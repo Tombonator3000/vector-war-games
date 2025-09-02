@@ -52,6 +52,13 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// NORAD Vector neon colors
+				cyan: 'hsl(var(--cyan))',
+				'neon-green': 'hsl(var(--neon-green))',
+				'neon-magenta': 'hsl(var(--neon-magenta))',
+				'neon-yellow': 'hsl(var(--neon-yellow))',
+				'neon-red': 'hsl(var(--neon-red))',
+				'deep-space': 'hsl(var(--deep-space))',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
