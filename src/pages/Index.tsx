@@ -56,6 +56,8 @@ interface Nation {
   bordersClosedTurns?: number;
   greenShiftTurns?: number;
   threats?: Record<string, number>;
+  migrantsThisTurn?: number;
+  migrantsTotal?: number;
 }
 
 interface GameState {
@@ -854,6 +856,16 @@ function project(lon: number, lat: number): [number, number] {
   return [x, y];
 }
 
+// Convert screen coordinates to longitude/latitude
+function toLonLat(x: number, y: number): [number, number] {
+  // Account for camera transformation
+  const adjustedX = (x - cam.x) / cam.zoom;
+  const adjustedY = (y - cam.y) / cam.zoom;
+  const lon = (adjustedX / W) * 360 - 180;
+  const lat = 90 - (adjustedY / H) * 180;
+  return [lon, lat];
+}
+
 function drawWorld() {
   if (!worldCountries || !ctx) return;
   
@@ -1014,7 +1026,7 @@ function drawMissiles() {
     ctx.lineWidth = 2;
     ctx.setLineDash([8, 6]);
     ctx.lineDashOffset = -(Date.now() / 60) % 100;
-    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowColor = typeof ctx.strokeStyle === 'string' ? ctx.strokeStyle : '#ff00ff';
     ctx.shadowBlur = 8;
     ctx.beginPath();
     ctx.moveTo(sx, sy);
@@ -1286,7 +1298,7 @@ function drawFX() {
     grad.addColorStop(0, `rgba(150,255,0,${zone.intensity * 0.3 * pulse})`);
     grad.addColorStop(1, `rgba(255,100,0,0)`);
     
-    ctx.fillStyle = grad as string;
+    ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
     ctx.fill();
@@ -1862,9 +1874,12 @@ export default function NoradVector() {
         requestAnimationFrame(gameLoop);
       });
       
-      // Setup mouse controls
+      // Setup mouse and touch controls
       let isDragging = false;
       let dragStart = { x: 0, y: 0 };
+      let touching = false;
+      let touchStart = { x: 0, y: 0 };
+      let zoomedIn = false;
 
       const handleMouseDown = (e: MouseEvent) => {
         isDragging = true;
@@ -1884,19 +1899,162 @@ export default function NoradVector() {
 
       const handleWheel = (e: WheelEvent) => {
         e.preventDefault();
-        cam.targetZoom = Math.max(0.5, Math.min(3, cam.targetZoom - e.deltaY * 0.001));
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        cam.targetZoom = Math.max(0.5, Math.min(3, cam.targetZoom * delta));
+      };
+
+      const handleTouchStart = (e: TouchEvent) => {
+        if(e.touches.length === 1) {
+          touching = true;
+          touchStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+        }
+      };
+
+      const handleTouchMove = (e: TouchEvent) => {
+        if(!touching) return;
+        if(e.touches.length === 1) { 
+          const nx = e.touches[0].clientX, ny = e.touches[0].clientY; 
+          cam.x += nx - touchStart.x; 
+          cam.y += ny - touchStart.y; 
+          touchStart = {x: nx, y: ny}; 
+        }
+      };
+
+      const handleTouchEnd = () => { 
+        touching = false; 
+      };
+
+      // Click handler for satellite intelligence
+      const handleClick = (e: MouseEvent) => {
+        if (isDragging) return;
+        if (S.gameOver) return;
+        const player = PlayerManager.get();
+        if (!player || !player.satellites) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        
+        for (const n of nations) {
+          if (n.isPlayer) continue;
+          if (!player.satellites[n.id]) continue;
+          if (n.population <= 0) continue;
+          const [nx, ny] = project(n.lon, n.lat);
+          const dist = Math.hypot(mx - nx, my - ny);
+          
+          if (dist < 20) {
+            let intelHtml = `<div style="margin:8px 0;padding:6px;border:1px solid rgba(124,255,107,.3);">`;
+            intelHtml += `<strong>${n.name}</strong><br>`;
+            intelHtml += `Missiles: ${n.missiles} | Defense: ${n.defense}<br>`;
+            intelHtml += `Warheads: ${Object.entries(n.warheads || {}).map(([k, v]) => `${k}MT×${v}`).join(', ')}<br>`;
+            intelHtml += `Production: ${Math.floor(n.production || 0)} | Uranium: ${Math.floor(n.uranium || 0)} | Intel: ${Math.floor(n.intel || 0)}<br>`;
+            intelHtml += `Migrants (This Turn / Total): ${(n.migrantsThisTurn || 0)} / ${(n.migrantsTotal || 0)}<br>`;
+            intelHtml += `Population: ${Math.floor(n.population)}M | Instability: ${Math.floor(n.instability || 0)}`;
+            intelHtml += `</div>`;
+            openModal(`${n.name} INTEL`, intelHtml);
+            break;
+          }
+        }
+      };
+
+      // Double-click zoom functionality
+      const handleDoubleClick = (e: MouseEvent) => {
+        if (isDragging) return;
+        if (S.gameOver) return;
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        
+        if (zoomedIn) {
+          cam.targetZoom = 1;
+          cam.zoom = 1;
+          cam.x = (W - W * cam.zoom) / 2;
+          cam.y = (H - H * cam.zoom) / 2;
+          zoomedIn = false;
+          return;
+        }
+        
+        const [lon, lat] = toLonLat(mx, my);
+        const newZoom = Math.min(3, cam.targetZoom * 1.5);
+        cam.targetZoom = newZoom;
+        cam.zoom = newZoom;
+        cam.x = W / 2 - ((lon + 180) / 360) * W * newZoom;
+        cam.y = H / 2 - ((90 - lat) / 180) * H * newZoom;
+        zoomedIn = true;
+        
+        let nearest = null;
+        let minDist = Infinity;
+        for (const nn of nations) {
+          const d = Math.hypot((nn.lon || 0) - lon, (nn.lat || 0) - lat);
+          if (d < minDist) { minDist = d; nearest = nn; }
+        }
+        
+        if (nearest) {
+          const lines = [];
+          lines.push(`<strong>${nearest.name}</strong>`);
+          if (nearest.leader) lines.push(`Leader: ${nearest.leader}`);
+          if (nearest.doctrine) lines.push(`Doctrine: ${nearest.doctrine}`);
+          lines.push(`Population: ${Math.floor(nearest.population || 0)}M`);
+          lines.push(`Cities: ${nearest.cities || 0}`);
+          lines.push(`Instability: ${Math.floor(nearest.instability || 0)}`);
+          
+          const currentPlayer = PlayerManager.get();
+          const hasIntelCoverage = currentPlayer && currentPlayer.satellites && currentPlayer.satellites[nearest.id];
+          if (hasIntelCoverage) {
+            lines.push(`Missiles: ${nearest.missiles || 0}, Defense: ${nearest.defense || 0}`);
+            lines.push(`Production: ${Math.floor(nearest.production || 0)}, Uranium: ${Math.floor(nearest.uranium || 0)}, Intel: ${Math.floor(nearest.intel || 0)}`);
+          } else {
+            lines.push(`Surveillance required to view military and resource data`);
+          }
+          const info = `<div style="margin:8px 0">${lines.join('<br>')}</div>`;
+          openModal(`${nearest.name} REGION`, info);
+        }
+      };
+
+      // Keyboard controls
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if(S.gameOver) return;
+        
+        switch(e.key) {
+          case '1': handleBuild(); break;
+          case '2': /* research */ break;
+          case '3': /* intel */ break;
+          case '4': /* culture */ break;
+          case '5': /* immigration */ break;
+          case '6': /* diplomacy */ break;
+          case '7': /* attack */ break;
+          case 'Enter': /* end turn */ break;
+          case ' ':
+            e.preventDefault();
+            S.paused = !S.paused;
+            break;
+          case 's':
+          case 'S': /* save */ break;
+        }
       };
 
       canvas.addEventListener('mousedown', handleMouseDown);
       canvas.addEventListener('mousemove', handleMouseMove);
       canvas.addEventListener('mouseup', handleMouseUp);
       canvas.addEventListener('wheel', handleWheel);
+      canvas.addEventListener('click', handleClick);
+      canvas.addEventListener('dblclick', handleDoubleClick);
+      canvas.addEventListener('touchstart', handleTouchStart, {passive: true});
+      canvas.addEventListener('touchmove', handleTouchMove, {passive: true});
+      canvas.addEventListener('touchend', handleTouchEnd, {passive: true});
+      document.addEventListener('keydown', handleKeyDown);
 
       return () => {
         canvas.removeEventListener('mousedown', handleMouseDown);
         canvas.removeEventListener('mousemove', handleMouseMove);
         canvas.removeEventListener('mouseup', handleMouseUp);
         canvas.removeEventListener('wheel', handleWheel);
+        canvas.removeEventListener('click', handleClick);
+        canvas.removeEventListener('dblclick', handleDoubleClick);
+        canvas.removeEventListener('touchstart', handleTouchStart);
+        canvas.removeEventListener('touchmove', handleTouchMove);
+        canvas.removeEventListener('touchend', handleTouchEnd);
+        document.removeEventListener('keydown', handleKeyDown);
       };
     }
   }, [isGameStarted]);
