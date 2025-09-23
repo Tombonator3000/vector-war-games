@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/components/ui/use-toast";
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -143,6 +144,8 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 ];
 
 let currentTheme: ThemeId = 'synthwave';
+let selectedTargetRefId: string | null = null;
+let uiUpdateCallback: (() => void) | null = null;
 
 // Global game state
 let S: GameState = {
@@ -1022,13 +1025,35 @@ function drawWorldPath(coords: number[][]) {
 
 function drawNations() {
   if (!ctx || nations.length === 0) return;
-  
+
   nations.forEach(n => {
     if (n.population <= 0) return;
 
     const [x, y] = project(n.lon, n.lat);
-    
+
     if (isNaN(x) || isNaN(y)) return;
+
+    const isSelectedTarget = selectedTargetRefId === n.id;
+    if (isSelectedTarget) {
+      const pulse = (Math.sin(Date.now() / 200) + 1) / 2;
+      const baseRadius = 42;
+      const radius = baseRadius + pulse * 10;
+
+      ctx.save();
+      ctx.strokeStyle = n.color || '#ff6666';
+      ctx.globalAlpha = 0.85;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 0.4;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(x, y, radius + 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // Nation marker (triangle)
     ctx.save();
@@ -1914,9 +1939,13 @@ function updateDisplay() {
     .join(' ');
   const warheadEl = document.getElementById('warheadDisplay');
   if (warheadEl) warheadEl.textContent = warheadText || 'NONE';
-  
+
   updateScoreboard();
   DoomsdayClock.update();
+
+  if (uiUpdateCallback) {
+    uiUpdateCallback();
+  }
 }
 
 function updateScoreboard() {
@@ -1985,6 +2014,9 @@ export default function NoradVector() {
   const [selectedLeader, setSelectedLeader] = useState<string | null>(null);
   const [selectedDoctrine, setSelectedDoctrine] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeId>('synthwave');
+  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
+  const [uiTick, setUiTick] = useState(0);
+  const handleAttackRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const stored = Storage.getItem('theme');
@@ -2009,6 +2041,176 @@ export default function NoradVector() {
       canvasRef.current.style.imageRendering = theme === 'retro80s' || theme === 'wargames' ? 'pixelated' : 'auto';
     }
   }, [theme]);
+
+  useEffect(() => {
+    uiUpdateCallback = () => setUiTick(prev => prev + 1);
+    return () => {
+      uiUpdateCallback = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    selectedTargetRefId = selectedTargetId;
+  }, [selectedTargetId]);
+
+  useEffect(() => {
+    if (!selectedTargetId) return;
+    const stillValid = nations.some(n => n.id === selectedTargetId && !n.isPlayer && n.population > 0);
+    if (!stillValid) {
+      setSelectedTargetId(null);
+    }
+  }, [selectedTargetId, uiTick]);
+
+  useEffect(() => {
+    if (!isGameStarted) {
+      setSelectedTargetId(null);
+    }
+  }, [isGameStarted]);
+
+  const targetableNations = useMemo(() => {
+    void uiTick;
+    return nations
+      .filter(n => !n.isPlayer && n.population > 0)
+      .sort((a, b) => b.population - a.population);
+  }, [uiTick]);
+
+  const handleTargetSelect = useCallback((nationId: string) => {
+    setSelectedTargetId(prev => (prev === nationId ? null : nationId));
+  }, []);
+
+  const handleAttack = useCallback(() => {
+    if (!isGameStarted || S.gameOver) return;
+
+    const player = PlayerManager.get();
+    if (!player) return;
+
+    if (S.phase !== 'PLAYER') {
+      toast({ title: 'Cannot launch', description: 'Attacks are only available during your phase.' });
+      return;
+    }
+
+    if (S.actionsRemaining <= 0) {
+      toast({ title: 'No actions remaining', description: 'You must end your turn before launching another strike.' });
+      return;
+    }
+
+    if (!canPerformAction('attack', S.defcon)) {
+      toast({ title: 'DEFCON too high', description: 'Escalate to DEFCON 2 or lower before ordering an attack.' });
+      return;
+    }
+
+    if (!selectedTargetId) {
+      toast({ title: 'Select a target', description: 'Choose a target nation from the list before launching.' });
+      return;
+    }
+
+    const target = nations.find(n => n.id === selectedTargetId && !n.isPlayer);
+    if (!target || target.population <= 0) {
+      toast({ title: 'Target unavailable', description: 'The selected target is no longer a valid threat.' });
+      setSelectedTargetId(null);
+      return;
+    }
+
+    const warheadEntries = Object.entries(player.warheads || {})
+      .map(([yieldStr, count]) => ({ yield: Number(yieldStr), count: count as number }))
+      .filter(entry => entry.count > 0)
+      .sort((a, b) => b.yield - a.yield);
+
+    if (warheadEntries.length === 0) {
+      toast({ title: 'No warheads ready', description: 'Build warheads before attempting to launch.' });
+      return;
+    }
+
+    const availableWarhead = warheadEntries.find(entry => {
+      const requiredDefcon = entry.yield > 50 ? 1 : 2;
+      return S.defcon <= requiredDefcon;
+    });
+
+    if (!availableWarhead) {
+      const minDefcon = Math.min(...warheadEntries.map(entry => (entry.yield > 50 ? 1 : 2)));
+      toast({
+        title: 'DEFCON restriction',
+        description: `Lower DEFCON to ${minDefcon} or less to deploy available warheads.`,
+      });
+      return;
+    }
+
+    const yieldMT = availableWarhead.yield;
+    const missileCount = player.missiles || 0;
+    const bomberCount = player.bombers || 0;
+    const submarineCount = player.submarines || 0;
+
+    let delivery: 'missile' | 'bomber' | 'submarine' | null = null;
+    if (missileCount > 0) delivery = 'missile';
+    else if (bomberCount > 0) delivery = 'bomber';
+    else if (submarineCount > 0) delivery = 'submarine';
+
+    if (!delivery) {
+      toast({ title: 'No launch platforms', description: 'Construct missiles, bombers, or submarines before attacking.' });
+      return;
+    }
+
+    const requirement = yieldMT > 50 ? 1 : 2;
+    const deliveryLabel = delivery === 'missile' ? 'ICBM' : delivery === 'bomber' ? 'Strategic Bomber' : 'Ballistic Submarine';
+    const confirmMessage = [
+      'AUTHORIZE NUCLEAR LAUNCH?',
+      '',
+      `Target: ${target.name}`,
+      `Population Estimate: ${Math.floor(target.population)}M`,
+      `Warhead Yield: ${yieldMT}MT`,
+      `Delivery System: ${deliveryLabel}`,
+      `Current DEFCON: ${S.defcon} (requires ≤ ${requirement})`,
+      '',
+      `Missiles Ready: ${missileCount}`,
+      `Bombers Ready: ${bomberCount}`,
+      `Submarines Ready: ${submarineCount}`,
+      '',
+      'Proceed with launch order?'
+    ].join('\n');
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    let launchSucceeded = false;
+
+    if (delivery === 'missile') {
+      launchSucceeded = launch(player, target, yieldMT);
+    } else {
+      player.warheads = player.warheads || {};
+      const remaining = (player.warheads[yieldMT] || 0) - 1;
+      if (remaining <= 0) {
+        delete player.warheads[yieldMT];
+      } else {
+        player.warheads[yieldMT] = remaining;
+      }
+
+      if (delivery === 'bomber') {
+        player.bombers = Math.max(0, (player.bombers || 0) - 1);
+        launchSucceeded = launchBomber(player, target, { yield: yieldMT });
+        if (launchSucceeded) {
+          log(`${player.name} dispatches bomber strike (${yieldMT}MT) toward ${target.name}`);
+          DoomsdayClock.tick(0.3);
+          AudioSys.playSFX('launch');
+        }
+      } else if (delivery === 'submarine') {
+        player.submarines = Math.max(0, (player.submarines || 0) - 1);
+        launchSucceeded = launchSubmarine(player, target, yieldMT);
+        if (launchSucceeded) {
+          log(`${player.name} launches submarine strike (${yieldMT}MT) toward ${target.name}`);
+          DoomsdayClock.tick(0.3);
+        }
+      }
+    }
+
+    if (launchSucceeded) {
+      consumeAction();
+    }
+  }, [isGameStarted, selectedTargetId]);
+
+  useEffect(() => {
+    handleAttackRef.current = handleAttack;
+  }, [handleAttack]);
 
   useEffect(() => {
     if (canvasRef.current && isGameStarted) {
@@ -2175,7 +2377,7 @@ export default function NoradVector() {
       // Keyboard controls
       const handleKeyDown = (e: KeyboardEvent) => {
         if(S.gameOver) return;
-        
+
         switch(e.key) {
           case '1': handleBuild(); break;
           case '2': /* research */ break;
@@ -2183,7 +2385,10 @@ export default function NoradVector() {
           case '4': /* culture */ break;
           case '5': /* immigration */ break;
           case '6': /* diplomacy */ break;
-          case '7': /* attack */ break;
+          case '7':
+            e.preventDefault();
+            handleAttackRef.current?.();
+            break;
           case 'Enter': /* end turn */ break;
           case ' ':
             e.preventDefault();
@@ -2191,6 +2396,11 @@ export default function NoradVector() {
             break;
           case 's':
           case 'S': /* save */ break;
+        }
+
+        if (e.code === 'Numpad7') {
+          e.preventDefault();
+          handleAttackRef.current?.();
         }
       };
 
@@ -2218,7 +2428,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted]);
+  }, [isGameStarted, handleBuild, openModal]);
 
   const startGame = useCallback(() => {
     if (!selectedLeader || !selectedDoctrine) {
@@ -2400,7 +2610,7 @@ export default function NoradVector() {
             <Button className="bg-cyan-700 hover:bg-cyan-600">
               DIPLOMACY
             </Button>
-            <Button className="bg-red-700 hover:bg-red-600">
+            <Button onClick={handleAttack} className="bg-red-700 hover:bg-red-600">
               ATTACK
             </Button>
             <Button onClick={endTurn} className="bg-gray-700 hover:bg-gray-600">
@@ -2434,7 +2644,36 @@ export default function NoradVector() {
             <div>WARHEADS: <span id="warheadDisplay">NONE</span></div>
           </div>
         </div>
-        
+
+        {/* Targets Panel */}
+        <div className="absolute top-20 right-72 bg-black bg-opacity-80 border border-red-500 p-4 rounded w-64 pointer-events-auto">
+          <h3 className="text-red-400 mb-2">TARGETS</h3>
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {targetableNations.length === 0 ? (
+              <div className="text-xs text-red-200/70">No viable enemy targets.</div>
+            ) : (
+              targetableNations.map(target => {
+                const isActive = selectedTargetId === target.id;
+                return (
+                  <button
+                    key={target.id}
+                    onClick={() => handleTargetSelect(target.id)}
+                    className={`w-full text-left px-3 py-2 border transition text-sm tracking-wide ${isActive ? 'bg-red-600 text-black border-red-300 shadow-[0_0_12px_rgba(255,0,0,0.45)]' : 'bg-transparent border-red-600/60 text-red-200 hover:bg-red-900/40'}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">{target.name}</span>
+                      <span className="text-xs opacity-80">{Math.floor(target.population)}M</span>
+                    </div>
+                    <div className="text-[10px] uppercase text-red-200/70 mt-1">
+                      DEF {target.defense} • MISS {target.missiles}
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
         {/* Doomsday Clock */}
         <div id="doomsdayPanel" className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-900 bg-opacity-80 border border-red-500 p-4 rounded text-center">
           <h3 className="text-red-400 mb-2">DOOMSDAY CLOCK</h3>
