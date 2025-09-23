@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, ReactNode } from 'react';
 import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -52,6 +52,7 @@ interface Nation {
   cities?: number;
   warheads: Record<number, number>;
   researched?: Record<string, boolean>;
+  researchQueue?: { projectId: string; turnsRemaining: number; totalTurns: number } | null;
   treaties?: Record<string, any>;
   satellites?: Record<string, boolean>;
   bordersClosedTurns?: number;
@@ -231,13 +232,117 @@ const COSTS = {
   defense: { production: 15 },
   warhead_10: { uranium: 5 },
   warhead_20: { uranium: 12 },
+  warhead_40: { uranium: 18 },
   warhead_50: { uranium: 25 },
   warhead_100: { uranium: 50 },
+  warhead_200: { uranium: 90 },
   immigration_skilled: { production: 10, intel: 5 },
   immigration_mass: { production: 5, intel: 2 },
   immigration_refugee: { intel: 15 },
   immigration_brain: { intel: 20 }
 };
+
+type ResourceCost = Partial<Record<'production' | 'intel' | 'uranium', number>>;
+
+interface ResearchProject {
+  id: string;
+  name: string;
+  description: string;
+  category: 'warhead' | 'defense' | 'intel';
+  turns: number;
+  cost: ResourceCost;
+  yield?: number;
+  prerequisites?: string[];
+  onComplete?: (nation: Nation) => void;
+}
+
+const RESEARCH_TREE: ResearchProject[] = [
+  {
+    id: 'warhead_20',
+    name: 'Improved Fission Packages',
+    description: 'Unlocks reliable 20MT warheads for tactical and strategic use.',
+    category: 'warhead',
+    turns: 2,
+    cost: { production: 20, intel: 5 },
+    yield: 20
+  },
+  {
+    id: 'warhead_40',
+    name: 'Boosted Fission Assembly',
+    description: 'Doubles your fission output and enables 40MT warheads.',
+    category: 'warhead',
+    turns: 3,
+    cost: { production: 30, intel: 10 },
+    yield: 40,
+    prerequisites: ['warhead_20']
+  },
+  {
+    id: 'warhead_50',
+    name: 'Thermonuclear Staging',
+    description: 'Perfect layered staging to field 50MT strategic devices.',
+    category: 'warhead',
+    turns: 4,
+    cost: { production: 40, intel: 15 },
+    yield: 50,
+    prerequisites: ['warhead_40']
+  },
+  {
+    id: 'warhead_100',
+    name: 'Titan-Class Weaponization',
+    description: 'Authorize titanic 100MT warheads for deterrence.',
+    category: 'warhead',
+    turns: 5,
+    cost: { production: 60, intel: 25 },
+    yield: 100,
+    prerequisites: ['warhead_50']
+  },
+  {
+    id: 'warhead_200',
+    name: 'Planet Cracker Initiative',
+    description: 'Unlock 200MT devices capable of ending civilizations.',
+    category: 'warhead',
+    turns: 6,
+    cost: { production: 80, intel: 35 },
+    yield: 200,
+    prerequisites: ['warhead_100']
+  },
+  {
+    id: 'defense_grid',
+    name: 'Orbital Defense Grid',
+    description: 'Integrate lasers and interceptors for +2 permanent defense.',
+    category: 'defense',
+    turns: 4,
+    cost: { production: 45, intel: 20 },
+    onComplete: nation => {
+      nation.defense += 2;
+    }
+  },
+  {
+    id: 'counterintel',
+    name: 'Counterintelligence Suite',
+    description: 'Deploy signals and HUMINT analysis to boost intel yields.',
+    category: 'intel',
+    turns: 3,
+    cost: { production: 25, intel: 25 }
+  }
+];
+
+const RESEARCH_LOOKUP: Record<string, ResearchProject> = RESEARCH_TREE.reduce((acc, project) => {
+  acc[project.id] = project;
+  return acc;
+}, {} as Record<string, ResearchProject>);
+
+const WARHEAD_RESEARCH_IDS = new Set(
+  RESEARCH_TREE.filter(project => project.category === 'warhead' && project.yield)
+    .map(project => project.id)
+);
+
+const WARHEAD_YIELD_TO_ID = new Map<number, string>(
+  RESEARCH_TREE.filter(project => project.category === 'warhead' && project.yield)
+    .map(project => [project.yield as number, project.id])
+);
+
+type ModalContentValue = string | ReactNode | (() => ReactNode);
 
 // PlayerManager class
 class PlayerManager {
@@ -510,6 +615,82 @@ function canPerformAction(action: string, defcon: number): boolean {
   return true;
 }
 
+function startResearch(tier: number | string): boolean {
+  const player = PlayerManager.get();
+  if (!player) return false;
+
+  const projectId = typeof tier === 'number' ? WARHEAD_YIELD_TO_ID.get(tier) || `warhead_${tier}` : tier;
+  const project = RESEARCH_LOOKUP[projectId];
+
+  if (!project) {
+    toast({ title: 'Unknown research', description: 'The requested project does not exist.' });
+    return false;
+  }
+
+  if (player.researchQueue) {
+    toast({ title: 'Project already running', description: 'You must wait for the current research to complete before starting another.' });
+    return false;
+  }
+
+  player.researched = player.researched || {};
+
+  if (player.researched[project.id]) {
+    toast({ title: 'Already unlocked', description: `${project.name} has already been researched.` });
+    return false;
+  }
+
+  if (project.prerequisites && project.prerequisites.some(req => !player.researched?.[req])) {
+    toast({ title: 'Prerequisites missing', description: 'Research previous tiers before starting this project.' });
+    return false;
+  }
+
+  if (!canAfford(player, project.cost)) {
+    toast({ title: 'Insufficient resources', description: 'You need more production or intel to begin this project.' });
+    return false;
+  }
+
+  pay(player, project.cost);
+
+  player.researchQueue = {
+    projectId: project.id,
+    turnsRemaining: project.turns,
+    totalTurns: project.turns
+  };
+
+  log(`Research initiated: ${project.name}`);
+  toast({ title: 'Research started', description: `${project.name} will complete in ${project.turns} turns.` });
+  updateDisplay();
+  return true;
+}
+
+function advanceResearch(nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') {
+  if (!nation.researchQueue || nation.researchQueue.turnsRemaining <= 0) return;
+
+  nation.researchQueue.turnsRemaining = Math.max(0, nation.researchQueue.turnsRemaining - 1);
+
+  if (nation.researchQueue.turnsRemaining > 0) return;
+
+  const project = RESEARCH_LOOKUP[nation.researchQueue.projectId];
+  nation.researchQueue = null;
+
+  if (!project) return;
+
+  nation.researched = nation.researched || {};
+  nation.researched[project.id] = true;
+
+  if (project.onComplete) {
+    project.onComplete(nation);
+  }
+
+  const message = `${nation.name} completes ${project.name}!`;
+  log(message, 'success');
+
+  if (nation.isPlayer) {
+    toast({ title: 'Research complete', description: `${project.name} finished during ${phase.toLowerCase()} phase.` });
+    updateDisplay();
+  }
+}
+
 // Game initialization
 function initNations() {
   nations = [];
@@ -536,7 +717,8 @@ function initNations() {
     intel: 10,
     cities: 1,
     warheads: { 10: 3, 20: 2 },
-    researched: {},
+    researched: { warhead_20: true },
+    researchQueue: null,
     treaties: {},
     threats: {},
     migrantsThisTurn: 0,
@@ -558,6 +740,7 @@ function initNations() {
           break;
         case 'firstStrike':
           playerNation.warheads[100] = 1;
+          playerNation.researched!['warhead_100'] = true;
           S.defcon = 3;
           break;
         case 'detente':
@@ -609,7 +792,8 @@ function initNations() {
       intel: 12 + Math.floor(Math.random() * 15),
       cities: 1,
       warheads: { 10: 2 + Math.floor(Math.random() * 3), 20: 1 + Math.floor(Math.random() * 2) },
-      researched: {},
+      researched: { warhead_20: true },
+      researchQueue: null,
       treaties: {},
       satellites: {},
       threats: {},
@@ -719,7 +903,16 @@ function launch(from: Nation, to: Nation, yieldMT: number) {
     log('No warheads of that yield!', 'warning');
     return false;
   }
-  
+
+  if (from.isPlayer) {
+    const requiredResearchId = WARHEAD_YIELD_TO_ID.get(yieldMT);
+    if (requiredResearchId && !from.researched?.[requiredResearchId]) {
+      const projectName = RESEARCH_LOOKUP[requiredResearchId]?.name || `${yieldMT}MT program`;
+      toast({ title: 'Technology unavailable', description: `Research ${projectName} before deploying this warhead.` });
+      return false;
+    }
+  }
+
   if (from.missiles <= 0) {
     log('No missiles available!', 'warning');
     return false;
@@ -773,7 +966,7 @@ function resolutionPhase() {
   // Process radiation zones
   S.radiationZones.forEach(zone => {
     zone.intensity *= 0.95;
-    
+
     nations.forEach(n => {
       const [x, y] = project(n.lon, n.lat);
       const dist = Math.hypot(x - zone.x, y - zone.y);
@@ -783,7 +976,9 @@ function resolutionPhase() {
       }
     });
   });
-  
+
+  nations.forEach(n => advanceResearch(n, 'RESOLUTION'));
+
   log('=== RESOLUTION PHASE COMPLETE ===', 'success');
   
   // Nuclear winter effects
@@ -855,7 +1050,14 @@ function productionPhase() {
     if (n.bordersClosedTurns && n.bordersClosedTurns > 0) {
       n.bordersClosedTurns--;
     }
+
+    if (n.researched?.counterintel) {
+      const intelBonus = Math.ceil(baseIntel * 0.2);
+      n.intel += intelBonus;
+    }
   });
+
+  nations.forEach(n => advanceResearch(n, 'PRODUCTION'));
 }
 
 // World map loading
@@ -2010,7 +2212,7 @@ export default function NoradVector() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [modalContent, setModalContent] = useState({ title: '', content: '' });
+  const [modalContent, setModalContent] = useState<{ title: string; content: ModalContentValue }>({ title: '', content: '' });
   const [selectedLeader, setSelectedLeader] = useState<string | null>(null);
   const [selectedDoctrine, setSelectedDoctrine] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeId>('synthwave');
@@ -2113,7 +2315,13 @@ export default function NoradVector() {
 
     const warheadEntries = Object.entries(player.warheads || {})
       .map(([yieldStr, count]) => ({ yield: Number(yieldStr), count: count as number }))
-      .filter(entry => entry.count > 0)
+      .filter(entry => {
+        if (entry.count <= 0) return false;
+        if (entry.yield <= 10) return true;
+        const researchId = WARHEAD_YIELD_TO_ID.get(entry.yield);
+        if (!researchId) return true;
+        return !!player.researched?.[researchId];
+      })
       .sort((a, b) => b.yield - a.yield);
 
     if (warheadEntries.length === 0) {
@@ -2440,7 +2648,7 @@ export default function NoradVector() {
     setIsGameStarted(true);
   }, [selectedLeader, selectedDoctrine]);
 
-  const openModal = useCallback((title: string, content: string) => {
+  const openModal = useCallback((title: string, content: ModalContentValue) => {
     setModalContent({ title, content });
     setShowModal(true);
   }, []);
@@ -2452,7 +2660,7 @@ export default function NoradVector() {
   const handleBuild = useCallback(() => {
     const player = PlayerManager.get();
     if (!player) return;
-    
+
     let content = `
       <div class="grid grid-cols-2 gap-4">
         <button class="p-4 border border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-black">
@@ -2465,9 +2673,152 @@ export default function NoradVector() {
         </button>
       </div>
     `;
-    
+
     openModal('BUILD', content);
   }, [openModal]);
+
+  const handleResearch = useCallback(() => {
+    openModal('RESEARCH DIRECTORATE', renderResearchModal);
+  }, [openModal, renderResearchModal]);
+
+  const renderResearchModal = useCallback((): ReactNode => {
+    const player = PlayerManager.get();
+    if (!player) {
+      return <div className="text-sm text-cyan-200">No nation data available.</div>;
+    }
+
+    const activeQueue = player.researchQueue;
+    const activeProject = activeQueue ? RESEARCH_LOOKUP[activeQueue.projectId] : null;
+    const progress = activeQueue && activeQueue.totalTurns > 0
+      ? Math.round(((activeQueue.totalTurns - activeQueue.turnsRemaining) / activeQueue.totalTurns) * 100)
+      : 0;
+
+    const categories: { id: ResearchProject['category']; label: string }[] = [
+      { id: 'warhead', label: 'Warhead Programs' },
+      { id: 'defense', label: 'Defense Initiatives' },
+      { id: 'intel', label: 'Intelligence Operations' }
+    ];
+
+    const formatCost = (cost: ResourceCost) => {
+      const parts = Object.entries(cost)
+        .filter(([, amount]) => (amount || 0) > 0)
+        .map(([resource, amount]) => `${amount} ${resource.toUpperCase()}`);
+      return parts.length > 0 ? parts.join(' • ') : 'No cost';
+    };
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold text-cyan-300 mb-2">Research Focus</h3>
+          {activeProject ? (
+            <div className="border border-cyan-600/60 rounded p-4 bg-black/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-cyan-200">{activeProject.name}</span>
+                <span className="text-sm text-cyan-300">{progress}%</span>
+              </div>
+              <p className="text-sm text-cyan-200/70">{activeProject.description}</p>
+              <div className="h-2 bg-cyan-900 rounded overflow-hidden">
+                <div
+                  className="h-full bg-cyan-400 transition-all"
+                  style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                />
+              </div>
+              <div className="text-xs text-cyan-200/80">
+                Turns remaining: {activeQueue.turnsRemaining}/{activeQueue.totalTurns}
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-cyan-200/80">
+              No active project. Select a program below to begin research.
+            </div>
+          )}
+        </div>
+
+        {categories.map(category => {
+          const projects = RESEARCH_TREE.filter(project => project.category === category.id);
+          if (projects.length === 0) return null;
+
+          return (
+            <div key={category.id} className="space-y-3">
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-cyan-400">
+                {category.label}
+              </h4>
+              {projects.map(project => {
+                const isUnlocked = !!player.researched?.[project.id];
+                const prerequisitesMet = (project.prerequisites || []).every(req => player.researched?.[req]);
+                const affordable = canAfford(player, project.cost);
+                const disabled = isUnlocked || !prerequisitesMet || !!activeQueue || !affordable;
+
+                return (
+                  <div key={project.id} className="border border-cyan-700/70 rounded p-4 bg-black/50 space-y-2">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="font-semibold text-cyan-200">{project.name}</div>
+                        <div className="text-xs text-cyan-200/70 uppercase">
+                          {project.turns} turns • Cost: {formatCost(project.cost)}
+                        </div>
+                      </div>
+                      {isUnlocked ? (
+                        <span className="text-green-400 text-xs font-semibold">UNLOCKED</span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="bg-cyan-700 hover:bg-cyan-600 text-black"
+                          disabled={disabled}
+                          onClick={() => startResearch(project.id)}
+                        >
+                          START
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-sm text-cyan-100/80">{project.description}</p>
+                    {project.yield ? (
+                      <div className="text-xs text-cyan-200/70">
+                        Unlocks deployment of {project.yield}MT warheads.
+                      </div>
+                    ) : null}
+                    {project.prerequisites && project.prerequisites.length > 0 ? (
+                      <div className="text-xs text-cyan-200/70">
+                        Prerequisites:{' '}
+                        {project.prerequisites.map(req => {
+                          const met = !!player.researched?.[req];
+                          const name = RESEARCH_LOOKUP[req]?.name || req;
+                          return (
+                            <span key={req} className={met ? 'text-green-400' : 'text-red-400'}>
+                              {name}
+                            </span>
+                          );
+                        }).reduce((acc, elem, idx, arr) => {
+                          acc.push(elem);
+                          if (idx < arr.length - 1) acc.push(<span key={`sep-${project.id}-${idx}`}> • </span>);
+                          return acc;
+                        }, [] as ReactNode[])}
+                      </div>
+                    ) : null}
+                    {!isUnlocked && !prerequisitesMet ? (
+                      <div className="text-xs text-yellow-300/80">
+                        Complete prerequisite programs first.
+                      </div>
+                    ) : null}
+                    {!isUnlocked && prerequisitesMet && !affordable ? (
+                      <div className="text-xs text-yellow-300/80">
+                        Additional resources required to begin this project.
+                      </div>
+                    ) : null}
+                    {!isUnlocked && prerequisitesMet && affordable && activeQueue ? (
+                      <div className="text-xs text-yellow-300/80">
+                        Another project is currently underway.
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }, []);
 
   if (!isGameStarted) {
     return (
@@ -2595,7 +2946,7 @@ export default function NoradVector() {
             <Button onClick={handleBuild} className="bg-green-700 hover:bg-green-600">
               BUILD
             </Button>
-            <Button className="bg-blue-700 hover:bg-blue-600">
+            <Button onClick={handleResearch} className="bg-blue-700 hover:bg-blue-600">
               RESEARCH
             </Button>
             <Button className="bg-purple-700 hover:bg-purple-600">
@@ -2721,7 +3072,13 @@ export default function NoradVector() {
           <DialogHeader>
             <DialogTitle className="text-cyan-400">{modalContent.title}</DialogTitle>
           </DialogHeader>
-          <div dangerouslySetInnerHTML={{ __html: modalContent.content }} />
+          {(() => {
+            const content = typeof modalContent.content === 'function' ? modalContent.content() : modalContent.content;
+            if (typeof content === 'string') {
+              return <div dangerouslySetInnerHTML={{ __html: content }} />;
+            }
+            return content ?? null;
+          })()}
         </DialogContent>
       </Dialog>
     </div>
