@@ -2305,150 +2305,432 @@ const RandomEvents = {
     }},
     {id: 'pandemic', name: 'Pandemic', desc: "A global pandemic randomly reduces population in several nations", effect: () => {
       nations.forEach(n => {
-        if(Math.random() < 0.5) {
+        if (Math.random() < 0.5) {
           n.population = Math.max(0, n.population - 1);
         }
       });
       log('🦠 PANDEMIC! Random nations lose population', 'warning');
     }},
-    {id: 'arms_race', name: 'Arms Race', desc: "All nations accelerate their weapons programs: +1 missile each", effect: () => {
+    {id: 'arms_race', name: 'Arms Race', desc: "Every nation accelerates their missile programs", effect: () => {
       nations.forEach(n => n.missiles++);
       DoomsdayClock.tick(0.3);
       log('🚀 ARMS RACE! All nations +1 missile', 'alert');
     }},
-    {id: 'peace_protest', name: 'Peace Protests', desc: "Public protests for peace cause DEFCON to improve", effect: () => {
-      if(S.defcon < 5) S.defcon++;
+    {id: 'peace_protest', name: 'Peace Protests', desc: "Public protests improve the global DEFCON level", effect: () => {
+      if (S.defcon < 5) S.defcon++;
       log('☮️ PEACE PROTESTS! DEFCON improved', 'success');
     }},
-    {id: 'nuclear_accident', name: 'Nuclear Accident', desc: "A nuclear accident reduces a random nation's warhead stockpile", effect: () => {
+    {id: 'nuclear_accident', name: 'Nuclear Accident', desc: "A nuclear mishap destroys a random stored warhead", effect: () => {
       const victim = nations[Math.floor(Math.random() * nations.length)];
       const types = Object.keys(victim.warheads || {});
-      if(types.length > 0) {
-        const type = types[0];
+      if (types.length > 0) {
+        const type = types[Math.floor(Math.random() * types.length)];
         victim.warheads[type]--;
-        if(victim.warheads[type] <= 0) delete victim.warheads[type];
+        if (victim.warheads[type] <= 0) delete victim.warheads[type];
         log(`☢️ NUCLEAR ACCIDENT in ${victim.name}! Lost warhead`, 'alert');
       }
     }},
     {id: 'coup', name: 'Military Coup', desc: "A sudden coup alters the AI personality of a random nation", effect: () => {
-      const victim = nations.filter(n => !n.isPlayer)[Math.floor(Math.random() * nations.filter(n => !n.isPlayer).length)];
-      if(victim) {
-        victim.ai = ['aggressive', 'defensive', 'chaotic'][Math.floor(Math.random() * 3)];
-        log(`🎖️ COUP in ${victim.name}! New AI personality`, 'warning');
-      }
+      const candidates = nations.filter(n => !n.isPlayer);
+      if (candidates.length === 0) return;
+      const victim = candidates[Math.floor(Math.random() * candidates.length)];
+      victim.ai = ['aggressive', 'defensive', 'chaotic'][Math.floor(Math.random() * 3)];
+      log(`🎖️ COUP in ${victim.name}! New AI personality`, 'warning');
     }},
-    {id: 'cyber_attack', name: 'Cyber Attack', desc: "A cyber attack cripples a random nation's missile arsenal (-3 missiles)", effect: () => {
+    {id: 'cyber_attack', name: 'Cyber Attack', desc: "A crippling cyber strike removes missiles from a nation", effect: () => {
       const victim = nations[Math.floor(Math.random() * nations.length)];
       victim.missiles = Math.max(0, victim.missiles - 3);
       log(`💻 CYBER ATTACK on ${victim.name}! -3 missiles`, 'warning');
     }},
-    {id: 'un_sanctions', name: 'UN Sanctions', desc: "The United Nations imposes sanctions, lowering all nations' intel by 1", effect: () => {
+    {id: 'un_sanctions', name: 'UN Sanctions', desc: "Global sanctions reduce intelligence gathering for everyone", effect: () => {
       nations.forEach(n => n.intel = Math.max(0, (n.intel || 0) - 1));
-      log('🌍 UN SANCTIONS! All nations -1 intel', 'warning');
+      log('🌐 UN SANCTIONS! All nations -1 intel', 'warning');
     }},
-    {id: 'resource_boom', name: 'Resource Boom', desc: "A lucky nation discovers a resource bonanza (+10 uranium)", effect: () => {
+    {id: 'resource_boom', name: 'Resource Boom', desc: "A nation strikes a rich uranium deposit", effect: () => {
       const lucky = nations[Math.floor(Math.random() * nations.length)];
       lucky.uranium = (lucky.uranium || 0) + 10;
       log(`💎 RESOURCE BOOM in ${lucky.name}! +10 uranium`, 'success');
     }},
-    {id: 'black_market', name: 'Black Market', desc: "Widespread black market trading increases missiles for all nations (+1)", effect: () => {
+    {id: 'black_market', name: 'Black Market', desc: "Illicit trades arm every nation with an extra missile", effect: () => {
       nations.forEach(n => n.missiles++);
       log('💰 BLACK MARKET TRADE! All nations +1 missile', 'warning');
     }},
-    
-    // Additional expanded events
-    {id: 'border_crisis', name: 'Border Crisis', desc: "A border crisis triggers mass migration and instability increases", effect: () => {
+    {id: 'border_crisis', name: 'Border Crisis', desc: "A sudden border clash triggers mass migration and unrest", effect: () => {
+      if (nations.length < 2) return;
       const source = nations[Math.floor(Math.random() * nations.length)];
-      const target = nations.filter(n => n !== source)[Math.floor(Math.random() * (nations.length - 1))];
-      const migrants = Math.floor(source.population * 0.2);
-      source.population -= migrants;
+      const others = nations.filter(n => n !== source);
+      if (others.length === 0) return;
+      const target = others[Math.floor(Math.random() * others.length)];
+      const migrants = Math.max(1, Math.floor(source.population * 0.2));
+      source.population = Math.max(0, source.population - migrants);
       target.population += migrants;
-      // Record incoming migrants so intel reports can reveal migrant levels
-      target.immigrants = (target.immigrants || 0) + migrants;
       target.instability = (target.instability || 0) + 50;
+      target.immigrants = (target.immigrants || 0) + migrants;
+      target.migrantsThisTurn = (target.migrantsThisTurn || 0) + migrants;
+      target.migrantsTotal = (target.migrantsTotal || 0) + migrants;
       log(`🚪 BORDER CRISIS! ${migrants}M flee ${source.name} → ${target.name} (+50 instab)`, 'warning');
     }},
-    {id: 'brain_drain_leak', name: 'Brain Drain', desc: "A rival nation steals one of your researched technologies", effect: () => {
+    {id: 'exodus', name: 'Mass Exodus', desc: "Instability drives huge populations into neighbouring nations", effect: () => {
+      if (nations.length < 2) return;
+      const unstable = nations.filter(n => (n.instability || 0) > 40);
+      const source = unstable.length ? unstable[Math.floor(Math.random() * unstable.length)] : nations[Math.floor(Math.random() * nations.length)];
+      const pool = nations.filter(n => n !== source);
+      if (pool.length === 0) return;
+      const count = Math.min(pool.length, 2 + Math.floor(Math.random() * 3));
+      const targets = [...pool].sort(() => Math.random() - 0.5).slice(0, count);
+      const refugees = Math.max(1, Math.floor(source.population * 0.3));
+      source.population = Math.max(0, source.population - refugees);
+      let remaining = refugees;
+      targets.forEach((t, idx) => {
+        const shareBase = Math.floor(refugees / targets.length);
+        let share = shareBase;
+        if (idx < refugees % targets.length) share++;
+        share = Math.max(1, Math.min(share, remaining));
+        remaining -= share;
+        t.population += share;
+        t.instability = (t.instability || 0) + 20;
+        t.immigrants = (t.immigrants || 0) + share;
+        t.migrantsThisTurn = (t.migrantsThisTurn || 0) + share;
+        t.migrantsTotal = (t.migrantsTotal || 0) + share;
+      });
+      log(`🏃 MASS EXODUS from ${source.name}! Refugees scatter across borders`, 'warning');
+    }},
+    {id: 'refugee_convoy', name: 'Refugee Convoy', desc: "You redirect unrest outward, exporting instability to a rival", effect: () => {
       const player = PlayerManager.get();
-      if(player && player.researched) {
-        const techs = Object.keys(player.researched);
-        if(techs.length > 0) {
+      if (!player) return;
+      const rivals = nations.filter(n => !n.isPlayer);
+      if (rivals.length === 0) return;
+      const target = rivals[Math.floor(Math.random() * rivals.length)];
+      const gain = Math.max(1, Math.floor(target.population * 0.15));
+      target.population += gain;
+      target.instability = (target.instability || 0) + 35;
+      target.immigrants = (target.immigrants || 0) + gain;
+      target.migrantsThisTurn = (target.migrantsThisTurn || 0) + gain;
+      target.migrantsTotal = (target.migrantsTotal || 0) + gain;
+      player.instability = Math.max(0, (player.instability || 0) - 15);
+      log(`🚛 REFUGEE CONVOY! Targeting ${target.name}: you shed unrest (instab -15), they gain +15% pop & +35 instab`, 'success');
+    }},
+    {id: 'brain_drain_leak', name: 'Brain Drain', desc: "Scientists defect, gifting your technology and stalling research", effect: () => {
+      const player = PlayerManager.get();
+      if (player && player.researched) {
+        const techs = Object.keys(player.researched).filter(k => player.researched[k]);
+        if (techs.length > 0) {
           const stolen = techs[Math.floor(Math.random() * techs.length)];
-          const rival = nations.filter(n => !n.isPlayer)[Math.floor(Math.random() * nations.filter(n => !n.isPlayer).length)];
-          if(rival) {
+          const rivals = nations.filter(n => !n.isPlayer);
+          if (rivals.length > 0) {
+            const rival = rivals[Math.floor(Math.random() * rivals.length)];
             rival.researched = rival.researched || {};
             rival.researched[stolen] = true;
+            player.intelPenaltyAmount = (player.intelPenaltyAmount || 0) + 2;
+            player.intelPenaltyTurns = (player.intelPenaltyTurns || 0) + 2;
             log(`🧠 BRAIN DRAIN! ${rival.name} steals your ${stolen} technology`, 'alert');
           }
         }
       }
     }},
-    {id: 'factory_fire', name: 'Factory Fire', desc: "An industrial accident destroys a city and applies a production debuff", effect: () => {
+    {id: 'cultural_renaissance', name: 'Cultural Renaissance', desc: "Artistic boom supercharges your intelligence network", effect: () => {
       const player = PlayerManager.get();
-      if(player) {
-        if(player.cities > 1) player.cities--;
-        player.productionDebuff = (player.productionDebuff || 0) + 0.1;
+      if (player) {
+        player.intel = (player.intel || 0) + 12;
+        log('🎭 CULTURAL RENAISSANCE! +12 intel for enlightened thinking', 'success');
+      }
+    }},
+    {id: 'strikes_protests', name: 'Labor Strikes', desc: "Nationwide protests spike instability and stall factories", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
+        player.instability = (player.instability || 0) + 18;
+        player.productionDebuff = Math.min(0.9, (player.productionDebuff || 0) + 0.2);
+        player.productionDebuffTurns = (player.productionDebuffTurns || 0) + 1;
+        log('🪧 LABOR STRIKES! +18 instability, -20% production next turn', 'warning');
+      }
+    }},
+    {id: 'black_market_uranium', name: 'Uranium Smuggling', desc: "Shady dealers deliver an influx of uranium", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
+        player.uranium = (player.uranium || 0) + 12;
+        log('⚛️ BLACK MARKET URANIUM! Shady dealers bring +12 uranium', 'success');
+      }
+    }},
+    {id: 'uranium_shortage', name: 'Uranium Shortage', desc: "Global shortage hits every stockpile", effect: () => {
+      nations.forEach(n => n.uranium = Math.max(0, (n.uranium || 0) - 6));
+      log('⛏️ GLOBAL URANIUM SHORTAGE! All nations -6 uranium', 'warning');
+    }},
+    {id: 'factory_fire', name: 'Factory Fire', desc: "An industrial inferno levels a city and hampers production", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
+        if (player.cities > 1) player.cities--;
+        player.productionDebuff = Math.max(player.productionDebuff || 0, 0.1);
+        player.productionDebuffTurns = (player.productionDebuffTurns || 0) + 1;
         log('🔥 FACTORY FIRE! -1 city, -10% production next turn', 'alert');
       }
     }},
-    {id: 'satellite_collision', name: 'Satellite Collision', desc: "Debris collision destroys all of your satellites", effect: () => {
+    {id: 'automation', name: 'Industrial Automation', desc: "Automation surge boosts output next turn", effect: () => {
       const player = PlayerManager.get();
-      if(player) {
+      if (player) {
+        player.productionBonus = (player.productionBonus || 0) + 0.25;
+        player.productionBonusTurns = (player.productionBonusTurns || 0) + 1;
+        log('🤖 AUTOMATION BREAKTHROUGH! +25% production next turn', 'success');
+      }
+    }},
+    {id: 'hack_back', name: 'Counter-Hack Success', desc: "You trace hostile code and seize their intel", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
+        player.intel = (player.intel || 0) + 6;
+        log('💻 COUNTER-HACK SUCCESS! Traced and neutralized threats (+6 intel)', 'success');
+      }
+    }},
+    {id: 'satellite_launch', name: 'Satellite Launch', desc: "Successful spy satellite grants wide surveillance for 2 turns", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
+        player.satelliteBonus = Math.max(player.satelliteBonus || 0, 2);
+        log('🛰️ SATELLITE LAUNCH SUCCESS! Free surveillance for 2 turns', 'success');
+      }
+    }},
+    {id: 'satellite_collision', name: 'Satellite Collision', desc: "Orbital debris shreds your satellite network", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
         player.satellites = {};
+        player.satelliteBonus = 0;
         log('💥 SATELLITE COLLISION! Lost all surveillance coverage', 'warning');
       }
     }},
-    {id: 'defcon_miscommunication', name: 'DEFCON Miscommunication', desc: "An erroneous alert changes the DEFCON level randomly", effect: () => {
+    {id: 'silo_explosion', name: 'Silo Explosion', desc: "A missile silo detonates, destroying payloads", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
+        player.missiles = Math.max(0, player.missiles - 1);
+        const types = Object.keys(player.warheads || {});
+        if (types.length > 0) {
+          const type = types[Math.floor(Math.random() * types.length)];
+          player.warheads[type] = Math.max(0, player.warheads[type] - 1);
+          if (player.warheads[type] <= 0) delete player.warheads[type];
+          log(`💥 SILO EXPLOSION! Lost 1 missile and 1 ${type}MT warhead`, 'alert');
+        } else {
+          log('💥 SILO EXPLOSION! Lost 1 missile', 'alert');
+        }
+      }
+    }},
+    {id: 'mirv_breakthrough', name: 'MIRV Breakthrough', desc: "Espionage unlocks MIRV technology instantly", effect: () => {
+      const player = PlayerManager.get();
+      if (player && !(player.researched && player.researched.mirv)) {
+        player.researched = player.researched || {};
+        player.researched.mirv = true;
+        log('🎯 MIRV BREAKTHROUGH! Technology unlocked through espionage', 'success');
+      }
+    }},
+    {id: 'laser_malfunction', name: 'Laser Defense Malfunction', desc: "A laser defense network shorts out", effect: () => {
+      const victims = nations.filter(n => n.researched?.laser);
+      if (victims.length > 0) {
+        const victim = victims[Math.floor(Math.random() * victims.length)];
+        victim.defense = Math.max(0, victim.defense - 3);
+        log(`⚡ LASER MALFUNCTION in ${victim.name}! Defense systems offline (-3 def)`, 'warning');
+      }
+    }},
+    {id: 'defcon_miscommunication', name: 'DEFCON Miscommunication', desc: "Confused signals shift DEFCON randomly", effect: () => {
       const change = Math.random() < 0.5 ? 1 : -1;
       S.defcon = Math.max(1, Math.min(5, S.defcon + change));
       log(`📡 DEFCON MISCOMMUNICATION! Alert level ${change > 0 ? 'lowered' : 'raised'} to ${S.defcon}`, change > 0 ? 'success' : 'warning');
     }},
-    {id: 'peace_rally', name: 'Peace Rally', desc: "A peace rally reduces your instability and improves DEFCON", effect: () => {
+    {id: 'peace_rally', name: 'Peace Rally', desc: "Grassroots rally reduces unrest and cools tensions", effect: () => {
       const player = PlayerManager.get();
-      if(player) {
+      if (player) {
         player.instability = Math.max(0, (player.instability || 0) - 10);
-        if(S.defcon < 5) S.defcon++;
-        log('✌️ PEACE RALLY! Your instability -10, DEFCON improved', 'success');
+      }
+      if (S.defcon < 5) S.defcon++;
+      log('✌️ PEACE RALLY! Your instability -10, DEFCON improved', 'success');
+    }},
+    {id: 'coup_attempt', name: 'Coup Attempt', desc: "A coup attempt rattles a nation", effect: () => {
+      const victim = nations[Math.floor(Math.random() * nations.length)];
+      victim.defense = Math.max(0, victim.defense - 1);
+      victim.instability = (victim.instability || 0) + 25;
+      log(`🥷 COUP ATTEMPT in ${victim.name}! Defense compromised, chaos rising`, 'warning');
+    }},
+    {id: 'famine', name: 'Famine', desc: "Crop failure kills millions", effect: () => {
+      const victim = nations[Math.floor(Math.random() * nations.length)];
+      victim.population = Math.max(0, victim.population - 2);
+      log(`🌾 FAMINE strikes ${victim.name}! -2M population`, 'warning');
+    }},
+    {id: 'vaccination_drive', name: 'Vaccination Drive', desc: "Mass vaccinations save lives and calm nerves", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
+        player.population += 2;
+        player.instability = Math.max(0, (player.instability || 0) - 5);
+        log('💉 VACCINATION DRIVE! Population +2M, instability -5', 'success');
       }
     }},
-    {id: 'unexpected_truce', name: 'Unexpected Truce', desc: "Two AI nations unexpectedly agree to a cease-fire for two turns", effect: () => {
-      const ai1 = nations.filter(n => !n.isPlayer)[0];
-      const ai2 = nations.filter(n => !n.isPlayer)[1];
-      if(ai1 && ai2) {
-        ai1.treaties = ai1.treaties || {};
-        ai2.treaties = ai2.treaties || {};
-        ai1.treaties[ai2.id] = {truceTurns: 2};
-        ai2.treaties[ai1.id] = {truceTurns: 2};
-        log(`🤝 UNEXPECTED TRUCE! ${ai1.name} and ${ai2.name} agree to 2-turn cease-fire`, 'success');
+    {id: 'smuggled_warheads', name: 'Smuggled Warheads', desc: "Black market traders deliver an unexpected warhead", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
+        const types = [10, 20, 50];
+        const mt = types[Math.floor(Math.random() * types.length)];
+        player.warheads = player.warheads || {};
+        player.warheads[mt] = (player.warheads[mt] || 0) + 1;
+        log(`📦 SMUGGLED WARHEADS! Black market delivers +1 ${mt}MT warhead`, 'success');
       }
-    }} ,
-
-    // Newly added global resource crises.  These events are meant to
-    // reduce runaway resource accumulation and make the late game more
-    // unpredictable.  When triggered they apply a modest penalty to
-    // production or uranium across all nations.
-    {id: 'energy_crisis', name: 'Energy Crisis', desc: 'A worldwide energy shortage reduces production for all nations', effect: () => {
-      nations.forEach(n => {
-        // Subtract a flat amount of production to simulate factories
-        // running at reduced capacity.  Use Math.max to avoid negative
-        // production.  Notify the log once per event.
-        n.production = Math.max(0, (n.production || 0) - 5);
-      });
-      log('⚡ ENERGY CRISIS! All nations -5 production', 'warning');
     }},
-    {id: 'uranium_shortage', name: 'Uranium Shortage', desc: 'Global uranium supplies dwindle; all nations lose uranium', effect: () => {
-      nations.forEach(n => {
-        // Remove three units of uranium from each nation.  Ensure the
-        // value does not dip below zero.  This curbs stockpiling and
-        // encourages strategic use of nuclear resources.
-        n.uranium = Math.max(0, (n.uranium || 0) - 3);
-      });
-      log('🔋 URANIUM SHORTAGE! All nations -3 uranium', 'warning');
+    {id: 'iaea_inspection', name: 'IAEA Inspection', desc: "Inspectors halt warhead construction temporarily", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
+        player.inspectionBlock = Math.max(player.inspectionBlock || 0, 1);
+        log('🔍 IAEA INSPECTION! Warhead production blocked for 1 turn', 'warning');
+      }
     }},
-    // New urgent global events.  These disasters trigger a timed prompt
-    // that requires immediate player action.  Respond quickly to
-    // mitigate the impact, or suffer harsher penalties.  Each effect
-    // calls showUrgentEvent() with appropriate callbacks and audio.
+    {id: 'emp_test', name: 'EMP Weapon Test', desc: "A hostile EMP test cripples interceptors for a turn", effect: () => {
+      const victim = nations[Math.floor(Math.random() * nations.length)];
+      victim.defense = Math.max(0, victim.defense - 2);
+      victim.empRestore = (victim.empRestore || 0) + 2;
+      victim.empDebuff = (victim.empDebuff || 0) + 1;
+      log(`⚡ EMP TEST affects ${victim.name}! Defense systems disrupted (-2 def, 1 turn)`, 'warning');
+    }},
+    {id: 'economic_boom', name: 'Economic Boom', desc: "Lucky nations enjoy extra missile production", effect: () => {
+      nations.forEach(n => {
+        if (Math.random() < 0.5) {
+          n.missiles += 2;
+        }
+      });
+      log('📈 ECONOMIC BOOM! Random nations gain missiles', 'success');
+    }},
+    {id: 'nuclear_scare', name: 'Nuclear Scare', desc: "Panic pushes DEFCON closer to war", effect: () => {
+      if (S.defcon > 1) S.defcon--;
+      log('😰 NUCLEAR SCARE! Global paranoia escalates', 'warning');
+    }},
+    {id: 'ai_malfunction', name: 'AI Malfunction', desc: "A rival control system goes haywire granting extra actions", effect: () => {
+      const victims = nations.filter(n => !n.isPlayer);
+      if (victims.length === 0) return;
+      const victim = victims[Math.floor(Math.random() * victims.length)];
+      victim.aiBonus = (victim.aiBonus || 0) + 1;
+      log(`🤖 AI MALFUNCTION in ${victim.name}! Extra action this turn`, 'warning');
+    }},
+    {id: 'industrial_accident', name: 'Industrial Accident', desc: "Factory disaster wipes out production reserves", effect: () => {
+      const victim = nations[Math.floor(Math.random() * nations.length)];
+      victim.production = Math.max(0, (victim.production || 0) - 5);
+      log(`⚙️ INDUSTRIAL ACCIDENT in ${victim.name}! -5 production`, 'warning');
+    }},
+    {id: 'spy_scandal', name: 'Spy Scandal', desc: "Espionage exposure ignites unrest", effect: () => {
+      const victim = nations[Math.floor(Math.random() * nations.length)];
+      victim.instability = (victim.instability || 0) + 10;
+      log(`🕵️ SPY SCANDAL exposed in ${victim.name}! +10 instability`, 'warning');
+    }},
+    {id: 'leader_assassination', name: 'Assassination Attempt', desc: "Leadership attack cripples intel operations", effect: () => {
+      const victim = nations[Math.floor(Math.random() * nations.length)];
+      victim.intel = Math.floor((victim.intel || 0) / 2);
+      victim.instability = Math.max(0, (victim.instability || 0) - 10);
+      log(`🎯 ASSASSINATION ATTEMPT on ${victim.name} leader! Intel halved, instability -10`, 'alert');
+    }},
+    {id: 'natural_disaster', name: 'Natural Disaster', desc: "Severe disaster levels a city and kills millions", effect: () => {
+      const victim = nations[Math.floor(Math.random() * nations.length)];
+      if (victim.cities > 1) victim.cities--;
+      victim.population = Math.max(0, victim.population - 10);
+      log(`🌪️ NATURAL DISASTER strikes ${victim.name}! -1 city, -10M population`, 'alert');
+    }},
+    {id: 'ufo_sighting', name: 'UFO Sighting', desc: "The unknown unites humanity, easing tensions", effect: () => {
+      DoomsdayClock.improve(0.3);
+      nations.forEach(n => n.instability = Math.max(0, (n.instability || 0) - 5));
+      log('🛸 UFO SIGHTINGS! Global unity improves Doomsday Clock (+0.3 min)', 'success');
+    }},
+    {id: 'cyber_espionage', name: 'Cyber Espionage', desc: "Covert hacks steal secrets worldwide", effect: () => {
+      nations.forEach(n => n.intel = Math.max(0, (n.intel || 0) - 2));
+      log('🖥️ GLOBAL CYBER ESPIONAGE! All nations -2 intel', 'warning');
+    }},
+    {id: 'religious_revival', name: 'Religious Revival', desc: "A spiritual wave calms a nation", effect: () => {
+      const lucky = nations[Math.floor(Math.random() * nations.length)];
+      lucky.instability = Math.max(0, (lucky.instability || 0) - 5);
+      log(`⛪ RELIGIOUS REVIVAL in ${lucky.name}! Faith calms unrest (-5 instability)`, 'success');
+    }},
+    {id: 'shadow_network', name: 'Shadow Network', desc: "Covert contacts grant free satellite intel on a rival", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
+        const targets = nations.filter(n => !n.isPlayer);
+        if (targets.length === 0) return;
+        const target = targets[Math.floor(Math.random() * targets.length)];
+        player.satellites = player.satellites || {};
+        player.satellites[target.id] = true;
+        log(`🕴️ SHADOW NETWORK! Free satellite intel on ${target.name}`, 'success');
+      }
+    }},
+    {id: 'mass_desertion', name: 'Mass Desertion', desc: "Troops abandon posts, weakening a nation", effect: () => {
+      const victim = nations[Math.floor(Math.random() * nations.length)];
+      victim.defense = Math.max(0, victim.defense - 1);
+      victim.missiles = Math.max(0, victim.missiles - 1);
+      log(`🏃‍♂️ MASS DESERTION in ${victim.name}! Military units abandon posts`, 'warning');
+    }},
+    {id: 'propaganda_backfire', name: 'Propaganda Backfire', desc: "Failed messaging inflames unrest", effect: () => {
+      const victim = nations[Math.floor(Math.random() * nations.length)];
+      victim.instability = (victim.instability || 0) + 15;
+      log(`📺 PROPAGANDA BACKFIRE in ${victim.name}! Lies exposed (+15 instability)`, 'warning');
+    }},
+    {id: 'unexpected_truce', name: 'Unexpected Truce', desc: "Two AI rivals agree to a sudden cease-fire", effect: () => {
+      const ai = nations.filter(n => !n.isPlayer);
+      if (ai.length < 2) return;
+      const [ai1, ai2] = ai;
+      ai1.treaties = ai1.treaties || {};
+      ai2.treaties = ai2.treaties || {};
+      ai1.treaties[ai2.id] = {truceTurns: 2};
+      ai2.treaties[ai1.id] = {truceTurns: 2};
+      log(`🤝 UNEXPECTED TRUCE! ${ai1.name} and ${ai2.name} agree to 2-turn cease-fire`, 'success');
+    }},
+    {id: 'terrorist_attack', name: 'Terrorist Attack', desc: "Terror strikes cripple defenses and fuel unrest", effect: () => {
+      const victim = nations[Math.floor(Math.random() * nations.length)];
+      victim.instability = (victim.instability || 0) + 12;
+      victim.defense = Math.max(0, victim.defense - 1);
+      log(`💣 TERRORIST ATTACK in ${victim.name}! +12 instability, -1 defense`, 'alert');
+    }},
+    {id: 'diplomatic_crisis', name: 'Diplomatic Crisis', desc: "Talks collapse, dragging the world toward war", effect: () => {
+      if (S.defcon > 1) S.defcon--;
+      DoomsdayClock.tick(0.2);
+      log('🏛️ DIPLOMATIC CRISIS! Tensions escalate globally', 'warning');
+    }},
+    {id: 'space_race', name: 'Space Race Victory', desc: "A nation wins a prestige space milestone", effect: () => {
+      const winner = nations[Math.floor(Math.random() * nations.length)];
+      winner.intel = (winner.intel || 0) + 8;
+      winner.instability = Math.max(0, (winner.instability || 0) - 8);
+      log(`🚀 SPACE RACE! ${winner.name} achieves orbital supremacy (+8 intel, -8 instab)`, 'success');
+    }},
+    {id: 'climate_disaster', name: 'Climate Disaster', desc: "Climate shocks raise instability and sap populations", effect: () => {
+      nations.forEach(n => {
+        n.instability = (n.instability || 0) + 3;
+        if (Math.random() < 0.3) {
+          n.population = Math.max(0, n.population - 1);
+        }
+      });
+      log('🌡️ CLIMATE DISASTER! Global instability +3, random population loss', 'warning');
+    }},
+    {id: 'energy_crisis', name: 'Energy Crisis', desc: "Fuel shortages dent industrial output worldwide", effect: () => {
+      nations.forEach(n => n.production = Math.max(0, (n.production || 0) - 3));
+      log('⚡ ENERGY CRISIS! All nations -3 production', 'warning');
+    }},
+    {id: 'tech_breakthrough', name: 'Tech Breakthrough', desc: "Research windfall powers new production", effect: () => {
+      const player = PlayerManager.get();
+      if (player) {
+        player.intel = (player.intel || 0) + 5;
+        player.production = (player.production || 0) + 5;
+        log('🧪 TECH BREAKTHROUGH! Research yields practical benefits (+5 intel, +5 prod)', 'success');
+      }
+    }},
+    {id: 'market_crash', name: 'Market Crash', desc: "Markets collapse, draining production reserves", effect: () => {
+      nations.forEach(n => {
+        n.production = Math.max(0, (n.production || 0) - 8);
+        n.instability = (n.instability || 0) + 5;
+      });
+      log('📉 MARKET CRASH! Global production -8, instability +5', 'alert');
+    }},
+    {id: 'election_chaos', name: 'Election Chaos', desc: "Contested elections roil a nation", effect: () => {
+      const victim = nations[Math.floor(Math.random() * nations.length)];
+      victim.instability = (victim.instability || 0) + 20;
+      victim.intel = Math.max(0, (victim.intel || 0) - 3);
+      log(`🗳️ ELECTION CHAOS in ${victim.name}! Democracy under strain (+20 instab, -3 intel)`, 'warning');
+    }},
+    {id: 'alliance_breakdown', name: 'Alliance Breakdown', desc: "Two AI allies fall out, reigniting rivalries", effect: () => {
+      const ai = nations.filter(n => !n.isPlayer);
+      if (ai.length < 2) return;
+      const [ai1, ai2] = ai;
+      if (ai1.treaties?.[ai2.id]) {
+        delete ai1.treaties[ai2.id];
+        delete ai2.treaties?.[ai1.id];
+        ai1.instability = (ai1.instability || 0) + 10;
+        ai2.instability = (ai2.instability || 0) + 10;
+        log(`💔 ALLIANCE BREAKDOWN! ${ai1.name} and ${ai2.name} relations collapse`, 'warning');
+      }
+    }},
     {id: 'earthquake', name: 'Earthquake', desc: "A massive earthquake threatens your cities; respond promptly to reduce casualties", effect: () => {
       AudioSys.playSFX('alert');
       const player = PlayerManager.get();
@@ -2499,7 +2781,6 @@ const RandomEvents = {
       }, 7000);
     }},
   ],
-  
   trigger() {
     if(Math.random() < 0.25 && S.turn > 3) {
       const event = this.events[Math.floor(Math.random() * this.events.length)];
@@ -2657,11 +2938,38 @@ function productionPhase() {
     let prodGain = Math.floor(baseProd * mult);
     let uranGain = Math.floor(baseUran * mult) + (n.doctrine === 'technocrat' ? 2 : 0);
     let intelGain = Math.floor(baseIntel * mult);
-    // Apply any ongoing production debuffs from events or culture ops.  Each point
-    // of debuff is a multiplicative reduction (e.g. 0.15 = -15%).
-    if (n.productionDebuff) {
-      prodGain = Math.floor(prodGain * (1 - n.productionDebuff));
+
+    // Temporary production modifiers from events are tracked separately so that
+    // one-off bonuses and penalties expire automatically.  productionBonus adds
+    // a percentage boost while productionDebuff subtracts a percentage.
+    let prodMultiplier = 1;
+    if (n.productionBonus) {
+      if (n.productionBonusTurns && n.productionBonusTurns > 0) {
+        prodMultiplier += n.productionBonus;
+        n.productionBonusTurns--;
+        if (n.productionBonusTurns <= 0) {
+          delete n.productionBonusTurns;
+          delete n.productionBonus;
+        }
+      } else if (!n.productionBonusTurns) {
+        prodMultiplier += n.productionBonus;
+      }
     }
+    if (n.productionDebuff) {
+      if (n.productionDebuffTurns && n.productionDebuffTurns > 0) {
+        prodMultiplier -= n.productionDebuff;
+        n.productionDebuffTurns--;
+        if (n.productionDebuffTurns <= 0) {
+          delete n.productionDebuffTurns;
+          delete n.productionDebuff;
+        }
+      } else if (!n.productionDebuffTurns) {
+        prodMultiplier -= n.productionDebuff;
+      }
+    }
+    prodMultiplier = Math.max(0, prodMultiplier);
+    prodGain = Math.floor(prodGain * prodMultiplier);
+
     // Apply temporary green shift debuffs from environmental propaganda.
     if (n.greenShiftTurns && n.greenShiftTurns > 0) {
       prodGain = Math.floor(prodGain * 0.6);
@@ -2678,6 +2986,19 @@ function productionPhase() {
       uranGain = Math.floor(uranGain * 0.7);
       n.environmentPenaltyTurns--;
     }
+
+    if (n.intelPenaltyAmount) {
+      if (n.intelPenaltyTurns && n.intelPenaltyTurns > 0) {
+        intelGain = Math.max(0, intelGain - n.intelPenaltyAmount);
+        n.intelPenaltyTurns--;
+        if (n.intelPenaltyTurns <= 0) {
+          delete n.intelPenaltyTurns;
+          delete n.intelPenaltyAmount;
+        }
+      } else if (!n.intelPenaltyTurns) {
+        intelGain = Math.max(0, intelGain - n.intelPenaltyAmount);
+      }
+    }
     // Maintenance costs: owning missiles and defence systems consumes part of your production each turn.
     // Each missile costs 0.5 production and each defence level costs 0.3 production per turn.
     const missileMaintenance = (n.missiles || 0) * 0.5;
@@ -2687,6 +3008,21 @@ function productionPhase() {
     n.production = (n.production || 0) + prodGain;
     n.uranium = (n.uranium || 0) + uranGain;
     n.intel = (n.intel || 0) + intelGain;
+
+    if (n.satelliteBonus && n.satelliteBonus > 0) {
+      const others = nations.filter(other => other && other !== n);
+      n.satellites = n.satellites || {};
+      others.forEach(other => {
+        if (other && other.id != null) {
+          n.satellites[other.id] = true;
+        }
+      });
+      n.satelliteBonus--;
+      if (n.satelliteBonus <= 0) {
+        n.satelliteBonus = 0;
+      }
+    }
+
     if (n.isPlayer) {
       log(`📊 Production: +${prodGain} PROD | +${uranGain} URAN | +${intelGain} INTEL (Total: ${n.production}/${n.uranium}/${n.intel})`, 'success');
     }
@@ -2695,6 +3031,22 @@ function productionPhase() {
 
 /// ============ RESOLUTION PHASE ============
 function resolutionPhase() {
+  nations.forEach(n => {
+    if (n.inspectionBlock && n.inspectionBlock > 0) {
+      n.inspectionBlock--;
+      if (n.inspectionBlock < 0) n.inspectionBlock = 0;
+    }
+    if (n.empDebuff && n.empDebuff > 0) {
+      n.empDebuff--;
+      if (n.empDebuff <= 0 && n.empRestore) {
+        n.defense = Math.max(0, n.defense + n.empRestore);
+        delete n.empRestore;
+      }
+    } else if (!n.empDebuff && n.empRestore) {
+      n.defense = Math.max(0, n.defense + n.empRestore);
+      delete n.empRestore;
+    }
+  });
   RandomEvents.trigger();
   // Reset migrant counters each turn.  At the start of the resolution
   // phase we record how many migrants arrived in the previous turn and
@@ -4125,8 +4477,9 @@ function actBuild() {
   const player = PlayerManager.get();
   if (!player) return;
   
+  const inspectionActive = (player.inspectionBlock || 0) > 0;
   const cityCost = getCityCost(player);
-  
+
   let html = '<div class="modal-grid">';
   
   html += `<button class="modal-btn" data-k="missile" ${!canAfford(player, COSTS.missile) ? 'disabled' : ''}>
@@ -4159,9 +4512,11 @@ function actBuild() {
   
   [10, 20, 50, 100].forEach(mt => {
     const cost = COSTS[`warhead_${mt}`];
-    html += `<button class="modal-btn" data-k="warhead_${mt}" ${!canAfford(player, cost) ? 'disabled' : ''}>
+    const disabled = (!canAfford(player, cost) || inspectionActive) ? 'disabled' : '';
+    const status = inspectionActive ? '<small>IAEA inspection active</small>' : `<small>Cost: ${cost.production} PROD, ${cost.uranium} URAN</small>`;
+    html += `<button class="modal-btn" data-k="warhead_${mt}" ${disabled}>
       BUILD ${mt}MT WARHEAD<br>
-      <small>Cost: ${cost.production} PROD, ${cost.uranium} URAN</small>
+      ${status}
     </button>`;
   });
 
@@ -4212,14 +4567,18 @@ function actBuild() {
           built = true;
         }
       } else if (k.startsWith('warhead_')) {
-        const mt = parseInt(k.split('_')[1]);
-        const cost = COSTS[k];
-        if (canAfford(player, cost)) {
-          pay(player, cost);
-          player.warheads = player.warheads || {};
-          player.warheads[mt] = (player.warheads[mt] || 0) + 1;
-          log(`Built ${mt}MT warhead`);
-          built = true;
+        if (inspectionActive) {
+          log('IAEA inspectors are onsite. Warhead production is halted this turn.', 'warning');
+        } else {
+          const mt = parseInt(k.split('_')[1]);
+          const cost = COSTS[k];
+          if (canAfford(player, cost)) {
+            pay(player, cost);
+            player.warheads = player.warheads || {};
+            player.warheads[mt] = (player.warheads[mt] || 0) + 1;
+            log(`Built ${mt}MT warhead`);
+            built = true;
+          }
         }
       } else if (k === 'submarine') {
         // Build a submarine if research is complete
@@ -5320,7 +5679,12 @@ function endTurn() {
   
   let aiActionCount = 0;
   aiNations.forEach(ai => {
-    for (let i = 0; i < actionsPerAI; i++) {
+    const bonus = ai.aiBonus || 0;
+    const totalActions = actionsPerAI + bonus;
+    if (ai.aiBonus) {
+      ai.aiBonus = Math.max(0, ai.aiBonus - bonus);
+    }
+    for (let i = 0; i < totalActions; i++) {
       setTimeout(() => aiTurn(ai), 500 * aiActionCount++);
     }
   });
