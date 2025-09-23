@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Storage wrapper for localStorage
@@ -88,6 +88,62 @@ interface GameState {
   events?: boolean;
 }
 
+type ThemeId = 'synthwave' | 'retro80s' | 'wargames' | 'nightmode' | 'highcontrast';
+
+const THEME_SETTINGS: Record<ThemeId, {
+  mapOutline: string;
+  grid: string;
+  radar: string;
+  ocean: string;
+  cloud: string;
+}> = {
+  synthwave: {
+    mapOutline: 'rgba(143,225,255,0.8)',
+    grid: 'rgba(143,225,255,0.25)',
+    radar: 'rgba(143,225,255,0.08)',
+    ocean: 'rgba(40,100,220,0.6)',
+    cloud: 'rgba(255,200,255,0.6)'
+  },
+  retro80s: {
+    mapOutline: 'rgba(0,255,65,0.5)',
+    grid: 'rgba(0,255,65,0.2)',
+    radar: 'rgba(0,255,65,0.08)',
+    ocean: 'rgba(30,70,160,0.65)',
+    cloud: 'rgba(255,105,180,0.6)'
+  },
+  wargames: {
+    mapOutline: 'rgba(0,255,0,0.4)',
+    grid: 'rgba(0,255,0,0.1)',
+    radar: 'rgba(0,255,0,0.05)',
+    ocean: 'rgba(0,80,160,0.6)',
+    cloud: 'rgba(150,150,150,0.6)'
+  },
+  nightmode: {
+    mapOutline: 'rgba(102,204,255,0.5)',
+    grid: 'rgba(102,204,255,0.18)',
+    radar: 'rgba(102,204,255,0.07)',
+    ocean: 'rgba(15,60,130,0.65)',
+    cloud: 'rgba(160,200,240,0.45)'
+  },
+  highcontrast: {
+    mapOutline: 'rgba(255,255,255,0.7)',
+    grid: 'rgba(255,255,255,0.25)',
+    radar: 'rgba(255,255,255,0.1)',
+    ocean: 'rgba(20,80,160,0.7)',
+    cloud: 'rgba(255,220,0,0.45)'
+  }
+};
+
+const themeOptions: { id: ThemeId; label: string }[] = [
+  { id: 'synthwave', label: 'Synthwave' },
+  { id: 'retro80s', label: 'Retro 80s' },
+  { id: 'wargames', label: 'WARGAMES' },
+  { id: 'nightmode', label: 'Night Mode' },
+  { id: 'highcontrast', label: 'High Contrast' }
+];
+
+let currentTheme: ThemeId = 'synthwave';
+
 // Global game state
 let S: GameState = {
   turn: 1,
@@ -128,15 +184,17 @@ let worldData: any = null;
 let worldCountries: any = null;
 
 // Leaders configuration
-const leaders = [
-  { name: 'REAGAN', ai: 'aggressive' },
-  { name: 'THATCHER', ai: 'balanced' },
-  { name: 'GORBACHEV', ai: 'defensive' },
-  { name: 'CASTRO', ai: 'trickster' },
-  { name: 'MAO', ai: 'chaotic' },
-  { name: 'NIXON', ai: 'paranoid' },
-  { name: 'BREZHNEV', ai: 'isolationist' },
-  { name: 'DE GAULLE', ai: 'balanced' }
+const leaders: { name: string; ai: string; color: string }[] = [
+  { name: 'Ronnie Raygun', ai: 'aggressive', color: '#ff5555' },
+  { name: 'Tricky Dick', ai: 'defensive', color: '#5599ff' },
+  { name: 'Jimi Farmer', ai: 'balanced', color: '#55ff99' },
+  { name: 'E. Musk Rat', ai: 'chaotic', color: '#ff55ff' },
+  { name: 'Donnie Trumpf', ai: 'aggressive', color: '#ffaa55' },
+  { name: 'Atom Hus-Bomb', ai: 'aggressive', color: '#ff3333' },
+  { name: 'Krazy Re-Entry', ai: 'chaotic', color: '#cc44ff' },
+  { name: 'Odd\'n Wild Card', ai: 'trickster', color: '#44ffcc' },
+  { name: 'Oil-Stain Lint-Off', ai: 'balanced', color: '#88ff88' },
+  { name: 'Ruin Annihilator', ai: 'aggressive', color: '#ff6600' }
 ];
 
 // Doctrines configuration
@@ -274,54 +332,61 @@ const AudioSys = {
 const Atmosphere = {
   clouds: [] as any[],
   stars: [] as any[],
-  
+  initialized: false,
+
   init() {
-    // Generate stars
+    if (this.initialized) return;
     this.stars = [];
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 120; i++) {
       this.stars.push({
         x: Math.random() * W,
-        y: Math.random() * H,
+        y: Math.random() * H * 0.6,
         brightness: Math.random()
       });
     }
-    
-    // Generate clouds
+
     this.clouds = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 16; i++) {
       this.clouds.push({
-        x: Math.random() * W * 2,
-        y: Math.random() * H * 0.3,
-        size: 20 + Math.random() * 40,
-        speed: 0.1 + Math.random() * 0.3
+        x: Math.random() * W,
+        y: Math.random() * H * 0.5,
+        sizeX: 160 + Math.random() * 220,
+        sizeY: 60 + Math.random() * 90,
+        speed: 0.05 + Math.random() * 0.1
       });
     }
+    this.initialized = true;
   },
   
   update() {
     this.clouds.forEach(cloud => {
       cloud.x += cloud.speed;
-      if (cloud.x > W + cloud.size) {
-        cloud.x = -cloud.size;
+      if (cloud.x - cloud.sizeX > W) {
+        cloud.x = -cloud.sizeX;
       }
     });
   },
   
   draw(context: CanvasRenderingContext2D) {
-    // Draw stars
-    context.fillStyle = 'rgba(255,255,255,0.3)';
+    if (!this.initialized) return;
+
+    const palette = THEME_SETTINGS[currentTheme];
+
+    context.fillStyle = 'rgba(255,255,255,0.25)';
     this.stars.forEach(star => {
-      context.globalAlpha = star.brightness * 0.5;
+      context.globalAlpha = star.brightness * 0.4;
       context.fillRect(star.x, star.y, 1, 1);
     });
     context.globalAlpha = 1;
-    
-    // Draw clouds
-    context.fillStyle = 'rgba(200,200,200,0.1)';
+
     this.clouds.forEach(cloud => {
+      context.save();
+      context.globalAlpha = 0.08;
+      context.fillStyle = palette.cloud;
       context.beginPath();
-      context.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+      context.ellipse(cloud.x, cloud.y, cloud.sizeX, cloud.sizeY, 0, 0, Math.PI * 2);
       context.fill();
+      context.restore();
     });
   }
 };
@@ -347,9 +412,11 @@ const Ocean = {
   
   draw(context: CanvasRenderingContext2D) {
     const time = Date.now() / 1000;
-    context.strokeStyle = 'rgba(0,100,200,0.2)';
+    const palette = THEME_SETTINGS[currentTheme];
+    context.strokeStyle = palette.ocean;
+    context.globalAlpha = 0.35;
     context.lineWidth = 1;
-    
+
     this.waves.forEach(wave => {
       context.beginPath();
       for (let x = 0; x < W; x += 5) {
@@ -359,6 +426,7 @@ const Ocean = {
       }
       context.stroke();
     });
+    context.globalAlpha = 1;
   }
 };
 
@@ -444,15 +512,17 @@ function initNations() {
   nations = [];
   PlayerManager.reset();
   
+  const playerLeaderName = S.selectedLeader || 'PLAYER';
+  const playerLeaderConfig = leaders.find(l => l.name === playerLeaderName);
   const playerNation: Nation = {
     id: 'player',
     isPlayer: true,
-    name: 'UNITED STATES',
-    leader: S.selectedLeader || 'PLAYER',
+    name: 'PLAYER',
+    leader: playerLeaderName,
     doctrine: S.selectedDoctrine || undefined,
     lon: -95,
     lat: 39,
-    color: '#00ff00',
+    color: playerLeaderConfig?.color || '#00ffff',
     population: 240,
     missiles: 5,
     bombers: 2,
@@ -464,9 +534,12 @@ function initNations() {
     cities: 1,
     warheads: { 10: 3, 20: 2 },
     researched: {},
-    treaties: {}
+    treaties: {},
+    threats: {},
+    migrantsThisTurn: 0,
+    migrantsTotal: 0
   };
-  
+
   // Apply doctrine bonuses
   if (S.selectedDoctrine) {
     const doctrine = doctrines[S.selectedDoctrine as keyof typeof doctrines];
@@ -491,48 +564,61 @@ function initNations() {
       }
     }
   }
-  
+
   nations.push(playerNation);
-  
-  // Add AI nations
-  const aiNations = [
-    { name: 'USSR', lon: 37, lat: 55, leader: 'BREZHNEV' },
-    { name: 'CHINA', lon: 116, lat: 39, leader: 'MAO' },
-    { name: 'UK', lon: 0, lat: 51, leader: 'THATCHER' },
-    { name: 'FRANCE', lon: 2, lat: 48, leader: 'DE GAULLE' },
-    { name: 'INDIA', lon: 77, lat: 28, leader: 'GANDHI' }
+
+  const aiPositions = [
+    { lon: 37, lat: 55, name: 'EURASIA' },
+    { lon: 116, lat: 40, name: 'EASTASIA' },
+    { lon: -60, lat: -15, name: 'SOUTHAM' },
+    { lon: 20, lat: 0, name: 'AFRICA' }
   ];
-  
-  aiNations.forEach((config, i) => {
-    const leaderData = leaders.find(l => l.name === config.leader) || { name: config.leader, ai: 'balanced' };
+
+  const doctrineKeys = Object.keys(doctrines);
+  const availableLeaders = leaders.filter(l => l.name !== playerLeaderName);
+  const shuffledLeaders = (availableLeaders.length ? availableLeaders : leaders)
+    .slice()
+    .sort(() => Math.random() - 0.5);
+
+  aiPositions.forEach((pos, i) => {
+    const leaderConfig = shuffledLeaders[i % shuffledLeaders.length];
+    const aiDoctrine = doctrineKeys.length
+      ? doctrineKeys[Math.floor(Math.random() * doctrineKeys.length)]
+      : undefined;
+
     const nation: Nation = {
       id: `ai_${i}`,
       isPlayer: false,
-      name: config.name,
-      leader: config.leader,
-      ai: leaderData.ai,
-      lon: config.lon,
-      lat: config.lat,
-      color: ['#ff0040', '#ff8000', '#40ff00', '#0040ff', '#ff0080'][i],
-      population: 180 + Math.random() * 80,
-      missiles: 3 + Math.floor(Math.random() * 4),
-      bombers: 1 + Math.floor(Math.random() * 2),
-      defense: 1 + Math.floor(Math.random() * 3),
+      name: pos.name,
+      leader: leaderConfig?.name || `AI_${i}`,
+      ai: leaderConfig?.ai || 'balanced',
+      doctrine: aiDoctrine,
+      lon: pos.lon,
+      lat: pos.lat,
+      color: leaderConfig?.color || ['#ff0040', '#ff8000', '#40ff00', '#0040ff'][i % 4],
+      population: 150 + Math.random() * 60,
+      missiles: 4 + Math.floor(Math.random() * 4),
+      bombers: Math.floor(Math.random() * 3),
+      defense: 2 + Math.floor(Math.random() * 4),
       instability: Math.random() * 20,
-      production: 15 + Math.floor(Math.random() * 10),
-      uranium: 8 + Math.floor(Math.random() * 12),
-      intel: 5 + Math.floor(Math.random() * 10),
+      production: 25 + Math.floor(Math.random() * 35),
+      uranium: 6 + Math.floor(Math.random() * 10),
+      intel: 12 + Math.floor(Math.random() * 15),
       cities: 1,
-      warheads: { 10: 2, 20: 1 },
+      warheads: { 10: 2 + Math.floor(Math.random() * 3), 20: 1 + Math.floor(Math.random() * 2) },
       researched: {},
       treaties: {},
-      threats: {}
+      satellites: {},
+      threats: {},
+      migrantsThisTurn: 0,
+      migrantsTotal: 0
     };
+
     nations.push(nation);
   });
-  
+
   log('=== GAME START ===', 'success');
-  log(`Leader: ${S.selectedLeader}`, 'success');
+  log(`Leader: ${playerLeaderName}`, 'success');
   log(`Doctrine: ${S.selectedDoctrine}`, 'success');
 }
 
@@ -777,9 +863,9 @@ async function loadWorld() {
     const cached = Storage.getItem(CACHE_NAME);
     if (cached) {
       const data = JSON.parse(cached);
-      if (data.type === 'Topology' && (window as any).topojson) {
+      if (data.type === 'Topology' && data.objects) {
         worldData = data;
-        worldCountries = (window as any).topojson.feature(data, data.objects.countries || data.objects.land);
+        worldCountries = feature(data, data.objects.countries || data.objects.land);
         log('World map loaded from cache');
         return;
       } else if (data.type === 'FeatureCollection') {
@@ -804,9 +890,9 @@ async function loadWorld() {
         console.warn('Could not cache map data');
       }
       
-      if ((window as any).topojson && topo.objects) {
+      if (topo.objects) {
         worldData = topo;
-        worldCountries = (window as any).topojson.feature(topo, topo.objects.countries || topo.objects.land);
+        worldCountries = feature(topo, topo.objects.countries || topo.objects.land);
         log('World map loaded from CDN');
         return;
       }
@@ -868,31 +954,35 @@ function toLonLat(x: number, y: number): [number, number] {
 
 function drawWorld() {
   if (!worldCountries || !ctx) return;
-  
+
+  const palette = THEME_SETTINGS[currentTheme];
+
   ctx.save();
-  ctx.strokeStyle = 'rgba(0,255,255,0.3)';
+  ctx.strokeStyle = palette.mapOutline;
   ctx.lineWidth = 1;
-  
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
   worldCountries.features.forEach((feature: any) => {
     ctx.beginPath();
     const coords = feature.geometry.coordinates;
-    
+
     if (feature.geometry.type === 'Polygon') {
       drawWorldPath(coords[0]);
     } else if (feature.geometry.type === 'MultiPolygon') {
       coords.forEach((poly: any) => drawWorldPath(poly[0]));
     }
-    
+
     ctx.stroke();
   });
-  
+
   ctx.restore();
-  
+
   // Grid lines
   ctx.save();
-  ctx.strokeStyle = 'rgba(0,255,255,0.1)';
+  ctx.strokeStyle = palette.grid;
   ctx.lineWidth = 0.5;
-  
+
   for (let lon = -180; lon <= 180; lon += 30) {
     ctx.beginPath();
     for (let lat = -90; lat <= 90; lat += 5) {
@@ -902,12 +992,22 @@ function drawWorld() {
     }
     ctx.stroke();
   }
-  
+
+  for (let lat = -90; lat <= 90; lat += 30) {
+    ctx.beginPath();
+    for (let lon = -180; lon <= 180; lon += 5) {
+      const [x, y] = project(lon, lat);
+      if (lon === -180) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
   ctx.restore();
-  
+
   // Radar sweep
   const scanY = (Date.now() / 30) % H;
-  ctx.fillStyle = 'rgba(0,255,255,0.05)';
+  ctx.fillStyle = palette.radar;
   ctx.fillRect(0, scanY, W, 2);
 }
 
@@ -1233,6 +1333,14 @@ function drawParticles() {
       ctx.beginPath();
       ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
       ctx.fill();
+    } else if (p.type === 'spark') {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = a;
+      const g = 150 + Math.floor(Math.random() * 80);
+      ctx.fillStyle = `rgba(255,${g},50,${a * 0.9})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+      ctx.fill();
     } else {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = a;
@@ -1240,7 +1348,7 @@ function drawParticles() {
       ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
     }
     ctx.restore();
-    
+
     return true;
   });
 }
@@ -1265,19 +1373,29 @@ function drawFX() {
     ctx.globalCompositeOperation = 'lighter';
     let col = `rgba(255,121,198,${a})`;
     if (b.type === 'shock') col = `rgba(255,170,90,${a})`;
+    if (b.type === 'heat') col = `rgba(255,120,60,${a})`;
     if (b.type === 'incoming') col = `rgba(255,255,255,${a})`;
     if (b.type === 'afterglow') col = `rgba(255,255,200,${a})`;
     if (b.type === 'sonar') col = `rgba(100,255,255,${a})`;
+    if (b.type === 'flash') col = `rgba(255,255,255,${a})`;
+    if (b.type === 'plasma') col = `rgba(255,70,180,${a})`;
     ctx.strokeStyle = col;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = b.type === 'flash' ? 4 : 3;
+    let rx = typeof b.x === 'number' ? b.x : 0;
+    let ry = typeof b.y === 'number' ? b.y : 0;
+    if (b.lon !== undefined && b.lat !== undefined) {
+      const projected = project(b.lon, b.lat);
+      rx = projected[0];
+      ry = projected[1];
+    }
     ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.arc(rx, ry, b.r, 0, Math.PI * 2);
     ctx.stroke();
     if (b.txt) {
       ctx.fillStyle = `rgba(255,255,255,${a})`;
       ctx.font = 'bold 12px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(b.txt, b.x, b.y - 12);
+      ctx.fillText(b.txt, rx, ry - 12);
     }
     ctx.restore();
     if (b.r >= b.max) S.rings.splice(i, 1);
@@ -1395,7 +1513,9 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
   if (target && !target.isPlayer) {
     maybeBanter(target, 0.7);
   }
-  
+
+  const [elon, elat] = toLonLat(x, y);
+
   for (let i = 0; i < particleCount; i++) {
     const a = Math.random() * Math.PI * 2;
     const speed = (1 + Math.random() * 3) * scale;
@@ -1407,16 +1527,32 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
       max: 1000
     });
   }
-  
-  S.rings.push({ x, y, r: 3, max: 120 * scale * (S.fx || 1), speed: 2, alpha: 1, type: 'shock' });
-  S.rings.push({ x, y, r: 1, max: 40 * (S.fx || 1), speed: 1.5, alpha: 0.8, type: 'heat' });
-  
+
+  S.rings.push({ lon: elon, lat: elat, r: 3, max: 120 * scale * (S.fx || 1), speed: 2, alpha: 1, type: 'shock' });
+  S.rings.push({ lon: elon, lat: elat, r: 1, max: 40 * (S.fx || 1), speed: 1.5, alpha: 0.8, type: 'heat' });
+  S.rings.push({ lon: elon, lat: elat, r: 2, max: 80 * scale * (S.fx || 1), speed: 2.5, alpha: 0.9, type: 'flash' });
+  S.rings.push({ lon: elon, lat: elat, r: 4, max: 100 * scale * (S.fx || 1), speed: 1.5, alpha: 0.7, type: 'plasma' });
+
+  const sparkCount = Math.floor(50 * scale);
+  for (let j = 0; j < sparkCount; j++) {
+    const a2 = Math.random() * Math.PI * 2;
+    const spd = (0.5 + Math.random() * 2.5) * scale;
+    S.particles.push({
+      x, y,
+      vx: Math.cos(a2) * spd,
+      vy: Math.sin(a2) * spd,
+      life: 300 + Math.random() * 300,
+      max: 600,
+      type: 'spark'
+    });
+  }
+
   S.radiationZones.push({
     x, y,
     radius: Math.sqrt(yieldMT) * 8,
     intensity: yieldMT / 100
   });
-  
+
   // Nuclear winter accumulation
   if (yieldMT >= 50) {
     S.nuclearWinterLevel = (S.nuclearWinterLevel || 0) + (yieldMT || 0) / 100;
@@ -1455,10 +1591,8 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
       }
     });
   }
-  
-  if (yieldMT >= 50) {
-    S.screenShake = Math.min(20, yieldMT / 10);
-  }
+
+  S.screenShake = Math.max(S.screenShake || 0, Math.min(20, yieldMT / 5));
   
   if (target) {
     const reduction = Math.max(0, 1 - target.defense * 0.05);
@@ -1805,7 +1939,9 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
     return;
   }
-  
+
+  ctx.imageSmoothingEnabled = !(currentTheme === 'retro80s' || currentTheme === 'wargames');
+
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, W, H);
 
@@ -1848,6 +1984,31 @@ export default function NoradVector() {
   const [modalContent, setModalContent] = useState({ title: '', content: '' });
   const [selectedLeader, setSelectedLeader] = useState<string | null>(null);
   const [selectedDoctrine, setSelectedDoctrine] = useState<string | null>(null);
+  const [theme, setTheme] = useState<ThemeId>('synthwave');
+
+  useEffect(() => {
+    const stored = Storage.getItem('theme');
+    if (stored && themeOptions.some(opt => opt.id === stored)) {
+      const valid = stored as ThemeId;
+      setTheme(valid);
+      currentTheme = valid;
+    } else {
+      currentTheme = 'synthwave';
+    }
+  }, []);
+
+  useEffect(() => {
+    currentTheme = theme;
+    const classNames = themeOptions.map(opt => `theme-${opt.id}`);
+    if (typeof document !== 'undefined') {
+      document.body.classList.remove(...classNames);
+      document.body.classList.add(`theme-${theme}`);
+    }
+    Storage.setItem('theme', theme);
+    if (canvasRef.current) {
+      canvasRef.current.style.imageRendering = theme === 'retro80s' || theme === 'wargames' ? 'pixelated' : 'auto';
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (canvasRef.current && isGameStarted) {
@@ -2060,6 +2221,9 @@ export default function NoradVector() {
   }, [isGameStarted]);
 
   const startGame = useCallback(() => {
+    if (!selectedLeader || !selectedDoctrine) {
+      return;
+    }
     S.selectedLeader = selectedLeader;
     S.selectedDoctrine = selectedDoctrine;
     S.playerName = selectedLeader;
@@ -2106,18 +2270,27 @@ export default function NoradVector() {
             <div>
               <h2 className="text-3xl mb-6 text-cyan-400">SELECT LEADER</h2>
               <div className="grid grid-cols-2 gap-4 mb-8">
-                {leaders.map(leader => (
-                  <Button
-                    key={leader.name}
-                    onClick={() => setSelectedLeader(leader.name)}
-                    className="p-6 bg-black border border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-black"
-                  >
-                    <div>
-                      <div className="font-bold">{leader.name}</div>
-                      <div className="text-sm">{leader.ai}</div>
-                    </div>
-                  </Button>
-                ))}
+                {leaders.map(leader => {
+                  const isSelected = selectedLeader === leader.name;
+                  return (
+                    <Button
+                      key={leader.name}
+                      onClick={() => setSelectedLeader(leader.name)}
+                      className="p-6 border transition-all duration-300 uppercase tracking-wide"
+                      style={{
+                        borderColor: leader.color,
+                        backgroundColor: isSelected ? leader.color : 'rgba(0,0,0,0.6)',
+                        color: isSelected ? '#000000' : leader.color,
+                        boxShadow: isSelected ? `0 0 18px ${leader.color}` : '0 0 8px rgba(0,0,0,0.4)'
+                      }}
+                    >
+                      <div>
+                        <div className="font-bold">{leader.name}</div>
+                        <div className="text-sm opacity-80">{leader.ai}</div>
+                      </div>
+                    </Button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -2156,6 +2329,24 @@ export default function NoradVector() {
               </Button>
             </div>
           )}
+
+          <div className="mt-12">
+            <h2 className="text-2xl mb-4 text-purple-300">VISUAL THEME</h2>
+            <div className="flex flex-wrap justify-center gap-3">
+              {themeOptions.map(opt => {
+                const isActive = theme === opt.id;
+                return (
+                  <Button
+                    key={opt.id}
+                    onClick={() => setTheme(opt.id)}
+                    className={`px-4 py-2 border text-sm transition-all ${isActive ? 'bg-purple-500 text-black border-purple-300' : 'bg-transparent border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-black'}`}
+                  >
+                    {opt.label.toUpperCase()}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -2264,6 +2455,24 @@ export default function NoradVector() {
         <div id="log" className="absolute bottom-4 left-4 bg-black bg-opacity-80 border border-green-500 p-4 rounded w-96 h-48 overflow-y-auto">
           <h3 className="text-green-400 mb-2">EVENT LOG</h3>
           {/* Populated by log() function */}
+        </div>
+
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 border border-purple-500 p-3 rounded pointer-events-auto">
+          <h3 className="text-purple-300 text-xs tracking-[0.35em] mb-2 text-center">THEME</h3>
+          <div className="flex flex-wrap justify-center gap-2">
+            {themeOptions.map(opt => {
+              const active = theme === opt.id;
+              return (
+                <Button
+                  key={opt.id}
+                  onClick={() => setTheme(opt.id)}
+                  className={`px-3 py-1 text-xs border transition ${active ? 'bg-purple-500 text-black border-purple-300' : 'bg-transparent text-purple-200 border-purple-500 hover:bg-purple-500 hover:text-black'}`}
+                >
+                  {opt.label.toUpperCase()}
+                </Button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
