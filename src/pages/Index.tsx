@@ -2574,25 +2574,386 @@ export default function NoradVector() {
     );
   }, []);
 
-  const handleBuild = useCallback(() => {
+  const getBuildContext = useCallback((actionLabel: string): Nation | null => {
+    if (!isGameStarted) {
+      toast({ title: 'Simulation inactive', description: 'Start the scenario before issuing build orders.' });
+      return null;
+    }
+
+    if (S.gameOver) {
+      toast({ title: 'Conflict resolved', description: 'Further production orders are unnecessary.' });
+      return null;
+    }
+
     const player = PlayerManager.get();
+    if (!player) {
+      toast({ title: 'No command authority', description: 'Unable to locate the player nation.' });
+      return null;
+    }
+
+    if (S.phase !== 'PLAYER') {
+      toast({ title: 'Out of phase', description: `${actionLabel} orders can only be issued during the player phase.` });
+      return null;
+    }
+
+    if (S.actionsRemaining <= 0) {
+      toast({
+        title: 'No actions remaining',
+        description: 'End the turn or adjust DEFCON to regain command capacity.',
+      });
+      return null;
+    }
+
+    return player;
+  }, [isGameStarted]);
+
+  const buildMissile = useCallback(() => {
+    const player = getBuildContext('Build');
     if (!player) return;
 
-    let content = `
-      <div class="grid grid-cols-2 gap-4">
-        <button class="p-4 border border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-black">
-          BUILD MISSILE<br>
-          <small>Cost: 8 PRODUCTION</small>
-        </button>
-        <button class="p-4 border border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-black">
-          BUILD BOMBER<br>
-          <small>Cost: 20 PRODUCTION</small>
-        </button>
-      </div>
-    `;
+    if (!canAfford(player, COSTS.missile)) {
+      toast({ title: 'Insufficient production', description: 'You need 8 production to assemble an ICBM.' });
+      return;
+    }
 
-    openModal('BUILD', content);
-  }, [openModal]);
+    pay(player, COSTS.missile);
+    player.missiles = (player.missiles || 0) + 1;
+
+    log(`${player.name} builds a missile`);
+    updateDisplay();
+    consumeAction();
+    closeModal();
+  }, [closeModal, getBuildContext]);
+
+  const buildBomber = useCallback(() => {
+    const player = getBuildContext('Build');
+    if (!player) return;
+
+    if (!canAfford(player, COSTS.bomber)) {
+      toast({ title: 'Insufficient production', description: 'Strategic bombers cost 20 production to deploy.' });
+      return;
+    }
+
+    pay(player, COSTS.bomber);
+    player.bombers = (player.bombers || 0) + 1;
+
+    log(`${player.name} commissions a strategic bomber`);
+    updateDisplay();
+    consumeAction();
+    closeModal();
+  }, [closeModal, getBuildContext]);
+
+  const buildDefense = useCallback(() => {
+    const player = getBuildContext('Defense upgrade');
+    if (!player) return;
+
+    if (!canAfford(player, COSTS.defense)) {
+      toast({ title: 'Insufficient production', description: 'Defense upgrades require 15 production.' });
+      return;
+    }
+
+    pay(player, COSTS.defense);
+    player.defense = (player.defense || 0) + 2;
+
+    log(`${player.name} reinforces continental defense (+2)`);
+    updateDisplay();
+    consumeAction();
+    closeModal();
+  }, [closeModal, getBuildContext]);
+
+  const buildCity = useCallback(() => {
+    const player = getBuildContext('Infrastructure');
+    if (!player) return;
+
+    const cityCost = getCityCost(player);
+    if (!canAfford(player, cityCost)) {
+      const costText = Object.entries(cityCost)
+        .map(([resource, amount]) => `${amount} ${resource.toUpperCase()}`)
+        .join(' & ');
+      toast({ title: 'Insufficient production', description: `Constructing a new city requires ${costText}.` });
+      return;
+    }
+
+    pay(player, cityCost);
+    player.cities = (player.cities || 1) + 1;
+
+    const spread = 6;
+    const angle = Math.random() * Math.PI * 2;
+    const newLat = player.lat + Math.sin(angle) * spread;
+    const newLon = player.lon + Math.cos(angle) * spread;
+    CityLights.addCity(newLat, newLon, 1.0);
+
+    log(`${player.name} establishes city #${player.cities}`);
+    updateDisplay();
+    consumeAction();
+    closeModal();
+  }, [closeModal, getBuildContext]);
+
+  const buildWarhead = useCallback((yieldMT: number) => {
+    const player = getBuildContext('Warhead production');
+    if (!player) return;
+
+    const researchId = WARHEAD_YIELD_TO_ID.get(yieldMT);
+    if (researchId && !player.researched?.[researchId]) {
+      const projectName = RESEARCH_LOOKUP[researchId]?.name || `${yieldMT}MT program`;
+      toast({ title: 'Technology unavailable', description: `Research ${projectName} before producing this warhead.` });
+      return;
+    }
+
+    const costKey = `warhead_${yieldMT}` as keyof typeof COSTS;
+    const cost = COSTS[costKey];
+    if (!cost) {
+      toast({ title: 'Unknown cost', description: `No cost data for ${yieldMT}MT warheads.` });
+      return;
+    }
+
+    if (!canAfford(player, cost)) {
+      const requirements = Object.entries(cost)
+        .map(([resource, amount]) => `${amount} ${resource.toUpperCase()}`)
+        .join(' & ');
+      toast({ title: 'Insufficient resources', description: `Producing this warhead requires ${requirements}.` });
+      return;
+    }
+
+    pay(player, cost);
+    player.warheads = player.warheads || {};
+    player.warheads[yieldMT] = (player.warheads[yieldMT] || 0) + 1;
+
+    log(`${player.name} assembles a ${yieldMT}MT warhead`);
+    updateDisplay();
+    consumeAction();
+    closeModal();
+  }, [closeModal, getBuildContext]);
+
+  const renderBuildModal = useCallback((): ReactNode => {
+    const player = PlayerManager.get();
+    if (!player) {
+      return <div className="text-sm text-cyan-200">No nation data available.</div>;
+    }
+
+    const actionAvailable =
+      isGameStarted && !S.gameOver && S.phase === 'PLAYER' && S.actionsRemaining > 0;
+
+    let actionMessage: { tone: 'info' | 'warning'; text: string } | null = null;
+    if (!isGameStarted) {
+      actionMessage = {
+        tone: 'warning',
+        text: 'Begin the simulation to issue strategic production orders.',
+      };
+    } else if (S.gameOver) {
+      actionMessage = {
+        tone: 'warning',
+        text: 'The conflict has concluded. Production lines stand down.',
+      };
+    } else if (S.phase !== 'PLAYER') {
+      actionMessage = {
+        tone: 'warning',
+        text: 'Await the player phase before issuing new build directives.',
+      };
+    } else if (S.actionsRemaining <= 0) {
+      actionMessage = {
+        tone: 'warning',
+        text: 'Command capacity exhausted. End the turn or adjust DEFCON to regain actions.',
+      };
+    }
+
+    const formatCost = (cost: ResourceCost) => {
+      const parts = Object.entries(cost)
+        .filter(([, amount]) => (amount || 0) > 0)
+        .map(([resource, amount]) => `${amount} ${resource.toUpperCase()}`);
+      return parts.length > 0 ? parts.join(' • ') : 'No cost';
+    };
+
+    type PlayerResourceKey = 'production' | 'intel' | 'uranium';
+
+    const resourceGapText = (cost: ResourceCost) => {
+      const missing = Object.entries(cost)
+        .map(([resource, amount]) => {
+          const required = amount || 0;
+          const key = resource as PlayerResourceKey;
+          const current = player[key] ?? 0;
+          const deficit = required - current;
+          if (deficit <= 0) return null;
+          return `${deficit} ${resource.toUpperCase()}`;
+        })
+        .filter(Boolean) as string[];
+      return missing.length ? `Requires ${missing.join(' & ')}` : null;
+    };
+
+    const cityCost = getCityCost(player);
+    const nextCityNumber = (player.cities || 1) + 1;
+
+    type BuildOption = {
+      key: string;
+      label: string;
+      description: string;
+      cost: ResourceCost;
+      onClick: () => void;
+      statusLine?: string;
+      requirementMessage?: string | null;
+    };
+
+    const deliveryOptions: BuildOption[] = [
+      {
+        key: 'missile',
+        label: 'Build Missile',
+        description: 'Add an ICBM to your strategic arsenal.',
+        cost: COSTS.missile,
+        onClick: buildMissile,
+        statusLine: `Ready missiles: ${player.missiles || 0}`,
+      },
+      {
+        key: 'bomber',
+        label: 'Build Bomber',
+        description: 'Deploy a strategic bomber wing for flexible delivery.',
+        cost: COSTS.bomber,
+        onClick: buildBomber,
+        statusLine: `Available bombers: ${player.bombers || 0}`,
+      },
+      {
+        key: 'defense',
+        label: 'Upgrade Defense (+2)',
+        description: 'Invest in ABM systems to harden your defenses.',
+        cost: COSTS.defense,
+        onClick: buildDefense,
+        statusLine: `Current defense: ${player.defense || 0}`,
+      },
+    ];
+
+    const infrastructureOptions: BuildOption[] = [
+      {
+        key: 'city',
+        label: `Build City #${nextCityNumber}`,
+        description: 'Expand industrial capacity and resource yields.',
+        cost: cityCost,
+        onClick: buildCity,
+        statusLine: `Existing cities: ${player.cities || 1}`,
+      },
+    ];
+
+    const warheadYields = [10, 20, 40, 50, 100, 200];
+    const warheadOptions: BuildOption[] = warheadYields
+      .map(yieldMT => {
+        const costKey = `warhead_${yieldMT}` as keyof typeof COSTS;
+        const cost = COSTS[costKey];
+        if (!cost) return null;
+
+        const researchId = WARHEAD_YIELD_TO_ID.get(yieldMT);
+        const hasResearch = !researchId || !!player.researched?.[researchId];
+        const requirementMessage = hasResearch
+          ? null
+          : `Research ${RESEARCH_LOOKUP[researchId!]?.name ?? `${yieldMT}MT program`} to unlock.`;
+
+        return {
+          key: `warhead-${yieldMT}`,
+          label: `Assemble ${yieldMT}MT Warhead`,
+          description: `Increase your nuclear stockpile with a ${yieldMT}MT device.`,
+          cost,
+          onClick: () => buildWarhead(yieldMT),
+          statusLine: `Stock: ${player.warheads?.[yieldMT] || 0}`,
+          requirementMessage,
+        } satisfies BuildOption;
+      })
+      .filter(Boolean) as BuildOption[];
+
+    const renderOption = (option: BuildOption) => {
+      const affordable = canAfford(player, option.cost);
+      const requirement = option.requirementMessage || null;
+      const disabled = !actionAvailable || !affordable || !!requirement;
+
+      const reasons: string[] = [];
+      if (!actionAvailable && actionMessage) {
+        reasons.push(actionMessage.text);
+      }
+      if (requirement) {
+        reasons.push(requirement);
+      }
+      if (!affordable) {
+        const gap = resourceGapText(option.cost);
+        if (gap) {
+          reasons.push(gap);
+        }
+      }
+
+      const disabledReason = reasons.join(' • ');
+
+      return (
+        <div
+          key={option.key}
+          className="rounded border border-cyan-700/70 bg-black/60 p-4 shadow-[0_0_12px_rgba(0,255,255,0.08)]"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <div className="font-semibold text-cyan-100">{option.label}</div>
+              <div className="text-xs text-cyan-200/70 uppercase">Cost: {formatCost(option.cost)}</div>
+              <div className="text-xs text-cyan-200/80">{option.description}</div>
+              {option.statusLine ? (
+                <div className="text-xs text-cyan-200/60">{option.statusLine}</div>
+              ) : null}
+            </div>
+            <Button
+              onClick={option.onClick}
+              disabled={disabled}
+              title={disabledReason || 'Issue production order'}
+              className={`px-3 py-2 text-sm font-semibold transition-colors ${
+                disabled
+                  ? 'bg-cyan-900/40 text-cyan-200/40 cursor-not-allowed'
+                  : 'bg-cyan-600 text-black hover:bg-cyan-500'
+              }`}
+            >
+              {disabled ? 'Unavailable' : 'Order' }
+            </Button>
+          </div>
+          {disabledReason ? (
+            <div className="mt-3 text-xs text-yellow-300/80">{disabledReason}</div>
+          ) : null}
+        </div>
+      );
+    };
+
+    return (
+      <div className="space-y-5">
+        {actionMessage ? (
+          <div
+            className={`rounded border p-3 text-xs ${
+              actionMessage.tone === 'warning'
+                ? 'border-yellow-400/60 bg-yellow-900/10 text-yellow-200'
+                : 'border-cyan-400/60 bg-cyan-900/10 text-cyan-200'
+            }`}
+          >
+            {actionMessage.text}
+          </div>
+        ) : null}
+
+        <div className="space-y-4">
+          <div>
+            <h3 className="mb-2 text-sm font-semibold tracking-wide text-cyan-300">DELIVERY & DEFENSE</h3>
+            <div className="grid gap-3 md:grid-cols-2">
+              {deliveryOptions.map(renderOption)}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-sm font-semibold tracking-wide text-cyan-300">INFRASTRUCTURE</h3>
+            <div className="grid gap-3 md:grid-cols-2">
+              {infrastructureOptions.map(renderOption)}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-sm font-semibold tracking-wide text-cyan-300">WARHEAD PRODUCTION</h3>
+            <div className="grid gap-3 md:grid-cols-2">
+              {warheadOptions.map(renderOption)}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }, [buildBomber, buildCity, buildDefense, buildMissile, buildWarhead, isGameStarted]);
+
+  const handleBuild = useCallback(() => {
+    openModal('STRATEGIC PRODUCTION', renderBuildModal);
+  }, [openModal, renderBuildModal]);
 
   const handleResearch = useCallback(() => {
     openModal('RESEARCH DIRECTORATE', renderResearchModal);
