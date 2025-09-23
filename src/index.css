@@ -110,3 +110,34 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* NORAD Vector thematic palettes */
+body.theme-synthwave {
+  background-color: #050a14;
+  color: #8fe1ff;
+}
+
+body.theme-retro80s {
+  background-color: #001122;
+  color: #00ff41;
+}
+
+body.theme-wargames {
+  background-color: #000000;
+  color: #00ff00;
+}
+
+body.theme-nightmode {
+  background-color: #010a14;
+  color: #66ccff;
+}
+
+body.theme-highcontrast {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+body.theme-retro80s canvas,
+body.theme-wargames canvas {
+  image-rendering: pixelated;
+}
