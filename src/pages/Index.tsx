@@ -2825,7 +2825,16 @@ export default function NoradVector() {
     return (
       <div className="min-h-screen bg-black text-cyan-500 flex flex-col items-center justify-center p-8">
         <div className="text-center space-y-8 max-w-2xl">
-          <h1 className="text-6xl font-bold mb-8 text-green-400">NORAD VECTOR</h1>
+          <pre
+            aria-label="NORAD VECTOR"
+            className="mx-auto mb-8 max-w-full overflow-x-auto rounded-lg border border-cyan-500/40 bg-black/60 p-6 font-mono text-[clamp(1.5rem,4vw,3.5rem)] leading-tight text-emerald-300 shadow-[0_0_20px_rgba(0,255,170,0.45)] drop-shadow-[0_0_18px_rgba(0,255,170,0.75)]"
+          >{`███╗   ██╗ ██████╗ ██████╗  █████╗ ██████╗      ██╗   ██╗███████╗ ██████╗████████╗ ██████╗ ██████╗ 
+████╗  ██║██╔═══██╗██╔══██╗██╔══██╗██╔══██╗     ██║   ██║██╔════╝██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗
+██╔██╗ ██║██║   ██║██████╔╝███████║██║  ██║     ██║   ██║█████╗  ██║        ██║   ██║   ██║██████╔╝
+██║╚██╗██║██║   ██║██╔══██╗██╔══██║██║  ██║     ╚██╗ ██╔╝██╔══╝  ██║        ██║   ██║   ██║██╔══██╗
+██║ ╚████║╚██████╔╝██║  ██║██║  ██║██████╔╝██████╚████╔╝ ███████╗╚██████╗   ██║   ╚██████╔╝██║  ██║
+╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚═════╝╚═══╝  ╚══════╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝`}
+          </pre>
           <p className="text-xl mb-8">Nuclear War Simulation</p>
           
           {!selectedLeader && (
