@@ -244,6 +244,44 @@ body {
   gap: clamp(1.25rem, 2vh, 2.25rem);
   padding: clamp(1.5rem, 2.5vw, 3rem);
   overflow: hidden;
+  width: 100%;
+  max-width: min(100%, 1240px);
+  margin: 0 auto;
+}
+
+.hud-controls {
+  position: absolute;
+  top: clamp(0.75rem, 2.5vh, 1.5rem);
+  left: clamp(0.75rem, 3vw, 1.8rem);
+  display: flex;
+  gap: 0.5rem;
+  z-index: 4;
+  pointer-events: auto;
+}
+
+.hud-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 255, 213, 0.4);
+  background: rgba(0, 16, 28, 0.8);
+  color: #bafcff;
+  box-shadow: 0 0 18px rgba(0, 255, 213, 0.18);
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.hud-toggle:hover,
+.hud-toggle:focus-visible {
+  outline: none;
+  border-color: rgba(0, 255, 213, 0.75);
+  background: rgba(0, 24, 38, 0.9);
+  color: #e2ffff;
+  box-shadow: 0 0 22px rgba(0, 255, 213, 0.28);
 }
 
 .hud-topbar {
@@ -297,6 +335,138 @@ body {
   border-radius: inherit;
   border: 1px solid rgba(0, 255, 255, 0.08);
   pointer-events: none;
+}
+
+.command-interface--compact .hud-grid {
+  max-width: min(100%, 980px);
+  padding: clamp(1rem, 2vw, 1.75rem);
+  gap: clamp(0.85rem, 1.4vh, 1.2rem);
+}
+
+.command-interface--compact .hud-topbar {
+  grid-template-columns: minmax(220px, 260px) minmax(260px, 1fr) minmax(220px, 260px);
+}
+
+.command-interface--compact .hud-bottom {
+  grid-template-columns: minmax(240px, 1fr) minmax(240px, 1fr);
+}
+
+.command-interface--compact .hud-panel {
+  padding: clamp(0.85rem, 1.4vw, 1.25rem);
+  background: rgba(4, 22, 36, 0.8);
+}
+
+.command-interface--compact .panel-title {
+  font-size: 0.6rem;
+  letter-spacing: 0.36em;
+}
+
+.command-interface--compact .panel-subtitle {
+  font-size: 0.58rem;
+  letter-spacing: 0.3em;
+}
+
+.command-interface--compact .command-button {
+  padding: 0.65rem 0.7rem;
+  font-size: 0.64rem;
+  letter-spacing: 0.32em;
+}
+
+.command-interface--compact .score-list {
+  max-height: clamp(9rem, 20vh, 13rem);
+}
+
+.command-interface--compact .hud-panel--log,
+.command-interface--compact .targets-list {
+  max-height: clamp(10rem, 24vh, 16rem);
+  overflow-y: auto;
+}
+
+.command-interface--compact .resource-grid {
+  gap: 0.75rem;
+}
+
+.command-interface--compact .resource-item span:first-child,
+.command-interface--compact .status-item span:first-child {
+  letter-spacing: 0.32em;
+}
+
+.command-interface--minimal .hud-grid {
+  max-width: min(100%, 820px);
+  padding: clamp(0.75rem, 1.6vw, 1.1rem);
+  gap: clamp(0.6rem, 1.2vh, 0.9rem);
+}
+
+.command-interface--minimal .hud-topbar {
+  grid-template-columns: minmax(200px, 220px) minmax(220px, 1fr) minmax(200px, 220px);
+  align-items: flex-start;
+}
+
+.command-interface--minimal .hud-bottom {
+  grid-template-columns: 1fr;
+  gap: clamp(0.6rem, 1.2vh, 0.9rem);
+  margin-top: clamp(1rem, 2vh, 1.5rem);
+}
+
+.command-interface--minimal .hud-panel {
+  padding: clamp(0.55rem, 1vw, 0.85rem);
+  background: rgba(3, 16, 28, 0.68);
+  border-color: rgba(0, 255, 213, 0.12);
+  box-shadow:
+    0 12px 26px rgba(0, 0, 0, 0.35),
+    0 0 14px rgba(0, 255, 213, 0.12);
+}
+
+.command-interface--minimal .hud-panel::before {
+  border-color: rgba(0, 255, 255, 0.05);
+}
+
+.command-interface--minimal .panel-title {
+  font-size: 0.56rem;
+  letter-spacing: 0.3em;
+}
+
+.command-interface--minimal .panel-subtitle {
+  display: none;
+}
+
+.command-interface--minimal .metric-grid {
+  gap: 0.55rem;
+}
+
+.command-interface--minimal .metric-value {
+  font-size: 1.6rem;
+}
+
+.command-interface--minimal .doomsday-card {
+  margin-top: 0.6rem;
+}
+
+.command-interface--minimal .operations-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.command-interface--minimal .command-button {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.26em;
+}
+
+.command-interface--minimal .score-list,
+.command-interface--minimal .hud-panel--log,
+.command-interface--minimal .targets-list {
+  max-height: clamp(8rem, 22vh, 12rem);
+  overflow-y: auto;
+}
+
+.command-interface--minimal .resource-grid {
+  gap: 0.6rem;
+}
+
+.command-interface--minimal .resource-item span:first-child,
+.command-interface--minimal .status-item span:first-child {
+  letter-spacing: 0.28em;
 }
 
 .panel-title {
@@ -717,6 +887,54 @@ body {
   justify-content: flex-start;
 }
 
+.layout-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.layout-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(0, 255, 213, 0.24);
+  background: rgba(0, 45, 68, 0.4);
+  color: rgba(164, 255, 235, 0.85);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.layout-chip__label {
+  font-size: 0.68rem;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+}
+
+.layout-chip__description {
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  text-transform: none;
+  color: rgba(196, 252, 255, 0.75);
+  line-height: 1.35;
+}
+
+.layout-chip.is-active {
+  border-color: rgba(0, 255, 213, 0.65);
+  background: rgba(0, 60, 90, 0.55);
+  box-shadow: 0 0 22px rgba(0, 255, 213, 0.18);
+}
+
+.layout-chip:hover,
+.layout-chip:focus-visible {
+  outline: none;
+  border-color: rgba(0, 255, 213, 0.75);
+  box-shadow: 0 0 24px rgba(0, 255, 213, 0.25);
+  background: rgba(0, 60, 90, 0.6);
+}
+
 .options-toggle {
   display: flex;
   align-items: center;
@@ -782,6 +1000,13 @@ body {
   .hud-bottom {
     margin-top: clamp(1rem, 2vh, 1.5rem);
   }
+
+  .command-interface--compact .hud-topbar,
+  .command-interface--minimal .hud-topbar,
+  .command-interface--compact .hud-bottom,
+  .command-interface--minimal .hud-bottom {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
@@ -808,6 +1033,11 @@ body {
   }
 
   .operations-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .command-interface--compact .operations-grid,
+  .command-interface--minimal .operations-grid {
     grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 
