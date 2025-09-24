@@ -178,7 +178,7 @@ let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 let startCanvas: HTMLCanvasElement;
 let startCtx: CanvasRenderingContext2D;
-let W = 800, H = 600;
+let W = 1600, H = 900;
 
 // Camera system
 const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
@@ -2101,7 +2101,7 @@ function updateDisplay() {
   if (actionsEl) actionsEl.textContent = `${S.actionsRemaining}/${maxActions}`;
   
   const phaseEl = document.getElementById('phaseBadge');
-  if (phaseEl) phaseEl.textContent = `PHASE: ${S.phase}`;
+  if (phaseEl) phaseEl.textContent = S.phase;
   
   const productionEl = document.getElementById('productionDisplay');
   if (productionEl) productionEl.textContent = (player.production || 0).toString();
@@ -2968,8 +2968,8 @@ export default function NoradVector() {
       canvas = canvasRef.current;
       ctx = canvas.getContext('2d')!;
       
-      W = canvas.width = 1200;
-      H = canvas.height = 800;
+      W = canvas.width = 1600;
+      H = canvas.height = 900;
       
       // Initialize audio
       AudioSys.init();
@@ -3285,159 +3285,225 @@ export default function NoradVector() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-green-400 overflow-hidden">
-      {/* Game Canvas */}
-      <canvas
-        ref={canvasRef}
-        className="block mx-auto cursor-crosshair"
-        width={1200}
-        height={800}
-      />
-      
-      {/* HUD Elements */}
-      <div className="fixed inset-0 pointer-events-none">
-        {/* Top HUD */}
-        <div id="gameHud" className="absolute top-4 left-4 right-4 flex justify-between pointer-events-auto">
-          <div className="flex gap-4">
-            <div className="defcon-display bg-red-900 border border-red-500 px-4 py-2 rounded">
-              DEFCON: <span id="defcon">5</span>
-            </div>
-            <div className="bg-blue-900 border border-blue-500 px-4 py-2 rounded">
-              TURN: <span id="turn">1</span>
-            </div>
-            <div className="bg-yellow-900 border border-yellow-500 px-4 py-2 rounded">
-              ACTIONS: <span id="actionsDisplay">1/1</span>
-            </div>
-            <div className="bg-purple-900 border border-purple-500 px-4 py-2 rounded">
-              <span id="phaseBadge">PHASE: PLAYER</span>
-            </div>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button onClick={handleBuild} className="bg-green-700 hover:bg-green-600">
-              BUILD
-            </Button>
-            <Button onClick={handleResearch} className="bg-blue-700 hover:bg-blue-600">
-              RESEARCH
-            </Button>
-            <Button className="bg-purple-700 hover:bg-purple-600">
-              INTEL
-            </Button>
-            <Button className="bg-yellow-700 hover:bg-yellow-600">
-              CULTURE
-            </Button>
-            <Button className="bg-orange-700 hover:bg-orange-600">
-              IMMIGRATION
-            </Button>
-            <Button className="bg-cyan-700 hover:bg-cyan-600">
-              DIPLOMACY
-            </Button>
-            <Button onClick={handleAttack} className="bg-red-700 hover:bg-red-600">
-              ATTACK
-            </Button>
-            <Button onClick={endTurn} className="bg-gray-700 hover:bg-gray-600">
-              END TURN
-            </Button>
-          </div>
-        </div>
-        
-        {/* Left Panel - Resources */}
-        <div id="resourcePanel" className="absolute top-20 left-4 bg-black bg-opacity-80 border border-green-500 p-4 rounded">
-          <h3 className="text-green-400 mb-2">RESOURCES</h3>
-          <div className="space-y-1 text-sm">
-            <div>PRODUCTION: <span id="productionDisplay">0</span></div>
-            <div>URANIUM: <span id="uraniumDisplay">0</span></div>
-            <div>INTEL: <span id="intelDisplay">0</span></div>
-            <div>CITIES: <span id="citiesDisplay">1</span></div>
-            <div>POPULATION: <span id="popDisplay">0</span>M</div>
-          </div>
-        </div>
-        
-        {/* Right Panel - Status */}
-        <div id="statusPanel" className="absolute top-20 right-4 bg-black bg-opacity-80 border border-cyan-500 p-4 rounded">
-          <h3 className="text-cyan-400 mb-2">STATUS</h3>
-          <div className="space-y-1 text-sm">
-            <div>LEADER: <span id="leaderDisplay">-</span></div>
-            <div>DOCTRINE: <span id="doctrineDisplay">-</span></div>
-            <div>MISSILES: <span id="missileDisplay">0</span></div>
-            <div>BOMBERS: <span id="bomberDisplay">0</span></div>
-            <div>DEFENSE: <span id="defenseDisplay">0</span></div>
-            <div>INSTABILITY: <span id="instabilityDisplay">0</span></div>
-            <div>WARHEADS: <span id="warheadDisplay">NONE</span></div>
-          </div>
-        </div>
+    <div className="command-interface">
+      <div className="command-interface__glow" aria-hidden="true" />
+      <div className="command-interface__scanlines" aria-hidden="true" />
 
-        {/* Targets Panel */}
-        <div className="absolute top-20 right-72 bg-black bg-opacity-80 border border-red-500 p-4 rounded w-64 pointer-events-auto">
-          <h3 className="text-red-400 mb-2">TARGETS</h3>
-          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-            {targetableNations.length === 0 ? (
-              <div className="text-xs text-red-200/70">No viable enemy targets.</div>
-            ) : (
-              targetableNations.map(target => {
-                const isActive = selectedTargetId === target.id;
-                return (
-                  <button
-                    key={target.id}
-                    onClick={() => handleTargetSelect(target.id)}
-                    className={`w-full text-left px-3 py-2 border transition text-sm tracking-wide ${isActive ? 'bg-red-600 text-black border-red-300 shadow-[0_0_12px_rgba(255,0,0,0.45)]' : 'bg-transparent border-red-600/60 text-red-200 hover:bg-red-900/40'}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">{target.name}</span>
-                      <span className="text-xs opacity-80">{Math.floor(target.population)}M</span>
+      <div className="map-shell">
+        <canvas
+          ref={canvasRef}
+          className="map-shell__canvas"
+          width={1600}
+          height={900}
+        />
+
+        <div className="hud-layers pointer-events-none">
+          <div className="hud-grid">
+            <div className="hud-row hud-row--top">
+              <div id="scorePanel" className="hud-panel hud-panel--score pointer-events-auto">
+                <div className="panel-title">
+                  <span>WORLD POWERS</span>
+                  <span>POPULATION (M)</span>
+                </div>
+                <div id="scoreList" className="score-list">
+                  {/* Populated by updateScoreboard() */}
+                </div>
+              </div>
+
+              <div className="hud-panel hud-panel--metrics pointer-events-auto">
+                <div className="panel-title">
+                  <span>GLOBAL STATUS</span>
+                  <span>COMMAND</span>
+                </div>
+                <div className="metric-grid">
+                  <div className="metric-card">
+                    <div className="metric-label">DEFCON</div>
+                    <div id="defcon" className="metric-value">5</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">TURN</div>
+                    <div id="turn" className="metric-value">1</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">ACTIONS</div>
+                    <div id="actionsDisplay" className="metric-value">1/1</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">PHASE</div>
+                    <div id="phaseBadge" className="metric-value metric-value--small">PLAYER</div>
+                  </div>
+                </div>
+                <div className="doomsday-card">
+                  <div className="doomsday-label">DOOMSDAY CLOCK</div>
+                  <div id="doomsdayTime" className="doomsday-value">7:00</div>
+                </div>
+              </div>
+
+              <div className="hud-panel hud-panel--operations pointer-events-auto">
+                <div className="panel-title">
+                  <span>OPERATIONS</span>
+                  <span>ORDERS</span>
+                </div>
+                <div className="operations-grid">
+                  <Button onClick={handleBuild} className="command-button">
+                    BUILD
+                  </Button>
+                  <Button onClick={handleResearch} className="command-button">
+                    RESEARCH
+                  </Button>
+                  <Button className="command-button">INTEL</Button>
+                  <Button className="command-button">CULTURE</Button>
+                  <Button className="command-button">IMMIGRATION</Button>
+                  <Button className="command-button">DIPLOMACY</Button>
+                  <Button onClick={handleAttack} className="command-button command-button--danger">
+                    ATTACK
+                  </Button>
+                  <Button onClick={endTurn} className="command-button command-button--neutral">
+                    END TURN
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="hud-row hud-row--middle">
+              <div className="hud-stack">
+                <div id="resourcePanel" className="hud-panel pointer-events-auto">
+                  <div className="panel-title">
+                    <span>RESOURCE MATRIX</span>
+                    <span>ECONOMY</span>
+                  </div>
+                  <div className="resource-grid">
+                    <div className="resource-item">
+                      <span>PRODUCTION</span>
+                      <span id="productionDisplay">0</span>
                     </div>
-                    <div className="text-[10px] uppercase text-red-200/70 mt-1">
-                      DEF {target.defense} • MISS {target.missiles}
+                    <div className="resource-item">
+                      <span>URANIUM</span>
+                      <span id="uraniumDisplay">0</span>
                     </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
+                    <div className="resource-item">
+                      <span>INTEL</span>
+                      <span id="intelDisplay">0</span>
+                    </div>
+                    <div className="resource-item">
+                      <span>CITIES</span>
+                      <span id="citiesDisplay">1</span>
+                    </div>
+                    <div className="resource-item resource-item--wide">
+                      <span>POPULATION (M)</span>
+                      <span id="popDisplay">0</span>
+                    </div>
+                  </div>
+                </div>
 
-        {/* Doomsday Clock */}
-        <div id="doomsdayPanel" className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-900 bg-opacity-80 border border-red-500 p-4 rounded text-center">
-          <h3 className="text-red-400 mb-2">DOOMSDAY CLOCK</h3>
-          <div className="text-2xl font-bold text-red-300">
-            <span id="doomsdayTime">7:00</span>
-          </div>
-        </div>
-        
-        {/* Scoreboard */}
-        <div id="scorePanel" className="absolute bottom-4 right-4 bg-black bg-opacity-80 border border-yellow-500 p-4 rounded w-64">
-          <h3 className="text-yellow-400 mb-2">WORLD POWERS</h3>
-          <div id="scoreList" className="space-y-1 text-sm">
-            {/* Populated by updateScoreboard() */}
-          </div>
-        </div>
-        
-        {/* Event Log */}
-        <div id="log" className="absolute bottom-4 left-4 bg-black bg-opacity-80 border border-green-500 p-4 rounded w-96 h-48 overflow-y-auto">
-          <h3 className="text-green-400 mb-2">EVENT LOG</h3>
-          {/* Populated by log() function */}
-        </div>
+                <div id="log" className="hud-panel hud-panel--log pointer-events-auto">
+                  <div className="panel-title">
+                    <span>STRATEGIC EVENTS</span>
+                    <span>LIVE FEED</span>
+                  </div>
+                  {/* Populated by log() function */}
+                </div>
+              </div>
 
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 border border-purple-500 p-3 rounded pointer-events-auto">
-          <h3 className="text-purple-300 text-xs tracking-[0.35em] mb-2 text-center">THEME</h3>
-          <div className="flex flex-wrap justify-center gap-2">
-            {themeOptions.map(opt => {
-              const active = theme === opt.id;
-              return (
-                <Button
-                  key={opt.id}
-                  onClick={() => setTheme(opt.id)}
-                  className={`px-3 py-1 text-xs border transition ${active ? 'bg-purple-500 text-black border-purple-300' : 'bg-transparent text-purple-200 border-purple-500 hover:bg-purple-500 hover:text-black'}`}
-                >
-                  {opt.label.toUpperCase()}
-                </Button>
-              );
-            })}
+              <div className="hud-center-spacer" />
+
+              <div className="hud-stack">
+                <div id="statusPanel" className="hud-panel pointer-events-auto">
+                  <div className="panel-title">
+                    <span>COMMAND PROFILE</span>
+                    <span>PLAYER</span>
+                  </div>
+                  <div className="status-grid">
+                    <div className="status-item">
+                      <span>LEADER</span>
+                      <span id="leaderDisplay">-</span>
+                    </div>
+                    <div className="status-item">
+                      <span>DOCTRINE</span>
+                      <span id="doctrineDisplay">-</span>
+                    </div>
+                    <div className="status-item">
+                      <span>MISSILES</span>
+                      <span id="missileDisplay">0</span>
+                    </div>
+                    <div className="status-item">
+                      <span>BOMBERS</span>
+                      <span id="bomberDisplay">0</span>
+                    </div>
+                    <div className="status-item">
+                      <span>DEFENSE</span>
+                      <span id="defenseDisplay">0</span>
+                    </div>
+                    <div className="status-item">
+                      <span>INSTABILITY</span>
+                      <span id="instabilityDisplay">0</span>
+                    </div>
+                    <div className="status-item status-item--wide">
+                      <span>WARHEADS</span>
+                      <span id="warheadDisplay">NONE</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="hud-panel hud-panel--targets pointer-events-auto">
+                  <div className="panel-title">
+                    <span>TARGET DESIGNATION</span>
+                    <span>HOSTILES</span>
+                  </div>
+                  <div className="targets-list">
+                    {targetableNations.length === 0 ? (
+                      <div className="targets-empty">No viable enemy targets.</div>
+                    ) : (
+                      targetableNations.map(target => {
+                        const isActive = selectedTargetId === target.id;
+                        return (
+                          <button
+                            key={target.id}
+                            onClick={() => handleTargetSelect(target.id)}
+                            className={`command-target${isActive ? ' is-active' : ''}`}
+                          >
+                            <div className="command-target__header">
+                              <span>{target.name}</span>
+                              <span>{Math.floor(target.population)}M</span>
+                            </div>
+                            <div className="command-target__meta">
+                              DEF {target.defense} • MISS {target.missiles}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="hud-row hud-row--bottom">
+              <div className="hud-panel hud-panel--themes pointer-events-auto">
+                <div className="panel-title">
+                  <span>VISUALIZER</span>
+                  <span>THEMES</span>
+                </div>
+                <div className="theme-grid">
+                  {themeOptions.map(opt => {
+                    const active = theme === opt.id;
+                    return (
+                      <Button
+                        key={opt.id}
+                        onClick={() => setTheme(opt.id)}
+                        className={`theme-chip${active ? ' is-active' : ''}`}
+                      >
+                        {opt.label.toUpperCase()}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Modal Dialog */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="bg-black border border-cyan-500 text-cyan-500 max-w-2xl">
           <DialogHeader>
