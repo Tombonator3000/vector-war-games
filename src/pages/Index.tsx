@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -2566,6 +2567,7 @@ function consumeAction() {
 
 // React Component
 export default function NoradVector() {
+  const navigate = useNavigate();
   const interfaceRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGameStarted, setIsGameStarted] = useState(false);
@@ -4506,6 +4508,14 @@ export default function NoradVector() {
                     </Button>
                   );
                 })}
+              </div>
+              <div className="mt-6 flex justify-center">
+                <Button
+                  onClick={() => navigate('/fase-1')}
+                  className="border border-purple-400 bg-transparent px-6 py-3 text-sm font-semibold text-purple-200 transition hover:bg-purple-500 hover:text-black"
+                >
+                  ÅPNE FASE 1-KONSEPTTAVLE
+                </Button>
               </div>
             </div>
           </div>
