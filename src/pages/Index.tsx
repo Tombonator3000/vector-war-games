@@ -226,7 +226,7 @@ const doctrines = {
   },
   firstStrike: {
     name: 'FIRST STRIKE',
-    desc: 'Preemptive attack capability', 
+    desc: 'Preemptive attack capability',
     effects: '+1 100MT warhead, start at DEFCON 3'
   },
   detente: {
@@ -235,6 +235,40 @@ const doctrines = {
     effects: '+10 intel, +2 production, peaceful start'
   }
 };
+
+type DoctrineKey = keyof typeof doctrines;
+
+function applyDoctrineEffects(nation: Nation, doctrineKey?: DoctrineKey) {
+  if (!doctrineKey) return;
+
+  switch (doctrineKey) {
+    case 'mad': {
+      nation.missiles = Math.max(0, (nation.missiles || 0) + 2);
+      nation.defense = Math.max(0, (nation.defense || 0) - 1);
+      break;
+    }
+    case 'defense': {
+      nation.defense = Math.max(0, (nation.defense || 0) + 3);
+      nation.missiles = Math.max(0, (nation.missiles || 0) - 1);
+      break;
+    }
+    case 'firstStrike': {
+      nation.warheads = nation.warheads || {};
+      nation.warheads[100] = (nation.warheads[100] || 0) + 1;
+      nation.researched = nation.researched || {};
+      nation.researched.warhead_100 = true;
+      S.defcon = Math.min(S.defcon, 3);
+      break;
+    }
+    case 'detente': {
+      nation.intel = (nation.intel || 0) + 10;
+      nation.production = (nation.production || 0) + 2;
+      break;
+    }
+    default:
+      break;
+  }
+}
 
 // Costs configuration
 const COSTS = {
@@ -992,12 +1026,13 @@ function initNations() {
   
   const playerLeaderName = S.selectedLeader || 'PLAYER';
   const playerLeaderConfig = leaders.find(l => l.name === playerLeaderName);
+  const selectedDoctrine = (S.selectedDoctrine as DoctrineKey | null) || undefined;
   const playerNation: Nation = {
     id: 'player',
     isPlayer: true,
     name: 'PLAYER',
     leader: playerLeaderName,
-    doctrine: S.selectedDoctrine || undefined,
+    doctrine: selectedDoctrine,
     lon: -95,
     lat: 39,
     color: playerLeaderConfig?.color || '#00ffff',
@@ -1020,30 +1055,7 @@ function initNations() {
   };
 
   // Apply doctrine bonuses
-  if (S.selectedDoctrine) {
-    const doctrine = doctrines[S.selectedDoctrine as keyof typeof doctrines];
-    if (doctrine) {
-      switch (S.selectedDoctrine) {
-        case 'mad':
-          playerNation.missiles += 2;
-          playerNation.defense -= 1;
-          break;
-        case 'defense':
-          playerNation.defense += 3;
-          playerNation.missiles -= 1;
-          break;
-        case 'firstStrike':
-          playerNation.warheads[100] = 1;
-          playerNation.researched!['warhead_100'] = true;
-          S.defcon = 3;
-          break;
-        case 'detente':
-          playerNation.intel += 10;
-          playerNation.production += 2;
-          break;
-      }
-    }
-  }
+  applyDoctrineEffects(playerNation, selectedDoctrine);
 
   nations.push(playerNation);
 
@@ -1054,7 +1066,7 @@ function initNations() {
     { lon: 20, lat: 0, name: 'AFRICA' }
   ];
 
-  const doctrineKeys = Object.keys(doctrines);
+  const doctrineKeys = Object.keys(doctrines) as DoctrineKey[];
   const availableLeaders = leaders.filter(l => l.name !== playerLeaderName);
   const shuffledLeaders = (availableLeaders.length ? availableLeaders : leaders)
     .slice()
@@ -1095,6 +1107,7 @@ function initNations() {
       migrantsTotal: 0
     };
 
+    applyDoctrineEffects(nation, aiDoctrine);
     nations.push(nation);
   });
 
@@ -1213,13 +1226,15 @@ function launch(from: Nation, to: Nation, yieldMT: number) {
     return false;
   }
 
-  if (from.isPlayer) {
-    const requiredResearchId = WARHEAD_YIELD_TO_ID.get(yieldMT);
-    if (requiredResearchId && !from.researched?.[requiredResearchId]) {
-      const projectName = RESEARCH_LOOKUP[requiredResearchId]?.name || `${yieldMT}MT program`;
+  const requiredResearchId = WARHEAD_YIELD_TO_ID.get(yieldMT);
+  if (requiredResearchId && !from.researched?.[requiredResearchId]) {
+    const projectName = RESEARCH_LOOKUP[requiredResearchId]?.name || `${yieldMT}MT program`;
+    if (from.isPlayer) {
       toast({ title: 'Technology unavailable', description: `Research ${projectName} before deploying this warhead.` });
-      return false;
+    } else {
+      log(`${from.name} lacks the ${projectName} technology and aborts the launch.`, 'warning');
     }
+    return false;
   }
 
   if (from.missiles <= 0) {
@@ -2345,19 +2360,20 @@ function aiTurn(n: Nation) {
         return compute(b) - compute(a);
       })[0];
       
-      const warheadTypes = Object.keys(n.warheads || {}).filter(k => (n.warheads as any)[k] > 0);
-      if (warheadTypes.length > 0 && n.missiles > 0) {
-        const yieldMT = parseInt(warheadTypes[0]);
-        
-        if ((yieldMT <= 50 && S.defcon <= 2) || (yieldMT > 50 && S.defcon === 1)) {
-          (n.warheads as any)[yieldMT]--;
-          if ((n.warheads as any)[yieldMT] <= 0) delete (n.warheads as any)[yieldMT];
-          n.missiles--;
-          
-          launch(n, target, yieldMT);
-          log(`${n.name} launches ${yieldMT}MT at ${target.name}`);
+      const availableYields = Object.entries(n.warheads || {})
+        .filter(([, count]) => (count || 0) > 0)
+        .map(([yieldStr]) => Number(yieldStr))
+        .sort((a, b) => b - a);
+
+      const yieldMT = availableYields.find(value =>
+        (value <= 50 && S.defcon <= 2) || (value > 50 && S.defcon === 1)
+      );
+
+      if (yieldMT !== undefined && n.missiles > 0) {
+        const launchSucceeded = launch(n, target, yieldMT);
+        if (launchSucceeded) {
           maybeBanter(n, 0.7);
-          
+
           if (target.isPlayer) {
             maybeBanter(n, 0.5);
           }
