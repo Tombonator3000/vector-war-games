@@ -246,30 +246,34 @@ body {
   overflow: hidden;
 }
 
-.hud-row {
+.hud-topbar {
   display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(340px, 1fr) minmax(280px, 340px);
   gap: clamp(1rem, 1.6vw, 1.8rem);
+  align-items: stretch;
 }
 
-.hud-row--top,
-.hud-row--middle {
-  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr) minmax(260px, 330px);
-  align-items: start;
-}
-
-.hud-row--bottom {
-  grid-template-columns: minmax(300px, 440px);
-  justify-content: center;
-}
-
-.hud-stack {
+.hud-column,
+.hud-topbar__center {
   display: flex;
   flex-direction: column;
   gap: clamp(1rem, 1.5vh, 1.6rem);
+  min-height: 0;
 }
 
-.hud-center-spacer {
-  min-height: 1px;
+.hud-bottom {
+  margin-top: clamp(1.5rem, 2vh, 2.5rem);
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+  gap: clamp(1rem, 1.6vw, 1.8rem);
+  align-items: stretch;
+}
+
+.hud-bottom__column {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 1.5vh, 1.6rem);
+  min-height: 0;
 }
 
 .hud-panel {
@@ -303,12 +307,24 @@ body {
   font-size: 0.65rem;
   letter-spacing: 0.42em;
   color: rgba(144, 254, 255, 0.75);
-  margin-bottom: 1.1rem;
+  margin-bottom: 0.8rem;
 }
 
 .panel-title span:last-child {
   color: rgba(226, 255, 255, 0.6);
   font-weight: 600;
+}
+
+.panel-title + .panel-subtitle {
+  margin-top: -0.25rem;
+}
+
+.panel-subtitle {
+  font-size: 0.62rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(164, 255, 235, 0.62);
+  margin-bottom: 0.9rem;
 }
 
 .score-list {
@@ -758,13 +774,13 @@ body {
 }
 
 @media (max-width: 1280px) {
-  .hud-row--top,
-  .hud-row--middle {
+  .hud-topbar,
+  .hud-bottom {
     grid-template-columns: 1fr;
   }
 
-  .hud-center-spacer {
-    display: none;
+  .hud-bottom {
+    margin-top: clamp(1rem, 2vh, 1.5rem);
   }
 }
 
@@ -776,6 +792,15 @@ body {
   .hud-grid {
     padding: 1.25rem;
     overflow-y: auto;
+  }
+
+  .hud-topbar,
+  .hud-bottom {
+    gap: 1.25rem;
+  }
+
+  .hud-bottom {
+    margin-top: 1rem;
   }
 
   .metric-grid {
@@ -801,6 +826,15 @@ body {
     padding: 1rem;
     gap: 1.25rem;
     overflow-y: auto;
+  }
+
+  .hud-topbar,
+  .hud-bottom {
+    gap: 1rem;
+  }
+
+  .panel-subtitle {
+    letter-spacing: 0.24em;
   }
 
   .metric-value {
