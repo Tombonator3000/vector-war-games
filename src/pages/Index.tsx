@@ -102,6 +102,33 @@ interface GameState {
 }
 
 type ThemeId = 'synthwave' | 'retro80s' | 'wargames' | 'nightmode' | 'highcontrast';
+type LayoutDensity = 'expanded' | 'compact' | 'minimal';
+
+type LayoutDensityOption = {
+  id: LayoutDensity;
+  label: string;
+  description: string;
+};
+
+const layoutDensityOptions: LayoutDensityOption[] = [
+  {
+    id: 'expanded',
+    label: 'Expanded',
+    description: 'Full briefing overlay with maximum telemetry panels.',
+  },
+  {
+    id: 'compact',
+    label: 'Compact',
+    description: 'Slimmed panels that free up more of the strategic map.',
+  },
+  {
+    id: 'minimal',
+    label: 'Minimal',
+    description: 'Ultralight HUD that keeps essentials while spotlighting the globe.',
+  },
+];
+
+const layoutDensityOrder: LayoutDensity[] = layoutDensityOptions.map((option) => option.id);
 
 const THEME_SETTINGS: Record<ThemeId, {
   mapOutline: string;
@@ -2592,6 +2619,13 @@ export default function NoradVector() {
   const [selectedLeader, setSelectedLeader] = useState<string | null>(null);
   const [selectedDoctrine, setSelectedDoctrine] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeId>('synthwave');
+  const [layoutDensity, setLayoutDensity] = useState<LayoutDensity>(() => {
+    const stored = Storage.getItem('layout_density');
+    if (stored === 'expanded' || stored === 'compact' || stored === 'minimal') {
+      return stored;
+    }
+    return 'compact';
+  });
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [musicEnabled, setMusicEnabled] = useState(AudioSys.musicEnabled);
   const [sfxEnabled, setSfxEnabled] = useState(AudioSys.sfxEnabled);
@@ -2600,6 +2634,26 @@ export default function NoradVector() {
   const [uiTick, setUiTick] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const handleAttackRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    Storage.setItem('layout_density', layoutDensity);
+  }, [layoutDensity]);
+
+  const activeLayout = useMemo(
+    () => layoutDensityOptions.find((option) => option.id === layoutDensity) ?? layoutDensityOptions[0],
+    [layoutDensity],
+  );
+
+  const cycleLayoutDensity = useCallback(() => {
+    const currentIndex = layoutDensityOrder.indexOf(layoutDensity);
+    const nextIndex = (currentIndex + 1) % layoutDensityOrder.length;
+    const nextDensity = layoutDensityOrder[nextIndex];
+    setLayoutDensity(nextDensity);
+    const nextLayout = layoutDensityOptions.find((option) => option.id === nextDensity);
+    if (nextLayout) {
+      toast({ title: `HUD layout: ${nextLayout.label}`, description: nextLayout.description });
+    }
+  }, [layoutDensity]);
 
   const resizeCanvas = useCallback(() => {
     const element = canvasRef.current;
@@ -4541,7 +4595,7 @@ export default function NoradVector() {
   }
 
   return (
-    <div ref={interfaceRef} className="command-interface">
+    <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity}`}>
       <div className="command-interface__glow" aria-hidden="true" />
       <div className="command-interface__scanlines" aria-hidden="true" />
 
@@ -4554,6 +4608,18 @@ export default function NoradVector() {
         />
 
         <div className="hud-layers pointer-events-none">
+          <div className="hud-controls pointer-events-auto">
+            <button
+              type="button"
+              onClick={cycleLayoutDensity}
+              className="hud-toggle"
+              aria-label="Cycle HUD layout density"
+              title={activeLayout.description}
+            >
+              HUD: {activeLayout.label}
+            </button>
+          </div>
+
           <div className="hud-grid">
             <div className="hud-topbar">
               <div className="hud-column">
@@ -4790,6 +4856,29 @@ export default function NoradVector() {
                   >
                     {opt.label.toUpperCase()}
                   </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="options-section">
+            <h3 className="options-section__heading">HUD LAYOUT</h3>
+            <p className="options-section__subheading">Choose how much interface overlays the map.</p>
+            <div className="layout-grid">
+              {layoutDensityOptions.map((option) => {
+                const isActive = layoutDensity === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setLayoutDensity(option.id)}
+                    className={`layout-chip${isActive ? ' is-active' : ''}`}
+                    aria-pressed={isActive}
+                    title={option.description}
+                  >
+                    <span className="layout-chip__label">{option.label}</span>
+                    <span className="layout-chip__description">{option.description}</span>
+                  </button>
                 );
               })}
             </div>
