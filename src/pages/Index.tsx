@@ -2,6 +2,9 @@ import { useEffect, useRef, useState, useCallback, useMemo, ReactNode } from 're
 import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 
 // Storage wrapper for localStorage
@@ -2216,9 +2219,29 @@ export default function NoradVector() {
   const [selectedLeader, setSelectedLeader] = useState<string | null>(null);
   const [selectedDoctrine, setSelectedDoctrine] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeId>('synthwave');
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [musicEnabled, setMusicEnabled] = useState(AudioSys.musicEnabled);
+  const [sfxEnabled, setSfxEnabled] = useState(AudioSys.sfxEnabled);
+  const [musicVolume, setMusicVolume] = useState(AudioSys.musicVolume);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [uiTick, setUiTick] = useState(0);
   const handleAttackRef = useRef<() => void>(() => {});
+
+  const handleMusicToggle = useCallback((checked: boolean) => {
+    AudioSys.musicEnabled = checked;
+    setMusicEnabled(checked);
+  }, []);
+
+  const handleSfxToggle = useCallback((checked: boolean) => {
+    AudioSys.sfxEnabled = checked;
+    setSfxEnabled(checked);
+  }, []);
+
+  const handleMusicVolumeChange = useCallback((value: number[]) => {
+    const volume = Math.min(1, Math.max(0, value[0] ?? 0));
+    AudioSys.setMusicVolume(volume);
+    setMusicVolume(volume);
+  }, []);
 
   useEffect(() => {
     const stored = Storage.getItem('theme');
@@ -3358,6 +3381,13 @@ export default function NoradVector() {
                   <Button onClick={handleAttack} className="command-button command-button--danger">
                     ATTACK
                   </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setOptionsOpen(true)}
+                    className="command-button command-button--neutral"
+                  >
+                    OPTIONS
+                  </Button>
                   <Button onClick={endTurn} className="command-button command-button--neutral">
                     END TURN
                   </Button>
@@ -3478,31 +3508,71 @@ export default function NoradVector() {
               </div>
             </div>
 
-            <div className="hud-row hud-row--bottom">
-              <div className="hud-panel hud-panel--themes pointer-events-auto">
-                <div className="panel-title">
-                  <span>VISUALIZER</span>
-                  <span>THEMES</span>
-                </div>
-                <div className="theme-grid">
-                  {themeOptions.map(opt => {
-                    const active = theme === opt.id;
-                    return (
-                      <Button
-                        key={opt.id}
-                        onClick={() => setTheme(opt.id)}
-                        className={`theme-chip${active ? ' is-active' : ''}`}
-                      >
-                        {opt.label.toUpperCase()}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
+
+      <Sheet open={optionsOpen} onOpenChange={setOptionsOpen}>
+        <SheetContent
+          side="right"
+          className="options-sheet"
+        >
+          <SheetHeader>
+            <SheetTitle className="options-sheet__title">COMMAND OPTIONS</SheetTitle>
+            <SheetDescription className="options-sheet__description">
+              Tune the command interface to match your control room preferences.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="options-section">
+            <h3 className="options-section__heading">VISUAL THEMES</h3>
+            <p className="options-section__subheading">Switch the world feed rendering profile.</p>
+            <div className="theme-grid">
+              {themeOptions.map(opt => {
+                const active = theme === opt.id;
+                return (
+                  <Button
+                    key={opt.id}
+                    onClick={() => setTheme(opt.id)}
+                    className={`theme-chip${active ? ' is-active' : ''}`}
+                    type="button"
+                  >
+                    {opt.label.toUpperCase()}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="options-section">
+            <h3 className="options-section__heading">AUDIO CONTROL</h3>
+            <p className="options-section__subheading">Manage strategic alert audio and briefing ambience.</p>
+            <div className="options-toggle">
+              <span>MUSIC</span>
+              <Switch checked={musicEnabled} onCheckedChange={handleMusicToggle} aria-label="Toggle music" />
+            </div>
+            <div className="options-toggle">
+              <span>SOUND FX</span>
+              <Switch checked={sfxEnabled} onCheckedChange={handleSfxToggle} aria-label="Toggle sound effects" />
+            </div>
+            <div className="options-slider">
+              <div className="options-slider__label">
+                <span>MUSIC GAIN</span>
+                <span>{Math.round(musicVolume * 100)}%</span>
+              </div>
+              <Slider
+                value={[musicVolume]}
+                min={0}
+                max={1}
+                step={0.05}
+                onValueChange={handleMusicVolumeChange}
+                disabled={!musicEnabled}
+                aria-label="Adjust music volume"
+              />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="bg-black border border-cyan-500 text-cyan-500 max-w-2xl">
