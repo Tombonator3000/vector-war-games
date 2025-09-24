@@ -240,9 +240,14 @@ export default function PhaseOne() {
               hovedsimulasjonen.
             </p>
           </div>
-          <Button asChild variant="secondary" className="bg-slate-800 text-slate-200 hover:bg-slate-700">
-            <Link to="/">Tilbake til simulasjonen</Link>
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild variant="secondary" className="bg-slate-800 text-slate-200 hover:bg-slate-700">
+              <Link to="/">Tilbake til simulasjonen</Link>
+            </Button>
+            <Button asChild variant="outline" className="border-cyan-400 text-cyan-200 hover:bg-cyan-500/10">
+              <Link to="/fase-2">Fase 2 – Kart &amp; kontroll</Link>
+            </Button>
+          </div>
         </header>
 
         <Card className="border-cyan-500/30 bg-slate-900/60">
