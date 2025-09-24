@@ -214,6 +214,152 @@ const technicalStack = [
   },
 ] as const;
 
+const launchStreams = [
+  {
+    id: "soft-launch",
+    title: "Soft launch/beta",
+    summary:
+      "Sikre robust innsikt gjennom telemetri og KPI-sporing før full lansering.",
+    pillars: [
+      {
+        label: "Telemetrioppsett",
+        items: [
+          "Definér presise eventer (oppdragsstart/-slutt, abort, menyvalg).",
+          "Implementer anonymisert datainnsamling i klient og backend.",
+          "Sett opp dashboards for sanntidsovervåking (Looker/Data Studio/Superset).",
+        ],
+      },
+      {
+        label: "KPI-definisjoner",
+        items: [
+          "Sessionslengde segmentert på modus og plattform.",
+          "Oppdragsfullføring med årsakslogging for avbrudd.",
+          "Retention-mål på D1/D7/D30 for å validere interesse.",
+        ],
+      },
+      {
+        label: "Testplan",
+        items: [
+          "Planlegg A/B-tester på onboarding, vanskelighetsgrad eller økonomi.",
+          "Etabler bug triage-prosess med responstid og ansvarlige.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "live-updates",
+    title: "Live-oppdateringer",
+    summary:
+      "Planlagt rotasjon av sesongtemaer, politiske eventer og rådgivere for kontinuerlig innhold.",
+    pillars: [
+      {
+        label: "Sesongtemaer",
+        items: [
+          "Produser 3–4 måneders kalender med planlagte temaer og assets.",
+          "Forbered fallback-planer for forsinkelser via gjenbruk av innhold.",
+        ],
+      },
+      {
+        label: "Eventer og rådgivere",
+        items: [
+          "Bygg mekanikker for dynamisk aktivering og belønninger.",
+          "Synk story- og gameplay-team for balanse og tonalitet.",
+        ],
+      },
+      {
+        label: "Drift",
+        items: [
+          "Etabler release-pipeline med rollback-strategi.",
+          "QA-sjekklister for hver oppdatering (kompatibilitet, ytelse, lokalisering).",
+        ],
+      },
+    ],
+  },
+  {
+    id: "community",
+    title: "Community feedback-loop",
+    summary:
+      "Etabler dedikerte kanaler for forslag og prioriter iterasjoner basert på respons.",
+    pillars: [
+      {
+        label: "Kanaler",
+        items: [
+          "Start Discord/forum med kategorier for bugs, forslag og lore.",
+          "Utnevn moderasjonsteam og retningslinjer for trygg tone.",
+        ],
+      },
+      {
+        label: "Feedback-prosess",
+        items: [
+          "Ukentlig eller biukentlig gjennomgang og tagging av tilbakemeldinger.",
+          "Månedlig oppdatering til community om prioriteringer.",
+        ],
+      },
+      {
+        label: "Engasjement",
+        items: [
+          "Planlegg AMA-er, utviklerdagbøker og spotlight av bidragsytere.",
+          "Belønn aktive medlemmer med kosmetikk eller titler.",
+        ],
+      },
+    ],
+  },
+] as const;
+
+const resourceSupport = {
+  roles: [
+    "LiveOps-produsent",
+    "Dataanalytiker",
+    "Community manager",
+    "Supportteam",
+  ] as const,
+  tools: [
+    "Telemetri: Amplitude, Firebase",
+    "Ticket-håndtering: Jira eller Trello",
+    "Kommunikasjon: Discord, Discourse",
+  ] as const,
+  risks: [
+    "Datakvalitet – etabler validering og fallback-logging.",
+    "Overoppdatering – bruk data til å balansere frekvens.",
+    "Negativ feedback – proaktiv moderasjon og tydelig kommunikasjon.",
+  ] as const,
+} as const;
+
+const milestoneTimeline = [
+  {
+    week: "Uke 1–2",
+    focus: "Telemetri & KPI",
+    deliverables: ["Event-skjema", "Dashboards", "Testplan"],
+  },
+  {
+    week: "Uke 3–4",
+    focus: "Beta-launch",
+    deliverables: ["Invite-prosess", "Bug triage", "Første datareview"],
+  },
+  {
+    week: "Uke 5–6",
+    focus: "Live-innhold",
+    deliverables: ["Sesongplan", "Assets produksjon", "QA"],
+  },
+  {
+    week: "Uke 7–8",
+    focus: "Community",
+    deliverables: ["Discord/forum live", "Moderasjonsguide", "Første AMA"],
+  },
+  {
+    week: "Uke 9+",
+    focus: "Kontinuerlig drift",
+    deliverables: ["Månedlige innholdsdrop", "Feedback-samlinger", "KPI-review"],
+  },
+] as const;
+
+const followUpSteps = [
+  "Bekreft ressurser og ansvarlige for hver aktivitet.",
+  "Prioriter telemetri og KPI-er før beta for å sikre målegrunnlag.",
+  "Sett opp community-kanaler tidlig og kommuniser roadmap.",
+  "Etabler månedlige analyser av data og feedback for å justere planene.",
+] as const;
+
 export default function PhaseOne() {
   const [activeLayer, setActiveLayer] = useState<(typeof overlayLayers)[number]["id"]>(
     overlayLayers[0]?.id ?? "threat",
@@ -441,6 +587,132 @@ export default function PhaseOne() {
                 </ul>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        <Card className="border-emerald-500/30 bg-slate-900/60">
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-2xl text-emerald-200">Fase 5 – Launch og oppfølging</CardTitle>
+                <CardDescription className="text-slate-300">
+                  LiveOps-plan som dekker soft launch, kontinuerlige oppdateringer og community-arbeid.
+                </CardDescription>
+              </div>
+              <Badge className="bg-emerald-400/20 text-emerald-200">LiveOps</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            <div className="grid gap-6 md:grid-cols-3">
+              {launchStreams.map((stream) => (
+                <div key={stream.id} className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-lg font-semibold text-emerald-100">{stream.title}</h3>
+                    <Badge className="bg-emerald-300/20 text-emerald-100">Kjerne</Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-emerald-50/80">{stream.summary}</p>
+                  <Separator className="my-3 border-emerald-500/30" />
+                  <div className="space-y-3">
+                    {stream.pillars.map((pillar) => (
+                      <div key={`${stream.id}-${pillar.label}`}>
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-emerald-200">
+                          {pillar.label}
+                        </h4>
+                        <ul className="mt-1 space-y-2 text-sm text-emerald-50/90">
+                          {pillar.items.map((item) => (
+                            <li key={item} className="flex items-start gap-2">
+                              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Separator className="border-emerald-500/20" />
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="rounded-lg border border-emerald-500/20 bg-slate-950/50 p-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-200">Teamroller</h3>
+                <ul className="mt-2 space-y-2 text-sm text-slate-300">
+                  {resourceSupport.roles.map((role) => (
+                    <li key={role} className="flex items-start gap-2">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                      <span>{role}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-lg border border-emerald-500/20 bg-slate-950/50 p-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-200">Verktøy</h3>
+                <ul className="mt-2 space-y-2 text-sm text-slate-300">
+                  {resourceSupport.tools.map((tool) => (
+                    <li key={tool} className="flex items-start gap-2">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                      <span>{tool}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-lg border border-emerald-500/20 bg-slate-950/50 p-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-200">Risikofaktorer</h3>
+                <ul className="mt-2 space-y-2 text-sm text-slate-300">
+                  {resourceSupport.risks.map((risk) => (
+                    <li key={risk} className="flex items-start gap-2">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                      <span>{risk}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <Separator className="border-emerald-500/20" />
+
+            <div className="rounded-lg border border-emerald-500/20">
+              <div className="grid grid-cols-[0.8fr_1fr_1.2fr] gap-3 bg-emerald-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-100">
+                <span>Uke</span>
+                <span>Fokus</span>
+                <span>Leveranser</span>
+              </div>
+              <div className="divide-y divide-emerald-500/10">
+                {milestoneTimeline.map((milestone) => (
+                  <div
+                    key={milestone.week}
+                    className="grid grid-cols-[0.8fr_1fr_1.2fr] gap-3 px-4 py-3 text-sm text-slate-200"
+                  >
+                    <span className="font-semibold text-emerald-200">{milestone.week}</span>
+                    <span>{milestone.focus}</span>
+                    <ul className="space-y-1 text-sm text-slate-300">
+                      {milestone.deliverables.map((item) => (
+                        <li key={item} className="flex items-start gap-2">
+                          <span className="mt-1 h-1 w-1 rounded-full bg-emerald-300" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator className="border-emerald-500/20" />
+
+            <div className="rounded-lg border border-emerald-500/20 bg-slate-950/50 p-4">
+              <h3 className="text-sm font-semibold text-emerald-200">Neste steg</h3>
+              <ul className="mt-3 space-y-2 text-sm text-slate-300">
+                {followUpSteps.map((step) => (
+                  <li key={step} className="flex items-start gap-2">
+                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </CardContent>
         </Card>
       </div>
