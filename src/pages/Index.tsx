@@ -63,6 +63,13 @@ interface Nation {
   threats?: Record<string, number>;
   migrantsThisTurn?: number;
   migrantsTotal?: number;
+  migrantsLastTurn?: number;
+  immigrants?: number;
+  coverOpsTurns?: number;
+  deepRecon?: Record<string, number>;
+  sanctionTurns?: number;
+  sanctioned?: boolean;
+  environmentPenaltyTurns?: number;
 }
 
 interface GameState {
@@ -346,6 +353,273 @@ const WARHEAD_YIELD_TO_ID = new Map<number, string>(
 );
 
 type ModalContentValue = string | ReactNode | (() => ReactNode);
+
+type OperationTargetFilter = (nation: Nation, player: Nation) => boolean;
+
+interface OperationAction {
+  id: string;
+  title: string;
+  subtitle: string;
+  description?: string;
+  costText?: string;
+  requiresTarget?: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
+  targetFilter?: OperationTargetFilter;
+}
+
+interface OperationModalProps {
+  actions: OperationAction[];
+  player: Nation;
+  targetableNations: Nation[];
+  onExecute: (action: OperationAction, target?: Nation) => boolean;
+  onClose: () => void;
+  accent?: 'fuchsia' | 'cyan' | 'violet' | 'emerald' | 'amber';
+}
+
+const ACCENT_STYLES: Record<NonNullable<OperationModalProps['accent']>, {
+  border: string;
+  hover: string;
+  heading: string;
+  text: string;
+  muted: string;
+  button: string;
+}> = {
+  fuchsia: {
+    border: 'border-fuchsia-500/60',
+    hover: 'hover:border-fuchsia-300 hover:bg-fuchsia-500/10',
+    heading: 'text-fuchsia-300',
+    text: 'text-fuchsia-200',
+    muted: 'text-fuchsia-200/70',
+    button: 'bg-fuchsia-500 text-black hover:bg-fuchsia-400'
+  },
+  cyan: {
+    border: 'border-cyan-500/60',
+    hover: 'hover:border-cyan-300 hover:bg-cyan-500/10',
+    heading: 'text-cyan-300',
+    text: 'text-cyan-200',
+    muted: 'text-cyan-200/70',
+    button: 'bg-cyan-500 text-black hover:bg-cyan-400'
+  },
+  violet: {
+    border: 'border-violet-500/60',
+    hover: 'hover:border-violet-300 hover:bg-violet-500/10',
+    heading: 'text-violet-300',
+    text: 'text-violet-200',
+    muted: 'text-violet-200/70',
+    button: 'bg-violet-500 text-black hover:bg-violet-400'
+  },
+  emerald: {
+    border: 'border-emerald-500/60',
+    hover: 'hover:border-emerald-300 hover:bg-emerald-500/10',
+    heading: 'text-emerald-300',
+    text: 'text-emerald-200',
+    muted: 'text-emerald-200/70',
+    button: 'bg-emerald-500 text-black hover:bg-emerald-400'
+  },
+  amber: {
+    border: 'border-amber-500/60',
+    hover: 'hover:border-amber-300 hover:bg-amber-500/10',
+    heading: 'text-amber-300',
+    text: 'text-amber-200',
+    muted: 'text-amber-200/70',
+    button: 'bg-amber-500 text-black hover:bg-amber-400'
+  }
+};
+
+function OperationModal({ actions, player, targetableNations, onExecute, onClose, accent = 'fuchsia' }: OperationModalProps) {
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const accentStyles = ACCENT_STYLES[accent];
+
+  const pendingAction = useMemo(() => actions.find(action => action.id === pendingActionId) || null, [actions, pendingActionId]);
+
+  const availableTargets = useMemo(() => {
+    if (!pendingAction || !pendingAction.requiresTarget) return [] as Nation[];
+    const filter = pendingAction.targetFilter;
+    return targetableNations.filter(nation => (filter ? filter(nation, player) : true));
+  }, [pendingAction, targetableNations, player]);
+
+  const handleActionClick = (action: OperationAction) => {
+    if (action.disabled) {
+      if (action.disabledReason) {
+        toast({ title: 'Unavailable', description: action.disabledReason });
+      }
+      return;
+    }
+
+    if (action.requiresTarget) {
+      setPendingActionId(action.id);
+      return;
+    }
+
+    const success = onExecute(action);
+    if (success) {
+      onClose();
+    }
+  };
+
+  const handleTargetClick = (target: Nation) => {
+    if (!pendingAction) return;
+    const success = onExecute(pendingAction, target);
+    if (success) {
+      setPendingActionId(null);
+      onClose();
+    }
+  };
+
+  if (pendingAction && pendingAction.requiresTarget) {
+    return (
+      <div className="space-y-4">
+        <div className={`text-xs uppercase tracking-widest ${accentStyles.heading}`}>
+          Select target for {pendingAction.title}
+        </div>
+        <div className="grid gap-3">
+          {availableTargets.length === 0 ? (
+            <div className={`rounded border ${accentStyles.border} bg-black/50 px-4 py-3 text-sm ${accentStyles.muted}`}>
+              No valid targets available.
+            </div>
+          ) : (
+            availableTargets.map(target => (
+              <button
+                key={target.id}
+                type="button"
+                onClick={() => handleTargetClick(target)}
+                className={`rounded border ${accentStyles.border} bg-black/60 px-4 py-3 text-left transition ${accentStyles.hover}`}
+              >
+                <div className={`flex items-center justify-between text-sm font-semibold ${accentStyles.text}`}>
+                  <span>{target.name}</span>
+                  <span>{Math.floor(target.population)}M</span>
+                </div>
+                <div className={`mt-1 text-xs ${accentStyles.muted}`}>
+                  DEF {target.defense} • MISS {target.missiles} • INSTAB {Math.floor(target.instability || 0)}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+        <div className="flex flex-wrap justify-between gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPendingActionId(null)}
+            className="border border-cyan-500/60 bg-transparent text-cyan-200 hover:bg-cyan-500/10"
+          >
+            Back
+          </Button>
+          <Button type="button" onClick={onClose} className={accentStyles.button}>
+            Close [ESC]
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className={`text-xs uppercase tracking-widest ${accentStyles.heading}`}>Operations</div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {actions.map(action => (
+          <button
+            key={action.id}
+            type="button"
+            onClick={() => handleActionClick(action)}
+            className={`rounded border ${accentStyles.border} bg-black/60 px-4 py-3 text-left transition ${accentStyles.hover} ${action.disabled ? 'cursor-not-allowed opacity-40' : ''}`}
+            aria-disabled={action.disabled}
+          >
+            <div className={`text-sm font-semibold ${accentStyles.text}`}>{action.title}</div>
+            <div className={`text-xs uppercase tracking-wide ${accentStyles.heading}`}>{action.subtitle}</div>
+            {action.costText ? (
+              <div className={`mt-2 text-xs ${accentStyles.muted}`}>{action.costText}</div>
+            ) : null}
+            {action.description ? (
+              <p className={`mt-2 text-xs leading-relaxed ${accentStyles.muted}`}>{action.description}</p>
+            ) : null}
+            {action.disabled && action.disabledReason ? (
+              <p className="mt-2 text-xs text-yellow-300/80">{action.disabledReason}</p>
+            ) : null}
+          </button>
+        ))}
+      </div>
+      <div className="flex justify-end">
+        <Button type="button" onClick={onClose} className={accentStyles.button}>
+          Close [ESC]
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+interface IntelReportContentProps {
+  player: Nation;
+  onClose: () => void;
+}
+
+function IntelReportContent({ player, onClose }: IntelReportContentProps) {
+  const visibleTargets = useMemo(() => {
+    if (!player.satellites) return [] as Nation[];
+    return nations.filter(nation => {
+      if (nation.isPlayer) return false;
+      if (!player.satellites?.[nation.id]) return false;
+      if (nation.coverOpsTurns && nation.coverOpsTurns > 0) return false;
+      return true;
+    });
+  }, [player]);
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-3">
+        {visibleTargets.length === 0 ? (
+          <div className="rounded border border-cyan-500/60 bg-black/50 px-4 py-3 text-sm text-cyan-200/70">
+            No active surveillance targets available. Deploy satellites to gather intelligence.
+          </div>
+        ) : (
+          visibleTargets.map(nation => {
+            const warheads = Object.entries(nation.warheads || {})
+              .map(([yieldMT, count]) => `${yieldMT}MT×${count}`)
+              .join(' ');
+            const deepReconActive = !!player.deepRecon?.[nation.id];
+
+            return (
+              <div
+                key={nation.id}
+                className="rounded border border-cyan-500/60 bg-black/60 px-4 py-3 text-sm text-cyan-100"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-cyan-200">{nation.name}</span>
+                  <span className="text-xs text-cyan-300">POP {Math.floor(nation.population)}M</span>
+                </div>
+                <div className="mt-2 grid gap-1 text-xs text-cyan-200/80">
+                  <div>Missiles: {nation.missiles} • Defense: {nation.defense}</div>
+                  <div>Warheads: {warheads || '—'}</div>
+                  <div>
+                    Production: {Math.floor(nation.production || 0)} • Uranium: {Math.floor(nation.uranium || 0)} • Intel: {Math.floor(nation.intel || 0)}
+                  </div>
+                  <div>
+                    Instability: {Math.floor(nation.instability || 0)} • Cities: {nation.cities || 1}
+                  </div>
+                  <div>
+                    Migrants (turn / total): {(nation.migrantsThisTurn || 0)} / {(nation.migrantsTotal || 0)}
+                  </div>
+                  {deepReconActive ? (
+                    <>
+                      <div>Doctrine: {nation.doctrine || 'Unknown'} • Personality: {nation.ai || 'Unknown'}</div>
+                      <div>Tech: {Object.keys(nation.researched || {}).join(', ') || 'None'}</div>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+      <div className="flex justify-end">
+        <Button type="button" onClick={onClose} className="bg-cyan-500 text-black hover:bg-cyan-400">
+          Close [ESC]
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 // PlayerManager class
 class PlayerManager {
@@ -829,59 +1103,74 @@ function maybeBanter(nation: Nation, chance: number, pool?: string) {
 function performImmigration(type: string, target: Nation) {
   const player = PlayerManager.get();
   if (!player || !target) return false;
-  
+
+  const trackMigrants = (recipient: Nation, amount: number) => {
+    if (amount <= 0) return;
+    recipient.migrantsThisTurn = (recipient.migrantsThisTurn || 0) + amount;
+    recipient.migrantsTotal = (recipient.migrantsTotal || 0) + amount;
+  };
+
   switch (type) {
     case 'skilled':
-      if (canAfford(player, COSTS.immigration_skilled)) {
-        const amount = Math.floor(player.population * 0.05);
-        player.population -= amount;
-        target.population += amount;
+      if (!canAfford(player, COSTS.immigration_skilled)) break;
+
+      { const amount = Math.max(1, Math.floor(target.population * 0.05));
+        if (amount <= 0) break;
+        target.population = Math.max(0, target.population - amount);
+        player.population += amount;
         target.instability = (target.instability || 0) + 15;
-        target.defense += 1;
+        player.defense = (player.defense || 0) + 1;
         pay(player, COSTS.immigration_skilled);
-        log(`Skilled immigration: ${amount}M → ${target.name}`);
+        trackMigrants(player, amount);
+        log(`Skilled immigration: +${amount}M talent from ${target.name}`);
         return true;
       }
-      break;
-    
+
     case 'mass':
-      if (canAfford(player, COSTS.immigration_mass)) {
-        const amount = Math.floor(player.population * 0.10);
-        player.population -= amount;
-        target.population += amount;
-        target.instability = (target.instability || 0) + 30;
+      if (!canAfford(player, COSTS.immigration_mass)) break;
+
+      { const amount = Math.max(1, Math.floor(target.population * 0.1));
+        if (amount <= 0) break;
+        target.population = Math.max(0, target.population - amount);
+        player.population += amount;
+        const instability = 25 + Math.floor(Math.random() * 11);
+        target.instability = (target.instability || 0) + instability;
         pay(player, COSTS.immigration_mass);
-        log(`Mass immigration: ${amount}M → ${target.name}`);
+        trackMigrants(player, amount);
+        log(`Mass immigration: ${amount}M resettle from ${target.name} (+${instability} instability)`);
         return true;
       }
-      break;
-      
+
     case 'refugee':
-      if (canAfford(player, COSTS.immigration_refugee) && (player.instability || 0) >= 50) {
-        const amount = Math.floor(player.population * 0.15);
-        player.population -= amount;
-        target.population += amount;
+      if (!canAfford(player, COSTS.immigration_refugee) || (player.instability || 0) < 50) break;
+
+      { const amount = Math.max(1, Math.floor(target.population * 0.15));
+        if (amount <= 0) break;
+        target.population = Math.max(0, target.population - amount);
+        player.population += amount;
         target.instability = (target.instability || 0) + 40;
         player.instability = Math.max(0, (player.instability || 0) - 20);
         pay(player, COSTS.immigration_refugee);
-        log(`Refugee wave: ${amount}M → ${target.name}`);
+        trackMigrants(player, amount);
+        log(`Refugee wave: ${amount}M flee ${target.name} (your instability -20)`);
         return true;
       }
-      break;
-      
+
     case 'brain':
-      if (canAfford(player, COSTS.immigration_brain)) {
-        const amount = Math.floor(target.population * 0.03);
-        target.population -= amount;
+      if (!canAfford(player, COSTS.immigration_brain)) break;
+
+      { const amount = Math.max(1, Math.floor(target.population * 0.03));
+        if (amount <= 0) break;
+        target.population = Math.max(0, target.population - amount);
         player.population += amount;
         target.instability = (target.instability || 0) + 10;
         pay(player, COSTS.immigration_brain);
-        log(`Brain drain: +${amount}M from ${target.name}`);
+        trackMigrants(player, amount);
+        log(`Brain drain: +${amount}M skilled workers from ${target.name}`);
         return true;
       }
-      break;
   }
-  
+
   return false;
 }
 
@@ -1027,7 +1316,16 @@ function productionPhase() {
         log('Eco movement reduces nuclear production', 'warning');
       }
     }
-    
+
+    if (n.environmentPenaltyTurns && n.environmentPenaltyTurns > 0) {
+      prodMult *= 0.7;
+      uranMult *= 0.7;
+      n.environmentPenaltyTurns--;
+      if (n.environmentPenaltyTurns === 0 && n.isPlayer) {
+        log('Environmental treaty penalties have expired.', 'success');
+      }
+    }
+
     n.production += Math.floor(baseProd * prodMult);
     n.uranium += Math.floor(baseUranium * uranMult);
     n.intel += baseIntel;
@@ -1058,6 +1356,46 @@ function productionPhase() {
       const intelBonus = Math.ceil(baseIntel * 0.2);
       n.intel += intelBonus;
     }
+  });
+
+  nations.forEach(n => {
+    if (n.coverOpsTurns && n.coverOpsTurns > 0) {
+      n.coverOpsTurns = Math.max(0, n.coverOpsTurns - 1);
+    }
+
+    if (n.deepRecon) {
+      Object.keys(n.deepRecon).forEach(targetId => {
+        const remaining = Math.max(0, (n.deepRecon[targetId] || 0) - 1);
+        if (remaining <= 0) {
+          delete n.deepRecon[targetId];
+        } else {
+          n.deepRecon[targetId] = remaining;
+        }
+      });
+    }
+
+    if (n.sanctionTurns && n.sanctionTurns > 0) {
+      n.sanctionTurns--;
+      if (n.sanctionTurns <= 0) {
+        n.sanctioned = false;
+        delete n.sanctionTurns;
+        log(`Sanctions on ${n.name} expired.`, 'success');
+      }
+    }
+
+    if (n.treaties) {
+      Object.values(n.treaties).forEach(treaty => {
+        if (treaty && typeof treaty.truceTurns === 'number' && treaty.truceTurns > 0) {
+          treaty.truceTurns = Math.max(0, treaty.truceTurns - 1);
+          if (treaty.truceTurns === 0) {
+            delete treaty.truceTurns;
+          }
+        }
+      });
+    }
+
+    n.migrantsLastTurn = n.migrantsThisTurn || 0;
+    n.migrantsThisTurn = 0;
   });
 
   nations.forEach(n => advanceResearch(n, 'PRODUCTION'));
@@ -2593,9 +2931,14 @@ export default function NoradVector() {
             </div>
           );
         })}
+        <div className="flex justify-end pt-2">
+          <Button type="button" onClick={closeModal} className="bg-cyan-500 text-black hover:bg-cyan-400">
+            Close [ESC]
+          </Button>
+        </div>
       </div>
     );
-  }, []);
+  }, [closeModal]);
 
   const getBuildContext = useCallback((actionLabel: string): Nation | null => {
     if (!isGameStarted) {
@@ -2982,6 +3325,752 @@ export default function NoradVector() {
     openModal('RESEARCH DIRECTORATE', renderResearchModal);
   }, [openModal, renderResearchModal]);
 
+  const handleIntel = useCallback(() => {
+    const player = getBuildContext('Intelligence');
+    if (!player) return;
+
+    const intelActions: OperationAction[] = [
+      {
+        id: 'satellite',
+        title: 'DEPLOY SATELLITE',
+        subtitle: 'Reveal enemy arsenal',
+        costText: 'Cost: 5 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 5,
+        disabledReason: 'Requires 5 INTEL to deploy a satellite.',
+      },
+      {
+        id: 'sabotage',
+        title: 'SABOTAGE',
+        subtitle: 'Destroy enemy warhead',
+        costText: 'Cost: 10 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 10,
+        disabledReason: 'Requires 10 INTEL to mount sabotage.',
+        targetFilter: nation => Object.values(nation.warheads || {}).some(count => (count || 0) > 0),
+      },
+      {
+        id: 'propaganda',
+        title: 'PROPAGANDA',
+        subtitle: 'Stoke enemy unrest',
+        costText: 'Cost: 15 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 15,
+        disabledReason: 'Requires 15 INTEL to conduct propaganda.',
+      },
+      {
+        id: 'culture_bomb',
+        title: 'CULTURE BOMB',
+        subtitle: 'Steal 10% population',
+        costText: 'Cost: 20 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 20,
+        disabledReason: 'Requires 20 INTEL to deploy a culture bomb.',
+        targetFilter: nation => nation.population > 5,
+      },
+      {
+        id: 'view',
+        title: 'VIEW INTELLIGENCE',
+        subtitle: 'Review surveillance reports',
+        description: 'Displays detailed data for nations under satellite coverage.',
+      },
+      {
+        id: 'deep',
+        title: 'DEEP RECON',
+        subtitle: 'Reveal tech and doctrine',
+        costText: 'Cost: 30 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 30,
+        disabledReason: 'Requires 30 INTEL to run deep reconnaissance.',
+      },
+      {
+        id: 'cover',
+        title: 'COVER OPS',
+        subtitle: 'Hide your assets for 3 turns',
+        costText: 'Cost: 25 INTEL',
+        disabled: (player.intel || 0) < 25,
+        disabledReason: 'Requires 25 INTEL to mask your forces.',
+      }
+    ];
+
+    const executeIntelAction = (action: OperationAction, target?: Nation) => {
+      const commander = PlayerManager.get();
+      if (!commander) {
+        toast({ title: 'No command authority', description: 'Player nation could not be located.' });
+        return false;
+      }
+
+      switch (action.id) {
+        case 'view':
+          openModal('INTELLIGENCE REPORT', <IntelReportContent player={commander} onClose={closeModal} />);
+          return false;
+
+        case 'satellite':
+          if (!target) return false;
+          if ((commander.intel || 0) < 5) {
+            toast({ title: 'Insufficient intel', description: 'You need 5 INTEL to deploy a satellite.' });
+            return false;
+          }
+          commander.intel -= 5;
+          commander.satellites = commander.satellites || {};
+          commander.satellites[target.id] = true;
+          log(`Satellite deployed over ${target.name}`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'sabotage':
+          if (!target) return false;
+          if ((commander.intel || 0) < 10) {
+            toast({ title: 'Insufficient intel', description: 'You need 10 INTEL for sabotage operations.' });
+            return false;
+          }
+          {
+            const warheadTypes = Object.keys(target.warheads || {}).filter(key => (target.warheads?.[Number(key)] || target.warheads?.[key as any]) > 0);
+            if (warheadTypes.length === 0) {
+              toast({ title: 'No targets', description: `${target.name} has no active warheads to sabotage.` });
+              return false;
+            }
+            const type = warheadTypes[Math.floor(Math.random() * warheadTypes.length)];
+            const numericType = Number(type);
+            if (target.warheads) {
+              target.warheads[numericType] = Math.max(0, (target.warheads[numericType] || 0) - 1);
+              if (target.warheads[numericType] <= 0) {
+                delete target.warheads[numericType];
+              }
+            }
+            commander.intel -= 10;
+            log(`Sabotage successful: ${target.name}'s ${type}MT warhead destroyed.`);
+          }
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'propaganda':
+          if (!target) return false;
+          if ((commander.intel || 0) < 15) {
+            toast({ title: 'Insufficient intel', description: 'You need 15 INTEL for propaganda operations.' });
+            return false;
+          }
+          commander.intel -= 15;
+          target.instability = (target.instability || 0) + 20;
+          log(`Propaganda campaign spikes instability in ${target.name}.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'culture_bomb':
+          if (!target) return false;
+          if ((commander.intel || 0) < 20) {
+            toast({ title: 'Insufficient intel', description: 'You need 20 INTEL for a culture bomb.' });
+            return false;
+          }
+          {
+            const stolen = Math.max(1, Math.floor(target.population * 0.1));
+            commander.intel -= 20;
+            target.population = Math.max(0, target.population - stolen);
+            commander.population += stolen;
+            commander.migrantsThisTurn = (commander.migrantsThisTurn || 0) + stolen;
+            commander.migrantsTotal = (commander.migrantsTotal || 0) + stolen;
+            log(`Culture bomb siphons ${stolen}M population from ${target.name}.`);
+          }
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'deep':
+          if (!target) return false;
+          if ((commander.intel || 0) < 30) {
+            toast({ title: 'Insufficient intel', description: 'You need 30 INTEL for deep reconnaissance.' });
+            return false;
+          }
+          commander.intel -= 30;
+          commander.satellites = commander.satellites || {};
+          commander.satellites[target.id] = true;
+          commander.deepRecon = commander.deepRecon || {};
+          commander.deepRecon[target.id] = (commander.deepRecon[target.id] || 0) + 3;
+          log(`Deep recon initiated over ${target.name}. Detailed intel for 3 turns.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'cover':
+          if ((commander.intel || 0) < 25) {
+            toast({ title: 'Insufficient intel', description: 'You need 25 INTEL to initiate cover operations.' });
+            return false;
+          }
+          commander.intel -= 25;
+          commander.coverOpsTurns = (commander.coverOpsTurns || 0) + 3;
+          log('Cover operations active: your forces are hidden for 3 turns.');
+          updateDisplay();
+          consumeAction();
+          return true;
+      }
+
+      return false;
+    };
+
+    openModal(
+      'INTELLIGENCE OPS',
+      <OperationModal
+        actions={intelActions}
+        player={player}
+        targetableNations={targetableNations}
+        onExecute={executeIntelAction}
+        onClose={closeModal}
+        accent="cyan"
+      />
+    );
+  }, [closeModal, getBuildContext, openModal, targetableNations]);
+
+
+  const handleCulture = useCallback(() => {
+    const player = getBuildContext('Culture');
+    if (!player) return;
+
+    const cultureActions: OperationAction[] = [
+      {
+        id: 'meme',
+        title: 'MEME WAVE',
+        subtitle: 'Steal 5M pop, +8 instability',
+        costText: 'Cost: 2 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 2,
+        disabledReason: 'Requires 2 INTEL to flood the networks.',
+        targetFilter: nation => nation.population > 1,
+      },
+      {
+        id: 'cancel',
+        title: 'CANCEL CAMPAIGN',
+        subtitle: 'Agitate regime supporters',
+        costText: 'Cost: 3 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 3,
+        disabledReason: 'Requires 3 INTEL to fuel the outrage machine.',
+      },
+      {
+        id: 'deepfake',
+        title: 'DEEPFAKE OPS',
+        subtitle: 'Target defense -2',
+        costText: 'Cost: 5 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 5,
+        disabledReason: 'Requires 5 INTEL to produce convincing deepfakes.',
+      },
+      {
+        id: 'victory',
+        title: 'PROPAGANDA VICTORY',
+        subtitle: 'Win via cultural dominance',
+        costText: 'Requires 50 INTEL and majority influence',
+        disabled: (player.intel || 0) < 50,
+        disabledReason: 'Requires 50 INTEL to attempt cultural victory.',
+      },
+      {
+        id: 'eco',
+        title: 'ECO PROPAGANDA',
+        subtitle: 'Force nuclear phase-out',
+        costText: 'Cost: 30 PROD, 150 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 150 || (player.production || 0) < 30,
+        disabledReason: 'Requires 150 INTEL and 30 PRODUCTION to sway global opinion.',
+      }
+    ];
+
+    const executeCultureAction = (action: OperationAction, target?: Nation) => {
+      const commander = PlayerManager.get();
+      if (!commander) {
+        toast({ title: 'No command authority', description: 'Player nation could not be located.' });
+        return false;
+      }
+
+      switch (action.id) {
+        case 'meme':
+          if (!target) return false;
+          if ((commander.intel || 0) < 2) {
+            toast({ title: 'Insufficient intel', description: 'You need 2 INTEL to unleash the meme wave.' });
+            return false;
+          }
+          commander.intel -= 2;
+          {
+            const stolen = Math.min(5, Math.max(1, Math.floor(target.population)));
+            target.population = Math.max(0, target.population - stolen);
+            commander.population += stolen;
+            commander.migrantsThisTurn = (commander.migrantsThisTurn || 0) + stolen;
+            commander.migrantsTotal = (commander.migrantsTotal || 0) + stolen;
+            target.instability = (target.instability || 0) + 8;
+            log(`Meme wave steals ${stolen}M population from ${target.name}.`);
+          }
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'cancel':
+          if (!target) return false;
+          if ((commander.intel || 0) < 3) {
+            toast({ title: 'Insufficient intel', description: 'You need 3 INTEL to sustain a cancel campaign.' });
+            return false;
+          }
+          commander.intel -= 3;
+          target.instability = (target.instability || 0) + 4;
+          log(`Cancel campaign inflames unrest in ${target.name}.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'deepfake':
+          if (!target) return false;
+          if ((commander.intel || 0) < 5) {
+            toast({ title: 'Insufficient intel', description: 'You need 5 INTEL to produce deepfakes.' });
+            return false;
+          }
+          commander.intel -= 5;
+          target.defense = Math.max(0, target.defense - 2);
+          log(`Deepfake operation undermines ${target.name}'s defenses.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'victory': {
+          if ((commander.intel || 0) < 50) {
+            toast({ title: 'Insufficient intel', description: 'You need 50 INTEL to attempt a cultural victory.' });
+            return false;
+          }
+          const totalIntel = nations.reduce((sum, nation) => sum + (nation.intel || 0), 0);
+          if (totalIntel <= 0) {
+            toast({ title: 'Insufficient data', description: 'No global intel footprint detected yet.' });
+            return false;
+          }
+          const share = (commander.intel || 0) / totalIntel;
+          if (share <= 0.5) {
+            toast({ title: 'Influence too low', description: 'Control more than half of the world\'s culture to win.' });
+            return false;
+          }
+          commander.intel -= 50;
+          consumeAction();
+          endGame(true, 'CULTURAL VICTORY - Minds conquered without firing a shot!');
+          return true;
+        }
+
+        case 'eco':
+          if (!target) return false;
+          if ((commander.intel || 0) < 150 || (commander.production || 0) < 30) {
+            toast({ title: 'Insufficient resources', description: 'You need 150 INTEL and 30 PRODUCTION to launch eco propaganda.' });
+            return false;
+          }
+          commander.intel -= 150;
+          commander.production = Math.max(0, (commander.production || 0) - 30);
+          target.greenShiftTurns = (target.greenShiftTurns || 0) + 5;
+          log(`Eco propaganda forces ${target.name} to wind down nuclear production.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+      }
+
+      return false;
+    };
+
+    openModal(
+      'CULTURE WARFARE',
+      <OperationModal
+        actions={cultureActions}
+        player={player}
+        targetableNations={targetableNations}
+        onExecute={executeCultureAction}
+        onClose={closeModal}
+        accent="violet"
+      />
+    );
+  }, [closeModal, getBuildContext, openModal, targetableNations]);
+
+
+  const handleImmigration = useCallback(() => {
+    const player = getBuildContext('Immigration');
+    if (!player) return;
+
+    const immigrationActions: OperationAction[] = [
+      {
+        id: 'skilled',
+        title: 'SKILLED IMMIGRATION',
+        subtitle: 'Steal 5% pop, +15 instability',
+        costText: 'Cost: 10 PROD, 5 INTEL',
+        requiresTarget: true,
+        disabled: !canAfford(player, COSTS.immigration_skilled),
+        disabledReason: 'Requires 10 PRODUCTION and 5 INTEL.',
+        targetFilter: nation => nation.population > 1,
+      },
+      {
+        id: 'mass',
+        title: 'MASS IMMIGRATION',
+        subtitle: 'Drain 10% pop, +25-35 instability',
+        costText: 'Cost: 5 PROD, 2 INTEL',
+        requiresTarget: true,
+        disabled: !canAfford(player, COSTS.immigration_mass),
+        disabledReason: 'Requires 5 PRODUCTION and 2 INTEL.',
+        targetFilter: nation => nation.population > 5,
+      },
+      {
+        id: 'refugee',
+        title: 'REFUGEE WAVE',
+        subtitle: 'Dump instability onto target',
+        costText: 'Cost: 15 INTEL (requires 50 instability)',
+        requiresTarget: true,
+        disabled: !canAfford(player, COSTS.immigration_refugee) || (player.instability || 0) < 50,
+        disabledReason: 'Requires 15 INTEL and 50+ instability.',
+        targetFilter: nation => nation.population > 5,
+      },
+      {
+        id: 'brain',
+        title: 'BRAIN DRAIN',
+        subtitle: 'Steal 3% skilled population',
+        costText: 'Cost: 20 INTEL',
+        requiresTarget: true,
+        disabled: !canAfford(player, COSTS.immigration_brain),
+        disabledReason: 'Requires 20 INTEL.',
+        targetFilter: nation => nation.population > 1,
+      }
+    ];
+
+    const executeImmigrationAction = (action: OperationAction, target?: Nation) => {
+      if (!target) return false;
+      const commander = PlayerManager.get();
+      if (!commander) {
+        toast({ title: 'No command authority', description: 'Player nation could not be located.' });
+        return false;
+      }
+
+      const success = performImmigration(action.id, target);
+      if (!success) {
+        toast({ title: 'Operation failed', description: 'Insufficient resources or requirements not met.' });
+        return false;
+      }
+
+      updateDisplay();
+      consumeAction();
+      return true;
+    };
+
+    openModal(
+      'IMMIGRATION OPS',
+      <OperationModal
+        actions={immigrationActions}
+        player={player}
+        targetableNations={targetableNations}
+        onExecute={executeImmigrationAction}
+        onClose={closeModal}
+        accent="emerald"
+      />
+    );
+  }, [closeModal, getBuildContext, openModal, targetableNations]);
+
+  const handleDiplomacy = useCallback(() => {
+    const player = getBuildContext('Diplomacy');
+    if (!player) return;
+
+    const treatyWith = (nation: Nation) => player.treaties?.[nation.id];
+
+    const diplomacyActions: OperationAction[] = [
+      {
+        id: 'truce',
+        title: 'DECLARE TRUCE',
+        subtitle: 'Mutual peace for 2 turns',
+        requiresTarget: true,
+        disabled: false,
+        targetFilter: nation => !(treatyWith(nation)?.truceTurns > 0),
+      },
+      {
+        id: 'trade',
+        title: 'TRADE AGREEMENT',
+        subtitle: 'Give 10 PROD → Get 5 URANIUM',
+        costText: 'Cost: 10 PRODUCTION',
+        requiresTarget: true,
+        disabled: (player.production || 0) < 10,
+        disabledReason: 'Requires 10 PRODUCTION to trade.',
+      },
+      {
+        id: 'un',
+        title: 'UN APPEAL',
+        subtitle: 'Improve DEFCON by 1',
+        costText: 'Cost: 10 INTEL',
+        disabled: (player.intel || 0) < 10 || S.defcon >= 5,
+        disabledReason: S.defcon >= 5 ? 'DEFCON already at maximum.' : 'Requires 10 INTEL.',
+      },
+      {
+        id: 'alliance',
+        title: 'FORM ALLIANCE',
+        subtitle: 'Share intel and secure peace',
+        costText: 'Cost: 10 PROD, 40 INTEL',
+        requiresTarget: true,
+        disabled: (player.production || 0) < 10 || (player.intel || 0) < 40,
+        disabledReason: 'Requires 10 PRODUCTION and 40 INTEL.',
+        targetFilter: nation => !(treatyWith(nation)?.alliance),
+      },
+      {
+        id: 'backstab',
+        title: 'BACKSTAB',
+        subtitle: 'Break treaties for +1 missile',
+        requiresTarget: true,
+        disabled: false,
+        targetFilter: nation => {
+          const treaty = treatyWith(nation);
+          return !!(treaty?.truceTurns || treaty?.alliance);
+        },
+      },
+      {
+        id: 'borders',
+        title: 'CLOSE BORDERS',
+        subtitle: 'Block immigration for 2 turns',
+        costText: 'Cost: 5 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 5,
+        disabledReason: 'Requires 5 INTEL.',
+        targetFilter: nation => !(nation.bordersClosedTurns && nation.bordersClosedTurns > 0),
+      },
+      {
+        id: 'sanction',
+        title: 'IMPOSE SANCTIONS',
+        subtitle: 'Block target trade for 5 turns',
+        costText: 'Cost: 15 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 15,
+        disabledReason: 'Requires 15 INTEL.',
+        targetFilter: nation => !nation.sanctioned,
+      },
+      {
+        id: 'pact',
+        title: 'NON-AGGRESSION PACT',
+        subtitle: 'Five turns of guaranteed peace',
+        costText: 'Cost: 15 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 15,
+        disabledReason: 'Requires 15 INTEL.',
+        targetFilter: nation => !(treatyWith(nation)?.truceTurns && treatyWith(nation)?.truceTurns > 2),
+      },
+      {
+        id: 'aid',
+        title: 'ECONOMIC AID',
+        subtitle: 'Reduce instability by 10',
+        costText: 'Cost: 20 PRODUCTION',
+        requiresTarget: true,
+        disabled: (player.production || 0) < 20,
+        disabledReason: 'Requires 20 PRODUCTION.',
+        targetFilter: nation => (nation.instability || 0) > 0,
+      },
+      {
+        id: 'propaganda',
+        title: 'PROPAGANDA',
+        subtitle: 'Drain 10 INTEL from target',
+        costText: 'Cost: 15 INTEL',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 15,
+        disabledReason: 'Requires 15 INTEL.',
+      },
+      {
+        id: 'env',
+        title: 'ENV TREATY',
+        subtitle: 'Reduce production & uranium for 5 turns',
+        costText: 'Cost: 15 PROD, 60 INTEL',
+        requiresTarget: true,
+        disabled: (player.production || 0) < 15 || (player.intel || 0) < 60,
+        disabledReason: 'Requires 15 PRODUCTION and 60 INTEL.',
+      }
+    ];
+
+    const executeDiplomacyAction = (action: OperationAction, target?: Nation) => {
+      const commander = PlayerManager.get();
+      if (!commander) {
+        toast({ title: 'No command authority', description: 'Player nation could not be located.' });
+        return false;
+      }
+
+      const ensureTreaty = (self: Nation, other: Nation) => {
+        self.treaties = self.treaties || {};
+        self.treaties[other.id] = self.treaties[other.id] || {};
+        return self.treaties[other.id];
+      };
+
+      switch (action.id) {
+        case 'truce':
+          if (!target) return false;
+          ensureTreaty(commander, target).truceTurns = 2;
+          ensureTreaty(target, commander).truceTurns = 2;
+          log(`Truce declared with ${target.name} for 2 turns.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'trade':
+          if (!target) return false;
+          if ((commander.production || 0) < 10) {
+            toast({ title: 'Insufficient production', description: 'You need 10 PRODUCTION to trade.' });
+            return false;
+          }
+          if (commander.sanctioned) {
+            toast({ title: 'Trade blocked', description: 'You are currently under sanctions.' });
+            return false;
+          }
+          commander.production = Math.max(0, (commander.production || 0) - 10);
+          commander.uranium = (commander.uranium || 0) + 5;
+          log(`Trade agreement with ${target.name}: -10 PRODUCTION, +5 URANIUM.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'un':
+          if ((commander.intel || 0) < 10) {
+            toast({ title: 'Insufficient intel', description: 'You need 10 INTEL for a UN appeal.' });
+            return false;
+          }
+          if (S.defcon >= 5) {
+            toast({ title: 'DEFCON stable', description: 'DEFCON is already at maximum stability.' });
+            return false;
+          }
+          commander.intel -= 10;
+          S.defcon = Math.min(5, S.defcon + 1);
+          DoomsdayClock.improve(0.5);
+          log(`UN appeal successful: DEFCON improved to ${S.defcon}.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'alliance':
+          if (!target) return false;
+          if ((commander.production || 0) < 10 || (commander.intel || 0) < 40) {
+            toast({ title: 'Insufficient resources', description: 'You need 10 PRODUCTION and 40 INTEL to form an alliance.' });
+            return false;
+          }
+          commander.production = Math.max(0, (commander.production || 0) - 10);
+          commander.intel -= 40;
+          ensureTreaty(commander, target).truceTurns = 999;
+          ensureTreaty(commander, target).alliance = true;
+          ensureTreaty(target, commander).truceTurns = 999;
+          ensureTreaty(target, commander).alliance = true;
+          log(`Alliance formed with ${target.name}.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'backstab':
+          if (!target) return false;
+          {
+            const treaty = ensureTreaty(commander, target);
+            const targetTreaty = ensureTreaty(target, commander);
+            if (!treaty.truceTurns && !treaty.alliance) {
+              toast({ title: 'No treaty to break', description: 'You need an active truce or alliance to backstab.' });
+              return false;
+            }
+            delete treaty.truceTurns;
+            delete treaty.alliance;
+            delete targetTreaty.truceTurns;
+            delete targetTreaty.alliance;
+          }
+          commander.missiles += 1;
+          commander.instability = (commander.instability || 0) + 10;
+          log(`Backstab! Treaties with ${target.name} are broken. (+1 missile, +10 instability)`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'borders':
+          if (!target) return false;
+          if ((commander.intel || 0) < 5) {
+            toast({ title: 'Insufficient intel', description: 'You need 5 INTEL to close borders.' });
+            return false;
+          }
+          commander.intel -= 5;
+          target.bordersClosedTurns = Math.max(2, (target.bordersClosedTurns || 0) + 2);
+          log(`${target.name}'s borders sealed for 2 turns.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'sanction':
+          if (!target) return false;
+          if ((commander.intel || 0) < 15) {
+            toast({ title: 'Insufficient intel', description: 'You need 15 INTEL to impose sanctions.' });
+            return false;
+          }
+          commander.intel -= 15;
+          target.sanctioned = true;
+          target.sanctionTurns = (target.sanctionTurns || 0) + 5;
+          log(`Sanctions imposed on ${target.name} for 5 turns.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'pact':
+          if (!target) return false;
+          if ((commander.intel || 0) < 15) {
+            toast({ title: 'Insufficient intel', description: 'You need 15 INTEL for a non-aggression pact.' });
+            return false;
+          }
+          commander.intel -= 15;
+          ensureTreaty(commander, target).truceTurns = 5;
+          ensureTreaty(target, commander).truceTurns = 5;
+          log(`Non-aggression pact signed with ${target.name} for 5 turns.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'aid':
+          if (!target) return false;
+          if ((commander.production || 0) < 20) {
+            toast({ title: 'Insufficient production', description: 'You need 20 PRODUCTION to send aid.' });
+            return false;
+          }
+          commander.production = Math.max(0, (commander.production || 0) - 20);
+          target.instability = Math.max(0, (target.instability || 0) - 10);
+          log(`Economic aid sent to ${target.name}, reducing instability by 10.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'propaganda': {
+          if (!target) return false;
+          if ((commander.intel || 0) < 15) {
+            toast({ title: 'Insufficient intel', description: 'You need 15 INTEL to run propaganda.' });
+            return false;
+          }
+          commander.intel -= 15;
+          const drained = Math.min(10, target.intel || 0);
+          target.intel = Math.max(0, (target.intel || 0) - drained);
+          commander.intel += 5;
+          log(`Propaganda drains intel from ${target.name} (target loses ${drained}).`);
+          updateDisplay();
+          consumeAction();
+          return true;
+        }
+
+        case 'env':
+          if (!target) return false;
+          if ((commander.production || 0) < 15 || (commander.intel || 0) < 60) {
+            toast({ title: 'Insufficient resources', description: 'You need 15 PRODUCTION and 60 INTEL to enforce an environmental treaty.' });
+            return false;
+          }
+          commander.production = Math.max(0, (commander.production || 0) - 15);
+          commander.intel -= 60;
+          target.environmentPenaltyTurns = (target.environmentPenaltyTurns || 0) + 5;
+          log(`Environmental treaty limits ${target.name}'s nuclear industry for 5 turns.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+      }
+
+      return false;
+    };
+
+    openModal(
+      'DIPLOMACY',
+      <OperationModal
+        actions={diplomacyActions}
+        player={player}
+        targetableNations={targetableNations}
+        onExecute={executeDiplomacyAction}
+        onClose={closeModal}
+        accent="fuchsia"
+      />
+    );
+  }, [closeModal, getBuildContext, openModal, targetableNations]);
+
   useEffect(() => {
     handleAttackRef.current = handleAttack;
   }, [handleAttack]);
@@ -3154,11 +4243,11 @@ export default function NoradVector() {
 
         switch(e.key) {
           case '1': handleBuild(); break;
-          case '2': /* research */ break;
-          case '3': /* intel */ break;
-          case '4': /* culture */ break;
-          case '5': /* immigration */ break;
-          case '6': /* diplomacy */ break;
+          case '2': handleResearch(); break;
+          case '3': handleIntel(); break;
+          case '4': handleCulture(); break;
+          case '5': handleImmigration(); break;
+          case '6': handleDiplomacy(); break;
           case '7':
             e.preventDefault();
             handleAttackRef.current?.();
@@ -3202,7 +4291,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted, handleBuild, openModal]);
+  }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, openModal]);
 
 
   if (!isGameStarted) {
@@ -3374,10 +4463,10 @@ export default function NoradVector() {
                   <Button onClick={handleResearch} className="command-button">
                     RESEARCH
                   </Button>
-                  <Button className="command-button">INTEL</Button>
-                  <Button className="command-button">CULTURE</Button>
-                  <Button className="command-button">IMMIGRATION</Button>
-                  <Button className="command-button">DIPLOMACY</Button>
+                  <Button onClick={handleIntel} className="command-button">INTEL</Button>
+                  <Button onClick={handleCulture} className="command-button">CULTURE</Button>
+                  <Button onClick={handleImmigration} className="command-button">IMMIGRATION</Button>
+                  <Button onClick={handleDiplomacy} className="command-button">DIPLOMACY</Button>
                   <Button onClick={handleAttack} className="command-button command-button--danger">
                     ATTACK
                   </Button>
