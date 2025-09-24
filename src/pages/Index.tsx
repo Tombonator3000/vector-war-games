@@ -892,6 +892,22 @@ function canPerformAction(action: string, defcon: number): boolean {
   return true;
 }
 
+function hasActivePeaceTreaty(player: Nation | null, target: Nation): boolean {
+  if (!player) return false;
+  const treaty = player.treaties?.[target.id];
+  if (!treaty) return false;
+  if (treaty.alliance) return true;
+  if (typeof treaty.truceTurns === 'number' && treaty.truceTurns > 0) return true;
+  return false;
+}
+
+function isEligibleEnemyTarget(player: Nation | null, target: Nation): boolean {
+  if (target.isPlayer) return false;
+  if (target.population <= 0) return false;
+  if (hasActivePeaceTreaty(player, target)) return false;
+  return true;
+}
+
 function startResearch(tier: number | string): boolean {
   const player = PlayerManager.get();
   if (!player) return false;
@@ -2550,6 +2566,7 @@ function consumeAction() {
 
 // React Component
 export default function NoradVector() {
+  const interfaceRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -2563,7 +2580,81 @@ export default function NoradVector() {
   const [musicVolume, setMusicVolume] = useState(AudioSys.musicVolume);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [uiTick, setUiTick] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const handleAttackRef = useRef<() => void>(() => {});
+
+  const resizeCanvas = useCallback(() => {
+    const element = canvasRef.current;
+    if (!element) return;
+
+    const parent = element.parentElement;
+    const rect = parent?.getBoundingClientRect();
+    const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : element.width;
+    const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : element.height;
+    const width = Math.floor(rect?.width ?? fallbackWidth);
+    const height = Math.floor(rect?.height ?? fallbackHeight);
+
+    if (width <= 0 || height <= 0) {
+      return;
+    }
+
+    element.style.width = '100%';
+    element.style.height = '100%';
+
+    const sizeChanged = element.width !== width || element.height !== height;
+    if (sizeChanged) {
+      element.width = width;
+      element.height = height;
+      W = width;
+      H = height;
+      cam.x = (W - W * cam.zoom) / 2;
+      cam.y = (H - H * cam.zoom) / 2;
+    } else {
+      W = element.width;
+      H = element.height;
+    }
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    const element = interfaceRef.current ?? document.documentElement;
+
+    if (!document.fullscreenElement) {
+      if (element.requestFullscreen) {
+        void element.requestFullscreen().catch(() => {
+          toast({ title: 'Fullscreen blocked', description: 'Browser prevented entering fullscreen mode.' });
+        });
+      } else {
+        toast({ title: 'Fullscreen unsupported', description: 'This browser does not support fullscreen mode.' });
+      }
+    } else if (document.exitFullscreen) {
+      void document.exitFullscreen().catch(() => {
+        toast({ title: 'Fullscreen error', description: 'Unable to exit fullscreen mode.' });
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+      resizeCanvas();
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    handleFullscreenChange();
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, [resizeCanvas]);
+
+  useEffect(() => {
+    if (isGameStarted) {
+      resizeCanvas();
+    }
+  }, [isGameStarted, resizeCanvas]);
 
   const handleMusicToggle = useCallback((checked: boolean) => {
     AudioSys.musicEnabled = checked;
@@ -2618,8 +2709,9 @@ export default function NoradVector() {
 
   useEffect(() => {
     if (!selectedTargetId) return;
-    const stillValid = nations.some(n => n.id === selectedTargetId && !n.isPlayer && n.population > 0);
-    if (!stillValid) {
+    const player = PlayerManager.get();
+    const target = nations.find(n => n.id === selectedTargetId);
+    if (!target || !isEligibleEnemyTarget(player, target)) {
       setSelectedTargetId(null);
     }
   }, [selectedTargetId, uiTick]);
@@ -2636,6 +2728,11 @@ export default function NoradVector() {
       .filter(n => !n.isPlayer && n.population > 0)
       .sort((a, b) => b.population - a.population);
   }, [uiTick]);
+
+  const attackableNations = useMemo(() => {
+    const player = PlayerManager.get();
+    return targetableNations.filter(nation => isEligibleEnemyTarget(player, nation));
+  }, [targetableNations]);
 
   const handleTargetSelect = useCallback((nationId: string) => {
     setSelectedTargetId(prev => (prev === nationId ? null : nationId));
@@ -2670,6 +2767,12 @@ export default function NoradVector() {
     const target = nations.find(n => n.id === selectedTargetId && !n.isPlayer);
     if (!target || target.population <= 0) {
       toast({ title: 'Target unavailable', description: 'The selected target is no longer a valid threat.' });
+      setSelectedTargetId(null);
+      return;
+    }
+
+    if (hasActivePeaceTreaty(player, target)) {
+      toast({ title: 'Treaty in effect', description: 'An active truce or alliance prevents launching against this nation.' });
       setSelectedTargetId(null);
       return;
     }
@@ -4079,10 +4182,17 @@ export default function NoradVector() {
     if (canvasRef.current && isGameStarted) {
       canvas = canvasRef.current;
       ctx = canvas.getContext('2d')!;
-      
-      W = canvas.width = 1600;
-      H = canvas.height = 900;
-      
+
+      resizeCanvas();
+
+      const handleWindowResize = () => {
+        resizeCanvas();
+      };
+
+      if (typeof window !== 'undefined') {
+        window.addEventListener('resize', handleWindowResize);
+      }
+
       // Initialize audio
       AudioSys.init();
       
@@ -4279,6 +4389,9 @@ export default function NoradVector() {
       document.addEventListener('keydown', handleKeyDown);
 
       return () => {
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('resize', handleWindowResize);
+        }
         canvas.removeEventListener('mousedown', handleMouseDown);
         canvas.removeEventListener('mousemove', handleMouseMove);
         canvas.removeEventListener('mouseup', handleMouseUp);
@@ -4291,104 +4404,109 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, openModal]);
+  }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, openModal, resizeCanvas]);
 
 
   if (!isGameStarted) {
     return (
-      <div className="min-h-screen bg-black text-cyan-500 flex flex-col items-center justify-center p-8">
-        <div className="text-center space-y-8 max-w-2xl">
-          <pre
-            aria-label="NORAD VECTOR"
-            className="mx-auto mb-8 max-w-full overflow-x-auto rounded-lg border border-cyan-500/40 bg-black/60 p-6 font-mono text-[clamp(1.5rem,4vw,3.5rem)] leading-tight text-emerald-300 shadow-[0_0_20px_rgba(0,255,170,0.45)] drop-shadow-[0_0_18px_rgba(0,255,170,0.75)]"
-          >{`███╗   ██╗ ██████╗ ██████╗  █████╗ ██████╗      ██╗   ██╗███████╗ ██████╗████████╗ ██████╗ ██████╗ 
+      <div ref={interfaceRef} className="command-interface">
+        <div className="command-interface__glow" aria-hidden="true" />
+        <div className="command-interface__scanlines" aria-hidden="true" />
+
+        <div className="relative z-10 flex flex-1 w-full items-center justify-center px-8 py-10 text-cyan-500">
+          <div className="text-center space-y-8 max-w-2xl">
+            <pre
+              aria-label="NORAD VECTOR"
+              className="mx-auto mb-8 max-w-full overflow-x-auto rounded-lg border border-cyan-500/40 bg-black/60 p-6 font-mono text-[clamp(1.5rem,4vw,3.5rem)] leading-tight text-emerald-300 shadow-[0_0_20px_rgba(0,255,170,0.45)] drop-shadow-[0_0_18px_rgba(0,255,170,0.75)]"
+            >{`███╗   ██╗ ██████╗ ██████╗  █████╗ ██████╗      ██╗   ██╗███████╗ ██████╗████████╗ ██████╗ ██████╗
 ████╗  ██║██╔═══██╗██╔══██╗██╔══██╗██╔══██╗     ██║   ██║██╔════╝██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗
 ██╔██╗ ██║██║   ██║██████╔╝███████║██║  ██║     ██║   ██║█████╗  ██║        ██║   ██║   ██║██████╔╝
 ██║╚██╗██║██║   ██║██╔══██╗██╔══██║██║  ██║     ╚██╗ ██╔╝██╔══╝  ██║        ██║   ██║   ██║██╔══██╗
 ██║ ╚████║╚██████╔╝██║  ██║██║  ██║██████╔╝██████╚████╔╝ ███████╗╚██████╗   ██║   ╚██████╔╝██║  ██║
 ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚═════╝╚═══╝  ╚══════╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝`}
-          </pre>
-          <p className="text-xl mb-8">Nuclear War Simulation</p>
-          
-          {!selectedLeader && (
-            <div>
-              <h2 className="text-3xl mb-6 text-cyan-400">SELECT LEADER</h2>
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                {leaders.map(leader => {
-                  const isSelected = selectedLeader === leader.name;
-                  return (
+            </pre>
+            <p className="text-xl mb-8">Nuclear War Simulation</p>
+
+            {!selectedLeader && (
+              <div>
+                <h2 className="text-3xl mb-6 text-cyan-400">SELECT LEADER</h2>
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                  {leaders.map(leader => {
+                    const isSelected = selectedLeader === leader.name;
+                    return (
+                      <Button
+                        key={leader.name}
+                        onClick={() => setSelectedLeader(leader.name)}
+                        className="p-6 border transition-all duration-300 uppercase tracking-wide"
+                        style={{
+                          borderColor: leader.color,
+                          backgroundColor: isSelected ? leader.color : 'rgba(0,0,0,0.6)',
+                          color: isSelected ? '#000000' : leader.color,
+                          boxShadow: isSelected ? `0 0 18px ${leader.color}` : '0 0 8px rgba(0,0,0,0.4)'
+                        }}
+                      >
+                        <div>
+                          <div className="font-bold">{leader.name}</div>
+                          <div className="text-sm opacity-80">{leader.ai}</div>
+                        </div>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {selectedLeader && !selectedDoctrine && (
+              <div>
+                <h2 className="text-3xl mb-6 text-cyan-400">SELECT DOCTRINE</h2>
+                <div className="grid grid-cols-1 gap-4 mb-8">
+                  {Object.entries(doctrines).map(([key, doctrine]) => (
                     <Button
-                      key={leader.name}
-                      onClick={() => setSelectedLeader(leader.name)}
-                      className="p-6 border transition-all duration-300 uppercase tracking-wide"
-                      style={{
-                        borderColor: leader.color,
-                        backgroundColor: isSelected ? leader.color : 'rgba(0,0,0,0.6)',
-                        color: isSelected ? '#000000' : leader.color,
-                        boxShadow: isSelected ? `0 0 18px ${leader.color}` : '0 0 8px rgba(0,0,0,0.4)'
-                      }}
+                      key={key}
+                      onClick={() => setSelectedDoctrine(key)}
+                      className="p-6 bg-black border border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-black text-left"
                     >
                       <div>
-                        <div className="font-bold">{leader.name}</div>
-                        <div className="text-sm opacity-80">{leader.ai}</div>
+                        <div className="font-bold">{doctrine.name}</div>
+                        <div className="text-sm">{doctrine.desc}</div>
+                        <div className="text-xs text-yellow-400">{doctrine.effects}</div>
                       </div>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedLeader && selectedDoctrine && (
+              <div>
+                <h2 className="text-3xl mb-6 text-green-400">READY TO START</h2>
+                <p className="mb-4">Leader: {selectedLeader}</p>
+                <p className="mb-6">Doctrine: {doctrines[selectedDoctrine as keyof typeof doctrines].name}</p>
+                <Button
+                  onClick={startGame}
+                  className="px-12 py-4 bg-green-600 hover:bg-green-700 text-white text-xl"
+                >
+                  START GAME
+                </Button>
+              </div>
+            )}
+
+            <div className="mt-12">
+              <h2 className="text-2xl mb-4 text-purple-300">VISUAL THEME</h2>
+              <div className="flex flex-wrap justify-center gap-3">
+                {themeOptions.map(opt => {
+                  const isActive = theme === opt.id;
+                  return (
+                    <Button
+                      key={opt.id}
+                      onClick={() => setTheme(opt.id)}
+                      className={`px-4 py-2 border text-sm transition-all ${isActive ? 'bg-purple-500 text-black border-purple-300' : 'bg-transparent border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-black'}`}
+                    >
+                      {opt.label.toUpperCase()}
                     </Button>
                   );
                 })}
               </div>
-            </div>
-          )}
-          
-          {selectedLeader && !selectedDoctrine && (
-            <div>
-              <h2 className="text-3xl mb-6 text-cyan-400">SELECT DOCTRINE</h2>
-              <div className="grid grid-cols-1 gap-4 mb-8">
-                {Object.entries(doctrines).map(([key, doctrine]) => (
-                  <Button
-                    key={key}
-                    onClick={() => setSelectedDoctrine(key)}
-                    className="p-6 bg-black border border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-black text-left"
-                  >
-                    <div>
-                      <div className="font-bold">{doctrine.name}</div>
-                      <div className="text-sm">{doctrine.desc}</div>
-                      <div className="text-xs text-yellow-400">{doctrine.effects}</div>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {selectedLeader && selectedDoctrine && (
-            <div>
-              <h2 className="text-3xl mb-6 text-green-400">READY TO START</h2>
-              <p className="mb-4">Leader: {selectedLeader}</p>
-              <p className="mb-6">Doctrine: {doctrines[selectedDoctrine as keyof typeof doctrines].name}</p>
-              <Button
-                onClick={startGame}
-                className="px-12 py-4 bg-green-600 hover:bg-green-700 text-white text-xl"
-              >
-                START GAME
-              </Button>
-            </div>
-          )}
-
-          <div className="mt-12">
-            <h2 className="text-2xl mb-4 text-purple-300">VISUAL THEME</h2>
-            <div className="flex flex-wrap justify-center gap-3">
-              {themeOptions.map(opt => {
-                const isActive = theme === opt.id;
-                return (
-                  <Button
-                    key={opt.id}
-                    onClick={() => setTheme(opt.id)}
-                    className={`px-4 py-2 border text-sm transition-all ${isActive ? 'bg-purple-500 text-black border-purple-300' : 'bg-transparent border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-black'}`}
-                  >
-                    {opt.label.toUpperCase()}
-                  </Button>
-                );
-              })}
             </div>
           </div>
         </div>
@@ -4397,7 +4515,7 @@ export default function NoradVector() {
   }
 
   return (
-    <div className="command-interface">
+    <div ref={interfaceRef} className="command-interface">
       <div className="command-interface__glow" aria-hidden="true" />
       <div className="command-interface__scanlines" aria-hidden="true" />
 
@@ -4469,6 +4587,13 @@ export default function NoradVector() {
                   <Button onClick={handleDiplomacy} className="command-button">DIPLOMACY</Button>
                   <Button onClick={handleAttack} className="command-button command-button--danger">
                     ATTACK
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={toggleFullscreen}
+                    className="command-button command-button--neutral"
+                  >
+                    {isFullscreen ? 'EXIT FULLSCREEN' : 'FULLSCREEN'}
                   </Button>
                   <Button
                     type="button"
@@ -4570,10 +4695,10 @@ export default function NoradVector() {
                     <span>HOSTILES</span>
                   </div>
                   <div className="targets-list">
-                    {targetableNations.length === 0 ? (
-                      <div className="targets-empty">No viable enemy targets.</div>
+                    {attackableNations.length === 0 ? (
+                      <div className="targets-empty">No viable enemy targets. Existing truces or alliances must be broken first.</div>
                     ) : (
-                      targetableNations.map(target => {
+                      attackableNations.map(target => {
                         const isActive = selectedTargetId === target.id;
                         return (
                           <button
