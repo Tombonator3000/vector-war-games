@@ -158,37 +158,26 @@ body {
 }
 
 /* ASCII Logo and Synthwave Effects */
+.simple-text {
+  /* Clean readable text without heavy effects */
+}
+
 .glow-text {
-  text-shadow: 
-    0 0 5px hsl(var(--cyan)),
-    0 0 10px hsl(var(--cyan)),
-    0 0 15px hsl(var(--cyan)),
-    0 0 20px hsl(var(--cyan));
-  animation: glow-pulse 2s ease-in-out infinite alternate;
+  /* Removed heavy glow effects */
 }
 
 @keyframes glow-pulse {
   from {
-    text-shadow: 
-      0 0 5px hsl(var(--cyan)),
-      0 0 10px hsl(var(--cyan)),
-      0 0 15px hsl(var(--cyan)),
-      0 0 20px hsl(var(--cyan));
+    opacity: 1;
   }
   to {
-    text-shadow: 
-      0 0 2px hsl(var(--cyan)),
-      0 0 5px hsl(var(--cyan)),
-      0 0 8px hsl(var(--cyan)),
-      0 0 12px hsl(var(--cyan));
+    opacity: 0.8;
   }
 }
 
 .glow-on-hover:hover {
   box-shadow: 
-    0 0 20px hsl(var(--cyan)),
-    inset 0 0 20px hsl(var(--cyan) / 0.1);
-  text-shadow: 0 0 10px hsl(var(--cyan));
+    0 0 10px hsl(var(--cyan) / 0.5);
 }
 
 .synthwave-card {

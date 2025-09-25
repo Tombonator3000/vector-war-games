@@ -4482,64 +4482,30 @@ export default function NoradVector() {
 
   // Render functions for different phases
   const renderIntroScreen = () => (
-    <div ref={interfaceRef} className="fixed inset-0 bg-background flex items-center justify-center">
-      <div className="text-center space-y-12 max-w-4xl mx-auto px-8">
-        {/* NORAD Logo */}
-        <div className="font-mono text-cyan space-y-1">
-          <div className="text-4xl md:text-6xl lg:text-7xl leading-none tracking-wider glow-text">
-            ███╗   ██╗ ██████╗ ██████╗  █████╗ ██████╗
-          </div>
-          <div className="text-4xl md:text-6xl lg:text-7xl leading-none tracking-wider glow-text">
-            ████╗  ██║██╔═══██╗██╔══██╗██╔══██╗██╔══██╗
-          </div>
-          <div className="text-4xl md:text-6xl lg:text-7xl leading-none tracking-wider glow-text">
-            ██╔██╗ ██║██║   ██║██████╔╝███████║██║  ██║
-          </div>
-          <div className="text-4xl md:text-6xl lg:text-7xl leading-none tracking-wider glow-text">
-            ██║╚██╗██║██║   ██║██╔══██╗██╔══██║██║  ██║
-          </div>
-          <div className="text-4xl md:text-6xl lg:text-7xl leading-none tracking-wider glow-text">
-            ██║ ╚████║╚██████╔╝██║  ██║██║  ██║██████╔╝
-          </div>
-          <div className="text-4xl md:text-6xl lg:text-7xl leading-none tracking-wider glow-text">
-            ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
-          </div>
-        </div>
-        
-        {/* VECTOR Logo */}
-        <div className="font-mono text-neon-magenta space-y-1">
-          <div className="text-3xl md:text-5xl lg:text-6xl leading-none tracking-wider glow-text">
-            ██╗   ██╗███████╗ ██████╗████████╗ ██████╗ ██████╗
-          </div>
-          <div className="text-3xl md:text-5xl lg:text-6xl leading-none tracking-wider glow-text">
-            ██║   ██║██╔════╝██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗
-          </div>
-          <div className="text-3xl md:text-5xl lg:text-6xl leading-none tracking-wider glow-text">
-            ██║   ██║█████╗  ██║        ██║   ██║   ██║██████╔╝
-          </div>
-          <div className="text-3xl md:text-5xl lg:text-6xl leading-none tracking-wider glow-text">
-            ╚██╗ ██╔╝██╔══╝  ██║        ██║   ██║   ██║██╔══██╗
-          </div>
-          <div className="text-3xl md:text-5xl lg:text-6xl leading-none tracking-wider glow-text">
-             ╚████╔╝ ███████╗╚██████╗   ██║   ╚██████╔╝██║  ██║
-          </div>
-          <div className="text-3xl md:text-5xl lg:text-6xl leading-none tracking-wider glow-text">
-              ╚═══╝  ╚══════╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
-          </div>
+    <div className="min-h-screen bg-black text-white flex items-center justify-center p-8">
+      <div className="text-center space-y-8 max-w-lg">
+        {/* Simple clean logo */}
+        <div className="space-y-2">
+          <h1 className="text-5xl md:text-7xl font-bold text-blue-400">
+            NORAD
+          </h1>
+          <h2 className="text-3xl md:text-5xl font-bold text-purple-400">
+            VECTOR
+          </h2>
         </div>
         
         {/* Want to play text */}
-        <div className="text-neon-green text-2xl md:text-3xl font-mono tracking-wider animate-pulse">
+        <p className="text-xl md:text-2xl text-green-400">
           Want to play a game?
-        </div>
+        </p>
         
         {/* Start button */}
-        <Button 
+        <button 
           onClick={() => setGamePhase('leader')}
-          className="px-12 py-4 bg-transparent border-2 border-cyan text-cyan hover:bg-cyan hover:text-background transition-all duration-300 font-mono text-xl tracking-widest uppercase glow-on-hover"
+          className="px-8 py-3 text-lg font-bold bg-blue-600 hover:bg-blue-500 text-white rounded border-2 border-blue-400 transition-colors duration-200"
         >
-          Initialize
-        </Button>
+          START GAME
+        </button>
       </div>
     </div>
   );
