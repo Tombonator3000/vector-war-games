@@ -157,6 +157,67 @@ body {
   letter-spacing: 0.06em;
 }
 
+/* ASCII Logo and Synthwave Effects */
+.glow-text {
+  text-shadow: 
+    0 0 5px hsl(var(--cyan)),
+    0 0 10px hsl(var(--cyan)),
+    0 0 15px hsl(var(--cyan)),
+    0 0 20px hsl(var(--cyan));
+  animation: glow-pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow-pulse {
+  from {
+    text-shadow: 
+      0 0 5px hsl(var(--cyan)),
+      0 0 10px hsl(var(--cyan)),
+      0 0 15px hsl(var(--cyan)),
+      0 0 20px hsl(var(--cyan));
+  }
+  to {
+    text-shadow: 
+      0 0 2px hsl(var(--cyan)),
+      0 0 5px hsl(var(--cyan)),
+      0 0 8px hsl(var(--cyan)),
+      0 0 12px hsl(var(--cyan));
+  }
+}
+
+.glow-on-hover:hover {
+  box-shadow: 
+    0 0 20px hsl(var(--cyan)),
+    inset 0 0 20px hsl(var(--cyan) / 0.1);
+  text-shadow: 0 0 10px hsl(var(--cyan));
+}
+
+.synthwave-card {
+  background: linear-gradient(135deg, 
+    hsl(var(--deep-space)) 0%,
+    hsl(var(--background)) 50%,
+    hsl(var(--deep-space)) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.synthwave-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    hsl(var(--neon-magenta) / 0.2), 
+    transparent);
+  transition: left 0.5s;
+}
+
+.synthwave-card:hover::before {
+  left: 100%;
+}
+
 .command-interface {
   position: relative;
   display: flex;

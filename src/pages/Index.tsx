@@ -2613,6 +2613,7 @@ export default function NoradVector() {
   const navigate = useNavigate();
   const interfaceRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [gamePhase, setGamePhase] = useState('intro');
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState<{ title: string; content: ModalContentValue }>({ title: '', content: '' });
@@ -4479,119 +4480,166 @@ export default function NoradVector() {
   }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, openModal, resizeCanvas]);
 
 
-  if (!isGameStarted) {
-    return (
-      <div ref={interfaceRef} className="command-interface">
-        <div className="command-interface__glow" aria-hidden="true" />
-        <div className="command-interface__scanlines" aria-hidden="true" />
-
-        <div className="relative z-10 flex flex-1 w-full items-center justify-center px-8 py-10 text-cyan-500">
-          <div className="text-center space-y-8 max-w-2xl">
-            <pre
-              aria-label="NORAD VECTOR"
-              className="mx-auto mb-8 max-w-full overflow-x-auto rounded-lg border border-cyan-500/40 bg-black/60 p-6 font-mono text-[clamp(1.5rem,4vw,3.5rem)] leading-tight text-emerald-300 shadow-[0_0_20px_rgba(0,255,170,0.45)] drop-shadow-[0_0_18px_rgba(0,255,170,0.75)]"
-            >{`███╗   ██╗ ██████╗ ██████╗  █████╗ ██████╗      ██╗   ██╗███████╗ ██████╗████████╗ ██████╗ ██████╗
-████╗  ██║██╔═══██╗██╔══██╗██╔══██╗██╔══██╗     ██║   ██║██╔════╝██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗
-██╔██╗ ██║██║   ██║██████╔╝███████║██║  ██║     ██║   ██║█████╗  ██║        ██║   ██║   ██║██████╔╝
-██║╚██╗██║██║   ██║██╔══██╗██╔══██║██║  ██║     ╚██╗ ██╔╝██╔══╝  ██║        ██║   ██║   ██║██╔══██╗
-██║ ╚████║╚██████╔╝██║  ██║██║  ██║██████╔╝██████╚████╔╝ ███████╗╚██████╗   ██║   ╚██████╔╝██║  ██║
-╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚═════╝╚═══╝  ╚══════╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝`}
-            </pre>
-            <p className="text-xl mb-8">Nuclear War Simulation</p>
-
-            {!selectedLeader && (
-              <div>
-                <h2 className="text-3xl mb-6 text-cyan-400">SELECT LEADER</h2>
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  {leaders.map(leader => {
-                    const isSelected = selectedLeader === leader.name;
-                    return (
-                      <Button
-                        key={leader.name}
-                        onClick={() => setSelectedLeader(leader.name)}
-                        className="p-6 border transition-all duration-300 uppercase tracking-wide"
-                        style={{
-                          borderColor: leader.color,
-                          backgroundColor: isSelected ? leader.color : 'rgba(0,0,0,0.6)',
-                          color: isSelected ? '#000000' : leader.color,
-                          boxShadow: isSelected ? `0 0 18px ${leader.color}` : '0 0 8px rgba(0,0,0,0.4)'
-                        }}
-                      >
-                        <div>
-                          <div className="font-bold">{leader.name}</div>
-                          <div className="text-sm opacity-80">{leader.ai}</div>
-                        </div>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {selectedLeader && !selectedDoctrine && (
-              <div>
-                <h2 className="text-3xl mb-6 text-cyan-400">SELECT DOCTRINE</h2>
-                <div className="grid grid-cols-1 gap-4 mb-8">
-                  {Object.entries(doctrines).map(([key, doctrine]) => (
-                    <Button
-                      key={key}
-                      onClick={() => setSelectedDoctrine(key)}
-                      className="p-6 bg-black border border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-black text-left"
-                    >
-                      <div>
-                        <div className="font-bold">{doctrine.name}</div>
-                        <div className="text-sm">{doctrine.desc}</div>
-                        <div className="text-xs text-yellow-400">{doctrine.effects}</div>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {selectedLeader && selectedDoctrine && (
-              <div>
-                <h2 className="text-3xl mb-6 text-green-400">READY TO START</h2>
-                <p className="mb-4">Leader: {selectedLeader}</p>
-                <p className="mb-6">Doctrine: {doctrines[selectedDoctrine as keyof typeof doctrines].name}</p>
-                <Button
-                  onClick={startGame}
-                  className="px-12 py-4 bg-green-600 hover:bg-green-700 text-white text-xl"
-                >
-                  START GAME
-                </Button>
-              </div>
-            )}
-
-            <div className="mt-12">
-              <h2 className="text-2xl mb-4 text-purple-300">VISUAL THEME</h2>
-              <div className="flex flex-wrap justify-center gap-3">
-                {themeOptions.map(opt => {
-                  const isActive = theme === opt.id;
-                  return (
-                    <Button
-                      key={opt.id}
-                      onClick={() => setTheme(opt.id)}
-                      className={`px-4 py-2 border text-sm transition-all ${isActive ? 'bg-purple-500 text-black border-purple-300' : 'bg-transparent border-purple-500 text-purple-300 hover:bg-purple-500 hover:text-black'}`}
-                    >
-                      {opt.label.toUpperCase()}
-                    </Button>
-                  );
-                })}
-              </div>
-              <div className="mt-6 flex justify-center">
-                <Button
-                  onClick={() => navigate('/fase-1')}
-                  className="border border-purple-400 bg-transparent px-6 py-3 text-sm font-semibold text-purple-200 transition hover:bg-purple-500 hover:text-black"
-                >
-                  ÅPNE FASE 1-KONSEPTTAVLE
-                </Button>
-              </div>
+  // Render functions for different phases
+  const renderIntroScreen = () => (
+    <div ref={interfaceRef} className="command-interface">
+      <div className="command-interface__glow" aria-hidden="true" />
+      <div className="command-interface__scanlines" aria-hidden="true" />
+      
+      <div className="fixed inset-0 bg-gradient-to-b from-background via-deep-space to-background flex items-center justify-center">
+        <div className="text-center space-y-8">
+          <div className="ascii-logo text-cyan font-mono text-4xl md:text-6xl leading-tight tracking-widest">
+            <div className="glow-text">
+              ███╗   ██╗ ██████╗ ██████╗  █████╗ ██████╗ 
             </div>
+            <div className="glow-text">
+              ████╗  ██║██╔═══██╗██╔══██╗██╔══██╗██╔══██╗
+            </div>
+            <div className="glow-text">
+              ██╔██╗ ██║██║   ██║██████╔╝███████║██║  ██║
+            </div>
+            <div className="glow-text">
+              ██║╚██╗██║██║   ██║██╔══██╗██╔══██║██║  ██║
+            </div>
+            <div className="glow-text">
+              ██║ ╚████║╚██████╔╝██║  ██║██║  ██║██████╔╝
+            </div>
+            <div className="glow-text">
+              ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ 
+            </div>
+            <div className="mt-4 text-neon-magenta">
+              ██╗   ██╗███████╗ ██████╗████████╗ ██████╗ ██████╗ 
+            </div>
+            <div className="text-neon-magenta">
+              ██║   ██║██╔════╝██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗
+            </div>
+            <div className="text-neon-magenta">
+              ██║   ██║█████╗  ██║        ██║   ██║   ██║██████╔╝
+            </div>
+            <div className="text-neon-magenta">
+              ╚██╗ ██╔╝██╔══╝  ██║        ██║   ██║   ██║██╔══██╗
+            </div>
+            <div className="text-neon-magenta">
+               ╚████╔╝ ███████╗╚██████╗   ██║   ╚██████╔╝██║  ██║
+            </div>
+            <div className="text-neon-magenta">
+                ╚═══╝  ╚══════╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
+            </div>
+          </div>
+          
+          <div className="text-neon-green text-xl md:text-2xl font-mono tracking-wider animate-pulse">
+            Want to play a game?
+          </div>
+          
+          <Button 
+            onClick={() => setGamePhase('leader')}
+            className="px-8 py-4 bg-transparent border-2 border-cyan text-cyan hover:bg-cyan hover:text-background transition-all duration-300 font-mono text-lg tracking-widest uppercase glow-on-hover"
+          >
+            Initialize
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderLeaderSelection = () => (
+    <div ref={interfaceRef} className="command-interface">
+      <div className="command-interface__glow" aria-hidden="true" />
+      <div className="command-interface__scanlines" aria-hidden="true" />
+      
+      <div className="fixed inset-0 bg-gradient-to-br from-background via-deep-space to-background flex items-center justify-center p-8">
+        <div className="max-w-4xl w-full">
+          <h2 className="text-3xl font-mono text-cyan text-center mb-8 tracking-widest uppercase glow-text">
+            Select Commander
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {leaders.map((leader) => (
+              <div
+                key={leader.name}
+                onClick={() => {
+                  setSelectedLeader(leader.name);
+                  setGamePhase('doctrine');
+                }}
+                className="bg-card border border-cyan/30 p-6 rounded-lg cursor-pointer hover:border-cyan hover:bg-cyan/10 transition-all duration-300 hover:shadow-lg hover:shadow-cyan/20"
+              >
+                <h3 className="text-xl font-mono text-neon-green mb-2">{leader.name}</h3>
+                <p className="text-sm text-muted-foreground uppercase tracking-wide">{leader.ai}</p>
+              </div>
+            ))}
+          </div>
+          
+          <div className="text-center">
+            <Button
+              onClick={() => setGamePhase('intro')}
+              className="px-6 py-2 bg-transparent border border-muted-foreground text-muted-foreground hover:border-cyan hover:text-cyan transition-all duration-300 font-mono uppercase tracking-wide"
+            >
+              Back
+            </Button>
           </div>
         </div>
       </div>
-    );
+    </div>
+  );
+
+  const renderDoctrineSelection = () => (
+    <div ref={interfaceRef} className="command-interface">
+      <div className="command-interface__glow" aria-hidden="true" />
+      <div className="command-interface__scanlines" aria-hidden="true" />
+      
+      <div className="fixed inset-0 bg-gradient-to-br from-background via-deep-space to-background flex items-center justify-center p-8">
+        <div className="max-w-6xl w-full">
+          <h2 className="text-3xl font-mono text-neon-magenta text-center mb-2 tracking-widest uppercase glow-text">
+            Select Doctrine
+          </h2>
+          <p className="text-center text-cyan font-mono mb-8">Commander: {selectedLeader}</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {Object.entries(doctrines).map(([key, doctrine]) => (
+              <div
+                key={key}
+                onClick={() => {
+                  setSelectedDoctrine(key);
+                  setGamePhase('game');
+                }}
+                className="bg-card border border-neon-magenta/30 p-6 rounded-lg cursor-pointer hover:border-neon-magenta hover:bg-neon-magenta/10 transition-all duration-300 hover:shadow-lg hover:shadow-neon-magenta/20 synthwave-card"
+              >
+                <h3 className="text-xl font-mono text-neon-yellow mb-2">{doctrine.name}</h3>
+                <p className="text-sm text-cyan mb-3">{doctrine.desc}</p>
+                <p className="text-xs text-neon-green font-mono">{doctrine.effects}</p>
+              </div>
+            ))}
+          </div>
+          
+          <div className="text-center">
+            <Button
+              onClick={() => setGamePhase('leader')}
+              className="px-6 py-2 bg-transparent border border-muted-foreground text-muted-foreground hover:border-neon-magenta hover:text-neon-magenta transition-all duration-300 font-mono uppercase tracking-wide"
+            >
+              Back
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Early returns for different phases
+  if (gamePhase === 'intro') {
+    return renderIntroScreen();
+  }
+
+  if (gamePhase === 'leader') {
+    return renderLeaderSelection();
+  }
+
+  if (gamePhase === 'doctrine') {
+    return renderDoctrineSelection();
+  }
+
+  if (!isGameStarted && gamePhase === 'game') {
+    // Auto-start game when entering game phase
+    setIsGameStarted(true);
   }
 
   return (
