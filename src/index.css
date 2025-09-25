@@ -176,12 +176,179 @@ body {
 }
 
 .glow-on-hover:hover {
-  box-shadow: 
+  box-shadow:
     0 0 10px hsl(var(--cyan) / 0.5);
 }
 
+.intro-screen {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(2rem, 6vw, 4rem) clamp(1.5rem, 4vw, 3rem);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(59, 0, 153, 0.4), transparent 55%),
+    radial-gradient(circle at 80% 18%, rgba(0, 216, 255, 0.28), transparent 60%),
+    radial-gradient(circle at 50% 90%, rgba(255, 0, 153, 0.22), transparent 68%),
+    #030712;
+  overflow: hidden;
+}
+
+.intro-screen__content {
+  position: relative;
+  z-index: 2;
+  width: min(120ch, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1.5rem, 3vh, 2.5rem);
+  text-align: center;
+}
+
+.intro-screen__grid,
+.intro-screen__scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.intro-screen__grid {
+  background-image:
+    linear-gradient(rgba(0, 255, 213, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 0, 204, 0.08) 1px, transparent 1px);
+  background-size: clamp(24px, 3vw, 40px) clamp(24px, 3vw, 40px);
+  opacity: 0.35;
+}
+
+.intro-screen__scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 216, 255, 0.08) 3px,
+    rgba(0, 0, 0, 0) 6px
+  );
+  mix-blend-mode: screen;
+  opacity: 0.35;
+}
+
+.intro-screen__logo {
+  font-family: "Share Tech Mono", "IBM Plex Mono", "Roboto Mono", monospace;
+  white-space: pre;
+  line-height: 1.08;
+  font-size: clamp(0.3rem, 0.58vw + 0.15rem, 0.82rem);
+  letter-spacing: 0.04em;
+  margin: 0;
+  background: linear-gradient(90deg, #39ff14, #00d9ff, #ff00ff, #00d9ff, #39ff14);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 0 6px rgba(0, 217, 255, 0.5),
+    0 0 12px rgba(255, 0, 255, 0.35),
+    0 0 22px rgba(57, 255, 20, 0.25);
+  filter: drop-shadow(0 0 12px rgba(0, 216, 255, 0.32));
+  animation: intro-logo-glow 2.6s ease-in-out infinite alternate;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.intro-screen__tagline {
+  font-size: clamp(1.1rem, 1.6vw, 1.75rem);
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: hsl(var(--neon-green));
+  text-shadow:
+    0 0 10px rgba(0, 255, 170, 0.5),
+    0 0 18px rgba(0, 255, 213, 0.35);
+}
+
+.intro-screen__cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.85rem, 1.2vw, 1.15rem) clamp(2.75rem, 4vw, 3.75rem);
+  font-size: clamp(0.95rem, 1.35vw, 1.15rem);
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 216, 255, 0.6);
+  color: hsl(var(--foreground));
+  background:
+    linear-gradient(135deg, rgba(3, 20, 40, 0.85), rgba(5, 10, 30, 0.65));
+  box-shadow:
+    0 0 12px rgba(0, 216, 255, 0.45),
+    0 0 28px rgba(255, 0, 204, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.intro-screen__cta::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 0, 204, 0.45);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.intro-screen__cta:hover,
+.intro-screen__cta:focus-visible {
+  transform: translateY(-2px) scale(1.01);
+  border-color: rgba(0, 255, 213, 0.85);
+  box-shadow:
+    0 0 18px rgba(0, 255, 213, 0.55),
+    0 0 42px rgba(255, 0, 204, 0.45);
+  outline: none;
+}
+
+.intro-screen__cta:hover::after,
+.intro-screen__cta:focus-visible::after {
+  opacity: 1;
+}
+
+@keyframes intro-logo-glow {
+  0% {
+    filter: drop-shadow(0 0 12px rgba(0, 216, 255, 0.3));
+  }
+  100% {
+    filter: drop-shadow(0 0 26px rgba(255, 0, 204, 0.55));
+  }
+}
+
+@media (max-width: 768px) {
+  .intro-screen {
+    padding: clamp(1.5rem, 6vw, 2.5rem) clamp(1rem, 5vw, 2rem);
+  }
+
+  .intro-screen__logo {
+    font-size: clamp(0.28rem, 1.4vw + 0.12rem, 0.6rem);
+    line-height: 1.05;
+  }
+
+  .intro-screen__tagline {
+    letter-spacing: 0.28em;
+  }
+}
+
+@media (max-width: 480px) {
+  .intro-screen__logo {
+    font-size: clamp(0.26rem, 2vw + 0.08rem, 0.5rem);
+  }
+
+  .intro-screen__cta {
+    letter-spacing: 0.32em;
+    padding: clamp(0.75rem, 1.3vw, 1rem) clamp(2.2rem, 5vw, 3rem);
+  }
+}
+
 .synthwave-card {
-  background: linear-gradient(135deg, 
+  background: linear-gradient(135deg,
     hsl(var(--deep-space)) 0%,
     hsl(var(--background)) 50%,
     hsl(var(--deep-space)) 100%);
@@ -196,8 +363,8 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, 
-    transparent, 
+  background: linear-gradient(90deg,
+    transparent,
     hsl(var(--neon-magenta) / 0.2), 
     transparent);
   transition: left 0.5s;

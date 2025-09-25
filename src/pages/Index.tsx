@@ -110,6 +110,49 @@ type LayoutDensityOption = {
   description: string;
 };
 
+const ASCII_INTRO_LOGO = String.raw`
+NNNNNNNN        NNNNNNNN     OOOOOOOOO     RRRRRRRRRRRRRRRRR                  AAA               DDDDDDDDDDDDD
+N:::::::N       N::::::N   OO:::::::::OO   R::::::::::::::::R                A:::A              D::::::::::::DDD
+N::::::::N      N::::::N OO:::::::::::::OO R::::::RRRRRR:::::R              A:::::A             D:::::::::::::::DD
+N:::::::::N     N::::::NO:::::::OOO:::::::ORR:::::R     R:::::R            A:::::::A            DDD:::::DDDDD:::::D
+N::::::::::N    N::::::NO::::::O   O::::::O  R::::R     R:::::R           A:::::::::A             D:::::D    D:::::D
+N:::::::::::N   N::::::NO:::::O     O:::::O  R::::R     R:::::R          A:::::A:::::A            D:::::D     D:::::D
+N:::::::N::::N  N::::::NO:::::O     O:::::O  R::::RRRRRR:::::R          A:::::A A:::::A           D:::::D     D:::::D
+N::::::N N::::N N::::::NO:::::O     O:::::O  R:::::::::::::RR          A:::::A   A:::::A          D:::::D     D:::::D
+N::::::N  N::::N:::::::NO:::::O     O:::::O  R::::RRRRRR:::::R        A:::::A     A:::::A         D:::::D     D:::::D
+N::::::N   N:::::::::::NO:::::O     O:::::O  R::::R     R:::::R      A:::::AAAAAAAAA:::::A        D:::::D     D:::::D
+N::::::N    N::::::::::NO:::::O     O:::::O  R::::R     R:::::R     A:::::::::::::::::::::A       D:::::D     D:::::D
+N::::::N     N:::::::::NO::::::O   O::::::O  R::::R     R:::::R    A:::::AAAAAAAAAAAAA:::::A      D:::::D    D:::::D
+N::::::N      N::::::::NO:::::::OOO:::::::ORR:::::R     R:::::R   A:::::A             A:::::A   DDD:::::DDDDD:::::D
+N::::::N       N:::::::N OO:::::::::::::OO R::::::R     R:::::R  A:::::A               A:::::A  D:::::::::::::::DD
+N::::::N        N::::::N   OO:::::::::OO   R::::::R     R:::::R A:::::A                 A:::::A D::::::::::::DDD
+NNNNNNNN         NNNNNNN     OOOOOOOOO     RRRRRRRR     RRRRRRRAAAAAAA                   AAAAAAADDDDDDDDDDDDD
+
+
+
+
+
+
+
+
+
+                                                       VVVVVVVV           VVVVVVVVEEEEEEEEEEEEEEEEEEEEEE       CCCCCCCCCCCCCTTTTTTTTTTTTTTTTTTTTTTT     OOOOOOOOO     RRRRRRRRRRRRRRRRR
+                                                       V::::::V           V::::::VE::::::::::::::::::::E    CCC::::::::::::CT:::::::::::::::::::::T   OO:::::::::OO   R::::::::::::::::R
+                                                       V::::::V           V::::::VE::::::::::::::::::::E  CC:::::::::::::::CT:::::::::::::::::::::T OO:::::::::::::OO R::::::RRRRRR:::::R
+                                                       V::::::V           V::::::VEE::::::EEEEEEEEE::::E C:::::CCCCCCCC::::CT:::::TT:::::::TT:::::TO:::::::OOO:::::::ORR:::::R     R:::::R
+                                                        V:::::V           V:::::V   E:::::E       EEEEEEC:::::C       CCCCCCTTTTTT  T:::::T  TTTTTTO::::::O   O::::::O  R::::R     R:::::R
+                                                         V:::::V         V:::::V    E:::::E            C:::::C                      T:::::T        O:::::O     O:::::O  R::::R     R:::::R
+                                                          V:::::V       V:::::V     E::::::EEEEEEEEEE  C:::::C                      T:::::T        O:::::O     O:::::O  R::::RRRRRR:::::R
+                                                           V:::::V     V:::::V      E:::::::::::::::E  C:::::C                      T:::::T        O:::::O     O:::::O  R:::::::::::::RR
+                                                            V:::::V   V:::::V       E:::::::::::::::E  C:::::C                      T:::::T        O:::::O     O:::::O  R::::RRRRRR:::::R
+                                                             V:::::V V:::::V        E::::::EEEEEEEEEE  C:::::C                      T:::::T        O:::::O     O:::::O  R::::R     R:::::R
+                                                              V:::::V:::::V         E:::::E            C:::::C                      T:::::T        O:::::O     O:::::O  R::::R     R:::::R
+                                                               V:::::::::V          E:::::E       EEEEEEC:::::C       CCCCCC        T:::::T        O::::::O   O::::::O  R::::R     R:::::R
+                                                                V:::::::V         EE::::::EEEEEEEE:::::E C:::::CCCCCCCC::::C      TT:::::::TT      O:::::::OOO:::::::ORR:::::R     R:::::R
+                                                                 V:::::V          E::::::::::::::::::::E  CC:::::::::::::::C      T:::::::::T       OO:::::::::::::OO R::::::R     R:::::R
+                                                                  V:::V           E::::::::::::::::::::E    CCC::::::::::::C      T:::::::::T         OO:::::::::OO   R::::::R     R:::::R
+                                                                   VVV            EEEEEEEEEEEEEEEEEEEEEE       CCCCCCCCCCCCC      TTTTTTTTTTT           OOOOOOOOO     RRRRRRRR     RRRRRRR`;
+
 const layoutDensityOptions: LayoutDensityOption[] = [
   {
     id: 'expanded',
@@ -4482,29 +4525,18 @@ export default function NoradVector() {
 
   // Render functions for different phases
   const renderIntroScreen = () => (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center p-8">
-      <div className="text-center space-y-8 max-w-lg">
-        {/* Simple clean logo */}
-        <div className="space-y-2">
-          <h1 className="text-5xl md:text-7xl font-bold text-blue-400">
-            NORAD
-          </h1>
-          <h2 className="text-3xl md:text-5xl font-bold text-purple-400">
-            VECTOR
-          </h2>
-        </div>
-        
-        {/* Want to play text */}
-        <p className="text-xl md:text-2xl text-green-400">
-          Want to play a game?
-        </p>
-        
-        {/* Start button */}
-        <button 
-          onClick={() => setGamePhase('leader')}
-          className="px-8 py-3 text-lg font-bold bg-blue-600 hover:bg-blue-500 text-white rounded border-2 border-blue-400 transition-colors duration-200"
-        >
-          START GAME
+    <div className="intro-screen">
+      <div className="intro-screen__grid" aria-hidden="true" />
+      <div className="intro-screen__scanlines" aria-hidden="true" />
+
+      <div className="intro-screen__content">
+        <span className="sr-only">NORAD Vector</span>
+        <pre className="intro-screen__logo" aria-hidden="true">{ASCII_INTRO_LOGO}</pre>
+
+        <p className="intro-screen__tagline">Want to play a game?</p>
+
+        <button onClick={() => setGamePhase('leader')} className="intro-screen__cta">
+          Start Game
         </button>
       </div>
     </div>
