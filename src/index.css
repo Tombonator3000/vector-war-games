@@ -321,8 +321,8 @@ body {
   font-family: "Share Tech Mono", "IBM Plex Mono", "Roboto Mono", monospace;
   white-space: pre;
   line-height: 1.08;
-  font-size: clamp(0.3rem, 0.58vw + 0.15rem, 0.82rem);
-  letter-spacing: 0.04em;
+  font-size: clamp(0.18rem, 0.58vw + 0.11rem, 0.82rem);
+  letter-spacing: 0.025em;
   margin: 0;
   background: linear-gradient(90deg, #39ff14, #00d9ff, #ff00ff, #00d9ff, #39ff14);
   -webkit-background-clip: text;
@@ -409,8 +409,9 @@ body {
   }
 
   .intro-screen__logo {
-    font-size: clamp(0.28rem, 1.4vw + 0.12rem, 0.6rem);
+    font-size: clamp(0.17rem, 1.4vw + 0.1rem, 0.6rem);
     line-height: 1.05;
+    letter-spacing: 0.02em;
   }
 
   .intro-screen__tagline {
@@ -420,7 +421,8 @@ body {
 
 @media (max-width: 480px) {
   .intro-screen__logo {
-    font-size: clamp(0.26rem, 2vw + 0.08rem, 0.5rem);
+    font-size: clamp(0.16rem, 2vw + 0.06rem, 0.5rem);
+    letter-spacing: 0.018em;
   }
 
   .intro-screen__cta {
