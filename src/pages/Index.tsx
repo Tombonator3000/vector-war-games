@@ -3056,13 +3056,16 @@ export default function NoradVector() {
     }
   }, [isGameStarted, selectedTargetId]);
 
-  const startGame = useCallback(() => {
-    if (!selectedLeader || !selectedDoctrine) {
+  const startGame = useCallback((leaderOverride?: string, doctrineOverride?: string) => {
+    const leaderToUse = leaderOverride ?? selectedLeader;
+    const doctrineToUse = doctrineOverride ?? selectedDoctrine;
+
+    if (!leaderToUse || !doctrineToUse) {
       return;
     }
-    S.selectedLeader = selectedLeader;
-    S.selectedDoctrine = selectedDoctrine;
-    S.playerName = selectedLeader;
+    S.selectedLeader = leaderToUse;
+    S.selectedDoctrine = doctrineToUse;
+    S.playerName = leaderToUse;
     setIsGameStarted(true);
   }, [selectedLeader, selectedDoctrine]);
 
@@ -4663,6 +4666,7 @@ export default function NoradVector() {
                 key={key}
                 onClick={() => {
                   setSelectedDoctrine(key);
+                  startGame(selectedLeader ?? undefined, key);
                   setGamePhase('game');
                 }}
                 className="bg-card border border-neon-magenta/30 p-6 rounded-lg cursor-pointer hover:border-neon-magenta hover:bg-neon-magenta/10 transition-all duration-300 hover:shadow-lg hover:shadow-neon-magenta/20 synthwave-card"
@@ -4701,8 +4705,10 @@ export default function NoradVector() {
   }
 
   if (!isGameStarted && gamePhase === 'game') {
-    // Auto-start game when entering game phase
-    setIsGameStarted(true);
+    // Auto-start game when entering game phase, but only after selections are ready
+    if (S.selectedLeader && S.selectedDoctrine && S.playerName) {
+      setIsGameStarted(true);
+    }
   }
 
   return (
