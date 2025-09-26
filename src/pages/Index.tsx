@@ -4668,211 +4668,197 @@ export default function NoradVector() {
             </button>
           </div>
 
-          <div className="hud-grid">
-            <div className="hud-topbar">
-              <div className="hud-column">
-                <div id="statusPanel" className="hud-panel pointer-events-auto">
-                  <div className="panel-title">
-                    <span>COMMAND PROFILE</span>
-                    <span>PLAYER</span>
+          <div className="hud">
+            <div className="hud-left">
+              <section id="statusPanel" className="hud-module nation-status pointer-events-auto">
+                <header className="hud-module__header">
+                  <span>COMMAND PROFILE</span>
+                  <span>PLAYER</span>
+                </header>
+                <div className="hud-module__body nation-status__grid">
+                  <div className="nation-status__item">
+                    <span>LEADER</span>
+                    <span id="leaderDisplay">-</span>
                   </div>
-                  <p className="panel-subtitle">Leader, doctrine, and active forces.</p>
-                  <div className="status-grid">
-                    <div className="status-item">
-                      <span>LEADER</span>
-                      <span id="leaderDisplay">-</span>
-                    </div>
-                    <div className="status-item">
-                      <span>DOCTRINE</span>
-                      <span id="doctrineDisplay">-</span>
-                    </div>
-                    <div className="status-item">
-                      <span>MISSILES</span>
-                      <span id="missileDisplay">0</span>
-                    </div>
-                    <div className="status-item">
-                      <span>BOMBERS</span>
-                      <span id="bomberDisplay">0</span>
-                    </div>
-                    <div className="status-item">
-                      <span>DEFENSE</span>
-                      <span id="defenseDisplay">0</span>
-                    </div>
-                    <div className="status-item">
-                      <span>INSTABILITY</span>
-                      <span id="instabilityDisplay">0</span>
-                    </div>
-                    <div className="status-item status-item--wide">
-                      <span>WARHEADS</span>
-                      <span id="warheadDisplay">NONE</span>
-                    </div>
+                  <div className="nation-status__item">
+                    <span>DOCTRINE</span>
+                    <span id="doctrineDisplay">-</span>
+                  </div>
+                  <div className="nation-status__item">
+                    <span>MISSILES</span>
+                    <span id="missileDisplay">0</span>
+                  </div>
+                  <div className="nation-status__item">
+                    <span>BOMBERS</span>
+                    <span id="bomberDisplay">0</span>
+                  </div>
+                  <div className="nation-status__item">
+                    <span>DEFENSE</span>
+                    <span id="defenseDisplay">0</span>
+                  </div>
+                  <div className="nation-status__item">
+                    <span>INSTABILITY</span>
+                    <span id="instabilityDisplay">0</span>
+                  </div>
+                  <div className="nation-status__item nation-status__item--wide">
+                    <span>WARHEADS</span>
+                    <span id="warheadDisplay">NONE</span>
                   </div>
                 </div>
+              </section>
 
-                <div className="hud-panel hud-panel--operations pointer-events-auto">
-                  <div className="panel-title">
-                    <span>OPERATIONS</span>
-                    <span>ORDERS</span>
+              <section id="resourcePanel" className="hud-module resources pointer-events-auto">
+                <header className="hud-module__header">
+                  <span>RESOURCE MATRIX</span>
+                  <span>ECONOMY</span>
+                </header>
+                <div className="hud-module__body resources__grid">
+                  <div className="resources__item">
+                    <span>PRODUCTION</span>
+                    <span id="productionDisplay">0</span>
                   </div>
-                  <p className="panel-subtitle">Available actions for the current turn.</p>
-                  <div className="operations-grid">
-                    <Button onClick={handleBuild} className="command-button">
-                      BUILD
-                    </Button>
-                    <Button onClick={handleResearch} className="command-button">
-                      RESEARCH
-                    </Button>
-                    <Button onClick={handleIntel} className="command-button">INTEL</Button>
-                    <Button onClick={handleCulture} className="command-button">CULTURE</Button>
-                    <Button onClick={handleImmigration} className="command-button">IMMIGRATION</Button>
-                    <Button onClick={handleDiplomacy} className="command-button">DIPLOMACY</Button>
-                    <Button onClick={handleAttack} className="command-button command-button--danger">
-                      ATTACK
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={toggleFullscreen}
-                      className="command-button command-button--neutral"
-                    >
-                      {isFullscreen ? 'EXIT FULLSCREEN' : 'FULLSCREEN'}
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => setOptionsOpen(true)}
-                      className="command-button command-button--neutral"
-                    >
-                      OPTIONS
-                    </Button>
-                    <Button onClick={endTurn} className="command-button command-button--neutral">
-                      END TURN
-                    </Button>
+                  <div className="resources__item">
+                    <span>URANIUM</span>
+                    <span id="uraniumDisplay">0</span>
                   </div>
-                </div>
-              </div>
-
-              <div className="hud-topbar__center">
-                <div className="hud-panel hud-panel--metrics pointer-events-auto">
-                  <div className="panel-title">
-                    <span>GLOBAL STATUS</span>
-                    <span>COMMAND</span>
+                  <div className="resources__item">
+                    <span>INTEL</span>
+                    <span id="intelDisplay">0</span>
                   </div>
-                  <p className="panel-subtitle">Strategic readiness and command cadence.</p>
-                  <div className="metric-grid">
-                    <div className="metric-card">
-                      <div className="metric-label">DEFCON</div>
-                      <div id="defcon" className="metric-value">5</div>
-                    </div>
-                    <div className="metric-card">
-                      <div className="metric-label">TURN</div>
-                      <div id="turn" className="metric-value">1</div>
-                    </div>
-                    <div className="metric-card">
-                      <div className="metric-label">ACTIONS</div>
-                      <div id="actionsDisplay" className="metric-value">1/1</div>
-                    </div>
-                    <div className="metric-card">
-                      <div className="metric-label">PHASE</div>
-                      <div id="phaseBadge" className="metric-value metric-value--small">PLAYER</div>
-                    </div>
+                  <div className="resources__item">
+                    <span>CITIES</span>
+                    <span id="citiesDisplay">1</span>
                   </div>
-                  <div className="doomsday-card">
-                    <div className="doomsday-label">DOOMSDAY CLOCK</div>
-                    <div id="doomsdayTime" className="doomsday-value">7:00</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="hud-column">
-                <div id="scorePanel" className="hud-panel hud-panel--score pointer-events-auto">
-                  <div className="panel-title">
-                    <span>WORLD POWERS</span>
+                  <div className="resources__item resources__item--wide">
                     <span>POPULATION (M)</span>
-                  </div>
-                  <p className="panel-subtitle">Global powers ranked by population.</p>
-                  <div id="scoreList" className="score-list">
-                    {/* Populated by updateScoreboard() */}
+                    <span id="popDisplay">0</span>
                   </div>
                 </div>
-
-                <div className="hud-panel hud-panel--targets pointer-events-auto">
-                  <div className="panel-title">
-                    <span>TARGET DESIGNATION</span>
-                    <span>HOSTILES</span>
-                  </div>
-                  <p className="panel-subtitle">Select a hostile nation before issuing ATTACK orders.</p>
-                  <div className="targets-list">
-                    {attackableNations.length === 0 ? (
-                      <div className="targets-empty">No viable enemy targets. Existing truces or alliances must be broken first.</div>
-                    ) : (
-                      attackableNations.map(target => {
-                        const isActive = selectedTargetId === target.id;
-                        return (
-                          <button
-                            key={target.id}
-                            onClick={() => handleTargetSelect(target.id)}
-                            className={`command-target${isActive ? ' is-active' : ''}`}
-                          >
-                            <div className="command-target__header">
-                              <span>{target.name}</span>
-                              <span>{Math.floor(target.population)}M</span>
-                            </div>
-                            <div className="command-target__meta">
-                              DEF {target.defense} • MISS {target.missiles}
-                            </div>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              </div>
+              </section>
             </div>
 
-            <div className="hud-bottom">
-              <div className="hud-bottom__column">
-                <div id="resourcePanel" className="hud-panel pointer-events-auto">
-                  <div className="panel-title">
-                    <span>RESOURCE MATRIX</span>
-                    <span>ECONOMY</span>
+            <div className="hud-center">
+              <section className="hud-module doomsday pointer-events-auto">
+                <header className="hud-module__header">
+                  <span>GLOBAL STATUS</span>
+                  <span>COMMAND</span>
+                </header>
+                <div className="hud-module__body doomsday__grid">
+                  <div className="doomsday__metric">
+                    <span>DEFCON</span>
+                    <span id="defcon">5</span>
                   </div>
-                  <p className="panel-subtitle">Key economic and production metrics.</p>
-                  <div className="resource-grid">
-                    <div className="resource-item">
-                      <span>PRODUCTION</span>
-                      <span id="productionDisplay">0</span>
-                    </div>
-                    <div className="resource-item">
-                      <span>URANIUM</span>
-                      <span id="uraniumDisplay">0</span>
-                    </div>
-                    <div className="resource-item">
-                      <span>INTEL</span>
-                      <span id="intelDisplay">0</span>
-                    </div>
-                    <div className="resource-item">
-                      <span>CITIES</span>
-                      <span id="citiesDisplay">1</span>
-                    </div>
-                    <div className="resource-item resource-item--wide">
-                      <span>POPULATION (M)</span>
-                      <span id="popDisplay">0</span>
-                    </div>
+                  <div className="doomsday__metric">
+                    <span>TURN</span>
+                    <span id="turn">1</span>
+                  </div>
+                  <div className="doomsday__metric">
+                    <span>ACTIONS</span>
+                    <span id="actionsDisplay">1/1</span>
+                  </div>
+                  <div className="doomsday__metric">
+                    <span>PHASE</span>
+                    <span id="phaseBadge">PLAYER</span>
                   </div>
                 </div>
-              </div>
+                <div className="doomsday__clock">
+                  <span>DOOMSDAY</span>
+                  <span id="doomsdayTime">7:00</span>
+                </div>
+              </section>
 
-              <div className="hud-bottom__column">
-                <div id="log" className="hud-panel hud-panel--log pointer-events-auto">
-                  <div className="panel-title">
-                    <span>STRATEGIC EVENTS</span>
-                    <span>LIVE FEED</span>
-                  </div>
-                  <p className="panel-subtitle">Latest world events and mission reports.</p>
+              <section className="hud-module operations pointer-events-auto">
+                <header className="hud-module__header">
+                  <span>OPERATIONS</span>
+                  <span>ORDERS</span>
+                </header>
+                <div className="hud-module__body operations__grid">
+                  <Button onClick={handleBuild} className="command-button">
+                    BUILD
+                  </Button>
+                  <Button onClick={handleResearch} className="command-button">
+                    RESEARCH
+                  </Button>
+                  <Button onClick={handleIntel} className="command-button">INTEL</Button>
+                  <Button onClick={handleCulture} className="command-button">CULTURE</Button>
+                  <Button onClick={handleImmigration} className="command-button">IMMIGRATION</Button>
+                  <Button onClick={handleDiplomacy} className="command-button">DIPLOMACY</Button>
+                  <Button onClick={handleAttack} className="command-button command-button--danger">
+                    ATTACK
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={toggleFullscreen}
+                    className="command-button command-button--neutral"
+                  >
+                    {isFullscreen ? 'EXIT FULLSCREEN' : 'FULLSCREEN'}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setOptionsOpen(true)}
+                    className="command-button command-button--neutral"
+                  >
+                    OPTIONS
+                  </Button>
+                  <Button onClick={endTurn} className="command-button command-button--neutral">
+                    END TURN
+                  </Button>
+                </div>
+              </section>
+
+              <section className="hud-module targets pointer-events-auto">
+                <header className="hud-module__header">
+                  <span>TARGET DESIGNATION</span>
+                  <span>HOSTILES</span>
+                </header>
+                <div className="hud-module__body targets__list">
+                  {attackableNations.length === 0 ? (
+                    <div className="targets__empty">No viable enemy targets. Existing truces or alliances must be broken first.</div>
+                  ) : (
+                    attackableNations.map(target => {
+                      const isActive = selectedTargetId === target.id;
+                      return (
+                        <button
+                          key={target.id}
+                          onClick={() => handleTargetSelect(target.id)}
+                          className={`command-target${isActive ? ' is-active' : ''}`}
+                        >
+                          <div className="command-target__header">
+                            <span>{target.name}</span>
+                            <span>{Math.floor(target.population)}M</span>
+                          </div>
+                          <div className="command-target__meta">
+                            DEF {target.defense} • MISS {target.missiles}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            </div>
+
+            <div className="hud-right">
+              <section id="scorePanel" className="hud-module scoreboard pointer-events-auto">
+                <header className="hud-module__header">
+                  <span>WORLD POWERS</span>
+                  <span>POPULATION (M)</span>
+                </header>
+                <div id="scoreList" className="hud-module__body scoreboard__list">
+                  {/* Populated by updateScoreboard() */}
+                </div>
+              </section>
+
+              <section className="hud-module log pointer-events-auto">
+                <header className="hud-module__header">
+                  <span>STRATEGIC EVENTS</span>
+                  <span>LIVE FEED</span>
+                </header>
+                <div id="log" className="hud-module__body log__entries">
                   {/* Populated by log() function */}
                 </div>
-              </div>
+              </section>
             </div>
-
           </div>
         </div>
       </div>
