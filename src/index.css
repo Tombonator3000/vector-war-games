@@ -9,57 +9,110 @@ All colors MUST be HSL.
 @layer base {
   :root {
     /* NORAD VECTOR - Synthwave Theme */
-    --background: 220 100% 4%;
-    --foreground: 180 100% 75%;
+    --background: 222 92% 6%;
+    --foreground: 188 88% 80%;
 
-    --card: 220 100% 4%;
-    --card-foreground: 180 100% 75%;
+    --card: 222 86% 8%;
+    --card-foreground: 188 88% 82%;
 
-    --popover: 220 100% 4%;
-    --popover-foreground: 180 100% 75%;
+    --popover: 222 86% 8%;
+    --popover-foreground: 188 88% 82%;
 
-    --primary: 180 100% 50%;
-    --primary-foreground: 220 100% 4%;
+    --primary: 188 100% 62%;
+    --primary-foreground: 224 100% 6%;
 
-    --secondary: 300 100% 75%;
-    --secondary-foreground: 220 100% 4%;
+    --secondary: 308 100% 72%;
+    --secondary-foreground: 224 100% 8%;
 
-    --muted: 220 50% 15%;
-    --muted-foreground: 180 50% 60%;
+    --muted: 220 60% 16%;
+    --muted-foreground: 188 56% 70%;
 
-    --accent: 120 100% 75%;
-    --accent-foreground: 220 100% 4%;
+    --accent: 164 98% 66%;
+    --accent-foreground: 224 100% 8%;
 
-    --destructive: 0 100% 50%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 346 100% 60%;
+    --destructive-foreground: 220 100% 6%;
 
-    --border: 180 100% 50%;
-    --input: 220 50% 15%;
-    --ring: 180 100% 50%;
+    --border: 188 100% 62%;
+    --input: 220 60% 16%;
+    --ring: 308 100% 72%;
 
     --radius: 0.5rem;
 
     /* NORAD Vector specific colors */
-    --cyan: 180 100% 50%;
-    --neon-green: 120 100% 75%;
-    --neon-magenta: 300 100% 75%;
-    --neon-yellow: 60 100% 75%;
-    --neon-red: 0 100% 50%;
-    --deep-space: 220 100% 4%;
-    
-    /* Glows */
-    --glow-cyan: 0 0 20px hsl(180 100% 50% / 0.8);
-    --glow-green: 0 0 20px hsl(120 100% 75% / 0.8);
-    --glow-magenta: 0 0 20px hsl(300 100% 75% / 0.8);
+    --cyan: 188 100% 62%;
+    --neon-green: 164 98% 66%;
+    --neon-magenta: 308 100% 72%;
+    --neon-yellow: 54 100% 68%;
+    --neon-red: 346 100% 60%;
+    --deep-space: 222 96% 6%;
 
-    --sidebar-background: 220 100% 4%;
-    --sidebar-foreground: 180 100% 75%;
-    --sidebar-primary: 180 100% 50%;
-    --sidebar-primary-foreground: 220 100% 4%;
-    --sidebar-accent: 300 100% 75%;
-    --sidebar-accent-foreground: 220 100% 4%;
-    --sidebar-border: 180 100% 50%;
-    --sidebar-ring: 180 100% 50%;
+    /* Glows */
+    --glow-cyan: 0 0 22px hsl(188 100% 62% / 0.78);
+    --glow-green: 0 0 22px hsl(164 98% 66% / 0.78);
+    --glow-magenta: 0 0 22px hsl(308 100% 72% / 0.78);
+
+    /* Synthwave gradient system */
+    --synthwave-horizon-gradient: radial-gradient(
+        circle at 50% 0%,
+        hsl(308 94% 58% / 0.22) 0%,
+        hsl(248 92% 18% / 0) 52%
+      ),
+      radial-gradient(
+        circle at 15% 85%,
+        hsl(188 100% 60% / 0.18) 0%,
+        hsl(188 100% 60% / 0) 60%
+      ),
+      radial-gradient(
+        circle at 85% 80%,
+        hsl(164 98% 64% / 0.2) 0%,
+        hsl(164 98% 64% / 0) 65%
+      );
+    --synthwave-surface-gradient: linear-gradient(
+      135deg,
+      hsl(222 84% 14%) 0%,
+      hsl(254 78% 18%) 38%,
+      hsl(202 92% 12%) 100%
+    );
+    --synthwave-panel-highlight: linear-gradient(
+      120deg,
+      hsl(286 88% 52% / 0.2) 0%,
+      hsl(192 92% 50% / 0.35) 42%,
+      hsl(162 94% 64% / 0.25) 100%
+    );
+    --synthwave-panel-inner: linear-gradient(
+      180deg,
+      hsl(224 82% 24% / 0.45) 0%,
+      hsl(222 92% 12% / 0.65) 55%,
+      hsl(220 98% 6% / 0.92) 100%
+    );
+    --synthwave-hud-border: hsl(188 100% 68% / 0.55);
+    --synthwave-hud-border-strong: hsl(308 100% 72% / 0.55);
+    --synthwave-hud-glow: 0 0 24px hsl(188 100% 68% / 0.45);
+    --synthwave-button-gradient: linear-gradient(
+      135deg,
+      hsl(188 100% 66%) 0%,
+      hsl(168 100% 70%) 40%,
+      hsl(308 100% 72%) 100%
+    );
+    --synthwave-button-highlight: linear-gradient(
+      180deg,
+      hsl(0 0% 100% / 0.32) 0%,
+      hsl(0 0% 100% / 0) 62%
+    );
+    --synthwave-button-border: hsl(188 100% 76% / 0.55);
+    --synthwave-button-border-strong: hsl(308 100% 76% / 0.55);
+    --synthwave-button-glow: 0 0 26px hsl(188 100% 72% / 0.48);
+    --synthwave-surface-shadow: 0 24px 60px hsl(222 96% 6% / 0.65);
+
+    --sidebar-background: 222 92% 6%;
+    --sidebar-foreground: 188 88% 80%;
+    --sidebar-primary: 188 100% 62%;
+    --sidebar-primary-foreground: 224 100% 6%;
+    --sidebar-accent: 308 100% 72%;
+    --sidebar-accent-foreground: 224 100% 6%;
+    --sidebar-border: 188 100% 62%;
+    --sidebar-ring: 308 100% 72%;
   }
 
   .dark {
@@ -123,8 +176,37 @@ All colors MUST be HSL.
 
 /* NORAD Vector thematic palettes */
 body.theme-synthwave {
-  background-color: #050a14;
-  color: #8fe1ff;
+  position: relative;
+  background:
+    var(--synthwave-horizon-gradient),
+    linear-gradient(
+      180deg,
+      hsl(222 92% 14%) 0%,
+      hsl(222 96% 8%) 60%,
+      hsl(240 96% 4%) 100%
+    );
+  color: hsl(188 88% 82%);
+  text-shadow: 0 0 10px hsl(188 100% 62% / 0.18);
+}
+
+body.theme-synthwave::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+      circle at 50% 88%,
+      hsl(308 100% 72% / 0.18) 0%,
+      hsl(308 100% 72% / 0) 62%
+    ),
+    radial-gradient(
+      circle at 12% 18%,
+      hsl(188 100% 70% / 0.12) 0%,
+      hsl(188 100% 70% / 0) 55%
+    );
+  mix-blend-mode: screen;
+  opacity: 0.45;
+  z-index: -1;
 }
 
 body.theme-retro80s {
@@ -389,6 +471,51 @@ body {
   overflow: hidden;
 }
 
+body.theme-synthwave .command-interface {
+  background:
+    var(--synthwave-horizon-gradient),
+    var(--synthwave-surface-gradient);
+  color: hsl(188 88% 86%);
+  box-shadow: var(--synthwave-surface-shadow);
+  --hud-module-bg: var(--synthwave-panel-inner);
+  --hud-module-outline: hsl(188 100% 70% / 0.45);
+  --hud-module-glow: hsl(188 100% 72% / 0.22);
+  --hud-value-color: hsl(182 100% 92%);
+  --hud-font-size: 0.6rem;
+  --hud-heading-size: 0.58rem;
+  --hud-letter-spacing: 0.36em;
+}
+
+body.theme-synthwave .command-interface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    hsl(0 0% 100% / 0.08) 0%,
+    hsl(0 0% 100% / 0) 45%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.6;
+  z-index: 0;
+}
+
+body.theme-synthwave .command-interface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 120%,
+    hsl(308 100% 70% / 0.18) 0%,
+    hsl(308 100% 70% / 0) 55%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.55;
+  z-index: 0;
+}
+
 .command-interface__glow,
 .command-interface__scanlines {
   position: absolute;
@@ -405,6 +532,26 @@ body {
   opacity: 0.75;
 }
 
+body.theme-synthwave .command-interface__glow {
+  background:
+    radial-gradient(
+      circle at 18% 16%,
+      hsl(164 98% 64% / 0.28),
+      hsl(164 98% 64% / 0)
+    ),
+    radial-gradient(
+      circle at 76% 20%,
+      hsl(308 100% 72% / 0.22),
+      hsl(308 100% 72% / 0)
+    ),
+    radial-gradient(
+      circle at 10% 78%,
+      hsl(188 100% 60% / 0.2),
+      hsl(188 100% 60% / 0)
+    );
+  opacity: 0.85;
+}
+
 .command-interface__scanlines {
   background: repeating-linear-gradient(
     to bottom,
@@ -415,6 +562,17 @@ body {
   );
   mix-blend-mode: screen;
   opacity: 0.25;
+}
+
+body.theme-synthwave .command-interface__scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    hsl(220 96% 6% / 0) 0,
+    hsl(220 96% 6% / 0) 2px,
+    hsl(188 100% 62% / 0.08) 3px,
+    hsl(220 96% 6% / 0) 6px
+  );
+  opacity: 0.18;
 }
 
 .map-shell {
@@ -517,6 +675,18 @@ body {
   pointer-events: none;
 }
 
+body.theme-synthwave .hud {
+  color: hsl(188 88% 86%);
+  text-shadow: 0 0 12px hsl(188 100% 62% / 0.18);
+}
+
+body.theme-synthwave .hud-left,
+body.theme-synthwave .hud-right,
+body.theme-synthwave .hud-center {
+  position: relative;
+  filter: drop-shadow(0 0 14px hsl(188 100% 62% / 0.25));
+}
+
 .hud-left,
 .hud-right {
   display: flex;
@@ -563,6 +733,46 @@ body {
   line-height: 1.35;
 }
 
+body.theme-synthwave .hud-module {
+  position: relative;
+  background: var(--synthwave-panel-inner);
+  border-color: var(--synthwave-hud-border);
+  color: hsl(188 88% 86%);
+  box-shadow:
+    var(--synthwave-hud-glow),
+    inset 0 0 0 1px hsl(188 100% 72% / 0.24);
+}
+
+body.theme-synthwave .hud-module::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: calc(var(--hud-module-radius) - 2px);
+  background: var(--synthwave-panel-highlight);
+  mix-blend-mode: screen;
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+body.theme-synthwave .hud-module::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--hud-module-radius);
+  background: linear-gradient(
+    180deg,
+    hsl(0 0% 100% / 0.16) 0%,
+    hsl(0 0% 100% / 0) 55%
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+body.theme-synthwave .hud-module > * {
+  position: relative;
+  z-index: 1;
+}
+
 .hud-module__header {
   display: flex;
   justify-content: space-between;
@@ -573,14 +783,27 @@ body {
   color: rgba(144, 254, 255, 0.78);
 }
 
+body.theme-synthwave .hud-module__header {
+  color: hsl(188 88% 90%);
+  text-shadow: 0 0 12px hsl(188 100% 70% / 0.32);
+}
+
 .hud-module__header span:last-child {
   color: rgba(226, 255, 255, 0.62);
+}
+
+body.theme-synthwave .hud-module__header span:last-child {
+  color: hsl(308 100% 82% / 0.78);
 }
 
 .hud-module__body {
   display: flex;
   flex-direction: column;
   gap: calc(var(--hud-gap) * 0.45);
+}
+
+body.theme-synthwave .hud-module__body {
+  color: hsl(188 72% 82%);
 }
 
 .nation-status__grid,
@@ -601,6 +824,12 @@ body {
   color: rgba(148, 244, 255, 0.68);
 }
 
+body.theme-synthwave .nation-status__item,
+body.theme-synthwave .resources__item {
+  color: hsl(188 72% 82% / 0.82);
+  text-shadow: 0 0 10px hsl(188 100% 62% / 0.16);
+}
+
 .nation-status__item--wide,
 .resources__item--wide {
   grid-column: 1 / -1;
@@ -612,6 +841,48 @@ body {
   font-size: calc(var(--hud-font-size) * 1.35);
   letter-spacing: 0.12em;
   color: var(--hud-value-color);
+}
+
+body.theme-synthwave .nation-status__item span:last-child {
+  color: hsl(308 100% 82%);
+  text-shadow: 0 0 12px hsl(308 100% 72% / 0.4);
+}
+
+body.theme-synthwave .resources__item {
+  position: relative;
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    hsl(222 84% 18% / 0.5) 0%,
+    hsl(198 92% 22% / 0.28) 40%,
+    hsl(202 92% 12% / 0.38) 100%
+  );
+  box-shadow: inset 0 0 18px hsl(188 100% 62% / 0.14);
+}
+
+body.theme-synthwave .resources__item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    hsl(0 0% 100% / 0.16) 0%,
+    hsl(0 0% 100% / 0) 70%
+  );
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+body.theme-synthwave .resources__item > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.theme-synthwave .resources__item span:last-child {
+  color: hsl(162 100% 80%);
+  text-shadow: 0 0 14px hsl(162 100% 70% / 0.45);
 }
 
 .doomsday {
@@ -824,6 +1095,277 @@ body {
   box-shadow: 0 0 18px rgba(0, 255, 213, 0.2);
 }
 
+body.theme-synthwave [data-ui-button]:not(.command-button) {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.65rem;
+  background: var(--synthwave-button-gradient);
+  color: hsl(224 100% 6%);
+  border: 1px solid var(--synthwave-button-border);
+  box-shadow: var(--synthwave-button-glow);
+  text-shadow: 0 0 10px hsl(0 0% 100% / 0.24);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+body.theme-synthwave [data-ui-button]:not(.command-button)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--synthwave-button-highlight);
+  opacity: 0.58;
+  pointer-events: none;
+}
+
+body.theme-synthwave [data-ui-button]:not(.command-button):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 28px hsl(188 100% 72% / 0.52);
+}
+
+body.theme-synthwave [data-ui-button]:not(.command-button):focus-visible {
+  outline: 2px solid hsl(308 100% 76% / 0.75);
+  outline-offset: 2px;
+}
+
+body.theme-synthwave [data-ui-button].is-active {
+  box-shadow: 0 0 32px hsl(188 100% 72% / 0.65);
+  border-color: var(--synthwave-button-border-strong);
+}
+
+body.theme-synthwave .theme-chip {
+  letter-spacing: 0.32em;
+  font-weight: 700;
+}
+
+body.theme-synthwave .theme-chip.is-active {
+  background: linear-gradient(
+    135deg,
+    hsl(308 100% 72%) 0%,
+    hsl(188 100% 70%) 50%,
+    hsl(162 100% 72%) 100%
+  );
+  color: hsl(224 100% 6%);
+}
+
+body.theme-synthwave .options-sheet {
+  position: relative;
+  background: var(--synthwave-panel-inner);
+  border: 1px solid var(--synthwave-hud-border);
+  color: hsl(188 88% 86%);
+  box-shadow: var(--synthwave-surface-shadow);
+  overflow: hidden;
+}
+
+body.theme-synthwave .options-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--synthwave-panel-highlight);
+  mix-blend-mode: screen;
+  opacity: 0.4;
+}
+
+body.theme-synthwave .options-sheet::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    hsl(0 0% 100% / 0.12) 0%,
+    hsl(0 0% 100% / 0) 55%
+  );
+  opacity: 0.55;
+}
+
+body.theme-synthwave .options-sheet > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.theme-synthwave .options-sheet__title {
+  color: hsl(308 100% 82%);
+  letter-spacing: 0.4em;
+  text-shadow: 0 0 16px hsl(308 100% 74% / 0.48);
+}
+
+body.theme-synthwave .options-sheet__description {
+  color: hsl(188 72% 82% / 0.85);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px hsl(188 100% 62% / 0.24);
+}
+
+body.theme-synthwave .options-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem 1.35rem;
+  margin-top: 1.25rem;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    hsl(222 84% 18% / 0.65) 0%,
+    hsl(198 92% 20% / 0.32) 45%,
+    hsl(220 98% 8% / 0.6) 100%
+  );
+  border: 1px solid hsl(188 100% 62% / 0.28);
+  box-shadow: inset 0 0 22px hsl(188 100% 62% / 0.12);
+}
+
+body.theme-synthwave .options-section:first-of-type {
+  margin-top: 1rem;
+}
+
+body.theme-synthwave .options-section__heading {
+  font-size: 0.85rem;
+  letter-spacing: 0.4em;
+  color: hsl(188 92% 88%);
+  text-shadow: 0 0 16px hsl(188 100% 62% / 0.28);
+}
+
+body.theme-synthwave .options-section__subheading {
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  color: hsl(188 72% 80% / 0.78);
+  text-shadow: 0 0 10px hsl(188 100% 62% / 0.2);
+}
+
+body.theme-synthwave .theme-grid,
+body.theme-synthwave .layout-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+body.theme-synthwave .theme-grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+body.theme-synthwave .layout-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+body.theme-synthwave .layout-chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    hsl(222 84% 20% / 0.65) 0%,
+    hsl(188 100% 28% / 0.32) 45%,
+    hsl(220 96% 8% / 0.6) 100%
+  );
+  border: 1px solid hsl(188 100% 62% / 0.28);
+  color: hsl(188 88% 86%);
+  letter-spacing: 0.16em;
+  text-align: left;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  overflow: hidden;
+}
+
+body.theme-synthwave .layout-chip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: linear-gradient(
+    180deg,
+    hsl(0 0% 100% / 0.14) 0%,
+    hsl(0 0% 100% / 0) 70%
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+body.theme-synthwave .layout-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 28px hsl(188 100% 62% / 0.4);
+  border-color: hsl(188 100% 62% / 0.45);
+}
+
+body.theme-synthwave .layout-chip.is-active {
+  box-shadow: 0 0 32px hsl(188 100% 62% / 0.55);
+  border-color: var(--synthwave-button-border-strong);
+}
+
+body.theme-synthwave .layout-chip__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.32em;
+  color: hsl(188 92% 88%);
+  text-shadow: 0 0 12px hsl(188 100% 62% / 0.28);
+}
+
+body.theme-synthwave .layout-chip__description {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: hsl(188 72% 80% / 0.75);
+}
+
+body.theme-synthwave .options-toggle,
+body.theme-synthwave .options-slider {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    hsl(222 84% 20% / 0.55) 0%,
+    hsl(188 100% 28% / 0.25) 50%,
+    hsl(220 96% 10% / 0.55) 100%
+  );
+  border: 1px solid hsl(188 100% 62% / 0.24);
+  color: hsl(188 88% 86%);
+}
+
+body.theme-synthwave .options-toggle span,
+body.theme-synthwave .options-slider__label span:first-child {
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px hsl(188 100% 62% / 0.22);
+}
+
+body.theme-synthwave .options-slider__label span:last-child {
+  font-family: var(--font-mono, 'IBM Plex Mono', 'Share Tech Mono', monospace);
+  color: hsl(162 100% 80%);
+  text-shadow: 0 0 12px hsl(162 100% 70% / 0.4);
+}
+
+body.theme-synthwave .command-button {
+  position: relative;
+  overflow: hidden;
+  background: var(--synthwave-button-gradient);
+  color: hsl(224 100% 6%);
+  border-color: var(--synthwave-button-border);
+  box-shadow: var(--synthwave-button-glow);
+  text-shadow: 0 0 12px hsl(0 0% 100% / 0.3);
+}
+
+body.theme-synthwave .command-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 0.65rem;
+  background: var(--synthwave-button-highlight);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+body.theme-synthwave .command-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 34px hsl(188 100% 72% / 0.6);
+  border-color: var(--synthwave-button-border-strong);
+}
+
+body.theme-synthwave .command-button:focus-visible {
+  outline: 2px solid hsl(308 100% 76% / 0.75);
+  outline-offset: 2px;
+}
+
 .command-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 0 26px rgba(0, 255, 213, 0.35);
@@ -838,10 +1380,27 @@ body {
   box-shadow: 0 0 20px rgba(255, 65, 110, 0.25);
 }
 
+body.theme-synthwave .command-button--danger {
+  background: linear-gradient(
+    135deg,
+    hsl(346 100% 64%) 0%,
+    hsl(308 100% 70%) 58%,
+    hsl(286 100% 66%) 100%
+  );
+  border-color: hsl(346 100% 74% / 0.6);
+  box-shadow: 0 0 28px hsl(346 100% 64% / 0.45);
+  color: hsl(224 100% 6%);
+}
+
 .command-button--danger:hover {
   border-color: rgba(255, 120, 150, 0.8);
   background: linear-gradient(135deg, rgba(255, 75, 130, 0.35), rgba(120, 0, 60, 0.35));
   box-shadow: 0 0 28px rgba(255, 65, 110, 0.45);
+}
+
+body.theme-synthwave .command-button--danger:hover {
+  box-shadow: 0 0 38px hsl(346 100% 64% / 0.65);
+  border-color: hsl(346 100% 80% / 0.75);
 }
 
 .command-button--neutral {
@@ -851,10 +1410,27 @@ body {
   box-shadow: 0 0 20px rgba(125, 160, 255, 0.28);
 }
 
+body.theme-synthwave .command-button--neutral {
+  background: linear-gradient(
+    135deg,
+    hsl(222 84% 64%) 0%,
+    hsl(188 100% 70%) 55%,
+    hsl(162 100% 72%) 100%
+  );
+  border-color: hsl(188 100% 72% / 0.55);
+  box-shadow: 0 0 28px hsl(188 100% 70% / 0.42);
+  color: hsl(224 100% 6%);
+}
+
 .command-button--neutral:hover {
   border-color: rgba(165, 190, 255, 0.7);
   background: linear-gradient(135deg, rgba(125, 160, 255, 0.3), rgba(70, 90, 180, 0.28));
   box-shadow: 0 0 28px rgba(125, 160, 255, 0.45);
+}
+
+body.theme-synthwave .command-button--neutral:hover {
+  box-shadow: 0 0 32px hsl(188 100% 72% / 0.6);
+  border-color: hsl(188 100% 76% / 0.7);
 }
 
 .command-interface--compact .command-button {
