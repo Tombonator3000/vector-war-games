@@ -865,7 +865,9 @@ body.theme-synthwave .hud-right {
 
 .hud-footer__top {
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--hud-gap);
   pointer-events: none;
 }
 
@@ -874,28 +876,16 @@ body.theme-synthwave .hud-right {
   max-width: clamp(260px, 32vw, 420px);
 }
 
-.card-tray {
-  width: 100%;
-}
-
-.card-tray__body {
+.hud-footer__controls {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--hud-gap) * 0.6);
-}
-
-.card-tray__slots {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(140px, 1fr);
-  gap: calc(var(--hud-gap) * 0.6);
-  min-height: clamp(140px, 22vh, 220px);
   align-items: flex-end;
+  gap: calc(var(--hud-gap) * 0.5);
+  pointer-events: auto;
 }
 
-.card-tray__footer {
-  display: flex;
-  justify-content: flex-end;
+.hud-footer__end-turn {
+  min-width: clamp(140px, 18vw, 220px);
 }
 
 .hud-module {

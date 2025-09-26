@@ -4941,24 +4941,16 @@ export default function NoradVector() {
                   {/* Populated by log() function */}
                 </div>
               </section>
-            </div>
 
-            <section className="hud-module card-tray pointer-events-auto">
-              <header className="hud-module__header card-tray__header">
-                <span>YOUR HAND</span>
-                <span>COMMAND CARDS</span>
-              </header>
-              <div className="hud-module__body card-tray__body">
-                <div className="card-tray__slots" id="cardTray">
-                  {/* Command cards injected dynamically */}
-                </div>
-                <div className="card-tray__footer">
-                  <Button onClick={endTurn} className="command-button command-button--neutral">
-                    END TURN
-                  </Button>
-                </div>
+              <div className="hud-footer__controls">
+                <Button
+                  onClick={endTurn}
+                  className="command-button command-button--neutral hud-footer__end-turn"
+                >
+                  END TURN
+                </Button>
               </div>
-            </section>
+            </div>
           </div>
         </div>
       </div>
