@@ -1184,6 +1184,14 @@ function initNations() {
   log('=== GAME START ===', 'success');
   log(`Leader: ${playerLeaderName}`, 'success');
   log(`Doctrine: ${S.selectedDoctrine}`, 'success');
+
+  S.turn = 1;
+  S.phase = 'PLAYER';
+  S.paused = false;
+  S.gameOver = false;
+  S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+
+  updateDisplay();
 }
 
 // Banter system
