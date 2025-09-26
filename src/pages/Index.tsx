@@ -1208,9 +1208,18 @@ function maybeBanter(nation: Nation, chance: number, pool?: string) {
 }
 
 // Immigration functions
+const hasOpenBorders = (nation?: Nation | null) => (nation?.bordersClosedTurns ?? 0) <= 0;
+
 function performImmigration(type: string, target: Nation) {
   const player = PlayerManager.get();
   if (!player || !target) return false;
+
+  if (!hasOpenBorders(target)) {
+    const message = `${target.name} has sealed its borders.`;
+    log(`Immigration blocked: ${message}`, 'warning');
+    toast({ title: 'Borders closed', description: message });
+    return false;
+  }
 
   const trackMigrants = (recipient: Nation, amount: number) => {
     if (amount <= 0) return;
@@ -3966,7 +3975,7 @@ export default function NoradVector() {
         requiresTarget: true,
         disabled: !canAfford(player, COSTS.immigration_skilled),
         disabledReason: 'Requires 10 PRODUCTION and 5 INTEL.',
-        targetFilter: nation => nation.population > 1,
+        targetFilter: nation => nation.population > 1 && hasOpenBorders(nation),
       },
       {
         id: 'mass',
@@ -3976,7 +3985,7 @@ export default function NoradVector() {
         requiresTarget: true,
         disabled: !canAfford(player, COSTS.immigration_mass),
         disabledReason: 'Requires 5 PRODUCTION and 2 INTEL.',
-        targetFilter: nation => nation.population > 5,
+        targetFilter: nation => nation.population > 5 && hasOpenBorders(nation),
       },
       {
         id: 'refugee',
@@ -3986,7 +3995,7 @@ export default function NoradVector() {
         requiresTarget: true,
         disabled: !canAfford(player, COSTS.immigration_refugee) || (player.instability || 0) < 50,
         disabledReason: 'Requires 15 INTEL and 50+ instability.',
-        targetFilter: nation => nation.population > 5,
+        targetFilter: nation => nation.population > 5 && hasOpenBorders(nation),
       },
       {
         id: 'brain',
@@ -3996,7 +4005,7 @@ export default function NoradVector() {
         requiresTarget: true,
         disabled: !canAfford(player, COSTS.immigration_brain),
         disabledReason: 'Requires 20 INTEL.',
-        targetFilter: nation => nation.population > 1,
+        targetFilter: nation => nation.population > 1 && hasOpenBorders(nation),
       }
     ];
 
@@ -4010,6 +4019,9 @@ export default function NoradVector() {
 
       const success = performImmigration(action.id, target);
       if (!success) {
+        if (!hasOpenBorders(target)) {
+          return false;
+        }
         toast({ title: 'Operation failed', description: 'Insufficient resources or requirements not met.' });
         return false;
       }
