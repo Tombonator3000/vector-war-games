@@ -1148,6 +1148,7 @@ function initNations() {
       ? doctrineKeys[Math.floor(Math.random() * doctrineKeys.length)]
       : undefined;
 
+    // Balanced starting resources - AI gets similar resources to player
     const nation: Nation = {
       id: `ai_${i}`,
       isPlayer: false,
@@ -1158,16 +1159,19 @@ function initNations() {
       lon: pos.lon,
       lat: pos.lat,
       color: leaderConfig?.color || ['#ff0040', '#ff8000', '#40ff00', '#0040ff'][i % 4],
-      population: 150 + Math.random() * 60,
-      missiles: 4 + Math.floor(Math.random() * 4),
-      bombers: Math.floor(Math.random() * 3),
-      defense: 2 + Math.floor(Math.random() * 4),
-      instability: Math.random() * 20,
-      production: 25 + Math.floor(Math.random() * 35),
-      uranium: 6 + Math.floor(Math.random() * 10),
-      intel: 12 + Math.floor(Math.random() * 15),
+      population: 180 + Math.floor(Math.random() * 50), // Balanced with player (240)
+      missiles: 4 + Math.floor(Math.random() * 3), // 4-6 missiles (player has 5)
+      bombers: 1 + Math.floor(Math.random() * 2), // 1-2 bombers (player has 2)
+      defense: 3 + Math.floor(Math.random() * 2), // 3-4 defense (player has 3)
+      instability: Math.floor(Math.random() * 15), // Low initial instability
+      production: 20 + Math.floor(Math.random() * 15), // 20-35 production (player has 25)
+      uranium: 12 + Math.floor(Math.random() * 8), // 12-20 uranium (player has 15)
+      intel: 8 + Math.floor(Math.random() * 8), // 8-16 intel (player has 10)
       cities: 1,
-      warheads: { 10: 2 + Math.floor(Math.random() * 3), 20: 1 + Math.floor(Math.random() * 2) },
+      warheads: { 
+        10: 2 + Math.floor(Math.random() * 2), // 2-3 10MT
+        20: 1 + Math.floor(Math.random() * 2)  // 1-2 20MT
+      },
       researched: { warhead_20: true },
       researchQueue: null,
       treaties: {},
@@ -1178,6 +1182,15 @@ function initNations() {
     };
 
     applyDoctrineEffects(nation, aiDoctrine);
+    
+    // Initialize threat tracking for all nations
+    nations.forEach(existingNation => {
+      if (existingNation.id !== nation.id) {
+        nation.threats[existingNation.id] = Math.floor(Math.random() * 5);
+        existingNation.threats[nation.id] = Math.floor(Math.random() * 5);
+      }
+    });
+    
     nations.push(nation);
   });
 
@@ -1194,14 +1207,32 @@ function initNations() {
   updateDisplay();
 }
 
-// Banter system
+// Banter system - Enhanced to use expanded banter pack
 function maybeBanter(nation: Nation, chance: number, pool?: string) {
   if (Math.random() > chance) return;
   
+  // Use the expanded banter system if available
+  if (typeof window !== 'undefined' && (window as any).banterSay) {
+    try {
+      // Determine pool based on context if not specified
+      if (!pool && nation.ai) {
+        pool = nation.ai; // Use AI personality as default pool
+      }
+      (window as any).banterSay(pool || 'default', nation, 1);
+      return;
+    } catch (e) {
+      // Fallback to basic banter if expanded system fails
+    }
+  }
+  
+  // Fallback basic banter messages
   const messages = [
     `${nation.name}: "The world will know our strength!"`,
     `${nation.name}: "This aggression will not stand!"`,
-    `${nation.name}: "We are prepared for anything!"`
+    `${nation.name}: "We are prepared for anything!"`,
+    `${nation.name}: "Our resolve is absolute!"`,
+    `${nation.name}: "Strategic advantage secured."`,
+    `${nation.name}: "Deterrence is our doctrine."`,
   ];
   
   log(messages[Math.floor(Math.random() * messages.length)], 'warning');
@@ -1359,6 +1390,36 @@ function launch(from: Nation, to: Nation, yieldMT: number) {
 function resolutionPhase() {
   log('=== RESOLUTION PHASE ===', 'success');
   
+  // Update threat levels based on actions
+  nations.forEach(attacker => {
+    if (attacker.population <= 0) return;
+    
+    nations.forEach(target => {
+      if (target.id === attacker.id || target.population <= 0) return;
+      
+      // Initialize threats object if needed
+      attacker.threats = attacker.threats || {};
+      
+      // Increase threat if target has attacked us or has large arsenal
+      const targetMissiles = target.missiles || 0;
+      const targetWarheads = Object.values(target.warheads || {}).reduce((sum, count) => sum + (count || 0), 0);
+      
+      if (targetMissiles > 10 || targetWarheads > 15) {
+        attacker.threats[target.id] = Math.min(100, (attacker.threats[target.id] || 0) + 1);
+      }
+      
+      // Player is always considered a threat
+      if (target.isPlayer) {
+        attacker.threats[target.id] = Math.min(100, (attacker.threats[target.id] || 0) + 2);
+      }
+      
+      // Decay old threats
+      if (attacker.threats[target.id]) {
+        attacker.threats[target.id] = Math.max(0, attacker.threats[target.id] - 0.5);
+      }
+    });
+  });
+  
   // Missile impacts and effects
   S.missiles.forEach(missile => {
     if (missile.t >= 1) {
@@ -1418,11 +1479,11 @@ function productionPhase() {
   nations.forEach(n => {
     if (n.population <= 0) return;
     
-    // Base production
-    const baseProduction = Math.floor(n.population * 0.1);
-    const baseProd = baseProduction + (n.cities || 1) * 10;
-    const baseUranium = Math.floor(n.population * 0.02) + (n.cities || 1) * 3;
-    const baseIntel = Math.floor(n.population * 0.03) + (n.cities || 1) * 2;
+    // Base production - balanced for all nations
+    const baseProduction = Math.floor(n.population * 0.12); // Slightly increased
+    const baseProd = baseProduction + (n.cities || 1) * 12;
+    const baseUranium = Math.floor(n.population * 0.025) + (n.cities || 1) * 4;
+    const baseIntel = Math.floor(n.population * 0.04) + (n.cities || 1) * 3;
     
     // Apply green shift debuff if active
     let prodMult = 1;
@@ -2414,77 +2475,280 @@ function log(msg: string, type: string = 'normal') {
   }
 }
 
-// AI Turn
+// AI Turn - Complete strategic decision making
 function aiTurn(n: Nation) {
   S.overlay = { text: 'AI: ' + (n.leader || n.name), ttl: 800 };
   if (n.population <= 0) return;
   
   maybeBanter(n, 0.3);
   
-  const r = Math.random();
+  // Determine AI personality modifiers
   let aggressionMod = 0;
-  if (n.ai === 'aggressive') aggressionMod = 0.2;
-  else if (n.ai === 'defensive') aggressionMod = -0.1;
-  else if (n.ai === 'balanced') aggressionMod = 0.0;
-  else if (n.ai === 'isolationist') aggressionMod = -0.2;
+  let defenseMod = 0;
+  let economicMod = 0;
+  let intelMod = 0;
   
-  if (r < 0.3 + aggressionMod && S.defcon <= 2) {
-    const targets = nations.filter(t => t !== n && t.population > 0 && !n.treaties?.[t.id]?.truceTurns);
-    if (targets.length > 0) {
-      const target = targets.sort((a, b) => {
-        const compute = (t: Nation) => {
-          const threat = n.threats ? (n.threats[t.id] || 0) : 0;
-          let score = threat;
-          const aiType = n.ai || '';
-          if (aiType === 'balanced') score *= 1.0;
-          else if (aiType === 'isolationist') score *= 1.5;
-          else if (aiType === 'aggressive') score *= 1.2;
-          const defWeight = aiType === 'aggressive' ? 0.4 : aiType === 'balanced' ? 0.6 : aiType === 'isolationist' ? 0.8 : 0.5;
-          score -= (t.defense || 0) * defWeight;
-          if (t.isPlayer) score += 5;
-          return score;
-        };
-        return compute(b) - compute(a);
+  switch (n.ai) {
+    case 'aggressive':
+      aggressionMod = 0.3;
+      defenseMod = -0.1;
+      economicMod = 0.0;
+      intelMod = 0.1;
+      break;
+    case 'defensive':
+      aggressionMod = -0.2;
+      defenseMod = 0.3;
+      economicMod = 0.1;
+      intelMod = 0.1;
+      break;
+    case 'balanced':
+      aggressionMod = 0.0;
+      defenseMod = 0.1;
+      economicMod = 0.15;
+      intelMod = 0.15;
+      break;
+    case 'isolationist':
+      aggressionMod = -0.3;
+      defenseMod = 0.2;
+      economicMod = 0.2;
+      intelMod = 0.0;
+      break;
+    case 'trickster':
+      aggressionMod = 0.1;
+      defenseMod = 0.0;
+      economicMod = 0.05;
+      intelMod = 0.35;
+      break;
+    case 'chaotic':
+      aggressionMod = 0.2;
+      defenseMod = -0.1;
+      economicMod = 0.1;
+      intelMod = 0.2;
+      break;
+  }
+  
+  // Calculate threats and priorities
+  const enemies = nations.filter(t => 
+    t !== n && 
+    t.population > 0 && 
+    !n.treaties?.[t.id]?.truceTurns
+  );
+  
+  const player = PlayerManager.get();
+  const playerThreat = player ? (n.threats?.[player.id] || 0) : 0;
+  
+  // Strategic decision tree
+  const r = Math.random();
+  
+  // 1. RESEARCH - Advance technology
+  if (r < 0.08 + intelMod && !n.researchQueue) {
+    const availableResearch = RESEARCH_TREE.filter(project => {
+      if (n.researched?.[project.id]) return false;
+      if (project.prerequisites?.some(prereq => !n.researched?.[prereq])) return false;
+      return canAfford(n, project.cost);
+    });
+    
+    if (availableResearch.length > 0) {
+      const project = availableResearch.sort((a, b) => {
+        // Prioritize warheads for aggressive AI
+        if (a.category === 'warhead' && n.ai === 'aggressive') return -1;
+        if (b.category === 'warhead' && n.ai === 'aggressive') return 1;
+        // Prioritize defense for defensive AI
+        if (a.category === 'defense' && n.ai === 'defensive') return -1;
+        if (b.category === 'defense' && n.ai === 'defensive') return 1;
+        return 0;
       })[0];
       
-      const availableYields = Object.entries(n.warheads || {})
-        .filter(([, count]) => (count || 0) > 0)
-        .map(([yieldStr]) => Number(yieldStr))
-        .sort((a, b) => b - a);
-
-      const yieldMT = availableYields.find(value =>
-        (value <= 50 && S.defcon <= 2) || (value > 50 && S.defcon === 1)
+      if (canAfford(n, project.cost)) {
+        pay(n, project.cost);
+        n.researchQueue = { projectId: project.id, turnsRemaining: project.turns, totalTurns: project.turns };
+        log(`${n.name} begins research: ${project.name}`);
+        return;
+      }
+    }
+  }
+  
+  // 2. INTELLIGENCE OPERATIONS
+  if (r < 0.15 + intelMod && n.intel >= 5) {
+    const intelTargets = enemies.filter(t => !n.satellites?.[t.id]);
+    
+    // Deploy satellite
+    if (intelTargets.length > 0 && n.intel >= 5 && Math.random() < 0.6) {
+      const target = intelTargets.sort((a, b) => {
+        const aThreat = n.threats?.[a.id] || 0;
+        const bThreat = n.threats?.[b.id] || 0;
+        return bThreat - aThreat;
+      })[0];
+      
+      n.intel -= 5;
+      n.satellites = n.satellites || {};
+      n.satellites[target.id] = true;
+      log(`${n.name} deploys satellite over ${target.name}`);
+      return;
+    }
+    
+    // Sabotage enemy warheads
+    if (n.intel >= 10 && Math.random() < 0.3) {
+      const sabotageTargets = enemies.filter(t => 
+        Object.values(t.warheads || {}).some(count => (count || 0) > 0)
       );
-
-      if (yieldMT !== undefined && n.missiles > 0) {
-        const launchSucceeded = launch(n, target, yieldMT);
-        if (launchSucceeded) {
-          maybeBanter(n, 0.7);
-
-          if (target.isPlayer) {
-            maybeBanter(n, 0.5);
+      
+      if (sabotageTargets.length > 0) {
+        const target = sabotageTargets.sort((a, b) => {
+          const aThreat = n.threats?.[a.id] || 0;
+          const bThreat = n.threats?.[b.id] || 0;
+          return bThreat - aThreat;
+        })[0];
+        
+        const warheadTypes = Object.keys(target.warheads || {}).filter(key => 
+          (target.warheads?.[Number(key)] || 0) > 0
+        );
+        
+        if (warheadTypes.length > 0) {
+          const type = warheadTypes[Math.floor(Math.random() * warheadTypes.length)];
+          const numericType = Number(type);
+          if (target.warheads) {
+            target.warheads[numericType] = Math.max(0, (target.warheads[numericType] || 0) - 1);
+            if (target.warheads[numericType] <= 0) {
+              delete target.warheads[numericType];
+            }
           }
+          n.intel -= 10;
+          log(`${n.name} sabotages ${target.name}'s ${type}MT warhead`);
+          return;
         }
       }
     }
-  } else if (r < 0.5) {
-    if (canAfford(n, COSTS.missile)) {
+    
+    // Propaganda warfare
+    if (n.intel >= 15 && Math.random() < 0.25) {
+      const target = enemies[Math.floor(Math.random() * enemies.length)];
+      n.intel -= 15;
+      target.instability = (target.instability || 0) + 20;
+      log(`${n.name} launches propaganda against ${target.name}`);
+      return;
+    }
+  }
+  
+  // 3. CULTURE WARFARE
+  if (r < 0.12 + intelMod && n.intel >= 2) {
+    const cultureTargets = enemies.filter(t => t.population > 5);
+    
+    if (cultureTargets.length > 0 && n.intel >= 20 && Math.random() < 0.15) {
+      // Culture bomb
+      const target = cultureTargets.sort((a, b) => b.population - a.population)[0];
+      const stolen = Math.max(1, Math.floor(target.population * 0.1));
+      n.intel -= 20;
+      target.population = Math.max(0, target.population - stolen);
+      n.population += stolen;
+      n.migrantsThisTurn = (n.migrantsThisTurn || 0) + stolen;
+      n.migrantsTotal = (n.migrantsTotal || 0) + stolen;
+      log(`${n.name} culture bombs ${target.name}, stealing ${stolen}M population`);
+      return;
+    } else if (n.intel >= 2 && Math.random() < 0.2) {
+      // Meme wave
+      const target = enemies[Math.floor(Math.random() * enemies.length)];
+      const stolen = Math.min(5, Math.max(1, Math.floor(target.population * 0.02)));
+      n.intel -= 2;
+      target.population = Math.max(0, target.population - stolen);
+      n.population += stolen;
+      n.migrantsThisTurn = (n.migrantsThisTurn || 0) + stolen;
+      n.migrantsTotal = (n.migrantsTotal || 0) + stolen;
+      target.instability = (target.instability || 0) + 8;
+      log(`${n.name} launches meme wave against ${target.name}`);
+      return;
+    }
+  }
+  
+  // 4. MILITARY STRIKE - Attack if aggressive and at low DEFCON
+  if (r < 0.35 + aggressionMod && S.defcon <= 2 && enemies.length > 0) {
+    const target = enemies.sort((a, b) => {
+      const compute = (t: Nation) => {
+        const threat = n.threats ? (n.threats[t.id] || 0) : 0;
+        let score = threat;
+        const aiType = n.ai || '';
+        if (aiType === 'balanced') score *= 1.0;
+        else if (aiType === 'isolationist') score *= 1.5;
+        else if (aiType === 'aggressive') score *= 1.2;
+        const defWeight = aiType === 'aggressive' ? 0.4 : aiType === 'balanced' ? 0.6 : aiType === 'isolationist' ? 0.8 : 0.5;
+        score -= (t.defense || 0) * defWeight;
+        if (t.isPlayer) score += 5;
+        return score;
+      };
+      return compute(b) - compute(a);
+    })[0];
+    
+    const availableYields = Object.entries(n.warheads || {})
+      .filter(([, count]) => (count || 0) > 0)
+      .map(([yieldStr]) => Number(yieldStr))
+      .sort((a, b) => b - a);
+
+    const yieldMT = availableYields.find(value =>
+      (value <= 50 && S.defcon <= 2) || (value > 50 && S.defcon === 1)
+    );
+
+    if (yieldMT !== undefined && n.missiles > 0) {
+      const launchSucceeded = launch(n, target, yieldMT);
+      if (launchSucceeded) {
+        maybeBanter(n, 0.7);
+        if (target.isPlayer) {
+          maybeBanter(n, 0.5);
+        }
+        return;
+      }
+    }
+  }
+  
+  // 5. BUILD MILITARY - Missiles and warheads
+  if (r < 0.50 + aggressionMod) {
+    // Build advanced warheads if researched
+    const warheadYields = [200, 100, 50, 40, 20, 10];
+    for (const yieldMT of warheadYields) {
+      const researchId = `warhead_${yieldMT}`;
+      if (n.researched?.[researchId]) {
+        const cost = COSTS[`warhead_${yieldMT}` as keyof typeof COSTS];
+        if (cost && canAfford(n, cost)) {
+          pay(n, cost);
+          n.warheads = n.warheads || {};
+          n.warheads[yieldMT] = (n.warheads[yieldMT] || 0) + 1;
+          log(`${n.name} builds ${yieldMT}MT warhead`);
+          return;
+        }
+      }
+    }
+    
+    // Build missiles
+    if (canAfford(n, COSTS.missile) && n.missiles < 15) {
       pay(n, COSTS.missile);
       n.missiles++;
       log(`${n.name} builds missile`);
       maybeBanter(n, 0.2);
-    } else if (canAfford(n, COSTS.warhead_20)) {
-      pay(n, COSTS.warhead_20);
-      n.warheads = n.warheads || {};
-      n.warheads[20] = (n.warheads[20] || 0) + 1;
-      log(`${n.name} builds 20MT warhead`);
+      return;
     }
-  } else if (r < 0.7) {
-    if (canAfford(n, COSTS.defense)) {
+    
+    // Build bombers
+    if (canAfford(n, COSTS.bomber) && (n.bombers || 0) < 5 && Math.random() < 0.3) {
+      pay(n, COSTS.bomber);
+      n.bombers = (n.bombers || 0) + 1;
+      log(`${n.name} builds bomber`);
+      return;
+    }
+  }
+  
+  // 6. BUILD DEFENSE
+  if (r < 0.65 + defenseMod) {
+    if (canAfford(n, COSTS.defense) && n.defense < 15) {
       pay(n, COSTS.defense);
       n.defense += 2;
       log(`${n.name} upgrades defense`);
-    } else if ((n.cities || 1) < 3) {
+      return;
+    }
+  }
+  
+  // 7. ECONOMIC EXPANSION
+  if (r < 0.80 + economicMod) {
+    const maxCities = n.ai === 'isolationist' ? 5 : n.ai === 'balanced' ? 4 : 3;
+    if ((n.cities || 1) < maxCities) {
       const cityCost = getCityCost(n);
       if (canAfford(n, cityCost)) {
         pay(n, cityCost);
@@ -2498,13 +2762,27 @@ function aiTurn(n: Nation) {
         
         log(`${n.name} builds city #${n.cities}`);
         maybeBanter(n, 0.3);
+        return;
       }
     }
-  } else {
-    if (Math.random() < 0.5 && S.defcon > 1) {
+  }
+  
+  // 8. ESCALATION - Reduce DEFCON
+  if (r < 0.90 + aggressionMod) {
+    if (S.defcon > 1 && Math.random() < 0.4) {
       S.defcon--;
       log(`${n.name} escalates to DEFCON ${S.defcon}`);
       maybeBanter(n, 0.4);
+      return;
+    }
+  }
+  
+  // 9. DIPLOMACY - Occasionally de-escalate if defensive
+  if (n.ai === 'defensive' || n.ai === 'balanced') {
+    if (S.defcon < 5 && Math.random() < 0.1) {
+      S.defcon++;
+      log(`${n.name} proposes de-escalation to DEFCON ${S.defcon}`);
+      return;
     }
   }
 }
