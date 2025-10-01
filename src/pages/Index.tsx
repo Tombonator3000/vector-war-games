@@ -228,6 +228,7 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 let currentTheme: ThemeId = 'synthwave';
 let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
+let gameLoopRunning = false; // Prevent multiple game loops
 
 // Global game state
 let S: GameState = {
@@ -1091,6 +1092,12 @@ function advanceResearch(nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') {
 
 // Game initialization
 function initNations() {
+  // Prevent re-initialization if game is already running
+  if (nations.length > 0 && S.turn > 1) {
+    console.warn('Attempted to re-initialize game - blocked');
+    return;
+  }
+  
   nations = [];
   PlayerManager.reset();
   
@@ -4653,22 +4660,29 @@ export default function NoradVector() {
         window.addEventListener('resize', handleWindowResize);
       }
 
-      // Initialize audio
-      AudioSys.init();
+      // Only initialize game systems once
+      if (nations.length === 0) {
+        // Initialize audio
+        AudioSys.init();
+        
+        // Initialize game systems
+        Atmosphere.init();
+        Ocean.init();
+        
+        // Initialize game
+        initNations();
+        CityLights.generate();
+        
+        // Load world map and start game loop only once
+        if (!gameLoopRunning) {
+          gameLoopRunning = true;
+          loadWorld().then(() => {
+            requestAnimationFrame(gameLoop);
+          });
+        }
+      }
       
-      // Initialize game systems
-      Atmosphere.init();
-      Ocean.init();
-      
-      // Initialize game
-      initNations();
-      CityLights.generate();
-      
-      // Load world map
-      loadWorld().then(() => {
-        // Start game loop
-        requestAnimationFrame(gameLoop);
-      });
+      // Setup mouse and touch controls
       
       // Setup mouse and touch controls
       let isDragging = false;
