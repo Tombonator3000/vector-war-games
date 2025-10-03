@@ -330,6 +330,7 @@ function applyDoctrineEffects(nation: Nation, doctrineKey?: DoctrineKey) {
       nation.researched = nation.researched || {};
       nation.researched.warhead_100 = true;
       S.defcon = Math.min(S.defcon, 3);
+      AudioSys.playSFX('defcon');
       break;
     }
     case 'detente': {
@@ -788,7 +789,6 @@ const AudioSys = {
   
   playSFX(type: string) {
     if (!this.sfxEnabled) return;
-    // Simple beep sound generation
     if (!this.audioContext) this.init();
     
     const oscillator = this.audioContext!.createOscillator();
@@ -797,14 +797,87 @@ const AudioSys = {
     oscillator.connect(gainNode);
     gainNode.connect(this.audioContext!.destination);
     
-    const freq = type === 'explosion' ? 80 : type === 'launch' ? 200 : 400;
+    // Define sound profiles for different events
+    let freq = 400;
+    let duration = 0.3;
+    let volume = 0.1;
+    let waveType: OscillatorType = 'sine';
+    
+    switch(type) {
+      case 'explosion':
+        freq = 80;
+        duration = 0.5;
+        volume = 0.15;
+        waveType = 'sawtooth';
+        break;
+      case 'launch':
+        freq = 200;
+        duration = 0.4;
+        volume = 0.12;
+        waveType = 'square';
+        break;
+      case 'click':
+        freq = 600;
+        duration = 0.08;
+        volume = 0.08;
+        waveType = 'sine';
+        break;
+      case 'success':
+        freq = 800;
+        duration = 0.15;
+        volume = 0.1;
+        waveType = 'sine';
+        break;
+      case 'error':
+        freq = 150;
+        duration = 0.2;
+        volume = 0.12;
+        waveType = 'sawtooth';
+        break;
+      case 'build':
+        freq = 500;
+        duration = 0.25;
+        volume = 0.1;
+        waveType = 'triangle';
+        break;
+      case 'research':
+        freq = 700;
+        duration = 0.3;
+        volume = 0.09;
+        waveType = 'sine';
+        break;
+      case 'intel':
+        freq = 900;
+        duration = 0.2;
+        volume = 0.08;
+        waveType = 'sine';
+        break;
+      case 'defcon':
+        freq = 300;
+        duration = 0.5;
+        volume = 0.15;
+        waveType = 'square';
+        break;
+      case 'endturn':
+        freq = 450;
+        duration = 0.35;
+        volume = 0.11;
+        waveType = 'triangle';
+        break;
+      default:
+        freq = 400;
+        duration = 0.15;
+        volume = 0.08;
+    }
+    
+    oscillator.type = waveType;
     oscillator.frequency.setValueAtTime(freq, this.audioContext!.currentTime);
     
-    gainNode.gain.setValueAtTime(0.1, this.audioContext!.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext!.currentTime + 0.3);
+    gainNode.gain.setValueAtTime(volume, this.audioContext!.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext!.currentTime + duration);
     
     oscillator.start();
-    oscillator.stop(this.audioContext!.currentTime + 0.3);
+    oscillator.stop(this.audioContext!.currentTime + duration);
   },
   
   toggleMusic() {
@@ -1057,6 +1130,7 @@ function startResearch(tier: number | string): boolean {
     totalTurns: project.turns
   };
 
+  AudioSys.playSFX('research');
   log(`Research initiated: ${project.name}`);
   toast({ title: 'Research started', description: `${project.name} will complete in ${project.turns} turns.` });
   updateDisplay();
@@ -1086,6 +1160,7 @@ function advanceResearch(nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') {
   log(message, 'success');
 
   if (nation.isPlayer) {
+    AudioSys.playSFX('success');
     toast({ title: 'Research complete', description: `${project.name} finished during ${phase.toLowerCase()} phase.` });
     updateDisplay();
   }
@@ -2779,6 +2854,7 @@ function aiTurn(n: Nation) {
   if (r < 0.90 + aggressionMod) {
     if (S.defcon > 1 && Math.random() < 0.4) {
       S.defcon--;
+      AudioSys.playSFX('defcon');
       log(`${n.name} escalates to DEFCON ${S.defcon}`);
       maybeBanter(n, 0.4);
       return;
@@ -2789,6 +2865,7 @@ function aiTurn(n: Nation) {
   if (n.ai === 'defensive' || n.ai === 'balanced') {
     if (S.defcon < 5 && Math.random() < 0.1) {
       S.defcon++;
+      AudioSys.playSFX('defcon');
       log(`${n.name} proposes de-escalation to DEFCON ${S.defcon}`);
       return;
     }
@@ -3074,6 +3151,7 @@ export default function NoradVector() {
   }, []);
 
   const toggleFullscreen = useCallback(() => {
+    AudioSys.playSFX('click');
     if (typeof document === 'undefined') return;
     const element = interfaceRef.current ?? document.documentElement;
 
@@ -3201,6 +3279,7 @@ export default function NoradVector() {
   }, []);
 
   const handleAttack = useCallback(() => {
+    AudioSys.playSFX('click');
     if (!isGameStarted || S.gameOver) return;
 
     const player = PlayerManager.get();
@@ -3553,6 +3632,7 @@ export default function NoradVector() {
     pay(player, COSTS.missile);
     player.missiles = (player.missiles || 0) + 1;
 
+    AudioSys.playSFX('build');
     log(`${player.name} builds a missile`);
     updateDisplay();
     consumeAction();
@@ -3571,6 +3651,7 @@ export default function NoradVector() {
     pay(player, COSTS.bomber);
     player.bombers = (player.bombers || 0) + 1;
 
+    AudioSys.playSFX('build');
     log(`${player.name} commissions a strategic bomber`);
     updateDisplay();
     consumeAction();
@@ -3589,6 +3670,7 @@ export default function NoradVector() {
     pay(player, COSTS.defense);
     player.defense = (player.defense || 0) + 2;
 
+    AudioSys.playSFX('build');
     log(`${player.name} reinforces continental defense (+2)`);
     updateDisplay();
     consumeAction();
@@ -3617,6 +3699,7 @@ export default function NoradVector() {
     const newLon = player.lon + Math.cos(angle) * spread;
     CityLights.addCity(newLat, newLon, 1.0);
 
+    AudioSys.playSFX('build');
     log(`${player.name} establishes city #${player.cities}`);
     updateDisplay();
     consumeAction();
@@ -3653,6 +3736,7 @@ export default function NoradVector() {
     player.warheads = player.warheads || {};
     player.warheads[yieldMT] = (player.warheads[yieldMT] || 0) + 1;
 
+    AudioSys.playSFX('build');
     log(`${player.name} assembles a ${yieldMT}MT warhead`);
     updateDisplay();
     consumeAction();
@@ -3886,14 +3970,17 @@ export default function NoradVector() {
   }, [buildBomber, buildCity, buildDefense, buildMissile, buildWarhead, isGameStarted]);
 
   const handleBuild = useCallback(() => {
+    AudioSys.playSFX('click');
     openModal('STRATEGIC PRODUCTION', renderBuildModal);
   }, [openModal, renderBuildModal]);
 
   const handleResearch = useCallback(() => {
+    AudioSys.playSFX('click');
     openModal('RESEARCH DIRECTORATE', renderResearchModal);
   }, [openModal, renderResearchModal]);
 
   const handleIntel = useCallback(() => {
+    AudioSys.playSFX('click');
     const player = getBuildContext('Intelligence');
     if (!player) return;
 
@@ -4093,6 +4180,7 @@ export default function NoradVector() {
 
 
   const handleCulture = useCallback(() => {
+    AudioSys.playSFX('click');
     const player = getBuildContext('Culture');
     if (!player) return;
 
@@ -4252,6 +4340,7 @@ export default function NoradVector() {
 
 
   const handleImmigration = useCallback(() => {
+    AudioSys.playSFX('click');
     const player = getBuildContext('Immigration');
     if (!player) return;
 
@@ -4334,6 +4423,7 @@ export default function NoradVector() {
   }, [closeModal, getBuildContext, openModal, targetableNations]);
 
   const handleDiplomacy = useCallback(() => {
+    AudioSys.playSFX('click');
     const player = getBuildContext('Diplomacy');
     if (!player) return;
 
@@ -4497,6 +4587,7 @@ export default function NoradVector() {
           }
           commander.intel -= 10;
           S.defcon = Math.min(5, S.defcon + 1);
+          AudioSys.playSFX('defcon');
           DoomsdayClock.improve(0.5);
           log(`UN appeal successful: DEFCON improved to ${S.defcon}.`);
           updateDisplay();
@@ -4647,6 +4738,7 @@ export default function NoradVector() {
   }, [handleAttack]);
 
   const handleEndTurn = useCallback(() => {
+    AudioSys.playSFX('endturn');
     endTurn();
   }, []);
 
@@ -5047,7 +5139,10 @@ export default function NoradVector() {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setOptionsOpen(true)}
+                onClick={() => {
+                  AudioSys.playSFX('click');
+                  setOptionsOpen(true);
+                }}
                 className="h-7 px-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
               >
                 OPTIONS
