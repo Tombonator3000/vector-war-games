@@ -4646,6 +4646,10 @@ export default function NoradVector() {
     handleAttackRef.current = handleAttack;
   }, [handleAttack]);
 
+  const handleEndTurn = useCallback(() => {
+    endTurn();
+  }, []);
+
   useEffect(() => {
     if (canvasRef.current && isGameStarted) {
       canvas = canvasRef.current;
@@ -5144,7 +5148,7 @@ export default function NoradVector() {
               <div className="w-px h-8 bg-cyan-500/30 mx-2" />
               
               <Button
-                onClick={endTurn}
+                onClick={handleEndTurn}
                 variant="ghost"
                 className="h-12 px-4 text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
                 title="END TURN"
