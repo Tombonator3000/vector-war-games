@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight } from 'lucide-react';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -5017,237 +5018,150 @@ export default function NoradVector() {
         />
 
         <div className="hud-layers pointer-events-none">
-          <header className="hud pointer-events-auto">
-            <div className="hud-bar__left">
-              <div className="hud-status">
-                <div className="hud-status__item">
-                  <span className="hud-status__label">DEFCON</span>
-                  <span className="hud-status__value" id="defcon">5</span>
-                </div>
-                <div className="hud-status__item">
-                  <span className="hud-status__label">TURN</span>
-                  <span className="hud-status__value" id="turn">1</span>
-                </div>
-                <div className="hud-status__item">
-                  <span className="hud-status__label">ACTIONS</span>
-                  <span className="hud-status__value" id="actionsDisplay">1/1</span>
-                </div>
+          {/* Minimal top status bar */}
+          <header className="fixed top-0 left-0 right-0 h-10 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto z-50">
+            <div className="flex items-center gap-6 text-xs font-mono">
+              <div className="flex items-center gap-2">
+                <span className="text-cyan-400">DEFCON</span>
+                <span className="text-neon-green font-bold" id="defcon">5</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-cyan-400">TURN</span>
+                <span className="text-neon-green font-bold" id="turn">1</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-cyan-400">ACTIONS</span>
+                <span className="text-neon-green font-bold" id="actionsDisplay">1/1</span>
               </div>
             </div>
 
-            <div className="hud-bar__center">
-              <Button onClick={handleBuild} className="command-button hud-action">
-                BUILD
-              </Button>
-              <Button onClick={handleResearch} className="command-button hud-action">
-                RESEARCH
-              </Button>
-              <Button onClick={handleIntel} className="command-button hud-action">INTEL</Button>
-              <Button onClick={handleCulture} className="command-button hud-action">CULTURE</Button>
-              <Button onClick={handleImmigration} className="command-button hud-action">IMMIGRATION</Button>
-              <Button onClick={handleDiplomacy} className="command-button hud-action">DIPLOMACY</Button>
-              <Button onClick={handleAttack} className="command-button command-button--danger hud-action">
-                ATTACK
-              </Button>
-            </div>
-
-            <div className="hud-bar__right">
+            <div className="flex items-center gap-2">
+              <div className="text-xs font-mono text-neon-magenta mr-4">
+                <span className="text-cyan-400">DOOMSDAY</span>{' '}
+                <span id="doomsdayTime" className="font-bold">7:00</span>
+              </div>
               <Button
-                type="button"
-                onClick={handlePauseToggle}
-                className="command-button command-button--neutral hud-meta-button"
-              >
-                {isPaused ? 'RESUME' : 'PAUSE'}
-              </Button>
-              <Button
-                type="button"
-                onClick={handleSaveSnapshot}
-                className="command-button command-button--neutral hud-meta-button"
-              >
-                SAVE
-              </Button>
-              <Button
-                type="button"
-                onClick={toggleFullscreen}
-                className="command-button command-button--neutral hud-meta-button"
-              >
-                {isFullscreen ? 'EXIT FULLSCREEN' : 'FULLSCREEN'}
-              </Button>
-              <Button
-                type="button"
+                size="sm"
+                variant="ghost"
                 onClick={() => setOptionsOpen(true)}
-                className="command-button command-button--neutral hud-meta-button"
+                className="h-7 px-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
               >
                 OPTIONS
               </Button>
-              <button
-                type="button"
-                onClick={cycleLayoutDensity}
-                className="hud-toggle"
-                aria-label="Cycle HUD layout density"
-                title={activeLayout.description}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={toggleFullscreen}
+                className="h-7 px-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
               >
-                HUD: {activeLayout.label}
-              </button>
+                {isFullscreen ? 'EXIT FS' : 'FULLSCREEN'}
+              </Button>
             </div>
           </header>
 
-          <div className="hud-body">
-            <div className="hud-left">
-              <section id="resourcePanel" className="hud-module resources pointer-events-auto">
-                <header className="hud-module__header">
-                  <span>RESOURCE MATRIX</span>
-                  <span>ECONOMY</span>
-                </header>
-                <div className="hud-module__body resources__grid">
-                  <div className="resources__item">
-                    <span>PRODUCTION</span>
-                    <span id="productionDisplay">0</span>
-                  </div>
-                  <div className="resources__item">
-                    <span>URANIUM</span>
-                    <span id="uraniumDisplay">0</span>
-                  </div>
-                  <div className="resources__item">
-                    <span>INTEL</span>
-                    <span id="intelDisplay">0</span>
-                  </div>
-                  <div className="resources__item">
-                    <span>CITIES</span>
-                    <span id="citiesDisplay">1</span>
-                  </div>
-                  <div className="resources__item resources__item--wide">
-                    <span>POPULATION (M)</span>
-                    <span id="popDisplay">0</span>
-                  </div>
-                </div>
-              </section>
+          {/* Minimal bottom icon bar */}
+          <div className="fixed bottom-0 left-0 right-0 h-16 bg-black/90 border-t border-cyan-500/30 backdrop-blur-sm pointer-events-auto z-50">
+            <div className="h-full flex items-center justify-center gap-1 px-4">
+              <Button
+                onClick={handleBuild}
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                title="BUILD - Production and construction"
+              >
+                <Factory className="h-5 w-5" />
+                <span className="text-[8px] font-mono">BUILD</span>
+              </Button>
+              
+              <Button
+                onClick={handleResearch}
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                title="RESEARCH - Technology advancement"
+              >
+                <Microscope className="h-5 w-5" />
+                <span className="text-[8px] font-mono">RESEARCH</span>
+              </Button>
+              
+              <Button
+                onClick={handleIntel}
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                title="INTEL - Intelligence operations"
+              >
+                <Satellite className="h-5 w-5" />
+                <span className="text-[8px] font-mono">INTEL</span>
+              </Button>
+              
+              <Button
+                onClick={handleCulture}
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                title="CULTURE - Cultural warfare"
+              >
+                <Radio className="h-5 w-5" />
+                <span className="text-[8px] font-mono">CULTURE</span>
+              </Button>
+              
+              <Button
+                onClick={handleImmigration}
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                title="IMMIGRATION - Population management"
+              >
+                <Users className="h-5 w-5" />
+                <span className="text-[8px] font-mono">IMMIGR</span>
+              </Button>
+              
+              <Button
+                onClick={handleDiplomacy}
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                title="DIPLOMACY - International relations"
+              >
+                <Handshake className="h-5 w-5" />
+                <span className="text-[8px] font-mono">DIPLO</span>
+              </Button>
+              
+              <div className="w-px h-8 bg-cyan-500/30 mx-2" />
+              
+              <Button
+                onClick={handleAttack}
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 text-red-400 hover:text-red-300 hover:bg-red-500/10 flex flex-col items-center justify-center gap-0.5"
+                title="ATTACK - Launch nuclear strike"
+              >
+                <Zap className="h-5 w-5" />
+                <span className="text-[8px] font-mono">ATTACK</span>
+              </Button>
 
-              <section id="scorePanel" className="hud-module scoreboard pointer-events-auto">
-                <header className="hud-module__header">
-                  <span>WORLD POWERS</span>
-                  <span>POPULATION (M)</span>
-                </header>
-                <div id="scoreList" className="hud-module__body scoreboard__list">
-                  {/* Populated by updateScoreboard() */}
-                </div>
-              </section>
-
-              <section className="hud-module targets pointer-events-auto">
-                <header className="hud-module__header">
-                  <span>TARGET DESIGNATION</span>
-                  <span>HOSTILES</span>
-                </header>
-                <div className="hud-module__body targets__list">
-                  {attackableNations.length === 0 ? (
-                    <div className="targets__empty">No viable enemy targets. Existing truces or alliances must be broken first.</div>
-                  ) : (
-                    attackableNations.map(target => {
-                      const isActive = selectedTargetId === target.id;
-                      return (
-                        <button
-                          key={target.id}
-                          onClick={() => handleTargetSelect(target.id)}
-                          className={`command-target${isActive ? ' is-active' : ''}`}
-                        >
-                          <div className="command-target__header">
-                            <span>{target.name}</span>
-                            <span>{Math.floor(target.population)}M</span>
-                          </div>
-                          <div className="command-target__meta">
-                            DEF {target.defense} • MISS {target.missiles}
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </section>
-            </div>
-
-            <div className="hud-body__spacer" aria-hidden="true" />
-
-            <div className="hud-right">
-              <section className="hud-module doomsday pointer-events-auto">
-                <header className="hud-module__header">
-                  <span>DOOMSDAY CLOCK</span>
-                  <span>GLOBAL STATUS</span>
-                </header>
-                <div className="hud-module__body doomsday__grid doomsday__grid--compact">
-                  <div className="doomsday__metric">
-                    <span>PHASE</span>
-                    <span id="phaseBadge">PLAYER</span>
-                  </div>
-                  <div className="doomsday__metric">
-                    <span>STATUS</span>
-                    <span className="doomsday__status">{isPaused ? 'PAUSED' : 'LIVE'}</span>
-                  </div>
-                </div>
-                <div className="doomsday__clock">
-                  <span>DOOMSDAY</span>
-                  <span id="doomsdayTime">7:00</span>
-                </div>
-              </section>
-
-              <section id="statusPanel" className="hud-module nation-status pointer-events-auto">
-                <header className="hud-module__header">
-                  <span>COMMAND PROFILE</span>
-                  <span>PLAYER</span>
-                </header>
-                <div className="hud-module__body nation-status__grid">
-                  <div className="nation-status__item">
-                    <span>LEADER</span>
-                    <span id="leaderDisplay">-</span>
-                  </div>
-                  <div className="nation-status__item">
-                    <span>DOCTRINE</span>
-                    <span id="doctrineDisplay">-</span>
-                  </div>
-                  <div className="nation-status__item">
-                    <span>MISSILES</span>
-                    <span id="missileDisplay">0</span>
-                  </div>
-                  <div className="nation-status__item">
-                    <span>BOMBERS</span>
-                    <span id="bomberDisplay">0</span>
-                  </div>
-                  <div className="nation-status__item">
-                    <span>DEFENSE</span>
-                    <span id="defenseDisplay">0</span>
-                  </div>
-                  <div className="nation-status__item">
-                    <span>INSTABILITY</span>
-                    <span id="instabilityDisplay">0</span>
-                  </div>
-                  <div className="nation-status__item nation-status__item--wide">
-                    <span>WARHEADS</span>
-                    <span id="warheadDisplay">NONE</span>
-                  </div>
-                </div>
-              </section>
+              <div className="w-px h-8 bg-cyan-500/30 mx-2" />
+              
+              <Button
+                onClick={endTurn}
+                variant="ghost"
+                className="h-12 px-4 text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                title="END TURN"
+              >
+                <ArrowRight className="h-5 w-5" />
+                <span className="text-[8px] font-mono">END TURN</span>
+              </Button>
             </div>
           </div>
 
-          <div className="hud-footer">
-            <div className="hud-footer__top">
-              <section className="hud-module log pointer-events-auto">
-                <header className="hud-module__header">
-                  <span>STRATEGIC EVENTS</span>
-                  <span>LIVE FEED</span>
-                </header>
-                <div id="log" className="hud-module__body log__entries">
-                  {/* Populated by log() function */}
-                </div>
-              </section>
-
-              <div className="hud-footer__controls">
-                <Button
-                  onClick={endTurn}
-                  className="command-button command-button--neutral hud-footer__end-turn"
-                >
-                  END TURN
-                </Button>
-              </div>
+          {/* Events log - minimal bottom left corner */}
+          <div className="fixed bottom-20 left-4 w-80 max-h-32 bg-black/80 border border-cyan-500/30 backdrop-blur-sm pointer-events-auto rounded overflow-hidden">
+            <div className="text-[10px] font-mono text-cyan-400 bg-black/60 px-2 py-1 border-b border-cyan-500/30">
+              EVENTS
+            </div>
+            <div id="log" className="text-[10px] font-mono text-cyan-300 p-2 overflow-y-auto max-h-24">
+              {/* Populated by log() function */}
             </div>
           </div>
         </div>
