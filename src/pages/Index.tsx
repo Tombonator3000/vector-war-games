@@ -1044,11 +1044,21 @@ const CityLights = {
   },
   
   draw(context: CanvasRenderingContext2D) {
-    context.fillStyle = 'rgba(255,255,100,0.8)';
+    const time = Date.now();
     this.cities.forEach(city => {
       const [x, y] = project(city.lon, city.lat);
-      context.globalAlpha = city.brightness * 0.6;
-      context.fillRect(x - 0.5, y - 0.5, 1, 1);
+      
+      // Flickering light effect (satellite view)
+      const flicker = 0.8 + Math.sin(time * 0.003 + city.lon + city.lat) * 0.2;
+      const brightness = city.brightness * flicker;
+      
+      // Glow effect
+      context.save();
+      context.shadowColor = 'rgba(255,255,150,0.8)';
+      context.shadowBlur = 3;
+      context.fillStyle = `rgba(255,255,100,${brightness * 0.8})`;
+      context.fillRect(x - 0.8, y - 0.8, 1.6, 1.6);
+      context.restore();
     });
     context.globalAlpha = 1;
   }
@@ -1897,6 +1907,28 @@ function drawNations() {
     ctx.globalAlpha = 1;
     ctx.restore();
 
+    // Draw city squares around nation
+    const cityCount = n.cities || 1;
+    if (cityCount > 1) {
+      ctx.save();
+      for (let i = 1; i < cityCount; i++) {
+        const angle = (i / (cityCount - 1)) * Math.PI * 2;
+        const radius = 35 + (i % 3) * 8;
+        const cx = x + Math.cos(angle) * radius;
+        const cy = y + Math.sin(angle) * radius;
+        
+        ctx.fillStyle = n.color;
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(cx - 3, cy - 3, 6, 6);
+        
+        ctx.strokeStyle = n.color;
+        ctx.globalAlpha = 0.8;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(cx - 3, cy - 3, 6, 6);
+      }
+      ctx.restore();
+    }
+
     // Nation labels
     const displayName = n.isPlayer
       ? (S.playerName || S.selectedLeader || 'PLAYER')
@@ -2189,6 +2221,28 @@ function drawParticles() {
       ctx.beginPath();
       ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
       ctx.fill();
+    } else if (p.type === 'mushroom-stem') {
+      // Rising column of the mushroom cloud
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = a * 0.8;
+      const sz = 4 + (1 - a) * 3;
+      ctx.fillStyle = `rgba(255,120,60,${a * 0.8})`;
+      ctx.fillRect(p.x - sz / 2, p.y - sz / 2, sz, sz);
+    } else if (p.type === 'mushroom-cap') {
+      // Mushroom cloud cap
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = a * 0.7;
+      const sz = 5 + (1 - a) * 4;
+      ctx.fillStyle = `rgba(200,100,50,${a * 0.7})`;
+      ctx.shadowColor = 'rgba(255,100,30,0.5)';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(p.x - sz / 2, p.y - sz / 2, sz, sz);
+    } else if (p.type === 'blast') {
+      // Ground blast particles
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = a * 0.9;
+      ctx.fillStyle = `rgba(255,180,80,${a * 0.9})`;
+      ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
     } else {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = a;
@@ -2364,15 +2418,51 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
 
   const [elon, elat] = toLonLat(x, y);
 
-  for (let i = 0; i < particleCount; i++) {
+  // Create mushroom cloud particles
+  const mushroomStemHeight = 20 * scale;
+  const mushroomCapRadius = 12 * scale;
+  
+  // Stem particles (rising column)
+  for (let i = 0; i < particleCount * 0.4; i++) {
     const a = Math.random() * Math.PI * 2;
-    const speed = (1 + Math.random() * 3) * scale;
+    const r = Math.random() * 3 * scale;
+    S.particles.push({
+      x: x + Math.cos(a) * r,
+      y: y,
+      vx: (Math.random() - 0.5) * 0.3 * scale,
+      vy: -1.5 - Math.random() * 1.5,
+      life: 600 + Math.random() * 400,
+      max: 1000,
+      type: 'mushroom-stem'
+    });
+  }
+  
+  // Cap particles (mushroom top)
+  for (let i = 0; i < particleCount * 0.3; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.random() * mushroomCapRadius;
+    S.particles.push({
+      x: x + Math.cos(a) * r * 0.3,
+      y: y - mushroomStemHeight,
+      vx: Math.cos(a) * (0.8 + Math.random() * 0.7),
+      vy: -0.2 + Math.random() * 0.4,
+      life: 800 + Math.random() * 600,
+      max: 1400,
+      type: 'mushroom-cap'
+    });
+  }
+  
+  // Ground blast particles
+  for (let i = 0; i < particleCount * 0.3; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const speed = (2 + Math.random() * 4) * scale;
     S.particles.push({
       x, y,
       vx: Math.cos(a) * speed,
-      vy: Math.sin(a) * speed,
-      life: 500 + Math.random() * 500,
-      max: 1000
+      vy: Math.sin(a) * speed * 0.3,
+      life: 400 + Math.random() * 300,
+      max: 700,
+      type: 'blast'
     });
   }
 
