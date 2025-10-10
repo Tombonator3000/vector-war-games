@@ -1,5 +1,169 @@
 # NORAD VECTOR - Development Log
 
+## 2025-10-10 (Part 2): Phase 3 Implementation - Innovative Features
+
+### 🚀 Major Features Implemented
+
+#### 1. News Ticker System ✅
+**File:** `src/components/NewsTicker.tsx`
+- Real-time scrolling news at bottom of screen
+- Priority-based color coding (routine → important → urgent → critical)
+- Category icons: ⚔️ military, 🤝 diplomatic, 💰 economic, 🛰️ intel, ⚠️ crisis, ☢️ environment
+- Seamless infinite loop animation
+- Auto-generates news for major game events
+- 20-item rolling history buffer
+
+**Integration:**
+- Renders at bottom of game UI
+- Receives news from global game functions
+- Updates on: launches, DEFCON changes, flashpoints, doctrines, diplomatic actions
+
+#### 2. Flashpoint & Crisis System ✅
+**Files:**
+- `src/hooks/useFlashpoints.ts` - Core flashpoint logic (322 lines)
+- `src/components/FlashpointModal.tsx` - Crisis decision UI (170 lines)
+
+**5 Unique Crisis Templates:**
+1. **Terrorist Nuclear Theft** (90s timer)
+   - Terrorists seize plutonium, threaten NYC
+   - Options: Negotiate (40%), Special Forces (60%), Evacuate (90%)
+   
+2. **Military Coup** (60s timer)
+   - Rogue general seizes ICBM bases
+   - Options: Support coup, Oppose, Preemptive strike, Monitor
+   
+3. **Accidental Launch** (45s timer)
+   - Unidentified missile detected heading to Moscow
+   - Options: Hotline explanation, Intercept, Full counterstrike
+   
+4. **Rogue AI** (75s timer)
+   - AI infiltrates nuclear command systems
+   - Options: Emergency shutdown, Counter-AI, Manual control
+   
+5. **Pandemic Outbreak** (60s timer)
+   - Bio-weapon suspected in military bases
+   - Options: Quarantine, Investigate, Retaliate
+
+**Features:**
+- Timed decisions with countdown (45-90 seconds)
+- Advisor support/oppose indicators
+- Success probability displayed (0-100%)
+- Permanent consequence tracking
+- Multiple outcomes per choice (success/failure branches)
+- Dynamic triggering based on DEFCON and turn count
+- Probability increases: 2% base × (6-DEFCON) × turnMultiplier
+
+#### 3. Fog of War & Unreliable Intelligence ✅
+**File:** `src/hooks/useFogOfWar.ts` (114 lines)
+
+**Intelligence Accuracy System:**
+- Base accuracy: 20-95% (clamped range)
+- **Modifiers:**
+  - Satellite coverage: +20%
+  - Deep reconnaissance: +15%
+  - Enemy counterintel: -25%
+
+**Data Distortion:**
+- Applies Gaussian noise to enemy stats:
+  - Missiles count (distorted)
+  - Defense systems (distorted)
+  - Production capacity (distorted)
+  - Uranium reserves (distorted)
+  - Warhead counts (requires deep recon for accuracy)
+
+**False Intelligence Types:**
+- Phantom military buildups (15% chance)
+- Fake launch preparations
+- Double agent betrayals
+- Ghost missiles (weather balloons)
+- Planted disinformation documents
+
+**Visual Indicators:**
+- Intel confidence percentage displayed
+- Reliability rating: verified (80%+), likely (60-80%), uncertain (40-60%), unconfirmed (<40%)
+- Orange warning text for low-confidence intel
+
+#### 4. News Generation System ✅
+**Automatic News Events:**
+- **Nuclear Launches:** Critical for strategic, urgent for tactical
+- **DEFCON Changes:** Critical priority announcements
+- **First Strike Doctrine:** Critical military alert
+- **UN Security Council:** Important diplomatic news
+- **Flashpoint Triggers:** Critical crisis alerts
+- **Routine Updates:** Every 3 turns (tensions, reconnaissance, exercises)
+
+**Technical Implementation:**
+- Global window API bridge: `__gameAddNewsItem`, `__gameTriggerFlashpoint`
+- React hooks with useCallback for performance
+- useState for news items array
+- Refs for stable function references
+
+### 📊 Integration Points
+
+**Main Game Loop (`src/pages/Index.tsx`):**
+- Line 3069-3095: News/flashpoint hooks initialization
+- Line 2906-2931: Flashpoint triggering in endTurn()
+- Line 1450-1480: Launch event news generation
+- Line 331-342: First Strike doctrine news
+- Line 4641-4651: UN appeal news
+- Line 4912-4930: Fog of war applied to intel display
+- Line 5388-5456: Flashpoint modal with consequence handlers
+
+**Enemy Intel Display:**
+- Shows distorted values for nations under satellite coverage
+- Displays confidence percentage
+- Reliability rating visible
+- Deep recon reveals accurate warhead counts
+- Player's own stats remain accurate
+
+### 🎯 Game Balance Impact
+
+**Flashpoints:**
+- Low probability at start (DEFCON 5, early turns)
+- Escalates with tension (DEFCON 1 + turn 50 = ~3% per turn)
+- Adds unpredictability and realism
+- Forces crisis management decisions
+
+**Fog of War:**
+- Prevents perfect information warfare
+- Rewards intel investment (satellites, deep recon)
+- Countered by enemy counterintelligence
+- Creates strategic uncertainty
+
+**News Ticker:**
+- Enhances situational awareness
+- Provides narrative context
+- Historical record of events
+- Immersive atmosphere
+
+### 📈 Statistics
+
+**New Code:**
+- NewsTicker: 98 lines
+- useFlashpoints: 322 lines
+- FlashpointModal: 170 lines
+- useFogOfWar: 114 lines
+- Integration changes: ~150 lines
+- **Total: ~854 new lines**
+
+**New Content:**
+- 5 flashpoint templates
+- 15 flashpoint decision options
+- 5 false intel types
+- 10+ news event categories
+- 30+ news templates
+
+### 🔜 Next Steps (Week 2 of Phase 3)
+
+From roadmap.md:
+- [ ] Cooperative multiplayer infrastructure (Week 2)
+- [ ] WebSocket synchronization
+- [ ] Role-based gameplay (Strategist/Tactician)
+- [ ] Shared resource pools
+- [ ] Real-time turn coordination
+
+---
+
 ## 2025-10-10: Comprehensive Audit & Roadmap Creation
 
 ### 🔍 Audit Completed

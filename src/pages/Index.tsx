@@ -335,6 +335,9 @@ function applyDoctrineEffects(nation: Nation, doctrineKey?: DoctrineKey) {
       nation.researched.warhead_100 = true;
       S.defcon = Math.min(S.defcon, 3);
       AudioSys.playSFX('defcon');
+      if ((window as any).__gameAddNewsItem) {
+        (window as any).__gameAddNewsItem('military', `${nation.name} adopts First Strike Doctrine - DEFCON ${S.defcon}`, 'critical');
+      }
       break;
     }
     case 'detente': {
@@ -1469,6 +1472,16 @@ function launch(from: Nation, to: Nation, yieldMT: number) {
   log(`${from.name} → ${to.name}: LAUNCH ${yieldMT}MT`);
   AudioSys.playSFX('launch');
   DoomsdayClock.tick(0.3);
+  
+  // Generate news for launch
+  if ((window as any).__gameAddNewsItem) {
+    const priority = yieldMT > 50 ? 'critical' : 'urgent';
+    (window as any).__gameAddNewsItem(
+      'military',
+      `${from.name} launches ${yieldMT}MT warhead at ${to.name}`,
+      priority
+    );
+  }
   
   return true;
 }
@@ -2907,6 +2920,25 @@ function endTurn() {
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
       
+      // Trigger flashpoint check at start of new turn
+      if ((window as any).__gameTriggerFlashpoint) {
+        const flashpoint = (window as any).__gameTriggerFlashpoint(S.turn, S.defcon);
+        if (flashpoint) {
+          (window as any).__gameAddNewsItem?.('crisis', `CRITICAL: ${flashpoint.title}`, 'critical');
+        }
+      }
+      
+      // Generate routine news
+      if ((window as any).__gameAddNewsItem && S.turn % 3 === 0) {
+        const newsTemplates = [
+          { category: 'diplomatic' as const, text: 'International tensions remain high', priority: 'routine' as const },
+          { category: 'intel' as const, text: 'Satellite reconnaissance continues', priority: 'routine' as const },
+          { category: 'military' as const, text: 'Military readiness exercises ongoing', priority: 'routine' as const },
+        ];
+        const randomNews = newsTemplates[Math.floor(Math.random() * newsTemplates.length)];
+        (window as any).__gameAddNewsItem(randomNews.category, randomNews.text, randomNews.priority);
+      }
+      
       updateDisplay();
       checkVictory();
     }, 1500);
@@ -3063,6 +3095,35 @@ export default function NoradVector() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
   const handleAttackRef = useRef<() => void>(() => {});
+  
+  // News ticker and flashpoints
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
+  const { activeFlashpoint, triggerRandomFlashpoint, resolveFlashpoint, dismissFlashpoint } = useFlashpoints();
+  const { distortNationIntel, generateFalseIntel } = useFogOfWar();
+
+  const addNewsItem = useCallback((category: NewsItem['category'], text: string, priority: NewsItem['priority']) => {
+    const item: NewsItem = {
+      id: `news_${Date.now()}_${Math.random()}`,
+      text,
+      priority,
+      category,
+      timestamp: Date.now()
+    };
+    setNewsItems(prev => [...prev, item].slice(-20)); // Keep last 20 items
+  }, []);
+
+  // Expose functions globally for game loop access
+  const addNewsItemRef = useRef(addNewsItem);
+  const triggerRandomFlashpointRef = useRef(triggerRandomFlashpoint);
+  
+  useEffect(() => {
+    addNewsItemRef.current = addNewsItem;
+    triggerRandomFlashpointRef.current = triggerRandomFlashpoint;
+    
+    // Make available globally
+    (window as any).__gameAddNewsItem = addNewsItem;
+    (window as any).__gameTriggerFlashpoint = triggerRandomFlashpoint;
+  }, [addNewsItem, triggerRandomFlashpoint]);
 
   useEffect(() => {
     Storage.setItem('layout_density', layoutDensity);
@@ -4594,6 +4655,9 @@ export default function NoradVector() {
           AudioSys.playSFX('defcon');
           DoomsdayClock.improve(0.5);
           log(`UN appeal successful: DEFCON improved to ${S.defcon}.`);
+          if ((window as any).__gameAddNewsItem) {
+            (window as any).__gameAddNewsItem('diplomatic', `UN Security Council approves de-escalation - DEFCON ${S.defcon}`, 'important');
+          }
           updateDisplay();
           consumeAction();
           return true;
@@ -4911,7 +4975,18 @@ export default function NoradVector() {
           
           const currentPlayer = PlayerManager.get();
           const hasIntelCoverage = currentPlayer && currentPlayer.satellites && currentPlayer.satellites[nearest.id];
-          if (hasIntelCoverage) {
+          if (hasIntelCoverage && !nearest.isPlayer) {
+            // Apply fog of war to enemy nations
+            const distorted = distortNationIntel(nearest, {
+              baseAccuracy: 0.7,
+              satelliteCoverage: true,
+              deepReconActive: !!(currentPlayer.deepRecon && currentPlayer.deepRecon[nearest.id]),
+              counterintelActive: (nearest.intel || 0) > 50
+            });
+            lines.push(`Missiles: ${distorted.missiles || 0} (${distorted._intelReliability}), Defense: ${distorted.defense || 0}`);
+            lines.push(`Production: ${Math.floor(distorted.production || 0)}, Uranium: ${Math.floor(distorted.uranium || 0)}, Intel: ${Math.floor(distorted.intel || 0)}`);
+            lines.push(`<span style="color: #ffa500; font-size: 0.85em">Intel Confidence: ${Math.round((distorted._intelConfidence || 0) * 100)}%</span>`);
+          } else if (hasIntelCoverage && nearest.isPlayer) {
             lines.push(`Missiles: ${nearest.missiles || 0}, Defense: ${nearest.defense || 0}`);
             lines.push(`Production: ${Math.floor(nearest.production || 0)}, Uranium: ${Math.floor(nearest.uranium || 0)}, Intel: ${Math.floor(nearest.intel || 0)}`);
           } else {
@@ -5369,6 +5444,62 @@ export default function NoradVector() {
           })()}
         </DialogContent>
       </Dialog>
+
+      <NewsTicker items={newsItems} />
+
+      {activeFlashpoint && (
+        <FlashpointModal
+          flashpoint={activeFlashpoint}
+          onResolve={(optionId) => {
+            const result = resolveFlashpoint(optionId, activeFlashpoint);
+            const player = PlayerManager.get();
+            if (!player) return;
+
+            const option = activeFlashpoint.options.find(opt => opt.id === optionId);
+            if (!option) return;
+
+            // Apply consequences based on outcome
+            const outcome = result.success ? option.outcome.success : option.outcome.failure;
+            
+            if (outcome.defcon) {
+              S.defcon = Math.max(1, Math.min(5, outcome.defcon));
+              AudioSys.playSFX('defcon');
+              addNewsItem('crisis', `DEFCON ${S.defcon}: Flashpoint resolved - ${result.success ? 'Success' : 'Failure'}`, 'critical');
+            }
+            
+            if (outcome.morale) {
+              player.instability = Math.max(0, (player.instability || 0) - outcome.morale);
+            }
+            
+            if (outcome.intel) {
+              player.intel = Math.max(0, (player.intel || 0) + outcome.intel);
+            }
+            
+            if (outcome.production) {
+              player.production = Math.max(0, player.production + outcome.production);
+            }
+            
+            if (outcome.uranium) {
+              player.uranium = Math.max(0, player.uranium + outcome.uranium);
+            }
+            
+            if (outcome.nuclearWar || outcome.worldEnds) {
+              addNewsItem('crisis', 'NUCLEAR WAR INITIATED', 'critical');
+              S.defcon = 1;
+            } else if (result.success) {
+              addNewsItem('diplomatic', `Crisis resolved: ${option.text}`, 'important');
+            } else {
+              addNewsItem('crisis', `Crisis escalated: ${option.text} failed`, 'urgent');
+            }
+            
+            updateDisplay();
+          }}
+          onTimeout={() => {
+            dismissFlashpoint();
+            addNewsItem('crisis', 'CRISIS UNRESOLVED - Default action taken', 'critical');
+          }}
+        />
+      )}
     </div>
   );
 }
