@@ -3,6 +3,19 @@
 ## Overview
 The Agent System provides intelligent, voice-enabled advisors that guide players through strategic decisions, react to game events, and provide dynamic commentary. This system uses ElevenLabs for text-to-speech and implements an adaptive personality framework.
 
+### Operational Log Requirements
+- Every session log entry **must** include an ISO-8601 timestamp (UTC) alongside the action description.
+- For any repository modification, record the relative paths of all files touched in that entry.
+- Summaries should highlight key outcomes, blockers, and follow-up actions to maintain continuity across shifts.
+
+### Suggested Additions for `AGENTS.md`
+To make the guide more actionable, consider capturing:
+- **Mission Context:** High-level objective, current phase, and success criteria.
+- **Communication Protocol:** Preferred format for updates, required approvals, and escalation paths.
+- **Testing Matrix:** Mandatory checks before merging (e.g., `npm run lint`, `npm test`).
+- **Tooling Credentials:** Where to find API keys, feature flags, and mock services (with security notes).
+- **Glossary & Domain Notes:** Definitions of in-universe terminology to keep narratives consistent.
+
 ---
 
 ## 🎭 Advisor Personalities
