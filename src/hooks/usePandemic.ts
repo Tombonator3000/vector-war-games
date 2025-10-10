@@ -203,14 +203,12 @@ export function usePandemic(addNewsItem: AddNewsItem) {
   }, [addNewsItem]);
 
   const applyCountermeasure = useCallback((payload: PandemicCountermeasurePayload) => {
-    if (!pandemicState.active) return;
-
-    let newsCategory: NewsItem['category'] = 'science';
-    let newsPriority: NewsItem['priority'] = 'important';
-    let newsMessage: string | null = null;
+    let news: { category: NewsItem['category']; priority: NewsItem['priority']; message: string } | null = null;
 
     setPandemicState(prev => {
-      if (!prev.active) return prev;
+      if (!prev.active) {
+        return prev;
+      }
 
       switch (payload.type) {
         case 'containment': {
@@ -221,7 +219,11 @@ export function usePandemic(addNewsItem: AddNewsItem) {
             infection: clamp(outbreak.infection - reducedInfection * 0.5, 0, 100),
             heat: clamp(outbreak.heat + 5, 0, 100)
           }));
-          newsMessage = payload.label ?? 'BioShield cordons tightened – infection pressure falling.';
+          news = {
+            category: 'science',
+            priority: 'important',
+            message: payload.label ?? 'BioShield cordons tightened – infection pressure falling.'
+          };
           return {
             ...prev,
             containmentEffort: clamp(prev.containmentEffort + value, 0, 100),
@@ -232,7 +234,11 @@ export function usePandemic(addNewsItem: AddNewsItem) {
         }
         case 'vaccine': {
           const value = payload.value ?? 20;
-          newsMessage = payload.label ?? 'Gene labs push experimental vaccine candidates into trials.';
+          news = {
+            category: 'science',
+            priority: 'important',
+            message: payload.label ?? 'Gene labs push experimental vaccine candidates into trials.'
+          };
           return {
             ...prev,
             vaccineProgress: clamp(prev.vaccineProgress + value, 0, 120),
@@ -242,11 +248,15 @@ export function usePandemic(addNewsItem: AddNewsItem) {
         }
         case 'mutation': {
           const value = payload.value ?? 5;
-          newsCategory = value > 0 ? 'crisis' : 'science';
-          newsPriority = value > 0 ? 'urgent' : 'important';
-          newsMessage = payload.label ?? (value > 0
-            ? `Pathogen ${prev.strainName} mutates beyond containment protocols.`
-            : `Counter-genetics program destabilizes ${prev.strainName}.`);
+          news = {
+            category: value > 0 ? 'crisis' : 'science',
+            priority: value > 0 ? 'urgent' : 'important',
+            message:
+              payload.label ??
+              (value > 0
+                ? `Pathogen ${prev.strainName} mutates beyond containment protocols.`
+                : `Counter-genetics program destabilizes ${prev.strainName}.`)
+          };
           return {
             ...prev,
             mutationLevel: clamp(prev.mutationLevel + value, 0, 12),
@@ -266,9 +276,15 @@ export function usePandemic(addNewsItem: AddNewsItem) {
                   heat: clamp(outbreak.heat - 10, 0, 100)
                 }
           );
-          newsMessage = payload.label ?? (region
-            ? `Deep-clean teams report ${region} outbreak receding.`
-            : 'Forward bases report infection clusters shrinking.');
+          news = {
+            category: 'science',
+            priority: 'important',
+            message:
+              payload.label ??
+              (region
+                ? `Deep-clean teams report ${region} outbreak receding.`
+                : 'Forward bases report infection clusters shrinking.')
+          };
           return {
             ...prev,
             outbreaks,
@@ -278,12 +294,19 @@ export function usePandemic(addNewsItem: AddNewsItem) {
         }
         case 'intel': {
           const actor = payload.actor;
-          newsMessage = payload.label ?? (actor ? `SIGINT points to ${actor} engineering the pathogen.` : 'Bioforensics yields new intel on release vector.');
-          newsCategory = 'intel';
           const suspectedActors = new Set(prev.suspectedActors);
           if (actor) {
             suspectedActors.add(actor);
           }
+          news = {
+            category: 'intel',
+            priority: 'important',
+            message:
+              payload.label ??
+              (actor
+                ? `SIGINT points to ${actor} engineering the pathogen.`
+                : 'Bioforensics yields new intel on release vector.')
+          };
           return {
             ...prev,
             suspectedActors: Array.from(suspectedActors),
@@ -296,10 +319,10 @@ export function usePandemic(addNewsItem: AddNewsItem) {
       }
     });
 
-    if (newsMessage) {
-      addNewsItem(newsCategory, newsMessage, newsPriority);
+    if (news) {
+      addNewsItem(news.category, news.message, news.priority);
     }
-  }, [addNewsItem, pandemicState.active]);
+  }, [addNewsItem]);
 
   const advancePandemicTurn = useCallback((context: PandemicTurnContext): PandemicTurnEffect | null => {
     if (!pandemicState.active) {
