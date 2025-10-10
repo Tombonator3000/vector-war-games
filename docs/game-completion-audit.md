@@ -192,6 +192,10 @@ This document outlines the complete audit and fixes applied to make NORAD VECTOR
     - Global radiation
     - Population impact
     - Production penalties
+11. **Unconventional Warfare Controls**
+    - Pandemic/bioweapon systems can be toggled as conquest options from the command interface
+    - Settings persisted per commander profile and logged for compliance audits
+    - Pandemic panel reflects directive status when systems are locked down
 
 ### ✅ Visual Systems
 1. Globe rendering with proper projection

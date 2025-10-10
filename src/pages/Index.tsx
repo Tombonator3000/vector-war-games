@@ -11,7 +11,7 @@ import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRigh
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
-import { usePandemic } from '@/hooks/usePandemic';
+import { usePandemic, type PandemicTriggerPayload, type PandemicCountermeasurePayload, type PandemicTurnContext } from '@/hooks/usePandemic';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
 
@@ -3207,6 +3207,20 @@ export default function NoradVector() {
   const [musicEnabled, setMusicEnabled] = useState(AudioSys.musicEnabled);
   const [sfxEnabled, setSfxEnabled] = useState(AudioSys.sfxEnabled);
   const [musicVolume, setMusicVolume] = useState(AudioSys.musicVolume);
+  const [pandemicIntegrationEnabled, setPandemicIntegrationEnabled] = useState(() => {
+    const stored = Storage.getItem('option_pandemic_integration');
+    if (stored === 'true' || stored === 'false') {
+      return stored === 'true';
+    }
+    return true;
+  });
+  const [bioWarfareEnabled, setBioWarfareEnabled] = useState(() => {
+    const stored = Storage.getItem('option_biowarfare_conquest');
+    if (stored === 'true' || stored === 'false') {
+      return stored === 'true';
+    }
+    return true;
+  });
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [uiTick, setUiTick] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -3231,19 +3245,49 @@ export default function NoradVector() {
 
   const { pandemicState, triggerPandemic, applyCountermeasure: applyPandemicCountermeasure, advancePandemicTurn } = usePandemic(addNewsItem);
 
+  const handlePandemicTrigger = useCallback((payload: PandemicTriggerPayload) => {
+    if (!pandemicIntegrationEnabled) {
+      addNewsItem(
+        'science',
+        'Pandemic simulations disabled – scenario logged for NORAD audit.',
+        'important'
+      );
+      return;
+    }
+    if (!bioWarfareEnabled) {
+      addNewsItem(
+        'diplomatic',
+        'Bio-weapon conquest protocols disabled – engineered outbreak denied.',
+        'important'
+      );
+      return;
+    }
+    triggerPandemic(payload);
+  }, [pandemicIntegrationEnabled, bioWarfareEnabled, triggerPandemic, addNewsItem]);
+
+  const handlePandemicCountermeasure = useCallback((payload: PandemicCountermeasurePayload) => {
+    if (!pandemicIntegrationEnabled) return;
+    applyPandemicCountermeasure(payload);
+  }, [pandemicIntegrationEnabled, applyPandemicCountermeasure]);
+
+  const handlePandemicAdvance = useCallback((context: PandemicTurnContext) => {
+    if (!pandemicIntegrationEnabled) return null;
+    return advancePandemicTurn(context);
+  }, [pandemicIntegrationEnabled, advancePandemicTurn]);
+
   // Expose functions globally for game loop access
   const addNewsItemRef = useRef(addNewsItem);
   const triggerRandomFlashpointRef = useRef(triggerRandomFlashpoint);
-  const triggerPandemicRef = useRef(triggerPandemic);
-  const applyPandemicCountermeasureRef = useRef(applyPandemicCountermeasure);
-  const advancePandemicTurnRef = useRef(advancePandemicTurn);
+  const triggerPandemicRef = useRef(handlePandemicTrigger);
+  const applyPandemicCountermeasureRef = useRef(handlePandemicCountermeasure);
+  const advancePandemicTurnRef = useRef(handlePandemicAdvance);
   
   useEffect(() => {
     addNewsItemRef.current = addNewsItem;
     triggerRandomFlashpointRef.current = triggerRandomFlashpoint;
-    triggerPandemicRef.current = triggerPandemic;
-    applyPandemicCountermeasureRef.current = applyPandemicCountermeasure;
-    advancePandemicTurnRef.current = advancePandemicTurn;
+    triggerPandemicRef.current = handlePandemicTrigger;
+    applyPandemicCountermeasureRef.current = handlePandemicCountermeasure;
+    advancePandemicTurnRef.current = handlePandemicAdvance;
 
     // Make available globally
     (window as any).__gameAddNewsItem = addNewsItem;
@@ -3251,11 +3295,19 @@ export default function NoradVector() {
     (window as any).__pandemicTrigger = (payload: unknown) => triggerPandemicRef.current(payload as any);
     (window as any).__pandemicCountermeasure = (payload: unknown) => applyPandemicCountermeasureRef.current(payload as any);
     (window as any).__pandemicAdvance = (context: unknown) => advancePandemicTurnRef.current(context as any);
-  }, [addNewsItem, triggerRandomFlashpoint, triggerPandemic, applyPandemicCountermeasure, advancePandemicTurn]);
+  }, [addNewsItem, triggerRandomFlashpoint, handlePandemicTrigger, handlePandemicCountermeasure, handlePandemicAdvance]);
 
   useEffect(() => {
     Storage.setItem('layout_density', layoutDensity);
   }, [layoutDensity]);
+
+  useEffect(() => {
+    Storage.setItem('option_pandemic_integration', pandemicIntegrationEnabled ? 'true' : 'false');
+  }, [pandemicIntegrationEnabled]);
+
+  useEffect(() => {
+    Storage.setItem('option_biowarfare_conquest', bioWarfareEnabled ? 'true' : 'false');
+  }, [bioWarfareEnabled]);
 
   const activeLayout = useMemo(
     () => layoutDensityOptions.find((option) => option.id === layoutDensity) ?? layoutDensityOptions[0],
@@ -5627,6 +5679,49 @@ export default function NoradVector() {
               />
             </div>
           </div>
+
+          <div className="options-section">
+            <h3 className="options-section__heading">UNCONVENTIONAL WARFARE</h3>
+            <p className="options-section__subheading">Control how pandemic and bio-weapon systems factor into conquest planning.</p>
+            <div className="options-toggle">
+              <div className="flex flex-col text-left">
+                <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Pandemic Integration</span>
+                <span className="text-[11px] text-cyan-400/80">Allow engineered outbreaks and containment play a role each turn.</span>
+              </div>
+              <Switch
+                checked={pandemicIntegrationEnabled}
+                onCheckedChange={(value) => {
+                  setPandemicIntegrationEnabled(value);
+                  toast({
+                    title: value ? 'Pandemic integration enabled' : 'Pandemic integration disabled',
+                    description: value
+                      ? 'Bio-threat modelling now influences readiness, production, and conquest routes.'
+                      : 'All pathogen events suppressed pending command audit.'
+                  });
+                }}
+                aria-label="Toggle pandemic gameplay"
+              />
+            </div>
+            <div className="options-toggle">
+              <div className="flex flex-col text-left">
+                <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Bio-Weapon Conquest Ops</span>
+                <span className="text-[11px] text-cyan-400/80">Enable offensive deployment of pathogens as a conquest vector. Changes are logged to the war-room audit trail.</span>
+              </div>
+              <Switch
+                checked={bioWarfareEnabled}
+                onCheckedChange={(value) => {
+                  setBioWarfareEnabled(value);
+                  toast({
+                    title: value ? 'Bio-weapon ops authorized' : 'Bio-weapon ops barred',
+                    description: value
+                      ? 'Pandemic flashpoints may now be weaponized in pursuit of domination.'
+                      : 'Offensive pathogen use disabled – only defensive monitoring remains.'
+                  });
+                }}
+                aria-label="Toggle bioweapon conquest options"
+              />
+            </div>
+          </div>
         </SheetContent>
       </Sheet>
 
@@ -5645,7 +5740,11 @@ export default function NoradVector() {
         </DialogContent>
       </Dialog>
 
-      <PandemicPanel state={pandemicState} />
+      <PandemicPanel
+        state={pandemicState}
+        enabled={pandemicIntegrationEnabled}
+        biowarfareEnabled={bioWarfareEnabled}
+      />
       <NewsTicker items={newsItems} />
 
       {activeFlashpoint && (
@@ -5709,11 +5808,11 @@ export default function NoradVector() {
             }
 
             if (outcome.pandemicTrigger) {
-              triggerPandemic(outcome.pandemicTrigger);
+              handlePandemicTrigger(outcome.pandemicTrigger);
             }
 
             if (outcome.containmentBoost) {
-              applyPandemicCountermeasure({
+              handlePandemicCountermeasure({
                 type: 'containment',
                 value: outcome.containmentBoost,
                 label: outcome.containmentLabel
@@ -5721,7 +5820,7 @@ export default function NoradVector() {
             }
 
             if (typeof outcome.vaccineProgress === 'number') {
-              applyPandemicCountermeasure({
+              handlePandemicCountermeasure({
                 type: 'vaccine',
                 value: outcome.vaccineProgress,
                 label: outcome.vaccineLabel
@@ -5729,7 +5828,7 @@ export default function NoradVector() {
             }
 
             if (outcome.mutationSpike) {
-              applyPandemicCountermeasure({
+              handlePandemicCountermeasure({
                 type: 'mutation',
                 value: outcome.mutationSpike,
                 label: outcome.mutationLabel
@@ -5737,7 +5836,7 @@ export default function NoradVector() {
             }
 
             if (outcome.suppressedRegion || outcome.suppressionStrength) {
-              applyPandemicCountermeasure({
+              handlePandemicCountermeasure({
                 type: 'suppression',
                 region: outcome.suppressedRegion,
                 value: outcome.suppressionStrength,
@@ -5746,7 +5845,7 @@ export default function NoradVector() {
             }
 
             if (outcome.intelActor) {
-              applyPandemicCountermeasure({
+              handlePandemicCountermeasure({
                 type: 'intel',
                 actor: outcome.intelActor,
                 value: outcome.intelValue,

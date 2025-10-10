@@ -3,6 +3,8 @@ import type { PandemicState } from '@/hooks/usePandemic';
 
 interface PandemicPanelProps {
   state: PandemicState;
+  enabled?: boolean;
+  biowarfareEnabled?: boolean;
 }
 
 const STAGE_CONFIG = {
@@ -37,12 +39,17 @@ function ProgressBar({ value, color, background = 'bg-cyan-500/10' }: { value: n
   );
 }
 
-export function PandemicPanel({ state }: PandemicPanelProps) {
+export function PandemicPanel({ state, enabled = true, biowarfareEnabled = true }: PandemicPanelProps) {
   const stage = STAGE_CONFIG[state.stage] ?? STAGE_CONFIG.outbreak;
   const infection = Math.round(state.globalInfection);
   const containment = Math.round(state.containmentEffort);
   const vaccine = Math.round(Math.min(state.vaccineProgress, 100));
   const mutation = Math.round(Math.min(state.mutationLevel * 8, 100));
+  const disabledMessage = !enabled
+    ? 'Pandemic integration disabled – biosurveillance lattice offline by command directive.'
+    : !biowarfareEnabled
+      ? 'Bio-weapon conquest options disabled – monitoring only for compliance audit.'
+      : null;
 
   return (
     <div className={`fixed bottom-20 right-4 w-80 bg-black/80 backdrop-blur-md border ${stage.border} rounded-lg shadow-xl shadow-cyan-900/30 pointer-events-auto text-[11px] font-mono text-cyan-200`}>
@@ -54,7 +61,17 @@ export function PandemicPanel({ state }: PandemicPanelProps) {
         <span className={`${stage.color} text-[10px] tracking-wide`}>{stage.label}</span>
       </div>
 
-      {state.active ? (
+      {disabledMessage ? (
+        <div className="px-3 py-4 text-cyan-200/80 space-y-2">
+          <div className="uppercase text-[10px] text-cyan-400 tracking-[0.3em]">Protocols Locked</div>
+          <div>{disabledMessage}</div>
+          {state.active && enabled && (
+            <div className="text-[10px] text-cyan-300/80">
+              {state.strainName} remains under containment watch. Metrics frozen until directives change.
+            </div>
+          )}
+        </div>
+      ) : state.active ? (
         <div className="space-y-3 px-3 py-3">
           <div className="space-y-1">
             <div className="flex items-center justify-between text-cyan-200 uppercase">
