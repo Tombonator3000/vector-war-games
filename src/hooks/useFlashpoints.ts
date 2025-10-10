@@ -223,46 +223,170 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     consequences: {}
   },
   {
-    title: 'PANDEMIC OUTBREAK IN MILITARY BASES',
-    description: 'Mysterious illness spreading through ICBM crews. 40% incapacitated. Intelligence suggests bio-weapon attack. Readiness critical.',
+    title: 'BIO-TERROR: STRATEGIC CREW PANDEMIC',
+    description: 'Telemetry shows simultaneous hemorrhagic outbreaks inside missile fields, bomber wings, and SSBN crews. CDC suspects engineered pathogen seeded through maintenance supply chains. Launch readiness collapsing within hours.',
     category: 'blackswan',
-    severity: 'major',
-    timeLimit: 60,
+    severity: 'critical',
+    timeLimit: 75,
     options: [
       {
-        id: 'quarantine',
-        text: 'Immediate Quarantine',
-        description: 'Isolate all affected bases',
-        advisorSupport: ['science'],
+        id: 'bioshield',
+        text: 'Activate Project BIOSHIELD',
+        description: 'Full lockdown of crews, automated drones deliver countermeasures, readiness be damned.',
+        advisorSupport: ['science', 'military'],
+        advisorOppose: ['pr'],
+        outcome: {
+          probability: 0.7,
+          success: {
+            pandemicTrigger: {
+              severity: 'moderate',
+              origin: 'bio-terror',
+              regions: ['CONUS missile crews', 'Atlantic SSBN flotilla'],
+              suspectedActors: ['Unknown bio-cell'],
+              initialContainment: 45,
+              label: 'BioShield perimeter seals strategic bases.'
+            },
+            containmentBoost: 35,
+            containmentLabel: 'BioShield cordons reinforced across missile complexes.',
+            readinessPenalty: 6,
+            intelGain: 5
+          },
+          failure: {
+            pandemicTrigger: {
+              severity: 'severe',
+              origin: 'bio-terror',
+              regions: ['CONUS missile crews', 'Pacific bomber squadrons'],
+              suspectedActors: ['Unknown bio-cell'],
+              initialContainment: 12,
+              label: 'BioShield breach – pathogen loose among missile crews.'
+            },
+            mutationSpike: 12,
+            mutationLabel: 'Pathogen adapts to hazmat cordons.',
+            populationLoss: 8,
+            instabilityIncrease: 10
+          }
+        }
+      },
+      {
+        id: 'sequencing',
+        text: 'Rush Pathogen Sequencing',
+        description: 'Divert orbital labs and DARPA compute clusters to decode the agent and craft a counter-vaccine.',
+        advisorSupport: ['science', 'intel'],
         advisorOppose: ['military'],
         outcome: {
-          probability: 0.8,
-          success: { containment: true, readiness: -40 },
-          failure: { pandemic: true, population: -10 }
+          probability: 0.55,
+          success: {
+            pandemicTrigger: {
+              severity: 'moderate',
+              origin: 'bio-terror',
+              regions: ['CONUS missile crews'],
+              suspectedActors: ['Unknown bio-cell'],
+              initialContainment: 30,
+              label: 'Genome isolated – targeted antivirals authorized.'
+            },
+            vaccineProgress: 35,
+            vaccineLabel: 'Rapid mRNA countermeasure enters emergency trials.',
+            containmentBoost: 10,
+            containmentLabel: 'Lab insights sharpen containment protocols.',
+            intelGain: 12
+          },
+          failure: {
+            pandemicTrigger: {
+              severity: 'severe',
+              origin: 'bio-terror',
+              regions: ['Pacific bomber squadrons'],
+              suspectedActors: ['Unknown bio-cell'],
+              initialContainment: 6,
+              label: 'Sequencing lab breach aerosolizes pathogen.'
+            },
+            mutationSpike: 15,
+            mutationLabel: 'Recombinant strain emerges during sequencing.',
+            vaccineProgress: -20,
+            productionPenalty: 15,
+            instabilityIncrease: 6
+          }
         }
       },
       {
-        id: 'investigate',
-        text: 'Launch Investigation',
-        description: 'Determine if attack or natural',
-        advisorSupport: ['intel', 'science'],
-        advisorOppose: [],
+        id: 'hunter',
+        text: 'Deploy Hunter-Killer Teams',
+        description: 'Special operations raid suspected enemy wet labs and courier networks feeding the outbreak.',
+        advisorSupport: ['military', 'intel'],
+        advisorOppose: ['diplomatic', 'pr'],
         outcome: {
-          probability: 0.6,
-          success: { evidenceFound: true, culpritIdentified: true },
-          failure: { spreadsContinues: true, readiness: -60 }
+          probability: 0.45,
+          success: {
+            pandemicTrigger: {
+              severity: 'moderate',
+              origin: 'bio-terror',
+              regions: ['Western Europe radar net'],
+              suspectedActors: ['Rogue Directorate'],
+              initialContainment: 25,
+              label: 'Wet-work raids seize engineered cultures abroad.'
+            },
+            suppressionStrength: 30,
+            suppressionLabel: 'Forward teams eradicate outbreak cells.',
+            containmentBoost: 15,
+            containmentLabel: 'Counter-force isolates remaining clusters.',
+            intelActor: 'Rogue Directorate',
+            intelLabel: 'Captured assets implicate ROGUE DIRECTORATE biolabs.',
+            instabilityIncrease: 8
+          },
+          failure: {
+            pandemicTrigger: {
+              severity: 'severe',
+              origin: 'bio-terror',
+              regions: ['Western Europe radar net'],
+              suspectedActors: ['Unknown bio-cell'],
+              initialContainment: 4,
+              label: 'Botched raid aerosolizes agent in metro hub.'
+            },
+            mutationSpike: 8,
+            mutationLabel: 'Pathogen disperses through urban transit.',
+            populationLoss: 12,
+            suppressionStrength: 5,
+            suppressionLabel: 'Containment perimeter buckles under spread.',
+            instabilityIncrease: 14,
+            defcon: 2
+          }
         }
       },
       {
-        id: 'retaliate',
-        text: 'Immediate Retaliation',
-        description: 'Assume enemy attack, strike back',
-        advisorSupport: ['military'],
-        advisorOppose: ['diplomatic', 'science'],
+        id: 'silence',
+        text: 'Maintain Readiness, Suppress Panic',
+        description: 'Keep crews on console, spin psyops narrative, risk further spread for deterrence optics.',
+        advisorSupport: ['pr', 'economic'],
+        advisorOppose: ['science'],
         outcome: {
-          probability: 0.3,
-          success: { enemyWeak: true, war: true },
-          failure: { wrongTarget: true, alliesLost: true, war: true }
+          probability: 0.5,
+          success: {
+            pandemicTrigger: {
+              severity: 'contained',
+              origin: 'unknown',
+              regions: ['CONUS missile crews'],
+              suspectedActors: ['Unknown bio-cell'],
+              initialContainment: 20,
+              label: 'Managed messaging steadies launch crews.'
+            },
+            morale: 10,
+            containmentBoost: 5,
+            containmentLabel: 'Crew discipline slows spread despite secrecy.',
+            productionPenalty: 5
+          },
+          failure: {
+            pandemicTrigger: {
+              severity: 'severe',
+              origin: 'bio-terror',
+              regions: ['CONUS missile crews', 'Atlantic SSBN flotilla'],
+              suspectedActors: ['Unknown bio-cell'],
+              initialContainment: 5,
+              label: 'Silence order backfires – crews collapse on duty.'
+            },
+            populationLoss: 15,
+            productionPenalty: 20,
+            instabilityIncrease: 12,
+            vaccineProgress: -10
+          }
         }
       }
     ],

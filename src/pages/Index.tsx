@@ -9,7 +9,9 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
+import { PandemicPanel } from '@/components/PandemicPanel';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
+import { usePandemic } from '@/hooks/usePandemic';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
 
@@ -3009,7 +3011,32 @@ function endTurn() {
       S.turn++;
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
-      
+
+      const player = PlayerManager.get();
+      const pandemicResult = (window as any).__pandemicAdvance?.({
+        turn: S.turn,
+        defcon: S.defcon,
+        playerPopulation: player?.population ?? 0
+      });
+
+      if (pandemicResult && player) {
+        if (pandemicResult.populationLoss) {
+          player.population = Math.max(0, player.population - pandemicResult.populationLoss);
+        }
+        if (pandemicResult.productionPenalty) {
+          player.production = Math.max(0, (player.production || 0) - pandemicResult.productionPenalty);
+        }
+        if (pandemicResult.instabilityIncrease) {
+          player.instability = Math.max(0, (player.instability || 0) + pandemicResult.instabilityIncrease);
+        }
+        if (pandemicResult.actionsPenalty) {
+          S.actionsRemaining = Math.max(0, S.actionsRemaining - pandemicResult.actionsPenalty);
+        }
+        if (pandemicResult.intelGain) {
+          player.intel = Math.max(0, (player.intel || 0) + pandemicResult.intelGain);
+        }
+      }
+
       // Trigger flashpoint check at start of new turn
       if ((window as any).__gameTriggerFlashpoint) {
         const flashpoint = (window as any).__gameTriggerFlashpoint(S.turn, S.defcon);
@@ -3202,18 +3229,29 @@ export default function NoradVector() {
     setNewsItems(prev => [...prev, item].slice(-20)); // Keep last 20 items
   }, []);
 
+  const { pandemicState, triggerPandemic, applyCountermeasure: applyPandemicCountermeasure, advancePandemicTurn } = usePandemic(addNewsItem);
+
   // Expose functions globally for game loop access
   const addNewsItemRef = useRef(addNewsItem);
   const triggerRandomFlashpointRef = useRef(triggerRandomFlashpoint);
+  const triggerPandemicRef = useRef(triggerPandemic);
+  const applyPandemicCountermeasureRef = useRef(applyPandemicCountermeasure);
+  const advancePandemicTurnRef = useRef(advancePandemicTurn);
   
   useEffect(() => {
     addNewsItemRef.current = addNewsItem;
     triggerRandomFlashpointRef.current = triggerRandomFlashpoint;
-    
+    triggerPandemicRef.current = triggerPandemic;
+    applyPandemicCountermeasureRef.current = applyPandemicCountermeasure;
+    advancePandemicTurnRef.current = advancePandemicTurn;
+
     // Make available globally
     (window as any).__gameAddNewsItem = addNewsItem;
     (window as any).__gameTriggerFlashpoint = triggerRandomFlashpoint;
-  }, [addNewsItem, triggerRandomFlashpoint]);
+    (window as any).__pandemicTrigger = (payload: unknown) => triggerPandemicRef.current(payload as any);
+    (window as any).__pandemicCountermeasure = (payload: unknown) => applyPandemicCountermeasureRef.current(payload as any);
+    (window as any).__pandemicAdvance = (context: unknown) => advancePandemicTurnRef.current(context as any);
+  }, [addNewsItem, triggerRandomFlashpoint, triggerPandemic, applyPandemicCountermeasure, advancePandemicTurn]);
 
   useEffect(() => {
     Storage.setItem('layout_density', layoutDensity);
@@ -5607,6 +5645,7 @@ export default function NoradVector() {
         </DialogContent>
       </Dialog>
 
+      <PandemicPanel state={pandemicState} />
       <NewsTicker items={newsItems} />
 
       {activeFlashpoint && (
@@ -5636,15 +5675,85 @@ export default function NoradVector() {
             if (outcome.intel) {
               player.intel = Math.max(0, (player.intel || 0) + outcome.intel);
             }
-            
+
             if (outcome.production) {
               player.production = Math.max(0, player.production + outcome.production);
             }
-            
+
             if (outcome.uranium) {
               player.uranium = Math.max(0, player.uranium + outcome.uranium);
             }
-            
+
+            if (typeof outcome.population === 'number') {
+              player.population = Math.max(0, player.population + outcome.population);
+            }
+
+            if (typeof outcome.populationLoss === 'number') {
+              player.population = Math.max(0, player.population - outcome.populationLoss);
+            }
+
+            if (typeof outcome.productionPenalty === 'number') {
+              player.production = Math.max(0, (player.production || 0) - outcome.productionPenalty);
+            }
+
+            if (typeof outcome.instabilityIncrease === 'number') {
+              player.instability = Math.max(0, (player.instability || 0) + outcome.instabilityIncrease);
+            }
+
+            if (typeof outcome.readinessPenalty === 'number') {
+              player.defense = Math.max(0, (player.defense || 0) - outcome.readinessPenalty);
+            }
+
+            if (outcome.intelGain) {
+              player.intel = Math.max(0, (player.intel || 0) + outcome.intelGain);
+            }
+
+            if (outcome.pandemicTrigger) {
+              triggerPandemic(outcome.pandemicTrigger);
+            }
+
+            if (outcome.containmentBoost) {
+              applyPandemicCountermeasure({
+                type: 'containment',
+                value: outcome.containmentBoost,
+                label: outcome.containmentLabel
+              });
+            }
+
+            if (typeof outcome.vaccineProgress === 'number') {
+              applyPandemicCountermeasure({
+                type: 'vaccine',
+                value: outcome.vaccineProgress,
+                label: outcome.vaccineLabel
+              });
+            }
+
+            if (outcome.mutationSpike) {
+              applyPandemicCountermeasure({
+                type: 'mutation',
+                value: outcome.mutationSpike,
+                label: outcome.mutationLabel
+              });
+            }
+
+            if (outcome.suppressedRegion || outcome.suppressionStrength) {
+              applyPandemicCountermeasure({
+                type: 'suppression',
+                region: outcome.suppressedRegion,
+                value: outcome.suppressionStrength,
+                label: outcome.suppressionLabel
+              });
+            }
+
+            if (outcome.intelActor) {
+              applyPandemicCountermeasure({
+                type: 'intel',
+                actor: outcome.intelActor,
+                value: outcome.intelValue,
+                label: outcome.intelLabel
+              });
+            }
+
             if (outcome.nuclearWar || outcome.worldEnds) {
               addNewsItem('crisis', 'NUCLEAR WAR INITIATED', 'critical');
               S.defcon = 1;
