@@ -4968,25 +4968,97 @@ export default function NoradVector() {
         cam.targetZoom = Math.max(0.5, Math.min(3, cam.targetZoom * delta));
       };
 
+      let touchStartTime = 0;
+      let lastTouchDistance = 0;
+      let initialPinchZoom = 1;
+
+      const getTouchDistance = (touches: TouchList) => {
+        if (touches.length < 2) return 0;
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      };
+
       const handleTouchStart = (e: TouchEvent) => {
+        touchStartTime = Date.now();
+        
         if(e.touches.length === 1) {
           touching = true;
           touchStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+        } else if (e.touches.length === 2) {
+          // Start pinch gesture
+          e.preventDefault();
+          lastTouchDistance = getTouchDistance(e.touches);
+          initialPinchZoom = cam.targetZoom;
+          touching = false;
         }
       };
 
       const handleTouchMove = (e: TouchEvent) => {
-        if(!touching) return;
-        if(e.touches.length === 1) { 
+        if (e.touches.length === 2) {
+          // Pinch-to-zoom
+          e.preventDefault();
+          const newDistance = getTouchDistance(e.touches);
+          if (lastTouchDistance > 0) {
+            const scaleFactor = newDistance / lastTouchDistance;
+            cam.targetZoom = Math.max(0.5, Math.min(3, initialPinchZoom * (newDistance / getTouchDistance(e.touches))));
+          }
+        } else if(touching && e.touches.length === 1) { 
+          // Single finger pan
+          e.preventDefault();
           const nx = e.touches[0].clientX, ny = e.touches[0].clientY; 
-          cam.x += nx - touchStart.x; 
-          cam.y += ny - touchStart.y; 
-          touchStart = {x: nx, y: ny}; 
+          const dx = nx - touchStart.x;
+          const dy = ny - touchStart.y;
+          
+          // Only pan if moved more than 5px (prevents accidental pan on tap)
+          if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+            cam.x += dx; 
+            cam.y += dy; 
+            touchStart = {x: nx, y: ny}; 
+          }
         }
       };
 
-      const handleTouchEnd = () => { 
-        touching = false; 
+      const handleTouchEnd = (e: TouchEvent) => { 
+        const touchDuration = Date.now() - touchStartTime;
+        
+        // Handle tap (quick touch < 300ms)
+        if (e.changedTouches.length === 1 && touchDuration < 300 && touching) {
+          const rect = canvas.getBoundingClientRect();
+          const touch = e.changedTouches[0];
+          const mx = touch.clientX - rect.left;
+          const my = touch.clientY - rect.top;
+          
+          // Check if tapped on a nation (simulate click for intel)
+          if (!S.gameOver) {
+            const player = PlayerManager.get();
+            if (player && player.satellites) {
+              for (const n of nations) {
+                if (n.isPlayer) continue;
+                if (!player.satellites[n.id]) continue;
+                if (n.population <= 0) continue;
+                const [nx, ny] = project(n.lon, n.lat);
+                const dist = Math.hypot(mx - nx, my - ny);
+                
+                if (dist < 30) { // Larger hit area for touch
+                  let intelHtml = `<div style="margin:8px 0;padding:6px;border:1px solid rgba(124,255,107,.3);">`;
+                  intelHtml += `<strong>${n.name}</strong><br>`;
+                  intelHtml += `Missiles: ${n.missiles} | Defense: ${n.defense}<br>`;
+                  intelHtml += `Warheads: ${Object.entries(n.warheads || {}).map(([k, v]) => `${k}MT×${v}`).join(', ')}<br>`;
+                  intelHtml += `Production: ${Math.floor(n.production || 0)} | Uranium: ${Math.floor(n.uranium || 0)} | Intel: ${Math.floor(n.intel || 0)}<br>`;
+                  intelHtml += `Migrants (This Turn / Total): ${(n.migrantsThisTurn || 0)} / ${(n.migrantsTotal || 0)}<br>`;
+                  intelHtml += `Population: ${Math.floor(n.population)}M | Instability: ${Math.floor(n.instability || 0)}`;
+                  intelHtml += `</div>`;
+                  openModal(`${n.name} INTEL`, intelHtml);
+                  break;
+                }
+              }
+            }
+          }
+        }
+        
+        touching = false;
+        lastTouchDistance = 0;
       };
 
       // Click handler for satellite intelligence
@@ -5123,9 +5195,9 @@ export default function NoradVector() {
       canvas.addEventListener('wheel', handleWheel);
       canvas.addEventListener('click', handleClick);
       canvas.addEventListener('dblclick', handleDoubleClick);
-      canvas.addEventListener('touchstart', handleTouchStart, {passive: true});
-      canvas.addEventListener('touchmove', handleTouchMove, {passive: true});
-      canvas.addEventListener('touchend', handleTouchEnd, {passive: true});
+      canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
+      canvas.addEventListener('touchmove', handleTouchMove, {passive: false});
+      canvas.addEventListener('touchend', handleTouchEnd, {passive: false});
       document.addEventListener('keydown', handleKeyDown);
 
       return () => {
@@ -5282,9 +5354,9 @@ export default function NoradVector() {
           height={900}
         />
 
-        <div className="hud-layers pointer-events-none">
+        <div className="hud-layers pointer-events-none touch-none">
           {/* Minimal top status bar */}
-          <header className="fixed top-0 left-0 right-0 h-10 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto z-50">
+          <header className="fixed top-0 left-0 right-0 h-10 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
             <div className="flex items-center gap-6 text-xs font-mono">
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">DEFCON</span>
@@ -5328,13 +5400,13 @@ export default function NoradVector() {
           </header>
 
           {/* Minimal bottom icon bar */}
-          <div className="fixed bottom-0 left-0 right-0 h-16 bg-black/90 border-t border-cyan-500/30 backdrop-blur-sm pointer-events-auto z-50">
+          <div className="fixed bottom-0 left-0 right-0 h-16 sm:h-20 bg-black/90 border-t border-cyan-500/30 backdrop-blur-sm pointer-events-auto touch-auto z-50">
             <div className="h-full flex items-center justify-center gap-1 px-4">
               <Button
                 onClick={handleBuild}
                 variant="ghost"
                 size="icon"
-                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
                 title="BUILD - Production and construction"
               >
                 <Factory className="h-5 w-5" />
@@ -5345,7 +5417,7 @@ export default function NoradVector() {
                 onClick={handleResearch}
                 variant="ghost"
                 size="icon"
-                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
                 title="RESEARCH - Technology advancement"
               >
                 <Microscope className="h-5 w-5" />
@@ -5356,7 +5428,7 @@ export default function NoradVector() {
                 onClick={handleIntel}
                 variant="ghost"
                 size="icon"
-                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
                 title="INTEL - Intelligence operations"
               >
                 <Satellite className="h-5 w-5" />
@@ -5367,7 +5439,7 @@ export default function NoradVector() {
                 onClick={handleCulture}
                 variant="ghost"
                 size="icon"
-                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
                 title="CULTURE - Cultural warfare"
               >
                 <Radio className="h-5 w-5" />
@@ -5378,7 +5450,7 @@ export default function NoradVector() {
                 onClick={handleImmigration}
                 variant="ghost"
                 size="icon"
-                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
                 title="IMMIGRATION - Population management"
               >
                 <Users className="h-5 w-5" />
@@ -5389,7 +5461,7 @@ export default function NoradVector() {
                 onClick={handleDiplomacy}
                 variant="ghost"
                 size="icon"
-                className="h-12 w-12 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
                 title="DIPLOMACY - International relations"
               >
                 <Handshake className="h-5 w-5" />
@@ -5402,7 +5474,7 @@ export default function NoradVector() {
                 onClick={handleAttack}
                 variant="ghost"
                 size="icon"
-                className="h-12 w-12 text-red-400 hover:text-red-300 hover:bg-red-500/10 flex flex-col items-center justify-center gap-0.5"
+                className="h-12 w-12 sm:h-14 sm:w-14 text-red-400 hover:text-red-300 hover:bg-red-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
                 title="ATTACK - Launch nuclear strike"
               >
                 <Zap className="h-5 w-5" />
@@ -5414,7 +5486,7 @@ export default function NoradVector() {
               <Button
                 onClick={handleEndTurn}
                 variant="ghost"
-                className="h-12 px-4 text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5"
+                className="h-12 sm:h-14 px-4 sm:px-6 text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
                 title="END TURN"
               >
                 <ArrowRight className="h-5 w-5" />

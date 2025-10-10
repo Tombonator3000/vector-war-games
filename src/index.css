@@ -237,6 +237,31 @@ body.theme-wargames canvas {
 body {
   font-family: "Share Tech Mono", "IBM Plex Mono", "Roboto Mono", monospace;
   letter-spacing: 0.06em;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+/* Touch-friendly styles for mobile devices */
+@media (hover: none) and (pointer: coarse) {
+  /* Prevent text selection during touch interactions */
+  * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* Allow text selection in input fields */
+  input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  
+  /* Larger hit targets for touch */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* ASCII Logo and Synthwave Effects */
