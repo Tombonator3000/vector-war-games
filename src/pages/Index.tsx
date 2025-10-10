@@ -8,6 +8,10 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight } from 'lucide-react';
+import { NewsTicker, NewsItem } from '@/components/NewsTicker';
+import { useFlashpoints } from '@/hooks/useFlashpoints';
+import { FlashpointModal } from '@/components/FlashpointModal';
+import { useFogOfWar } from '@/hooks/useFogOfWar';
 
 // Storage wrapper for localStorage
 const Storage = {
