@@ -150,9 +150,6 @@ function SceneContent({
   }, [camera, register, size]);
 
   useFrame(() => {
-    const earth = earthRef.current;
-    if (!earth) return;
-
     const { width, height } = size;
     const centerLon = ((width / 2 - cam.x) / (width * cam.zoom)) * 360 - 180;
     const centerLat = 90 - ((height / 2 - cam.y) / (height * cam.zoom)) * 180;
@@ -167,8 +164,6 @@ function SceneContent({
     (camera as THREE.PerspectiveCamera).position.lerp(desired, 0.12);
     (camera as THREE.PerspectiveCamera).lookAt(0, 0, 0);
     (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
-
-    earth.rotation.y = THREE.MathUtils.degToRad(centerLon + 180);
   });
 
   return (
