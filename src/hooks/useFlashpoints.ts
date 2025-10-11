@@ -223,6 +223,106 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     consequences: {}
   },
   {
+    title: 'CONTACT REPORT: EXTRATERRESTRIAL ARMADA',
+    description:
+      'Deep space radar confirms a formation of unknown vessels decelerating into high orbit. Alien signal demands surrender of all strategic arsenals within 90 minutes or face planetary neutralization.',
+    category: 'blackswan',
+    severity: 'catastrophic',
+    timeLimit: 90,
+    options: [
+      {
+        id: 'first_contact',
+        text: 'Initiate Peaceful Contact',
+        description: 'Transmit goodwill packets, invite dialogue, and stall for understanding.',
+        advisorSupport: ['diplomatic', 'science'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.35,
+          success: {
+            morale: +8,
+            intel: +15,
+            defcon: 4,
+            alienDiplomacyOpened: true,
+            alliancesStrengthened: true
+          },
+          failure: {
+            morale: -12,
+            intel: -10,
+            alienUltimatum: true,
+            defcon: 2
+          }
+        }
+      },
+      {
+        id: 'orbital_strike',
+        text: 'Launch Orbital Strike',
+        description: 'Fire every available ASAT and kinetic interceptor before they enter firing posture.',
+        advisorSupport: ['military', 'intel'],
+        advisorOppose: ['diplomatic', 'science'],
+        outcome: {
+          probability: 0.25,
+          success: {
+            morale: +5,
+            defcon: 1,
+            alienFleetDamaged: true,
+            deterrenceBoost: 10
+          },
+          failure: {
+            morale: -25,
+            defcon: 1,
+            alienRetaliation: true,
+            orbitalDefenseRuined: true
+          }
+        }
+      },
+      {
+        id: 'stealth_probe',
+        text: 'Dispatch Stealth Recon Probe',
+        description: 'Slip a cloaked drone into the formation to collect close-range telemetry.',
+        advisorSupport: ['intel', 'science'],
+        advisorOppose: ['pr'],
+        outcome: {
+          probability: 0.55,
+          success: {
+            intel: +25,
+            morale: +3,
+            defcon: 3,
+            alienTechRecovered: true
+          },
+          failure: {
+            intel: -15,
+            morale: -10,
+            alienDetection: true,
+            alienUltimatum: true
+          }
+        }
+      },
+      {
+        id: 'global_mobilization',
+        text: 'Activate Global Mobilization',
+        description: 'Coordinate with allies, raise planetary defense grids, and prepare civil shelters.',
+        advisorSupport: ['military', 'pr', 'economic'],
+        advisorOppose: ['science'],
+        outcome: {
+          probability: 0.45,
+          success: {
+            morale: +12,
+            defcon: 2,
+            alliancesStrengthened: true,
+            supplyChainsSecured: true
+          },
+          failure: {
+            morale: -18,
+            economicStrain: 20,
+            defcon: 1,
+            civilUnrest: true
+          }
+        }
+      }
+    ],
+    consequences: {}
+  },
+  {
     title: 'BIO-TERROR: STRATEGIC CREW PANDEMIC',
     description: 'Telemetry shows simultaneous hemorrhagic outbreaks inside missile fields, bomber wings, and SSBN crews. CDC suspects engineered pathogen seeded through maintenance supply chains. Launch readiness collapsing within hours.',
     category: 'blackswan',
