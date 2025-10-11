@@ -109,7 +109,13 @@ interface GameState {
   events?: boolean;
 }
 
-type ThemeId = 'synthwave' | 'retro80s' | 'wargames' | 'nightmode' | 'highcontrast';
+type ThemeId =
+  | 'synthwave'
+  | 'retro80s'
+  | 'wargames'
+  | 'nightmode'
+  | 'highcontrast'
+  | 'vectorclassic';
 type LayoutDensity = 'expanded' | 'compact' | 'minimal';
 
 type LayoutDensityOption = {
@@ -222,6 +228,13 @@ const THEME_SETTINGS: Record<ThemeId, {
     radar: 'rgba(255,255,255,0.1)',
     ocean: 'rgba(20,80,160,0.7)',
     cloud: 'rgba(255,220,0,0.45)'
+  },
+  vectorclassic: {
+    mapOutline: 'rgba(143,225,255,0.85)',
+    grid: 'rgba(143,225,255,0.28)',
+    radar: 'rgba(143,225,255,0.1)',
+    ocean: 'rgba(10,45,110,0.7)',
+    cloud: 'rgba(255,180,220,0.45)'
   }
 };
 
@@ -230,7 +243,8 @@ const themeOptions: { id: ThemeId; label: string }[] = [
   { id: 'retro80s', label: 'Retro 80s' },
   { id: 'wargames', label: 'WARGAMES' },
   { id: 'nightmode', label: 'Night Mode' },
-  { id: 'highcontrast', label: 'High Contrast' }
+  { id: 'highcontrast', label: 'High Contrast' },
+  { id: 'vectorclassic', label: 'Vector (Classic)' }
 ];
 
 let currentTheme: ThemeId = 'synthwave';

@@ -229,6 +229,11 @@ body.theme-highcontrast {
   color: #ffffff;
 }
 
+body.theme-vectorclassic {
+  background-color: #050a14;
+  color: #8fe1ff;
+}
+
 body.theme-retro80s canvas,
 body.theme-wargames canvas {
   image-rendering: pixelated;
