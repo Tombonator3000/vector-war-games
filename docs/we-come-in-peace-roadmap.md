@@ -1,0 +1,164 @@
+# "We Come in Peace" Total Conversion Roadmap
+
+## Overview
+"We Come in Peace" transforms Vector War into a multi-path alien invasion experience. Players command the Zyrathi Expeditionary Council as it seeks to secure Earth using conquest, coercion, or cohabitation. The roadmap structures development across four phases that layer distinct victory doctrines, human response systems, and late-game escalation loops.
+
+---
+
+## 🌌 Phase 1: Core Invasion Framework (Weeks 1-3)
+
+### Week 1: Strategic Foundation
+- [ ] **Zyrathi Command UI**
+  - Orbital command view with regional threat overlays
+  - Council directive panel (Conquest, Subdue, Propaganda)
+  - Dynamic mission log tracking planetary resistance
+- [ ] **Resource Pillars**
+  - Biomass (humans as sustenance)
+  - Hydrosiphon reserves (Earth water extraction)
+  - Empathic capital (goodwill for benevolent path)
+- [ ] **Doctrine Selection System**
+  - Immediate bonuses & penalties per doctrine
+  - Branching tech trees tied to doctrine focus
+  - Mid-campaign doctrine pivot events
+
+### Week 2: Human Response Baseline
+- [ ] **Global Defense Council AI**
+  - Nation alliance tracker (UN, ad-hoc coalitions)
+  - Defensive readiness levels and mobilization timers
+  - Counter-intelligence actions against alien presence
+- [ ] **Resistance Heat Map**
+  - Regional unrest, loyalty, and compliance metrics
+  - Human cultural traits affecting doctrine effectiveness
+  - Real-time visualization with alert system
+- [ ] **First Contact Event Chain**
+  - Forked scenarios for hostile, deceptive, or altruistic greetings
+  - Negotiation minigames affecting global morale
+  - Hidden agenda tracking (water theft vs. genuine aid)
+
+### Week 3: Planetfall Operations
+- [ ] **Landing Zone Mechanics**
+  - Geostrategic site selection (resource-rich, population dense, secure)
+  - Environmental adaptation requirements per biome
+  - Defensive perimeter & cloaking options
+- [ ] **Hybrid Unit Roster**
+  - Bio-mech infantry with fear auras
+  - Gravity armor spearheads (for conquest path)
+  - Diplomatic envoys & empathic healers (for benevolent path)
+- [ ] **Mission Generator**
+  - Procedural objectives: harvest, pacify, enlighten
+  - Human counter-ops as reactive encounters
+  - Outcome scoring feeding doctrine morale
+
+---
+
+## 🛰️ Phase 2: Doctrine Specialization (Weeks 4-7)
+
+### Week 4: Military Conquest
+- [ ] **Orbital Siege System**
+  - Space-to-ground kinetic strikes with collateral modeling
+  - Shield disruption mini-game against human missile defense
+  - Infrastructure devastation cascading into refugee flows
+- [ ] **Fear Propagation**
+  - Terror scale influencing surrender mechanics
+  - Psychological warfare missions (sky glyphs, sonic storms)
+  - Diminishing returns versus hardened militaries
+- [ ] **Human Hero Units**
+  - Emergent commanders with adaptive tactics
+  - Reputation & morale effects on resistance cells
+  - Capture/convert/assassinate mission paths
+
+### Week 5: Subdual & Control
+- [ ] **Compliance Architecture**
+  - Implantation vs. nanite cloud pacification options
+  - Compliance index affecting tax/resource yields
+  - Rebellion outbreak events with branching crises
+- [ ] **Occupation Economy**
+  - Water siphon infrastructure network
+  - Biomass processing facilities with moral backlash
+  - Black market & smuggling counter-systems
+- [ ] **Hybrid Governance**
+  - Puppet governments with loyalty traits
+  - Collaboration scorecards (propaganda bonuses)
+  - Earthling advisory council influencing decisions
+
+### Week 6-7: Propaganda & Benevolence
+- [ ] **Empathy Engine**
+  - Broadcast control (global media hijack vs. co-produced content)
+  - Cultural adaptation research trees per region
+  - Benevolent aid missions (cure diseases, share tech)
+- [ ] **True Intentions Meter**
+  - Tracks gap between declared benevolence and hidden goals
+  - Consequences for exposed deceptions (mutiny, coup)
+  - Redemption arcs allowing genuine peace path
+- [ ] **Human Cultural Renaissance**
+  - Joint science initiatives unlocking cooperative win state
+  - Religious & philosophical response events
+  - Tourism & exchange programs as soft power sinks
+
+---
+
+## 🧬 Phase 3: Advanced Systems & Late Game (Weeks 8-11)
+
+### Week 8: Narrative Arcs & Secrets
+- [ ] **Motivation Reveal Chains**
+  - Branches for: humans as food, water theft, saving Earth, fleeing galactic war
+  - Player choice-driven flashbacks shaping council politics
+  - Moral consequence tracker altering victory conditions
+- [ ] **Internal Council Politics**
+  - Factions for Purists, Pragmatists, Harmonists
+  - Loyalty, influence, and coup mechanics
+  - Council edicts gating late-game technologies
+
+### Week 9: Counter-Invasion Mechanics
+- [ ] **Human Retaliation Tech Tree**
+  - Reverse-engineered alien tech (EMP lances, psychic shields)
+  - Global unity score enabling mass mobilization
+  - Diplomatic victory path where humans force treaty terms
+- [ ] **Coalition Operations**
+  - Joint human offensives on alien bases
+  - Spy operations sabotaging Zyrathi infrastructure
+  - Media campaigns exposing atrocities
+
+### Week 10-11: Endgame & Replayability
+- [ ] **Multi-Outcome Victory Conditions**
+  - Domination: Earth subjugated with manageable unrest
+  - Harvest: Biomass quota reached without triggering extinction protocols
+  - Partnership: Co-governance charter ratified by majority
+  - Exodus: Benevolent evacuation after solving galactic crisis
+- [ ] **Dynamic Campaign Generator**
+  - Alternate starting conditions (different Earth eras or timelines)
+  - Randomized human leadership traits & secrets
+  - New Game+ with legacy perks and human memory of prior invasions
+- [ ] **Post-Game Analytics**
+  - Doctrine performance dashboard
+  - Narrative summary with cause & effect timeline
+  - Player codex unlocking lore for future runs
+
+---
+
+## 🧪 Phase 4: Polish & Community Expansion (Weeks 12-14)
+
+- [ ] **Accessibility & Localization**
+  - Iconography for doctrine states
+  - Multi-language support emphasizing cultural nuances
+  - Colorblind & dyslexia-friendly UI passes
+- [ ] **Scenario Editor Toolkit**
+  - Drag-and-drop event graph for custom invasions
+  - Shareable doctrine presets and human resistance templates
+  - Steam Workshop integration (if platform permits)
+- [ ] **Modding API**
+  - Data-driven unit, event, and doctrine definitions
+  - Script hooks for custom motivations or resource loops
+  - Documentation & example mods
+- [ ] **Community Feedback Loop**
+  - Closed beta focusing on balance between doctrines
+  - Telemetry dashboards tracking player choices
+  - Monthly updates with new events, units, and motivations
+
+---
+
+## Success Metrics
+- Distinct mechanics for each doctrine that meaningfully alter gameplay and narrative.
+- Robust human response systems providing escalating challenge.
+- Multiple victory conditions supporting both domination and cooperation fantasies.
+- Tooling and community support enabling ongoing scenario creation and balance.
