@@ -13,6 +13,7 @@ import { PandemicPanel } from '@/components/PandemicPanel';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
 import { usePandemic, type PandemicTriggerPayload, type PandemicCountermeasurePayload, type PandemicTurnContext } from '@/hooks/usePandemic';
 import { FlashpointModal } from '@/components/FlashpointModal';
+import GlobeScene, { PickerFn, ProjectorFn } from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
 
 // Storage wrapper for localStorage
@@ -268,6 +269,8 @@ let ctx: CanvasRenderingContext2D;
 let startCanvas: HTMLCanvasElement;
 let startCtx: CanvasRenderingContext2D;
 let W = 1600, H = 900;
+let globeProjector: ProjectorFn | null = null;
+let globePicker: PickerFn | null = null;
 
 // Camera system
 const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
@@ -1705,10 +1708,12 @@ async function loadWorld() {
         worldData = data;
         worldCountries = feature(data, data.objects.countries || data.objects.land);
         log('World map loaded from cache');
+        if (uiUpdateCallback) uiUpdateCallback();
         return;
       } else if (data.type === 'FeatureCollection') {
         worldCountries = data;
         log('World map loaded from cache (GeoJSON)');
+        if (uiUpdateCallback) uiUpdateCallback();
         return;
       }
     }
@@ -1732,6 +1737,7 @@ async function loadWorld() {
         worldData = topo;
         worldCountries = feature(topo, topo.objects.countries || topo.objects.land);
         log('World map loaded from CDN');
+        if (uiUpdateCallback) uiUpdateCallback();
         return;
       }
     }
@@ -1769,12 +1775,18 @@ async function loadWorld() {
       }
     ]
   };
-  
+
   log('Using fallback continent outlines');
+  if (uiUpdateCallback) uiUpdateCallback();
 }
 
 // Drawing functions
 function project(lon: number, lat: number): [number, number] {
+  if (globeProjector) {
+    const { x, y } = globeProjector(lon, lat);
+    return [x, y];
+  }
+
   const x = ((lon + 180) / 360) * W * cam.zoom + cam.x;
   const y = ((90 - lat) / 180) * H * cam.zoom + cam.y;
   return [x, y];
@@ -1782,6 +1794,13 @@ function project(lon: number, lat: number): [number, number] {
 
 // Convert screen coordinates to longitude/latitude
 function toLonLat(x: number, y: number): [number, number] {
+  if (globePicker) {
+    const hit = globePicker(x, y);
+    if (hit) {
+      return [hit.lon, hit.lat];
+    }
+  }
+
   // Account for camera transformation
   const adjustedX = (x - cam.x) / cam.zoom;
   const adjustedY = (y - cam.y) / cam.zoom;
@@ -3226,6 +3245,12 @@ export default function NoradVector() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
   const handleAttackRef = useRef<() => void>(() => {});
+  const handleProjectorReady = useCallback((projector: ProjectorFn) => {
+    globeProjector = projector;
+  }, []);
+  const handlePickerReady = useCallback((picker: PickerFn) => {
+    globePicker = picker;
+  }, []);
   
   // News ticker and flashpoints
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
@@ -3487,6 +3512,11 @@ export default function NoradVector() {
   useEffect(() => {
     selectedTargetRefId = selectedTargetId;
   }, [selectedTargetId]);
+
+  useEffect(() => () => {
+    globeProjector = null;
+    globePicker = null;
+  }, []);
 
   useEffect(() => {
     setIsPaused(S.paused);
@@ -5437,11 +5467,13 @@ export default function NoradVector() {
       <div className="command-interface__scanlines" aria-hidden="true" />
 
       <div className="map-shell">
-        <canvas
+        <GlobeScene
           ref={canvasRef}
-          className="map-shell__canvas"
-          width={1600}
-          height={900}
+          cam={cam}
+          nations={nations}
+          worldCountries={worldCountries}
+          onProjectorReady={handleProjectorReady}
+          onPickerReady={handlePickerReady}
         />
 
         <div className="hud-layers pointer-events-none touch-none">
