@@ -15,6 +15,8 @@ import { usePandemic, type PandemicTriggerPayload, type PandemicCountermeasurePa
 import { FlashpointModal } from '@/components/FlashpointModal';
 import GlobeScene, { PickerFn, ProjectorFn } from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
+import { TutorialGuide } from '@/components/TutorialGuide';
+import { GameHelper } from '@/components/GameHelper';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -3258,6 +3260,10 @@ export default function NoradVector() {
   const [uiTick, setUiTick] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
+  const [showTutorial, setShowTutorial] = useState(() => {
+    const hasSeenTutorial = Storage.getItem('has_seen_tutorial');
+    return hasSeenTutorial !== 'true';
+  });
   const handleAttackRef = useRef<() => void>(() => {});
   const handleProjectorReady = useCallback((projector: ProjectorFn) => {
     globeProjector = projector;
@@ -5916,6 +5922,16 @@ export default function NoradVector() {
           }}
         />
       )}
+
+      <TutorialGuide 
+        open={showTutorial} 
+        onClose={() => {
+          setShowTutorial(false);
+          Storage.setItem('has_seen_tutorial', 'true');
+        }} 
+      />
+      
+      <GameHelper />
     </div>
   );
 }
