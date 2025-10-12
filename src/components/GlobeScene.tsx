@@ -149,19 +149,19 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
       const cities = nation.cities || 1;
       
       // Calculate city count based on population and cities built
-      const baseCityCount = Math.min(50, Math.floor(population / 5));
-      const cityCount = Math.max(baseCityCount, cities * 10);
+      const baseCityCount = Math.min(80, Math.floor(population / 3));
+      const cityCount = Math.max(baseCityCount, cities * 15);
       
       // Health factor: reduce lights if population is low (attacked nations lose lights)
       const healthFactor = Math.max(0.1, Math.min(1, population / 150));
       
       for (let i = 0; i < cityCount; i++) {
         // Spread cities around nation capital
-        const spread = 10 + Math.random() * 6;
-        const angle = (i / cityCount) * Math.PI * 2 + Math.random() * 0.8;
+        const spread = 12 + Math.random() * 8;
+        const angle = (i / cityCount) * Math.PI * 2 + Math.random() * 1.2;
         const dist = Math.random() * spread;
         
-        const brightness = (0.6 + Math.random() * 0.4) * healthFactor;
+        const brightness = (0.7 + Math.random() * 0.3) * healthFactor;
         
         lights.push({
           id: `${nation.id}-city-${i}`,
@@ -178,28 +178,19 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
   return (
     <group>
       {cityLights.map(light => {
-        const position = latLonToVector3(light.lon, light.lat, EARTH_RADIUS + 0.015);
+        const position = latLonToVector3(light.lon, light.lat, EARTH_RADIUS + 0.012);
         const nation = nations.find(n => n.id === light.nationId);
-        const color = nation?.color || '#ffff00';
+        const color = nation?.color || '#ffdd00';
         
         return (
-          <group key={light.id}>
-            <mesh position={position.toArray() as [number, number, number]}>
-              <sphereGeometry args={[0.018, 12, 12]} />
-              <meshBasicMaterial 
-                color={color} 
-                transparent
-                opacity={light.brightness * 0.9}
-              />
-            </mesh>
-            <pointLight 
-              position={position.toArray() as [number, number, number]}
+          <mesh key={light.id} position={position.toArray() as [number, number, number]}>
+            <sphereGeometry args={[0.022, 6, 6]} />
+            <meshBasicMaterial 
               color={color} 
-              intensity={light.brightness * 1.2} 
-              distance={0.4}
-              decay={2}
+              transparent
+              opacity={light.brightness}
             />
-          </group>
+          </mesh>
         );
       })}
     </group>
