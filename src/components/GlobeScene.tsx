@@ -149,19 +149,19 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
       const cities = nation.cities || 1;
       
       // Calculate city count based on population and cities built
-      const baseCityCount = Math.min(30, Math.floor(population / 8));
-      const cityCount = Math.max(baseCityCount, cities * 5);
+      const baseCityCount = Math.min(50, Math.floor(population / 5));
+      const cityCount = Math.max(baseCityCount, cities * 10);
       
-      // Health factor: reduce lights if population is low
-      const healthFactor = Math.min(1, population / 100);
+      // Health factor: reduce lights if population is low (attacked nations lose lights)
+      const healthFactor = Math.max(0.1, Math.min(1, population / 150));
       
       for (let i = 0; i < cityCount; i++) {
         // Spread cities around nation capital
-        const spread = 8 + Math.random() * 4;
-        const angle = (i / cityCount) * Math.PI * 2 + Math.random() * 0.5;
+        const spread = 10 + Math.random() * 6;
+        const angle = (i / cityCount) * Math.PI * 2 + Math.random() * 0.8;
         const dist = Math.random() * spread;
         
-        const brightness = (0.4 + Math.random() * 0.6) * healthFactor;
+        const brightness = (0.6 + Math.random() * 0.4) * healthFactor;
         
         lights.push({
           id: `${nation.id}-city-${i}`,
@@ -178,25 +178,28 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
   return (
     <group>
       {cityLights.map(light => {
-        const position = latLonToVector3(light.lon, light.lat, EARTH_RADIUS + 0.02);
+        const position = latLonToVector3(light.lon, light.lat, EARTH_RADIUS + 0.015);
         const nation = nations.find(n => n.id === light.nationId);
-        const color = nation?.color || '#ffaa00';
+        const color = nation?.color || '#ffff00';
         
         return (
-          <mesh key={light.id} position={position.toArray() as [number, number, number]}>
-            <sphereGeometry args={[0.008, 8, 8]} />
-            <meshBasicMaterial 
-              color={color} 
-              transparent
-              opacity={light.brightness}
-            />
+          <group key={light.id}>
+            <mesh position={position.toArray() as [number, number, number]}>
+              <sphereGeometry args={[0.018, 12, 12]} />
+              <meshBasicMaterial 
+                color={color} 
+                transparent
+                opacity={light.brightness * 0.9}
+              />
+            </mesh>
             <pointLight 
+              position={position.toArray() as [number, number, number]}
               color={color} 
-              intensity={light.brightness * 0.3} 
-              distance={0.15}
+              intensity={light.brightness * 1.2} 
+              distance={0.4}
               decay={2}
             />
-          </mesh>
+          </group>
         );
       })}
     </group>
@@ -251,9 +254,9 @@ function SceneContent({
 
   return (
     <>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[6, 4, 3]} intensity={1.25} />
-      <directionalLight position={[-5, -3, -6]} intensity={0.5} color={new THREE.Color('#0af')} />
+      <ambientLight intensity={0.3} />
+      <directionalLight position={[6, 4, 3]} intensity={0.8} />
+      <directionalLight position={[-5, -3, -6]} intensity={0.3} color={new THREE.Color('#0af')} />
       <mesh ref={earthRef} castShadow receiveShadow>
         <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
         <meshStandardMaterial
@@ -261,8 +264,8 @@ function SceneContent({
           color={texture ? new THREE.Color('#0a1a2d') : new THREE.Color('#0a1220')}
           roughness={0.85}
           metalness={0.05}
-          emissive={new THREE.Color('#041a2f')}
-          emissiveIntensity={0.22}
+          emissive={new THREE.Color('#020510')}
+          emissiveIntensity={0.15}
         />
       </mesh>
       <CityLights nations={nations} />
