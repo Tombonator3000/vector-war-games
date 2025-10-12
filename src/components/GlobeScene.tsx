@@ -10,9 +10,25 @@ const MARKER_OFFSET = 0.06;
 export type ProjectorFn = (lon: number, lat: number) => { x: number; y: number; visible: boolean };
 export type PickerFn = (x: number, y: number) => { lon: number; lat: number } | null;
 
+export interface CityLight {
+  id: string;
+  lon: number;
+  lat: number;
+  brightness: number;
+  nationId: string;
+}
+
 export interface GlobeSceneProps {
   cam: { x: number; y: number; zoom: number };
-  nations: Array<{ id: string; lon: number; lat: number; color?: string; isPlayer?: boolean }>;
+  nations: Array<{ 
+    id: string; 
+    lon: number; 
+    lat: number; 
+    color?: string; 
+    isPlayer?: boolean;
+    population?: number;
+    cities?: number;
+  }>;
   worldCountries?: FeatureCollection<Polygon | MultiPolygon> | null;
   onNationClick?: (nationId: string) => void;
   onProjectorReady?: (projector: ProjectorFn) => void;
@@ -125,6 +141,68 @@ function buildAtlasTexture(worldCountries?: FeatureCollection<Polygon | MultiPol
   return texture;
 }
 
+function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
+  const cityLights = useMemo(() => {
+    const lights: CityLight[] = [];
+    nations.forEach(nation => {
+      const population = nation.population || 0;
+      const cities = nation.cities || 1;
+      
+      // Calculate city count based on population and cities built
+      const baseCityCount = Math.min(30, Math.floor(population / 8));
+      const cityCount = Math.max(baseCityCount, cities * 5);
+      
+      // Health factor: reduce lights if population is low
+      const healthFactor = Math.min(1, population / 100);
+      
+      for (let i = 0; i < cityCount; i++) {
+        // Spread cities around nation capital
+        const spread = 8 + Math.random() * 4;
+        const angle = (i / cityCount) * Math.PI * 2 + Math.random() * 0.5;
+        const dist = Math.random() * spread;
+        
+        const brightness = (0.4 + Math.random() * 0.6) * healthFactor;
+        
+        lights.push({
+          id: `${nation.id}-city-${i}`,
+          lat: nation.lat + Math.sin(angle) * dist,
+          lon: nation.lon + Math.cos(angle) * dist,
+          brightness,
+          nationId: nation.id,
+        });
+      }
+    });
+    return lights;
+  }, [nations]);
+
+  return (
+    <group>
+      {cityLights.map(light => {
+        const position = latLonToVector3(light.lon, light.lat, EARTH_RADIUS + 0.02);
+        const nation = nations.find(n => n.id === light.nationId);
+        const color = nation?.color || '#ffaa00';
+        
+        return (
+          <mesh key={light.id} position={position.toArray() as [number, number, number]}>
+            <sphereGeometry args={[0.008, 8, 8]} />
+            <meshBasicMaterial 
+              color={color} 
+              transparent
+              opacity={light.brightness}
+            />
+            <pointLight 
+              color={color} 
+              intensity={light.brightness * 0.3} 
+              distance={0.15}
+              decay={2}
+            />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
 function SceneContent({
   cam,
   texture,
@@ -187,6 +265,7 @@ function SceneContent({
           emissiveIntensity={0.22}
         />
       </mesh>
+      <CityLights nations={nations} />
       <group>
         {nations.map(nation => {
           if (Number.isNaN(nation.lon) || Number.isNaN(nation.lat)) return null;
