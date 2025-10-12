@@ -148,22 +148,22 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
       const population = nation.population || 0;
       const cities = nation.cities || 1;
       
-      // Calculate city count - start with LOTS of lights, reduce as population drops
-      const baseMinimum = 200; // Every nation starts with at least 200 lights
-      const populationBonus = Math.floor(population * 3); // 3 lights per population point
-      const cityBonus = cities * 50; // 50 lights per city
+      // Realistic satellite map lighting - thousands of lights like real cities
+      const baseMinimum = 800; // Every nation starts with 800+ lights (like real satellite maps)
+      const populationBonus = Math.floor(population * 8); // 8 lights per population point
+      const cityBonus = cities * 150; // 150 lights per city infrastructure
       const cityCount = Math.max(baseMinimum, populationBonus + cityBonus);
       
-      // Health factor: reduce lights drastically when population is very low (war damage)
-      const healthFactor = Math.max(0.2, Math.min(1, population / 100));
+      // Health factor: war damage reduces lights dramatically
+      const healthFactor = Math.max(0.15, Math.min(1, population / 100));
       
       for (let i = 0; i < cityCount; i++) {
-        // Spread cities around nation capital - tighter clustering for visibility
-        const spread = 8 + Math.random() * 6;
-        const angle = (i / cityCount) * Math.PI * 2 + Math.random() * 1.5;
-        const dist = Math.random() * spread;
+        // Dense clustering like real cities - multiple bright zones
+        const clusterRadius = 6 + Math.random() * 4;
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.pow(Math.random(), 0.7) * clusterRadius; // Denser in center
         
-        const brightness = (0.85 + Math.random() * 0.15) * healthFactor;
+        const brightness = (0.9 + Math.random() * 0.1) * healthFactor;
         
         lights.push({
           id: `${nation.id}-city-${i}`,
@@ -186,11 +186,11 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
         
         return (
           <mesh key={light.id} position={position.toArray() as [number, number, number]}>
-            <sphereGeometry args={[0.028, 8, 8]} />
+            <sphereGeometry args={[0.032, 8, 8]} />
             <meshBasicMaterial 
               color={color} 
               transparent
-              opacity={light.brightness * 0.9}
+              opacity={light.brightness}
               toneMapped={false}
             />
           </mesh>
