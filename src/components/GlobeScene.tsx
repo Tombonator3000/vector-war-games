@@ -149,19 +149,19 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
       const cities = nation.cities || 1;
       
       // Calculate city count based on population and cities built
-      const baseCityCount = Math.min(80, Math.floor(population / 3));
-      const cityCount = Math.max(baseCityCount, cities * 15);
+      const baseCityCount = Math.min(150, Math.floor(population / 2));
+      const cityCount = Math.max(baseCityCount, cities * 25);
       
       // Health factor: reduce lights if population is low (attacked nations lose lights)
       const healthFactor = Math.max(0.1, Math.min(1, population / 150));
       
       for (let i = 0; i < cityCount; i++) {
         // Spread cities around nation capital
-        const spread = 12 + Math.random() * 8;
+        const spread = 15 + Math.random() * 10;
         const angle = (i / cityCount) * Math.PI * 2 + Math.random() * 1.2;
         const dist = Math.random() * spread;
         
-        const brightness = (0.7 + Math.random() * 0.3) * healthFactor;
+        const brightness = (0.8 + Math.random() * 0.2) * healthFactor;
         
         lights.push({
           id: `${nation.id}-city-${i}`,
@@ -184,7 +184,7 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
         
         return (
           <mesh key={light.id} position={position.toArray() as [number, number, number]}>
-            <sphereGeometry args={[0.022, 6, 6]} />
+            <sphereGeometry args={[0.025, 6, 6]} />
             <meshBasicMaterial 
               color={color} 
               transparent
