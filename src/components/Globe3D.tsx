@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { OrbitControls, Stars, Sphere } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -11,6 +11,13 @@ interface Globe3DProps {
 function Earth() {
   const meshRef = useRef<THREE.Mesh>(null);
   
+  // Load realistic Earth textures
+  const [colorMap, normalMap, specularMap] = useLoader(THREE.TextureLoader, [
+    '/textures/earth_day.jpg',
+    '/textures/earth_normal.jpg',
+    '/textures/earth_specular.jpg',
+  ]);
+  
   useFrame(() => {
     if (meshRef.current) {
       meshRef.current.rotation.y += 0.001;
@@ -18,11 +25,13 @@ function Earth() {
   });
 
   return (
-    <Sphere ref={meshRef} args={[2, 64, 64]}>
-      <meshStandardMaterial
-        color="#1e40af"
-        metalness={0.4}
-        roughness={0.7}
+    <Sphere ref={meshRef} args={[2, 128, 128]}>
+      <meshPhongMaterial
+        map={colorMap}
+        normalMap={normalMap}
+        specularMap={specularMap}
+        shininess={15}
+        normalScale={new THREE.Vector2(0.85, 0.85)}
       />
     </Sphere>
   );
