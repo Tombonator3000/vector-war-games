@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -200,6 +200,48 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
   );
 }
 
+function EarthWithTextures({
+  earthRef,
+  vectorTexture,
+}: {
+  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
+  vectorTexture: THREE.Texture | null;
+}) {
+  const [textures, setTextures] = useState<{
+    day: THREE.Texture | null;
+    normal: THREE.Texture | null;
+    specular: THREE.Texture | null;
+  }>({ day: null, normal: null, specular: null });
+
+  useEffect(() => {
+    const loader = new THREE.TextureLoader();
+    
+    Promise.all([
+      loader.loadAsync('/textures/earth_day.jpg').catch(() => null),
+      loader.loadAsync('/textures/earth_normal.jpg').catch(() => null),
+      loader.loadAsync('/textures/earth_specular.jpg').catch(() => null),
+    ]).then(([day, normal, specular]) => {
+      setTextures({ day, normal, specular });
+    });
+  }, []);
+
+  return (
+    <mesh ref={earthRef} castShadow receiveShadow>
+      <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
+      <meshStandardMaterial
+        map={textures.day ?? (vectorTexture ?? undefined)}
+        normalMap={textures.normal ?? undefined}
+        normalScale={new THREE.Vector2(0.5, 0.5)}
+        roughness={textures.specular ? 0.7 : 0.85}
+        metalness={textures.specular ? 0.1 : 0.05}
+        color={textures.day ? new THREE.Color('#ffffff') : (vectorTexture ? new THREE.Color('#0a1a2d') : new THREE.Color('#0a1220'))}
+        emissive={new THREE.Color('#020510')}
+        emissiveIntensity={0.15}
+      />
+    </mesh>
+  );
+}
+
 function SceneContent({
   cam,
   texture,
@@ -251,17 +293,7 @@ function SceneContent({
       <ambientLight intensity={0.3} />
       <directionalLight position={[6, 4, 3]} intensity={0.8} />
       <directionalLight position={[-5, -3, -6]} intensity={0.3} color={new THREE.Color('#0af')} />
-      <mesh ref={earthRef} castShadow receiveShadow>
-        <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
-        <meshStandardMaterial
-          map={texture ?? undefined}
-          color={texture ? new THREE.Color('#0a1a2d') : new THREE.Color('#0a1220')}
-          roughness={0.85}
-          metalness={0.05}
-          emissive={new THREE.Color('#020510')}
-          emissiveIntensity={0.15}
-        />
-      </mesh>
+      <EarthWithTextures earthRef={earthRef} vectorTexture={texture} />
       <CityLights nations={nations} />
       <group>
         {nations.map(nation => {
