@@ -1,5 +1,5 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
 
 import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson';
@@ -207,36 +207,25 @@ function EarthWithTextures({
   earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
   vectorTexture: THREE.Texture | null;
 }) {
-  const [textures, setTextures] = useState<{
-    day: THREE.Texture | null;
-    normal: THREE.Texture | null;
-    specular: THREE.Texture | null;
-  }>({ day: null, normal: null, specular: null });
-
-  useEffect(() => {
-    const loader = new THREE.TextureLoader();
-    
-    Promise.all([
-      loader.loadAsync('/textures/earth_day.jpg').catch(() => null),
-      loader.loadAsync('/textures/earth_normal.jpg').catch(() => null),
-      loader.loadAsync('/textures/earth_specular.jpg').catch(() => null),
-    ]).then(([day, normal, specular]) => {
-      setTextures({ day, normal, specular });
-    });
-  }, []);
+  // Use React Three Fiber's useLoader for proper texture loading
+  const [dayMap, normalMap, specularMap] = useLoader(
+    THREE.TextureLoader,
+    [
+      '/textures/earth_day.jpg',
+      '/textures/earth_normal.jpg',
+      '/textures/earth_specular.jpg',
+    ]
+  );
 
   return (
     <mesh ref={earthRef} castShadow receiveShadow>
       <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
-      <meshStandardMaterial
-        map={textures.day ?? (vectorTexture ?? undefined)}
-        normalMap={textures.normal ?? undefined}
-        normalScale={new THREE.Vector2(0.5, 0.5)}
-        roughness={textures.specular ? 0.7 : 0.85}
-        metalness={textures.specular ? 0.1 : 0.05}
-        color={textures.day ? new THREE.Color('#ffffff') : (vectorTexture ? new THREE.Color('#0a1a2d') : new THREE.Color('#0a1220'))}
-        emissive={new THREE.Color('#020510')}
-        emissiveIntensity={0.15}
+      <meshPhongMaterial
+        map={dayMap}
+        normalMap={normalMap}
+        specularMap={specularMap}
+        shininess={15}
+        normalScale={new THREE.Vector2(0.85, 0.85)}
       />
     </mesh>
   );
