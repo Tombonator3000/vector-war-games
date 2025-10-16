@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { OrbitControls, Stars, Sphere } from '@react-three/drei';
 import * as THREE from 'three';
@@ -10,13 +10,18 @@ interface Globe3DProps {
 
 function Earth() {
   const meshRef = useRef<THREE.Mesh>(null);
-  
+
   // Load realistic Earth textures
-  const [colorMap, normalMap, specularMap] = useLoader(THREE.TextureLoader, [
-    '/textures/earth_day.jpg',
-    '/textures/earth_normal.jpg',
-    '/textures/earth_specular.jpg',
-  ]);
+  const textureUrls = useMemo(() => {
+    const baseUrl = import.meta.env.BASE_URL;
+    const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+    return [
+      `${normalizedBase}textures/earth_day.jpg`,
+      `${normalizedBase}textures/earth_normal.jpg`,
+      `${normalizedBase}textures/earth_specular.jpg`,
+    ];
+  }, []);
+  const [colorMap, normalMap, specularMap] = useLoader(THREE.TextureLoader, textureUrls);
   
   useFrame(() => {
     if (meshRef.current) {

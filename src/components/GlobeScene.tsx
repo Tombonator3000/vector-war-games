@@ -207,14 +207,19 @@ function EarthWithTextures({
   earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
   vectorTexture: THREE.Texture | null;
 }) {
+  const textureUrls = useMemo(() => {
+    const baseUrl = import.meta.env.BASE_URL;
+    const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+    return [
+      `${normalizedBase}textures/earth_day.jpg`,
+      `${normalizedBase}textures/earth_normal.jpg`,
+      `${normalizedBase}textures/earth_specular.jpg`,
+    ];
+  }, []);
   // Use React Three Fiber's useLoader for proper texture loading
   const [dayMap, normalMap, specularMap] = useLoader(
     THREE.TextureLoader,
-    [
-      '/textures/earth_day.jpg',
-      '/textures/earth_normal.jpg',
-      '/textures/earth_specular.jpg',
-    ]
+    textureUrls
   );
 
   return (
