@@ -1170,7 +1170,10 @@ function startResearch(tier: number | string): boolean {
 
   AudioSys.playSFX('research');
   log(`Research initiated: ${project.name}`);
-  toast({ title: 'Research started', description: `${project.name} will complete in ${project.turns} turns.` });
+  toast({ 
+    title: '🔬 Research Initiated', 
+    description: `${project.name} will complete in ${project.turns} turn${project.turns > 1 ? 's' : ''}.`,
+  });
   updateDisplay();
   return true;
 }
@@ -1199,7 +1202,10 @@ function advanceResearch(nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') {
 
   if (nation.isPlayer) {
     AudioSys.playSFX('success');
-    toast({ title: 'Research complete', description: `${project.name} finished during ${phase.toLowerCase()} phase.` });
+    toast({ 
+      title: '✅ Research Complete', 
+      description: `${project.name} breakthrough achieved! New capabilities unlocked.`,
+    });
     updateDisplay();
   }
 }
@@ -3929,6 +3935,10 @@ export default function NoradVector() {
 
     AudioSys.playSFX('build');
     log(`${player.name} builds a missile`);
+    toast({ 
+      title: '🚀 ICBM Constructed', 
+      description: `Strategic arsenal increased to ${player.missiles} missiles.`,
+    });
     updateDisplay();
     consumeAction();
     closeModal();
@@ -3948,6 +3958,10 @@ export default function NoradVector() {
 
     AudioSys.playSFX('build');
     log(`${player.name} commissions a strategic bomber`);
+    toast({ 
+      title: '✈️ Bomber Wing Deployed', 
+      description: `Strategic bomber fleet expanded to ${player.bombers} wings.`,
+    });
     updateDisplay();
     consumeAction();
     closeModal();
@@ -3967,6 +3981,10 @@ export default function NoradVector() {
 
     AudioSys.playSFX('build');
     log(`${player.name} reinforces continental defense (+2)`);
+    toast({ 
+      title: '🛡️ Defense System Upgraded', 
+      description: `ABM network strength increased to ${player.defense}.`,
+    });
     updateDisplay();
     consumeAction();
     closeModal();
@@ -3996,6 +4014,10 @@ export default function NoradVector() {
 
     AudioSys.playSFX('build');
     log(`${player.name} establishes city #${player.cities}`);
+    toast({ 
+      title: '🏙️ City Established', 
+      description: `Urban center ${player.cities} constructed. Population capacity increased.`,
+    });
     updateDisplay();
     consumeAction();
     closeModal();
@@ -4033,6 +4055,10 @@ export default function NoradVector() {
 
     AudioSys.playSFX('build');
     log(`${player.name} assembles a ${yieldMT}MT warhead`);
+    toast({ 
+      title: '☢️ Warhead Assembled', 
+      description: `${yieldMT}MT warhead added. Stockpile: ${player.warheads[yieldMT]} units.`,
+    });
     updateDisplay();
     consumeAction();
     closeModal();
@@ -4885,6 +4911,10 @@ export default function NoradVector() {
           AudioSys.playSFX('defcon');
           DoomsdayClock.improve(0.5);
           log(`UN appeal successful: DEFCON improved to ${S.defcon}.`);
+          toast({ 
+            title: '🕊️ DEFCON Improved', 
+            description: `UN Security Council approves de-escalation. DEFCON now at ${S.defcon}.`,
+          });
           if ((window as any).__gameAddNewsItem) {
             (window as any).__gameAddNewsItem('diplomatic', `UN Security Council approves de-escalation - DEFCON ${S.defcon}`, 'important');
           }

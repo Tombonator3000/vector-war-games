@@ -52,6 +52,24 @@ All colors MUST be HSL.
     --glow-green: 0 0 22px hsl(164 98% 66% / 0.78);
     --glow-magenta: 0 0 22px hsl(308 100% 72% / 0.78);
 
+    /* Typography Scale - Better Visual Hierarchy */
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+    --text-4xl: 2.25rem;
+
+    /* Visual Hierarchy Colors */
+    --text-primary: hsl(188 88% 80%);
+    --text-secondary: hsl(188 56% 70%);
+    --text-tertiary: hsl(188 40% 60%);
+    --text-critical: hsl(346 100% 60%);
+    --text-success: hsl(164 98% 66%);
+    --text-warning: hsl(54 100% 68%);
+
     /* Synthwave gradient system */
     --synthwave-horizon-gradient: radial-gradient(
         circle at 50% 0%,
@@ -947,14 +965,15 @@ body.theme-synthwave .hud-right {
   box-shadow:
     0 0 20px var(--hud-module-glow),
     inset 0 0 0 1px rgba(16, 255, 213, 0.12);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
   gap: calc(var(--hud-gap) * 0.5);
   pointer-events: auto;
-  color: rgba(188, 255, 255, 0.85);
+  color: hsl(var(--text-primary));
   font-size: var(--hud-font-size);
-  line-height: 1.35;
+  line-height: 1.4;
+  transition: all 0.2s ease;
 }
 
 body.theme-synthwave .hud-module {
@@ -1001,10 +1020,14 @@ body.theme-synthwave .hud-module > * {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: var(--hud-heading-size);
-  letter-spacing: var(--hud-letter-spacing);
+  font-size: var(--text-sm);
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: rgba(144, 254, 255, 0.78);
+  color: hsl(var(--primary));
+  font-weight: 700;
+  padding-bottom: calc(var(--hud-gap) * 0.3);
+  border-bottom: 1px solid hsl(var(--border) / 0.3);
+  text-shadow: 0 0 12px hsl(var(--primary) / 0.4);
 }
 
 body.theme-synthwave .hud-module__header {
