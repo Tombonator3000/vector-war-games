@@ -19,3 +19,4 @@
 | 2025-10-28T13:35:12Z | Refined AI event tracking deduplication and re-ran `npm run test -- useGovernance` to confirm passing state. |
 | 2025-10-28T13:46:39Z | Implemented globe mouse controls for rotation and zoom, including touch parity updates. |
 | 2025-10-28T15:10:52Z | Corrected latitude clamp bounds in `Index.tsx` to prevent southern snap during globe rotations. |
+| 2025-10-28T15:36:04Z | Reordered globe latitude clamp bounds to ensure proper min/max ordering before clamping. |
