@@ -86,6 +86,15 @@ interface Nation {
   environmentPenaltyTurns?: number;
 }
 
+interface DiplomacyState {
+  peaceTurns: number;
+  lastEvaluatedTurn: number;
+  allianceRatio: number;
+  influenceScore: number;
+  nearVictoryNotified: boolean;
+  victoryAnnounced: boolean;
+}
+
 interface GameState {
   turn: number;
   defcon: number;
@@ -112,6 +121,7 @@ interface GameState {
   nuclearWinterLevel?: number;
   globalRadiation?: number;
   events?: boolean;
+  diplomacy?: DiplomacyState;
 }
 
 type ThemeId =
@@ -178,6 +188,15 @@ NNNNNNNN         NNNNNNN     OOOOOOOOO     RRRRRRRR     RRRRRRRAAAAAAA          
                                                                  V:::::V          E::::::::::::::::::::E  CC:::::::::::::::C      T:::::::::T       OO:::::::::::::OO R::::::R     R:::::R
                                                                   V:::V           E::::::::::::::::::::E    CCC::::::::::::C      T:::::::::T         OO:::::::::OO   R::::::R     R:::::R
                                                                    VVV            EEEEEEEEEEEEEEEEEEEEEE       CCCCCCCCCCCCC      TTTTTTTTTTT           OOOOOOOOO     RRRRRRRR     RRRRRRR`;
+
+const DIPLOMATIC_VICTORY_CRITERIA = {
+  allianceRatio: 0.6,
+  requiredDefcon: 4,
+  peaceTurns: 4,
+  influenceTarget: 120,
+  nearProgressThreshold: 0.8,
+  resetNearThreshold: 0.55
+};
 
 const layoutDensityOptions: LayoutDensityOption[] = [
   {
@@ -286,7 +305,8 @@ let S: GameState = {
   screenShake: 0,
   fx: 1,
   nuclearWinterLevel: 0,
-  globalRadiation: 0
+  globalRadiation: 0,
+  diplomacy: createDefaultDiplomacyState()
 };
 
 let nations: Nation[] = [];
@@ -1815,6 +1835,7 @@ function initNations() {
   S.phase = 'PLAYER';
   S.paused = false;
   S.gameOver = false;
+  S.diplomacy = createDefaultDiplomacyState();
   S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
 
   updateDisplay();
@@ -3132,16 +3153,113 @@ function launchBomber(from: Nation, to: Nation, payload: any) {
   return true;
 }
 
+function createDefaultDiplomacyState(): DiplomacyState {
+  return {
+    peaceTurns: 0,
+    lastEvaluatedTurn: 0,
+    allianceRatio: 0,
+    influenceScore: 0,
+    nearVictoryNotified: false,
+    victoryAnnounced: false
+  };
+}
+
+function ensureDiplomacyState(): DiplomacyState {
+  if (!S.diplomacy) {
+    S.diplomacy = createDefaultDiplomacyState();
+  }
+  return S.diplomacy;
+}
+
+function evaluateDiplomaticProgress(player: Nation) {
+  const diplomacy = ensureDiplomacyState();
+  const aliveNations = nations.filter(n => n.population > 0);
+  const potentialPartners = Math.max(1, aliveNations.length - 1);
+  const allianceCount = aliveNations.filter(n => n !== player && player.treaties?.[n.id]?.alliance).length;
+  const allianceRatio = potentialPartners > 0 ? allianceCount / potentialPartners : 0;
+  const truceCount = aliveNations.filter(n => n !== player && player.treaties?.[n.id]?.truceTurns).length;
+
+  if (diplomacy.lastEvaluatedTurn !== S.turn) {
+    diplomacy.lastEvaluatedTurn = S.turn;
+    if (S.defcon >= DIPLOMATIC_VICTORY_CRITERIA.requiredDefcon) {
+      diplomacy.peaceTurns += 1;
+    } else {
+      diplomacy.peaceTurns = 0;
+    }
+  }
+
+  const influenceScore =
+    allianceCount * 25 +
+    truceCount * 10 +
+    (player.intel || 0) +
+    Math.max(0, (player.production || 0) * 0.5) +
+    S.defcon * 5;
+
+  diplomacy.allianceRatio = allianceRatio;
+  diplomacy.influenceScore = influenceScore;
+
+  const allianceProgress = Math.min(1, allianceRatio / DIPLOMATIC_VICTORY_CRITERIA.allianceRatio);
+  const peaceProgress = Math.min(1, diplomacy.peaceTurns / DIPLOMATIC_VICTORY_CRITERIA.peaceTurns);
+  const influenceProgress = Math.min(1, influenceScore / DIPLOMATIC_VICTORY_CRITERIA.influenceTarget);
+  const overallProgress = (allianceProgress + peaceProgress + influenceProgress) / 3;
+
+  if (overallProgress < DIPLOMATIC_VICTORY_CRITERIA.resetNearThreshold) {
+    diplomacy.nearVictoryNotified = false;
+  }
+
+  if (
+    !diplomacy.nearVictoryNotified &&
+    overallProgress >= DIPLOMATIC_VICTORY_CRITERIA.nearProgressThreshold &&
+    (allianceProgress < 1 || peaceProgress < 1 || influenceProgress < 1)
+  ) {
+    diplomacy.nearVictoryNotified = true;
+    toast({
+      title: 'Diplomatic Momentum',
+      description: 'World leaders are rallying behind you. Maintain the peace to secure a diplomatic victory.'
+    });
+    (window as any).__gameAddNewsItem?.('diplomatic', 'Global coalition forming around your leadership', 'important');
+  }
+
+  const victoryAchieved =
+    allianceRatio >= DIPLOMATIC_VICTORY_CRITERIA.allianceRatio &&
+    diplomacy.peaceTurns >= DIPLOMATIC_VICTORY_CRITERIA.peaceTurns &&
+    influenceScore >= DIPLOMATIC_VICTORY_CRITERIA.influenceTarget;
+
+  if (victoryAchieved && !diplomacy.victoryAnnounced) {
+    diplomacy.victoryAnnounced = true;
+    toast({
+      title: 'Diplomatic Victory Achieved',
+      description: 'A worldwide alliance recognizes your leadership.'
+    });
+    (window as any).__gameAddNewsItem?.('diplomatic', 'Diplomatic triumph! A global coalition is declared.', 'critical');
+  }
+
+  return {
+    victory: victoryAchieved,
+    message: victoryAchieved
+      ? `DIPLOMATIC VICTORY - Forged alliances with ${allianceCount} nations, preserved peace for ${diplomacy.peaceTurns} turns, and achieved influence score ${Math.floor(
+          influenceScore
+        )}.`
+      : undefined
+  };
+}
+
 // Victory check
 function checkVictory() {
   if (S.gameOver) return;
-  
+
   const player = PlayerManager.get();
   if (!player) return;
-  
+
   const alive = nations.filter(n => n.population > 0);
   const totalPop = alive.reduce((sum, n) => sum + n.population, 0);
-  
+
+  const diplomacyResult = evaluateDiplomaticProgress(player);
+  if (diplomacyResult.victory && diplomacyResult.message) {
+    endGame(true, diplomacyResult.message);
+    return;
+  }
+
   if (player.population <= 0) {
     endGame(false, 'Your nation has been destroyed');
     return;
@@ -3193,8 +3311,13 @@ function endGame(victory: boolean, message: string) {
   highscores.sort((a: any, b: any) => b.score - a.score);
   Storage.setItem('highscores', JSON.stringify(highscores.slice(0, 10)));
   
-  log(victory ? 'VICTORY!' : 'DEFEAT!', victory ? 'success' : 'alert');
-  log(message, 'success');
+  if (victory) {
+    log('🏆 VICTORY ACHIEVED!', 'success');
+    log(`Victory Condition: ${message}`, 'success');
+  } else {
+    log('DEFEAT!', 'alert');
+    log(message, 'alert');
+  }
   log(`Final Score: ${Math.floor(score)}`, 'success');
 }
 
