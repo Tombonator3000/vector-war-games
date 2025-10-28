@@ -47,3 +47,5 @@
 | 2025-10-28T17:38:08Z | Hardened SFX playback for missing contexts and reordered options drawer toggle before audio. |
 | 2025-10-28T18:18:55+00:00 | Reviewed Phase 2 roadmap documentation to scope infiltration propaganda additions. |
 | 2025-10-28T18:19:00+00:00 | Inserted Phase 2 infiltration & propaganda theatre bullet linking disguise ops to Resistance Heat Map metrics. |
+| 2025-10-28T18:28:15Z | Reviewed Phase 1-3 roadmap sections to scope biomass logistics, occupation event chain, and motivation cross-link updates. |
+| 2025-10-28T18:28:18Z | Expanded roadmap documentation with clandestine biomass logistics details, occupation economy event chain and sabotage hooks, and Phase 3 harvest pipeline victory paths. |
