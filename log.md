@@ -41,3 +41,4 @@
 | 2025-10-28T16:00:47Z | Ran `npm run test -- useGovernance` to verify updated election gating behavior. |
 | 2025-10-28T16:01:31Z | Staged governance condition updates and tests for commit. |
 | 2025-10-28T16:01:46Z | Restaged log updates after recording staging action. |
+| 2025-10-28T16:53:45Z | Added BioForge command sheet toggle, gating permissions, and multiplayer action plumbing for the bio-warfare lab modal. |

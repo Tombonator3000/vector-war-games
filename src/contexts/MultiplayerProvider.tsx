@@ -5,8 +5,8 @@ import { MultiplayerTransport, type MultiplayerPresenceState, type MultiplayerSt
 import type { MultiplayerActionType, MultiplayerSharedState } from '@/types/game';
 
 const ROLE_PERMISSIONS: Record<MultiplayerRole, Set<MultiplayerActionType>> = {
-  STRATEGIST: new Set(['BUILD', 'RESEARCH', 'DIPLOMACY', 'PRODUCTION']),
-  TACTICIAN: new Set(['INTEL', 'CULTURE', 'IMMIGRATION', 'PRODUCTION']),
+  STRATEGIST: new Set(['BUILD', 'RESEARCH', 'DIPLOMACY', 'PRODUCTION', 'BIOWARFARE']),
+  TACTICIAN: new Set(['INTEL', 'CULTURE', 'IMMIGRATION', 'PRODUCTION', 'BIOWARFARE']),
 };
 
 const SESSION_STORAGE_KEY = 'norad_coop_session_id';
