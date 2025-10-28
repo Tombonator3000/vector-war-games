@@ -1,3 +1,23 @@
+export interface NationCyberProfile {
+  readiness: number;
+  maxReadiness: number;
+  offense: number;
+  defense: number;
+  detection: number;
+  attribution: number;
+  research?: {
+    firewalls?: boolean;
+    intrusionDetection?: boolean;
+  };
+  lastAttribution?: {
+    turn: number;
+    attackerId: string;
+    outcome: 'success' | 'failed';
+    falseFlagged?: boolean;
+    attributedTo?: string | null;
+  };
+}
+
 export interface Nation {
   id: string;
   isPlayer: boolean;
@@ -36,6 +56,7 @@ export interface Nation {
   sanctioned?: boolean;
   sanctionedBy?: Record<string, number>;
   environmentPenaltyTurns?: number;
+  cyber?: NationCyberProfile;
 }
 
 export interface DiplomacyState {

@@ -26,7 +26,7 @@ import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { GameHelper } from '@/components/GameHelper';
 import { useMultiplayer } from '@/contexts/MultiplayerProvider';
-import type { GameState, Nation, ConventionalWarfareDelta } from '@/types/game';
+import type { GameState, Nation, ConventionalWarfareDelta, NationCyberProfile } from '@/types/game';
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
 import { SyncStatusBadge } from '@/components/coop/SyncStatusBadge';
 import { ApprovalQueue } from '@/components/coop/ApprovalQueue';
@@ -40,6 +40,11 @@ import {
 } from '@/hooks/useConventionalWarfare';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
+import {
+  useCyberWarfare,
+  createDefaultNationCyberProfile,
+  applyCyberResearchUnlock,
+} from '@/hooks/useCyberWarfare';
 import { GovernanceEventDialog } from '@/components/governance/GovernanceEventDialog';
 import { MoraleHeatmapOverlay } from '@/components/governance/MoraleHeatmapOverlay';
 import { ElectionCountdownWidget } from '@/components/governance/ElectionCountdownWidget';
@@ -114,6 +119,7 @@ interface Nation {
   environmentPenaltyTurns?: number;
   conventional?: NationConventionalProfile;
   controlledTerritories?: string[];
+  cyber?: NationCyberProfile;
 }
 
 interface DiplomacyState {
@@ -544,6 +550,29 @@ const RESEARCH_TREE: ResearchProject[] = [
     category: 'intel',
     turns: 3,
     cost: { production: 25, intel: 25 }
+  },
+  {
+    id: 'cyber_firewalls',
+    name: 'Adaptive Quantum Firewalls',
+    description: 'Boost cyber readiness regeneration and baseline intrusion resistance.',
+    category: 'intel',
+    turns: 3,
+    cost: { production: 28, intel: 22 },
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'firewalls');
+    }
+  },
+  {
+    id: 'cyber_ids',
+    name: 'Intrusion Pattern Analysis',
+    description: 'Advanced anomaly detection enables attribution and false-flag countermeasures.',
+    category: 'intel',
+    turns: 4,
+    cost: { production: 32, intel: 30 },
+    prerequisites: ['cyber_firewalls'],
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'intrusion_detection');
+    }
   }
 ];
 
@@ -788,6 +817,7 @@ function IntelReportContent({ player, onClose }: IntelReportContentProps) {
               .map(([yieldMT, count]) => `${yieldMT}MT×${count}`)
               .join(' ');
             const deepReconActive = !!player.deepRecon?.[nation.id];
+            const cyberProfile = nation.cyber ?? createDefaultNationCyberProfile();
 
             return (
               <div
@@ -809,6 +839,9 @@ function IntelReportContent({ player, onClose }: IntelReportContentProps) {
                   </div>
                   <div>
                     Migrants (turn / total): {(nation.migrantsThisTurn || 0)} / {(nation.migrantsTotal || 0)}
+                  </div>
+                  <div>
+                    Cyber readiness: {Math.round(cyberProfile.readiness)}/{cyberProfile.maxReadiness} • Detection: {Math.round(cyberProfile.detection)}%
                   </div>
                   {deepReconActive ? (
                     <>
@@ -1806,7 +1839,13 @@ function initNations() {
     migrantsThisTurn: 0,
     migrantsTotal: 0,
     conventional: createDefaultNationConventionalProfile('army'),
-    controlledTerritories: []
+    controlledTerritories: [],
+    cyber: {
+      ...createDefaultNationCyberProfile(),
+      readiness: 70,
+      offense: 60,
+      detection: 38,
+    }
   };
 
   // Apply doctrine bonuses
@@ -1871,7 +1910,14 @@ function initNations() {
       conventional: createDefaultNationConventionalProfile(
         i === 1 ? 'navy' : i === 2 ? 'air' : 'army'
       ),
-      controlledTerritories: []
+      controlledTerritories: [],
+      cyber: {
+        ...createDefaultNationCyberProfile(),
+        readiness: 55 + Math.floor(Math.random() * 12),
+        offense: 52 + Math.floor(Math.random() * 10),
+        defense: 48 + Math.floor(Math.random() * 8),
+        detection: 30 + Math.floor(Math.random() * 10),
+      }
     };
 
     applyDoctrineEffects(nation, aiDoctrine);
@@ -3741,6 +3787,11 @@ function aiTurn(n: Nation) {
       return;
     }
   }
+
+  const cyberOutcome = (window as any).__cyberAiPlan?.(n.id);
+  if (cyberOutcome?.executed) {
+    updateDisplay();
+  }
 }
 
 // End turn
@@ -3773,6 +3824,8 @@ function endTurn() {
       S.turn++;
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+
+      (window as any).__cyberAdvance?.();
 
       const player = PlayerManager.get();
       const pandemicResult = (window as any).__pandemicAdvance?.({
@@ -3850,6 +3903,13 @@ function updateDisplay() {
   
   const intelEl = document.getElementById('intelDisplay');
   if (intelEl) intelEl.textContent = (player.intel || 0).toString();
+
+  const cyberEl = document.getElementById('cyberDisplay');
+  if (cyberEl) {
+    const readiness = Math.round(player.cyber?.readiness ?? 0);
+    const max = Math.round(player.cyber?.maxReadiness ?? 100);
+    cyberEl.textContent = `${readiness}/${max}`;
+  }
   
   const citiesEl = document.getElementById('citiesDisplay');
   if (citiesEl) citiesEl.textContent = (player.cities || 1).toString();
@@ -4109,6 +4169,8 @@ export default function NoradVector() {
     setNewsItems(prev => [...prev, item].slice(-20)); // Keep last 20 items
   }, []);
 
+  const getAllNations = useCallback(() => nations, []);
+
   const { pandemicState, triggerPandemic, applyCountermeasure: applyPandemicCountermeasure, advancePandemicTurn } = usePandemic(addNewsItem);
   const conventional = useConventionalWarfare({
     initialState: conventionalState,
@@ -4118,6 +4180,34 @@ export default function NoradVector() {
     onConsumeAction: consumeAction,
     onUpdateDisplay: updateDisplay,
   });
+
+  const cyber = useCyberWarfare({
+    currentTurn: S.turn,
+    getNation: getNationById,
+    getNations: getAllNations,
+    onLog: (message, tone) => log(message, tone),
+    onToast: payload => toast(payload),
+    onNews: addNewsItem,
+    onDefconShift: (delta, reason) => {
+      const previous = S.defcon;
+      S.defcon = Math.max(1, Math.min(5, S.defcon + delta));
+      if (S.defcon !== previous) {
+        AudioSys.playSFX('defcon');
+        log(reason, delta < 0 ? 'warning' : 'success');
+        addNewsItem('intel', reason, delta < 0 ? 'critical' : 'important');
+        updateDisplay();
+      }
+    },
+  });
+
+  const {
+    getActionAvailability: getCyberActionAvailability,
+    launchAttack: launchCyberAttack,
+    launchFalseFlag: launchCyberFalseFlag,
+    hardenNetworks: hardenCyberNetworks,
+    advanceTurn: advanceCyberTurn,
+    runAiPlan: runCyberAiPlan,
+  } = cyber;
 
   const getGovernanceNations = useCallback(
     () => nations as unknown as GovernanceNationRef[],
@@ -4174,6 +4264,15 @@ export default function NoradVector() {
     resolveProxyEngagement: resolveConventionalProxyEngagement,
     getUnitsForNation: getConventionalUnitsForNation,
   } = conventional;
+
+  useEffect(() => {
+    (window as any).__cyberAdvance = advanceCyberTurn;
+    (window as any).__cyberAiPlan = runCyberAiPlan;
+    return () => {
+      delete (window as any).__cyberAdvance;
+      delete (window as any).__cyberAiPlan;
+    };
+  }, [advanceCyberTurn, runCyberAiPlan]);
 
   const handlePandemicTrigger = useCallback((payload: PandemicTriggerPayload) => {
     if (!pandemicIntegrationEnabled) {
@@ -5434,7 +5533,44 @@ export default function NoradVector() {
     const player = getBuildContext('Intelligence');
     if (!player) return;
 
+    const cyberAttackAvailability = getCyberActionAvailability(player.id, 'intrusion');
+    const cyberDefenseAvailability = getCyberActionAvailability(player.id, 'fortify');
+    const cyberFalseFlagAvailability = getCyberActionAvailability(player.id, 'false_flag');
+
+    const cyberActions: OperationAction[] = [
+      {
+        id: 'cyber_attack',
+        title: 'CYBER INTRUSION',
+        subtitle: 'Drain enemy readiness & intel',
+        costText: `Cost: ${cyberAttackAvailability.cost} CYBER`,
+        requiresTarget: true,
+        disabled: !cyberAttackAvailability.canExecute,
+        disabledReason: cyberAttackAvailability.reason,
+        targetFilter: (nation, commander) => isEligibleEnemyTarget(commander, nation),
+      },
+      {
+        id: 'cyber_defend',
+        title: 'HARDEN NETWORKS',
+        subtitle: 'Restore readiness reserves',
+        costText: `Cost: ${cyberDefenseAvailability.cost} CYBER`,
+        disabled: !cyberDefenseAvailability.canExecute,
+        disabledReason: cyberDefenseAvailability.reason,
+      },
+      {
+        id: 'cyber_false_flag',
+        title: 'FALSE FLAG BREACH',
+        subtitle: 'Frame a rival for aggression',
+        costText: `Cost: ${cyberFalseFlagAvailability.cost} CYBER`,
+        requiresTarget: true,
+        disabled: !cyberFalseFlagAvailability.canExecute,
+        disabledReason: cyberFalseFlagAvailability.reason,
+        description: 'Stage an intrusion that points forensic evidence toward another rival.',
+        targetFilter: (nation, commander) => isEligibleEnemyTarget(commander, nation),
+      },
+    ];
+
     const intelActions: OperationAction[] = [
+      ...cyberActions,
       {
         id: 'satellite',
         title: 'DEPLOY SATELLITE',
@@ -5506,6 +5642,38 @@ export default function NoradVector() {
       }
 
       switch (action.id) {
+        case 'cyber_attack': {
+          if (!target) return false;
+          const outcome = launchCyberAttack(commander.id, target.id);
+          if (!outcome.executed) {
+            return false;
+          }
+          updateDisplay();
+          consumeAction();
+          return true;
+        }
+
+        case 'cyber_defend': {
+          const outcome = hardenCyberNetworks(commander.id);
+          if (!outcome.executed) {
+            return false;
+          }
+          updateDisplay();
+          consumeAction();
+          return true;
+        }
+
+        case 'cyber_false_flag': {
+          if (!target) return false;
+          const outcome = launchCyberFalseFlag(commander.id, target.id);
+          if (!outcome.executed) {
+            return false;
+          }
+          updateDisplay();
+          consumeAction();
+          return true;
+        }
+
         case 'view':
           openModal('INTELLIGENCE REPORT', <IntelReportContent player={commander} onClose={closeModal} />);
           return false;
@@ -5788,7 +5956,17 @@ export default function NoradVector() {
         accent="violet"
       />
     );
-  }, [closeModal, ensureAction, getBuildContext, openModal, targetableNations]);
+  }, [
+    closeModal,
+    ensureAction,
+    getBuildContext,
+    openModal,
+    targetableNations,
+    getCyberActionAvailability,
+    launchCyberAttack,
+    hardenCyberNetworks,
+    launchCyberFalseFlag,
+  ]);
 
 
   const handleImmigration = useCallback(async () => {
@@ -6691,6 +6869,10 @@ export default function NoradVector() {
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">ACTIONS</span>
                 <span className="text-neon-green font-bold" id="actionsDisplay">1/1</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-cyan-400">CYBER</span>
+                <span className="text-neon-green font-bold" id="cyberDisplay">60/100</span>
               </div>
             </div>
 
