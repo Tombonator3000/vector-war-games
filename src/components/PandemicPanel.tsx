@@ -51,8 +51,8 @@ export function PandemicPanel({ state, enabled = true, biowarfareEnabled = true 
       ? 'Bio-weapon conquest options disabled – monitoring only for compliance audit.'
       : null;
 
-  return (
-    <div className={`fixed bottom-20 right-4 w-80 bg-black/80 backdrop-blur-md border ${stage.border} rounded-lg shadow-xl shadow-cyan-900/30 pointer-events-auto text-[11px] font-mono text-cyan-200`}>
+    return (
+      <div className={`fixed bottom-20 right-4 z-50 w-80 bg-black/80 backdrop-blur-md border ${stage.border} rounded-lg shadow-xl shadow-cyan-900/30 pointer-events-auto text-[11px] font-mono text-cyan-200`}>
       <div className="flex items-center justify-between px-3 py-2 border-b border-cyan-500/30">
         <div className="flex items-center gap-2 uppercase tracking-[0.35em] text-[10px] text-cyan-300">
           <Biohazard className="h-4 w-4 text-red-400" />
