@@ -24,6 +24,8 @@ import { useFogOfWar } from '@/hooks/useFogOfWar';
 import {
   useGovernance,
   type GovernanceNationRef,
+  type GovernanceMetrics,
+  type GovernanceDelta,
   calculateMoraleProductionMultiplier,
   calculateMoraleRecruitmentModifier,
 } from '@/hooks/useGovernance';
@@ -4243,10 +4245,8 @@ export default function NoradVector() {
     [],
   );
 
-  const governance = useGovernance({
-    currentTurn: S.turn,
-    getNations: getGovernanceNations,
-    onMetricsSync: (nationId, metrics) => {
+  const handleGovernanceMetricsSync = useCallback(
+    (nationId: string, metrics: GovernanceMetrics) => {
       const nation = getNationById(nationId);
       if (!nation) return;
       nation.morale = metrics.morale;
@@ -4254,7 +4254,11 @@ export default function NoradVector() {
       nation.electionTimer = metrics.electionTimer;
       nation.cabinetApproval = metrics.cabinetApproval;
     },
-    onApplyDelta: (nationId, delta) => {
+    [],
+  );
+
+  const handleGovernanceDelta = useCallback(
+    (nationId: string, delta: GovernanceDelta) => {
       const nation = getNationById(nationId);
       if (!nation) return;
       if (typeof delta.instability === 'number') {
@@ -4270,6 +4274,14 @@ export default function NoradVector() {
         nation.uranium = Math.max(0, (nation.uranium || 0) + delta.uranium);
       }
     },
+    [],
+  );
+
+  const governance = useGovernance({
+    currentTurn: S.turn,
+    getNations: getGovernanceNations,
+    onMetricsSync: handleGovernanceMetricsSync,
+    onApplyDelta: handleGovernanceDelta,
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
   });
 
