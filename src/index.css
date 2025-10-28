@@ -1035,6 +1035,17 @@ body.theme-synthwave .hud-module__header {
   text-shadow: 0 0 12px hsl(188 100% 70% / 0.32);
 }
 
+.map-style-button {
+  border: 1px solid hsl(188 100% 70% / 0.3);
+  color: hsl(188 100% 70%);
+  transition: all 0.2s ease;
+}
+
+.map-style-button:hover {
+  background-color: hsl(188 100% 70% / 0.1);
+  color: hsl(188 100% 80%);
+}
+
 .hud-module__header span:last-child {
   color: rgba(226, 255, 255, 0.62);
 }

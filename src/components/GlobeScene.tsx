@@ -18,6 +18,8 @@ export interface CityLight {
   nationId: string;
 }
 
+export type MapStyle = 'realistic' | 'wireframe' | 'night' | 'political';
+
 export interface GlobeSceneProps {
   cam: { x: number; y: number; zoom: number };
   nations: Array<{ 
@@ -33,6 +35,7 @@ export interface GlobeSceneProps {
   onNationClick?: (nationId: string) => void;
   onProjectorReady?: (projector: ProjectorFn) => void;
   onPickerReady?: (picker: PickerFn) => void;
+  mapStyle?: MapStyle;
 }
 
 interface SceneRegistration {
@@ -200,32 +203,27 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
   );
 }
 
-function EarthWithTextures({
+function EarthRealistic({
   earthRef,
-  vectorTexture,
 }: {
   earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
-  vectorTexture: THREE.Texture | null;
 }) {
-  const textureUrls = useMemo(() => {
-    const baseUrl = import.meta.env.BASE_URL || '/';
-    const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-    return [
-      `${normalizedBase}textures/earth_day.jpg`,
-      `${normalizedBase}textures/earth_normal.jpg`,
-      `${normalizedBase}textures/earth_specular.jpg`,
-    ];
-  }, []);
+  const textureUrls = useMemo(() => [
+    '/textures/earth_day.jpg',
+    '/textures/earth_normal.jpg',
+    '/textures/earth_specular.jpg',
+  ], []);
 
-  // Load textures with proper error handling
   const [dayMap, normalMap, specularMap] = useLoader(THREE.TextureLoader, textureUrls);
 
-  // Configure textures for optimal quality
   useEffect(() => {
-    [dayMap, normalMap, specularMap].forEach((texture, idx) => {
+    [dayMap, normalMap, specularMap].forEach(texture => {
       if (texture) {
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.anisotropy = 16;
+        texture.generateMipmaps = true;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.magFilter = THREE.LinearFilter;
         texture.needsUpdate = true;
       }
     });
@@ -238,10 +236,67 @@ function EarthWithTextures({
         map={dayMap}
         normalMap={normalMap}
         specularMap={specularMap}
-        shininess={25}
-        normalScale={new THREE.Vector2(1.2, 1.2)}
+        shininess={30}
+        normalScale={new THREE.Vector2(1.5, 1.5)}
+        emissive={new THREE.Color('#000814')}
+        emissiveIntensity={0.15}
+      />
+    </mesh>
+  );
+}
+
+function EarthWireframe({
+  earthRef,
+  vectorTexture,
+}: {
+  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
+  vectorTexture: THREE.Texture | null;
+}) {
+  return (
+    <mesh ref={earthRef}>
+      <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
+      <meshBasicMaterial 
+        map={vectorTexture} 
+        color="#0a1929"
+        transparent
+        opacity={0.95}
+      />
+    </mesh>
+  );
+}
+
+function EarthNight({
+  earthRef,
+}: {
+  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
+}) {
+  return (
+    <mesh ref={earthRef}>
+      <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
+      <meshBasicMaterial 
+        color="#020912"
+        transparent
+        opacity={0.98}
+      />
+    </mesh>
+  );
+}
+
+function EarthPolitical({
+  earthRef,
+  vectorTexture,
+}: {
+  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
+  vectorTexture: THREE.Texture | null;
+}) {
+  return (
+    <mesh ref={earthRef}>
+      <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
+      <meshStandardMaterial 
+        map={vectorTexture}
+        color="#0f1c2e"
         emissive={new THREE.Color('#001122')}
-        emissiveIntensity={0.1}
+        emissiveIntensity={0.2}
       />
     </mesh>
   );
@@ -253,12 +308,14 @@ function SceneContent({
   nations,
   onNationClick,
   register,
+  mapStyle = 'realistic',
 }: {
   cam: GlobeSceneProps['cam'];
   texture: THREE.Texture | null;
   nations: GlobeSceneProps['nations'];
   onNationClick?: GlobeSceneProps['onNationClick'];
   register: (registration: SceneRegistration) => void;
+  mapStyle?: MapStyle;
 }) {
   const { camera, size } = useThree();
   const earthRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>(null);
@@ -293,20 +350,39 @@ function SceneContent({
     earth.rotation.y = THREE.MathUtils.degToRad(centerLon + 180);
   });
 
+  const renderEarth = () => {
+    const fallback = (
+      <mesh ref={earthRef}>
+        <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
+        <meshStandardMaterial color="#0a1929" />
+      </mesh>
+    );
+
+    switch (mapStyle) {
+      case 'realistic':
+        return (
+          <Suspense fallback={fallback}>
+            <EarthRealistic earthRef={earthRef} />
+          </Suspense>
+        );
+      case 'wireframe':
+        return <EarthWireframe earthRef={earthRef} vectorTexture={texture} />;
+      case 'night':
+        return <EarthNight earthRef={earthRef} />;
+      case 'political':
+        return <EarthPolitical earthRef={earthRef} vectorTexture={texture} />;
+      default:
+        return fallback;
+    }
+  };
+
   return (
     <>
       <ambientLight intensity={0.5} />
       <directionalLight position={[6, 4, 3]} intensity={1.5} castShadow />
       <directionalLight position={[-5, -3, -6]} intensity={0.5} color={new THREE.Color('#0af')} />
-      <Suspense fallback={
-        <mesh ref={earthRef}>
-          <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
-          <meshStandardMaterial color="#1a4d6d" />
-        </mesh>
-      }>
-        <EarthWithTextures earthRef={earthRef} vectorTexture={texture} />
-      </Suspense>
-      <CityLights nations={nations} />
+      {renderEarth()}
+      {(mapStyle === 'night' || mapStyle === 'realistic') && <CityLights nations={nations} />}
       <group>
         {nations.map(nation => {
           if (Number.isNaN(nation.lon) || Number.isNaN(nation.lat)) return null;
@@ -332,7 +408,7 @@ function SceneContent({
 }
 
 export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function GlobeScene(
-  { cam, nations, worldCountries, onNationClick, onProjectorReady, onPickerReady }: GlobeSceneProps,
+  { cam, nations, worldCountries, onNationClick, onProjectorReady, onPickerReady, mapStyle = 'realistic' }: GlobeSceneProps,
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -435,6 +511,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
           nations={nations}
           onNationClick={onNationClick}
           register={handleRegister}
+          mapStyle={mapStyle}
         />
       </Canvas>
       <canvas ref={overlayRef} className="globe-scene__overlay" />

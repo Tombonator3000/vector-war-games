@@ -13,7 +13,8 @@ import { PandemicPanel } from '@/components/PandemicPanel';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
 import { usePandemic, type PandemicTriggerPayload, type PandemicCountermeasurePayload, type PandemicTurnContext } from '@/hooks/usePandemic';
 import { FlashpointModal } from '@/components/FlashpointModal';
-import GlobeScene, { PickerFn, ProjectorFn } from '@/components/GlobeScene';
+import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
+import { MapStyleSelector } from '@/components/MapStyleSelector';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
 import { TutorialGuide } from '@/components/TutorialGuide';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
@@ -3247,6 +3248,13 @@ export default function NoradVector() {
     return 'compact';
   });
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
+    const stored = Storage.getItem('map_style');
+    if (stored === 'realistic' || stored === 'wireframe' || stored === 'night' || stored === 'political') {
+      return stored;
+    }
+    return 'realistic';
+  });
   const [musicEnabled, setMusicEnabled] = useState(AudioSys.musicEnabled);
   const [sfxEnabled, setSfxEnabled] = useState(AudioSys.sfxEnabled);
   const [musicVolume, setMusicVolume] = useState(AudioSys.musicVolume);
@@ -5573,6 +5581,7 @@ export default function NoradVector() {
           worldCountries={worldCountries}
           onProjectorReady={handleProjectorReady}
           onPickerReady={handlePickerReady}
+          mapStyle={mapStyle}
         />
 
         <div className="hud-layers pointer-events-none touch-none">
@@ -5594,6 +5603,18 @@ export default function NoradVector() {
             </div>
 
             <div className="flex items-center gap-2">
+              <MapStyleSelector
+                currentStyle={mapStyle}
+                onStyleChange={(style) => {
+                  setMapStyle(style);
+                  Storage.setItem('map_style', style);
+                  AudioSys.playSFX('click');
+                  toast({
+                    title: "Map style updated",
+                    description: `Display mode changed to ${style}`,
+                  });
+                }}
+              />
               <div className="text-xs font-mono text-neon-magenta mr-4">
                 <span className="text-cyan-400">DOOMSDAY</span>{' '}
                 <span id="doomsdayTime" className="font-bold">7:00</span>
