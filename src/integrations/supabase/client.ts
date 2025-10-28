@@ -2,6 +2,30 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'clear'>;
+
+const createMemoryStorage = (): StorageLike => {
+  const store = new Map<string, string>();
+
+  return {
+    getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+    clear: () => {
+      store.clear();
+    },
+  };
+};
+
+const storage: StorageLike | undefined =
+  typeof window !== 'undefined' && 'localStorage' in window
+    ? window.localStorage
+    : createMemoryStorage();
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -10,7 +34,7 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage,
     persistSession: true,
     autoRefreshToken: true,
   }
