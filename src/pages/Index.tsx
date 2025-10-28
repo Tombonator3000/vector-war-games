@@ -14,7 +14,6 @@ import { useFlashpoints } from '@/hooks/useFlashpoints';
 import { usePandemic, type PandemicTriggerPayload, type PandemicCountermeasurePayload, type PandemicTurnContext } from '@/hooks/usePandemic';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
-import { MapStyleSelector } from '@/components/MapStyleSelector';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
 import { TutorialGuide } from '@/components/TutorialGuide';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
@@ -128,6 +127,13 @@ type LayoutDensityOption = {
   label: string;
   description: string;
 };
+
+const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }[] = [
+  { value: 'realistic', label: 'Realistic', description: 'Satellite imagery with terrain overlays.' },
+  { value: 'wireframe', label: 'Wireframe', description: 'Vector borders and topography outlines.' },
+  { value: 'night', label: 'Night Lights', description: 'City illumination against a dark globe.' },
+  { value: 'political', label: 'Political', description: 'Colored territorial boundaries and claims.' },
+];
 
 const ASCII_INTRO_LOGO = String.raw`
 NNNNNNNN        NNNNNNNN     OOOOOOOOO     RRRRRRRRRRRRRRRRR                  AAA               DDDDDDDDDDDDD
@@ -3278,6 +3284,15 @@ export default function NoradVector() {
     const hasSeenTutorial = Storage.getItem('has_seen_tutorial');
     return hasSeenTutorial !== 'true';
   });
+  const handleMapStyleChange = (style: MapStyle) => {
+    setMapStyle(style);
+    Storage.setItem('map_style', style);
+    AudioSys.playSFX('click');
+    toast({
+      title: 'Map style updated',
+      description: `Display mode changed to ${style}`,
+    });
+  };
   const handleAttackRef = useRef<() => void>(() => {});
   const handleProjectorReady = useCallback((projector: ProjectorFn) => {
     globeProjector = projector;
@@ -5601,18 +5616,6 @@ export default function NoradVector() {
             </div>
 
             <div className="flex items-center gap-2">
-              <MapStyleSelector
-                currentStyle={mapStyle}
-                onStyleChange={(style) => {
-                  setMapStyle(style);
-                  Storage.setItem('map_style', style);
-                  AudioSys.playSFX('click');
-                  toast({
-                    title: "Map style updated",
-                    description: `Display mode changed to ${style}`,
-                  });
-                }}
-              />
               <div className="text-xs font-mono text-neon-magenta mr-4">
                 <span className="text-cyan-400">DOOMSDAY</span>{' '}
                 <span id="doomsdayTime" className="font-bold">7:00</span>
@@ -5774,6 +5777,28 @@ export default function NoradVector() {
                   >
                     {opt.label.toUpperCase()}
                   </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="options-section">
+            <h3 className="options-section__heading">MAP DISPLAY STYLE</h3>
+            <p className="options-section__subheading">Choose how the global map is rendered.</p>
+            <div className="layout-grid">
+              {MAP_STYLE_OPTIONS.map((option) => {
+                const isActive = mapStyle === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleMapStyleChange(option.value)}
+                    className={`layout-chip${isActive ? ' is-active' : ''}`}
+                    aria-pressed={isActive}
+                  >
+                    <span className="layout-chip__label">{option.label}</span>
+                    <span className="layout-chip__description">{option.description}</span>
+                  </button>
                 );
               })}
             </div>
