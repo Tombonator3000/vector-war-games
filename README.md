@@ -71,3 +71,17 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Running tests
+
+Unit tests are powered by [Vitest](https://vitest.dev/) and the React Testing Library. They cover core gameplay hooks such as `useFlashpoints` to ensure deterministic outcomes for random events.
+
+```sh
+# Install dependencies if you have not already
+npm install
+
+# Execute the test suite
+npm run test
+```
+
+Continuous Integration runs the same `npm run test` command to guard against regressions whenever code is pushed or a pull request is opened.
