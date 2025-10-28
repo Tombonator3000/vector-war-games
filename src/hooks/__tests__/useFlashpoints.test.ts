@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { useFlashpoints } from '../useFlashpoints';
+import { calculateFlashpointProbability, useFlashpoints } from '../useFlashpoints';
 
 describe('useFlashpoints', () => {
   afterEach(() => {
@@ -87,5 +87,25 @@ describe('useFlashpoints', () => {
       result: 'failure'
     });
     expect(result.current.activeFlashpoint).toBeNull();
+  });
+});
+
+describe('calculateFlashpointProbability', () => {
+  it('aligns with documented scaling factors', () => {
+    const lowTurnLowTension = calculateFlashpointProbability(10, 5);
+    const highTurnHighTension = calculateFlashpointProbability(100, 1);
+
+    expect(lowTurnLowTension).toBeCloseTo(0.02 * (6 - 5) * (10 / 50));
+    expect(highTurnHighTension).toBeCloseTo(0.02 * (6 - 1) * 2); // turn multiplier capped at 2
+    expect(highTurnHighTension).toBeGreaterThan(lowTurnLowTension);
+  });
+
+  it('clamps probability within the 0-1 range and normalizes inputs', () => {
+    expect(calculateFlashpointProbability(-5, 10)).toBe(0); // negative turns treated as zero
+
+    const clampedHigh = calculateFlashpointProbability(5000, -3);
+    expect(clampedHigh).toBeLessThanOrEqual(1);
+    expect(clampedHigh).toBeGreaterThanOrEqual(0);
+    expect(clampedHigh).toBeCloseTo(0.02 * (6 - 1) * 2); // defcon and turn values are normalized
   });
 });
