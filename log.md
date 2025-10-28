@@ -51,3 +51,4 @@
 | 2025-10-28T18:28:18Z | Expanded roadmap documentation with clandestine biomass logistics details, occupation economy event chain and sabotage hooks, and Phase 3 harvest pipeline victory paths. |
 | 2025-10-28T18:34:52Z | Reviewed Phase 3 roadmap finale to plan campaign packaging, operation reskins, and acceptance criteria scope. |
 | 2025-10-28T18:37:38Z | Added campaign packaging section detailing acts, operation reskins, and completion criteria for alien conversion roadmap. |
+| 2025-10-28T18:59:20Z | Added newsroom banter pools to base AI script and XL pack to support `banterSay('news', ...)`. |
