@@ -208,7 +208,7 @@ function EarthWithTextures({
   vectorTexture: THREE.Texture | null;
 }) {
   const textureUrls = useMemo(() => {
-    const baseUrl = import.meta.env.BASE_URL;
+    const baseUrl = import.meta.env.BASE_URL || '/';
     const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
     return [
       `${normalizedBase}textures/earth_day.jpg`,
@@ -217,33 +217,18 @@ function EarthWithTextures({
     ];
   }, []);
 
-  // Use React Three Fiber's useLoader for proper texture loading with Suspense
-  const [dayMap, normalMap, specularMap] = useLoader(
-    THREE.TextureLoader,
-    textureUrls,
-    (loader) => {
-      // Success callback
-      console.log('Earth textures loaded successfully');
-    },
-    (error) => {
-      // Error callback
-      console.error('Failed to load Earth textures:', error);
-    }
-  );
+  // Load textures with proper error handling
+  const [dayMap, normalMap, specularMap] = useLoader(THREE.TextureLoader, textureUrls);
 
   // Configure textures for optimal quality
   useEffect(() => {
-    if (dayMap) {
-      dayMap.colorSpace = THREE.SRGBColorSpace;
-      dayMap.anisotropy = 16; // Improve texture quality at angles
-    }
-    if (normalMap) {
-      normalMap.anisotropy = 16;
-    }
-    if (specularMap) {
-      specularMap.colorSpace = THREE.SRGBColorSpace;
-      specularMap.anisotropy = 16;
-    }
+    [dayMap, normalMap, specularMap].forEach((texture, idx) => {
+      if (texture) {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = 16;
+        texture.needsUpdate = true;
+      }
+    });
   }, [dayMap, normalMap, specularMap]);
 
   return (
@@ -310,10 +295,15 @@ function SceneContent({
 
   return (
     <>
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[6, 4, 3]} intensity={1.2} castShadow />
-      <directionalLight position={[-5, -3, -6]} intensity={0.4} color={new THREE.Color('#0af')} />
-      <Suspense fallback={null}>
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[6, 4, 3]} intensity={1.5} castShadow />
+      <directionalLight position={[-5, -3, -6]} intensity={0.5} color={new THREE.Color('#0af')} />
+      <Suspense fallback={
+        <mesh ref={earthRef}>
+          <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
+          <meshStandardMaterial color="#1a4d6d" />
+        </mesh>
+      }>
         <EarthWithTextures earthRef={earthRef} vectorTexture={texture} />
       </Suspense>
       <CityLights nations={nations} />

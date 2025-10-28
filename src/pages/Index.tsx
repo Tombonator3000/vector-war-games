@@ -16,6 +16,8 @@ import { FlashpointModal } from '@/components/FlashpointModal';
 import GlobeScene, { PickerFn, ProjectorFn } from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
 import { TutorialGuide } from '@/components/TutorialGuide';
+import { TutorialOverlay } from '@/components/TutorialOverlay';
+import { useTutorial } from '@/hooks/useTutorial';
 import { GameHelper } from '@/components/GameHelper';
 
 // Storage wrapper for localStorage
@@ -3326,6 +3328,53 @@ export default function NoradVector() {
     return advancePandemicTurn(context);
   }, [pandemicIntegrationEnabled, advancePandemicTurn]);
 
+  // Progressive tutorial system
+  const tutorialSteps = [
+    {
+      id: 'welcome',
+      title: 'Velkommen til NORAD Command',
+      description: 'Du er kommandør for en supermakt. Målet er å overleve og dominere gjennom strategi, diplomati og militær makt.',
+      position: 'center' as const,
+      allowSkip: true,
+    },
+    {
+      id: 'defcon',
+      title: 'DEFCON Status',
+      description: 'DEFCON viser krigsberedskap. Jo lavere tall, jo nærmere atomkrig. Hold et øye med dette!',
+      target: '#defcon',
+      position: 'bottom' as const,
+    },
+    {
+      id: 'resources',
+      title: 'Ressurspanel',
+      description: 'Her ser du produksjon, uran og intel. Disse regenereres hver runde og brukes til å bygge og forske.',
+      target: '.hud-module:has(#production)',
+      position: 'left' as const,
+    },
+    {
+      id: 'build',
+      title: 'Byggemeny',
+      description: 'Klikk BUILD for å konstruere raketter, bombefly og forsvar. Husk å montere stridshoder!',
+      target: 'button:has(.lucide-factory)',
+      position: 'top' as const,
+    },
+    {
+      id: 'research',
+      title: 'Forskningssystem',
+      description: 'Forsk frem kraftigere våpen og forsvarsssystemer. Hver teknologi tar flere runder.',
+      target: 'button:has(.lucide-microscope)',
+      position: 'top' as const,
+    },
+    {
+      id: 'globe',
+      title: 'Globeinteraksjon',
+      description: 'Klikk på fiendtlige nasjoner for å se detaljer og utføre handlinger. Satellitter avslører mer info.',
+      position: 'center' as const,
+    },
+  ];
+
+  const { showTutorial: showProgressiveTutorial, handleComplete, handleSkip } = useTutorial('progressive_onboarding', tutorialSteps);
+
   // Expose functions globally for game loop access
   const addNewsItemRef = useRef(addNewsItem);
   const triggerRandomFlashpointRef = useRef(triggerRandomFlashpoint);
@@ -5960,6 +6009,14 @@ export default function NoradVector() {
           Storage.setItem('has_seen_tutorial', 'true');
         }} 
       />
+
+      {showProgressiveTutorial && isGameStarted && (
+        <TutorialOverlay 
+          steps={tutorialSteps}
+          onComplete={handleComplete}
+          onSkip={handleSkip}
+        />
+      )}
       
       <GameHelper />
     </div>
