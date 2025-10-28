@@ -14,6 +14,9 @@
   - Dynamic mission log tracking planetary resistance
 - [ ] **Resource Pillars**
   - Biomass (humans as sustenance)
+    - Clandestine biomass processing ships cycling between orbital bays and hidden ocean trawlers to avoid radar sweeps.
+    - Nutrient quotas per continent feeding weekly harvest tallies and triggering council debates when targets slip.
+    - Civilian cover stories (relief barges, quarantine barges) shielding population extractions from Phase 1 resistance intel.
   - Hydrosiphon reserves (Earth water extraction)
   - Empathic capital (goodwill for benevolent path)
 - [ ] **Doctrine Selection System**
@@ -81,6 +84,8 @@
 - [ ] **Occupation Economy**
   - Water siphon infrastructure network
   - Biomass processing facilities with moral backlash
+    - Mini event chain cycling supply raids, covert human farm management, synthetic substitute research trials, and escalating moral backlash meters.
+    - Resistance sabotage triggers seeded by uncovered logistics hubs; failure states spike rebellion risk and cripple nutrient quotas.
   - Black market & smuggling counter-systems
 - [ ] **Hybrid Governance**
   - Puppet governments with loyalty traits
@@ -110,6 +115,7 @@
   - Branches for: humans as food, water theft, saving Earth, fleeing galactic war
   - Player choice-driven flashbacks shaping council politics
   - Moral consequence tracker altering victory conditions
+  - Exposure or reform of the biomass harvest pipeline unlocks alternate victory paths (synthetic food breakthrough vs. purge order), cross-linking Phase 2 Occupation Economy outcomes with endgame doctrine pivots.
 - [ ] **Internal Council Politics**
   - Factions for Purists, Pragmatists, Harmonists
   - Loyalty, influence, and coup mechanics
