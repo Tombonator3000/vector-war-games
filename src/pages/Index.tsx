@@ -5642,99 +5642,107 @@ export default function NoradVector() {
             </div>
           </header>
 
-          {/* Minimal bottom icon bar */}
-          <div className="fixed bottom-0 left-0 right-0 h-16 sm:h-20 bg-black/90 border-t border-cyan-500/30 backdrop-blur-sm pointer-events-auto touch-auto z-50">
-            <div className="h-full flex items-center justify-center gap-1 px-4">
-              <Button
-                onClick={handleBuild}
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                title="BUILD - Production and construction"
-              >
-                <Factory className="h-5 w-5" />
-                <span className="text-[8px] font-mono">BUILD</span>
-              </Button>
-              
-              <Button
-                onClick={handleResearch}
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                title="RESEARCH - Technology advancement"
-              >
-                <Microscope className="h-5 w-5" />
-                <span className="text-[8px] font-mono">RESEARCH</span>
-              </Button>
-              
-              <Button
-                onClick={handleIntel}
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                title="INTEL - Intelligence operations"
-              >
-                <Satellite className="h-5 w-5" />
-                <span className="text-[8px] font-mono">INTEL</span>
-              </Button>
-              
-              <Button
-                onClick={handleCulture}
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                title="CULTURE - Cultural warfare"
-              >
-                <Radio className="h-5 w-5" />
-                <span className="text-[8px] font-mono">CULTURE</span>
-              </Button>
-              
-              <Button
-                onClick={handleImmigration}
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                title="IMMIGRATION - Population management"
-              >
-                <Users className="h-5 w-5" />
-                <span className="text-[8px] font-mono">IMMIGR</span>
-              </Button>
-              
-              <Button
-                onClick={handleDiplomacy}
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                title="DIPLOMACY - International relations"
-              >
-                <Handshake className="h-5 w-5" />
-                <span className="text-[8px] font-mono">DIPLO</span>
-              </Button>
-              
-              <div className="w-px h-8 bg-cyan-500/30 mx-2" />
-              
-              <Button
-                onClick={handleAttack}
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 sm:h-14 sm:w-14 text-red-400 hover:text-red-300 hover:bg-red-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                title="ATTACK - Launch nuclear strike"
-              >
-                <Zap className="h-5 w-5" />
-                <span className="text-[8px] font-mono">ATTACK</span>
-              </Button>
+          {/* Minimal bottom utility stack */}
+          <div className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50">
+            <div className="flex flex-col gap-1">
+              <NewsTicker
+                items={newsItems}
+                className="pointer-events-auto touch-auto"
+              />
+              <div className="h-16 sm:h-20 bg-black/90 border-t border-cyan-500/30 backdrop-blur-sm pointer-events-auto touch-auto">
+                <div className="h-full flex items-center justify-center gap-1 px-4">
+                  <Button
+                    onClick={handleBuild}
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                    title="BUILD - Production and construction"
+                  >
+                    <Factory className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">BUILD</span>
+                  </Button>
 
-              <div className="w-px h-8 bg-cyan-500/30 mx-2" />
-              
-              <Button
-                onClick={handleEndTurn}
-                variant="ghost"
-                className="h-12 sm:h-14 px-4 sm:px-6 text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                title="END TURN"
-              >
-                <ArrowRight className="h-5 w-5" />
-                <span className="text-[8px] font-mono">END TURN</span>
-              </Button>
+                  <Button
+                    onClick={handleResearch}
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                    title="RESEARCH - Technology advancement"
+                  >
+                    <Microscope className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">RESEARCH</span>
+                  </Button>
+
+                  <Button
+                    onClick={handleIntel}
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                    title="INTEL - Intelligence operations"
+                  >
+                    <Satellite className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">INTEL</span>
+                  </Button>
+
+                  <Button
+                    onClick={handleCulture}
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                    title="CULTURE - Cultural warfare"
+                  >
+                    <Radio className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">CULTURE</span>
+                  </Button>
+
+                  <Button
+                    onClick={handleImmigration}
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                    title="IMMIGRATION - Population management"
+                  >
+                    <Users className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">IMMIGR</span>
+                  </Button>
+
+                  <Button
+                    onClick={handleDiplomacy}
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                    title="DIPLOMACY - International relations"
+                  >
+                    <Handshake className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">DIPLO</span>
+                  </Button>
+
+                  <div className="w-px h-8 bg-cyan-500/30 mx-2" />
+
+                  <Button
+                    onClick={handleAttack}
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 sm:h-14 sm:w-14 text-red-400 hover:text-red-300 hover:bg-red-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                    title="ATTACK - Launch nuclear strike"
+                  >
+                    <Zap className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">ATTACK</span>
+                  </Button>
+
+                  <div className="w-px h-8 bg-cyan-500/30 mx-2" />
+
+                  <Button
+                    onClick={handleEndTurn}
+                    variant="ghost"
+                    className="h-12 sm:h-14 px-4 sm:px-6 text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                    title="END TURN"
+                  >
+                    <ArrowRight className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">END TURN</span>
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -5920,7 +5928,6 @@ export default function NoradVector() {
         enabled={pandemicIntegrationEnabled}
         biowarfareEnabled={bioWarfareEnabled}
       />
-      <NewsTicker items={newsItems} />
 
       {activeFlashpoint && (
         <FlashpointModal
