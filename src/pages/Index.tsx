@@ -4098,6 +4098,26 @@ export default function NoradVector() {
       nations.map(nation => ({ id: nation.id, isPlayer: nation.isPlayer }))
     );
   });
+
+  const selectedLeaderGlobal = S.selectedLeader;
+  const selectedDoctrineGlobal = S.selectedDoctrine;
+  const playerNameGlobal = S.playerName;
+
+  useEffect(() => {
+    if (isGameStarted) {
+      return;
+    }
+
+    if (gamePhase !== 'game') {
+      return;
+    }
+
+    if (!selectedLeaderGlobal || !selectedDoctrineGlobal || !playerNameGlobal) {
+      return;
+    }
+
+    setIsGameStarted(true);
+  }, [gamePhase, isGameStarted, playerNameGlobal, selectedDoctrineGlobal, selectedLeaderGlobal]);
   const [uiTick, setUiTick] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
@@ -6929,13 +6949,6 @@ export default function NoradVector() {
 
   if (gamePhase === 'doctrine') {
     return renderDoctrineSelection();
-  }
-
-  if (!isGameStarted && gamePhase === 'game') {
-    // Auto-start game when entering game phase, but only after selections are ready
-    if (S.selectedLeader && S.selectedDoctrine && S.playerName) {
-      setIsGameStarted(true);
-    }
   }
 
   const buildAllowed = canExecute('BUILD');
