@@ -82,6 +82,7 @@ interface Nation {
   deepRecon?: Record<string, number>;
   sanctionTurns?: number;
   sanctioned?: boolean;
+  sanctionedBy?: Record<string, number>;
   environmentPenaltyTurns?: number;
 }
 
@@ -1385,6 +1386,232 @@ function isEligibleEnemyTarget(player: Nation | null, target: Nation): boolean {
   return true;
 }
 
+function getNationById(id: string): Nation | undefined {
+  return nations.find(n => n.id === id);
+}
+
+function ensureTreatyRecord(self: Nation, other: Nation) {
+  self.treaties = self.treaties || {};
+  self.treaties[other.id] = self.treaties[other.id] || {};
+  return self.treaties[other.id];
+}
+
+function adjustThreat(nation: Nation, otherId: string, delta: number) {
+  nation.threats = nation.threats || {};
+  const next = Math.max(0, Math.min(100, (nation.threats[otherId] || 0) + delta));
+  if (next <= 0) {
+    delete nation.threats[otherId];
+  } else {
+    nation.threats[otherId] = next;
+  }
+}
+
+function aiLogDiplomacy(actor: Nation, message: string) {
+  log(`${actor.name} ${message}`);
+}
+
+function aiSignMutualTruce(actor: Nation, target: Nation, turns: number, reason?: string) {
+  const treaty = ensureTreatyRecord(actor, target);
+  const reciprocal = ensureTreatyRecord(target, actor);
+  treaty.truceTurns = Math.max(treaty.truceTurns || 0, turns);
+  reciprocal.truceTurns = Math.max(reciprocal.truceTurns || 0, turns);
+  aiLogDiplomacy(actor, `agrees to a ${turns}-turn truce with ${target.name}${reason ? ` (${reason})` : ''}.`);
+  adjustThreat(actor, target.id, -3);
+  adjustThreat(target, actor.id, -2);
+}
+
+function aiSignNonAggressionPact(actor: Nation, target: Nation): boolean {
+  const cost = { intel: 15 };
+  if (!canAfford(actor, cost)) return false;
+  pay(actor, cost);
+  aiSignMutualTruce(actor, target, 5, 'non-aggression pact');
+  return true;
+}
+
+function aiFormAlliance(actor: Nation, target: Nation): boolean {
+  const cost = { production: 10, intel: 40 };
+  if (!canAfford(actor, cost)) return false;
+  pay(actor, cost);
+  const treaty = ensureTreatyRecord(actor, target);
+  const reciprocal = ensureTreatyRecord(target, actor);
+  treaty.truceTurns = 999;
+  reciprocal.truceTurns = 999;
+  treaty.alliance = true;
+  reciprocal.alliance = true;
+  aiLogDiplomacy(actor, `enters an alliance with ${target.name}.`);
+  adjustThreat(actor, target.id, -5);
+  adjustThreat(target, actor.id, -5);
+  return true;
+}
+
+function aiSendAid(actor: Nation, target: Nation): boolean {
+  const cost = { production: 20 };
+  if (!canAfford(actor, cost)) return false;
+  pay(actor, cost);
+  target.instability = Math.max(0, (target.instability || 0) - 10);
+  aiLogDiplomacy(actor, `sends economic aid to ${target.name}, reducing their instability.`);
+  adjustThreat(target, actor.id, -2);
+  return true;
+}
+
+function aiImposeSanctions(actor: Nation, target: Nation): boolean {
+  if (target.sanctioned && target.sanctionedBy?.[actor.id]) return false;
+  const cost = { intel: 15 };
+  if (!canAfford(actor, cost)) return false;
+  pay(actor, cost);
+  target.sanctioned = true;
+  target.sanctionTurns = Math.max(5, (target.sanctionTurns || 0) + 5);
+  target.sanctionedBy = target.sanctionedBy || {};
+  target.sanctionedBy[actor.id] = (target.sanctionedBy[actor.id] || 0) + 5;
+  aiLogDiplomacy(actor, `imposes sanctions on ${target.name}.`);
+  adjustThreat(target, actor.id, 3);
+  return true;
+}
+
+function aiBreakTreaties(actor: Nation, target: Nation, reason?: string): boolean {
+  const treaty = ensureTreatyRecord(actor, target);
+  const reciprocal = ensureTreatyRecord(target, actor);
+  const hadAgreements = !!(treaty.truceTurns || treaty.alliance);
+  if (!hadAgreements) return false;
+  delete treaty.truceTurns;
+  delete reciprocal.truceTurns;
+  delete treaty.alliance;
+  delete reciprocal.alliance;
+  aiLogDiplomacy(actor, `terminates agreements with ${target.name}${reason ? ` (${reason})` : ''}.`);
+  adjustThreat(actor, target.id, 6);
+  adjustThreat(target, actor.id, 8);
+  return true;
+}
+
+function aiRespondToSanctions(actor: Nation): boolean {
+  if (!actor.sanctioned || !actor.sanctionedBy) return false;
+  const sanctioners = Object.keys(actor.sanctionedBy)
+    .map(id => getNationById(id))
+    .filter((nation): nation is Nation => !!nation && nation.population > 0);
+
+  if (sanctioners.length === 0) return false;
+
+  const prioritized = sanctioners.sort((a, b) => {
+    const aThreat = actor.threats?.[a.id] || 0;
+    const bThreat = actor.threats?.[b.id] || 0;
+    return bThreat - aThreat;
+  });
+
+  const topSanctioner = prioritized[0];
+  if (!topSanctioner) return false;
+
+  // Try counter-sanctions if affordable and no alliance
+  const treaty = actor.treaties?.[topSanctioner.id];
+  if ((!treaty || !treaty.alliance) && aiImposeSanctions(actor, topSanctioner)) {
+    aiLogDiplomacy(actor, `retaliates against ${topSanctioner.name} for sanctions.`);
+    return true;
+  }
+
+  // Attempt to de-escalate via truce if counter-sanctions failed
+  if (!treaty?.truceTurns) {
+    aiSignMutualTruce(actor, topSanctioner, 2, 'attempting to ease sanctions');
+    return true;
+  }
+
+  return false;
+}
+
+function aiHandleTreatyStrain(actor: Nation): boolean {
+  if (!actor.treaties) return false;
+  const strained = Object.entries(actor.treaties)
+    .map(([id, treaty]) => ({ id, treaty, partner: getNationById(id) }))
+    .filter(({ treaty, partner }) => partner && (treaty?.truceTurns || treaty?.alliance));
+
+  for (const { id, treaty, partner } of strained) {
+    if (!partner) continue;
+    const threat = actor.threats?.[id] || 0;
+    if (threat > 12) {
+      return aiBreakTreaties(actor, partner, 'due to rising hostilities');
+    }
+    if (treaty?.alliance && partner.sanctionedBy?.[actor.id]) {
+      // Alliance member sanctioning us is a breach
+      return aiBreakTreaties(actor, partner, 'after alliance breach');
+    }
+  }
+
+  return false;
+}
+
+function aiHandleDiplomaticUrgencies(actor: Nation): boolean {
+  if (aiRespondToSanctions(actor)) {
+    return true;
+  }
+
+  if (aiHandleTreatyStrain(actor)) {
+    return true;
+  }
+
+  return false;
+}
+
+function aiAttemptDiplomacy(actor: Nation): boolean {
+  const others = nations.filter(n => n !== actor && n.population > 0);
+  if (others.length === 0) return false;
+
+  const sortedByThreat = others
+    .map(target => ({ target, threat: actor.threats?.[target.id] || 0 }))
+    .sort((a, b) => b.threat - a.threat);
+
+  const highest = sortedByThreat[0];
+  if (highest && highest.threat >= 8) {
+    const treaty = actor.treaties?.[highest.target.id];
+    if (!treaty?.truceTurns) {
+      if (highest.threat >= 12 && aiSignNonAggressionPact(actor, highest.target)) {
+        return true;
+      }
+      aiSignMutualTruce(actor, highest.target, 2, 'to diffuse tensions');
+      return true;
+    }
+    if (!treaty?.alliance && highest.threat >= 15 && aiBreakTreaties(actor, highest.target, 'after repeated provocations')) {
+      return true;
+    }
+  }
+
+  // Sanction persistently hostile nations
+  const sanctionTarget = sortedByThreat.find(entry => entry.threat >= 10 && !actor.treaties?.[entry.target.id]?.alliance);
+  if (sanctionTarget && Math.random() < 0.6 && aiImposeSanctions(actor, sanctionTarget.target)) {
+    return true;
+  }
+
+  // Support unstable allies or low-threat partners
+  const aidCandidate = others
+    .filter(target => (actor.treaties?.[target.id]?.alliance || actor.treaties?.[target.id]?.truceTurns) && (target.instability || 0) >= 10)
+    .sort((a, b) => (b.instability || 0) - (a.instability || 0))[0];
+
+  if (aidCandidate && aiSendAid(actor, aidCandidate)) {
+    return true;
+  }
+
+  // Form alliances with trusted nations occasionally
+  if (Math.random() < 0.15) {
+    const allianceCandidate = others
+      .filter(target => {
+        const threat = actor.threats?.[target.id] || 0;
+        const treaty = actor.treaties?.[target.id];
+        return threat <= 2 && !(treaty?.alliance);
+      })
+      .sort((a, b) => (actor.threats?.[a.id] || 0) - (actor.threats?.[b.id] || 0))[0];
+
+    if (allianceCandidate && aiFormAlliance(actor, allianceCandidate)) {
+      return true;
+    }
+  }
+
+  // Offer truces when moderately threatened
+  const moderateThreat = sortedByThreat.find(entry => entry.threat >= 5 && !(actor.treaties?.[entry.target.id]?.truceTurns));
+  if (moderateThreat && Math.random() < 0.6) {
+    aiSignMutualTruce(actor, moderateThreat.target, 2);
+    return true;
+  }
+
+  return false;
+}
+
 function startResearch(tier: number | string): boolean {
   const player = PlayerManager.get();
   if (!player) return false;
@@ -1950,7 +2177,28 @@ function productionPhase() {
       });
     }
 
-    if (n.sanctionTurns && n.sanctionTurns > 0) {
+    if (n.sanctionedBy) {
+      Object.keys(n.sanctionedBy).forEach(id => {
+        const remaining = Math.max(0, (n.sanctionedBy?.[id] || 0) - 1);
+        if (remaining <= 0) {
+          if (n.sanctionedBy) {
+            delete n.sanctionedBy[id];
+          }
+        } else if (n.sanctionedBy) {
+          n.sanctionedBy[id] = remaining;
+        }
+      });
+
+      if (n.sanctionedBy && Object.keys(n.sanctionedBy).length === 0) {
+        delete n.sanctionedBy;
+        n.sanctioned = false;
+        delete n.sanctionTurns;
+        log(`Sanctions on ${n.name} expired.`, 'success');
+      } else if (n.sanctionedBy) {
+        n.sanctioned = true;
+        n.sanctionTurns = Object.values(n.sanctionedBy).reduce((total, turns) => total + turns, 0);
+      }
+    } else if (n.sanctionTurns && n.sanctionTurns > 0) {
       n.sanctionTurns--;
       if (n.sanctionTurns <= 0) {
         n.sanctioned = false;
@@ -3028,10 +3276,21 @@ function aiTurn(n: Nation) {
   
   const player = PlayerManager.get();
   const playerThreat = player ? (n.threats?.[player.id] || 0) : 0;
-  
+
   // Strategic decision tree
   const r = Math.random();
-  
+
+  if (aiHandleDiplomaticUrgencies(n)) {
+    return;
+  }
+
+  const diplomacyBias = 0.18 + Math.max(0, defenseMod * 0.5) + (n.ai === 'defensive' ? 0.1 : 0) + (n.ai === 'balanced' ? 0.05 : 0);
+  if (Math.random() < diplomacyBias) {
+    if (aiAttemptDiplomacy(n)) {
+      return;
+    }
+  }
+
   // 1. RESEARCH - Advance technology
   if (r < 0.08 + intelMod && !n.researchQueue) {
     const availableResearch = RESEARCH_TREE.filter(project => {
@@ -5365,6 +5624,8 @@ export default function NoradVector() {
           commander.intel -= 15;
           target.sanctioned = true;
           target.sanctionTurns = (target.sanctionTurns || 0) + 5;
+          target.sanctionedBy = target.sanctionedBy || {};
+          target.sanctionedBy[commander.id] = (target.sanctionedBy[commander.id] || 0) + 5;
           log(`Sanctions imposed on ${target.name} for 5 turns.`);
           updateDisplay();
           consumeAction();
