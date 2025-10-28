@@ -4040,10 +4040,11 @@ export default function NoradVector() {
         if (state.conventionalDeltas) {
           conventionalDeltas = state.conventionalDeltas.map(delta => ({ ...delta }));
         }
+
+        updateDisplay();
       } finally {
         suppressMultiplayerBroadcast = false;
       }
-      updateDisplay();
     });
     return unsubscribe;
   }, [registerStateListener]);
