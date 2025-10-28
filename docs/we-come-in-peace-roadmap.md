@@ -148,6 +148,33 @@
 
 ---
 
+## 🎭 Campaign Mode Packaging
+
+Leveraging the Phase 1 **Mission Generator** foundations and the Phase 3 **Dynamic Campaign Generator**, the alien campaign is packaged into three escalating acts. Each act stitches authored story beats to procedural objectives so narrative teams can scope bespoke encounters while systems dynamically remix resistance pacing.
+
+- **Act I – Orbital Foothold (6 missions)**
+  - Mission mix: 3 authored landings, 3 generated harvest/covert ops from the Mission Generator.
+  - Unlock trigger: Available at campaign start; Act II unlocks once two planetary regions drop below 40% resistance and the council ratifies the initial doctrine alignment.
+- **Act II – Planetary Pressure (8 missions)**
+  - Mission mix: 4 scripted council flashpoints, 4 adaptive suppression/propaganda sorties seeded by the Mission Generator using regional unrest weights.
+  - Unlock trigger: Requires completion of Act I, plus at least one Dynamic Campaign Generator branch (e.g., divergent human coalition tech tree) and sustained biomass quotas for three consecutive turns.
+- **Act III – Convergence Gambit (5 missions + finale)**
+  - Mission mix: 3 bespoke finale lead-ins tied to motivation reveal chains, 2 dynamically selected retaliation counter-ops, and a branching final mission authored per doctrine path.
+  - Unlock trigger: Opens when the Dynamic Campaign Generator flags both a human retaliation escalation and an internal council crisis, forcing players to resolve a loyalty vote before progressing.
+
+### Operation Re-skins & UI Hooks
+- **Propaganda** (Index.tsx `propaganda` intel action) becomes **Resonance Broadcasts**, flavoring instability as psychic empathy surges. Requires a new orbital relay meter on the Intelligence Ops sheet that only appears after Act I tutorials, plus state gating that checks the council approved "Broadcast Charter".
+- **Culture Warfare** (Index.tsx `culture_bomb`, `meme`, `cancel`, `deepfake`, `eco` actions) is reframed as **Empathic Assimilation**, translating population theft into "sanctuary resettlement" and debuffs into trust corrosion. UI needs doctrine-tinted tooltips and a campaign flag preventing deepfake deployments until Act II when the Empathy Engine research card is unlocked.
+- **Sabotage** (Index.tsx `sabotage` intel action) transforms into **Nanite Sabotage Raids**, with destructive payloads justified as infrastructure pruning. Introduce a readiness alert in the target selector showing required nanite stockpiles and lock the button whenever resistance above 70% would trigger immediate human retaliation (new state check).
+
+### Campaign Completion Acceptance Criteria
+- **Act Gates:** Players must clear all missions in each act and meet unlock triggers before subsequent acts spawn; mission generator retries cannot bypass council votes or resistance thresholds.
+- **Council Votes:** Final act requires a unanimous loyalty vote or a passed emergency override (2/3 majority) to greenlight the finale mission, recording the outcome for save-state continuity.
+- **Resistance Thresholds:** Campaign completion flags only if global resistance averages under 45% or, for benevolent doctrines, empathy goodwill exceeds 65%; exceeding thresholds branches into a rebellion end state that must be resolved before credits.
+- **Save-State Hooks:** Mission completions, vote tallies, and resistance averages are written to the dynamic campaign state tree so the scripting team can author re-entry beats and NG+ unlocks.
+
+---
+
 ## 🧪 Phase 4: Polish & Community Expansion (Weeks 12-14)
 
 - [ ] **Accessibility & Localization**
