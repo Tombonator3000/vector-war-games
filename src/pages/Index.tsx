@@ -810,11 +810,34 @@ class DoomsdayClock {
 }
 
 // Audio System
+const withBaseUrl = (path: string) => {
+  const base = import.meta.env.BASE_URL ?? '/';
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+  const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+  return `${normalizedBase}${normalizedPath}`;
+};
+
 const MUSIC_TRACKS = [
-  { id: 'vector-command', title: 'Vector Command Briefing', file: '/Muzak/vector-command.mp3' },
-  { id: 'night-operations', title: 'Night Operations', file: '/Muzak/night-operations.mp3' },
-  { id: 'diplomatic-channel', title: 'Diplomatic Channel', file: '/Muzak/diplomatic-channel.mp3' },
-  { id: 'tactical-escalation', title: 'Tactical Escalation', file: '/Muzak/tactical-escalation.mp3' }
+  {
+    id: 'vector-command',
+    title: 'Vector Command Briefing',
+    file: withBaseUrl('Muzak/vector-command.mp3'),
+  },
+  {
+    id: 'night-operations',
+    title: 'Night Operations',
+    file: withBaseUrl('Muzak/night-operations.mp3'),
+  },
+  {
+    id: 'diplomatic-channel',
+    title: 'Diplomatic Channel',
+    file: withBaseUrl('Muzak/diplomatic-channel.mp3'),
+  },
+  {
+    id: 'tactical-escalation',
+    title: 'Tactical Escalation',
+    file: withBaseUrl('Muzak/tactical-escalation.mp3'),
+  },
 ] as const;
 type MusicTrack = (typeof MUSIC_TRACKS)[number];
 type MusicTrackId = MusicTrack['id'];
