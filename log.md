@@ -43,3 +43,5 @@
 | 2025-10-28T16:01:46Z | Restaged log updates after recording staging action. |
 | 2025-10-28T16:53:45Z | Added BioForge command sheet toggle, gating permissions, and multiplayer action plumbing for the bio-warfare lab modal. |
 | 2025-10-28T17:17:45Z | Repositioned co-op status into options sheet and kept approval queue anchored to HUD. |
+| 2025-10-28T17:38:06Z | Reviewed audio system safeguards and planned SFX guard updates. |
+| 2025-10-28T17:38:08Z | Hardened SFX playback for missing contexts and reordered options drawer toggle before audio. |
