@@ -941,11 +941,23 @@ const AudioSys = {
   currentTrackId: null as MusicTrackId | null,
   userInteractionPrimed: false,
   trackListeners: new Set<(trackId: MusicTrackId | null) => void>(),
+  audioSupported: true,
 
   init() {
     if (typeof window === 'undefined') return;
+    if (!this.audioSupported) return;
     if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      try {
+        const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContextCtor) {
+          throw new Error('Web Audio API is not available in this browser');
+        }
+        this.audioContext = new AudioContextCtor();
+      } catch (error) {
+        console.warn('Audio context initialization failed; disabling audio features.', error);
+        this.audioSupported = false;
+        this.sfxEnabled = false;
+      }
     }
   },
 
@@ -1177,6 +1189,7 @@ const AudioSys = {
 
   playSFX(type: string) {
     if (!this.sfxEnabled) return;
+    if (!this.audioSupported) return;
     if (!this.audioContext) this.init();
     const context = this.audioContext;
     if (!context) return;
