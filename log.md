@@ -45,3 +45,5 @@
 | 2025-10-28T17:17:45Z | Repositioned co-op status into options sheet and kept approval queue anchored to HUD. |
 | 2025-10-28T17:38:06Z | Reviewed audio system safeguards and planned SFX guard updates. |
 | 2025-10-28T17:38:08Z | Hardened SFX playback for missing contexts and reordered options drawer toggle before audio. |
+| 2025-10-28T18:18:55+00:00 | Reviewed Phase 2 roadmap documentation to scope infiltration propaganda additions. |
+| 2025-10-28T18:19:00+00:00 | Inserted Phase 2 infiltration & propaganda theatre bullet linking disguise ops to Resistance Heat Map metrics. |

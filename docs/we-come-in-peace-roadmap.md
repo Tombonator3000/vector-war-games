@@ -62,6 +62,12 @@
   - Terror scale influencing surrender mechanics
   - Psychological warfare missions (sky glyphs, sonic storms)
   - Diminishing returns versus hardened militaries
+- [ ] **Infiltration & Propaganda Theatre**
+  - Human disguise tech suites for covert envoys, allowing alien agents to masquerade as aid workers and media liaisons.
+  - Staged charity missions and goodwill tours that seed infiltration nodes while feeding infiltration risk values back into the Phase 1 Resistance Heat Map to modulate regional unrest metrics.
+  - Collaborator recruitment playbooks that surface local elites, influencers, and black-market brokers as mission-gated assets.
+  - Resistance journalism counter-ops that plant doctored evidence packages, suppress leaks, or expose human false flags to maintain narrative control.
+  - Branching consequences framework: successful propaganda tour unlocks deeper benevolence routes, while leaked footage escalates unrest and foreshadows Phase 3 revelation chains.
 - [ ] **Human Hero Units**
   - Emergent commanders with adaptive tactics
   - Reputation & morale effects on resistance cells
