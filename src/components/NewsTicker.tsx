@@ -5,7 +5,15 @@ export interface NewsItem {
   text: string;
   priority: 'routine' | 'important' | 'urgent' | 'critical';
   timestamp: number;
-  category: 'military' | 'diplomatic' | 'economic' | 'intel' | 'crisis' | 'environment' | 'science';
+  category:
+    | 'military'
+    | 'diplomatic'
+    | 'economic'
+    | 'intel'
+    | 'crisis'
+    | 'environment'
+    | 'science'
+    | 'governance';
 }
 
 interface NewsTickerProps {
@@ -28,7 +36,8 @@ const CATEGORY_PREFIXES = {
   intel: '🛰️',
   crisis: '⚠️',
   environment: '☢️',
-  science: '🧪'
+  science: '🧪',
+  governance: '🏛️',
 };
 
 export function NewsTicker({ items, speed = 50, className }: NewsTickerProps) {
