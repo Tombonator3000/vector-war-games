@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
-import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight } from 'lucide-react';
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
@@ -19,6 +19,15 @@ import { TutorialGuide } from '@/components/TutorialGuide';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { GameHelper } from '@/components/GameHelper';
+import {
+  useConventionalWarfare,
+  type ConventionalState,
+  type NationConventionalProfile,
+  createDefaultConventionalState,
+  createDefaultNationConventionalProfile,
+} from '@/hooks/useConventionalWarfare';
+import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
+import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -84,6 +93,8 @@ interface Nation {
   sanctioned?: boolean;
   sanctionedBy?: Record<string, number>;
   environmentPenaltyTurns?: number;
+  conventional?: NationConventionalProfile;
+  controlledTerritories?: string[];
 }
 
 interface DiplomacyState {
@@ -122,6 +133,7 @@ interface GameState {
   globalRadiation?: number;
   events?: boolean;
   diplomacy?: DiplomacyState;
+  conventional?: ConventionalState;
 }
 
 type ThemeId =
@@ -306,7 +318,8 @@ let S: GameState = {
   fx: 1,
   nuclearWinterLevel: 0,
   globalRadiation: 0,
-  diplomacy: createDefaultDiplomacyState()
+  diplomacy: createDefaultDiplomacyState(),
+  conventional: createDefaultConventionalState()
 };
 
 let nations: Nation[] = [];
@@ -1754,7 +1767,9 @@ function initNations() {
     treaties: {},
     threats: {},
     migrantsThisTurn: 0,
-    migrantsTotal: 0
+    migrantsTotal: 0,
+    conventional: createDefaultNationConventionalProfile('army'),
+    controlledTerritories: []
   };
 
   // Apply doctrine bonuses
@@ -1811,7 +1826,11 @@ function initNations() {
       satellites: {},
       threats: {},
       migrantsThisTurn: 0,
-      migrantsTotal: 0
+      migrantsTotal: 0,
+      conventional: createDefaultNationConventionalProfile(
+        i === 1 ? 'navy' : i === 2 ? 'air' : 'army'
+      ),
+      controlledTerritories: []
     };
 
     applyDoctrineEffects(nation, aiDoctrine);
@@ -1825,6 +1844,25 @@ function initNations() {
     });
     
     nations.push(nation);
+  });
+
+  const conventionalState = createDefaultConventionalState(
+    nations.map(nation => ({ id: nation.id, isPlayer: nation.isPlayer }))
+  );
+  S.conventional = conventionalState;
+
+  nations.forEach(nation => {
+    const profile = nation.conventional ?? createDefaultNationConventionalProfile();
+    const units = Object.values(conventionalState.units).filter(unit => unit.ownerId === nation.id);
+    nation.conventional = {
+      ...profile,
+      reserve: units.filter(unit => unit.status === 'reserve').length,
+      deployedUnits: units.filter(unit => unit.status === 'deployed').map(unit => unit.id),
+      readiness: profile.readiness,
+    };
+    nation.controlledTerritories = Object.values(conventionalState.territories)
+      .filter(territory => territory.controllingNationId === nation.id)
+      .map(territory => territory.id);
   });
 
   log('=== GAME START ===', 'success');
@@ -3914,6 +3952,20 @@ export default function NoradVector() {
     return true;
   });
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
+  const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
+    const stored = Storage.getItem('conventional_state');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as ConventionalState;
+        return parsed;
+      } catch (error) {
+        console.warn('Failed to parse conventional state cache', error);
+      }
+    }
+    return S.conventional ?? createDefaultConventionalState(
+      nations.map(nation => ({ id: nation.id, isPlayer: nation.isPlayer }))
+    );
+  });
   const [uiTick, setUiTick] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
@@ -3978,6 +4030,35 @@ export default function NoradVector() {
   }, []);
 
   const { pandemicState, triggerPandemic, applyCountermeasure: applyPandemicCountermeasure, advancePandemicTurn } = usePandemic(addNewsItem);
+  const conventional = useConventionalWarfare({
+    initialState: conventionalState,
+    currentTurn: S.turn,
+    getNation: getNationById,
+    onStateChange: setConventionalState,
+    onConsumeAction: consumeAction,
+    onUpdateDisplay: updateDisplay,
+  });
+
+  useEffect(() => {
+    S.conventional = conventional.state;
+    try {
+      Storage.setItem('conventional_state', JSON.stringify(conventional.state));
+    } catch (error) {
+      console.warn('Failed to persist conventional warfare state', error);
+    }
+  }, [conventional.state]);
+
+  const {
+    units: conventionalUnits,
+    territories: conventionalTerritories,
+    templates: conventionalTemplatesMap,
+    logs: conventionalLogs,
+    trainUnit: trainConventionalUnit,
+    deployUnit: deployConventionalUnit,
+    resolveBorderConflict: resolveConventionalBorderConflict,
+    resolveProxyEngagement: resolveConventionalProxyEngagement,
+    getUnitsForNation: getConventionalUnitsForNation,
+  } = conventional;
 
   const handlePandemicTrigger = useCallback((payload: PandemicTriggerPayload) => {
     if (!pandemicIntegrationEnabled) {
@@ -4132,6 +4213,7 @@ export default function NoradVector() {
           selectedLeader: S.selectedLeader,
           selectedDoctrine: S.selectedDoctrine,
           doomsdayMinutes: DoomsdayClock.minutes,
+          conventional: S.conventional,
         },
       };
       Storage.setItem('save_snapshot', JSON.stringify(payload));
@@ -4508,6 +4590,167 @@ export default function NoradVector() {
   const closeModal = useCallback(() => {
     setShowModal(false);
   }, []);
+
+  const renderMilitaryModal = useCallback((): ReactNode => {
+    const player = PlayerManager.get();
+    if (!player) {
+      return <div className="text-sm text-cyan-200">No player nation data available.</div>;
+    }
+
+    const playerUnits = getConventionalUnitsForNation(player.id);
+    const territoryList = Object.values(conventionalTerritories);
+    const templates = Object.values(conventionalTemplatesMap);
+    const recentLogs = [...conventionalLogs].slice(-6).reverse();
+
+    const profile: NationConventionalProfile = {
+      ...(player.conventional ?? createDefaultNationConventionalProfile()),
+      reserve: playerUnits.filter(unit => unit.status === 'reserve').length,
+      deployedUnits: playerUnits.filter(unit => unit.status === 'deployed').map(unit => unit.id),
+    };
+
+    const handleTrain = (templateId: string) => {
+      const result = trainConventionalUnit(player.id, templateId);
+      if (!result.success) {
+        toast({
+          title: 'Unable to queue formation',
+          description:
+            result.reason === 'Insufficient resources'
+              ? 'Production, intel, or uranium shortfall for this formation.'
+              : 'Requested formation template is unavailable.',
+        });
+        return;
+      }
+
+      const template = conventionalTemplatesMap[templateId];
+      toast({ title: 'Formation queued', description: `${template?.name ?? 'New unit'} added to reserves.` });
+      addNewsItem('military', `${player.name} mobilises ${template?.name ?? 'new forces'}`, 'important');
+    };
+
+    const handleDeployUnit = (unitId: string, territoryId: string) => {
+      const result = deployConventionalUnit(unitId, territoryId);
+      if (!result.success) {
+        toast({ title: 'Deployment failed', description: result.reason ?? 'Unable to deploy selected unit.' });
+        return;
+      }
+
+      const territory = conventionalTerritories[territoryId];
+      toast({
+        title: 'Unit deployed',
+        description: `${player.name} reinforces ${territory?.name ?? 'forward position'}.`,
+      });
+      addNewsItem('military', `${player.name} deploys assets to ${territory?.name ?? territoryId}`, 'important');
+    };
+
+    const handleBorderConflict = (territoryId: string, defenderId: string) => {
+      const territory = conventionalTerritories[territoryId];
+      const result = resolveConventionalBorderConflict(territoryId, player.id, defenderId);
+      if (!result.success) {
+        toast({ title: 'Conflict aborted', description: 'Border offensive could not be executed.' });
+        return;
+      }
+
+      toast({
+        title: result.attackerVictory ? 'Border seized' : 'Advance repelled',
+        description: `${territory?.name ?? 'Target region'} engagement odds ${(result.odds * 100).toFixed(0)}%.`,
+      });
+      addNewsItem(
+        'military',
+        result.attackerVictory
+          ? `${player.name} captures ${territory?.name ?? territoryId}`
+          : `${player.name} fails to secure ${territory?.name ?? territoryId}`,
+        result.attackerVictory ? 'critical' : 'urgent'
+      );
+    };
+
+    const handleProxyEngagement = (territoryId: string, opposingId: string) => {
+      const territory = conventionalTerritories[territoryId];
+      const result = resolveConventionalProxyEngagement(territoryId, player.id, opposingId);
+      if (!result.success) {
+        toast({ title: 'Proxy engagement failed', description: 'Unable to project forces into this theatre.' });
+        return;
+      }
+
+      toast({
+        title: result.sponsorSuccess ? 'Proxy victory' : 'Proxy setback',
+        description: `${territory?.name ?? 'Region'} influence shifted ${(result.odds * 100).toFixed(0)}% odds.`,
+      });
+      addNewsItem(
+        'military',
+        result.sponsorSuccess
+          ? `${player.name} proxy gains in ${territory?.name ?? territoryId}`
+          : `${player.name} proxy loses ground in ${territory?.name ?? territoryId}`,
+        result.sponsorSuccess ? 'important' : 'urgent'
+      );
+    };
+
+    return (
+      <div className="space-y-6">
+        <ConventionalForcesPanel
+          templates={templates}
+          units={playerUnits}
+          territories={territoryList}
+          profile={profile}
+          onTrain={handleTrain}
+          onDeploy={handleDeployUnit}
+        />
+
+        <section className="rounded border border-cyan-500/40 bg-black/60 p-4">
+          <header className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold tracking-[0.3em] text-cyan-300">Theatre Overview</h3>
+            <span className="text-[11px] font-mono text-cyan-300/80">{territoryList.length} theatres monitored</span>
+          </header>
+          <TerritoryMapPanel
+            territories={territoryList}
+            units={Object.values(conventionalUnits)}
+            playerId={player.id}
+            onBorderConflict={handleBorderConflict}
+            onProxyEngagement={handleProxyEngagement}
+          />
+        </section>
+
+        <section className="rounded border border-cyan-500/30 bg-black/60 p-4">
+          <header className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold tracking-[0.3em] text-cyan-300">Recent Engagements</h3>
+            <span className="text-[11px] font-mono text-cyan-300/80">{recentLogs.length} events</span>
+          </header>
+          <div className="space-y-2">
+            {recentLogs.length === 0 && (
+              <p className="text-[11px] text-cyan-300/70">No conventional engagements recorded this campaign.</p>
+            )}
+            {recentLogs.map(logEntry => (
+              <div key={logEntry.id} className="rounded border border-cyan-500/20 bg-black/40 p-3">
+                <div className="flex items-center justify-between text-[11px] font-mono text-cyan-300/90">
+                  <span>{logEntry.summary}</span>
+                  <span>Turn {logEntry.turn}</span>
+                </div>
+                <div className="mt-1 text-[10px] text-cyan-300/70">
+                  Casualties: {Object.entries(logEntry.casualties)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(' • ')}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }, [
+    addNewsItem,
+    conventionalLogs,
+    conventionalTemplatesMap,
+    conventionalTerritories,
+    conventionalUnits,
+    deployConventionalUnit,
+    getConventionalUnitsForNation,
+    resolveConventionalBorderConflict,
+    resolveConventionalProxyEngagement,
+    toast,
+    trainConventionalUnit,
+  ]);
+
+  const handleMilitary = useCallback(() => {
+    openModal('CONVENTIONAL COMMAND', renderMilitaryModal);
+  }, [openModal, renderMilitaryModal]);
 
   const renderResearchModal = useCallback((): ReactNode => {
     const player = PlayerManager.get();
@@ -5863,6 +6106,7 @@ export default function NoradVector() {
         
         // Initialize game
         initNations();
+        setConventionalState(S.conventional ?? createDefaultConventionalState());
         CityLights.generate();
         
         // Load world map and start game loop only once
@@ -6157,7 +6401,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, handlePauseToggle, openModal, resizeCanvas]);
+  }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, handleMilitary, handlePauseToggle, openModal, resizeCanvas]);
 
 
   // Render functions for different phases
@@ -6416,6 +6660,17 @@ export default function NoradVector() {
                   >
                     <Handshake className="h-5 w-5" />
                     <span className="text-[8px] font-mono">DIPLO</span>
+                  </Button>
+
+                  <Button
+                    onClick={handleMilitary}
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                    title="MILITARY - Conventional command"
+                  >
+                    <Shield className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">MIL</span>
                   </Button>
 
                   <div className="w-px h-8 bg-cyan-500/30 mx-2" />
