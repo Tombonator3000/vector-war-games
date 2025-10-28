@@ -64,3 +64,6 @@
   - When adding map layers or missions, implement dedicated components under `src/components/` and wire them into page containers with feature flags or tutorial updates to maintain narrative continuity.
 
 Adhere to this guide for all future contributions; update sections if gameplay pillars evolve.
+
+## Logging Requirement
+- Record every action related to this repository in `log.md` with precise timestamps.
