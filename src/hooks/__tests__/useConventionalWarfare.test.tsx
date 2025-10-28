@@ -111,6 +111,31 @@ describe('useConventionalWarfare', () => {
     expect(updateSpy).toHaveBeenCalled();
   });
 
+  it('prevents border conflicts without deployed attacker units', () => {
+    const { result } = renderHook(() =>
+      useConventionalWarfare({
+        initialState: latestState,
+        currentTurn: 4,
+        getNation,
+        onStateChange: state => {
+          latestState = state;
+        },
+        onConsumeAction: consumeSpy,
+        onUpdateDisplay: updateSpy,
+      }),
+    );
+
+    const randomSpy = vi.spyOn(Math, 'random');
+
+    let resolution;
+    act(() => {
+      resolution = result.current.resolveBorderConflict('eastern_bloc', player.id, rival.id);
+    });
+
+    expect(randomSpy).not.toHaveBeenCalled();
+    expect(resolution).toEqual({ success: false, reason: 'No attacking units deployed' });
+  });
+
   it('modifies instability and production during proxy engagements', () => {
     const { result } = renderHook(() =>
       useConventionalWarfare({

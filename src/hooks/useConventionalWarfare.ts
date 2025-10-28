@@ -540,6 +540,10 @@ export function useConventionalWarfare({
       const attackerUnits = (unitsByNation[attackerId] || []).filter(
         (unit) => unit.locationId === territoryId && unit.status === 'deployed',
       );
+      if (attackerUnits.length === 0) {
+        return { success: false, reason: 'No attacking units deployed' } as const;
+      }
+
       const defenderUnits = (unitsByNation[defenderId] || []).filter(
         (unit) => unit.locationId === territoryId && unit.status === 'deployed',
       );
