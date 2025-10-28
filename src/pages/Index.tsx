@@ -15,6 +15,12 @@ import { usePandemic, type PandemicTriggerPayload, type PandemicCountermeasurePa
 import { FlashpointModal } from '@/components/FlashpointModal';
 import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
+import {
+  useGovernance,
+  type GovernanceNationRef,
+  calculateMoraleProductionMultiplier,
+  calculateMoraleRecruitmentModifier,
+} from '@/hooks/useGovernance';
 import { TutorialGuide } from '@/components/TutorialGuide';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
@@ -39,6 +45,9 @@ import {
   createDefaultNationCyberProfile,
   applyCyberResearchUnlock,
 } from '@/hooks/useCyberWarfare';
+import { GovernanceEventDialog } from '@/components/governance/GovernanceEventDialog';
+import { MoraleHeatmapOverlay } from '@/components/governance/MoraleHeatmapOverlay';
+import { ElectionCountdownWidget } from '@/components/governance/ElectionCountdownWidget';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -82,6 +91,10 @@ interface Nation {
   submarines?: number;
   defense: number;
   instability?: number;
+  morale: number;
+  publicOpinion: number;
+  electionTimer: number;
+  cabinetApproval: number;
   production: number;
   uranium: number;
   intel: number;
@@ -1810,6 +1823,10 @@ function initNations() {
     bombers: 2,
     defense: 3,
     instability: 0,
+    morale: 72,
+    publicOpinion: 68,
+    electionTimer: 12,
+    cabinetApproval: 64,
     production: 25,
     uranium: 15,
     intel: 10,
@@ -1871,6 +1888,10 @@ function initNations() {
       bombers: 1 + Math.floor(Math.random() * 2), // 1-2 bombers (player has 2)
       defense: 3 + Math.floor(Math.random() * 2), // 3-4 defense (player has 3)
       instability: Math.floor(Math.random() * 15), // Low initial instability
+      morale: 60 + Math.floor(Math.random() * 15),
+      publicOpinion: 55 + Math.floor(Math.random() * 20),
+      electionTimer: 10 + Math.floor(Math.random() * 6),
+      cabinetApproval: 50 + Math.floor(Math.random() * 20),
       production: 20 + Math.floor(Math.random() * 15), // 20-35 production (player has 25)
       uranium: 12 + Math.floor(Math.random() * 8), // 12-20 uranium (player has 15)
       intel: 8 + Math.floor(Math.random() * 8), // 8-16 intel (player has 10)
@@ -2254,9 +2275,10 @@ function productionPhase() {
       }
     }
 
-    n.production += Math.floor(baseProd * prodMult);
-    n.uranium += Math.floor(baseUranium * uranMult);
-    n.intel += baseIntel;
+    const moraleMultiplier = calculateMoraleProductionMultiplier(n.morale ?? 0);
+    n.production += Math.floor(baseProd * prodMult * moraleMultiplier);
+    n.uranium += Math.floor(baseUranium * uranMult * moraleMultiplier);
+    n.intel += Math.floor(baseIntel * moraleMultiplier);
     
     // Instability effects
     if (n.instability && n.instability > 50) {
@@ -4186,6 +4208,41 @@ export default function NoradVector() {
     advanceTurn: advanceCyberTurn,
     runAiPlan: runCyberAiPlan,
   } = cyber;
+
+  const getGovernanceNations = useCallback(
+    () => nations as unknown as GovernanceNationRef[],
+    [],
+  );
+
+  const governance = useGovernance({
+    currentTurn: S.turn,
+    getNations: getGovernanceNations,
+    onMetricsSync: (nationId, metrics) => {
+      const nation = getNationById(nationId);
+      if (!nation) return;
+      nation.morale = metrics.morale;
+      nation.publicOpinion = metrics.publicOpinion;
+      nation.electionTimer = metrics.electionTimer;
+      nation.cabinetApproval = metrics.cabinetApproval;
+    },
+    onApplyDelta: (nationId, delta) => {
+      const nation = getNationById(nationId);
+      if (!nation) return;
+      if (typeof delta.instability === 'number') {
+        nation.instability = Math.max(0, (nation.instability || 0) + delta.instability);
+      }
+      if (typeof delta.production === 'number') {
+        nation.production = Math.max(0, nation.production + delta.production);
+      }
+      if (typeof delta.intel === 'number') {
+        nation.intel = Math.max(0, (nation.intel || 0) + delta.intel);
+      }
+      if (typeof delta.uranium === 'number') {
+        nation.uranium = Math.max(0, (nation.uranium || 0) + delta.uranium);
+      }
+    },
+    onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
+  });
 
   useEffect(() => {
     S.conventional = conventional.state;
@@ -6847,6 +6904,12 @@ export default function NoradVector() {
             </div>
           </header>
 
+          <MoraleHeatmapOverlay
+            nations={nations.map(nation => ({ id: nation.id, name: nation.name, isPlayer: nation.isPlayer }))}
+            metrics={governance.metrics}
+          />
+          <div className="pointer-events-auto fixed top-14 right-6 z-40 w-64">
+            <ElectionCountdownWidget metrics={governance.metrics['player']} />
           <div className="fixed top-14 right-4 flex w-72 flex-col gap-3 pointer-events-auto touch-auto z-40">
             <CoopStatusPanel />
             <ApprovalQueue />
@@ -7181,6 +7244,26 @@ export default function NoradVector() {
         </SheetContent>
       </Sheet>
 
+      <GovernanceEventDialog
+        open={Boolean(governance.activeEvent)}
+        event={governance.activeEvent}
+        metrics={governance.activeEvent ? governance.metrics[governance.activeEvent.nationId] : undefined}
+        onSelect={(optionId) => {
+          const outcome = governance.selectOption(optionId);
+          if (outcome) {
+            toast({
+              title: 'Governance Decision Logged',
+              description: outcome.description,
+            });
+            updateDisplay();
+          }
+        }}
+        onDismiss={() => {
+          governance.dismissEvent();
+          updateDisplay();
+        }}
+      />
+
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="bg-black border border-cyan-500 text-cyan-500 max-w-2xl">
           <DialogHeader>
@@ -7223,7 +7306,7 @@ export default function NoradVector() {
             }
             
             if (outcome.morale) {
-              player.instability = Math.max(0, (player.instability || 0) - outcome.morale);
+              player.morale = Math.max(0, Math.min(100, (player.morale ?? 0) + outcome.morale));
             }
             
             if (outcome.intel) {
