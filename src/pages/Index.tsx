@@ -3254,19 +3254,19 @@ function checkVictory() {
   const alive = nations.filter(n => n.population > 0);
   const totalPop = alive.reduce((sum, n) => sum + n.population, 0);
 
-  const diplomacyResult = evaluateDiplomaticProgress(player);
-  if (diplomacyResult.victory && diplomacyResult.message) {
-    endGame(true, diplomacyResult.message);
-    return;
-  }
-
   if (player.population <= 0) {
     endGame(false, 'Your nation has been destroyed');
     return;
   }
-  
+
   if (DoomsdayClock.minutes <= 0) {
     endGame(false, 'MUTUAL ASSURED DESTRUCTION');
+    return;
+  }
+
+  const diplomacyResult = evaluateDiplomaticProgress(player);
+  if (diplomacyResult.victory && diplomacyResult.message) {
+    endGame(true, diplomacyResult.message);
     return;
   }
   
