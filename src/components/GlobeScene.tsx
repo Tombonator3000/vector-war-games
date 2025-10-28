@@ -46,6 +46,8 @@ interface SceneRegistration {
 
 type ForwardedCanvas = HTMLCanvasElement | null;
 
+type WorldFeature = FeatureCollection<Polygon | MultiPolygon>['features'][number];
+
 function latLonToVector3(lon: number, lat: number, radius: number) {
   const phi = THREE.MathUtils.degToRad(90 - lat);
   const theta = THREE.MathUtils.degToRad(lon + 180);
@@ -77,6 +79,7 @@ function buildAtlasTexture(worldCountries?: FeatureCollection<Polygon | MultiPol
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const drawRing = (coords: number[][]) => {
+    if (!coords.length) return;
     coords.forEach(([lon, lat], index) => {
       const x = ((lon + 180) / 360) * canvas.width;
       const y = ((90 - lat) / 180) * canvas.height;
@@ -86,6 +89,40 @@ function buildAtlasTexture(worldCountries?: FeatureCollection<Polygon | MultiPol
         ctx.lineTo(x, y);
       }
     });
+    ctx.closePath();
+  };
+
+  const featureFillCache = new Map<string, string>();
+
+  const getFeatureId = (feature: WorldFeature) => {
+    const { properties, id } = feature;
+    return (
+      (typeof id === 'string' && id) ||
+      (properties &&
+        ((properties as Record<string, unknown>).name as string | undefined ||
+          (properties as Record<string, unknown>).NAME as string | undefined ||
+          (properties as Record<string, unknown>).ADMIN as string | undefined)) ||
+      'feature'
+    );
+  };
+
+  const getFillColor = (feature: WorldFeature) => {
+    const key = getFeatureId(feature);
+    if (featureFillCache.has(key)) {
+      return featureFillCache.get(key)!;
+    }
+
+    let hash = 0;
+    for (let i = 0; i < key.length; i += 1) {
+      hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+    }
+
+    const hue = hash % 360;
+    const saturation = 50 + (hash % 30);
+    const lightness = 35 + ((hash >> 3) % 20);
+    const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    featureFillCache.set(key, color);
+    return color;
   };
 
   if (worldCountries && worldCountries.features?.length) {
@@ -100,12 +137,19 @@ function buildAtlasTexture(worldCountries?: FeatureCollection<Polygon | MultiPol
 
       ctx.beginPath();
       if (geometry.type === 'Polygon') {
-        drawRing(geometry.coordinates[0] as number[][]);
+        for (const ring of geometry.coordinates) {
+          drawRing(ring as number[][]);
+        }
       } else if (geometry.type === 'MultiPolygon') {
         for (const polygon of geometry.coordinates) {
-          drawRing(polygon[0] as number[][]);
+          for (const ring of polygon) {
+            drawRing(ring as number[][]);
+          }
         }
       }
+
+      ctx.fillStyle = getFillColor(feature);
+      ctx.fill('evenodd');
       ctx.stroke();
     }
   } else {
@@ -292,11 +336,15 @@ function EarthPolitical({
   return (
     <mesh ref={earthRef}>
       <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
-      <meshStandardMaterial 
+      <meshStandardMaterial
         map={vectorTexture}
-        color="#0f1c2e"
-        emissive={new THREE.Color('#001122')}
-        emissiveIntensity={0.2}
+        color="#ffffff"
+        emissive={new THREE.Color('#070b12')}
+        emissiveIntensity={0.35}
+        roughness={0.9}
+        metalness={0.05}
+        transparent
+        opacity={0.96}
       />
     </mesh>
   );
