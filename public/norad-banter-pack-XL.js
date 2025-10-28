@@ -115,6 +115,14 @@
       "Borders are suggestions with paperwork.",
       "Brains are MIRVs for economies."
     ],
+    news: [
+      "Producers whisper: can you escalate before the next ad slot?",
+      "Ticker just spiked; your markets face-planted on live TV.",
+      "Anchor wants optimism. I handed them fallout graphics instead.",
+      "Studio applause lights blink whenever your polling nosedives.",
+      "Editorial calls it overreaction; ratings call it must-see brinkmanship.",
+      "Segment tease: exclusive interview with your collapsing credibility."
+    ],
     city_lost: [
       "One light out; a thousand vows lit.",
       "We rebuild on the bones of your confidence.",
