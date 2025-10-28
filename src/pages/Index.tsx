@@ -6442,8 +6442,8 @@ export default function NoradVector() {
         const camYForLat = (lat: number) =>
           height / 2 - (height * zoomLevel * (90 - lat)) / 180;
 
-        const minCamY = camYForLat(maxLat);
-        const maxCamY = camYForLat(minLat);
+        const minCamY = camYForLat(minLat);
+        const maxCamY = camYForLat(maxLat);
         cam.y = Math.min(Math.max(cam.y, minCamY), maxCamY);
       };
 

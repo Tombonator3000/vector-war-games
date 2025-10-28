@@ -18,3 +18,4 @@
 | 2025-10-28T13:34:44Z | Implemented governance event turn tracking, added morale crisis regression test, and executed `npm run test -- useGovernance`. |
 | 2025-10-28T13:35:12Z | Refined AI event tracking deduplication and re-ran `npm run test -- useGovernance` to confirm passing state. |
 | 2025-10-28T13:46:39Z | Implemented globe mouse controls for rotation and zoom, including touch parity updates. |
+| 2025-10-28T15:10:52Z | Corrected latitude clamp bounds in `Index.tsx` to prevent southern snap during globe rotations. |
