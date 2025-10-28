@@ -11,6 +11,7 @@ export interface NewsItem {
 interface NewsTickerProps {
   items: NewsItem[];
   speed?: number;
+  className?: string;
 }
 
 const PRIORITY_COLORS = {
@@ -30,7 +31,7 @@ const CATEGORY_PREFIXES = {
   science: '🧪'
 };
 
-export function NewsTicker({ items, speed = 50 }: NewsTickerProps) {
+export function NewsTicker({ items, speed = 50, className }: NewsTickerProps) {
   const [offset, setOffset] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -61,10 +62,18 @@ export function NewsTicker({ items, speed = 50 }: NewsTickerProps) {
     return b.timestamp - a.timestamp;
   });
 
+  const containerClasses = [
+    'w-full bg-black/90 border-t border-cyan-500/40 overflow-hidden'
+  ];
+
+  if (className) {
+    containerClasses.push(className);
+  }
+
   return (
-    <div 
+    <div
       ref={containerRef}
-      className="fixed bottom-0 left-0 right-0 bg-black/90 border-t border-cyan-500/40 overflow-hidden z-30"
+      className={containerClasses.join(' ')}
       style={{ height: '32px' }}
     >
       <div
