@@ -494,18 +494,23 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
   }
 ];
 
+export function calculateFlashpointProbability(turn: number, defcon: number) {
+  const baseProbability = 0.02; // 2% per turn
+  const normalizedTurn = Math.max(turn, 0);
+  const normalizedDefcon = Math.min(Math.max(defcon, 1), 5);
+  const turnMultiplier = Math.min(normalizedTurn / 50, 2); // Caps at 2x
+  const probability = baseProbability * (6 - normalizedDefcon) * turnMultiplier;
+
+  return Math.min(Math.max(probability, 0), 1);
+}
+
 export function useFlashpoints() {
   const [activeFlashpoint, setActiveFlashpoint] = useState<FlashpointEvent | null>(null);
   const [flashpointHistory, setFlashpointHistory] = useState<Array<{ event: FlashpointEvent; choice: string; result: 'success' | 'failure' }>>([]);
 
   const triggerRandomFlashpoint = useCallback((turn: number, defcon: number) => {
-    // Probability increases with lower DEFCON and higher turn count
-    const baseProbability = 0.02; // 2% per turn
-    const defconMultiplier = (6 - defcon) * 0.5;
-    const turnMultiplier = Math.min(turn / 50, 2); // Caps at 2x
-    
-    const probability = baseProbability * defconMultiplier * turnMultiplier;
-    
+    const probability = calculateFlashpointProbability(turn, defcon);
+
     if (Math.random() < probability) {
       const template = FLASHPOINT_TEMPLATES[Math.floor(Math.random() * FLASHPOINT_TEMPLATES.length)];
       const flashpoint: FlashpointEvent = {
