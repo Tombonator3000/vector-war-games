@@ -1176,94 +1176,100 @@ const AudioSys = {
   playSFX(type: string) {
     if (!this.sfxEnabled) return;
     if (!this.audioContext) this.init();
+    const context = this.audioContext;
+    if (!context) return;
 
-    const oscillator = this.audioContext!.createOscillator();
-    const gainNode = this.audioContext!.createGain();
+    try {
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
 
-    oscillator.connect(gainNode);
-    gainNode.connect(this.audioContext!.destination);
-    
-    // Define sound profiles for different events
-    let freq = 400;
-    let duration = 0.3;
-    let volume = 0.1;
-    let waveType: OscillatorType = 'sine';
-    
-    switch(type) {
-      case 'explosion':
-        freq = 80;
-        duration = 0.5;
-        volume = 0.15;
-        waveType = 'sawtooth';
-        break;
-      case 'launch':
-        freq = 200;
-        duration = 0.4;
-        volume = 0.12;
-        waveType = 'square';
-        break;
-      case 'click':
-        freq = 600;
-        duration = 0.08;
-        volume = 0.08;
-        waveType = 'sine';
-        break;
-      case 'success':
-        freq = 800;
-        duration = 0.15;
-        volume = 0.1;
-        waveType = 'sine';
-        break;
-      case 'error':
-        freq = 150;
-        duration = 0.2;
-        volume = 0.12;
-        waveType = 'sawtooth';
-        break;
-      case 'build':
-        freq = 500;
-        duration = 0.25;
-        volume = 0.1;
-        waveType = 'triangle';
-        break;
-      case 'research':
-        freq = 700;
-        duration = 0.3;
-        volume = 0.09;
-        waveType = 'sine';
-        break;
-      case 'intel':
-        freq = 900;
-        duration = 0.2;
-        volume = 0.08;
-        waveType = 'sine';
-        break;
-      case 'defcon':
-        freq = 300;
-        duration = 0.5;
-        volume = 0.15;
-        waveType = 'square';
-        break;
-      case 'endturn':
-        freq = 450;
-        duration = 0.35;
-        volume = 0.11;
-        waveType = 'triangle';
-        break;
-      default:
-        freq = 400;
-        duration = 0.15;
-        volume = 0.08;
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+
+      // Define sound profiles for different events
+      let freq = 400;
+      let duration = 0.3;
+      let volume = 0.1;
+      let waveType: OscillatorType = 'sine';
+
+      switch(type) {
+        case 'explosion':
+          freq = 80;
+          duration = 0.5;
+          volume = 0.15;
+          waveType = 'sawtooth';
+          break;
+        case 'launch':
+          freq = 200;
+          duration = 0.4;
+          volume = 0.12;
+          waveType = 'square';
+          break;
+        case 'click':
+          freq = 600;
+          duration = 0.08;
+          volume = 0.08;
+          waveType = 'sine';
+          break;
+        case 'success':
+          freq = 800;
+          duration = 0.15;
+          volume = 0.1;
+          waveType = 'sine';
+          break;
+        case 'error':
+          freq = 150;
+          duration = 0.2;
+          volume = 0.12;
+          waveType = 'sawtooth';
+          break;
+        case 'build':
+          freq = 500;
+          duration = 0.25;
+          volume = 0.1;
+          waveType = 'triangle';
+          break;
+        case 'research':
+          freq = 700;
+          duration = 0.3;
+          volume = 0.09;
+          waveType = 'sine';
+          break;
+        case 'intel':
+          freq = 900;
+          duration = 0.2;
+          volume = 0.08;
+          waveType = 'sine';
+          break;
+        case 'defcon':
+          freq = 300;
+          duration = 0.5;
+          volume = 0.15;
+          waveType = 'square';
+          break;
+        case 'endturn':
+          freq = 450;
+          duration = 0.35;
+          volume = 0.11;
+          waveType = 'triangle';
+          break;
+        default:
+          freq = 400;
+          duration = 0.15;
+          volume = 0.08;
+      }
+
+      oscillator.type = waveType;
+      oscillator.frequency.setValueAtTime(freq, context.currentTime);
+
+      gainNode.gain.setValueAtTime(volume, context.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + duration);
+
+      oscillator.start();
+      oscillator.stop(context.currentTime + duration);
+    } catch (error) {
+      console.warn('SFX playback failed', error);
     }
-    
-    oscillator.type = waveType;
-    oscillator.frequency.setValueAtTime(freq, this.audioContext!.currentTime);
-    
-    gainNode.gain.setValueAtTime(volume, this.audioContext!.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext!.currentTime + duration);
-    
-    oscillator.start();
-    oscillator.stop(this.audioContext!.currentTime + duration);
   },
   
   toggleMusic() {
@@ -6963,8 +6969,8 @@ export default function NoradVector() {
                 size="sm"
                 variant="ghost"
                 onClick={() => {
-                  AudioSys.playSFX('click');
                   setOptionsOpen(true);
+                  AudioSys.playSFX('click');
                 }}
                 className="h-7 px-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
               >
