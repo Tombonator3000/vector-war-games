@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo, ReactNode } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, ReactNode, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
@@ -810,25 +810,270 @@ class DoomsdayClock {
 }
 
 // Audio System
+const MUSIC_TRACKS = [
+  { id: 'vector-command', title: 'Vector Command Briefing', file: '/Muzak/vector-command.mp3' },
+  { id: 'night-operations', title: 'Night Operations', file: '/Muzak/night-operations.mp3' },
+  { id: 'diplomatic-channel', title: 'Diplomatic Channel', file: '/Muzak/diplomatic-channel.mp3' },
+  { id: 'tactical-escalation', title: 'Tactical Escalation', file: '/Muzak/tactical-escalation.mp3' }
+] as const;
+type MusicTrack = (typeof MUSIC_TRACKS)[number];
+type MusicTrackId = MusicTrack['id'];
+
 const AudioSys = {
   audioContext: null as AudioContext | null,
   musicEnabled: true,
   sfxEnabled: true,
   musicVolume: 0.3,
-  
+  musicGainNode: null as GainNode | null,
+  musicSource: null as AudioBufferSourceNode | null,
+  musicCache: new Map<string, AudioBuffer>(),
+  trackPromises: new Map<string, Promise<AudioBuffer>>(),
+  preferredTrackId: null as MusicTrackId | null,
+  pendingTrackId: null as MusicTrackId | null,
+  currentTrackId: null as MusicTrackId | null,
+  userInteractionPrimed: false,
+  trackListeners: new Set<(trackId: MusicTrackId | null) => void>(),
+
   init() {
+    if (typeof window === 'undefined') return;
     if (!this.audioContext) {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
   },
-  
+
+  ensureMusicGain() {
+    if (!this.audioContext) this.init();
+    if (!this.audioContext) return null;
+    if (!this.musicGainNode) {
+      this.musicGainNode = this.audioContext.createGain();
+      this.musicGainNode.gain.value = this.musicVolume;
+      this.musicGainNode.connect(this.audioContext.destination);
+    }
+    return this.musicGainNode;
+  },
+
+  async resumeContext() {
+    if (!this.audioContext) this.init();
+    if (!this.audioContext) return;
+    if (this.audioContext.state === 'suspended') {
+      try {
+        await this.audioContext.resume();
+      } catch (error) {
+        console.warn('Audio context resume failed', error);
+      }
+    }
+  },
+
+  async loadMusicTrack(trackId: MusicTrackId) {
+    if (this.musicCache.has(trackId)) {
+      return this.musicCache.get(trackId)!;
+    }
+    if (this.trackPromises.has(trackId)) {
+      return this.trackPromises.get(trackId)!;
+    }
+
+    const track = MUSIC_TRACKS.find(entry => entry.id === trackId);
+    if (!track) {
+      throw new Error(`Unknown track ${trackId}`);
+    }
+
+    const loadPromise = (async () => {
+      try {
+        const response = await fetch(track.file);
+        if (!response.ok) {
+          throw new Error(`Failed to load track: ${response.status} ${response.statusText}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        if (!this.audioContext) this.init();
+        if (!this.audioContext) throw new Error('Audio context unavailable');
+        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer.slice(0));
+        this.musicCache.set(trackId, audioBuffer);
+        return audioBuffer;
+      } catch (error) {
+        console.warn('Music track load failed', error);
+        throw error;
+      } finally {
+        this.trackPromises.delete(trackId);
+      }
+    })();
+
+    this.trackPromises.set(trackId, loadPromise);
+    return loadPromise;
+  },
+
+  pickRandomTrack(excludeId?: MusicTrackId | null) {
+    const available = MUSIC_TRACKS.filter(track => track.id !== excludeId);
+    if (available.length === 0) {
+      return MUSIC_TRACKS[0]?.id ?? null;
+    }
+    const choice = available[Math.floor(Math.random() * available.length)];
+    return choice?.id ?? null;
+  },
+
+  async playTrack(trackId: MusicTrackId, { forceRestart = false }: { forceRestart?: boolean } = {}) {
+    this.pendingTrackId = trackId;
+    if (!this.musicEnabled) {
+      return;
+    }
+    if (!this.userInteractionPrimed) {
+      return;
+    }
+    if (!this.audioContext) this.init();
+    if (!this.audioContext) {
+      return;
+    }
+    if (!forceRestart && this.currentTrackId === trackId && this.musicSource) {
+      return;
+    }
+
+    try {
+      await this.resumeContext();
+      const buffer = await this.loadMusicTrack(trackId);
+      if (!buffer) return;
+      if (!this.musicEnabled || this.pendingTrackId !== trackId) return;
+
+      const gainNode = this.ensureMusicGain();
+      if (!gainNode) return;
+
+      this.stopMusic();
+
+      const source = this.audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.loop = this.preferredTrackId !== null;
+      source.connect(gainNode);
+      source.onended = () => {
+        if (!this.preferredTrackId) {
+          const next = this.pickRandomTrack(trackId);
+          if (next) {
+            void this.playTrack(next, { forceRestart: true });
+          }
+        }
+      };
+      source.start(0);
+      this.musicSource = source;
+      this.currentTrackId = trackId;
+      this.notifyTrackListeners(trackId);
+    } catch (error) {
+      console.warn('Music playback failed', error);
+    }
+  },
+
+  async playPreferredTrack({ forceRestart = false }: { forceRestart?: boolean } = {}) {
+    if (!this.musicEnabled) {
+      return;
+    }
+    let trackId = this.preferredTrackId;
+    if (!trackId) {
+      trackId = this.pickRandomTrack(this.currentTrackId);
+    }
+    if (!trackId) {
+      return;
+    }
+    await this.playTrack(trackId, { forceRestart });
+  },
+
+  stopMusic() {
+    if (this.musicSource) {
+      this.musicSource.onended = null;
+      try {
+        this.musicSource.stop();
+      } catch (error) {
+        console.warn('Stopping music failed', error);
+      }
+      try {
+        this.musicSource.disconnect();
+      } catch (error) {
+        console.warn('Disconnecting music failed', error);
+      }
+    }
+    this.musicSource = null;
+    this.currentTrackId = null;
+    this.notifyTrackListeners(null);
+  },
+
+  handleUserInteraction() {
+    if (this.userInteractionPrimed) {
+      return;
+    }
+    this.userInteractionPrimed = true;
+    void this.playPreferredTrack({ forceRestart: true });
+  },
+
+  setPreferredTrack(trackId: MusicTrackId | null) {
+    this.preferredTrackId = trackId;
+    if (!trackId) {
+      const next = this.pickRandomTrack(this.currentTrackId);
+      if (next) {
+        this.pendingTrackId = next;
+        void this.playTrack(next, { forceRestart: true });
+      }
+      return;
+    }
+    this.pendingTrackId = trackId;
+    void this.playTrack(trackId, { forceRestart: true });
+  },
+
+  getPreferredTrack() {
+    return this.preferredTrackId;
+  },
+
+  getCurrentTrack() {
+    return this.currentTrackId;
+  },
+
+  getTracks() {
+    return MUSIC_TRACKS.slice();
+  },
+
+  getTrackMetadata(trackId: MusicTrackId) {
+    return MUSIC_TRACKS.find(track => track.id === trackId) ?? null;
+  },
+
+  notifyTrackListeners(trackId: MusicTrackId | null) {
+    this.trackListeners.forEach(listener => {
+      try {
+        listener(trackId);
+      } catch (error) {
+        console.warn('Track listener error', error);
+      }
+    });
+  },
+
+  subscribeToTrackChanges(listener: (trackId: MusicTrackId | null) => void) {
+    this.trackListeners.add(listener);
+    return () => {
+      this.trackListeners.delete(listener);
+    };
+  },
+
+  setMusicEnabled(enabled: boolean) {
+    this.musicEnabled = enabled;
+    if (!enabled) {
+      this.stopMusic();
+    } else {
+      void this.playPreferredTrack({ forceRestart: true });
+    }
+  },
+
+  playNextTrack() {
+    if (this.preferredTrackId) {
+      void this.playTrack(this.preferredTrackId, { forceRestart: true });
+      return;
+    }
+    const next = this.pickRandomTrack(this.currentTrackId);
+    if (next) {
+      this.pendingTrackId = next;
+      void this.playTrack(next, { forceRestart: true });
+    }
+  },
+
   playSFX(type: string) {
     if (!this.sfxEnabled) return;
     if (!this.audioContext) this.init();
-    
+
     const oscillator = this.audioContext!.createOscillator();
     const gainNode = this.audioContext!.createGain();
-    
+
     oscillator.connect(gainNode);
     gainNode.connect(this.audioContext!.destination);
     
@@ -918,13 +1163,20 @@ const AudioSys = {
   toggleMusic() {
     this.musicEnabled = !this.musicEnabled;
   },
-  
+
   toggleSFX() {
     this.sfxEnabled = !this.sfxEnabled;
   },
-  
+
   setMusicVolume(volume: number) {
     this.musicVolume = volume;
+    if (this.musicGainNode && this.audioContext) {
+      try {
+        this.musicGainNode.gain.setTargetAtTime(volume, this.audioContext.currentTime, 0.05);
+      } catch (error) {
+        this.musicGainNode.gain.value = volume;
+      }
+    }
   }
 };
 
@@ -3262,6 +3514,9 @@ export default function NoradVector() {
   const [musicEnabled, setMusicEnabled] = useState(AudioSys.musicEnabled);
   const [sfxEnabled, setSfxEnabled] = useState(AudioSys.sfxEnabled);
   const [musicVolume, setMusicVolume] = useState(AudioSys.musicVolume);
+  const [musicSelection, setMusicSelection] = useState<string>(() => AudioSys.getPreferredTrack() ?? 'random');
+  const [activeTrackId, setActiveTrackId] = useState<MusicTrackId | null>(AudioSys.getCurrentTrack());
+  const musicTracks = useMemo(() => AudioSys.getTracks(), []);
   const [pandemicIntegrationEnabled, setPandemicIntegrationEnabled] = useState(() => {
     const stored = Storage.getItem('option_pandemic_integration');
     if (stored === 'true' || stored === 'false') {
@@ -3300,7 +3555,30 @@ export default function NoradVector() {
   const handlePickerReady = useCallback((picker: PickerFn) => {
     globePicker = picker;
   }, []);
-  
+
+  useEffect(() => {
+    const unsubscribe = AudioSys.subscribeToTrackChanges(trackId => {
+      setActiveTrackId(trackId);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const unlock = () => {
+      AudioSys.handleUserInteraction();
+    };
+    const options: AddEventListenerOptions = { once: true, passive: true };
+    window.addEventListener('pointerdown', unlock, options);
+    window.addEventListener('keydown', unlock, options);
+    window.addEventListener('touchstart', unlock, options);
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+  }, []);
+
   // News ticker and flashpoints
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const { activeFlashpoint, triggerRandomFlashpoint, resolveFlashpoint, dismissFlashpoint } = useFlashpoints();
@@ -3559,7 +3837,7 @@ export default function NoradVector() {
   }, [isGameStarted, resizeCanvas]);
 
   const handleMusicToggle = useCallback((checked: boolean) => {
-    AudioSys.musicEnabled = checked;
+    AudioSys.setMusicEnabled(checked);
     setMusicEnabled(checked);
   }, []);
 
@@ -3573,6 +3851,41 @@ export default function NoradVector() {
     AudioSys.setMusicVolume(volume);
     setMusicVolume(volume);
   }, []);
+
+  const handleMusicTrackChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    setMusicSelection(value);
+    if (value === 'random') {
+      AudioSys.setPreferredTrack(null);
+    } else {
+      AudioSys.setPreferredTrack(value as MusicTrackId);
+    }
+  }, []);
+
+  const handleNextTrack = useCallback(() => {
+    AudioSys.playNextTrack();
+  }, []);
+
+  const activeTrackMeta = useMemo(() => (activeTrackId ? AudioSys.getTrackMetadata(activeTrackId) : null), [activeTrackId]);
+
+  const activeTrackMessage = useMemo(() => {
+    if (!musicEnabled) {
+      return 'Music disabled';
+    }
+    if (activeTrackMeta) {
+      return `Now playing: ${activeTrackMeta.title}`;
+    }
+    if (!AudioSys.userInteractionPrimed) {
+      return 'Awaiting first interaction to start playback';
+    }
+    if (musicSelection !== 'random') {
+      const selected = AudioSys.getTrackMetadata(musicSelection as MusicTrackId);
+      if (selected) {
+        return `Preparing: ${selected.title}`;
+      }
+    }
+    return 'Preparing soundtrack';
+  }, [activeTrackMeta, musicEnabled, musicSelection]);
 
   useEffect(() => {
     const stored = Storage.getItem('theme');
@@ -5860,6 +6173,36 @@ export default function NoradVector() {
                 disabled={!musicEnabled}
                 aria-label="Adjust music volume"
               />
+            </div>
+            <div className="mt-4 space-y-2">
+              <div className="flex flex-col text-left">
+                <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Soundtrack</span>
+                <span className="text-[11px] text-cyan-400/80">{activeTrackMessage}</span>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <select
+                  className="bg-black/60 border border-cyan-700 text-cyan-100 text-sm rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={musicSelection}
+                  onChange={handleMusicTrackChange}
+                  disabled={!musicEnabled}
+                  aria-label="Select soundtrack"
+                >
+                  <option value="random">Random Rotation</option>
+                  {musicTracks.map(track => (
+                    <option key={track.id} value={track.id}>
+                      {track.title}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  className="bg-cyan-900/40 border border-cyan-700/60 text-cyan-200 hover:bg-cyan-800/60 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleNextTrack}
+                  disabled={!musicEnabled}
+                >
+                  Advance Track
+                </Button>
+              </div>
             </div>
           </div>
 
