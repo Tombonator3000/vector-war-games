@@ -32,3 +32,4 @@
 | 2025-10-28T15:51:00Z | Updated resolution loop to advance while active, ensuring captured effect reflects the neutralizing turn. |
 | 2025-10-28T15:51:46Z | Finalized resolution assertion to rely on inactive state and casualty totals for stability. |
 | 2025-10-28T15:52:13Z | Executed `npm run test -- usePandemic` to validate new bio-warfare trait mechanics. |
+| 2025-10-28T15:51:03Z | Added governance event cooldown tracking, updated morale crisis cooldown test, and ran `npm run test -- useGovernance`. |

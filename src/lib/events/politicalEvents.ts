@@ -28,6 +28,7 @@ export interface PoliticalEventDefinition {
   title: string;
   summary: string;
   severity: 'routine' | 'serious' | 'critical';
+  cooldownTurns?: number;
   conditions?: {
     moraleBelow?: number;
     publicOpinionBelow?: number;
@@ -46,6 +47,7 @@ export const politicalEvents: PoliticalEventDefinition[] = [
     title: 'Election Year Showdown',
     summary: 'Campaign season peaks as factions vie for control of the legislature.',
     severity: 'serious',
+    cooldownTurns: 6,
     conditions: {
       electionImminent: true,
     },
@@ -97,6 +99,7 @@ export const politicalEvents: PoliticalEventDefinition[] = [
     title: 'Nationwide Morale Crisis',
     summary: 'Economic stagnation and media pessimism erode frontline morale.',
     severity: 'serious',
+    cooldownTurns: 4,
     conditions: {
       moraleBelow: 55,
     },
@@ -146,6 +149,7 @@ export const politicalEvents: PoliticalEventDefinition[] = [
     title: 'Cabinet Scandal Explodes',
     summary: 'Investigative reporters expose graft at the highest levels of government.',
     severity: 'critical',
+    cooldownTurns: 5,
     conditions: {
       cabinetApprovalBelow: 50,
       minTurn: 5,

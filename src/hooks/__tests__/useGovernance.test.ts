@@ -171,15 +171,13 @@ describe('useGovernance', () => {
     randomSpy.mockRestore();
   });
 
-  it('prevents morale crisis from reopening in the same turn after a negative outcome', async () => {
+  it('enforces a cooldown between morale crisis events', async () => {
     nations[0].morale = 45;
     nations[0].publicOpinion = 40;
     nations[0].cabinetApproval = 55;
+    nations[1].morale = 60;
 
-    const randomSpy = vi.spyOn(Math, 'random');
-    randomSpy.mockReturnValue(0.99);
-    randomSpy.mockReturnValueOnce(0.2);
-    randomSpy.mockReturnValueOnce(0.1);
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.2);
 
     const { result, rerender } = renderHook(({ currentTurn }) =>
       useGovernance({
@@ -195,21 +193,26 @@ describe('useGovernance', () => {
       expect(result.current.activeEvent?.definition.id).toBe('morale_crisis');
     });
 
-    const optionId = result.current.activeEvent!.definition.options[0].id;
+    const hazardPayOption = result.current.activeEvent!.definition.options.find(
+      (option) => option.id === 'hazard_pay',
+    )!.id;
 
     await act(async () => {
-      result.current.selectOption(optionId);
+      result.current.selectOption(hazardPayOption);
     });
 
     await waitFor(() => {
       expect(result.current.activeEvent).toBeNull();
     });
 
-    rerender({ currentTurn: turn });
+    for (let i = 0; i < 3; i += 1) {
+      turn += 1;
+      rerender({ currentTurn: turn });
 
-    await waitFor(() => {
-      expect(result.current.activeEvent).toBeNull();
-    });
+      await waitFor(() => {
+        expect(result.current.activeEvent).toBeNull();
+      });
+    }
 
     turn += 1;
     rerender({ currentTurn: turn });
