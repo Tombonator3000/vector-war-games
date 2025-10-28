@@ -510,6 +510,7 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
+  height: 100vh;
   min-height: 100vh;
   width: 100%;
   padding: 0;
@@ -630,6 +631,7 @@ body.theme-synthwave .command-interface__scanlines {
   z-index: 1;
   display: flex;
   flex: 1 1 auto;
+  min-height: 0;
   align-items: stretch;
   justify-content: center;
   width: 100%;
@@ -642,6 +644,7 @@ body.theme-synthwave .command-interface__scanlines {
 .globe-scene {
   position: relative;
   flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   height: 100%;
   display: flex;
