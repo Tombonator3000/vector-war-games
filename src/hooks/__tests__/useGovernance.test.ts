@@ -170,4 +170,54 @@ describe('useGovernance', () => {
 
     randomSpy.mockRestore();
   });
+
+  it('prevents morale crisis from reopening in the same turn after a negative outcome', async () => {
+    nations[0].morale = 45;
+    nations[0].publicOpinion = 40;
+    nations[0].cabinetApproval = 55;
+
+    const randomSpy = vi.spyOn(Math, 'random');
+    randomSpy.mockReturnValue(0.99);
+    randomSpy.mockReturnValueOnce(0.2);
+    randomSpy.mockReturnValueOnce(0.1);
+
+    const { result, rerender } = renderHook(({ currentTurn }) =>
+      useGovernance({
+        currentTurn,
+        getNations,
+        onMetricsSync: syncMetrics,
+        onApplyDelta: applyDelta,
+        onAddNewsItem: newsSpy,
+      }),
+    { initialProps: { currentTurn: turn } });
+
+    await waitFor(() => {
+      expect(result.current.activeEvent?.definition.id).toBe('morale_crisis');
+    });
+
+    const optionId = result.current.activeEvent!.definition.options[0].id;
+
+    await act(async () => {
+      result.current.selectOption(optionId);
+    });
+
+    await waitFor(() => {
+      expect(result.current.activeEvent).toBeNull();
+    });
+
+    rerender({ currentTurn: turn });
+
+    await waitFor(() => {
+      expect(result.current.activeEvent).toBeNull();
+    });
+
+    turn += 1;
+    rerender({ currentTurn: turn });
+
+    await waitFor(() => {
+      expect(result.current.activeEvent?.definition.id).toBe('morale_crisis');
+    });
+
+    randomSpy.mockRestore();
+  });
 });

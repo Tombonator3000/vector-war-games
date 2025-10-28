@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   politicalEvents,
   type GovernanceDelta,
@@ -129,6 +129,30 @@ export function useGovernance({
   });
 
   const [activeEvent, setActiveEvent] = useState<GovernanceEventState | null>(null);
+  const eventTurnHistoryRef = useRef<Map<string, Map<string, number>>>(new Map());
+
+  const recordEventTurn = useCallback((nationId: string, eventId: string, turn: number) => {
+    let nationEvents = eventTurnHistoryRef.current.get(nationId);
+    if (!nationEvents) {
+      nationEvents = new Map<string, number>();
+      eventTurnHistoryRef.current.set(nationId, nationEvents);
+    }
+    nationEvents.set(eventId, turn);
+  }, []);
+
+  useEffect(() => {
+    const tracker = eventTurnHistoryRef.current;
+    tracker.forEach((events, nationId) => {
+      events.forEach((lastTurn, eventId) => {
+        if (lastTurn < currentTurn) {
+          events.delete(eventId);
+        }
+      });
+      if (events.size === 0) {
+        tracker.delete(nationId);
+      }
+    });
+  }, [currentTurn]);
 
   const syncNationMetrics = useCallback(
     (
@@ -215,9 +239,10 @@ export function useGovernance({
       )[0];
       const outcome = pickOutcome(bestOption);
       applyDelta(nation.id, outcome.effects);
+      recordEventTurn(nation.id, definition.id, currentTurn);
       return outcome;
     },
-    [applyDelta],
+    [applyDelta, currentTurn, recordEventTurn],
   );
 
   const ensureElectionTimer = useCallback(() => {
@@ -243,7 +268,13 @@ export function useGovernance({
           continue;
         }
 
+        const lastTurn = eventTurnHistoryRef.current.get(nation.id)?.get(electionEvent.id);
+        if (lastTurn === currentTurn) {
+          continue;
+        }
+
         if (nation.isPlayer) {
+          recordEventTurn(nation.id, electionEvent.id, currentTurn);
           setActiveEvent({ nationId: nation.id, definition: electionEvent, triggeredTurn: currentTurn });
         } else {
           const outcome = autoResolve(nation, electionEvent);
@@ -283,10 +314,15 @@ export function useGovernance({
       }
       return true;
     });
-    if (applicableEvents.length === 0) return;
-    const selected = applicableEvents[Math.floor(Math.random() * applicableEvents.length)];
+    const freshEvents = applicableEvents.filter((event) => {
+      const lastTurn = eventTurnHistoryRef.current.get(targetNation.id)?.get(event.id);
+      return lastTurn !== currentTurn;
+    });
+    if (freshEvents.length === 0) return;
+    const selected = freshEvents[Math.floor(Math.random() * freshEvents.length)];
 
     if (targetNation.isPlayer) {
+      recordEventTurn(targetNation.id, selected.id, currentTurn);
       setActiveEvent({ nationId: targetNation.id, definition: selected, triggeredTurn: currentTurn });
       onAddNewsItem?.('governance', selected.title, 'important');
     } else {
