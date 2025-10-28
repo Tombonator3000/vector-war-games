@@ -5907,6 +5907,7 @@ export default function NoradVector() {
 
       let touchStartTime = 0;
       let lastTouchDistance = 0;
+      let initialPinchDistance = 0;
       let initialPinchZoom = 1;
 
       const getTouchDistance = (touches: TouchList) => {
@@ -5926,6 +5927,7 @@ export default function NoradVector() {
           // Start pinch gesture
           e.preventDefault();
           lastTouchDistance = getTouchDistance(e.touches);
+          initialPinchDistance = lastTouchDistance;
           initialPinchZoom = cam.targetZoom;
           touching = false;
         }
@@ -5936,9 +5938,10 @@ export default function NoradVector() {
           // Pinch-to-zoom
           e.preventDefault();
           const newDistance = getTouchDistance(e.touches);
-          if (lastTouchDistance > 0) {
-            const scaleFactor = newDistance / lastTouchDistance;
-            cam.targetZoom = Math.max(0.5, Math.min(3, initialPinchZoom * (newDistance / getTouchDistance(e.touches))));
+          if (lastTouchDistance > 0 && initialPinchDistance > 0) {
+            const scaleFactor = newDistance / initialPinchDistance;
+            cam.targetZoom = Math.max(0.5, Math.min(3, initialPinchZoom * scaleFactor));
+            lastTouchDistance = newDistance;
           }
         } else if(touching && e.touches.length === 1) { 
           // Single finger pan
@@ -5996,6 +5999,7 @@ export default function NoradVector() {
         
         touching = false;
         lastTouchDistance = 0;
+        initialPinchDistance = 0;
       };
 
       // Click handler for satellite intelligence
