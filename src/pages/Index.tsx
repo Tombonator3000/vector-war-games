@@ -19,6 +19,12 @@ import { TutorialGuide } from '@/components/TutorialGuide';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { GameHelper } from '@/components/GameHelper';
+import { useMultiplayer } from '@/contexts/MultiplayerProvider';
+import type { GameState, Nation, ConventionalWarfareDelta } from '@/types/game';
+import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
+import { SyncStatusBadge } from '@/components/coop/SyncStatusBadge';
+import { ApprovalQueue } from '@/components/coop/ApprovalQueue';
+import { ConflictResolutionDialog } from '@/components/coop/ConflictResolutionDialog';
 import {
   useConventionalWarfare,
   type ConventionalState,
@@ -323,6 +329,20 @@ let S: GameState = {
 };
 
 let nations: Nation[] = [];
+let conventionalDeltas: ConventionalWarfareDelta[] = [];
+let suppressMultiplayerBroadcast = false;
+let multiplayerPublisher: (() => void) | null = null;
+
+const setMultiplayerPublisher = (publisher: (() => void) | null) => {
+  multiplayerPublisher = publisher;
+};
+
+const broadcastMultiplayerState = () => {
+  if (!suppressMultiplayerBroadcast && multiplayerPublisher) {
+    multiplayerPublisher();
+  }
+};
+
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 let startCanvas: HTMLCanvasElement;
@@ -3845,6 +3865,8 @@ function updateDisplay() {
   if (uiUpdateCallback) {
     uiUpdateCallback();
   }
+
+  broadcastMultiplayerState();
 }
 
 function updateScoreboard() {
@@ -3989,6 +4011,42 @@ export default function NoradVector() {
   const handlePickerReady = useCallback((picker: PickerFn) => {
     globePicker = picker;
   }, []);
+  const { ensureAction, registerStateListener, publishState, canExecute } = useMultiplayer();
+
+  const broadcastState = useCallback(() => {
+    publishState({
+      gameState: { ...S },
+      nations: nations.map(nation => ({ ...nation })),
+      conventionalDeltas: conventionalDeltas.map(delta => ({ ...delta })),
+    });
+  }, [publishState]);
+
+  useEffect(() => {
+    setMultiplayerPublisher(() => broadcastState);
+    return () => setMultiplayerPublisher(null);
+  }, [broadcastState]);
+
+  useEffect(() => {
+    const unsubscribe = registerStateListener(envelope => {
+      const { state } = envelope;
+      suppressMultiplayerBroadcast = true;
+      try {
+        if (state.gameState) {
+          S = { ...state.gameState };
+        }
+        if (state.nations) {
+          nations = state.nations.map(nation => ({ ...nation }));
+        }
+        if (state.conventionalDeltas) {
+          conventionalDeltas = state.conventionalDeltas.map(delta => ({ ...delta }));
+        }
+      } finally {
+        suppressMultiplayerBroadcast = false;
+      }
+      updateDisplay();
+    });
+    return unsubscribe;
+  }, [registerStateListener]);
 
   useEffect(() => {
     const unsubscribe = AudioSys.subscribeToTrackChanges(trackId => {
@@ -5298,17 +5356,23 @@ export default function NoradVector() {
     );
   }, [buildBomber, buildCity, buildDefense, buildMissile, buildWarhead, isGameStarted]);
 
-  const handleBuild = useCallback(() => {
+  const handleBuild = useCallback(async () => {
+    const approved = await ensureAction('BUILD', { description: 'Strategic production request' });
+    if (!approved) return;
     AudioSys.playSFX('click');
     openModal('STRATEGIC PRODUCTION', renderBuildModal);
-  }, [openModal, renderBuildModal]);
+  }, [ensureAction, openModal, renderBuildModal]);
 
-  const handleResearch = useCallback(() => {
+  const handleResearch = useCallback(async () => {
+    const approved = await ensureAction('RESEARCH', { description: 'Research directive access' });
+    if (!approved) return;
     AudioSys.playSFX('click');
     openModal('RESEARCH DIRECTORATE', renderResearchModal);
-  }, [openModal, renderResearchModal]);
+  }, [ensureAction, openModal, renderResearchModal]);
 
-  const handleIntel = useCallback(() => {
+  const handleIntel = useCallback(async () => {
+    const approved = await ensureAction('INTEL', { description: 'Intelligence operations authorization' });
+    if (!approved) return;
     AudioSys.playSFX('click');
     const player = getBuildContext('Intelligence');
     if (!player) return;
@@ -5508,7 +5572,9 @@ export default function NoradVector() {
   }, [closeModal, getBuildContext, openModal, targetableNations]);
 
 
-  const handleCulture = useCallback(() => {
+  const handleCulture = useCallback(async () => {
+    const approved = await ensureAction('CULTURE', { description: 'Cultural operations briefing' });
+    if (!approved) return;
     AudioSys.playSFX('click');
     const player = getBuildContext('Culture');
     if (!player) return;
@@ -5665,10 +5731,12 @@ export default function NoradVector() {
         accent="violet"
       />
     );
-  }, [closeModal, getBuildContext, openModal, targetableNations]);
+  }, [closeModal, ensureAction, getBuildContext, openModal, targetableNations]);
 
 
-  const handleImmigration = useCallback(() => {
+  const handleImmigration = useCallback(async () => {
+    const approved = await ensureAction('IMMIGRATION', { description: 'Immigration policy adjustment' });
+    if (!approved) return;
     AudioSys.playSFX('click');
     const player = getBuildContext('Immigration');
     if (!player) return;
@@ -5749,9 +5817,11 @@ export default function NoradVector() {
         accent="emerald"
       />
     );
-  }, [closeModal, getBuildContext, openModal, targetableNations]);
+  }, [closeModal, ensureAction, getBuildContext, openModal, targetableNations]);
 
-  const handleDiplomacy = useCallback(() => {
+  const handleDiplomacy = useCallback(async () => {
+    const approved = await ensureAction('DIPLOMACY', { description: 'Diplomatic operations request' });
+    if (!approved) return;
     AudioSys.playSFX('click');
     const player = getBuildContext('Diplomacy');
     if (!player) return;
@@ -6069,7 +6139,7 @@ export default function NoradVector() {
         accent="fuchsia"
       />
     );
-  }, [closeModal, getBuildContext, openModal, targetableNations]);
+  }, [closeModal, ensureAction, getBuildContext, openModal, targetableNations]);
 
   useEffect(() => {
     handleAttackRef.current = handleAttack;
@@ -6526,6 +6596,13 @@ export default function NoradVector() {
     }
   }
 
+  const buildAllowed = canExecute('BUILD');
+  const researchAllowed = canExecute('RESEARCH');
+  const intelAllowed = canExecute('INTEL');
+  const cultureAllowed = canExecute('CULTURE');
+  const immigrationAllowed = canExecute('IMMIGRATION');
+  const diplomacyAllowed = canExecute('DIPLOMACY');
+
   return (
     <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity}`}>
       <div className="command-interface__glow" aria-hidden="true" />
@@ -6560,7 +6637,8 @@ export default function NoradVector() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <SyncStatusBadge />
               <div className="text-xs font-mono text-neon-magenta mr-4">
                 <span className="text-cyan-400">DOOMSDAY</span>{' '}
                 <span id="doomsdayTime" className="font-bold">7:00</span>
@@ -6587,6 +6665,15 @@ export default function NoradVector() {
             </div>
           </header>
 
+          <div className="fixed top-14 right-4 flex w-72 flex-col gap-3 pointer-events-auto touch-auto z-40">
+            <CoopStatusPanel />
+            <ApprovalQueue />
+          </div>
+
+          <div className="pointer-events-auto touch-auto">
+            <ConflictResolutionDialog />
+          </div>
+
           {/* Minimal bottom utility stack */}
           <div className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50">
             <div className="flex flex-col gap-1">
@@ -6600,8 +6687,11 @@ export default function NoradVector() {
                     onClick={handleBuild}
                     variant="ghost"
                     size="icon"
-                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                    title="BUILD - Production and construction"
+                    data-role-locked={!buildAllowed}
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      buildAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                    }`}
+                    title={buildAllowed ? 'BUILD - Production and construction' : 'Await strategist approval or request authorization'}
                   >
                     <Factory className="h-5 w-5" />
                     <span className="text-[8px] font-mono">BUILD</span>
@@ -6611,8 +6701,11 @@ export default function NoradVector() {
                     onClick={handleResearch}
                     variant="ghost"
                     size="icon"
-                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                    title="RESEARCH - Technology advancement"
+                    data-role-locked={!researchAllowed}
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      researchAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                    }`}
+                    title={researchAllowed ? 'RESEARCH - Technology advancement' : 'Strategist approval required to manage research'}
                   >
                     <Microscope className="h-5 w-5" />
                     <span className="text-[8px] font-mono">RESEARCH</span>
@@ -6622,8 +6715,11 @@ export default function NoradVector() {
                     onClick={handleIntel}
                     variant="ghost"
                     size="icon"
-                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                    title="INTEL - Intelligence operations"
+                    data-role-locked={!intelAllowed}
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      intelAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                    }`}
+                    title={intelAllowed ? 'INTEL - Intelligence operations' : 'Tactician authorization required to operate intel'}
                   >
                     <Satellite className="h-5 w-5" />
                     <span className="text-[8px] font-mono">INTEL</span>
@@ -6633,8 +6729,11 @@ export default function NoradVector() {
                     onClick={handleCulture}
                     variant="ghost"
                     size="icon"
-                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                    title="CULTURE - Cultural warfare"
+                    data-role-locked={!cultureAllowed}
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                    }`}
+                    title={cultureAllowed ? 'CULTURE - Cultural warfare' : 'Requires co-commander approval to launch culture ops'}
                   >
                     <Radio className="h-5 w-5" />
                     <span className="text-[8px] font-mono">CULTURE</span>
@@ -6644,8 +6743,11 @@ export default function NoradVector() {
                     onClick={handleImmigration}
                     variant="ghost"
                     size="icon"
-                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                    title="IMMIGRATION - Population management"
+                    data-role-locked={!immigrationAllowed}
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      immigrationAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                    }`}
+                    title={immigrationAllowed ? 'IMMIGRATION - Population management' : 'Immigration changes require strategist approval'}
                   >
                     <Users className="h-5 w-5" />
                     <span className="text-[8px] font-mono">IMMIGR</span>
@@ -6655,8 +6757,11 @@ export default function NoradVector() {
                     onClick={handleDiplomacy}
                     variant="ghost"
                     size="icon"
-                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                    title="DIPLOMACY - International relations"
+                    data-role-locked={!diplomacyAllowed}
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      diplomacyAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                    }`}
+                    title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
                   >
                     <Handshake className="h-5 w-5" />
                     <span className="text-[8px] font-mono">DIPLO</span>
