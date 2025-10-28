@@ -6,6 +6,15 @@ import {
   type PoliticalEventOption,
 } from '@/lib/events/politicalEvents';
 
+const politicalEventIndex = new Map<string, PoliticalEventDefinition>(
+  politicalEvents.map((event) => [event.id, event]),
+);
+
+const getEventDefinitionById = (id: string) => politicalEventIndex.get(id);
+
+const getEventCooldownTurns = (definition: PoliticalEventDefinition | undefined) =>
+  definition?.cooldownTurns ?? 1;
+
 export interface GovernanceMetrics {
   morale: number;
   publicOpinion: number;
@@ -144,7 +153,9 @@ export function useGovernance({
     const tracker = eventTurnHistoryRef.current;
     tracker.forEach((events, nationId) => {
       events.forEach((lastTurn, eventId) => {
-        if (lastTurn < currentTurn) {
+        const definition = getEventDefinitionById(eventId);
+        const cooldown = getEventCooldownTurns(definition);
+        if (currentTurn - lastTurn >= cooldown) {
           events.delete(eventId);
         }
       });
@@ -269,7 +280,10 @@ export function useGovernance({
         }
 
         const lastTurn = eventTurnHistoryRef.current.get(nation.id)?.get(electionEvent.id);
-        if (lastTurn === currentTurn) {
+        if (
+          typeof lastTurn === 'number' &&
+          currentTurn - lastTurn < getEventCooldownTurns(electionEvent)
+        ) {
           continue;
         }
 
@@ -316,7 +330,10 @@ export function useGovernance({
     });
     const freshEvents = applicableEvents.filter((event) => {
       const lastTurn = eventTurnHistoryRef.current.get(targetNation.id)?.get(event.id);
-      return lastTurn !== currentTurn;
+      if (typeof lastTurn !== 'number') {
+        return true;
+      }
+      return currentTurn - lastTurn >= getEventCooldownTurns(event);
     });
     if (freshEvents.length === 0) return;
     const selected = freshEvents[Math.floor(Math.random() * freshEvents.length)];
