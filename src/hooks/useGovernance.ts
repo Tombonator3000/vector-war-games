@@ -4,6 +4,7 @@ import {
   type GovernanceDelta,
   type PoliticalEventDefinition,
   type PoliticalEventOption,
+  type PoliticalEventThresholdKey,
 } from '@/lib/events/politicalEvents';
 
 const politicalEventIndex = new Map<string, PoliticalEventDefinition>(
@@ -14,6 +15,62 @@ const getEventDefinitionById = (id: string) => politicalEventIndex.get(id);
 
 const getEventCooldownTurns = (definition: PoliticalEventDefinition | undefined) =>
   definition?.cooldownTurns ?? 1;
+
+const thresholdEvaluators: Record<
+  PoliticalEventThresholdKey,
+  (metrics: GovernanceMetrics, threshold: number) => boolean
+> = {
+  moraleBelow: (metrics, threshold) => metrics.morale < threshold,
+  publicOpinionBelow: (metrics, threshold) => metrics.publicOpinion < threshold,
+  cabinetApprovalBelow: (metrics, threshold) => metrics.cabinetApproval < threshold,
+};
+
+const meetsPoliticalEventConditions = (
+  definition: PoliticalEventDefinition,
+  metrics: GovernanceMetrics,
+  currentTurn: number,
+): boolean => {
+  const { conditions } = definition;
+  if (!conditions) {
+    return true;
+  }
+
+  if (typeof conditions.minTurn === 'number' && currentTurn < conditions.minTurn) {
+    return false;
+  }
+
+  const requireAnySet = new Set<PoliticalEventThresholdKey>(conditions.requireAny ?? []);
+  let anyThresholdMet = false;
+  let hasAnyCandidate = false;
+
+  for (const key of Object.keys(thresholdEvaluators) as PoliticalEventThresholdKey[]) {
+    const value = conditions[key];
+    if (typeof value !== 'number') {
+      continue;
+    }
+
+    const isMet = thresholdEvaluators[key](metrics, value);
+    if (requireAnySet.has(key)) {
+      hasAnyCandidate = true;
+      if (isMet) {
+        anyThresholdMet = true;
+      }
+    } else if (!isMet) {
+      return false;
+    }
+  }
+
+  if (requireAnySet.size > 0) {
+    if (!hasAnyCandidate) {
+      return false;
+    }
+    if (!anyThresholdMet) {
+      return false;
+    }
+  }
+
+  return true;
+};
 
 export interface GovernanceMetrics {
   morale: number;
@@ -287,6 +344,14 @@ export function useGovernance({
           continue;
         }
 
+        if (!meetsPoliticalEventConditions(electionEvent, nationMetrics, currentTurn)) {
+          syncNationMetrics(nation.id, (current) => ({
+            ...current,
+            electionTimer: getNextElectionTimer(current),
+          }));
+          continue;
+        }
+
         if (nation.isPlayer) {
           recordEventTurn(nation.id, electionEvent.id, currentTurn);
           setActiveEvent({ nationId: nation.id, definition: electionEvent, triggeredTurn: currentTurn });
@@ -294,7 +359,11 @@ export function useGovernance({
           const outcome = autoResolve(nation, electionEvent);
           onAddNewsItem?.(
             'governance',
-            `${nation.name} election yields ${outcome.effects.morale && outcome.effects.morale > 0 ? 'renewed mandate' : 'fractured coalition'}.`,
+            `${nation.name} election yields ${
+              outcome.effects.morale && outcome.effects.morale > 0
+                ? 'renewed mandate'
+                : 'fractured coalition'
+            }.`,
             'routine',
           );
         }
@@ -307,46 +376,46 @@ export function useGovernance({
     }
 
     const candidates = politicalEvents.filter((event) => !event.conditions?.electionImminent);
-    const lowMoraleNations = nations.filter((nation) => (metrics[nation.id]?.morale ?? nation.morale) < 55);
-    if (lowMoraleNations.length === 0) return;
-    const targetNation = lowMoraleNations[Math.floor(Math.random() * lowMoraleNations.length)];
-    const applicableEvents = candidates.filter((event) => {
-      const condition = event.conditions;
-      if (!condition) return true;
-      const snapshot = metrics[targetNation.id] ?? seedMetrics(targetNation);
-      if (typeof condition.moraleBelow === 'number' && snapshot.morale >= condition.moraleBelow) {
-        return false;
-      }
-      if (typeof condition.publicOpinionBelow === 'number' && snapshot.publicOpinion >= condition.publicOpinionBelow) {
-        return false;
-      }
-      if (typeof condition.cabinetApprovalBelow === 'number' && snapshot.cabinetApproval >= condition.cabinetApprovalBelow) {
-        return false;
-      }
-      if (typeof condition.minTurn === 'number' && currentTurn < condition.minTurn) {
-        return false;
-      }
-      return true;
-    });
-    const freshEvents = applicableEvents.filter((event) => {
-      const lastTurn = eventTurnHistoryRef.current.get(targetNation.id)?.get(event.id);
-      if (typeof lastTurn !== 'number') {
-        return true;
-      }
-      return currentTurn - lastTurn >= getEventCooldownTurns(event);
-    });
-    if (freshEvents.length === 0) return;
-    const selected = freshEvents[Math.floor(Math.random() * freshEvents.length)];
+    const eligibleTargets: Array<{ nation: GovernanceNationRef; events: PoliticalEventDefinition[] }> = [];
 
-    if (targetNation.isPlayer) {
-      recordEventTurn(targetNation.id, selected.id, currentTurn);
-      setActiveEvent({ nationId: targetNation.id, definition: selected, triggeredTurn: currentTurn });
+    for (const nation of nations) {
+      const snapshot = metrics[nation.id] ?? seedMetrics(nation);
+      const applicableEvents = candidates.filter((event) =>
+        meetsPoliticalEventConditions(event, snapshot, currentTurn),
+      );
+      if (applicableEvents.length === 0) {
+        continue;
+      }
+
+      const freshEvents = applicableEvents.filter((event) => {
+        const lastTurn = eventTurnHistoryRef.current.get(nation.id)?.get(event.id);
+        if (typeof lastTurn !== 'number') {
+          return true;
+        }
+        return currentTurn - lastTurn >= getEventCooldownTurns(event);
+      });
+
+      if (freshEvents.length > 0) {
+        eligibleTargets.push({ nation, events: freshEvents });
+      }
+    }
+
+    if (eligibleTargets.length === 0) {
+      return;
+    }
+
+    const target = eligibleTargets[Math.floor(Math.random() * eligibleTargets.length)];
+    const selected = target.events[Math.floor(Math.random() * target.events.length)];
+
+    if (target.nation.isPlayer) {
+      recordEventTurn(target.nation.id, selected.id, currentTurn);
+      setActiveEvent({ nationId: target.nation.id, definition: selected, triggeredTurn: currentTurn });
       onAddNewsItem?.('governance', selected.title, 'important');
     } else {
-      const outcome = autoResolve(targetNation, selected);
+      const outcome = autoResolve(target.nation, selected);
       onAddNewsItem?.(
         'governance',
-        `${targetNation.name} resolves ${selected.title.toLowerCase()} (${outcome.description}).`,
+        `${target.nation.name} resolves ${selected.title.toLowerCase()} (${outcome.description}).`,
         'routine',
       );
     }

@@ -135,6 +135,7 @@ describe('useGovernance', () => {
 
   it('triggers election turnover and resets timer', async () => {
     nations[0].electionTimer = 0;
+    nations[0].publicOpinion = 50;
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.02);
 
     const { result, rerender } = renderHook(({ currentTurn }) =>
@@ -169,6 +170,27 @@ describe('useGovernance', () => {
     });
 
     randomSpy.mockRestore();
+  });
+
+  it('auto resolves election quietly when stability metrics are strong', async () => {
+    nations[0].electionTimer = 0;
+    nations[0].publicOpinion = 70;
+    nations[0].cabinetApproval = 68;
+
+    const { result } = renderHook(({ currentTurn }) =>
+      useGovernance({
+        currentTurn,
+        getNations,
+        onMetricsSync: syncMetrics,
+        onApplyDelta: applyDelta,
+        onAddNewsItem: newsSpy,
+      }),
+    { initialProps: { currentTurn: turn } });
+
+    await waitFor(() => {
+      expect(newsSpy).not.toHaveBeenCalled();
+      expect(result.current.metrics.player.electionTimer).toBeGreaterThan(0);
+    });
   });
 
   it('enforces a cooldown between morale crisis events', async () => {

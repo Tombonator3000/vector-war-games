@@ -23,6 +23,11 @@ export interface PoliticalEventOption {
   outcomes: PoliticalEventOutcome[];
 }
 
+export type PoliticalEventThresholdKey =
+  | 'moraleBelow'
+  | 'publicOpinionBelow'
+  | 'cabinetApprovalBelow';
+
 export interface PoliticalEventDefinition {
   id: string;
   title: string;
@@ -35,6 +40,7 @@ export interface PoliticalEventDefinition {
     cabinetApprovalBelow?: number;
     electionImminent?: boolean;
     minTurn?: number;
+    requireAny?: PoliticalEventThresholdKey[];
   };
   options: PoliticalEventOption[];
   fallbackDelta?: GovernanceDelta;
@@ -50,6 +56,9 @@ export const politicalEvents: PoliticalEventDefinition[] = [
     cooldownTurns: 6,
     conditions: {
       electionImminent: true,
+      publicOpinionBelow: 55,
+      cabinetApprovalBelow: 55,
+      requireAny: ['publicOpinionBelow', 'cabinetApprovalBelow'],
     },
     options: [
       {
