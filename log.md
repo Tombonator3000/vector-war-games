@@ -42,3 +42,4 @@
 | 2025-10-28T16:01:31Z | Staged governance condition updates and tests for commit. |
 | 2025-10-28T16:01:46Z | Restaged log updates after recording staging action. |
 | 2025-10-28T16:53:45Z | Added BioForge command sheet toggle, gating permissions, and multiplayer action plumbing for the bio-warfare lab modal. |
+| 2025-10-28T17:17:45Z | Repositioned co-op status into options sheet and kept approval queue anchored to HUD. |
