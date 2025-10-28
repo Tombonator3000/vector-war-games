@@ -6988,8 +6988,7 @@ export default function NoradVector() {
           <div className="pointer-events-auto fixed top-14 right-6 z-40 w-64">
             <ElectionCountdownWidget metrics={governance.metrics['player']} />
           </div>
-          <div className="fixed top-14 right-4 flex w-72 flex-col gap-3 pointer-events-auto touch-auto z-40">
-            <CoopStatusPanel />
+          <div className="fixed top-14 right-4 pointer-events-auto touch-auto z-40 w-72">
             <ApprovalQueue />
           </div>
 
@@ -7238,6 +7237,14 @@ export default function NoradVector() {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="options-section">
+            <h3 className="options-section__heading">CO-OP OPERATIONS</h3>
+            <p className="options-section__subheading">Review allied readiness, sync status, and role assignments.</p>
+            <div className="mt-4 space-y-3">
+              <CoopStatusPanel />
             </div>
           </div>
 
