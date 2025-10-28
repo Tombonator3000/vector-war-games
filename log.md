@@ -6,3 +6,4 @@
 | 2025-10-28T11:21:32+00:00 | Added logging mandate to `AGENTS.md` and created this `log.md` to track all actions. |
 | 2025-10-28T11:48:45Z | Implemented conventional warfare systems, UI, and persistence updates across hooks and `Index.tsx`. |
 | 2025-10-28T11:48:45Z | Authored Vitest coverage for conventional warfare logic and modal interactions. |
+| 2025-10-28T12:13:10Z | Blocked border conflicts without deployed attackers and added regression coverage for `resolveBorderConflict`. |
