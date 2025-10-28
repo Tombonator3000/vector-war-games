@@ -57,3 +57,6 @@
 | 2025-10-28T20:19:41Z | Reviewed audio initialization task requirements and repo guidelines. |
 | 2025-10-28T20:20:16Z | Hardened AudioSys initialization against missing Web Audio APIs and added audio support guard for SFX playback. |
 | 2025-10-28T21:30:04Z | Refactored game start trigger into effect watching selection globals to avoid render-phase state updates. |
+| 2025-10-28T23:18:50Z | Reviewed options sheet scrolling request and repository contribution guidelines. |
+| 2025-10-28T23:19:12Z | Updated `.options-sheet` CSS for mobile scrolling and overlay layering adjustments. |
+| 2025-10-28T23:21:05Z | Ran Vite dev server and validated options sheet sections on mobile viewport via Playwright. |
