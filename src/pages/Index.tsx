@@ -327,7 +327,7 @@ const doctrines = {
   firstStrike: {
     name: 'FIRST STRIKE',
     desc: 'Preemptive attack capability',
-    effects: '+1 100MT warhead, start at DEFCON 3'
+    effects: '+1 100MT warhead'
   },
   detente: {
     name: 'DÉTENTE',
@@ -357,10 +357,8 @@ function applyDoctrineEffects(nation: Nation, doctrineKey?: DoctrineKey) {
       nation.warheads[100] = (nation.warheads[100] || 0) + 1;
       nation.researched = nation.researched || {};
       nation.researched.warhead_100 = true;
-      S.defcon = Math.min(S.defcon, 3);
-      AudioSys.playSFX('defcon');
       if ((window as any).__gameAddNewsItem) {
-        (window as any).__gameAddNewsItem('military', `${nation.name} adopts First Strike Doctrine - DEFCON ${S.defcon}`, 'critical');
+        (window as any).__gameAddNewsItem('military', `${nation.name} adopts First Strike Doctrine`, 'critical');
       }
       break;
     }
