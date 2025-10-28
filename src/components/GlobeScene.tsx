@@ -252,11 +252,14 @@ function EarthRealistic({
 }: {
   earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
 }) {
-  const textureUrls = useMemo(() => [
-    '/textures/earth_day.jpg',
-    '/textures/earth_normal.jpg',
-    '/textures/earth_specular.jpg',
-  ], []);
+  const textureUrls = useMemo(() => {
+    const base = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+    return [
+      `${base}textures/earth_day.jpg`,
+      `${base}textures/earth_normal.jpg`,
+      `${base}textures/earth_specular.jpg`,
+    ];
+  }, []);
 
   const [dayMap, normalMap, specularMap] = useLoader(THREE.TextureLoader, textureUrls);
 
