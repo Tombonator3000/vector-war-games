@@ -6910,6 +6910,7 @@ export default function NoradVector() {
           />
           <div className="pointer-events-auto fixed top-14 right-6 z-40 w-64">
             <ElectionCountdownWidget metrics={governance.metrics['player']} />
+          </div>
           <div className="fixed top-14 right-4 flex w-72 flex-col gap-3 pointer-events-auto touch-auto z-40">
             <CoopStatusPanel />
             <ApprovalQueue />
