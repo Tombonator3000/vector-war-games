@@ -1427,7 +1427,9 @@ body.theme-synthwave .options-sheet {
   border: 1px solid var(--synthwave-hud-border);
   color: hsl(188 88% 86%);
   box-shadow: var(--synthwave-surface-shadow);
-  overflow: hidden;
+  max-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 body.theme-synthwave .options-sheet::before {
@@ -1438,6 +1440,7 @@ body.theme-synthwave .options-sheet::before {
   background: var(--synthwave-panel-highlight);
   mix-blend-mode: screen;
   opacity: 0.4;
+  z-index: 2;
 }
 
 body.theme-synthwave .options-sheet::after {
@@ -1451,6 +1454,7 @@ body.theme-synthwave .options-sheet::after {
     hsl(0 0% 100% / 0) 55%
   );
   opacity: 0.55;
+  z-index: 2;
 }
 
 body.theme-synthwave .options-sheet > * {
