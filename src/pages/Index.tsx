@@ -6432,16 +6432,40 @@ export default function NoradVector() {
       let touchStart = { x: 0, y: 0 };
       let zoomedIn = false;
 
+      const clampLatitude = () => {
+        const maxLat = 85;
+        const minLat = -85;
+        const height = H || canvas.height || 0;
+        if (!height) return;
+
+        const zoomLevel = Math.max(0.5, Math.min(3, cam.targetZoom));
+        const camYForLat = (lat: number) =>
+          height / 2 - (height * zoomLevel * (90 - lat)) / 180;
+
+        const minCamY = camYForLat(maxLat);
+        const maxCamY = camYForLat(minLat);
+        cam.y = Math.min(Math.max(cam.y, minCamY), maxCamY);
+      };
+
       const handleMouseDown = (e: MouseEvent) => {
+        if (e.button !== 0) return;
         isDragging = true;
-        dragStart = { x: e.clientX - cam.x, y: e.clientY - cam.y };
+        dragStart = { x: e.clientX, y: e.clientY };
       };
 
       const handleMouseMove = (e: MouseEvent) => {
-        if (isDragging) {
-          cam.x = e.clientX - dragStart.x;
-          cam.y = e.clientY - dragStart.y;
-        }
+        if (!isDragging) return;
+
+        const dx = e.clientX - dragStart.x;
+        const dy = e.clientY - dragStart.y;
+        dragStart = { x: e.clientX, y: e.clientY };
+
+        const rotationFactor = 0.85;
+        const tiltFactor = 0.75;
+
+        cam.x -= dx * rotationFactor;
+        cam.y -= dy * tiltFactor;
+        clampLatitude();
       };
 
       const handleMouseUp = () => {
@@ -6450,8 +6474,10 @@ export default function NoradVector() {
 
       const handleWheel = (e: WheelEvent) => {
         e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        const zoomIntensity = 0.0015;
+        const delta = Math.exp(-e.deltaY * zoomIntensity);
         cam.targetZoom = Math.max(0.5, Math.min(3, cam.targetZoom * delta));
+        clampLatitude();
       };
 
       let touchStartTime = 0;
@@ -6491,8 +6517,9 @@ export default function NoradVector() {
             const scaleFactor = newDistance / initialPinchDistance;
             cam.targetZoom = Math.max(0.5, Math.min(3, initialPinchZoom * scaleFactor));
             lastTouchDistance = newDistance;
+            clampLatitude();
           }
-        } else if(touching && e.touches.length === 1) { 
+        } else if(touching && e.touches.length === 1) {
           // Single finger pan
           e.preventDefault();
           const nx = e.touches[0].clientX, ny = e.touches[0].clientY; 
@@ -6501,9 +6528,13 @@ export default function NoradVector() {
           
           // Only pan if moved more than 5px (prevents accidental pan on tap)
           if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-            cam.x += dx; 
-            cam.y += dy; 
-            touchStart = {x: nx, y: ny}; 
+            const rotationFactor = 0.85;
+            const tiltFactor = 0.75;
+
+            cam.x -= dx * rotationFactor;
+            cam.y -= dy * tiltFactor;
+            clampLatitude();
+            touchStart = {x: nx, y: ny};
           }
         }
       };
@@ -6682,7 +6713,8 @@ export default function NoradVector() {
       canvas.addEventListener('mousedown', handleMouseDown);
       canvas.addEventListener('mousemove', handleMouseMove);
       canvas.addEventListener('mouseup', handleMouseUp);
-      canvas.addEventListener('wheel', handleWheel);
+      canvas.addEventListener('mouseleave', handleMouseUp);
+      canvas.addEventListener('wheel', handleWheel, { passive: false });
       canvas.addEventListener('click', handleClick);
       canvas.addEventListener('dblclick', handleDoubleClick);
       canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
@@ -6697,6 +6729,7 @@ export default function NoradVector() {
         canvas.removeEventListener('mousedown', handleMouseDown);
         canvas.removeEventListener('mousemove', handleMouseMove);
         canvas.removeEventListener('mouseup', handleMouseUp);
+        canvas.removeEventListener('mouseleave', handleMouseUp);
         canvas.removeEventListener('wheel', handleWheel);
         canvas.removeEventListener('click', handleClick);
         canvas.removeEventListener('dblclick', handleDoubleClick);
