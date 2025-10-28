@@ -56,3 +56,4 @@
 | 2025-10-28T18:59:20Z | Added newsroom banter pools to base AI script and XL pack to support `banterSay('news', ...)`. |
 | 2025-10-28T20:19:41Z | Reviewed audio initialization task requirements and repo guidelines. |
 | 2025-10-28T20:20:16Z | Hardened AudioSys initialization against missing Web Audio APIs and added audio support guard for SFX playback. |
+| 2025-10-28T21:30:04Z | Refactored game start trigger into effect watching selection globals to avoid render-phase state updates. |
