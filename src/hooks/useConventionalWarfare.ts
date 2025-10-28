@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { calculateMoraleRecruitmentModifier } from './useGovernance';
 
 export type ForceType = 'army' | 'navy' | 'air';
 
@@ -451,7 +452,9 @@ export function useConventionalWarfare({
         return { success: false, reason: 'Insufficient resources' } as const;
       }
 
+      const moraleModifier = calculateMoraleRecruitmentModifier(getNation(nationId)?.morale ?? 50);
       const profile = getNation(nationId)?.conventional ?? createDefaultNationConventionalProfile();
+      const readinessGain = Math.max(1, Math.round(5 * moraleModifier));
       const unitId = `${nationId}_${templateId}_${Date.now().toString(36)}`;
 
       syncState((prev) => ({
@@ -463,7 +466,7 @@ export function useConventionalWarfare({
             templateId,
             ownerId: nationId,
             label: `${profile.focus.toUpperCase()} ${profile.deployedUnits.length + 1}`,
-            readiness: clamp(profile.readiness + 5, 10, 100),
+            readiness: clamp(profile.readiness + readinessGain, 10, 100),
             experience: 0,
             locationId: null,
             status: 'reserve',
@@ -477,6 +480,7 @@ export function useConventionalWarfare({
         nation.conventional = {
           ...nationProfile,
           reserve: nationProfile.reserve + 1,
+          readiness: clamp(nationProfile.readiness + readinessGain * 0.5, 10, 100),
         };
       }
 
