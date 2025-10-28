@@ -10,8 +10,14 @@ import { toast } from "@/components/ui/use-toast";
 import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
+import { BioWarfareLab } from '@/components/BioWarfareLab';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
-import { usePandemic, type PandemicTriggerPayload, type PandemicCountermeasurePayload, type PandemicTurnContext } from '@/hooks/usePandemic';
+import {
+  usePandemic,
+  type PandemicTriggerPayload,
+  type PandemicCountermeasurePayload,
+  type PandemicTurnContext
+} from '@/hooks/usePandemic';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
@@ -4171,7 +4177,16 @@ export default function NoradVector() {
 
   const getAllNations = useCallback(() => nations, []);
 
-  const { pandemicState, triggerPandemic, applyCountermeasure: applyPandemicCountermeasure, advancePandemicTurn } = usePandemic(addNewsItem);
+  const {
+    pandemicState,
+    triggerPandemic,
+    applyCountermeasure: applyPandemicCountermeasure,
+    advancePandemicTurn,
+    upgradeTrait: upgradePandemicTrait,
+    downgradeTrait: downgradePandemicTrait,
+    resetTraits: resetPandemicTraits,
+    deployTraits: deployPandemicTraits
+  } = usePandemic(addNewsItem);
   const conventional = useConventionalWarfare({
     initialState: conventionalState,
     currentTurn: S.turn,
@@ -7312,6 +7327,15 @@ export default function NoradVector() {
           })()}
         </DialogContent>
       </Dialog>
+
+      <BioWarfareLab
+        state={pandemicState}
+        enabled={pandemicIntegrationEnabled && bioWarfareEnabled}
+        onUpgrade={upgradePandemicTrait}
+        onDowngrade={downgradePandemicTrait}
+        onDeploy={deployPandemicTraits}
+        onReset={resetPandemicTraits}
+      />
 
       <PandemicPanel
         state={pandemicState}

@@ -10,6 +10,18 @@ export interface PandemicOutbreak {
   heat: number; // signals how visible the outbreak is
 }
 
+export type PandemicTraitKey = 'transmission' | 'stealth' | 'lethality';
+
+export interface PandemicTraitDefinition {
+  key: PandemicTraitKey;
+  label: string;
+  description: string;
+  maxLevel: number;
+  costs: number[];
+}
+
+export type PandemicTraitLevels = Record<PandemicTraitKey, number>;
+
 export interface PandemicState {
   active: boolean;
   strainName: string;
@@ -25,6 +37,9 @@ export interface PandemicState {
   suspectedActors: string[];
   outbreaks: PandemicOutbreak[];
   lastMutation: string | null;
+  labResources: number;
+  traitLoadout: PandemicTraitLevels;
+  activeTraits: PandemicTraitLevels;
 }
 
 export interface PandemicTriggerPayload {
@@ -63,6 +78,44 @@ export interface PandemicTurnEffect {
 
 type AddNewsItem = (category: NewsItem['category'], text: string, priority: NewsItem['priority']) => void;
 
+export const PANDEMIC_TRAITS: PandemicTraitDefinition[] = [
+  {
+    key: 'transmission',
+    label: 'Transmission Mesh',
+    description: 'Optimizes aerosolization, multi-vector release, and neural hijack routines to accelerate spread.',
+    maxLevel: 3,
+    costs: [3, 4, 5]
+  },
+  {
+    key: 'stealth',
+    label: 'Stealth Protocols',
+    description: 'Suppresses symptomatic markers, scrambles biosurveillance telemetry, and delays detection.',
+    maxLevel: 3,
+    costs: [2, 3, 4]
+  },
+  {
+    key: 'lethality',
+    label: 'Lethality Suite',
+    description: 'Amplifies systemic collapse with hemorrhagic payloads, cytokine cascades, and prion overlays.',
+    maxLevel: 3,
+    costs: [4, 5, 6]
+  }
+];
+
+const TRAIT_CONFIG: Record<PandemicTraitKey, PandemicTraitDefinition> = PANDEMIC_TRAITS.reduce(
+  (acc, trait) => {
+    acc[trait.key] = trait;
+    return acc;
+  },
+  {} as Record<PandemicTraitKey, PandemicTraitDefinition>
+);
+
+const ZERO_TRAITS: PandemicTraitLevels = {
+  transmission: 0,
+  stealth: 0,
+  lethality: 0
+};
+
 const INITIAL_STATE: PandemicState = {
   active: false,
   strainName: '',
@@ -77,7 +130,10 @@ const INITIAL_STATE: PandemicState = {
   casualtyTally: 0,
   suspectedActors: [],
   outbreaks: [],
-  lastMutation: null
+  lastMutation: null,
+  labResources: 8,
+  traitLoadout: { ...ZERO_TRAITS },
+  activeTraits: { ...ZERO_TRAITS }
 };
 
 const STAGE_THRESHOLDS: Record<PandemicStage, number> = {
@@ -140,6 +196,28 @@ function buildOutbreaks(regions?: string[]): PandemicOutbreak[] {
   }));
 }
 
+function deriveTraitEffects(traits: PandemicTraitLevels) {
+  const transmission = traits.transmission ?? 0;
+  const stealth = traits.stealth ?? 0;
+  const lethality = traits.lethality ?? 0;
+
+  const initialInfectionBonus = transmission * 6;
+  const spreadBonus = transmission * 2.4;
+  const stealthHeatReduction = stealth * 5;
+  const containmentResistance = stealth * 1.5;
+  const lethalityScalar = 1 + lethality * 0.35;
+  const lethalityBase = lethality * 0.12;
+
+  return {
+    initialInfectionBonus,
+    spreadBonus,
+    stealthHeatReduction,
+    containmentResistance,
+    lethalityScalar,
+    lethalityBase
+  };
+}
+
 export function usePandemic(addNewsItem: AddNewsItem) {
   const [pandemicState, setPandemicState] = useState<PandemicState>(INITIAL_STATE);
   const stageRef = useRef<PandemicStage>('outbreak');
@@ -156,14 +234,18 @@ export function usePandemic(addNewsItem: AddNewsItem) {
       const containmentBoost = payload.initialContainment ?? (payload.severity === 'severe' ? 10 : payload.severity === 'moderate' ? 25 : 40);
       const infectionBoost = payload.initialInfection ?? (payload.severity === 'severe' ? 40 : payload.severity === 'moderate' ? 25 : 12);
 
+      const traitEffects = deriveTraitEffects(prev.activeTraits);
+      const infectionWithTraits = infectionBoost + traitEffects.initialInfectionBonus;
+      const containmentWithTraits = containmentBoost - traitEffects.containmentResistance;
+
       const suspectedActors = new Set(prev.suspectedActors);
       payload.suspectedActors?.forEach(actor => suspectedActors.add(actor));
 
       const outbreaks = active
         ? prev.outbreaks.map(outbreak => ({
             ...outbreak,
-            infection: clamp(outbreak.infection + infectionBoost * 0.3, 0, 100),
-            heat: clamp(outbreak.heat + 10, 0, 100)
+            infection: clamp(outbreak.infection + infectionWithTraits * 0.3, 0, 100),
+            heat: clamp(outbreak.heat + 10 - traitEffects.stealthHeatReduction, 0, 100)
           }))
         : buildOutbreaks(payload.regions);
 
@@ -177,15 +259,16 @@ export function usePandemic(addNewsItem: AddNewsItem) {
         : `Bio-weapon ${strainName} detected – ${pickRandom(['crews reporting hemorrhagic symptoms', 'NORAD medics overwhelmed', 'strategic readiness collapsing'])}`;
 
       const nextState: PandemicState = {
+        ...prev,
         active: true,
         strainName,
         pathogenType,
         origin: payload.origin,
         stage,
-        globalInfection: clamp(active ? prev.globalInfection + infectionBoost * 0.6 : infectionBoost, 0, 100),
+        globalInfection: clamp(active ? prev.globalInfection + infectionWithTraits * 0.6 : infectionWithTraits, 0, 100),
         mutationLevel: Math.max(prev.mutationLevel, payload.severity === 'severe' ? 4 : payload.severity === 'moderate' ? 2 : 1),
-        lethality: active ? prev.lethality : lethalityBase,
-        containmentEffort: clamp(active ? prev.containmentEffort + containmentBoost : containmentBoost, 0, 100),
+        lethality: active ? prev.lethality : lethalityBase + traitEffects.lethalityBase,
+        containmentEffort: clamp(active ? prev.containmentEffort + containmentWithTraits : containmentWithTraits, 0, 100),
         vaccineProgress: prev.vaccineProgress,
         casualtyTally: prev.casualtyTally,
         suspectedActors: Array.from(suspectedActors),
@@ -319,17 +402,18 @@ export function usePandemic(addNewsItem: AddNewsItem) {
     setPandemicState(prev => {
       if (!prev.active) return prev;
 
+      const traitEffects = deriveTraitEffects(prev.activeTraits);
       const containmentBleed = prev.containmentEffort > 0 ? 1.5 : 0;
       const vaccineMomentum = prev.vaccineProgress / 20;
-      const baseSpread = 6 + prev.outbreaks.length * 1.5 + prev.mutationLevel * 1.3;
-      const containmentEffect = prev.containmentEffort * 0.12 + vaccineMomentum;
+      const baseSpread = 6 + prev.outbreaks.length * 1.5 + prev.mutationLevel * 1.3 + traitEffects.spreadBonus;
+      const containmentEffect = Math.max(0, prev.containmentEffort * 0.12 + vaccineMomentum - traitEffects.containmentResistance);
       const newGlobalInfection = clamp(prev.globalInfection + baseSpread - containmentEffect, 0, 100);
       const infectionDelta = newGlobalInfection - prev.globalInfection;
 
       const outbreaks = prev.outbreaks.map(outbreak => ({
         ...outbreak,
         infection: clamp(outbreak.infection + infectionDelta * 0.5 - containmentEffect * 0.3, 0, 100),
-        heat: clamp(outbreak.heat + Math.max(0, infectionDelta) * 0.6 - containmentEffect * 0.2, 0, 100)
+        heat: clamp(outbreak.heat + Math.max(0, infectionDelta) * 0.6 - containmentEffect * 0.2 - traitEffects.stealthHeatReduction, 0, 100)
       }));
 
       const mutationChance = 0.12 + prev.mutationLevel * 0.03 - prev.containmentEffort * 0.002;
@@ -347,14 +431,18 @@ export function usePandemic(addNewsItem: AddNewsItem) {
       const newContainment = clamp(prev.containmentEffort - containmentBleed, 0, 100);
       const newVaccine = clamp(prev.vaccineProgress + Math.max(0, prev.containmentEffort - 40) * 0.05, 0, 120);
 
-      const lethality = prev.lethality + mutationLevel * 0.01;
-      const casualtyBase = Math.max(0, infectionDelta) * (lethality + 0.1) * 50000;
+      const lethality = prev.lethality + mutationLevel * 0.01 + traitEffects.lethalityBase;
+      const casualtyBase = Math.max(0, infectionDelta) * (lethality + 0.1) * 50000 * traitEffects.lethalityScalar;
       populationLoss = Math.round(casualtyBase * (context.playerPopulation > 0 ? clamp(context.playerPopulation / 300, 0.2, 2) : 1));
       productionPenalty = Math.round(newGlobalInfection * 0.2);
       instabilityIncrease = Math.round(Math.max(0, infectionDelta) * 0.5);
       actionsPenalty = newGlobalInfection >= 70 ? 1 : newGlobalInfection >= 45 ? 1 : 0;
 
       const newCasualtyTally = prev.casualtyTally + populationLoss;
+
+      const researchYield = Math.max(0, Math.round(Math.max(infectionDelta, 0) / 6));
+      const traitYield = prev.activeTraits.transmission > 0 || prev.activeTraits.stealth > 0 || prev.activeTraits.lethality > 0 ? 1 : 0;
+      const newLabResources = prev.labResources + researchYield + traitYield;
 
       let stage: PandemicStage = prev.stage;
       if (newGlobalInfection >= STAGE_THRESHOLDS.collapse) {
@@ -397,7 +485,10 @@ export function usePandemic(addNewsItem: AddNewsItem) {
             ...INITIAL_STATE,
             active: false,
             casualtyTally: newCasualtyTally,
-            lastMutation: mutationDescriptor
+            lastMutation: mutationDescriptor,
+            labResources: newLabResources,
+            traitLoadout: { ...prev.traitLoadout },
+            activeTraits: { ...ZERO_TRAITS }
           }
         : {
             ...prev,
@@ -408,7 +499,8 @@ export function usePandemic(addNewsItem: AddNewsItem) {
             outbreaks,
             casualtyTally: newCasualtyTally,
             stage,
-            lastMutation: mutationDescriptor ?? prev.lastMutation
+            lastMutation: mutationDescriptor ?? prev.lastMutation,
+            labResources: newLabResources
           };
 
       if (resolved) {
@@ -432,12 +524,116 @@ export function usePandemic(addNewsItem: AddNewsItem) {
     };
   }, [addNewsItem, pandemicState.active]);
 
+  const upgradeTrait = useCallback((trait: PandemicTraitKey) => {
+    let upgraded = false;
+    setPandemicState(prev => {
+      const config = TRAIT_CONFIG[trait];
+      const currentLevel = prev.traitLoadout[trait];
+      if (currentLevel >= config.maxLevel) {
+        return prev;
+      }
+      const cost = config.costs[currentLevel];
+      if (prev.labResources < cost) {
+        return prev;
+      }
+      upgraded = true;
+      return {
+        ...prev,
+        labResources: prev.labResources - cost,
+        traitLoadout: {
+          ...prev.traitLoadout,
+          [trait]: currentLevel + 1
+        }
+      };
+    });
+    return upgraded;
+  }, []);
+
+  const downgradeTrait = useCallback((trait: PandemicTraitKey) => {
+    let downgraded = false;
+    setPandemicState(prev => {
+      const config = TRAIT_CONFIG[trait];
+      const currentLevel = prev.traitLoadout[trait];
+      if (currentLevel <= 0) {
+        return prev;
+      }
+      downgraded = true;
+      const refund = config.costs[currentLevel - 1];
+      return {
+        ...prev,
+        labResources: prev.labResources + refund,
+        traitLoadout: {
+          ...prev.traitLoadout,
+          [trait]: currentLevel - 1
+        }
+      };
+    });
+    return downgraded;
+  }, []);
+
+  const resetTraits = useCallback(() => {
+    let adjusted = false;
+    setPandemicState(prev => {
+      let refundTotal = 0;
+      const nextLoadout: PandemicTraitLevels = { ...prev.traitLoadout };
+      PANDEMIC_TRAITS.forEach(trait => {
+        const current = nextLoadout[trait.key];
+        if (current > 0) {
+          adjusted = true;
+          for (let level = current - 1; level >= 0; level -= 1) {
+            refundTotal += trait.costs[level];
+          }
+          nextLoadout[trait.key] = 0;
+        }
+      });
+      if (!adjusted) {
+        return prev;
+      }
+      return {
+        ...prev,
+        labResources: prev.labResources + refundTotal,
+        traitLoadout: nextLoadout,
+        activeTraits: { ...ZERO_TRAITS }
+      };
+    });
+    return adjusted;
+  }, []);
+
+  const deployTraits = useCallback(() => {
+    let deployed = false;
+    setPandemicState(prev => {
+      const sameDeployment = PANDEMIC_TRAITS.every(trait => prev.activeTraits[trait.key] === prev.traitLoadout[trait.key]);
+      if (sameDeployment) {
+        return prev;
+      }
+      deployed = true;
+      return {
+        ...prev,
+        activeTraits: {
+          ...prev.traitLoadout
+        }
+      };
+    });
+    if (deployed) {
+      addNewsItem(
+        'science',
+        'BioForge lab deploys new pathogenic loadout – outbreak parameters recalibrated.',
+        'important'
+      );
+    }
+    return deployed;
+  }, [addNewsItem]);
+
   const derived = useMemo(() => pandemicState, [pandemicState]);
 
   return {
     pandemicState: derived,
     triggerPandemic,
     applyCountermeasure,
-    advancePandemicTurn
+    advancePandemicTurn,
+    upgradeTrait,
+    downgradeTrait,
+    resetTraits,
+    deployTraits
   };
 }
