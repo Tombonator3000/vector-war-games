@@ -117,4 +117,5 @@ export type MultiplayerActionType =
   | 'DIPLOMACY'
   | 'PRODUCTION'
   | 'CULTURE'
-  | 'IMMIGRATION';
+  | 'IMMIGRATION'
+  | 'BIOWARFARE';

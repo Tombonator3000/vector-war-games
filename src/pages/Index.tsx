@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
-import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield } from 'lucide-react';
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
@@ -4061,6 +4061,7 @@ export default function NoradVector() {
     }
     return true;
   });
+  const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
     const stored = Storage.getItem('conventional_state');
@@ -4083,6 +4084,13 @@ export default function NoradVector() {
     const hasSeenTutorial = Storage.getItem('has_seen_tutorial');
     return hasSeenTutorial !== 'true';
   });
+
+  useEffect(() => {
+    if (!(pandemicIntegrationEnabled && bioWarfareEnabled)) {
+      setIsBioWarfareOpen(false);
+    }
+  }, [pandemicIntegrationEnabled, bioWarfareEnabled]);
+  const bioWarfareAvailable = pandemicIntegrationEnabled && bioWarfareEnabled;
   const handleMapStyleChange = (style: MapStyle) => {
     setMapStyle(style);
     Storage.setItem('map_style', style);
@@ -5811,6 +5819,26 @@ export default function NoradVector() {
     );
   }, [closeModal, getBuildContext, openModal, targetableNations]);
 
+  const handleBioWarfareLabToggle = useCallback(async () => {
+    if (!bioWarfareAvailable) {
+      toast({
+        title: 'BioForge offline',
+        description: 'Enable pandemic integration and bio-weapon ops in options to access the lab.'
+      });
+      return;
+    }
+
+    if (isBioWarfareOpen) {
+      setIsBioWarfareOpen(false);
+      return;
+    }
+
+    const approved = await ensureAction('BIOWARFARE', { description: 'BioForge lab access' });
+    if (!approved) return;
+    AudioSys.playSFX('click');
+    setIsBioWarfareOpen(true);
+  }, [bioWarfareAvailable, ensureAction, isBioWarfareOpen]);
+
 
   const handleCulture = useCallback(async () => {
     const approved = await ensureAction('CULTURE', { description: 'Cultural operations briefing' });
@@ -6882,6 +6910,7 @@ export default function NoradVector() {
   const buildAllowed = canExecute('BUILD');
   const researchAllowed = canExecute('RESEARCH');
   const intelAllowed = canExecute('INTEL');
+  const bioWarfareAllowed = canExecute('BIOWARFARE');
   const cultureAllowed = canExecute('CULTURE');
   const immigrationAllowed = canExecute('IMMIGRATION');
   const diplomacyAllowed = canExecute('DIPLOMACY');
@@ -7017,6 +7046,28 @@ export default function NoradVector() {
                   >
                     <Satellite className="h-5 w-5" />
                     <span className="text-[8px] font-mono">INTEL</span>
+                  </Button>
+
+                  <Button
+                    onClick={handleBioWarfareLabToggle}
+                    variant="ghost"
+                    size="icon"
+                    data-role-locked={!bioWarfareAllowed}
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      bioWarfareAllowed && bioWarfareAvailable
+                        ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10'
+                        : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                    }`}
+                    title={
+                      bioWarfareAllowed
+                        ? bioWarfareAvailable
+                          ? 'BIOFORGE - Pathogen warfare lab'
+                          : 'Enable pandemic integration and bio-weapon ops in options to access the lab'
+                        : 'Command authorization required to access the BioForge lab'
+                    }
+                  >
+                    <FlaskConical className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">BIO</span>
                   </Button>
 
                   <Button
@@ -7329,6 +7380,8 @@ export default function NoradVector() {
       </Dialog>
 
       <BioWarfareLab
+        open={isBioWarfareOpen}
+        onOpenChange={setIsBioWarfareOpen}
         state={pandemicState}
         enabled={pandemicIntegrationEnabled && bioWarfareEnabled}
         onUpgrade={upgradePandemicTrait}
