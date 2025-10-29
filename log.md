@@ -144,3 +144,7 @@
 2025-11-07T09:58:25Z Implemented satellite orbit state tracking, canvas rendering, and deployment hooks for player and AI flows.
 2025-11-07T10:02:40Z Ran `npm run build` to verify satellite orbit integration compiles without errors.
 2025-11-07T10:05:55Z Ran `npm run dev` for manual satellite visualization spot check and terminated dev server after startup.
+2025-10-29T18:01:43Z Reviewed root `AGENTS.md` and scoped pandemic panel visibility changes for Index.tsx.
+2025-10-29T18:02:42Z Updated `src/pages/Index.tsx` to compute `showPandemicPanel` and render the pandemic HUD only when active outbreaks or the BioForge lab are open.
+2025-10-29T18:04:23Z Committed pandemic panel visibility change set with message "Conditionally render pandemic panel".
+2025-10-29T18:04:44Z Amended the commit to include updated log entries documenting the change workflow.

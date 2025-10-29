@@ -4942,6 +4942,7 @@ export default function NoradVector() {
     resetTraits: resetPandemicTraits,
     deployTraits: deployPandemicTraits
   } = usePandemic(addNewsItem);
+  const showPandemicPanel = pandemicState.active || isBioWarfareOpen;
   const conventional = useConventionalWarfare({
     initialState: conventionalState,
     currentTurn: S.turn,
@@ -8760,11 +8761,13 @@ export default function NoradVector() {
         onReset={resetPandemicTraits}
       />
 
-      <PandemicPanel
-        state={pandemicState}
-        enabled={pandemicIntegrationEnabled}
-        biowarfareEnabled={bioWarfareEnabled}
-      />
+      {showPandemicPanel && (
+        <PandemicPanel
+          state={pandemicState}
+          enabled={pandemicIntegrationEnabled}
+          biowarfareEnabled={bioWarfareEnabled}
+        />
+      )}
 
       {activeFlashpoint && (
         <FlashpointModal
