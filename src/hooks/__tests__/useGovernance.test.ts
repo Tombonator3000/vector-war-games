@@ -97,6 +97,38 @@ describe('useGovernance', () => {
     });
   });
 
+  it('applies external morale deltas and carries them through subsequent ticks', async () => {
+    const { result, rerender } = renderHook(({ currentTurn }) =>
+      useGovernance({
+        currentTurn,
+        getNations,
+        onMetricsSync: syncMetrics,
+        onApplyDelta: applyDelta,
+      }),
+    { initialProps: { currentTurn: turn } });
+
+    await waitFor(() => {
+      expect(nations[0].morale).toBeLessThan(70);
+    });
+    const baseline = nations[0].morale;
+
+    act(() => {
+      result.current.applyGovernanceDelta('player', { morale: 5 });
+    });
+
+    await waitFor(() => {
+      expect(result.current.metrics.player.morale).toBeCloseTo(baseline + 5, 5);
+      expect(nations[0].morale).toBeCloseTo(baseline + 5, 5);
+    });
+
+    turn += 1;
+    rerender({ currentTurn: turn });
+
+    await waitFor(() => {
+      expect(nations[0].morale).toBeGreaterThan(baseline);
+    });
+  });
+
   it('emits morale crisis event and applies option outcome', async () => {
     nations[0].morale = 50;
     nations[0].publicOpinion = 48;
