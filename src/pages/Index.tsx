@@ -418,6 +418,7 @@ let startCtx: CanvasRenderingContext2D;
 let W = 1600, H = 900;
 let globeProjector: ProjectorFn | null = null;
 let globePicker: PickerFn | null = null;
+let lastSatelliteUpdateMs: number | null = null;
 
 // Camera system
 const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
@@ -3051,8 +3052,12 @@ function drawSatellites(nowMs: number) {
 
   const orbits = S.satelliteOrbits ?? [];
   if (orbits.length === 0) {
+    lastSatelliteUpdateMs = nowMs;
     return;
   }
+
+  const deltaMs = lastSatelliteUpdateMs === null ? 0 : Math.max(0, nowMs - lastSatelliteUpdateMs);
+  lastSatelliteUpdateMs = nowMs;
 
   const activeOrbits: SatelliteOrbit[] = [];
   const player = PlayerManager.get();
@@ -3068,7 +3073,13 @@ function drawSatellites(nowMs: number) {
         ? player
         : nations.find(nation => nation.id === orbit.ownerId) ?? null;
 
-    const ttlExpired = nowMs - orbit.startedAt > orbit.ttl;
+    let remainingMs = Number.isFinite(orbit.remainingMs) ? orbit.remainingMs : orbit.ttl;
+    if (deltaMs > 0) {
+      remainingMs = Math.max(0, remainingMs - deltaMs);
+    }
+    orbit.remainingMs = remainingMs;
+
+    const ttlExpired = remainingMs <= 0;
     const hasCoverage = !!owner?.satellites?.[orbit.targetId];
 
     if (ttlExpired || !hasCoverage) {
@@ -3082,7 +3093,7 @@ function drawSatellites(nowMs: number) {
       return;
     }
 
-    const elapsed = nowMs - orbit.startedAt;
+    const elapsed = orbit.ttl - remainingMs;
     const angle = orbit.phaseOffset + SATELLITE_ORBIT_SPEED * elapsed * orbit.direction;
     const satelliteX = targetX + Math.cos(angle) * SATELLITE_ORBIT_RADIUS;
     const satelliteY = targetY + Math.sin(angle) * SATELLITE_ORBIT_RADIUS;
@@ -3113,13 +3124,12 @@ function drawSatellites(nowMs: number) {
 }
 
 function registerSatelliteOrbit(ownerId: string, targetId: string) {
-  const now = Date.now();
   S.satelliteOrbits = S.satelliteOrbits ?? [];
 
   const existing = S.satelliteOrbits.find(orbit => orbit.ownerId === ownerId && orbit.targetId === targetId);
   if (existing) {
-    existing.startedAt = now;
     existing.ttl = SATELLITE_ORBIT_TTL_MS;
+    existing.remainingMs = SATELLITE_ORBIT_TTL_MS;
     existing.phaseOffset = Math.random() * Math.PI * 2;
     existing.direction = Math.random() < 0.5 ? 1 : -1;
     return;
@@ -3128,8 +3138,8 @@ function registerSatelliteOrbit(ownerId: string, targetId: string) {
   S.satelliteOrbits.push({
     ownerId,
     targetId,
-    startedAt: now,
     ttl: SATELLITE_ORBIT_TTL_MS,
+    remainingMs: SATELLITE_ORBIT_TTL_MS,
     phaseOffset: Math.random() * Math.PI * 2,
     direction: Math.random() < 0.5 ? 1 : -1,
   });
@@ -4732,7 +4742,13 @@ export default function NoradVector() {
           S = { ...state.gameState };
           if (!Array.isArray(S.satelliteOrbits)) {
             S.satelliteOrbits = [];
+          } else {
+            S.satelliteOrbits = S.satelliteOrbits.map(orbit => ({
+              ...orbit,
+              remainingMs: Number.isFinite(orbit.remainingMs) ? orbit.remainingMs : orbit.ttl,
+            }));
           }
+          lastSatelliteUpdateMs = Date.now();
         }
         if (state.nations) {
           nations = state.nations.map(nation => ({ ...nation }));
