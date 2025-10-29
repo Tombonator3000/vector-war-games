@@ -6526,6 +6526,7 @@ export default function NoradVector() {
       
       // Setup mouse and touch controls
       let isDragging = false;
+      let dragButton: number | null = null;
       let dragStart = { x: 0, y: 0 };
       let touching = false;
       let touchStart = { x: 0, y: 0 };
@@ -6547,8 +6548,9 @@ export default function NoradVector() {
       };
 
       const handleMouseDown = (e: MouseEvent) => {
-        if (e.button !== 0) return;
+        if (e.button !== 0 && e.button !== 2) return;
         isDragging = true;
+        dragButton = e.button;
         dragStart = { x: e.clientX, y: e.clientY };
       };
 
@@ -6569,6 +6571,7 @@ export default function NoradVector() {
 
       const handleMouseUp = () => {
         isDragging = false;
+        dragButton = null;
       };
 
       const handleWheel = (e: WheelEvent) => {
@@ -6698,6 +6701,7 @@ export default function NoradVector() {
 
       // Click handler for satellite intelligence
       const handleClick = (e: MouseEvent) => {
+        if (e.button !== 0) return;
         if (isDragging) return;
         if (S.gameOver) return;
         const player = PlayerManager.get();
@@ -6824,6 +6828,12 @@ export default function NoradVector() {
         }
       };
 
+      const handleContextMenu = (e: MouseEvent) => {
+        if (isDragging && dragButton === 2) {
+          e.preventDefault();
+        }
+      };
+
       canvas.addEventListener('mousedown', handleMouseDown);
       canvas.addEventListener('mousemove', handleMouseMove);
       canvas.addEventListener('mouseup', handleMouseUp);
@@ -6831,6 +6841,7 @@ export default function NoradVector() {
       canvas.addEventListener('wheel', handleWheel, { passive: false });
       canvas.addEventListener('click', handleClick);
       canvas.addEventListener('dblclick', handleDoubleClick);
+      canvas.addEventListener('contextmenu', handleContextMenu);
       canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
       canvas.addEventListener('touchmove', handleTouchMove, {passive: false});
       canvas.addEventListener('touchend', handleTouchEnd, {passive: false});
@@ -6847,6 +6858,7 @@ export default function NoradVector() {
         canvas.removeEventListener('wheel', handleWheel);
         canvas.removeEventListener('click', handleClick);
         canvas.removeEventListener('dblclick', handleDoubleClick);
+        canvas.removeEventListener('contextmenu', handleContextMenu);
         canvas.removeEventListener('touchstart', handleTouchStart);
         canvas.removeEventListener('touchmove', handleTouchMove);
         canvas.removeEventListener('touchend', handleTouchEnd);

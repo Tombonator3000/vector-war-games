@@ -66,3 +66,5 @@
 | 2025-10-29T07:55:40Z | Reviewed repository contribution guide and scope instructions ahead of map zoom handling update. |
 | 2025-10-29T07:56:20Z | Started implementing globe wheel focal point zoom adjustments and camera offset recalculation plan. |
 | 2025-10-29T07:57:40Z | Implemented wheel zoom focal point preservation by recalculating camera offsets in `src/pages/Index.tsx`. |
+| 2025-10-29T07:43:53+00:00 | Reviewed drag handling task instructions and repository guidelines. |
+| 2025-10-29T07:44:33+00:00 | Implemented canvas drag handling for both mouse buttons, tracked drag initiator, and suppressed context menu during right-drag pan. |
