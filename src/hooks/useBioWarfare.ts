@@ -1,11 +1,12 @@
 /**
  * Integrated Bio-Warfare System
- * Combines pandemic mechanics with evolution tree
+ * Combines pandemic mechanics with evolution tree and lab construction
  */
 
 import { useCallback } from 'react';
 import { usePandemic } from './usePandemic';
 import { useEvolutionTree } from './useEvolutionTree';
+import { useBioLab } from './useBioLab';
 import type { PandemicTurnContext, PandemicTurnEffect } from './usePandemic';
 import type { NewsItem } from '@/components/NewsTicker';
 import type { PlagueState } from '@/types/biowarfare';
@@ -14,11 +15,12 @@ import { getPlagueTypeById } from '@/lib/evolutionData';
 type AddNewsItem = (category: NewsItem['category'], text: string, priority: NewsItem['priority']) => void;
 
 /**
- * Main hook that combines pandemic spread with evolution tree
+ * Main hook that combines pandemic spread with evolution tree and lab construction
  */
 export function useBioWarfare(addNewsItem: AddNewsItem) {
   const pandemic = usePandemic(addNewsItem);
   const evolution = useEvolutionTree(addNewsItem);
+  const bioLab = useBioLab(addNewsItem);
 
   /**
    * Calculate spread modifiers based on evolution stats
@@ -91,6 +93,12 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
    */
   const advanceBioWarfareTurn = useCallback((context: PandemicTurnContext): PandemicTurnEffect | null => {
     const plagueType = evolution.plagueState.selectedPlagueType ? getPlagueTypeById(evolution.plagueState.selectedPlagueType) : null;
+
+    // Advance lab construction if under construction
+    const constructionResult = bioLab.advanceConstruction();
+    if (constructionResult.completed && constructionResult.newTier) {
+      addNewsItem('science', `Bio Laboratory upgraded to Tier ${constructionResult.newTier}`, 'important');
+    }
 
     // Only process if plague is active
     if (!evolution.plagueState.plagueStarted || !pandemic.pandemicState.active) {
@@ -204,7 +212,7 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
     }
 
     return enhancedEffect;
-  }, [pandemic, evolution, calculateSpreadModifiers, addNewsItem]);
+  }, [pandemic, evolution, bioLab, calculateSpreadModifiers, addNewsItem]);
 
   /**
    * Trigger pandemic with evolution consideration
@@ -254,6 +262,9 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
     // Evolution state
     plagueState: evolution.plagueState,
 
+    // Lab state
+    labFacility: bioLab.labFacility,
+
     // Pandemic actions (original)
     applyCountermeasure: pandemic.applyCountermeasure,
 
@@ -262,6 +273,12 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
     evolveNode: evolution.evolveNode,
     devolveNode: evolution.devolveNode,
     addDNAPoints: evolution.addDNAPoints,
+
+    // Lab actions
+    startLabConstruction: bioLab.startConstruction,
+    cancelLabConstruction: bioLab.cancelConstruction,
+    getConstructionOptions: bioLab.getConstructionOptions,
+    isPlagueTypeUnlocked: bioLab.isPlagueTypeUnlocked,
 
     // Combined actions
     triggerBioWarfare,

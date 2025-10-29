@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FlaskConical, Biohazard } from 'lucide-react';
+import { FlaskConical, Biohazard, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
@@ -7,13 +7,16 @@ import { PlagueTypeSelector } from '@/components/PlagueTypeSelector';
 import { DNAPointsDisplay } from '@/components/DNAPointsDisplay';
 import { EvolutionTree } from '@/components/EvolutionTree';
 import type { PlagueState } from '@/types/biowarfare';
+import type { BioLabTier } from '@/types/bioLab';
 import { getPlagueTypeById } from '@/lib/evolutionData';
+import { getBioLabTierDefinition } from '@/types/bioLab';
 
 interface BioWarfareLabProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   plagueState: PlagueState;
   enabled: boolean;
+  labTier: BioLabTier;
   onSelectPlagueType: (plagueTypeId: string) => void;
   onEvolveNode: (nodeId: string) => void;
   onDevolveNode: (nodeId: string) => void;
@@ -24,6 +27,7 @@ export function BioWarfareLab({
   onOpenChange,
   plagueState,
   enabled,
+  labTier,
   onSelectPlagueType,
   onEvolveNode,
   onDevolveNode,
@@ -32,10 +36,10 @@ export function BioWarfareLab({
 
   // Auto-open plague selector when lab opens and no plague selected
   useEffect(() => {
-    if (open && !plagueState.plagueStarted) {
+    if (open && !plagueState.plagueStarted && labTier >= 3) {
       setShowPlagueSelector(true);
     }
-  }, [open, plagueState.plagueStarted]);
+  }, [open, plagueState.plagueStarted, labTier]);
 
   if (!enabled) {
     return null;
@@ -61,6 +65,9 @@ export function BioWarfareLab({
     onDevolveNode(nodeId);
   };
 
+  const currentLabDef = getBioLabTierDefinition(labTier);
+  const canUseBioForge = labTier >= 3;
+
   return (
     <>
       {/* Plague Type Selector Dialog */}
@@ -68,6 +75,7 @@ export function BioWarfareLab({
         open={showPlagueSelector}
         onOpenChange={setShowPlagueSelector}
         onSelect={handleSelectPlague}
+        labTier={labTier}
       />
 
       {/* Main BioForge Lab Dialog */}
@@ -79,7 +87,7 @@ export function BioWarfareLab({
                 <FlaskConical className="h-6 w-6 text-emerald-400" />
                 <div>
                   <DialogTitle className="text-cyan-300 uppercase tracking-[0.3em] text-sm">
-                    BIOFORGE LAB
+                    BIOFORGE LAB - {currentLabDef.name}
                   </DialogTitle>
                   {plagueType && (
                     <p className="text-[10px] text-cyan-400/80 uppercase tracking-wide mt-1">
@@ -121,8 +129,24 @@ export function BioWarfareLab({
           </DialogHeader>
 
           <div className="p-6">
-            {/* Show plague selector if no plague selected */}
-            {!plagueState.plagueStarted ? (
+            {/* Warning if lab tier too low */}
+            {!canUseBioForge ? (
+              <div className="flex flex-col items-center justify-center py-12 space-y-6">
+                <AlertTriangle className="h-20 w-20 text-yellow-500/60" />
+                <div className="text-center space-y-2">
+                  <h3 className="text-xl uppercase tracking-wide text-yellow-300">
+                    BioForge Facility Required
+                  </h3>
+                  <p className="text-sm text-cyan-400/80 max-w-md">
+                    Offensive bio-weapon development requires a BioForge Facility (Tier 3).
+                    Current laboratory: {currentLabDef.name} (Tier {labTier})
+                  </p>
+                  <p className="text-xs text-gray-400 max-w-md mt-4">
+                    Construct higher-tier bio laboratories to unlock pathogen development capabilities.
+                  </p>
+                </div>
+              </div>
+            ) : !plagueState.plagueStarted ? (
               <div className="flex flex-col items-center justify-center py-12 space-y-6">
                 <Biohazard className="h-20 w-20 text-cyan-500/40" />
                 <div className="text-center space-y-2">
