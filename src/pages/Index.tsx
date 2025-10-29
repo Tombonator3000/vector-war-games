@@ -182,7 +182,6 @@ type ConventionalUnitMarker = {
   ownerId: string;
   lon: number;
   lat: number;
-  icon: CanvasIcon;
   forceType: ForceType;
 };
 
@@ -191,7 +190,6 @@ type ConventionalMovementMarker = {
   unitId: string;
   ownerId: string;
   forceType: ForceType;
-  icon: CanvasIcon;
   startLon: number;
   startLat: number;
   endLon: number;
@@ -3441,7 +3439,7 @@ function drawConventionalForces() {
     ctx.restore();
 
     drawIcon(
-      movement.icon ?? conventionalIconLookup[movement.forceType],
+      conventionalIconLookup[movement.forceType],
       x,
       y,
       angle,
@@ -3474,7 +3472,7 @@ function drawConventionalForces() {
     ctx.restore();
 
     drawIcon(
-      marker.icon ?? conventionalIconLookup[marker.forceType],
+      conventionalIconLookup[marker.forceType],
       x,
       y,
       0,
@@ -5053,7 +5051,6 @@ export default function NoradVector() {
         ownerId: unit.ownerId,
         lon: anchor.lon,
         lat: anchor.lat,
-        icon: conventionalIconLookup[forceType],
         forceType,
       });
     });
@@ -5143,7 +5140,6 @@ export default function NoradVector() {
         unitId,
         ownerId,
         forceType,
-        icon: conventionalIconLookup[forceType],
         startLon,
         startLat,
         endLon,
