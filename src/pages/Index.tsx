@@ -5474,7 +5474,7 @@ export default function NoradVector() {
 
   const handlePandemicAdvance = useCallback((context: PandemicTurnContext) => {
     if (!pandemicIntegrationEnabled) return null;
-    return advanceBioWarfareTurn(context, nations);
+    return advanceBioWarfareTurn(context, nations ?? []);
   }, [pandemicIntegrationEnabled, advanceBioWarfareTurn, nations]);
 
   // Progressive tutorial system

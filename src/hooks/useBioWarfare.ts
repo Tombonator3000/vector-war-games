@@ -91,41 +91,44 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
   /**
    * Advance turn with evolution-enhanced mechanics
    */
-  const advanceBioWarfareTurn = useCallback((context: PandemicTurnContext, nations: any[]): PandemicTurnEffect | null => {
-    const plagueType = evolution.plagueState.selectedPlagueType ? getPlagueTypeById(evolution.plagueState.selectedPlagueType) : null;
+  const advanceBioWarfareTurn = useCallback(
+    (context: PandemicTurnContext, nations: any[] = []): PandemicTurnEffect | null => {
+      const resolvedNations = Array.isArray(nations) ? nations : [];
 
-    // Advance lab construction if under construction
-    const constructionResult = bioLab.advanceConstruction();
-    if (constructionResult.completed && constructionResult.newTier) {
-      addNewsItem('science', `Bio Laboratory upgraded to Tier ${constructionResult.newTier}`, 'important');
-    }
+      const plagueType = evolution.plagueState.selectedPlagueType ? getPlagueTypeById(evolution.plagueState.selectedPlagueType) : null;
 
-    // Advance per-country infections if using targeted deployment
-    if (evolution.plagueState.countryInfections.size > 0) {
-      evolution.advanceCountryInfections(context.turn, nations);
-    }
-
-    // Only process legacy global pandemic if plague is active
-    if (!evolution.plagueState.plagueStarted || !pandemic.pandemicState.active) {
-      return null;
-    }
-
-    // Calculate modifiers from evolution
-    const modifiers = calculateSpreadModifiers(evolution.plagueState);
-
-    // Bio-weapon: Auto-increasing lethality (evolve random lethal symptom every 5 turns)
-    if (plagueType?.autoIncreasingLethality && context.turn % 5 === 0) {
-      // Force-evolve a random lethal symptom if available
-      const lethalSymptoms = ['total-organ-failure', 'hemorrhagic-shock', 'necrosis', 'cytokine-storm', 'systemic-infection', 'liquefaction'];
-      const availableLethal = lethalSymptoms.filter(
-        (id) => !evolution.plagueState.unlockedNodes.has(id as any)
-      );
-      if (availableLethal.length > 0) {
-        const randomSymptom = availableLethal[Math.floor(Math.random() * availableLethal.length)];
-        evolution.evolveNode({ nodeId: randomSymptom as any, forced: true });
-        addNewsItem('crisis', `Bio-weapon unstable mutation: ${randomSymptom} evolved automatically`, 'urgent');
+      // Advance lab construction if under construction
+      const constructionResult = bioLab.advanceConstruction();
+      if (constructionResult.completed && constructionResult.newTier) {
+        addNewsItem('science', `Bio Laboratory upgraded to Tier ${constructionResult.newTier}`, 'important');
       }
-    }
+
+      // Advance per-country infections if using targeted deployment
+      if (evolution.plagueState.countryInfections.size > 0) {
+        evolution.advanceCountryInfections(context.turn, resolvedNations);
+      }
+
+      // Only process legacy global pandemic if plague is active
+      if (!evolution.plagueState.plagueStarted || !pandemic.pandemicState.active) {
+        return null;
+      }
+
+      // Calculate modifiers from evolution
+      const modifiers = calculateSpreadModifiers(evolution.plagueState);
+
+      // Bio-weapon: Auto-increasing lethality (evolve random lethal symptom every 5 turns)
+      if (plagueType?.autoIncreasingLethality && context.turn % 5 === 0) {
+        // Force-evolve a random lethal symptom if available
+        const lethalSymptoms = ['total-organ-failure', 'hemorrhagic-shock', 'necrosis', 'cytokine-storm', 'systemic-infection', 'liquefaction'];
+        const availableLethal = lethalSymptoms.filter(
+          (id) => !evolution.plagueState.unlockedNodes.has(id as any)
+        );
+        if (availableLethal.length > 0) {
+          const randomSymptom = availableLethal[Math.floor(Math.random() * availableLethal.length)];
+          evolution.evolveNode({ nodeId: randomSymptom as any, forced: true });
+          addNewsItem('crisis', `Bio-weapon unstable mutation: ${randomSymptom} evolved automatically`, 'urgent');
+        }
+      }
 
     // Virus: Random mutations
     if (plagueType?.id === 'virus' && Math.random() < plagueType.naturalMutationRate) {
