@@ -112,3 +112,4 @@
 | 2025-10-29T13:27:02Z | Ran `npm run build` to confirm the new textured flat map renders without TypeScript or bundler issues. |
 | 2025-10-29T13:45:17Z | Recomputed flat-realistic texture URL resolution in `src/pages/Index.tsx` to avoid invalid `new URL` base usage during module evaluation. |
 | 2025-10-29T13:45:17Z | Executed `npm run build` to verify the flat texture URL fix compiles successfully. |
+| 2025-10-29T13:54:01Z | Normalized flat texture URL handling to skip origin prefix when Vite base is absolute and updated Index.tsx accordingly. |

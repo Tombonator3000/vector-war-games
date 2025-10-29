@@ -392,12 +392,16 @@ const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
 let worldData: any = null;
 let worldCountries: any = null;
 
-const baseAssetPath = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
-const flatRealisticTexturePath = `${
-  baseAssetPath.startsWith('/') ? baseAssetPath : `/${baseAssetPath}`
-}textures/earth_day.jpg`;
+const rawBaseAssetPath = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const isAbsoluteBaseAssetPath = /^([a-z][a-z\d+\-.]*:)?\/\//i.test(rawBaseAssetPath);
+const normalizedBaseAssetPath = isAbsoluteBaseAssetPath
+  ? rawBaseAssetPath
+  : rawBaseAssetPath.startsWith('/')
+    ? rawBaseAssetPath
+    : `/${rawBaseAssetPath}`;
+const flatRealisticTexturePath = `${normalizedBaseAssetPath}textures/earth_day.jpg`;
 const FLAT_REALISTIC_TEXTURE_URL =
-  typeof window !== 'undefined' && typeof window.location?.origin === 'string'
+  typeof window !== 'undefined' && typeof window.location?.origin === 'string' && !isAbsoluteBaseAssetPath
     ? `${window.location.origin}${flatRealisticTexturePath}`
     : flatRealisticTexturePath;
 let flatRealisticTexture: HTMLImageElement | null = null;
