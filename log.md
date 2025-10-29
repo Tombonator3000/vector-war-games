@@ -103,3 +103,7 @@
 | 2025-10-29T12:45:38Z | Updated `src/index.css` to size, animate, and responsively adapt the new intro logo. |
 | 2025-10-29T12:45:39Z | Ran `npm run build` to verify the updated intro experience compiles without errors. |
 | 2025-10-29T12:45:40Z | Captured desktop and mobile intro screen screenshots to confirm centering and readability. |
+| 2025-10-29T12:52:53Z | Reviewed AGENTS.md instructions and confirmed logging requirements for map alignment fix. |
+| 2025-10-29T12:57:59Z | Inspected GlobeScene camera/orientation math to trace 3D globe and overlay misalignment. |
+| 2025-10-29T12:58:25Z | Removed redundant earth mesh rotation to realign 3D globe texture with projected overlays. |
+| 2025-10-29T12:59:15Z | Ran `npm run test` to confirm globe orientation fix passes existing suite. |
