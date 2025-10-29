@@ -4028,8 +4028,7 @@ function gameLoop() {
 
   ctx.imageSmoothingEnabled = !(currentTheme === 'retro80s' || currentTheme === 'wargames');
 
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, W, H);
+  ctx.clearRect(0, 0, W, H);
 
   Atmosphere.update();
   Atmosphere.draw(ctx);
