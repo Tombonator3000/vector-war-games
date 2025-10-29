@@ -4028,8 +4028,7 @@ function gameLoop() {
 
   ctx.imageSmoothingEnabled = !(currentTheme === 'retro80s' || currentTheme === 'wargames');
 
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, W, H);
+  ctx.clearRect(0, 0, W, H);
 
   Atmosphere.update();
   Atmosphere.draw(ctx);
@@ -4121,6 +4120,13 @@ export default function NoradVector() {
   const [sfxEnabled, setSfxEnabled] = useState(initialSfxEnabled);
   const [musicVolume, setMusicVolume] = useState(initialMusicVolume);
   const [musicSelection, setMusicSelection] = useState<string>(initialMusicSelection);
+  const [coopEnabled, setCoopEnabled] = useState(() => {
+    const stored = Storage.getItem('option_coop_enabled');
+    if (stored === 'true' || stored === 'false') {
+      return stored === 'true';
+    }
+    return true;
+  });
   const [activeTrackId, setActiveTrackId] = useState<MusicTrackId | null>(AudioSys.getCurrentTrack());
   useEffect(() => {
     AudioSys.setMusicEnabled(initialMusicEnabled);
@@ -4192,6 +4198,20 @@ export default function NoradVector() {
   });
 
   useEffect(() => {
+    Storage.setItem('option_coop_enabled', coopEnabled ? 'true' : 'false');
+  }, [coopEnabled]);
+
+  const handleCoopToggle = useCallback((enabled: boolean) => {
+    setCoopEnabled(enabled);
+    toast({
+      title: enabled ? 'Co-op approvals enabled' : 'Co-op approvals disabled',
+      description: enabled
+        ? 'Command approvals and multiplayer sync have been reactivated.'
+        : 'Single-commander mode active. Actions will auto-approve until re-enabled.',
+    });
+  }, []);
+
+  useEffect(() => {
     if (!(pandemicIntegrationEnabled && bioWarfareEnabled)) {
       setIsBioWarfareOpen(false);
     }
@@ -4215,20 +4235,40 @@ export default function NoradVector() {
   }, []);
   const { ensureAction, registerStateListener, publishState, canExecute } = useMultiplayer();
 
+  const requestApproval = useCallback(
+    async (action: Parameters<typeof ensureAction>[0], options?: Parameters<typeof ensureAction>[1]) => {
+      if (!coopEnabled) {
+        return true;
+      }
+      return ensureAction(action, options);
+    },
+    [coopEnabled, ensureAction],
+  );
+
   const broadcastState = useCallback(() => {
+    if (!coopEnabled) {
+      return;
+    }
     publishState({
       gameState: { ...S },
       nations: nations.map(nation => ({ ...nation })),
       conventionalDeltas: conventionalDeltas.map(delta => ({ ...delta })),
     });
-  }, [publishState]);
+  }, [coopEnabled, publishState]);
 
   useEffect(() => {
+    if (!coopEnabled) {
+      setMultiplayerPublisher(null);
+      return () => setMultiplayerPublisher(null);
+    }
     setMultiplayerPublisher(() => broadcastState);
     return () => setMultiplayerPublisher(null);
-  }, [broadcastState]);
+  }, [broadcastState, coopEnabled]);
 
   useEffect(() => {
+    if (!coopEnabled) {
+      return;
+    }
     const unsubscribe = registerStateListener(envelope => {
       const { state } = envelope;
       suppressMultiplayerBroadcast = true;
@@ -4248,7 +4288,7 @@ export default function NoradVector() {
       updateDisplay();
     });
     return unsubscribe;
-  }, [registerStateListener]);
+  }, [coopEnabled, registerStateListener]);
 
   useEffect(() => {
     const unsubscribe = AudioSys.subscribeToTrackChanges(trackId => {
@@ -5668,21 +5708,21 @@ export default function NoradVector() {
   }, [buildBomber, buildCity, buildDefense, buildMissile, buildWarhead, isGameStarted]);
 
   const handleBuild = useCallback(async () => {
-    const approved = await ensureAction('BUILD', { description: 'Strategic production request' });
+    const approved = await requestApproval('BUILD', { description: 'Strategic production request' });
     if (!approved) return;
     AudioSys.playSFX('click');
     openModal('STRATEGIC PRODUCTION', renderBuildModal);
-  }, [ensureAction, openModal, renderBuildModal]);
+  }, [openModal, renderBuildModal, requestApproval]);
 
   const handleResearch = useCallback(async () => {
-    const approved = await ensureAction('RESEARCH', { description: 'Research directive access' });
+    const approved = await requestApproval('RESEARCH', { description: 'Research directive access' });
     if (!approved) return;
     AudioSys.playSFX('click');
     openModal('RESEARCH DIRECTORATE', renderResearchModal);
-  }, [ensureAction, openModal, renderResearchModal]);
+  }, [openModal, renderResearchModal, requestApproval]);
 
   const handleIntel = useCallback(async () => {
-    const approved = await ensureAction('INTEL', { description: 'Intelligence operations authorization' });
+    const approved = await requestApproval('INTEL', { description: 'Intelligence operations authorization' });
     if (!approved) return;
     AudioSys.playSFX('click');
     const player = getBuildContext('Intelligence');
@@ -5965,15 +6005,15 @@ export default function NoradVector() {
       return;
     }
 
-    const approved = await ensureAction('BIOWARFARE', { description: 'BioForge lab access' });
+    const approved = await requestApproval('BIOWARFARE', { description: 'BioForge lab access' });
     if (!approved) return;
     AudioSys.playSFX('click');
     setIsBioWarfareOpen(true);
-  }, [bioWarfareAvailable, ensureAction, isBioWarfareOpen]);
+  }, [bioWarfareAvailable, isBioWarfareOpen, requestApproval]);
 
 
   const handleCulture = useCallback(async () => {
-    const approved = await ensureAction('CULTURE', { description: 'Cultural operations briefing' });
+    const approved = await requestApproval('CULTURE', { description: 'Cultural operations briefing' });
     if (!approved) return;
     AudioSys.playSFX('click');
     const player = getBuildContext('Culture');
@@ -6133,9 +6173,9 @@ export default function NoradVector() {
     );
   }, [
     closeModal,
-    ensureAction,
     getBuildContext,
     openModal,
+    requestApproval,
     targetableNations,
     getCyberActionAvailability,
     launchCyberAttack,
@@ -6145,7 +6185,7 @@ export default function NoradVector() {
 
 
   const handleImmigration = useCallback(async () => {
-    const approved = await ensureAction('IMMIGRATION', { description: 'Immigration policy adjustment' });
+    const approved = await requestApproval('IMMIGRATION', { description: 'Immigration policy adjustment' });
     if (!approved) return;
     AudioSys.playSFX('click');
     const player = getBuildContext('Immigration');
@@ -6227,10 +6267,10 @@ export default function NoradVector() {
         accent="emerald"
       />
     );
-  }, [closeModal, ensureAction, getBuildContext, openModal, targetableNations]);
+  }, [closeModal, getBuildContext, openModal, requestApproval, targetableNations]);
 
   const handleDiplomacy = useCallback(async () => {
-    const approved = await ensureAction('DIPLOMACY', { description: 'Diplomatic operations request' });
+    const approved = await requestApproval('DIPLOMACY', { description: 'Diplomatic operations request' });
     if (!approved) return;
     AudioSys.playSFX('click');
     const player = getBuildContext('Diplomacy');
@@ -6549,7 +6589,7 @@ export default function NoradVector() {
         accent="fuchsia"
       />
     );
-  }, [closeModal, ensureAction, getBuildContext, openModal, targetableNations]);
+  }, [closeModal, getBuildContext, openModal, requestApproval, targetableNations]);
 
   useEffect(() => {
     handleAttackRef.current = handleAttack;
@@ -7072,13 +7112,13 @@ export default function NoradVector() {
     return renderDoctrineSelection();
   }
 
-  const buildAllowed = canExecute('BUILD');
-  const researchAllowed = canExecute('RESEARCH');
-  const intelAllowed = canExecute('INTEL');
-  const bioWarfareAllowed = canExecute('BIOWARFARE');
-  const cultureAllowed = canExecute('CULTURE');
-  const immigrationAllowed = canExecute('IMMIGRATION');
-  const diplomacyAllowed = canExecute('DIPLOMACY');
+  const buildAllowed = coopEnabled ? canExecute('BUILD') : true;
+  const researchAllowed = coopEnabled ? canExecute('RESEARCH') : true;
+  const intelAllowed = coopEnabled ? canExecute('INTEL') : true;
+  const bioWarfareAllowed = coopEnabled ? canExecute('BIOWARFARE') : true;
+  const cultureAllowed = coopEnabled ? canExecute('CULTURE') : true;
+  const immigrationAllowed = coopEnabled ? canExecute('IMMIGRATION') : true;
+  const diplomacyAllowed = coopEnabled ? canExecute('DIPLOMACY') : true;
 
   return (
     <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity}`}>
@@ -7153,9 +7193,11 @@ export default function NoradVector() {
           <div className="pointer-events-auto fixed top-14 right-6 z-40 w-64">
             <ElectionCountdownWidget metrics={governance.metrics['player']} />
           </div>
-          <div className="fixed top-14 right-4 pointer-events-auto touch-auto z-40 w-72">
-            <ApprovalQueue />
-          </div>
+          {coopEnabled ? (
+            <div className="fixed top-14 right-4 pointer-events-auto touch-auto z-40 w-72">
+              <ApprovalQueue />
+            </div>
+          ) : null}
 
           <div className="pointer-events-auto touch-auto">
             <ConflictResolutionDialog />
@@ -7408,10 +7450,45 @@ export default function NoradVector() {
 
           <div className="options-section">
             <h3 className="options-section__heading">CO-OP OPERATIONS</h3>
-            <p className="options-section__subheading">Review allied readiness, sync status, and role assignments.</p>
-            <div className="mt-4 space-y-3">
-              <CoopStatusPanel />
+            <p className="options-section__subheading">
+              {coopEnabled
+                ? 'Review allied readiness, sync status, and role assignments.'
+                : 'Single-commander mode active; approvals and state sync are paused.'}
+            </p>
+            <div className="options-toggle">
+              <div className="flex flex-col text-left">
+                <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Shared Command</span>
+                <span className="text-[11px] text-cyan-400/80">
+                  {coopEnabled
+                    ? 'Strategic actions may require allied approval to execute.'
+                    : 'Approvals are bypassed and multiplayer messaging is suspended.'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={coopEnabled}
+                  onCheckedChange={handleCoopToggle}
+                  aria-label="Toggle co-op approvals"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-cyan-700/60 text-cyan-200 hover:bg-cyan-800/40"
+                  onClick={() => handleCoopToggle(!coopEnabled)}
+                >
+                  {coopEnabled ? 'Disable' : 'Enable'}
+                </Button>
+              </div>
             </div>
+            {coopEnabled ? (
+              <div className="mt-4 space-y-3">
+                <CoopStatusPanel />
+              </div>
+            ) : (
+              <div className="mt-4 rounded border border-cyan-500/40 bg-black/40 p-3 text-xs text-cyan-200">
+                Command approvals will be skipped and multiplayer sync paused until re-enabled.
+              </div>
+            )}
           </div>
 
           <div className="options-section">
