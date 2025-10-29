@@ -445,7 +445,7 @@ interface ResearchProject {
   id: string;
   name: string;
   description: string;
-  category: 'warhead' | 'defense' | 'intel' | 'delivery';
+  category: 'warhead' | 'defense' | 'intel' | 'delivery' | 'conventional';
   turns: number;
   cost: ResourceCost;
   yield?: number;
@@ -569,6 +569,44 @@ const RESEARCH_TREE: ResearchProject[] = [
     prerequisites: ['cyber_firewalls'],
     onComplete: nation => {
       applyCyberResearchUnlock(nation, 'intrusion_detection');
+    }
+  },
+  {
+    id: 'conventional_armored_doctrine',
+    name: 'Armored Maneuver Doctrine',
+    description: 'Codify combined-arms tactics to unlock modern armored corps formations.',
+    category: 'conventional',
+    turns: 3,
+    cost: { production: 28, intel: 12 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_armored_doctrine = true;
+    }
+  },
+  {
+    id: 'conventional_carrier_battlegroups',
+    name: 'Carrier Battlegroup Logistics',
+    description: 'Fund carrier aviation, underway replenishment, and escort integration.',
+    category: 'conventional',
+    turns: 4,
+    cost: { production: 36, intel: 16, uranium: 4 },
+    prerequisites: ['conventional_armored_doctrine'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_carrier_battlegroups = true;
+    }
+  },
+  {
+    id: 'conventional_expeditionary_airframes',
+    name: 'Expeditionary Airframes',
+    description: 'Deploy forward-operating squadrons with aerial refuelling and SEAD packages.',
+    category: 'conventional',
+    turns: 4,
+    cost: { production: 34, intel: 22 },
+    prerequisites: ['conventional_armored_doctrine'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_expeditionary_airframes = true;
     }
   }
 ];
@@ -4931,12 +4969,20 @@ export default function NoradVector() {
     const handleTrain = (templateId: string) => {
       const result = trainConventionalUnit(player.id, templateId);
       if (!result.success) {
+        let description = 'Requested formation template is unavailable.';
+        if (result.reason === 'Insufficient resources') {
+          description = 'Production, intel, or uranium shortfall for this formation.';
+        } else if (result.reason === 'Requires research unlock') {
+          const researchId = 'requiresResearchId' in result ? result.requiresResearchId : undefined;
+          const researchName = researchId ? RESEARCH_LOOKUP[researchId]?.name ?? 'required research unlock' : 'required research unlock';
+          description = `Complete ${researchName} before queuing this formation.`;
+        } else if (result.reason === 'Unknown nation') {
+          description = 'Unable to identify the requesting command authority.';
+        }
+
         toast({
           title: 'Unable to queue formation',
-          description:
-            result.reason === 'Insufficient resources'
-              ? 'Production, intel, or uranium shortfall for this formation.'
-              : 'Requested formation template is unavailable.',
+          description,
         });
         return;
       }
@@ -5012,6 +5058,7 @@ export default function NoradVector() {
           profile={profile}
           onTrain={handleTrain}
           onDeploy={handleDeployUnit}
+          researchUnlocks={player.researched ?? {}}
         />
 
         <section className="rounded border border-cyan-500/40 bg-black/60 p-4">
@@ -5088,7 +5135,8 @@ export default function NoradVector() {
       { id: 'warhead', label: 'Warhead Programs' },
       { id: 'delivery', label: 'Strategic Delivery Systems' },
       { id: 'defense', label: 'Defense Initiatives' },
-      { id: 'intel', label: 'Intelligence Operations' }
+      { id: 'intel', label: 'Intelligence Operations' },
+      { id: 'conventional', label: 'Conventional Forces' },
     ];
 
     const formatCost = (cost: ResourceCost) => {
