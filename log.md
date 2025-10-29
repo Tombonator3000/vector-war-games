@@ -93,3 +93,6 @@
 | 2025-10-29T11:34:54+00:00 | Launched Vite dev server on port 4173 to validate HUD transparency in-browser. |
 | 2025-10-29T11:35:10+00:00 | Captured browser screenshot via Playwright to confirm globe textures remain visible beneath transparent HUD. |
 | 2025-10-29T11:35:44+00:00 | Stopped Vite dev server after completing visual verification. |
+| 2025-10-29T12:08:19+00:00 | Reviewed globe overlay pipeline and existing mapStyle handling to scope rendering updates. |
+| 2025-10-29T12:11:24+00:00 | Threaded mapStyle through canvas helpers, updated draw routines for distinct styles, and refreshed CityLights behavior. |
+| 2025-10-29T12:12:12+00:00 | Ran `npm run build` to verify the updated rendering pipeline compiles successfully. |
