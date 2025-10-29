@@ -18,7 +18,7 @@ export interface CityLight {
   nationId: string;
 }
 
-export type MapStyle = 'realistic' | 'wireframe' | 'night' | 'political' | 'flat';
+export type MapStyle = 'realistic' | 'wireframe' | 'night' | 'political' | 'flat' | 'flat-realistic';
 
 export interface GlobeSceneProps {
   cam: { x: number; y: number; zoom: number };
@@ -370,7 +370,7 @@ function SceneContent({
 }) {
   const { camera, size } = useThree();
   const earthRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>(null);
-  const isFlat = mapStyle === 'flat';
+  const isFlat = mapStyle === 'flat' || mapStyle === 'flat-realistic';
 
   useEffect(() => {
     register({
@@ -434,6 +434,7 @@ function SceneContent({
       case 'political':
         return <EarthPolitical earthRef={earthRef} vectorTexture={texture} />;
       case 'flat':
+      case 'flat-realistic':
         return null;
       default:
         return fallback;
@@ -503,7 +504,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       const baseX = ((lon + 180) / 360) * width;
       const baseY = ((90 - lat) / 180) * height;
 
-      if (mapStyle === 'flat') {
+      if (mapStyle === 'flat' || mapStyle === 'flat-realistic') {
         return {
           x: baseX * cam.zoom + cam.x,
           y: baseY * cam.zoom + cam.y,
@@ -537,7 +538,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       const container = containerRef.current;
       if (!container) return null;
 
-      if (mapStyle === 'flat') {
+      if (mapStyle === 'flat' || mapStyle === 'flat-realistic') {
         const rect = container.getBoundingClientRect();
         const width = rect.width || 1;
         const height = rect.height || 1;

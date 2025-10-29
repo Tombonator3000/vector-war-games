@@ -153,6 +153,11 @@ const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }
   { value: 'night', label: 'Night Lights', description: 'City illumination against a dark globe.' },
   { value: 'political', label: 'Political', description: 'Colored territorial boundaries and claims.' },
   { value: 'flat', label: 'Flat', description: 'Orthographic projection with a 2D world canvas.' },
+  {
+    value: 'flat-realistic',
+    label: 'Flat Realistic',
+    description: 'High-resolution satellite texture rendered on the flat map.',
+  },
 ];
 
 const IntroLogo = () => (
@@ -386,6 +391,46 @@ const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
 // World data
 let worldData: any = null;
 let worldCountries: any = null;
+
+const FLAT_REALISTIC_TEXTURE_URL = new URL('textures/earth_day.jpg', import.meta.env.BASE_URL).toString();
+let flatRealisticTexture: HTMLImageElement | null = null;
+let flatRealisticTexturePromise: Promise<HTMLImageElement> | null = null;
+
+function preloadFlatRealisticTexture() {
+  if (flatRealisticTexture) {
+    return Promise.resolve(flatRealisticTexture);
+  }
+
+  if (flatRealisticTexturePromise) {
+    return flatRealisticTexturePromise;
+  }
+
+  if (typeof window === 'undefined' || typeof Image === 'undefined') {
+    return Promise.resolve(null);
+  }
+
+  flatRealisticTexturePromise = new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      flatRealisticTexture = image;
+      resolve(image);
+    };
+    image.onerror = (event) => {
+      flatRealisticTexturePromise = null;
+      reject(
+        event instanceof ErrorEvent
+          ? event.error ?? new Error('Failed to load flat map texture')
+          : new Error('Failed to load flat map texture'),
+      );
+    };
+    image.src = FLAT_REALISTIC_TEXTURE_URL;
+  });
+
+  return flatRealisticTexturePromise.catch(error => {
+    console.warn('Flat realistic texture failed to load:', error);
+    return null;
+  });
+}
 
 // Leaders configuration
 const leaders: { name: string; ai: string; color: string }[] = [
@@ -2625,51 +2670,68 @@ function getPoliticalFill(index: number) {
 }
 
 function drawWorld(style: MapStyle) {
-  if (!worldCountries || !ctx) return;
+  if (!ctx) return;
 
   const palette = THEME_SETTINGS[currentTheme];
 
   const isPolitical = style === 'political';
   const isNight = style === 'night';
   const isWireframe = style === 'wireframe';
+  const isFlatRealistic = style === 'flat-realistic';
 
-  ctx.save();
-  ctx.lineWidth = isWireframe ? 1.5 : 1;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-
-  worldCountries.features.forEach((feature: any, index: number) => {
-    ctx.beginPath();
-    const coords = feature.geometry.coordinates;
-
-    if (feature.geometry.type === 'Polygon') {
-      drawWorldPath(coords[0]);
-    } else if (feature.geometry.type === 'MultiPolygon') {
-      coords.forEach((poly: any) => drawWorldPath(poly[0]));
+  if (isFlatRealistic) {
+    if (!flatRealisticTexture && !flatRealisticTexturePromise) {
+      void preloadFlatRealisticTexture();
     }
-
-    if (isPolitical) {
+    if (flatRealisticTexture) {
       ctx.save();
-      ctx.globalAlpha = 0.35;
-      ctx.fillStyle = getPoliticalFill(index);
-      ctx.fill();
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(flatRealisticTexture, cam.x, cam.y, W * cam.zoom, H * cam.zoom);
       ctx.restore();
     }
+  }
 
-    if (isNight) {
-      ctx.strokeStyle = 'rgba(170,210,255,0.35)';
-    } else if (isWireframe) {
-      ctx.strokeStyle = 'rgba(80,240,255,0.75)';
-    } else if (isPolitical) {
-      ctx.strokeStyle = 'rgba(40,40,40,0.5)';
-    } else {
-      ctx.strokeStyle = palette.mapOutline;
-    }
+  if (worldCountries) {
+    ctx.save();
+    ctx.lineWidth = isWireframe ? 1.5 : 1;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
 
-    ctx.stroke();
-  });
+    worldCountries.features.forEach((feature: any, index: number) => {
+      ctx.beginPath();
+      const coords = feature.geometry.coordinates;
 
-  ctx.restore();
+      if (feature.geometry.type === 'Polygon') {
+        drawWorldPath(coords[0]);
+      } else if (feature.geometry.type === 'MultiPolygon') {
+        coords.forEach((poly: any) => drawWorldPath(poly[0]));
+      }
+
+      if (isPolitical) {
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = getPoliticalFill(index);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      if (isNight) {
+        ctx.strokeStyle = 'rgba(170,210,255,0.35)';
+      } else if (isWireframe) {
+        ctx.strokeStyle = 'rgba(80,240,255,0.75)';
+      } else if (isPolitical) {
+        ctx.strokeStyle = 'rgba(40,40,40,0.5)';
+      } else if (isFlatRealistic) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      } else {
+        ctx.strokeStyle = palette.mapOutline;
+      }
+
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }
 
   const shouldDrawGrid = style !== 'realistic' && style !== 'night';
   if (shouldDrawGrid) {
@@ -4230,7 +4292,8 @@ export default function NoradVector() {
       stored === 'wireframe' ||
       stored === 'night' ||
       stored === 'political' ||
-      stored === 'flat'
+      stored === 'flat' ||
+      stored === 'flat-realistic'
     ) {
       return stored;
     }
@@ -4238,6 +4301,14 @@ export default function NoradVector() {
   });
   useEffect(() => {
     currentMapStyle = mapStyle;
+  }, [mapStyle]);
+  useEffect(() => {
+    void preloadFlatRealisticTexture();
+  }, []);
+  useEffect(() => {
+    if (mapStyle === 'flat-realistic') {
+      void preloadFlatRealisticTexture();
+    }
   }, [mapStyle]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
   const initialMusicEnabled = storedMusicEnabled === 'true' ? true : storedMusicEnabled === 'false' ? false : AudioSys.musicEnabled;
@@ -4373,6 +4444,9 @@ export default function NoradVector() {
     setMapStyle(style);
     Storage.setItem('map_style', style);
     AudioSys.playSFX('click');
+    if (style === 'flat-realistic') {
+      void preloadFlatRealisticTexture();
+    }
     toast({
       title: 'Map style updated',
       description: `Display mode changed to ${style}`,
