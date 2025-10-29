@@ -921,6 +921,58 @@ const RESEARCH_TREE: ResearchProject[] = [
     }
   },
   {
+    id: 'conventional_combined_arms',
+    name: 'Combined Arms Doctrine',
+    description: 'Coordinate ground, air, and naval forces for devastating synergy (+10% attack with diverse units).',
+    category: 'conventional',
+    turns: 5,
+    cost: { production: 45, intel: 25 },
+    prerequisites: ['conventional_carrier_battlegroups', 'conventional_expeditionary_airframes'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_combined_arms = true;
+    }
+  },
+  {
+    id: 'conventional_advanced_logistics',
+    name: 'Advanced Logistics',
+    description: 'Streamlined supply chains accelerate unit readiness recovery (+1 readiness regen/turn).',
+    category: 'conventional',
+    turns: 3,
+    cost: { production: 30, intel: 15 },
+    prerequisites: ['conventional_armored_doctrine'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_advanced_logistics = true;
+    }
+  },
+  {
+    id: 'conventional_electronic_warfare',
+    name: 'Electronic Warfare Suite',
+    description: 'ECM and jamming systems reduce enemy detection in controlled territories (-20% detection).',
+    category: 'conventional',
+    turns: 4,
+    cost: { production: 40, intel: 30 },
+    prerequisites: ['conventional_armored_doctrine'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_electronic_warfare = true;
+    }
+  },
+  {
+    id: 'conventional_force_modernization',
+    name: 'Force Modernization',
+    description: 'Upgrade all existing units with advanced optics, armor, and weapons (+1 ATK/DEF all units).',
+    category: 'conventional',
+    turns: 6,
+    cost: { production: 60, intel: 40, uranium: 10 },
+    prerequisites: ['conventional_combined_arms'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_force_modernization = true;
+    }
+  },
+  {
     id: 'culture_social_media',
     name: 'Social Media Dominance',
     description: 'Global social networks amplify cultural influence and reduce culture bombing costs by 25%.',
@@ -978,6 +1030,68 @@ const RESEARCH_TREE: ResearchProject[] = [
     onComplete: nation => {
       nation.researched = nation.researched || {};
       nation.researched.culture_immunity = true;
+    }
+  },
+  {
+    id: 'space_satellite_network',
+    name: 'Advanced Satellite Network',
+    description: 'Enhanced orbital infrastructure allows deployment of additional satellites (+1 orbit slot).',
+    category: 'intel',
+    turns: 3,
+    cost: { production: 25, intel: 20 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.space_satellite_network = true;
+    }
+  },
+  {
+    id: 'space_recon_optics',
+    name: 'Enhanced Recon Optics',
+    description: 'Advanced imaging sensors provide deeper intelligence (+50% intel gathered from satellites).',
+    category: 'intel',
+    turns: 4,
+    cost: { production: 30, intel: 30 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.space_recon_optics = true;
+    }
+  },
+  {
+    id: 'space_asat_weapons',
+    name: 'Anti-Satellite Weapons (ASAT)',
+    description: 'Kinetic kill vehicles can destroy enemy satellites, blinding their surveillance.',
+    category: 'intel',
+    turns: 5,
+    cost: { production: 40, intel: 35, uranium: 5 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.space_asat_weapons = true;
+    }
+  },
+  {
+    id: 'space_orbital_strike',
+    name: 'Space Weapon Platform',
+    description: 'Orbital kinetic bombardment system delivers precision strikes from space.',
+    category: 'intel',
+    turns: 6,
+    cost: { production: 60, intel: 50, uranium: 15 },
+    prerequisites: ['space_satellite_network'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.space_orbital_strike = true;
+    }
+  },
+  {
+    id: 'space_gps_warfare',
+    name: 'GPS Warfare',
+    description: 'Jamming and spoofing enemy navigation systems reduces their missile accuracy by 20%.',
+    category: 'intel',
+    turns: 4,
+    cost: { production: 35, intel: 40 },
+    prerequisites: ['space_satellite_network'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.space_gps_warfare = true;
     }
   }
 ];
@@ -2793,7 +2907,7 @@ function productionPhase() {
     if (n.instability) {
       n.instability = Math.max(0, n.instability - 2);
     }
-    
+
     // Border closure effects
     if (n.bordersClosedTurns && n.bordersClosedTurns > 0) {
       n.bordersClosedTurns--;
@@ -2802,6 +2916,15 @@ function productionPhase() {
     if (n.researched?.counterintel) {
       const intelBonus = Math.ceil(baseIntel * 0.2);
       n.intel += intelBonus;
+    }
+
+    // Conventional warfare: Regenerate readiness
+    if (n.conventional) {
+      // Base regeneration: 5 readiness/turn, +1 with Advanced Logistics
+      const baseRegen = 5;
+      const logisticsBonus = n.researched?.conventional_advanced_logistics ? 1 : 0;
+      const totalRegen = baseRegen + logisticsBonus;
+      n.conventional.readiness = Math.min(100, (n.conventional.readiness || 60) + totalRegen);
     }
   });
 
@@ -3496,6 +3619,18 @@ function drawMissiles() {
         }
       }
       
+      // GPS Warfare: Check for navigation jamming miss
+      if (m.t >= 0.95 && !m.gpsChecked) {
+        m.gpsChecked = true;
+        if (m.target.researched?.space_gps_warfare && Math.random() < 0.2) {
+          S.missiles.splice(i, 1);
+          log(`GPS jamming causes missile to miss ${m.target.name}!`, 'success');
+          // Miss visual effect
+          S.rings.push({ x: tx + (Math.random() - 0.5) * 20, y: ty + (Math.random() - 0.5) * 20, r: 1, max: 25, speed: 2, alpha: 0.5, type: 'intercept' });
+          return;
+        }
+      }
+
       // Interception check
       if (m.t >= 0.95 && !m.interceptChecked) {
         m.interceptChecked = true;
@@ -3508,7 +3643,7 @@ function drawMissiles() {
             log(`${ally.name} helps defend ${m.target.name}!`, 'success');
           }
         });
-        
+
         if (Math.random() < totalIntercept) {
           S.missiles.splice(i, 1);
           log(`Missile intercepted! Defense successful`, 'success');
@@ -3516,7 +3651,7 @@ function drawMissiles() {
           return;
         }
       }
-      
+
       explode(tx, ty, m.target, m.yield);
       S.missiles.splice(i, 1);
     }
@@ -4392,14 +4527,16 @@ function aiTurn(n: Nation) {
   if (r < 0.15 + intelMod && n.intel >= 5) {
     const intelTargets = enemies.filter(t => !n.satellites?.[t.id]);
     
-    // Deploy satellite
-    if (intelTargets.length > 0 && n.intel >= 5 && Math.random() < 0.6) {
+    // Deploy satellite (check orbit capacity)
+    const maxAISatellites = n.researched?.space_satellite_network ? 4 : 3;
+    const currentAISatellites = Object.keys(n.satellites || {}).length;
+    if (intelTargets.length > 0 && n.intel >= 5 && currentAISatellites < maxAISatellites && Math.random() < 0.6) {
       const target = intelTargets.sort((a, b) => {
         const aThreat = n.threats?.[a.id] || 0;
         const bThreat = n.threats?.[b.id] || 0;
         return bThreat - aThreat;
       })[0];
-      
+
       n.intel -= 5;
       n.satellites = n.satellites || {};
       n.satellites[target.id] = true;
@@ -7091,6 +7228,26 @@ export default function NoradVector() {
         targetFilter: nation => Object.values(nation.warheads || {}).some(count => (count || 0) > 0),
       },
       {
+        id: 'asat_strike',
+        title: 'ASAT STRIKE',
+        subtitle: 'Destroy enemy satellite',
+        costText: 'Cost: 15 INTEL',
+        requiresTarget: true,
+        disabled: !player.researched?.space_asat_weapons || (player.intel || 0) < 15,
+        disabledReason: player.researched?.space_asat_weapons ? 'Requires 15 INTEL for ASAT strike.' : 'Requires Anti-Satellite Weapons technology.',
+        targetFilter: nation => !!player.satellites?.[nation.id],
+      },
+      {
+        id: 'orbital_strike',
+        title: 'ORBITAL STRIKE',
+        subtitle: 'Kinetic bombardment from space',
+        costText: 'Cost: 25 INTEL',
+        requiresTarget: true,
+        disabled: !player.researched?.space_orbital_strike || (player.intel || 0) < 25,
+        disabledReason: player.researched?.space_orbital_strike ? 'Requires 25 INTEL for orbital strike.' : 'Requires Space Weapon Platform technology.',
+        targetFilter: nation => nation.population > 0,
+      },
+      {
         id: 'propaganda',
         title: 'PROPAGANDA',
         subtitle: 'Stoke enemy unrest',
@@ -7184,10 +7341,17 @@ export default function NoradVector() {
             toast({ title: 'Insufficient intel', description: 'You need 5 INTEL to deploy a satellite.' });
             return false;
           }
+          // Check satellite limit: 3 base, +1 with Advanced Satellite Network
+          const maxSatellites = commander.researched?.space_satellite_network ? 4 : 3;
+          const currentSatellites = Object.keys(commander.satellites || {}).length;
+          if (currentSatellites >= maxSatellites) {
+            toast({ title: 'Orbit capacity reached', description: `Maximum ${maxSatellites} satellites deployed. Research Advanced Satellite Network for more.` });
+            return false;
+          }
           commander.intel -= 5;
           commander.satellites = commander.satellites || {};
           commander.satellites[target.id] = true;
-          log(`Satellite deployed over ${target.name}`);
+          log(`Satellite deployed over ${target.name} (${currentSatellites + 1}/${maxSatellites} orbits)`);
           registerSatelliteOrbit(commander.id, target.id);
           updateDisplay();
           consumeAction();
@@ -7215,6 +7379,45 @@ export default function NoradVector() {
             }
             commander.intel -= 10;
             log(`Sabotage successful: ${target.name}'s ${type}MT warhead destroyed.`);
+          }
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'asat_strike':
+          if (!target) return false;
+          if ((commander.intel || 0) < 15) {
+            toast({ title: 'Insufficient intel', description: 'You need 15 INTEL for ASAT strike.' });
+            return false;
+          }
+          if (!commander.satellites?.[target.id]) {
+            toast({ title: 'No satellite', description: `No satellite is deployed over ${target.name}.` });
+            return false;
+          }
+          commander.intel -= 15;
+          delete commander.satellites[target.id];
+          // Remove satellite orbit visual
+          S.satelliteOrbits = S.satelliteOrbits.filter(orbit => !(orbit.ownerId === commander.id && orbit.targetId === target.id));
+          log(`ASAT strike destroys surveillance satellite over ${target.name}.`);
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'orbital_strike':
+          if (!target) return false;
+          if ((commander.intel || 0) < 25) {
+            toast({ title: 'Insufficient intel', description: 'You need 25 INTEL for orbital strike.' });
+            return false;
+          }
+          {
+            commander.intel -= 25;
+            const populationLoss = Math.max(5, Math.floor(target.population * 0.15));
+            target.population = Math.max(0, target.population - populationLoss);
+            target.instability = (target.instability || 0) + 30;
+            // Destroy some infrastructure
+            if (target.missiles) target.missiles = Math.max(0, target.missiles - 2);
+            if (target.bombers) target.bombers = Math.max(0, target.bombers - 1);
+            log(`Orbital kinetic strike devastates ${target.name}: ${populationLoss}M casualties, infrastructure destroyed.`);
           }
           updateDisplay();
           consumeAction();
