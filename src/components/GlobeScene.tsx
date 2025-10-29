@@ -18,7 +18,7 @@ export interface CityLight {
   nationId: string;
 }
 
-export type MapStyle = 'realistic' | 'wireframe' | 'night' | 'political';
+export type MapStyle = 'realistic' | 'wireframe' | 'night' | 'political' | 'flat';
 
 export interface GlobeSceneProps {
   cam: { x: number; y: number; zoom: number };
@@ -370,16 +370,32 @@ function SceneContent({
 }) {
   const { camera, size } = useThree();
   const earthRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>(null);
+  const isFlat = mapStyle === 'flat';
 
   useEffect(() => {
     register({
       camera: camera as THREE.PerspectiveCamera,
       size,
-      earth: earthRef.current,
+      earth: isFlat ? null : earthRef.current,
     });
-  }, [camera, register, size]);
+  }, [camera, register, size, isFlat]);
+
+  useEffect(() => {
+    if (!isFlat) {
+      return;
+    }
+
+    const perspective = camera as THREE.PerspectiveCamera;
+    perspective.position.set(0, 0, EARTH_RADIUS + 3);
+    perspective.lookAt(0, 0, 0);
+    perspective.updateProjectionMatrix();
+  }, [camera, isFlat]);
 
   useFrame(() => {
+    if (isFlat) {
+      return;
+    }
+
     const earth = earthRef.current;
     if (!earth) return;
 
@@ -422,6 +438,8 @@ function SceneContent({
         return <EarthNight earthRef={earthRef} />;
       case 'political':
         return <EarthPolitical earthRef={earthRef} vectorTexture={texture} />;
+      case 'flat':
+        return null;
       default:
         return fallback;
     }
@@ -429,31 +447,37 @@ function SceneContent({
 
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[6, 4, 3]} intensity={1.5} castShadow />
-      <directionalLight position={[-5, -3, -6]} intensity={0.5} color={new THREE.Color('#0af')} />
+      {!isFlat && (
+        <>
+          <ambientLight intensity={0.5} />
+          <directionalLight position={[6, 4, 3]} intensity={1.5} castShadow />
+          <directionalLight position={[-5, -3, -6]} intensity={0.5} color={new THREE.Color('#0af')} />
+        </>
+      )}
       {renderEarth()}
       {(mapStyle === 'night' || mapStyle === 'realistic') && <CityLights nations={nations} />}
-      <group>
-        {nations.map(nation => {
-          if (Number.isNaN(nation.lon) || Number.isNaN(nation.lat)) return null;
-          const position = latLonToVector3(nation.lon, nation.lat, EARTH_RADIUS + MARKER_OFFSET);
-          const markerColor = nation.isPlayer ? '#7cff6b' : nation.color || '#ff6b6b';
-          return (
-            <mesh
-              key={nation.id}
-              position={position.toArray() as [number, number, number]}
-              onClick={(event) => {
-                event.stopPropagation();
-                onNationClick?.(nation.id);
-              }}
-            >
-              <sphereGeometry args={[0.06, 16, 16]} />
-              <meshStandardMaterial color={markerColor} emissive={markerColor} emissiveIntensity={0.6} />
-            </mesh>
-          );
-        })}
-      </group>
+      {!isFlat && (
+        <group>
+          {nations.map(nation => {
+            if (Number.isNaN(nation.lon) || Number.isNaN(nation.lat)) return null;
+            const position = latLonToVector3(nation.lon, nation.lat, EARTH_RADIUS + MARKER_OFFSET);
+            const markerColor = nation.isPlayer ? '#7cff6b' : nation.color || '#ff6b6b';
+            return (
+              <mesh
+                key={nation.id}
+                position={position.toArray() as [number, number, number]}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onNationClick?.(nation.id);
+                }}
+              >
+                <sphereGeometry args={[0.06, 16, 16]} />
+                <meshStandardMaterial color={markerColor} emissive={markerColor} emissiveIntensity={0.6} />
+              </mesh>
+            );
+          })}
+        </group>
+      )}
     </>
   );
 }
@@ -478,33 +502,60 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   const updateProjector = useCallback(() => {
     if (!onProjectorReady) return;
     const projector: ProjectorFn = (lon, lat) => {
-      const camera = cameraRef.current;
       const size = sizeRef.current;
-      if (!camera || !size) {
+      const width = size?.width ?? 1;
+      const height = size?.height ?? 1;
+      const baseX = ((lon + 180) / 360) * width;
+      const baseY = ((90 - lat) / 180) * height;
+
+      if (mapStyle === 'flat') {
         return {
-          x: ((lon + 180) / 360) * size.width,
-          y: ((90 - lat) / 180) * size.height,
+          x: baseX * cam.zoom + cam.x,
+          y: baseY * cam.zoom + cam.y,
           visible: true,
         };
       }
+
+      const camera = cameraRef.current;
+      if (!camera || !size) {
+        return {
+          x: baseX,
+          y: baseY,
+          visible: true,
+        };
+      }
+
       const vector = latLonToVector3(lon, lat, EARTH_RADIUS + MARKER_OFFSET * 0.5);
       vector.project(camera);
       return {
-        x: (vector.x * 0.5 + 0.5) * size.width,
-        y: (-vector.y * 0.5 + 0.5) * size.height,
+        x: (vector.x * 0.5 + 0.5) * width,
+        y: (-vector.y * 0.5 + 0.5) * height,
         visible: vector.z < 1,
       };
     };
     onProjectorReady(projector);
-  }, [onProjectorReady]);
+  }, [cam.x, cam.y, cam.zoom, mapStyle, onProjectorReady]);
 
   const updatePicker = useCallback(() => {
     if (!onPickerReady) return;
     const picker: PickerFn = (pointerX, pointerY) => {
+      const container = containerRef.current;
+      if (!container) return null;
+
+      if (mapStyle === 'flat') {
+        const rect = container.getBoundingClientRect();
+        const width = rect.width || 1;
+        const height = rect.height || 1;
+        const adjustedX = (pointerX - cam.x) / cam.zoom;
+        const adjustedY = (pointerY - cam.y) / cam.zoom;
+        const lon = normalizeLon((adjustedX / width) * 360 - 180);
+        const lat = THREE.MathUtils.clamp(90 - (adjustedY / height) * 180, -90, 90);
+        return { lon, lat };
+      }
+
       const camera = cameraRef.current;
       const earth = earthMeshRef.current;
-      const container = containerRef.current;
-      if (!camera || !earth || !container) return null;
+      if (!camera || !earth) return null;
 
       const rect = container.getBoundingClientRect();
       pointerVec.current.set(
@@ -525,7 +576,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       return { lon, lat };
     };
     onPickerReady(picker);
-  }, [onPickerReady]);
+  }, [cam.x, cam.y, cam.zoom, mapStyle, onPickerReady]);
 
   const handleRegister = useCallback(
     ({ camera, size, earth }: SceneRegistration) => {

@@ -152,6 +152,7 @@ const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }
   { value: 'wireframe', label: 'Wireframe', description: 'Vector borders and topography outlines.' },
   { value: 'night', label: 'Night Lights', description: 'City illumination against a dark globe.' },
   { value: 'political', label: 'Political', description: 'Colored territorial boundaries and claims.' },
+  { value: 'flat', label: 'Flat', description: 'Orthographic projection with a 2D world canvas.' },
 ];
 
 const ASCII_INTRO_LOGO = String.raw`
@@ -4187,7 +4188,13 @@ export default function NoradVector() {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
     const stored = Storage.getItem('map_style');
-    if (stored === 'realistic' || stored === 'wireframe' || stored === 'night' || stored === 'political') {
+    if (
+      stored === 'realistic' ||
+      stored === 'wireframe' ||
+      stored === 'night' ||
+      stored === 'political' ||
+      stored === 'flat'
+    ) {
       return stored;
     }
     return 'realistic';
