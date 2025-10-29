@@ -6658,18 +6658,18 @@ export default function NoradVector() {
         const focalX = e.clientX - rect.left;
         const focalY = e.clientY - rect.top;
         const [focalLon, focalLat] = toLonLat(focalX, focalY);
+        const prevZoom = cam.zoom;
+        const [projectedX, projectedY] = project(focalLon, focalLat);
 
         const zoomIntensity = 0.0015;
         const delta = Math.exp(-e.deltaY * zoomIntensity);
         const newZoom = Math.max(0.5, Math.min(3, cam.targetZoom * delta));
-
-        const normalizedX = ((focalLon + 180) / 360) * W;
-        const normalizedY = ((90 - focalLat) / 180) * H;
+        const zoomScale = prevZoom > 0 ? newZoom / prevZoom : 1;
 
         cam.targetZoom = newZoom;
         cam.zoom = newZoom;
-        cam.x = focalX - normalizedX * newZoom;
-        cam.y = focalY - normalizedY * newZoom;
+        cam.x = focalX - (projectedX - cam.x) * zoomScale;
+        cam.y = focalY - (projectedY - cam.y) * zoomScale;
         clampLatitude();
       };
 
@@ -6705,10 +6705,23 @@ export default function NoradVector() {
         if (e.touches.length === 2) {
           // Pinch-to-zoom
           e.preventDefault();
+          if (!canvas) return;
           const newDistance = getTouchDistance(e.touches);
           if (lastTouchDistance > 0 && initialPinchDistance > 0) {
             const scaleFactor = newDistance / initialPinchDistance;
-            cam.targetZoom = Math.max(0.5, Math.min(3, initialPinchZoom * scaleFactor));
+            const rect = canvas.getBoundingClientRect();
+            const midpointX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+            const midpointY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
+            const [focalLon, focalLat] = toLonLat(midpointX, midpointY);
+            const prevZoom = cam.zoom;
+            const [projectedX, projectedY] = project(focalLon, focalLat);
+            const newZoom = Math.max(0.5, Math.min(3, initialPinchZoom * scaleFactor));
+            const zoomScale = prevZoom > 0 ? newZoom / prevZoom : 1;
+
+            cam.targetZoom = newZoom;
+            cam.zoom = newZoom;
+            cam.x = midpointX - (projectedX - cam.x) * zoomScale;
+            cam.y = midpointY - (projectedY - cam.y) * zoomScale;
             lastTouchDistance = newDistance;
             clampLatitude();
           }
