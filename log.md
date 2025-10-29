@@ -73,3 +73,6 @@
 | 2025-10-29T09:12:43Z | Ran `npm run build` to ensure the production bundle succeeds after options sheet styling updates. |
 | 2025-10-29T09:12:50Z | Started Vite dev server to exercise the OPTIONS drawer interactions in-browser. |
 | 2025-10-29T09:13:00Z | Used Playwright to open the OPTIONS drawer and cycle theme chips, capturing screenshots that confirm overlay layering across themes. |
+| 2025-10-29T09:26:42Z | Reviewed research expansion request and scoped required updates to Index.tsx and testing strategy. |
+| 2025-10-29T09:26:52Z | Implemented MIRV and stealth research projects, delivery category wiring, and helper utilities for effect odds. |
+| 2025-10-29T09:27:05Z | Added unit tests for MIRV split chance and bomber interception modifiers; executed `npx vitest run` noting existing multiplayer test failures. |

@@ -56,6 +56,7 @@ import {
 import { GovernanceEventDialog } from '@/components/governance/GovernanceEventDialog';
 import { MoraleHeatmapOverlay } from '@/components/governance/MoraleHeatmapOverlay';
 import { ElectionCountdownWidget } from '@/components/governance/ElectionCountdownWidget';
+import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -444,7 +445,7 @@ interface ResearchProject {
   id: string;
   name: string;
   description: string;
-  category: 'warhead' | 'defense' | 'intel';
+  category: 'warhead' | 'defense' | 'intel' | 'delivery';
   turns: number;
   cost: ResourceCost;
   yield?: number;
@@ -501,6 +502,32 @@ const RESEARCH_TREE: ResearchProject[] = [
     cost: { production: 80, intel: 35 },
     yield: 200,
     prerequisites: ['warhead_100']
+  },
+  {
+    id: 'delivery_mirv',
+    name: 'MIRV Deployment Doctrine',
+    description: 'Retrofit ICBMs with multiple reentry vehicles for overwhelming barrages.',
+    category: 'delivery',
+    turns: 5,
+    cost: { production: 60, intel: 45 },
+    prerequisites: ['warhead_50'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.mirv = true;
+    }
+  },
+  {
+    id: 'delivery_stealth',
+    name: 'Strategic Stealth Airframes',
+    description: 'Radar-absorbent coatings and ECM suites halve bomber interception odds.',
+    category: 'delivery',
+    turns: 4,
+    cost: { production: 45, intel: 35 },
+    prerequisites: ['counterintel'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.stealth = true;
+    }
   },
   {
     id: 'defense_grid',
@@ -2719,7 +2746,8 @@ function drawMissiles() {
     // Impact
     if (m.t >= 1) {
       // MIRV split check
-      if (m.from?.researched?.mirv && !m.isMirv && Math.random() < 0.5) {
+      const mirvChance = getMirvSplitChance(m.from, !!m.isMirv);
+      if (mirvChance > 0 && Math.random() < mirvChance) {
         log(`MIRV ACTIVATED! Multiple warheads deployed`, 'warning');
         const splitYield = Math.floor(m.yield / 3);
         for (let j = 0; j < 2; j++) {
@@ -2782,8 +2810,7 @@ function drawBombers() {
       log(`⚠️ BOMBER DETECTED approaching ${bomber.to.name}!`, 'warning');
       
       // Intercept chance
-      const stealthMod = bomber.from?.researched?.stealth ? 0.5 : 1.0;
-      const interceptChance = (bomber.to.defense / 12) * stealthMod;
+      const interceptChance = calculateBomberInterceptChance(bomber.to.defense, bomber.from);
       
       if (Math.random() < interceptChance) {
         log(`✓ Bomber intercepted by ${bomber.to.name}!`, 'success');
@@ -5059,6 +5086,7 @@ export default function NoradVector() {
 
     const categories: { id: ResearchProject['category']; label: string }[] = [
       { id: 'warhead', label: 'Warhead Programs' },
+      { id: 'delivery', label: 'Strategic Delivery Systems' },
       { id: 'defense', label: 'Defense Initiatives' },
       { id: 'intel', label: 'Intelligence Operations' }
     ];
