@@ -15,12 +15,11 @@ import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
 import {
-  usePandemic,
   type PandemicTriggerPayload,
   type PandemicCountermeasurePayload,
   type PandemicTurnContext
 } from '@/hooks/usePandemic';
-import { useEvolutionTree } from '@/hooks/useEvolutionTree';
+import { useBioWarfare } from '@/hooks/useBioWarfare';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
@@ -4934,29 +4933,21 @@ export default function NoradVector() {
 
   const getAllNations = useCallback(() => nations, []);
 
+  // Integrated bio-warfare system (combines pandemic + evolution tree)
   const {
     pandemicState,
-    triggerPandemic,
-    applyCountermeasure: applyPandemicCountermeasure,
-    advancePandemicTurn,
-    upgradeTrait: upgradePandemicTrait,
-    downgradeTrait: downgradePandemicTrait,
-    resetTraits: resetPandemicTraits,
-    deployTraits: deployPandemicTraits
-  } = usePandemic(addNewsItem);
-
-  // Evolution tree system for Plague Inc style gameplay
-  const {
     plagueState,
+    applyCountermeasure: applyPandemicCountermeasure,
     selectPlagueType,
     evolveNode,
     devolveNode,
     addDNAPoints,
-    triggerRandomMutation,
-    updateCureProgress,
-    infectCountry,
+    triggerBioWarfare,
+    advanceBioWarfareTurn,
+    onCountryInfected,
     availableNodes,
-  } = useEvolutionTree(addNewsItem);
+    calculateSpreadModifiers,
+  } = useBioWarfare(addNewsItem);
 
   const conventional = useConventionalWarfare({
     initialState: conventionalState,
@@ -5317,8 +5308,8 @@ export default function NoradVector() {
       );
       return;
     }
-    triggerPandemic(payload);
-  }, [pandemicIntegrationEnabled, bioWarfareEnabled, triggerPandemic, addNewsItem]);
+    triggerBioWarfare(payload);
+  }, [pandemicIntegrationEnabled, bioWarfareEnabled, triggerBioWarfare, addNewsItem]);
 
   const handlePandemicCountermeasure = useCallback((payload: PandemicCountermeasurePayload) => {
     if (!pandemicIntegrationEnabled) return;
@@ -5327,8 +5318,8 @@ export default function NoradVector() {
 
   const handlePandemicAdvance = useCallback((context: PandemicTurnContext) => {
     if (!pandemicIntegrationEnabled) return null;
-    return advancePandemicTurn(context);
-  }, [pandemicIntegrationEnabled, advancePandemicTurn]);
+    return advanceBioWarfareTurn(context);
+  }, [pandemicIntegrationEnabled, advanceBioWarfareTurn]);
 
   // Progressive tutorial system
   const tutorialSteps = [
