@@ -38,6 +38,10 @@
 | 2025-10-28T15:55:14Z | Reviewed AGENTS instructions and scoped governance threshold update task. |
 | 2025-10-28T15:57:23Z | Updated political event conditions to include threshold key typing and stress requirements for election cycle. |
 | 2025-10-28T15:58:43Z | Refactored governance hook condition evaluation and event targeting to honor new threshold semantics and election auto-resolution. |
+| 2025-10-29T10:51:53Z | Reviewed AGENTS instructions and scoped co-op toggle disable requirements for Index UI. |
+| 2025-10-29T10:51:57Z | Implemented persisted co-op toggle, approval bypass logic, and conditional multiplayer UI in `src/pages/Index.tsx`. |
+| 2025-10-29T10:51:59Z | Added regression test `src/pages/__tests__/Index.test.tsx` with module mocks to confirm actions skip approvals when co-op is disabled. |
+| 2025-10-29T10:52:01Z | Executed `npm run test -- Index.test.tsx` to validate the new co-op bypass behavior. |
 | 2025-10-29T09:43:14Z | Added conventional research unlock projects, unit template prerequisites, and gating feedback across Index and warfare systems. |
 | 2025-10-29T09:43:17Z | Executed `npm run test` and `npm run test -- --run` to validate new gating coverage, updating multiplayer mocks to satisfy suites. |
 | 2025-10-28T15:59:01Z | Extended governance tests for election stress gating and quiet auto-resolution. |
