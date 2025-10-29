@@ -100,15 +100,36 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
     // Calculate modifiers from evolution
     const modifiers = calculateSpreadModifiers(evolution.plagueState);
 
-    // Bio-weapon: Auto-increasing lethality
-    if (plagueType?.autoIncreasingLethality) {
-      const lethalityIncrease = 0.5 + (context.turn * 0.1); // Increases each turn
-      // This will affect the base pandemic lethality
+    // Bio-weapon: Auto-increasing lethality (evolve random lethal symptom every 5 turns)
+    if (plagueType?.autoIncreasingLethality && context.turn % 5 === 0) {
+      // Force-evolve a random lethal symptom if available
+      const lethalSymptoms = ['total-organ-failure', 'hemorrhagic-shock', 'necrosis', 'cytokine-storm', 'systemic-infection', 'liquefaction'];
+      const availableLethal = lethalSymptoms.filter(
+        (id) => !evolution.plagueState.unlockedNodes.has(id as any)
+      );
+      if (availableLethal.length > 0) {
+        const randomSymptom = availableLethal[Math.floor(Math.random() * availableLethal.length)];
+        evolution.evolveNode({ nodeId: randomSymptom as any, forced: true });
+        addNewsItem('crisis', `Bio-weapon unstable mutation: ${randomSymptom} evolved automatically`, 'urgent');
+      }
     }
 
     // Virus: Random mutations
     if (plagueType?.id === 'virus' && Math.random() < plagueType.naturalMutationRate) {
       evolution.triggerRandomMutation();
+    }
+
+    // Prion: Random late-game lethal symptom mutation
+    if (plagueType?.id === 'prion' && pandemic.pandemicState.globalInfection > 40 && Math.random() < 0.15) {
+      const lethalSymptoms = ['necrosis', 'paralysis', 'coma', 'total-organ-failure'];
+      const availableSymptoms = lethalSymptoms.filter(
+        (id) => !evolution.plagueState.unlockedNodes.has(id as any)
+      );
+      if (availableSymptoms.length > 0) {
+        const randomSymptom = availableSymptoms[Math.floor(Math.random() * availableSymptoms.length)];
+        evolution.evolveNode({ nodeId: randomSymptom as any, forced: true });
+        addNewsItem('science', `Prion cascade: ${randomSymptom} manifested`, 'important');
+      }
     }
 
     // Advance pandemic with modifiers
@@ -130,12 +151,24 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
 
     // DNA from deaths (1 DNA per 100k deaths)
     if (enhancedEffect.populationLoss && enhancedEffect.populationLoss > 0) {
-      dnaGained += Math.floor(enhancedEffect.populationLoss / 100000);
+      const deathDNA = Math.floor(enhancedEffect.populationLoss / 100000);
+      if (deathDNA > 0) {
+        dnaGained += deathDNA;
+        addNewsItem('science', `Casualties yield ${deathDNA} DNA from pathogen samples`, 'normal');
+      }
     }
 
-    // DNA from spread (if infection increasing)
-    if (pandemic.pandemicState.globalInfection > 0) {
-      dnaGained += Math.floor(pandemic.pandemicState.globalInfection / 20);
+    // DNA from infection spread (every 10% global infection = 1 DNA)
+    const infectionMilestone = Math.floor(pandemic.pandemicState.globalInfection / 10);
+    const previousMilestone = Math.floor((pandemic.pandemicState.globalInfection - 5) / 10);
+    if (infectionMilestone > previousMilestone) {
+      dnaGained += 2;
+      addNewsItem('science', `Infection milestone reached: +2 DNA`, 'important');
+    }
+
+    // DNA from active outbreaks (1 DNA per active outbreak region)
+    if (pandemic.pandemicState.outbreaks.length > 0) {
+      dnaGained += pandemic.pandemicState.outbreaks.length;
     }
 
     // Award DNA
@@ -143,16 +176,35 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
       evolution.addDNAPoints({
         reason: 'milestone',
         amount: dnaGained,
-        message: `Bio-warfare advancement: +${dnaGained} DNA`,
       });
     }
 
     // Update cure progress (slowed by evolution)
-    const cureIncrease = 1.5 * modifiers.cureSpeedMultiplier;
+    let cureIncrease = 1.5 * modifiers.cureSpeedMultiplier;
+
+    // Nano-virus: Cure progresses faster
+    if (plagueType?.id === 'nano-virus') {
+      cureIncrease *= 1.5;
+    }
+
+    // Parasite/Prion: Cure starts later (detection delay)
+    if (plagueType?.id === 'parasite' && pandemic.pandemicState.globalInfection < 30) {
+      cureIncrease = 0; // No cure until 30% infected
+    }
+    if (plagueType?.id === 'prion' && pandemic.pandemicState.globalInfection < 40) {
+      cureIncrease = 0; // No cure until 40% infected
+    }
+
     evolution.updateCureProgress(cureIncrease);
 
+    // Check if cure completed
+    if (evolution.plagueState.cureProgress >= 100) {
+      addNewsItem('crisis', 'CURE DEPLOYED - Pathogen neutralization in progress', 'critical');
+      // TODO: Trigger cure deployment effects
+    }
+
     return enhancedEffect;
-  }, [pandemic, evolution, calculateSpreadModifiers]);
+  }, [pandemic, evolution, calculateSpreadModifiers, addNewsItem]);
 
   /**
    * Trigger pandemic with evolution consideration
