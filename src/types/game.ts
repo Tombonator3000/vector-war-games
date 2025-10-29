@@ -66,10 +66,18 @@ export interface Nation {
 export interface SatelliteOrbit {
   ownerId: string;
   targetId: string;
-  startedAt: number;
   ttl: number;
   phaseOffset: number;
   direction: 1 | -1;
+  /**
+   * Remaining lifetime in milliseconds. This is tracked relative to in-game time
+   * so orbits are consistent across clients regardless of wall-clock skew.
+   */
+  remainingMs: number;
+  /**
+   * Legacy field kept for backwards compatibility with older save data.
+   */
+  startedAt?: number;
 }
 
 export interface DiplomacyState {

@@ -141,3 +141,5 @@
 2025-11-07T09:58:25Z Implemented satellite orbit state tracking, canvas rendering, and deployment hooks for player and AI flows.
 2025-11-07T10:02:40Z Ran `npm run build` to verify satellite orbit integration compiles without errors.
 2025-11-07T10:05:55Z Ran `npm run dev` for manual satellite visualization spot check and terminated dev server after startup.
+2025-11-08T08:42:10Z Reviewed Codex follow-up request and analyzed satellite orbit TTL desynchronization in `src/pages/Index.tsx`.
+2025-11-08T08:56:30Z Reworked satellite orbit lifetime tracking to store remaining duration in game state and updated rendering logic accordingly.
