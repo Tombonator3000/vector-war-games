@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical } from 'lucide-react';
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
@@ -4722,6 +4722,7 @@ export default function NoradVector() {
     return true;
   });
   const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
+  const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const lastTargetPingIdRef = useRef<string | null>(null);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
@@ -5690,6 +5691,17 @@ export default function NoradVector() {
 
   const handleAttack = useCallback(() => {
     AudioSys.playSFX('click');
+    setIsStrikePlannerOpen(prev => {
+      if (!prev) {
+        return true;
+      }
+      return prev;
+    });
+
+    if (!isStrikePlannerOpen) {
+      return;
+    }
+
     if (!isGameStarted || S.gameOver) return;
 
     const player = PlayerManager.get();
@@ -5782,7 +5794,7 @@ export default function NoradVector() {
     setSelectedWarheadYield(deliverableWarheads[0]?.yield ?? null);
     const defaultDelivery = deliveryOptions.find(option => option.count > 0)?.id ?? null;
     setSelectedDeliveryMethod(defaultDelivery);
-  }, [isGameStarted, selectedTargetId]);
+  }, [isGameStarted, isStrikePlannerOpen, selectedTargetId]);
 
   const resetLaunchControl = useCallback(() => {
     setPendingLaunch(null);
@@ -8140,71 +8152,83 @@ export default function NoradVector() {
             <ConflictResolutionDialog />
           </div>
 
-          <div className="pointer-events-auto fixed bottom-24 right-6 z-40 w-80 max-h-[60vh]">
-            <div className="rounded border border-red-500/60 bg-black/85 backdrop-blur-sm shadow-lg shadow-red-500/20">
-              <div className="flex items-center justify-between border-b border-red-500/30 px-3 py-2">
-                <span className="text-[10px] font-mono uppercase tracking-[0.35em] text-red-200">Strike Planner</span>
-                <span
-                  className={`text-[10px] font-mono ${selectedTarget ? 'text-red-300' : 'text-cyan-300/70'}`}
-                >
-                  {selectedTarget ? 'LOCKED' : 'STANDBY'}
-                </span>
-              </div>
-              <div className="max-h-48 overflow-y-auto divide-y divide-red-500/10">
-                {attackableNations.length === 0 ? (
-                  <div className="px-3 py-4 text-[11px] text-cyan-200/70">
-                    No hostile launch solutions available.
+          {isStrikePlannerOpen ? (
+            <div className="pointer-events-auto fixed bottom-24 right-6 z-40 w-80 max-h-[60vh]">
+              <div className="rounded border border-red-500/60 bg-black/85 backdrop-blur-sm shadow-lg shadow-red-500/20">
+                <div className="flex items-center justify-between border-b border-red-500/30 px-3 py-2">
+                  <span className="text-[10px] font-mono uppercase tracking-[0.35em] text-red-200">Strike Planner</span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-mono ${selectedTarget ? 'text-red-300' : 'text-cyan-300/70'}`}
+                    >
+                      {selectedTarget ? 'LOCKED' : 'STANDBY'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsStrikePlannerOpen(false)}
+                      className="inline-flex h-5 w-5 items-center justify-center rounded border border-red-500/40 text-red-200/80 transition hover:border-red-400 hover:text-red-200"
+                      aria-label="Close strike planner"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                ) : (
-                  attackableNations.map(nation => {
-                    const isSelected = nation.id === selectedTargetId;
-                    const population = Math.max(0, Math.round(nation.population ?? 0));
-                    const defense = Math.max(0, Math.round(nation.defense ?? 0));
-                    const missiles = Math.max(0, Math.round(Number(nation.missiles ?? 0)));
-                    const instability = Math.max(0, Math.round(Number(nation.instability ?? 0)));
+                </div>
+                <div className="max-h-48 overflow-y-auto divide-y divide-red-500/10">
+                  {attackableNations.length === 0 ? (
+                    <div className="px-3 py-4 text-[11px] text-cyan-200/70">
+                      No hostile launch solutions available.
+                    </div>
+                  ) : (
+                    attackableNations.map(nation => {
+                      const isSelected = nation.id === selectedTargetId;
+                      const population = Math.max(0, Math.round(nation.population ?? 0));
+                      const defense = Math.max(0, Math.round(nation.defense ?? 0));
+                      const missiles = Math.max(0, Math.round(Number(nation.missiles ?? 0)));
+                      const instability = Math.max(0, Math.round(Number(nation.instability ?? 0)));
 
-                    return (
-                      <button
-                        key={nation.id}
-                        type="button"
-                        onClick={() => handleTargetSelect(nation.id)}
-                        className={`flex w-full items-center justify-between gap-3 border-l-2 px-3 py-2 text-left text-[11px] font-mono transition ${
-                          isSelected
-                            ? 'border-red-300/90 bg-red-500/20 text-red-100 shadow-inner'
-                            : 'border-transparent text-cyan-200 hover:border-red-400/70 hover:bg-red-500/10'
-                        }`}
-                      >
-                        <span className="flex-1">
-                          <span className="block text-[12px] uppercase tracking-[0.25em]">{nation.name}</span>
-                          <span className="block text-[10px] text-cyan-300/70">
-                            POP {population}M • DEF {defense} • MISS {missiles}
+                      return (
+                        <button
+                          key={nation.id}
+                          type="button"
+                          onClick={() => handleTargetSelect(nation.id)}
+                          className={`flex w-full items-center justify-between gap-3 border-l-2 px-3 py-2 text-left text-[11px] font-mono transition ${
+                            isSelected
+                              ? 'border-red-300/90 bg-red-500/20 text-red-100 shadow-inner'
+                              : 'border-transparent text-cyan-200 hover:border-red-400/70 hover:bg-red-500/10'
+                          }`}
+                        >
+                          <span className="flex-1">
+                            <span className="block text-[12px] uppercase tracking-[0.25em]">{nation.name}</span>
+                            <span className="block text-[10px] text-cyan-300/70">
+                              POP {population}M • DEF {defense} • MISS {missiles}
+                            </span>
                           </span>
-                        </span>
-                        <span className={`text-[10px] ${isSelected ? 'text-red-100' : 'text-red-200/80'}`}>
-                          INSTAB {instability}
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-              <div className="border-t border-red-500/30 px-3 py-2 text-[11px] text-cyan-200/80">
-                {selectedTarget ? (
-                  <div className="space-y-1">
-                    <p>
-                      Locked on <span className="text-red-200">{selectedTarget.name}</span>. Population&nbsp;
-                      {Math.max(0, Math.round(selectedTarget.population ?? 0))}M, defense{' '}
-                      {Math.max(0, Math.round(selectedTarget.defense ?? 0))}, missile capacity{' '}
-                      {Math.max(0, Math.round(Number(selectedTarget.missiles ?? 0)))}.
-                    </p>
-                    <p className="text-cyan-300/70">Confirm launch with ATTACK once satisfied with this solution.</p>
-                  </div>
-                ) : (
-                  <p>Select a hostile nation to arm the ATTACK command.</p>
-                )}
+                          <span className={`text-[10px] ${isSelected ? 'text-red-100' : 'text-red-200/80'}`}>
+                            INSTAB {instability}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+                <div className="border-t border-red-500/30 px-3 py-2 text-[11px] text-cyan-200/80">
+                  {selectedTarget ? (
+                    <div className="space-y-1">
+                      <p>
+                        Locked on <span className="text-red-200">{selectedTarget.name}</span>. Population&nbsp;
+                        {Math.max(0, Math.round(selectedTarget.population ?? 0))}M, defense{' '}
+                        {Math.max(0, Math.round(selectedTarget.defense ?? 0))}, missile capacity{' '}
+                        {Math.max(0, Math.round(Number(selectedTarget.missiles ?? 0)))}.
+                      </p>
+                      <p className="text-cyan-300/70">Confirm launch with ATTACK once satisfied with this solution.</p>
+                    </div>
+                  ) : (
+                    <p>Select a hostile nation to arm the ATTACK command.</p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Minimal bottom utility stack */}
           <div className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50">
