@@ -170,6 +170,25 @@ const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }
   },
 ];
 
+type CanvasIcon = HTMLImageElement | null;
+
+const loadIcon = (src: string): CanvasIcon => {
+  if (typeof Image === 'undefined') {
+    return null;
+  }
+  const image = new Image();
+  image.src = src;
+  return image;
+};
+
+const missileIcon = loadIcon('/icons/missile.svg');
+const bomberIcon = loadIcon('/icons/bomber.svg');
+const submarineIcon = loadIcon('/icons/submarine.svg');
+
+const MISSILE_ICON_BASE_SCALE = 0.14;
+const BOMBER_ICON_BASE_SCALE = 0.18;
+const SUBMARINE_ICON_BASE_SCALE = 0.2;
+
 const IntroLogo = () => (
   <svg
     className="intro-screen__logo"
@@ -2960,9 +2979,45 @@ function drawNations(style: MapStyle) {
   });
 }
 
+type DrawIconOptions = {
+  alpha?: number;
+};
+
+function drawIcon(
+  icon: CanvasIcon,
+  x: number,
+  y: number,
+  angle: number,
+  baseScale: number,
+  options?: DrawIconOptions
+) {
+  if (!ctx || !icon || !icon.complete || icon.naturalWidth === 0 || icon.naturalHeight === 0) {
+    return;
+  }
+
+  ctx.save();
+
+  if (options?.alpha !== undefined) {
+    ctx.globalAlpha *= options.alpha;
+  }
+
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+
+  const zoomScale = Math.max(0.7, Math.min(1.5, cam.zoom));
+  const width = icon.naturalWidth || icon.width || 1;
+  const height = icon.naturalHeight || icon.height || 1;
+  const scale = baseScale * zoomScale;
+  const drawWidth = width * scale;
+  const drawHeight = height * scale;
+
+  ctx.drawImage(icon, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+  ctx.restore();
+}
+
 function drawMissiles() {
   if (!ctx) return;
-  
+
   S.missiles.forEach((m: any, i: number) => {
     m.t = Math.min(1, m.t + 0.016);
     
@@ -2974,10 +3029,13 @@ function drawMissiles() {
     const cy = (sy + ty) / 2 - 150;
     const x = u * u * sx + 2 * u * m.t * cx + m.t * m.t * tx;
     const y = u * u * sy + 2 * u * m.t * cy + m.t * m.t * ty;
-    
+    const derivativeX = 2 * u * (cx - sx) + 2 * m.t * (tx - cx);
+    const derivativeY = 2 * u * (cy - sy) + 2 * m.t * (ty - cy);
+    const heading = Math.atan2(derivativeY, derivativeX);
+
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    
+
     // Trajectory path
     ctx.strokeStyle = m.color || 'rgba(255,0,255,0.9)';
     ctx.lineWidth = 2;
@@ -2990,12 +3048,13 @@ function drawMissiles() {
     ctx.quadraticCurveTo(cx, cy, tx, ty);
     ctx.stroke();
     ctx.setLineDash([]);
-    
-    // Missile dot
-    ctx.fillStyle = '#ffffff';
+
+    // Missile glow and icon
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.beginPath();
-    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
     ctx.fill();
+    drawIcon(missileIcon, x, y, heading, MISSILE_ICON_BASE_SCALE);
     ctx.restore();
     
     // Incoming warning
@@ -3087,29 +3146,20 @@ function drawBombers() {
     const x = bomber.sx + (bomber.tx - bomber.sx) * bomber.t;
     const y = bomber.sy + (bomber.ty - bomber.sy) * bomber.t;
     
-    ctx.save();
-    ctx.fillStyle = 'rgba(255,255,100,0.9)';
-    ctx.strokeStyle = 'rgba(255,255,100,0.8)';
-    ctx.lineWidth = 2;
-    
     const dx = bomber.tx - bomber.sx;
     const dy = bomber.ty - bomber.sy;
     const angle = Math.atan2(dy, dx);
-    
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-    
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(255,255,160,0.3)';
     ctx.beginPath();
-    ctx.moveTo(8, 0);
-    ctx.lineTo(-8, -4);
-    ctx.lineTo(-6, 0);
-    ctx.lineTo(-8, 4);
-    ctx.closePath();
+    ctx.arc(x, y, 10, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
-    
     ctx.restore();
-    
+
+    drawIcon(bomberIcon, x, y, angle, BOMBER_ICON_BASE_SCALE);
+
     if (bomber.t >= 1.0) {
       explode(bomber.tx, bomber.ty, bomber.to, bomber.payload.yield);
       S.bombers.splice(i, 1);
@@ -3119,21 +3169,26 @@ function drawBombers() {
 
 function drawSubmarines() {
   if (!ctx) return;
-  
+
   S.submarines = S.submarines || [];
   S.submarines.forEach((sub: any, i: number) => {
-    ctx.save();
+    const targetX = typeof sub.targetX === 'number' ? sub.targetX : sub.x;
+    const targetY = typeof sub.targetY === 'number' ? sub.targetY : sub.y;
+    const angle = Math.atan2(targetY - sub.y, targetX - sub.x);
+
     if (sub.phase === 0) {
       // Surfacing
       sub.phaseProgress = Math.min(1, (sub.phaseProgress || 0) + 0.03);
       const p = sub.phaseProgress;
+      ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      ctx.fillStyle = `rgba(100,200,255,${1-p})`;
+      ctx.fillStyle = `rgba(100,200,255,${1 - p})`;
       ctx.beginPath();
       ctx.arc(sub.x, sub.y, 30 * p, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#333';
-      ctx.fillRect(sub.x - 15, sub.y - 3 + (1-p) * 10, 30, 6);
+      ctx.restore();
+
+      drawIcon(submarineIcon, sub.x, sub.y + (1 - p) * 10, angle, SUBMARINE_ICON_BASE_SCALE, { alpha: p });
       if (p >= 1) {
         sub.phase = 1;
         // Launch missile
@@ -3157,14 +3212,12 @@ function drawSubmarines() {
       sub.phase = 2;
     } else if (sub.phase === 2) {
       sub.diveProgress = (sub.diveProgress || 0) + 0.02;
-      ctx.globalAlpha = 1 - sub.diveProgress;
-      ctx.fillStyle = '#333';
-      ctx.fillRect(sub.x - 15, sub.y - 3 + sub.diveProgress * 10, 30, 6);
+      const diveAlpha = Math.max(0, 1 - sub.diveProgress);
+      drawIcon(submarineIcon, sub.x, sub.y + sub.diveProgress * 10, angle, SUBMARINE_ICON_BASE_SCALE, { alpha: diveAlpha });
       if (sub.diveProgress >= 1) {
         S.submarines.splice(i, 1);
       }
     }
-    ctx.restore();
   });
 }
 
