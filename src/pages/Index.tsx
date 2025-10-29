@@ -155,48 +155,85 @@ const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }
   { value: 'flat', label: 'Flat', description: 'Orthographic projection with a 2D world canvas.' },
 ];
 
-const ASCII_INTRO_LOGO = String.raw`
-NNNNNNNN        NNNNNNNN     OOOOOOOOO     RRRRRRRRRRRRRRRRR                  AAA               DDDDDDDDDDDDD
-N:::::::N       N::::::N   OO:::::::::OO   R::::::::::::::::R                A:::A              D::::::::::::DDD
-N::::::::N      N::::::N OO:::::::::::::OO R::::::RRRRRR:::::R              A:::::A             D:::::::::::::::DD
-N:::::::::N     N::::::NO:::::::OOO:::::::ORR:::::R     R:::::R            A:::::::A            DDD:::::DDDDD:::::D
-N::::::::::N    N::::::NO::::::O   O::::::O  R::::R     R:::::R           A:::::::::A             D:::::D    D:::::D
-N:::::::::::N   N::::::NO:::::O     O:::::O  R::::R     R:::::R          A:::::A:::::A            D:::::D     D:::::D
-N:::::::N::::N  N::::::NO:::::O     O:::::O  R::::RRRRRR:::::R          A:::::A A:::::A           D:::::D     D:::::D
-N::::::N N::::N N::::::NO:::::O     O:::::O  R:::::::::::::RR          A:::::A   A:::::A          D:::::D     D:::::D
-N::::::N  N::::N:::::::NO:::::O     O:::::O  R::::RRRRRR:::::R        A:::::A     A:::::A         D:::::D     D:::::D
-N::::::N   N:::::::::::NO:::::O     O:::::O  R::::R     R:::::R      A:::::AAAAAAAAA:::::A        D:::::D     D:::::D
-N::::::N    N::::::::::NO:::::O     O:::::O  R::::R     R:::::R     A:::::::::::::::::::::A       D:::::D     D:::::D
-N::::::N     N:::::::::NO::::::O   O::::::O  R::::R     R:::::R    A:::::AAAAAAAAAAAAA:::::A      D:::::D    D:::::D
-N::::::N      N::::::::NO:::::::OOO:::::::ORR:::::R     R:::::R   A:::::A             A:::::A   DDD:::::DDDDD:::::D
-N::::::N       N:::::::N OO:::::::::::::OO R::::::R     R:::::R  A:::::A               A:::::A  D:::::::::::::::DD
-N::::::N        N::::::N   OO:::::::::OO   R::::::R     R:::::R A:::::A                 A:::::A D::::::::::::DDD
-NNNNNNNN         NNNNNNN     OOOOOOOOO     RRRRRRRR     RRRRRRRAAAAAAA                   AAAAAAADDDDDDDDDDDDD
-
-
-
-
-
-
-
-
-
-                                                       VVVVVVVV           VVVVVVVVEEEEEEEEEEEEEEEEEEEEEE       CCCCCCCCCCCCCTTTTTTTTTTTTTTTTTTTTTTT     OOOOOOOOO     RRRRRRRRRRRRRRRRR
-                                                       V::::::V           V::::::VE::::::::::::::::::::E    CCC::::::::::::CT:::::::::::::::::::::T   OO:::::::::OO   R::::::::::::::::R
-                                                       V::::::V           V::::::VE::::::::::::::::::::E  CC:::::::::::::::CT:::::::::::::::::::::T OO:::::::::::::OO R::::::RRRRRR:::::R
-                                                       V::::::V           V::::::VEE::::::EEEEEEEEE::::E C:::::CCCCCCCC::::CT:::::TT:::::::TT:::::TO:::::::OOO:::::::ORR:::::R     R:::::R
-                                                        V:::::V           V:::::V   E:::::E       EEEEEEC:::::C       CCCCCCTTTTTT  T:::::T  TTTTTTO::::::O   O::::::O  R::::R     R:::::R
-                                                         V:::::V         V:::::V    E:::::E            C:::::C                      T:::::T        O:::::O     O:::::O  R::::R     R:::::R
-                                                          V:::::V       V:::::V     E::::::EEEEEEEEEE  C:::::C                      T:::::T        O:::::O     O:::::O  R::::RRRRRR:::::R
-                                                           V:::::V     V:::::V      E:::::::::::::::E  C:::::C                      T:::::T        O:::::O     O:::::O  R:::::::::::::RR
-                                                            V:::::V   V:::::V       E:::::::::::::::E  C:::::C                      T:::::T        O:::::O     O:::::O  R::::RRRRRR:::::R
-                                                             V:::::V V:::::V        E::::::EEEEEEEEEE  C:::::C                      T:::::T        O:::::O     O:::::O  R::::R     R:::::R
-                                                              V:::::V:::::V         E:::::E            C:::::C                      T:::::T        O:::::O     O:::::O  R::::R     R:::::R
-                                                               V:::::::::V          E:::::E       EEEEEEC:::::C       CCCCCC        T:::::T        O::::::O   O::::::O  R::::R     R:::::R
-                                                                V:::::::V         EE::::::EEEEEEEE:::::E C:::::CCCCCCCC::::C      TT:::::::TT      O:::::::OOO:::::::ORR:::::R     R:::::R
-                                                                 V:::::V          E::::::::::::::::::::E  CC:::::::::::::::C      T:::::::::T       OO:::::::::::::OO R::::::R     R:::::R
-                                                                  V:::V           E::::::::::::::::::::E    CCC::::::::::::C      T:::::::::T         OO:::::::::OO   R::::::R     R:::::R
-                                                                   VVV            EEEEEEEEEEEEEEEEEEEEEE       CCCCCCCCCCCCC      TTTTTTTTTTT           OOOOOOOOO     RRRRRRRR     RRRRRRR`;
+const IntroLogo = () => (
+  <svg
+    className="intro-screen__logo"
+    viewBox="0 0 1200 420"
+    role="img"
+    aria-labelledby="intro-logo-title intro-logo-desc"
+  >
+    <title id="intro-logo-title">Vector War Games</title>
+    <desc id="intro-logo-desc">
+      Neon synthwave wordmark for the Vector War Games simulation.
+    </desc>
+    <defs>
+      <linearGradient id="logo-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#39ff14" />
+        <stop offset="35%" stopColor="#00d9ff" />
+        <stop offset="70%" stopColor="#ff00ff" />
+        <stop offset="100%" stopColor="#39ff14" />
+      </linearGradient>
+      <linearGradient id="logo-stroke" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="rgba(0, 217, 255, 0.8)" />
+        <stop offset="100%" stopColor="rgba(255, 0, 255, 0.8)" />
+      </linearGradient>
+      <filter id="logo-glow" x="-20%" y="-40%" width="140%" height="200%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="18" result="blur" />
+        <feColorMatrix
+          in="blur"
+          type="matrix"
+          values="0 0 0 0 0  0 0 0 0.75 0  0 0 0 0.9 0  0 0 0 0.35 0"
+          result="coloredBlur"
+        />
+        <feMerge>
+          <feMergeNode in="coloredBlur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+    </defs>
+    <g filter="url(#logo-glow)" fontFamily="'Share Tech Mono', 'Orbitron', 'Rajdhani', sans-serif" fontWeight="600">
+      <text
+        x="50%"
+        y="35%"
+        textAnchor="middle"
+        fontSize={128}
+        letterSpacing="0.45em"
+        fill="url(#logo-fill)"
+        stroke="url(#logo-stroke)"
+        strokeWidth={6}
+        paintOrder="stroke fill"
+      >
+        VECTOR
+      </text>
+      <text
+        x="50%"
+        y="62%"
+        textAnchor="middle"
+        fontSize={144}
+        letterSpacing="0.75em"
+        fill="url(#logo-fill)"
+        stroke="url(#logo-stroke)"
+        strokeWidth={7}
+        paintOrder="stroke fill"
+      >
+        WAR
+      </text>
+      <text
+        x="50%"
+        y="88%"
+        textAnchor="middle"
+        fontSize={128}
+        letterSpacing="0.55em"
+        fill="url(#logo-fill)"
+        stroke="url(#logo-stroke)"
+        strokeWidth={6}
+        paintOrder="stroke fill"
+      >
+        GAMES
+      </text>
+    </g>
+  </svg>
+);
 
 const DIPLOMATIC_VICTORY_CRITERIA = {
   allianceRatio: 0.6,
@@ -7119,8 +7156,7 @@ export default function NoradVector() {
       <div className="intro-screen__scanlines" aria-hidden="true" />
 
       <div className="intro-screen__content">
-        <span className="sr-only">NORAD Vector</span>
-        <pre className="intro-screen__logo" aria-hidden="true">{ASCII_INTRO_LOGO}</pre>
+        <IntroLogo />
 
         <p className="intro-screen__tagline">Want to play a game?</p>
 

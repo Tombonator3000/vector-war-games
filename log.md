@@ -98,3 +98,8 @@
 | 2025-10-29T12:12:12+00:00 | Ran `npm run build` to verify the updated rendering pipeline compiles successfully. |
 | 2025-10-29T12:27:36Z | Reviewed flat map projection requirements and identified GlobeScene, Index map options, and storage touchpoints. |
 | 2025-10-29T12:27:58Z | Implemented flat map mode wiring, updated projector/picker math, extended options UI, and ran targeted Vitest suite. |
+| 2025-10-29T12:45:36Z | Reviewed AGENTS.md guidelines and scoped the intro logo replacement requirements. |
+| 2025-10-29T12:45:37Z | Replaced the ASCII intro art with an inline SVG wordmark component in `src/pages/Index.tsx`. |
+| 2025-10-29T12:45:38Z | Updated `src/index.css` to size, animate, and responsively adapt the new intro logo. |
+| 2025-10-29T12:45:39Z | Ran `npm run build` to verify the updated intro experience compiles without errors. |
+| 2025-10-29T12:45:40Z | Captured desktop and mobile intro screen screenshots to confirm centering and readability. |

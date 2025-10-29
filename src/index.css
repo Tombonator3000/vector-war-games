@@ -366,24 +366,18 @@ body {
 }
 
 .intro-screen__logo {
-  font-family: "Share Tech Mono", "IBM Plex Mono", "Roboto Mono", monospace;
-  white-space: pre;
-  line-height: 1.08;
-  font-size: clamp(0.18rem, 0.58vw + 0.11rem, 0.82rem);
-  letter-spacing: 0.025em;
-  margin: 0;
-  background: linear-gradient(90deg, #39ff14, #00d9ff, #ff00ff, #00d9ff, #39ff14);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow:
-    0 0 6px rgba(0, 217, 255, 0.5),
-    0 0 12px rgba(255, 0, 255, 0.35),
-    0 0 22px rgba(57, 255, 20, 0.25);
-  filter: drop-shadow(0 0 12px rgba(0, 216, 255, 0.32));
-  animation: intro-logo-glow 2.6s ease-in-out infinite alternate;
-  max-width: 100%;
-  overflow-x: auto;
+  display: block;
+  width: min(82vw, 45rem);
+  max-width: 45rem;
+  height: auto;
+  margin: 0 auto clamp(1.75rem, 5vw, 3rem);
+  filter: drop-shadow(0 0 16px rgba(0, 216, 255, 0.35));
+  animation: intro-logo-glow 3.2s ease-in-out infinite alternate;
+}
+
+.intro-screen__logo text {
+  text-transform: uppercase;
+  font-variant-ligatures: none;
 }
 
 .intro-screen__tagline {
@@ -444,10 +438,22 @@ body {
 
 @keyframes intro-logo-glow {
   0% {
-    filter: drop-shadow(0 0 12px rgba(0, 216, 255, 0.3));
+    filter: drop-shadow(0 0 14px rgba(0, 216, 255, 0.35));
   }
   100% {
-    filter: drop-shadow(0 0 26px rgba(255, 0, 204, 0.55));
+    filter: drop-shadow(0 0 32px rgba(255, 0, 204, 0.55));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-screen__logo {
+    animation: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .intro-screen__logo {
+    width: min(86vw, 40rem);
   }
 }
 
@@ -457,9 +463,8 @@ body {
   }
 
   .intro-screen__logo {
-    font-size: clamp(0.17rem, 1.4vw + 0.1rem, 0.6rem);
-    line-height: 1.05;
-    letter-spacing: 0.02em;
+    width: min(90vw, 32rem);
+    margin-bottom: clamp(1.4rem, 6vw, 2.5rem);
   }
 
   .intro-screen__tagline {
@@ -469,8 +474,7 @@ body {
 
 @media (max-width: 480px) {
   .intro-screen__logo {
-    font-size: clamp(0.16rem, 2vw + 0.06rem, 0.5rem);
-    letter-spacing: 0.018em;
+    width: min(94vw, 20rem);
   }
 
   .intro-screen__cta {
