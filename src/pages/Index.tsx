@@ -919,6 +919,66 @@ const RESEARCH_TREE: ResearchProject[] = [
       nation.researched = nation.researched || {};
       nation.researched.conventional_expeditionary_airframes = true;
     }
+  },
+  {
+    id: 'culture_social_media',
+    name: 'Social Media Dominance',
+    description: 'Global social networks amplify cultural influence and reduce culture bombing costs by 25%.',
+    category: 'culture',
+    turns: 2,
+    cost: { production: 20, intel: 20 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.culture_social_media = true;
+    }
+  },
+  {
+    id: 'culture_influence',
+    name: 'Global Influence Network',
+    description: 'Diplomatic channels enable more simultaneous treaties and alliances.',
+    category: 'culture',
+    turns: 3,
+    cost: { production: 30, intel: 30 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.culture_influence = true;
+    }
+  },
+  {
+    id: 'culture_soft_power',
+    name: 'Soft Power Projection',
+    description: 'Cultural appeal attracts skilled immigrants (+20% immigration success rate).',
+    category: 'culture',
+    turns: 4,
+    cost: { production: 35, intel: 35 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.culture_soft_power = true;
+    }
+  },
+  {
+    id: 'culture_hegemony',
+    name: 'Cultural Hegemony',
+    description: 'Total cultural dominance converts stolen population 50% faster.',
+    category: 'culture',
+    turns: 5,
+    cost: { production: 50, intel: 50 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.culture_hegemony = true;
+    }
+  },
+  {
+    id: 'culture_immunity',
+    name: 'Diplomatic Immunity',
+    description: 'Ironclad treaties cannot be easily broken - AI treaty violations reduced.',
+    category: 'culture',
+    turns: 3,
+    cost: { production: 25, intel: 40 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.culture_immunity = true;
+    }
   }
 ];
 
@@ -1985,6 +2045,14 @@ function aiBreakTreaties(actor: Nation, target: Nation, reason?: string): boolea
   const reciprocal = ensureTreatyRecord(target, actor);
   const hadAgreements = !!(treaty.truceTurns || treaty.alliance);
   if (!hadAgreements) return false;
+
+  // Culture tech: Diplomatic Immunity makes treaties harder to break
+  // If target has diplomatic immunity, 70% chance AI respects the treaty
+  if (target.researched?.culture_immunity && Math.random() < 0.7) {
+    aiLogDiplomacy(actor, `considers breaking treaty with ${target.name} but is deterred by diplomatic consequences.`);
+    return false;
+  }
+
   delete treaty.truceTurns;
   delete reciprocal.truceTurns;
   delete treaty.alliance;
@@ -2434,11 +2502,14 @@ function performImmigration(type: string, target: Nation) {
     recipient.migrantsTotal = (recipient.migrantsTotal || 0) + amount;
   };
 
+  // Culture tech bonus: Soft Power Projection increases immigration effectiveness by 20%
+  const immigrationBonus = player.researched?.culture_soft_power ? 1.2 : 1.0;
+
   switch (type) {
     case 'skilled':
       if (!canAfford(player, COSTS.immigration_skilled)) break;
 
-      { const amount = Math.max(1, Math.floor(target.population * 0.05));
+      { const amount = Math.max(1, Math.floor(target.population * 0.05 * immigrationBonus));
         if (amount <= 0) break;
         target.population = Math.max(0, target.population - amount);
         player.population += amount;
@@ -2453,7 +2524,7 @@ function performImmigration(type: string, target: Nation) {
     case 'mass':
       if (!canAfford(player, COSTS.immigration_mass)) break;
 
-      { const amount = Math.max(1, Math.floor(target.population * 0.1));
+      { const amount = Math.max(1, Math.floor(target.population * 0.1 * immigrationBonus));
         if (amount <= 0) break;
         target.population = Math.max(0, target.population - amount);
         player.population += amount;
@@ -2468,7 +2539,7 @@ function performImmigration(type: string, target: Nation) {
     case 'refugee':
       if (!canAfford(player, COSTS.immigration_refugee) || (player.instability || 0) < 50) break;
 
-      { const amount = Math.max(1, Math.floor(target.population * 0.15));
+      { const amount = Math.max(1, Math.floor(target.population * 0.15 * immigrationBonus));
         if (amount <= 0) break;
         target.population = Math.max(0, target.population - amount);
         player.population += amount;
@@ -2483,7 +2554,7 @@ function performImmigration(type: string, target: Nation) {
     case 'brain':
       if (!canAfford(player, COSTS.immigration_brain)) break;
 
-      { const amount = Math.max(1, Math.floor(target.population * 0.03));
+      { const amount = Math.max(1, Math.floor(target.population * 0.03 * immigrationBonus));
         if (amount <= 0) break;
         target.population = Math.max(0, target.population - amount);
         player.population += amount;
@@ -4384,11 +4455,15 @@ function aiTurn(n: Nation) {
   if (r < 0.12 + intelMod && n.intel >= 2) {
     const cultureTargets = enemies.filter(t => t.population > 5);
     
-    if (cultureTargets.length > 0 && n.intel >= 20 && Math.random() < 0.15) {
+    // Culture tech bonuses for AI
+    const aiCultureBombCost = n.researched?.culture_social_media ? 15 : 20;
+    const aiCultureBombEffectiveness = n.researched?.culture_hegemony ? 0.15 : 0.1;
+
+    if (cultureTargets.length > 0 && n.intel >= aiCultureBombCost && Math.random() < 0.15) {
       // Culture bomb
       const target = cultureTargets.sort((a, b) => b.population - a.population)[0];
-      const stolen = Math.max(1, Math.floor(target.population * 0.1));
-      n.intel -= 20;
+      const stolen = Math.max(1, Math.floor(target.population * aiCultureBombEffectiveness));
+      n.intel -= aiCultureBombCost;
       target.population = Math.max(0, target.population - stolen);
       n.population += stolen;
       n.migrantsThisTurn = (n.migrantsThisTurn || 0) + stolen;
@@ -7027,11 +7102,11 @@ export default function NoradVector() {
       {
         id: 'culture_bomb',
         title: 'CULTURE BOMB',
-        subtitle: 'Steal 10% population',
-        costText: 'Cost: 20 INTEL',
+        subtitle: player.researched?.culture_hegemony ? 'Steal 15% population' : 'Steal 10% population',
+        costText: player.researched?.culture_social_media ? 'Cost: 15 INTEL' : 'Cost: 20 INTEL',
         requiresTarget: true,
-        disabled: (player.intel || 0) < 20,
-        disabledReason: 'Requires 20 INTEL to deploy a culture bomb.',
+        disabled: (player.intel || 0) < (player.researched?.culture_social_media ? 15 : 20),
+        disabledReason: `Requires ${player.researched?.culture_social_media ? 15 : 20} INTEL to deploy a culture bomb.`,
         targetFilter: nation => nation.population > 5,
       },
       {
@@ -7160,13 +7235,17 @@ export default function NoradVector() {
 
         case 'culture_bomb':
           if (!target) return false;
-          if ((commander.intel || 0) < 20) {
-            toast({ title: 'Insufficient intel', description: 'You need 20 INTEL for a culture bomb.' });
+          // Culture tech: Social Media Dominance reduces cost by 25% (20 -> 15 INTEL)
+          const cultureBombCost = commander.researched?.culture_social_media ? 15 : 20;
+          if ((commander.intel || 0) < cultureBombCost) {
+            toast({ title: 'Insufficient intel', description: `You need ${cultureBombCost} INTEL for a culture bomb.` });
             return false;
           }
           {
-            const stolen = Math.max(1, Math.floor(target.population * 0.1));
-            commander.intel -= 20;
+            // Culture tech: Cultural Hegemony increases stolen population by 50% (10% -> 15%)
+            const cultureBombEffectiveness = commander.researched?.culture_hegemony ? 0.15 : 0.1;
+            const stolen = Math.max(1, Math.floor(target.population * cultureBombEffectiveness));
+            commander.intel -= cultureBombCost;
             target.population = Math.max(0, target.population - stolen);
             commander.population += stolen;
             commander.migrantsThisTurn = (commander.migrantsThisTurn || 0) + stolen;
