@@ -13,14 +13,14 @@ import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRigh
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
+import { BioLabConstruction } from '@/components/BioLabConstruction';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
 import {
-  usePandemic,
   type PandemicTriggerPayload,
   type PandemicCountermeasurePayload,
   type PandemicTurnContext
 } from '@/hooks/usePandemic';
-import { useEvolutionTree } from '@/hooks/useEvolutionTree';
+import { useBioWarfare } from '@/hooks/useBioWarfare';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
@@ -4732,6 +4732,7 @@ export default function NoradVector() {
     return true;
   });
   const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
+  const [isLabConstructionOpen, setIsLabConstructionOpen] = useState(false);
   const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const lastTargetPingIdRef = useRef<string | null>(null);
@@ -4999,6 +5000,7 @@ export default function NoradVector() {
 
   const getAllNations = useCallback(() => nations, []);
 
+  // Integrated bio-warfare system (combines pandemic + evolution tree)
   const {
     pandemicState,
     triggerPandemic,
@@ -5053,15 +5055,24 @@ export default function NoradVector() {
   // Evolution tree system for Plague Inc style gameplay
   const {
     plagueState,
+    labFacility,
+    applyCountermeasure: applyPandemicCountermeasure,
     selectPlagueType,
     evolveNode,
     devolveNode,
     addDNAPoints,
-    triggerRandomMutation,
-    updateCureProgress,
-    infectCountry,
+    startLabConstruction,
+    cancelLabConstruction,
+    getConstructionOptions,
+    deployBioWeapon,
+    triggerBioWarfare,
+    advanceBioWarfareTurn,
+    onCountryInfected,
     availableNodes,
-  } = useEvolutionTree(addNewsItem);
+    calculateSpreadModifiers,
+  } = useBioWarfare(addNewsItem);
+
+  const showPandemicPanel = pandemicIntegrationEnabled && (pandemicState.active || isBioWarfareOpen);
 
   const conventional = useConventionalWarfare({
     initialState: conventionalState,
@@ -5422,8 +5433,8 @@ export default function NoradVector() {
       );
       return;
     }
-    triggerPandemic(payload);
-  }, [pandemicIntegrationEnabled, bioWarfareEnabled, triggerPandemic, addNewsItem]);
+    triggerBioWarfare(payload);
+  }, [pandemicIntegrationEnabled, bioWarfareEnabled, triggerBioWarfare, addNewsItem]);
 
   const handlePandemicCountermeasure = useCallback((payload: PandemicCountermeasurePayload) => {
     if (!pandemicIntegrationEnabled) return;
@@ -5432,8 +5443,8 @@ export default function NoradVector() {
 
   const handlePandemicAdvance = useCallback((context: PandemicTurnContext) => {
     if (!pandemicIntegrationEnabled) return null;
-    return advancePandemicTurn(context);
-  }, [pandemicIntegrationEnabled, advancePandemicTurn]);
+    return advanceBioWarfareTurn(context, nations);
+  }, [pandemicIntegrationEnabled, advanceBioWarfareTurn, nations]);
 
   // Progressive tutorial system
   const tutorialSteps = [
@@ -7037,10 +7048,24 @@ export default function NoradVector() {
 
   const handleBioWarfareLabToggle = useCallback(async () => {
     if (!bioWarfareAvailable) {
+      // Auto-enable settings if both are disabled
+      if (!pandemicIntegrationEnabled) {
+        setPandemicIntegrationEnabled(true);
+      }
+      if (!bioWarfareEnabled) {
+        setBioWarfareEnabled(true);
+      }
+
       toast({
-        title: 'BioForge offline',
-        description: 'Enable pandemic integration and bio-weapon ops in options to access the lab.'
+        title: 'BioForge Initialized',
+        description: 'Pandemic integration and bio-weapon systems activated. Opening lab...',
+        duration: 2000,
       });
+
+      // Open lab after short delay to show the toast
+      setTimeout(() => {
+        setIsBioWarfareOpen(true);
+      }, 500);
       return;
     }
 
@@ -7053,8 +7078,56 @@ export default function NoradVector() {
     if (!approved) return;
     AudioSys.playSFX('click');
     setIsBioWarfareOpen(true);
-  }, [bioWarfareAvailable, isBioWarfareOpen, requestApproval]);
+  }, [bioWarfareAvailable, isBioWarfareOpen, requestApproval, pandemicIntegrationEnabled, bioWarfareEnabled]);
 
+  const handleLabConstructionToggle = useCallback(() => {
+    setIsLabConstructionOpen(!isLabConstructionOpen);
+  }, [isLabConstructionOpen]);
+
+  const handleStartLabConstruction = useCallback((tier: number) => {
+    const player = getNationById(playerNationId);
+    if (!player) return;
+
+    const result = startLabConstruction(tier as any, player.production, player.uranium);
+
+    if (result.success) {
+      toast({
+        title: 'Construction Started',
+        description: result.message,
+        duration: 3000,
+      });
+      setIsLabConstructionOpen(false);
+    } else {
+      toast({
+        title: 'Construction Failed',
+        description: result.message,
+        variant: 'destructive',
+        duration: 3000,
+      });
+    }
+  }, [startLabConstruction, playerNationId, getNationById]);
+
+  const handleCancelLabConstruction = useCallback(() => {
+    const result = cancelLabConstruction();
+
+    if (result.success) {
+      toast({
+        title: 'Construction Cancelled',
+        description: result.message,
+        duration: 3000,
+      });
+    }
+  }, [cancelLabConstruction]);
+
+  const handleDeployBioWeapon = useCallback((selections: Array<{
+    nationId: string;
+    nationName: string;
+    deploymentMethod: string;
+    useFalseFlag: boolean;
+    falseFlagNationId: string | null;
+  }>) => {
+    deployBioWeapon(selections, S.turn);
+  }, [deployBioWeapon, S.turn]);
 
   const handleCulture = useCallback(async () => {
     const approved = await requestApproval('CULTURE', { description: 'Cultural operations briefing' });
@@ -8423,6 +8496,25 @@ export default function NoradVector() {
                   </Button>
 
                   <Button
+                    onClick={handleLabConstructionToggle}
+                    variant="ghost"
+                    size="icon"
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      labFacility.underConstruction
+                        ? 'text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10 animate-pulse'
+                        : 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10'
+                    }`}
+                    title={
+                      labFacility.underConstruction
+                        ? `Bio Lab Construction - ${labFacility.constructionProgress}/${labFacility.constructionTarget} turns`
+                        : `Bio Lab Construction - Current: Tier ${labFacility.tier}`
+                    }
+                  >
+                    <Microscope className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">LAB</span>
+                  </Button>
+
+                  <Button
                     onClick={handleCulture}
                     variant="ghost"
                     size="icon"
@@ -8898,9 +8990,33 @@ export default function NoradVector() {
         onOpenChange={setIsBioWarfareOpen}
         plagueState={plagueState}
         enabled={pandemicIntegrationEnabled && bioWarfareEnabled}
+        labTier={labFacility.tier}
+        availableNations={nations
+          .filter(n => n.id !== playerNationId && !n.eliminated)
+          .map(n => ({
+            id: n.id,
+            name: n.name,
+            intelligence: n.intelligence || 50,
+          }))}
+        playerActions={S.actionsRemaining}
         onSelectPlagueType={selectPlagueType}
         onEvolveNode={evolveNode}
         onDevolveNode={devolveNode}
+        onDeployBioWeapon={handleDeployBioWeapon}
+      />
+
+      <BioLabConstruction
+        open={isLabConstructionOpen}
+        onOpenChange={setIsLabConstructionOpen}
+        labFacility={labFacility}
+        constructionOptions={getConstructionOptions(
+          getNationById(playerNationId)?.production || 0,
+          getNationById(playerNationId)?.uranium || 0
+        )}
+        playerProduction={getNationById(playerNationId)?.production || 0}
+        playerUranium={getNationById(playerNationId)?.uranium || 0}
+        onStartConstruction={handleStartLabConstruction}
+        onCancelConstruction={handleCancelLabConstruction}
       />
 
       {showPandemicPanel && (

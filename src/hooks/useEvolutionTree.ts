@@ -39,6 +39,11 @@ const INITIAL_PLAGUE_STATE: PlagueState = {
     geneticHardening: 0,
   },
   countriesInfected: [],
+  deploymentHistory: [],
+  countryInfections: new Map(),
+  globalSuspicionLevel: 0,
+  nationsKnowingTruth: [],
+  attributionAttempts: 0,
   cureProgress: 0,
   cureActive: false,
 };
@@ -380,7 +385,7 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
     });
   }, [addNewsItem]);
 
-  // Infect new country
+  // Infect new country (legacy, maintains backward compatibility)
   const infectCountry = useCallback((countryId: string) => {
     setPlagueState((prev) => {
       if (prev.countriesInfected.includes(countryId)) {
@@ -397,6 +402,160 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
         ...prev,
         countriesInfected: newCountries,
         dnaPoints: prev.dnaPoints + dnaGain,
+      };
+    });
+  }, [addNewsItem]);
+
+  // Deploy bio-weapon to specific targets (new targeted system)
+  const deployBioWeapon = useCallback((deployments: Array<{
+    nationId: string;
+    nationName: string;
+    deploymentMethod: string;
+    useFalseFlag: boolean;
+    falseFlagNationId: string | null;
+  }>, currentTurn: number) => {
+    setPlagueState((prev) => {
+      const newDeployments = deployments.map(d => ({
+        nationId: d.nationId,
+        deploymentMethod: d.deploymentMethod as any,
+        useFalseFlag: d.useFalseFlag,
+        falseFlagNationId: d.falseFlagNationId || undefined,
+        deployedTurn: currentTurn,
+        infected: true,
+        infectionLevel: 0.1, // Start at 0.1%
+        deaths: 0,
+        detected: false,
+      }));
+
+      const newCountryInfections = new Map(prev.countryInfections);
+
+      deployments.forEach((d, idx) => {
+        const deployment = newDeployments[idx];
+
+        // Initialize country infection state
+        newCountryInfections.set(d.nationId, {
+          nationId: d.nationId,
+          infected: true,
+          infectionLevel: 0.1,
+          infectionStartTurn: currentTurn,
+          containmentLevel: 40, // Base containment
+          healthcareQuality: 50, // Base healthcare
+          deaths: 0,
+          deathRate: 0,
+          detectedBioWeapon: false,
+          suspicionLevel: 0,
+          spreadMethod: 'initial',
+        });
+
+        addNewsItem(
+          'crisis',
+          `Bio-weapon deployed to ${d.nationName} via ${d.deploymentMethod}`,
+          'critical'
+        );
+      });
+
+      return {
+        ...prev,
+        deploymentHistory: [...prev.deploymentHistory, ...newDeployments],
+        countryInfections: newCountryInfections,
+      };
+    });
+  }, [addNewsItem]);
+
+  // Advance country infections each turn (spread mechanics)
+  const advanceCountryInfections = useCallback((currentTurn: number, nations: any[]) => {
+    setPlagueState((prev) => {
+      const newCountryInfections = new Map(prev.countryInfections);
+      let dnaGained = 0;
+      let newDetections = 0;
+
+      // Process each infected country
+      newCountryInfections.forEach((infection, nationId) => {
+        if (!infection.infected) return;
+
+        // Calculate infection spread
+        const spreadRate = 0.5 + (prev.calculatedStats.totalInfectivity / 100);
+        const containmentPenalty = infection.containmentLevel / 100;
+        const effectiveSpread = spreadRate * (1 - containmentPenalty);
+
+        const newInfectionLevel = Math.min(100, infection.infectionLevel + effectiveSpread);
+
+        // Calculate deaths based on lethality
+        const lethalityFactor = prev.calculatedStats.totalLethality / 100;
+        const population = 100000; // Simplified, could pull from nation data
+        const newDeaths = Math.floor(
+          infection.infectionLevel * population * lethalityFactor * 0.001
+        );
+
+        // Update infection state
+        newCountryInfections.set(nationId, {
+          ...infection,
+          infectionLevel: newInfectionLevel,
+          deaths: infection.deaths + newDeaths,
+          deathRate: newDeaths,
+        });
+
+        // Award DNA from deaths
+        if (newDeaths > 0) {
+          const deathDNA = Math.floor(newDeaths / 10000); // 1 DNA per 10k deaths
+          dnaGained += deathDNA;
+        }
+
+        // Check for detection
+        if (!infection.detectedBioWeapon && infection.infectionLevel > 10) {
+          const detectionChance = Math.min(80, infection.infectionLevel * 2);
+          if (Math.random() * 100 < detectionChance) {
+            newCountryInfections.set(nationId, {
+              ...infection,
+              detectedBioWeapon: true,
+              detectionTurn: currentTurn,
+              suspicionLevel: 50,
+            });
+            newDetections++;
+            addNewsItem(
+              'intel',
+              `Bio-weapon outbreak detected in ${nationId}`,
+              'urgent'
+            );
+          }
+        }
+      });
+
+      // Spread to neighboring countries (simplified)
+      const infectedNations = Array.from(newCountryInfections.keys());
+      if (infectedNations.length > 0 && Math.random() < 0.2) {
+        // 20% chance per turn to spread to new nation
+        const uninfectedNations = nations.filter(n => !newCountryInfections.has(n.id));
+
+        if (uninfectedNations.length > 0) {
+          const target = uninfectedNations[Math.floor(Math.random() * uninfectedNations.length)];
+          const sourceNation = infectedNations[Math.floor(Math.random() * infectedNations.length)];
+
+          newCountryInfections.set(target.id, {
+            nationId: target.id,
+            infected: true,
+            infectionLevel: 0.1,
+            infectionStartTurn: currentTurn,
+            containmentLevel: 40,
+            healthcareQuality: 50,
+            deaths: 0,
+            deathRate: 0,
+            detectedBioWeapon: false,
+            suspicionLevel: 0,
+            spreadFrom: sourceNation,
+            spreadMethod: 'air-travel',
+          });
+
+          dnaGained += 5; // Bonus for spreading
+          addNewsItem('crisis', `Pathogen spread to ${target.name} via air travel`, 'important');
+        }
+      }
+
+      return {
+        ...prev,
+        countryInfections: newCountryInfections,
+        dnaPoints: prev.dnaPoints + dnaGained,
+        globalSuspicionLevel: Math.min(100, prev.globalSuspicionLevel + newDetections * 5),
       };
     });
   }, [addNewsItem]);
@@ -418,6 +577,8 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
     triggerRandomMutation,
     updateCureProgress,
     infectCountry,
+    deployBioWeapon,
+    advanceCountryInfections,
     availableNodes,
   };
 }
