@@ -822,6 +822,67 @@ const RESEARCH_TREE: ResearchProject[] = [
     }
   },
   {
+    id: 'economy_automation',
+    name: 'Industrial Automation',
+    description: 'Automated factories and AI-driven logistics increase production efficiency by 15%.',
+    category: 'economy',
+    turns: 2,
+    cost: { production: 20 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.economy_automation = true;
+    }
+  },
+  {
+    id: 'economy_extraction',
+    name: 'Advanced Resource Extraction',
+    description: 'Deep mining and advanced refining increase uranium output by +1 per turn.',
+    category: 'economy',
+    turns: 3,
+    cost: { production: 30, intel: 10 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.economy_extraction = true;
+    }
+  },
+  {
+    id: 'economy_efficiency',
+    name: 'Economic Efficiency',
+    description: 'Streamlined production reduces all construction costs by 10%.',
+    category: 'economy',
+    turns: 3,
+    cost: { production: 25, intel: 15 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.economy_efficiency = true;
+    }
+  },
+  {
+    id: 'economy_mobilization',
+    name: 'Total Mobilization',
+    description: 'War economy maximizes output (+20% production) but increases domestic tension (+5% instability).',
+    category: 'economy',
+    turns: 4,
+    cost: { production: 40, intel: 20 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.economy_mobilization = true;
+      nation.instability = (nation.instability || 0) + 5; // +5% instability penalty
+    }
+  },
+  {
+    id: 'economy_stockpiling',
+    name: 'Resource Stockpiling',
+    description: 'Strategic reserves increase maximum resource capacity by +50 for all resources.',
+    category: 'economy',
+    turns: 2,
+    cost: { production: 15 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.economy_stockpiling = true;
+    }
+  },
+  {
     id: 'conventional_armored_doctrine',
     name: 'Armored Maneuver Doctrine',
     description: 'Codify combined-arms tactics to unlock modern armored corps formations.',
@@ -1790,15 +1851,23 @@ const CityLights = {
 
 // Helper functions
 function canAfford(nation: Nation, cost: any): boolean {
+  // Apply economy_efficiency cost reduction (10%)
+  const costReduction = nation.researched?.economy_efficiency ? 0.9 : 1.0;
+
   return Object.entries(cost).every(([resource, amount]) => {
     const current = (nation as any)[resource] || 0;
-    return current >= (amount as number);
+    const adjustedAmount = Math.ceil((amount as number) * costReduction);
+    return current >= adjustedAmount;
   });
 }
 
 function pay(nation: Nation, cost: any) {
+  // Apply economy_efficiency cost reduction (10%)
+  const costReduction = nation.researched?.economy_efficiency ? 0.9 : 1.0;
+
   Object.entries(cost).forEach(([resource, amount]) => {
-    (nation as any)[resource] -= amount as number;
+    const adjustedAmount = Math.ceil((amount as number) * costReduction);
+    (nation as any)[resource] -= adjustedAmount;
   });
 }
 
@@ -2624,8 +2693,17 @@ function productionPhase() {
     }
 
     const moraleMultiplier = calculateMoraleProductionMultiplier(n.morale ?? 0);
-    n.production += Math.floor(baseProd * prodMult * moraleMultiplier);
-    n.uranium += Math.floor(baseUranium * uranMult * moraleMultiplier);
+
+    // Economy tech bonuses
+    let economyProductionBonus = 1.0;
+    if (n.researched?.economy_automation) economyProductionBonus += 0.15; // +15%
+    if (n.researched?.economy_mobilization) economyProductionBonus += 0.20; // +20%
+
+    let economyUraniumBonus = 0;
+    if (n.researched?.economy_extraction) economyUraniumBonus += 1; // +1 uranium/turn
+
+    n.production += Math.floor(baseProd * prodMult * moraleMultiplier * economyProductionBonus);
+    n.uranium += Math.floor(baseUranium * uranMult * moraleMultiplier) + economyUraniumBonus;
     n.intel += Math.floor(baseIntel * moraleMultiplier);
     
     // Instability effects
