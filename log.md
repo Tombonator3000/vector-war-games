@@ -118,6 +118,9 @@
 | 2025-10-29T14:40:32Z | Replaced `new URL(... import.meta.env.BASE_URL)` usage with a base-path aware resolver in `src/pages/Index.tsx` to prevent runtime crashes. |
 | 2025-10-29T14:41:45Z | Relaunched Vite dev server and confirmed intro screen renders via Playwright screenshot capture. |
 | 2025-10-29T14:42:30Z | Executed `npm run test -- --run` to verify the intro screen fix passes the Vitest suite. |
+| 2025-10-29T17:44:05Z | Reviewed conventional warfare hook and Index.tsx to scope anchor coordinates and rendering updates. |
+| 2025-10-29T17:54:30Z | Implemented territory anchors, conventional unit sprite management, and canvas rendering for deployments/movements. |
+| 2025-10-29T17:55:17Z | Executed `npm run test -- --run` to validate conventional forces animation changes. |
 | 2025-10-29T15:38:12Z | Reviewed root `AGENTS.md` and scoped clamp latitude camera bounds fix requirements. |
 | 2025-10-29T15:38:45Z | Inspected `src/pages/Index.tsx` interaction handlers to trace globe camera latitude clamping logic. |
 | 2025-10-29T15:39:10Z | Updated `clampLatitude` helper to derive min/max camera Y bounds via `Math.min`/`Math.max` for consistent latitude limits. |

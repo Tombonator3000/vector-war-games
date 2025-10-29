@@ -38,6 +38,8 @@ export interface TerritoryState {
   name: string;
   region: string;
   type: 'land' | 'sea';
+  anchorLat: number;
+  anchorLon: number;
   controllingNationId: string | null;
   contestedBy: string[];
   strategicValue: number;
@@ -138,6 +140,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     name: 'North American Theater',
     region: 'Western Hemisphere',
     type: 'land',
+    anchorLat: 50,
+    anchorLon: -100,
     controllingNationId: 'player',
     strategicValue: 5,
     productionBonus: 4,
@@ -151,6 +155,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     name: 'North Atlantic Sea Lanes',
     region: 'Atlantic',
     type: 'sea',
+    anchorLat: 45,
+    anchorLon: -35,
     controllingNationId: 'player',
     strategicValue: 3,
     productionBonus: 2,
@@ -164,6 +170,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     name: 'Eurasian Frontier',
     region: 'Europe & Siberia',
     type: 'land',
+    anchorLat: 55,
+    anchorLon: 45,
     controllingNationId: 'ai_0',
     strategicValue: 5,
     productionBonus: 3,
@@ -177,6 +185,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     name: 'Indo-Pacific Rim',
     region: 'Pacific',
     type: 'sea',
+    anchorLat: 8,
+    anchorLon: 130,
     controllingNationId: 'ai_1',
     strategicValue: 4,
     productionBonus: 3,
@@ -190,6 +200,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     name: 'Southern Hemisphere Coalition',
     region: 'South Atlantic',
     type: 'land',
+    anchorLat: -25,
+    anchorLon: -15,
     controllingNationId: 'ai_2',
     strategicValue: 3,
     productionBonus: 2,
@@ -203,6 +215,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     name: 'Equatorial Resource Belt',
     region: 'Africa & Middle East',
     type: 'land',
+    anchorLat: 5,
+    anchorLon: 20,
     controllingNationId: 'ai_3',
     strategicValue: 4,
     productionBonus: 4,
@@ -216,6 +230,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     name: 'Proxy Battleground: Middle East',
     region: 'Middle East',
     type: 'land',
+    anchorLat: 30,
+    anchorLon: 45,
     controllingNationId: null,
     strategicValue: 4,
     productionBonus: 1,
@@ -228,6 +244,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     name: 'Arctic Surveillance Zone',
     region: 'Arctic',
     type: 'sea',
+    anchorLat: 75,
+    anchorLon: -10,
     controllingNationId: null,
     strategicValue: 2,
     productionBonus: 1,
@@ -249,6 +267,11 @@ const computeUnitAttack = (unit: ConventionalUnitState): number => {
   const experienceBonus = 1 + unit.experience * 0.05;
   return template.attack * readinessFactor * experienceBonus + template.support;
 };
+
+export const territoryAnchors = DEFAULT_TERRITORIES.reduce<Record<string, { lon: number; lat: number }>>((acc, territory) => {
+  acc[territory.id] = { lon: territory.anchorLon, lat: territory.anchorLat };
+  return acc;
+}, {});
 
 const computeUnitDefense = (unit: ConventionalUnitState): number => {
   const template = templateLookup[unit.templateId];
