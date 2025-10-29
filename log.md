@@ -148,6 +148,9 @@
 2025-10-29T18:02:42Z Updated `src/pages/Index.tsx` to compute `showPandemicPanel` and render the pandemic HUD only when active outbreaks or the BioForge lab are open.
 2025-10-29T18:04:23Z Committed pandemic panel visibility change set with message "Conditionally render pandemic panel".
 2025-10-29T18:04:44Z Amended the commit to include updated log entries documenting the change workflow.
+2025-11-07T10:46:12Z Reviewed coop preference initialization in `src/pages/Index.tsx` to confirm stored-value handling before applying default change.
+2025-11-07T10:48:05Z Updated `coopEnabled` state initializer in `src/pages/Index.tsx` to default to `false` when no saved preference exists.
+2025-11-07T10:58:29Z Executed `npm run test` to verify multiplayer gating passes after coop default toggle update.
 2025-10-29T18:20:40Z Reviewed root `AGENTS.md` guidance before adjusting the strike planner interaction flow.
 2025-10-29T18:20:52Z Added strike planner toggle state, gated `handleAttack`, and rendered a close control in `src/pages/Index.tsx`.
 2025-10-29T19:04:10Z Restored `showPandemicPanel` computation in `src/pages/Index.tsx` to re-enable conditional pandemic HUD rendering after BioWarfare integration refactor.
