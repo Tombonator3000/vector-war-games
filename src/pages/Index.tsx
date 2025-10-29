@@ -6587,11 +6587,44 @@ export default function NoradVector() {
         const delta = Math.exp(-e.deltaY * zoomIntensity);
         const newZoom = Math.max(0.5, Math.min(3, cam.targetZoom * delta));
 
+        cam.targetZoom = newZoom;
+        cam.zoom = newZoom;
+
+        if (globeProjector) {
+          let attempts = 0;
+          const maxAttempts = 4;
+
+          const alignGlobeCamera = () => {
+            if (!globeProjector) return;
+            const projected = globeProjector(focalLon, focalLat);
+            if (!projected || !Number.isFinite(projected.x) || !Number.isFinite(projected.y)) {
+              return;
+            }
+
+            const offsetX = focalX - projected.x;
+            const offsetY = focalY - projected.y;
+
+            if (Math.abs(offsetX) < 0.5 && Math.abs(offsetY) < 0.5) {
+              return;
+            }
+
+            cam.x += offsetX;
+            cam.y += offsetY;
+            clampLatitude();
+
+            attempts += 1;
+            if (attempts < maxAttempts) {
+              requestAnimationFrame(alignGlobeCamera);
+            }
+          };
+
+          requestAnimationFrame(alignGlobeCamera);
+          return;
+        }
+
         const normalizedX = ((focalLon + 180) / 360) * W;
         const normalizedY = ((90 - focalLat) / 180) * H;
 
-        cam.targetZoom = newZoom;
-        cam.zoom = newZoom;
         cam.x = focalX - normalizedX * newZoom;
         cam.y = focalY - normalizedY * newZoom;
         clampLatitude();
