@@ -16,6 +16,7 @@ import { BioWarfareLab } from '@/components/BioWarfareLab';
 import { BioLabConstruction } from '@/components/BioLabConstruction';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
 import {
+  usePandemic,
   type PandemicTriggerPayload,
   type PandemicCountermeasurePayload,
   type PandemicTurnContext
@@ -419,7 +420,7 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 ];
 
 let currentTheme: ThemeId = 'synthwave';
-let currentMapStyle: MapStyle = 'realistic';
+let currentMapStyle: MapStyle = 'flat-realistic';
 let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
@@ -4653,10 +4654,19 @@ export default function NoradVector() {
     ) {
       return stored;
     }
-    return 'realistic';
+    return 'flat-realistic';
   });
   useEffect(() => {
     currentMapStyle = mapStyle;
+    if (mapStyle === 'flat' || mapStyle === 'flat-realistic') {
+      const expectedX = (W - W * cam.zoom) / 2;
+      const expectedY = (H - H * cam.zoom) / 2;
+      const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;
+      if (needsRecentering) {
+        cam.x = expectedX;
+        cam.y = expectedY;
+      }
+    }
   }, [mapStyle]);
   useEffect(() => {
     void preloadFlatRealisticTexture();
@@ -5056,7 +5066,7 @@ export default function NoradVector() {
   const {
     plagueState,
     labFacility,
-    applyCountermeasure: applyPandemicCountermeasure,
+    applyCountermeasure: applyBioWarfareCountermeasure,
     selectPlagueType,
     evolveNode,
     devolveNode,
@@ -5071,8 +5081,6 @@ export default function NoradVector() {
     availableNodes,
     calculateSpreadModifiers,
   } = useBioWarfare(addNewsItem);
-
-  const showPandemicPanel = pandemicIntegrationEnabled && (pandemicState.active || isBioWarfareOpen);
 
   const conventional = useConventionalWarfare({
     initialState: conventionalState,

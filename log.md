@@ -214,3 +214,12 @@
 2025-10-29T19:19:09Z Reintroduced showPandemicPanel memo in src/pages/Index.tsx to gate PandemicPanel rendering on integration, BioForge access, or active outbreaks.
 2025-10-29T19:19:47Z Ran npm run build to confirm the restored pandemic panel logic compiles without regressions.
 2025-10-29T19:20:24Z Committed pandemic panel visibility fix and log updates with message "Restore pandemic panel visibility guard".
+2025-10-29T21:16:30Z Reviewed root AGENTS.md to confirm repository-wide contribution standards for map style updates.
+2025-10-29T21:17:05Z Audited src/pages/Index.tsx initialization to locate currentMapStyle defaults and mapStyle persistence fallback.
+2025-10-29T21:18:05Z Updated currentMapStyle and mapStyle defaults to flat-realistic and added flat map re-centering guard when applying styles.
+2025-10-29T21:18:55Z Ran npm run test to validate suite; observed Vitest watch mode failure unrelated to map style defaults and exited watcher.
+2025-10-29T21:19:40Z Renamed BioWarfare countermeasure destructuring alias to prevent duplicate identifier errors when bundling tests.
+2025-10-29T21:21:55Z Executed npm run test -- --run; vitest reported failure from duplicate showPandemicPanel declarations in Index.tsx.
+2025-10-29T21:22:30Z Removed duplicate showPandemicPanel declaration to align with restored memoized pandemic panel gating logic.
+2025-10-29T21:23:35Z Restored usePandemic import in Index.tsx to satisfy runtime hook usage after module refactors.
+2025-10-29T21:24:15Z Re-ran npm run test -- --run; Vitest surfaced additional ReferenceError for playerNationId within Index.tsx during mocked rendering.
