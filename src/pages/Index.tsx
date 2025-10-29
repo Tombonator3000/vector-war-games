@@ -6576,9 +6576,24 @@ export default function NoradVector() {
 
       const handleWheel = (e: WheelEvent) => {
         e.preventDefault();
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const focalX = e.clientX - rect.left;
+        const focalY = e.clientY - rect.top;
+        const [focalLon, focalLat] = toLonLat(focalX, focalY);
+
         const zoomIntensity = 0.0015;
         const delta = Math.exp(-e.deltaY * zoomIntensity);
-        cam.targetZoom = Math.max(0.5, Math.min(3, cam.targetZoom * delta));
+        const newZoom = Math.max(0.5, Math.min(3, cam.targetZoom * delta));
+
+        const normalizedX = ((focalLon + 180) / 360) * W;
+        const normalizedY = ((90 - focalLat) / 180) * H;
+
+        cam.targetZoom = newZoom;
+        cam.zoom = newZoom;
+        cam.x = focalX - normalizedX * newZoom;
+        cam.y = focalY - normalizedY * newZoom;
         clampLatitude();
       };
 
