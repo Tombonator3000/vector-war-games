@@ -20,6 +20,7 @@ import {
   type PandemicCountermeasurePayload,
   type PandemicTurnContext
 } from '@/hooks/usePandemic';
+import { useEvolutionTree } from '@/hooks/useEvolutionTree';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
@@ -4943,7 +4944,20 @@ export default function NoradVector() {
     resetTraits: resetPandemicTraits,
     deployTraits: deployPandemicTraits
   } = usePandemic(addNewsItem);
-  const showPandemicPanel = pandemicState.active || isBioWarfareOpen;
+
+  // Evolution tree system for Plague Inc style gameplay
+  const {
+    plagueState,
+    selectPlagueType,
+    evolveNode,
+    devolveNode,
+    addDNAPoints,
+    triggerRandomMutation,
+    updateCureProgress,
+    infectCountry,
+    availableNodes,
+  } = useEvolutionTree(addNewsItem);
+
   const conventional = useConventionalWarfare({
     initialState: conventionalState,
     currentTurn: S.turn,
@@ -8777,12 +8791,11 @@ export default function NoradVector() {
       <BioWarfareLab
         open={isBioWarfareOpen}
         onOpenChange={setIsBioWarfareOpen}
-        state={pandemicState}
+        plagueState={plagueState}
         enabled={pandemicIntegrationEnabled && bioWarfareEnabled}
-        onUpgrade={upgradePandemicTrait}
-        onDowngrade={downgradePandemicTrait}
-        onDeploy={deployPandemicTraits}
-        onReset={resetPandemicTraits}
+        onSelectPlagueType={selectPlagueType}
+        onEvolveNode={evolveNode}
+        onDevolveNode={devolveNode}
       />
 
       {showPandemicPanel && (
