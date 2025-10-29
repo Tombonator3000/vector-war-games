@@ -148,3 +148,5 @@
 2025-10-29T18:02:42Z Updated `src/pages/Index.tsx` to compute `showPandemicPanel` and render the pandemic HUD only when active outbreaks or the BioForge lab are open.
 2025-10-29T18:04:23Z Committed pandemic panel visibility change set with message "Conditionally render pandemic panel".
 2025-10-29T18:04:44Z Amended the commit to include updated log entries documenting the change workflow.
+2025-10-29T18:20:40Z Reviewed root `AGENTS.md` guidance before adjusting the strike planner interaction flow.
+2025-10-29T18:20:52Z Added strike planner toggle state, gated `handleAttack`, and rendered a close control in `src/pages/Index.tsx`.
