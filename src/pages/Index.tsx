@@ -5010,6 +5010,46 @@ export default function NoradVector() {
     deployTraits: deployPandemicTraits
   } = usePandemic(addNewsItem);
 
+  const showPandemicPanel = useMemo(() => {
+    if (!pandemicIntegrationEnabled) {
+      return false;
+    }
+
+    if (bioWarfareEnabled && isBioWarfareOpen) {
+      return true;
+    }
+
+    const {
+      active,
+      outbreaks,
+      globalInfection,
+      mutationLevel,
+      vaccineProgress,
+      casualtyTally,
+    } = pandemicState;
+
+    if (active) {
+      return true;
+    }
+
+    const hasOutbreakActivity = outbreaks.some(
+      (outbreak) => outbreak.infection > 0 || outbreak.heat > 0,
+    );
+
+    const hasPandemicMomentum =
+      globalInfection > 0 ||
+      mutationLevel > 0 ||
+      vaccineProgress > 0 ||
+      casualtyTally > 0;
+
+    return hasOutbreakActivity || hasPandemicMomentum;
+  }, [
+    pandemicIntegrationEnabled,
+    bioWarfareEnabled,
+    isBioWarfareOpen,
+    pandemicState,
+  ]);
+
   // Evolution tree system for Plague Inc style gameplay
   const {
     plagueState,
