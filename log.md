@@ -112,3 +112,9 @@
 | 2025-10-29T13:18:41Z | Replaced canvas mouse listeners with pointer events in `src/pages/Index.tsx`, added pointer capture handling, and updated cleanup for reliable drag release detection. |
 | 2025-10-29T13:26:57Z | Extended map style options with a flat-realistic texture mode, cached the earth texture for reuse, and aligned GlobeScene flat handling. |
 | 2025-10-29T13:27:02Z | Ran `npm run build` to confirm the new textured flat map renders without TypeScript or bundler issues. |
+| 2025-10-29T14:33:20Z | Reviewed AGENTS.md guidance and existing log entries to confirm contribution requirements for start screen investigation. |
+| 2025-10-29T14:35:45Z | Inspected `src/pages/Index.tsx` start phase logic and related assets to trace missing intro rendering. |
+| 2025-10-29T14:38:58Z | Launched Vite dev server and captured Playwright console output revealing `new URL(... import.meta.env.BASE_URL)` runtime failure causing blank start screen. |
+| 2025-10-29T14:40:32Z | Replaced `new URL(... import.meta.env.BASE_URL)` usage with a base-path aware resolver in `src/pages/Index.tsx` to prevent runtime crashes. |
+| 2025-10-29T14:41:45Z | Relaunched Vite dev server and confirmed intro screen renders via Playwright screenshot capture. |
+| 2025-10-29T14:42:30Z | Executed `npm run test -- --run` to verify the intro screen fix passes the Vitest suite. |

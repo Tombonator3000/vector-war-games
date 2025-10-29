@@ -392,7 +392,19 @@ const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
 let worldData: any = null;
 let worldCountries: any = null;
 
-const FLAT_REALISTIC_TEXTURE_URL = new URL('textures/earth_day.jpg', import.meta.env.BASE_URL).toString();
+const resolvePublicAssetPath = (assetPath: string) => {
+  const base = import.meta.env.BASE_URL ?? '/';
+  const trimmedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+  const trimmedAsset = assetPath.startsWith('/') ? assetPath.slice(1) : assetPath;
+
+  if (!trimmedBase) {
+    return `/${trimmedAsset}`;
+  }
+
+  return `${trimmedBase}/${trimmedAsset}`;
+};
+
+const FLAT_REALISTIC_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day.jpg');
 let flatRealisticTexture: HTMLImageElement | null = null;
 let flatRealisticTexturePromise: Promise<HTMLImageElement> | null = null;
 
