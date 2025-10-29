@@ -60,3 +60,6 @@
 | 2025-10-28T23:18:50Z | Reviewed options sheet scrolling request and repository contribution guidelines. |
 | 2025-10-28T23:19:12Z | Updated `.options-sheet` CSS for mobile scrolling and overlay layering adjustments. |
 | 2025-10-28T23:21:05Z | Ran Vite dev server and validated options sheet sections on mobile viewport via Playwright. |
+| 2025-10-29T00:00:55Z | Reviewed `src/pages/Index.tsx` audio state initialization to plan persistent settings work. |
+| 2025-10-29T00:01:02Z | Implemented local storage hydration and persistence for music/SFX toggles, volume, and track selection. |
+| 2025-10-29T00:01:32Z | Ran `npm run test` to confirm audio preference persistence changes did not break existing tests. |
