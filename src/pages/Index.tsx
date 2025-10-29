@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical } from 'lucide-react';
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
@@ -46,8 +46,10 @@ import {
   useConventionalWarfare,
   type ConventionalState,
   type NationConventionalProfile,
+  type ForceType,
   createDefaultConventionalState,
   createDefaultNationConventionalProfile,
+  territoryAnchors,
 } from '@/hooks/useConventionalWarfare';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
@@ -133,6 +135,8 @@ interface GameState {
   events?: boolean;
   diplomacy?: DiplomacyState;
   conventional?: ConventionalState;
+  conventionalMovements?: ConventionalMovementMarker[];
+  conventionalUnits?: ConventionalUnitMarker[];
   satelliteOrbits: SatelliteOrbit[];
 }
 
@@ -174,6 +178,47 @@ const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }
 
 type CanvasIcon = HTMLImageElement | null;
 
+type ConventionalUnitMarker = {
+  unitId: string;
+  ownerId: string;
+  lon: number;
+  lat: number;
+  icon: CanvasIcon;
+  forceType: ForceType;
+};
+
+type ConventionalMovementMarker = {
+  id: string;
+  unitId: string;
+  ownerId: string;
+  forceType: ForceType;
+  icon: CanvasIcon;
+  startLon: number;
+  startLat: number;
+  endLon: number;
+  endLat: number;
+  fromTerritoryId: string | null;
+  toTerritoryId: string | null;
+  progress: number;
+  speed: number;
+  createdAt: number;
+};
+
+type ConventionalMovementRegistration = {
+  unitId: string;
+  templateId?: string;
+  ownerId: string;
+  fromTerritoryId?: string | null;
+  toTerritoryId?: string | null;
+  fallbackEnd?: { lon: number; lat: number } | null;
+};
+
+const CONVENTIONAL_ICON_BASE_SCALE: Record<ForceType, number> = {
+  army: 0.22,
+  navy: 0.24,
+  air: 0.2,
+};
+
 const loadIcon = (src: string): CanvasIcon => {
   if (typeof Image === 'undefined') {
     return null;
@@ -186,10 +231,20 @@ const loadIcon = (src: string): CanvasIcon => {
 const missileIcon = loadIcon('/icons/missile.svg');
 const bomberIcon = loadIcon('/icons/bomber.svg');
 const submarineIcon = loadIcon('/icons/submarine.svg');
+const armyIcon = loadIcon('/icons/army.svg');
+const navyIcon = loadIcon('/icons/navy.svg');
+const airIcon = loadIcon('/icons/air.svg');
+
+const conventionalIconLookup: Record<ForceType, CanvasIcon> = {
+  army: armyIcon,
+  navy: navyIcon,
+  air: airIcon,
+};
 
 const MISSILE_ICON_BASE_SCALE = 0.14;
 const BOMBER_ICON_BASE_SCALE = 0.18;
 const SUBMARINE_ICON_BASE_SCALE = 0.2;
+const easeInOutQuad = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const SATELLITE_ORBIT_RADIUS = 34;
 const SATELLITE_ORBIT_TTL_MS = 180000;
 const SATELLITE_ORBIT_SPEED = (Math.PI * 2) / 12000;
@@ -394,7 +449,9 @@ let S: LocalGameState = {
   nuclearWinterLevel: 0,
   globalRadiation: 0,
   diplomacy: createDefaultDiplomacyState(),
-  conventional: createDefaultConventionalState()
+  conventional: createDefaultConventionalState(),
+  conventionalMovements: [],
+  conventionalUnits: [],
 };
 
 let nations: LocalNation[] = [];
@@ -3342,9 +3399,94 @@ function drawSubmarines() {
   });
 }
 
+function drawConventionalForces() {
+  if (!ctx) return;
+
+  const movements = S.conventionalMovements ?? [];
+  const nextMovements: ConventionalMovementMarker[] = [];
+
+  movements.forEach((movement) => {
+    const [sx, sy] = project(movement.startLon, movement.startLat);
+    const [ex, ey] = project(movement.endLon, movement.endLat);
+    const dx = ex - sx;
+    const dy = ey - sy;
+    const distance = Math.hypot(dx, dy);
+    const nation = getNationById(movement.ownerId);
+    const color = nation?.color ?? '#38bdf8';
+
+    if (distance > 4) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    movement.progress = Math.min(1, movement.progress + movement.speed);
+    const eased = easeInOutQuad(movement.progress);
+    const x = sx + dx * eased;
+    const y = sy + dy * eased;
+    const angle = Math.atan2(dy, dx);
+
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    drawIcon(
+      movement.icon ?? conventionalIconLookup[movement.forceType],
+      x,
+      y,
+      angle,
+      CONVENTIONAL_ICON_BASE_SCALE[movement.forceType],
+      { alpha: 0.95 },
+    );
+
+    if (movement.progress < 1) {
+      nextMovements.push(movement);
+    }
+  });
+
+  S.conventionalMovements = nextMovements;
+
+  const unitMarkers = S.conventionalUnits ?? [];
+  unitMarkers.forEach((marker) => {
+    const [x, y] = project(marker.lon, marker.lat);
+    const nation = getNationById(marker.ownerId);
+    const color = nation?.color ?? '#22d3ee';
+
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = 'rgba(8,15,32,0.78)';
+    ctx.beginPath();
+    ctx.arc(x, y, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+    ctx.restore();
+
+    drawIcon(
+      marker.icon ?? conventionalIconLookup[marker.forceType],
+      x,
+      y,
+      0,
+      CONVENTIONAL_ICON_BASE_SCALE[marker.forceType],
+    );
+  });
+}
+
 function drawParticles() {
   if (!ctx) return;
-  
+
   S.particles = S.particles.filter((p: any) => {
     p.x += p.vx;
     p.y += p.vy;
@@ -4448,6 +4590,7 @@ function gameLoop() {
   drawMissiles();
   drawBombers();
   drawSubmarines();
+  drawConventionalForces();
   drawParticles();
   drawFX();
   
@@ -4580,6 +4723,7 @@ export default function NoradVector() {
     return true;
   });
   const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
+  const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const lastTargetPingIdRef = useRef<string | null>(null);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
@@ -4897,9 +5041,55 @@ export default function NoradVector() {
   });
 
   useEffect(() => {
-    S.conventional = conventional.state;
+    const nextState = conventional.state;
+    if (!nextState) {
+      S.conventionalUnits = [];
+      S.conventionalMovements = S.conventionalMovements ?? [];
+      return;
+    }
+
+    S.conventional = nextState;
+
+    const deployedMarkers: ConventionalUnitMarker[] = [];
+    const activeUnitIds = new Set<string>();
+
+    Object.values(nextState.units ?? {}).forEach((unit) => {
+      activeUnitIds.add(unit.id);
+      if (unit.status !== 'deployed' || !unit.locationId) {
+        return;
+      }
+      const anchor = territoryAnchors[unit.locationId];
+      if (!anchor) {
+        return;
+      }
+      const template = nextState.templates[unit.templateId];
+      const forceType: ForceType = template?.type ?? 'army';
+      deployedMarkers.push({
+        unitId: unit.id,
+        ownerId: unit.ownerId,
+        lon: anchor.lon,
+        lat: anchor.lat,
+        icon: conventionalIconLookup[forceType],
+        forceType,
+      });
+    });
+
+    S.conventionalUnits = deployedMarkers;
+
+    const filteredMovements = (S.conventionalMovements ?? []).filter((movement) => {
+      if (!activeUnitIds.has(movement.unitId)) {
+        return false;
+      }
+      if (movement.toTerritoryId && !territoryAnchors[movement.toTerritoryId]) {
+        return false;
+      }
+      return true;
+    });
+
+    S.conventionalMovements = filteredMovements;
+
     try {
-      Storage.setItem('conventional_state', JSON.stringify(conventional.state));
+      Storage.setItem('conventional_state', JSON.stringify(nextState));
     } catch (error) {
       console.warn('Failed to persist conventional warfare state', error);
     }
@@ -4911,11 +5101,195 @@ export default function NoradVector() {
     templates: conventionalTemplatesMap,
     logs: conventionalLogs,
     trainUnit: trainConventionalUnit,
-    deployUnit: deployConventionalUnit,
-    resolveBorderConflict: resolveConventionalBorderConflict,
+    deployUnit: deployConventionalUnitBase,
+    resolveBorderConflict: resolveConventionalBorderConflictBase,
     resolveProxyEngagement: resolveConventionalProxyEngagement,
     getUnitsForNation: getConventionalUnitsForNation,
   } = conventional;
+
+  const getNationAnchor = useCallback((ownerId: string) => {
+    let nation = getNationById(ownerId);
+    if (!nation && ownerId === 'player') {
+      nation = nations.find((entry) => entry.isPlayer) ?? null;
+    }
+    return nation ? { lon: nation.lon, lat: nation.lat } : null;
+  }, []);
+
+  const registerConventionalMovement = useCallback(
+    ({
+      unitId,
+      templateId,
+      ownerId,
+      fromTerritoryId,
+      toTerritoryId,
+      fallbackEnd,
+    }: ConventionalMovementRegistration) => {
+      if (!ownerId) {
+        return;
+      }
+
+      const template = templateId ? conventionalTemplatesMap[templateId] : undefined;
+      const forceType: ForceType = template?.type ?? 'army';
+
+      const targetAnchor =
+        (toTerritoryId ? territoryAnchors[toTerritoryId] : undefined) ??
+        fallbackEnd ??
+        getNationAnchor(ownerId);
+
+      if (!targetAnchor) {
+        return;
+      }
+
+      const originAnchor =
+        (fromTerritoryId ? territoryAnchors[fromTerritoryId] : undefined) ??
+        getNationAnchor(ownerId) ??
+        targetAnchor;
+
+      const startLon = originAnchor.lon;
+      const startLat = originAnchor.lat;
+      const endLon = targetAnchor.lon;
+      const endLat = targetAnchor.lat;
+
+      if (Math.hypot(endLon - startLon, endLat - startLat) < 0.01) {
+        return;
+      }
+
+      const movement: ConventionalMovementMarker = {
+        id: `${unitId}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        unitId,
+        ownerId,
+        forceType,
+        icon: conventionalIconLookup[forceType],
+        startLon,
+        startLat,
+        endLon,
+        endLat,
+        fromTerritoryId: fromTerritoryId ?? null,
+        toTerritoryId: toTerritoryId ?? null,
+        progress: 0,
+        speed: 0.012 + Math.random() * 0.01,
+        createdAt: Date.now(),
+      };
+
+      const existing = (S.conventionalMovements ?? []).filter((entry) => entry.unitId !== unitId);
+      S.conventionalMovements = [...existing, movement];
+    },
+    [conventionalTemplatesMap, getNationAnchor],
+  );
+
+  const deployConventionalUnit = useCallback(
+    (unitId: string, territoryId: string) => {
+      const currentUnit = conventionalUnits[unitId] ?? conventional.state.units[unitId];
+      const fromTerritoryId = currentUnit?.locationId ?? null;
+      const ownerId = currentUnit?.ownerId ?? 'player';
+      const templateId = currentUnit?.templateId;
+
+      const result = deployConventionalUnitBase(unitId, territoryId);
+      if (result.success) {
+        registerConventionalMovement({
+          unitId,
+          templateId,
+          ownerId,
+          fromTerritoryId,
+          toTerritoryId: territoryId,
+        });
+      }
+      return result;
+    },
+    [conventional.state.units, conventionalUnits, deployConventionalUnitBase, registerConventionalMovement],
+  );
+
+  const findStagingTerritory = useCallback(
+    (ownerId: string, territoryId: string): string | null => {
+      const territory = conventionalTerritories[territoryId];
+      if (!territory) {
+        return null;
+      }
+      for (const neighborId of territory.neighbors) {
+        const neighbor = conventionalTerritories[neighborId];
+        if (neighbor && neighbor.controllingNationId === ownerId) {
+          return neighbor.id;
+        }
+      }
+      return null;
+    },
+    [conventionalTerritories],
+  );
+
+  const resolveConventionalBorderConflict = useCallback(
+    (territoryId: string, attackerId: string, defenderId: string) => {
+      const attackerUnitsBefore = Object.values(conventionalUnits).filter(
+        (unit) => unit.ownerId === attackerId && unit.locationId === territoryId && unit.status === 'deployed',
+      );
+      const defenderUnitsBefore = Object.values(conventionalUnits).filter(
+        (unit) => unit.ownerId === defenderId && unit.locationId === territoryId && unit.status === 'deployed',
+      );
+
+      const attackerOrigin = findStagingTerritory(attackerId, territoryId);
+      const defenderOrigin = findStagingTerritory(defenderId, territoryId);
+
+      const result = resolveConventionalBorderConflictBase(territoryId, attackerId, defenderId);
+      if (result.success) {
+        const attackerFallback = getNationAnchor(attackerId);
+        const defenderFallback = getNationAnchor(defenderId);
+
+        if (result.attackerVictory) {
+          attackerUnitsBefore.forEach((unit) => {
+            registerConventionalMovement({
+              unitId: unit.id,
+              templateId: unit.templateId,
+              ownerId: unit.ownerId,
+              fromTerritoryId: attackerOrigin ?? null,
+              toTerritoryId: territoryId,
+              fallbackEnd: attackerFallback,
+            });
+          });
+
+          defenderUnitsBefore.forEach((unit) => {
+            registerConventionalMovement({
+              unitId: unit.id,
+              templateId: unit.templateId,
+              ownerId: unit.ownerId,
+              fromTerritoryId: territoryId,
+              toTerritoryId: defenderOrigin,
+              fallbackEnd: defenderFallback,
+            });
+          });
+        } else {
+          attackerUnitsBefore.forEach((unit) => {
+            registerConventionalMovement({
+              unitId: unit.id,
+              templateId: unit.templateId,
+              ownerId: unit.ownerId,
+              fromTerritoryId: territoryId,
+              toTerritoryId: attackerOrigin,
+              fallbackEnd: attackerFallback,
+            });
+          });
+
+          defenderUnitsBefore.forEach((unit) => {
+            registerConventionalMovement({
+              unitId: unit.id,
+              templateId: unit.templateId,
+              ownerId: unit.ownerId,
+              fromTerritoryId: defenderOrigin ?? null,
+              toTerritoryId: territoryId,
+              fallbackEnd: defenderFallback,
+            });
+          });
+        }
+      }
+
+      return result;
+    },
+    [
+      conventionalUnits,
+      findStagingTerritory,
+      getNationAnchor,
+      registerConventionalMovement,
+      resolveConventionalBorderConflictBase,
+    ],
+  );
 
   useEffect(() => {
     (window as any).__cyberAdvance = advanceCyberTurn;
@@ -5331,6 +5705,17 @@ export default function NoradVector() {
 
   const handleAttack = useCallback(() => {
     AudioSys.playSFX('click');
+    setIsStrikePlannerOpen(prev => {
+      if (!prev) {
+        return true;
+      }
+      return prev;
+    });
+
+    if (!isStrikePlannerOpen) {
+      return;
+    }
+
     if (!isGameStarted || S.gameOver) return;
 
     const player = PlayerManager.get();
@@ -5423,7 +5808,7 @@ export default function NoradVector() {
     setSelectedWarheadYield(deliverableWarheads[0]?.yield ?? null);
     const defaultDelivery = deliveryOptions.find(option => option.count > 0)?.id ?? null;
     setSelectedDeliveryMethod(defaultDelivery);
-  }, [isGameStarted, selectedTargetId]);
+  }, [isGameStarted, isStrikePlannerOpen, selectedTargetId]);
 
   const resetLaunchControl = useCallback(() => {
     setPendingLaunch(null);
@@ -7781,71 +8166,83 @@ export default function NoradVector() {
             <ConflictResolutionDialog />
           </div>
 
-          <div className="pointer-events-auto fixed bottom-24 right-6 z-40 w-80 max-h-[60vh]">
-            <div className="rounded border border-red-500/60 bg-black/85 backdrop-blur-sm shadow-lg shadow-red-500/20">
-              <div className="flex items-center justify-between border-b border-red-500/30 px-3 py-2">
-                <span className="text-[10px] font-mono uppercase tracking-[0.35em] text-red-200">Strike Planner</span>
-                <span
-                  className={`text-[10px] font-mono ${selectedTarget ? 'text-red-300' : 'text-cyan-300/70'}`}
-                >
-                  {selectedTarget ? 'LOCKED' : 'STANDBY'}
-                </span>
-              </div>
-              <div className="max-h-48 overflow-y-auto divide-y divide-red-500/10">
-                {attackableNations.length === 0 ? (
-                  <div className="px-3 py-4 text-[11px] text-cyan-200/70">
-                    No hostile launch solutions available.
+          {isStrikePlannerOpen ? (
+            <div className="pointer-events-auto fixed bottom-24 right-6 z-40 w-80 max-h-[60vh]">
+              <div className="rounded border border-red-500/60 bg-black/85 backdrop-blur-sm shadow-lg shadow-red-500/20">
+                <div className="flex items-center justify-between border-b border-red-500/30 px-3 py-2">
+                  <span className="text-[10px] font-mono uppercase tracking-[0.35em] text-red-200">Strike Planner</span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-mono ${selectedTarget ? 'text-red-300' : 'text-cyan-300/70'}`}
+                    >
+                      {selectedTarget ? 'LOCKED' : 'STANDBY'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsStrikePlannerOpen(false)}
+                      className="inline-flex h-5 w-5 items-center justify-center rounded border border-red-500/40 text-red-200/80 transition hover:border-red-400 hover:text-red-200"
+                      aria-label="Close strike planner"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                ) : (
-                  attackableNations.map(nation => {
-                    const isSelected = nation.id === selectedTargetId;
-                    const population = Math.max(0, Math.round(nation.population ?? 0));
-                    const defense = Math.max(0, Math.round(nation.defense ?? 0));
-                    const missiles = Math.max(0, Math.round(Number(nation.missiles ?? 0)));
-                    const instability = Math.max(0, Math.round(Number(nation.instability ?? 0)));
+                </div>
+                <div className="max-h-48 overflow-y-auto divide-y divide-red-500/10">
+                  {attackableNations.length === 0 ? (
+                    <div className="px-3 py-4 text-[11px] text-cyan-200/70">
+                      No hostile launch solutions available.
+                    </div>
+                  ) : (
+                    attackableNations.map(nation => {
+                      const isSelected = nation.id === selectedTargetId;
+                      const population = Math.max(0, Math.round(nation.population ?? 0));
+                      const defense = Math.max(0, Math.round(nation.defense ?? 0));
+                      const missiles = Math.max(0, Math.round(Number(nation.missiles ?? 0)));
+                      const instability = Math.max(0, Math.round(Number(nation.instability ?? 0)));
 
-                    return (
-                      <button
-                        key={nation.id}
-                        type="button"
-                        onClick={() => handleTargetSelect(nation.id)}
-                        className={`flex w-full items-center justify-between gap-3 border-l-2 px-3 py-2 text-left text-[11px] font-mono transition ${
-                          isSelected
-                            ? 'border-red-300/90 bg-red-500/20 text-red-100 shadow-inner'
-                            : 'border-transparent text-cyan-200 hover:border-red-400/70 hover:bg-red-500/10'
-                        }`}
-                      >
-                        <span className="flex-1">
-                          <span className="block text-[12px] uppercase tracking-[0.25em]">{nation.name}</span>
-                          <span className="block text-[10px] text-cyan-300/70">
-                            POP {population}M • DEF {defense} • MISS {missiles}
+                      return (
+                        <button
+                          key={nation.id}
+                          type="button"
+                          onClick={() => handleTargetSelect(nation.id)}
+                          className={`flex w-full items-center justify-between gap-3 border-l-2 px-3 py-2 text-left text-[11px] font-mono transition ${
+                            isSelected
+                              ? 'border-red-300/90 bg-red-500/20 text-red-100 shadow-inner'
+                              : 'border-transparent text-cyan-200 hover:border-red-400/70 hover:bg-red-500/10'
+                          }`}
+                        >
+                          <span className="flex-1">
+                            <span className="block text-[12px] uppercase tracking-[0.25em]">{nation.name}</span>
+                            <span className="block text-[10px] text-cyan-300/70">
+                              POP {population}M • DEF {defense} • MISS {missiles}
+                            </span>
                           </span>
-                        </span>
-                        <span className={`text-[10px] ${isSelected ? 'text-red-100' : 'text-red-200/80'}`}>
-                          INSTAB {instability}
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-              <div className="border-t border-red-500/30 px-3 py-2 text-[11px] text-cyan-200/80">
-                {selectedTarget ? (
-                  <div className="space-y-1">
-                    <p>
-                      Locked on <span className="text-red-200">{selectedTarget.name}</span>. Population&nbsp;
-                      {Math.max(0, Math.round(selectedTarget.population ?? 0))}M, defense{' '}
-                      {Math.max(0, Math.round(selectedTarget.defense ?? 0))}, missile capacity{' '}
-                      {Math.max(0, Math.round(Number(selectedTarget.missiles ?? 0)))}.
-                    </p>
-                    <p className="text-cyan-300/70">Confirm launch with ATTACK once satisfied with this solution.</p>
-                  </div>
-                ) : (
-                  <p>Select a hostile nation to arm the ATTACK command.</p>
-                )}
+                          <span className={`text-[10px] ${isSelected ? 'text-red-100' : 'text-red-200/80'}`}>
+                            INSTAB {instability}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+                <div className="border-t border-red-500/30 px-3 py-2 text-[11px] text-cyan-200/80">
+                  {selectedTarget ? (
+                    <div className="space-y-1">
+                      <p>
+                        Locked on <span className="text-red-200">{selectedTarget.name}</span>. Population&nbsp;
+                        {Math.max(0, Math.round(selectedTarget.population ?? 0))}M, defense{' '}
+                        {Math.max(0, Math.round(selectedTarget.defense ?? 0))}, missile capacity{' '}
+                        {Math.max(0, Math.round(Number(selectedTarget.missiles ?? 0)))}.
+                      </p>
+                      <p className="text-cyan-300/70">Confirm launch with ATTACK once satisfied with this solution.</p>
+                    </div>
+                  ) : (
+                    <p>Select a hostile nation to arm the ATTACK command.</p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Minimal bottom utility stack */}
           <div className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50">
@@ -8401,11 +8798,13 @@ export default function NoradVector() {
         onDevolveNode={devolveNode}
       />
 
-      <PandemicPanel
-        state={pandemicState}
-        enabled={pandemicIntegrationEnabled}
-        biowarfareEnabled={bioWarfareEnabled}
-      />
+      {showPandemicPanel && (
+        <PandemicPanel
+          state={pandemicState}
+          enabled={pandemicIntegrationEnabled}
+          biowarfareEnabled={bioWarfareEnabled}
+        />
+      )}
 
       {activeFlashpoint && (
         <FlashpointModal
