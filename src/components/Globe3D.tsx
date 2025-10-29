@@ -50,7 +50,16 @@ export function Globe3D({ nations = [], onNationClick }: Globe3DProps) {
         <pointLight position={[10, 10, 10]} intensity={1} />
         <Stars radius={100} depth={50} count={5000} factor={4} />
         <Earth />
-        <OrbitControls enableZoom={true} enablePan={true} />
+        <OrbitControls 
+          enableZoom={true} 
+          enablePan={true}
+          mouseButtons={{
+            LEFT: undefined,
+            MIDDLE: undefined,
+            RIGHT: 2, // Right button for panning
+          }}
+          zoomSpeed={1.2}
+        />
       </Canvas>
     </div>
   );

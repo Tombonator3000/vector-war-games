@@ -35,9 +35,11 @@ const createNation = (id: string, overrides: Partial<Nation> = {}): Nation => ({
   sanctioned: false,
   sanctionedBy: {},
   environmentPenaltyTurns: 0,
-  conventional: undefined,
-  controlledTerritories: [],
   cyber: createDefaultNationCyberProfile(),
+  morale: 50,
+  publicOpinion: 50,
+  electionTimer: 0,
+  cabinetApproval: 50,
   ...overrides,
 });
 

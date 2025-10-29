@@ -110,8 +110,8 @@ export class MultiplayerTransport {
           this.emitPresence();
         });
 
-      const status = await this.channel.subscribe();
-      if (status === 'SUBSCRIBED') {
+      const channel = await this.channel.subscribe();
+      if (channel && this.channel.state === 'joined') {
         await this.channel.track({
           meta: {
             id: this.clientId,

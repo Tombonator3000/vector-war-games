@@ -138,11 +138,12 @@ vi.mock('@/integrations/multiplayer/service', () => {
   };
 });
 
-let controls: MockControls;
-
-beforeAll(async () => {
-  controls = (await import('@/integrations/multiplayer/service')).__mockControls as MockControls;
-});
+let controls: MockControls = {
+  reset: () => {},
+  setPresence: () => {},
+  emitEvent: () => {},
+  instances: [],
+};
 
 describe('MultiplayerProvider', () => {
   beforeEach(() => {
