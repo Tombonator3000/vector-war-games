@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { FlaskConical, Biohazard, AlertTriangle } from 'lucide-react';
+import { FlaskConical, Biohazard, AlertTriangle, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
 import { PlagueTypeSelector } from '@/components/PlagueTypeSelector';
+import { DeploymentTargetSelector } from '@/components/DeploymentTargetSelector';
 import { DNAPointsDisplay } from '@/components/DNAPointsDisplay';
 import { EvolutionTree } from '@/components/EvolutionTree';
 import type { PlagueState } from '@/types/biowarfare';
@@ -17,9 +18,18 @@ interface BioWarfareLabProps {
   plagueState: PlagueState;
   enabled: boolean;
   labTier: BioLabTier;
+  availableNations: Array<{ id: string; name: string; intelligence: number }>;
+  playerActions: number;
   onSelectPlagueType: (plagueTypeId: string) => void;
   onEvolveNode: (nodeId: string) => void;
   onDevolveNode: (nodeId: string) => void;
+  onDeployBioWeapon: (selections: Array<{
+    nationId: string;
+    nationName: string;
+    deploymentMethod: string;
+    useFalseFlag: boolean;
+    falseFlagNationId: string | null;
+  }>) => void;
 }
 
 export function BioWarfareLab({
@@ -28,11 +38,15 @@ export function BioWarfareLab({
   plagueState,
   enabled,
   labTier,
+  availableNations,
+  playerActions,
   onSelectPlagueType,
   onEvolveNode,
   onDevolveNode,
+  onDeployBioWeapon,
 }: BioWarfareLabProps) {
   const [showPlagueSelector, setShowPlagueSelector] = useState(false);
+  const [showDeploymentSelector, setShowDeploymentSelector] = useState(false);
 
   // Auto-open plague selector when lab opens and no plague selected
   useEffect(() => {
@@ -68,6 +82,20 @@ export function BioWarfareLab({
   const currentLabDef = getBioLabTierDefinition(labTier);
   const canUseBioForge = labTier >= 3;
 
+  const handleDeployment = (selections: Array<{
+    nationId: string;
+    nationName: string;
+    deploymentMethod: string;
+    useFalseFlag: boolean;
+    falseFlagNationId: string | null;
+  }>) => {
+    onDeployBioWeapon(selections);
+    toast({
+      title: 'Bio-Weapon Deployed',
+      description: `Pathogen deployed to ${selections.length} target${selections.length !== 1 ? 's' : ''}`,
+    });
+  };
+
   return (
     <>
       {/* Plague Type Selector Dialog */}
@@ -76,6 +104,16 @@ export function BioWarfareLab({
         onOpenChange={setShowPlagueSelector}
         onSelect={handleSelectPlague}
         labTier={labTier}
+      />
+
+      {/* Deployment Target Selector */}
+      <DeploymentTargetSelector
+        open={showDeploymentSelector}
+        onOpenChange={setShowDeploymentSelector}
+        availableNations={availableNations}
+        playerDNA={plagueState.dnaPoints}
+        playerActions={playerActions}
+        onConfirmDeployment={handleDeployment}
       />
 
       {/* Main BioForge Lab Dialog */}
@@ -188,14 +226,24 @@ export function BioWarfareLab({
                     </div>
                   </div>
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowPlagueSelector(true)}
-                    className="border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 text-xs"
-                  >
-                    Change Pathogen
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => setShowDeploymentSelector(true)}
+                      className="bg-red-500 hover:bg-red-400 text-black font-semibold text-xs"
+                    >
+                      <Target className="h-3 w-3 mr-1" />
+                      Deploy
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowPlagueSelector(true)}
+                      className="border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 text-xs"
+                    >
+                      Change Pathogen
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Special Mechanic Alert */}

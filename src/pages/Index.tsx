@@ -4948,6 +4948,7 @@ export default function NoradVector() {
     startLabConstruction,
     cancelLabConstruction,
     getConstructionOptions,
+    deployBioWeapon,
     triggerBioWarfare,
     advanceBioWarfareTurn,
     onCountryInfected,
@@ -5326,8 +5327,8 @@ export default function NoradVector() {
 
   const handlePandemicAdvance = useCallback((context: PandemicTurnContext) => {
     if (!pandemicIntegrationEnabled) return null;
-    return advanceBioWarfareTurn(context);
-  }, [pandemicIntegrationEnabled, advanceBioWarfareTurn]);
+    return advanceBioWarfareTurn(context, nations);
+  }, [pandemicIntegrationEnabled, advanceBioWarfareTurn, nations]);
 
   // Progressive tutorial system
   const tutorialSteps = [
@@ -7001,6 +7002,16 @@ export default function NoradVector() {
       });
     }
   }, [cancelLabConstruction]);
+
+  const handleDeployBioWeapon = useCallback((selections: Array<{
+    nationId: string;
+    nationName: string;
+    deploymentMethod: string;
+    useFalseFlag: boolean;
+    falseFlagNationId: string | null;
+  }>) => {
+    deployBioWeapon(selections, S.turn);
+  }, [deployBioWeapon, S.turn]);
 
   const handleCulture = useCallback(async () => {
     const approved = await requestApproval('CULTURE', { description: 'Cultural operations briefing' });
@@ -8864,9 +8875,18 @@ export default function NoradVector() {
         plagueState={plagueState}
         enabled={pandemicIntegrationEnabled && bioWarfareEnabled}
         labTier={labFacility.tier}
+        availableNations={nations
+          .filter(n => n.id !== playerNationId && !n.eliminated)
+          .map(n => ({
+            id: n.id,
+            name: n.name,
+            intelligence: n.intelligence || 50,
+          }))}
+        playerActions={S.actionsRemaining}
         onSelectPlagueType={selectPlagueType}
         onEvolveNode={evolveNode}
         onDevolveNode={devolveNode}
+        onDeployBioWeapon={handleDeployBioWeapon}
       />
 
       <BioLabConstruction
