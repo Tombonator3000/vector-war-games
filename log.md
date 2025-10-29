@@ -107,3 +107,4 @@
 | 2025-10-29T12:57:59Z | Inspected GlobeScene camera/orientation math to trace 3D globe and overlay misalignment. |
 | 2025-10-29T12:58:25Z | Removed redundant earth mesh rotation to realign 3D globe texture with projected overlays. |
 | 2025-10-29T12:59:15Z | Ran `npm run test` to confirm globe orientation fix passes existing suite. |
+| 2025-10-29T13:18:41Z | Replaced canvas mouse listeners with pointer events in `src/pages/Index.tsx`, added pointer capture handling, and updated cleanup for reliable drag release detection. |

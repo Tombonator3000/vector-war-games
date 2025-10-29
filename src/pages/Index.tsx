@@ -6815,15 +6815,35 @@ export default function NoradVector() {
         cam.y = Math.min(Math.max(cam.y, minCamY), maxCamY);
       };
 
-      const handleMouseDown = (e: MouseEvent) => {
+      let activePointerId: number | null = null;
+
+      const handlePointerUp = (e: PointerEvent) => {
+        if (canvas && activePointerId !== null && canvas.hasPointerCapture(activePointerId)) {
+          canvas.releasePointerCapture(activePointerId);
+          activePointerId = null;
+        }
+        isDragging = false;
+        dragButton = null;
+        if (activePointerId === e.pointerId) {
+          activePointerId = null;
+        }
+      };
+
+      const handlePointerDown = (e: PointerEvent) => {
         if (e.button !== 0 && e.button !== 2) return;
         isDragging = true;
         dragButton = e.button;
         dragStart = { x: e.clientX, y: e.clientY };
+        activePointerId = e.pointerId;
+        canvas?.setPointerCapture(e.pointerId);
       };
 
-      const handleMouseMove = (e: MouseEvent) => {
+      const handlePointerMove = (e: PointerEvent) => {
         if (!isDragging) return;
+        if (e.buttons === 0) {
+          handlePointerUp(e);
+          return;
+        }
 
         const dx = e.clientX - dragStart.x;
         const dy = e.clientY - dragStart.y;
@@ -6837,9 +6857,8 @@ export default function NoradVector() {
         clampLatitude();
       };
 
-      const handleMouseUp = () => {
-        isDragging = false;
-        dragButton = null;
+      const handlePointerCancel = (e: PointerEvent) => {
+        handlePointerUp(e);
       };
 
       const handleWheel = (e: WheelEvent) => {
@@ -7115,10 +7134,10 @@ export default function NoradVector() {
         }
       };
 
-      canvas.addEventListener('mousedown', handleMouseDown);
-      canvas.addEventListener('mousemove', handleMouseMove);
-      canvas.addEventListener('mouseup', handleMouseUp);
-      canvas.addEventListener('mouseleave', handleMouseUp);
+      canvas.addEventListener('pointerdown', handlePointerDown);
+      canvas.addEventListener('pointermove', handlePointerMove);
+      canvas.addEventListener('pointerup', handlePointerUp);
+      canvas.addEventListener('pointercancel', handlePointerCancel);
       canvas.addEventListener('wheel', handleWheel, { passive: false });
       canvas.addEventListener('click', handleClick);
       canvas.addEventListener('dblclick', handleDoubleClick);
@@ -7132,10 +7151,14 @@ export default function NoradVector() {
         if (typeof window !== 'undefined') {
           window.removeEventListener('resize', handleWindowResize);
         }
-        canvas.removeEventListener('mousedown', handleMouseDown);
-        canvas.removeEventListener('mousemove', handleMouseMove);
-        canvas.removeEventListener('mouseup', handleMouseUp);
-        canvas.removeEventListener('mouseleave', handleMouseUp);
+        if (canvas && activePointerId !== null && canvas.hasPointerCapture(activePointerId)) {
+          canvas.releasePointerCapture(activePointerId);
+          activePointerId = null;
+        }
+        canvas.removeEventListener('pointerdown', handlePointerDown);
+        canvas.removeEventListener('pointermove', handlePointerMove);
+        canvas.removeEventListener('pointerup', handlePointerUp);
+        canvas.removeEventListener('pointercancel', handlePointerCancel);
         canvas.removeEventListener('wheel', handleWheel);
         canvas.removeEventListener('click', handleClick);
         canvas.removeEventListener('dblclick', handleDoubleClick);
