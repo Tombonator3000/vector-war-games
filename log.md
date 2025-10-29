@@ -172,15 +172,22 @@
 
 ---
 
-## Next: Priority #2 - Target Selection System
+## Priority #2: Target Selection System - In Progress
 
-**Objective**: Implement deployment target selection allowing players to choose specific nations to attack with bio-weapons.
+| 2025-10-29T21:00:00Z | Started Priority #2 implementation - created deployment types system in `src/types/bioDeployment.ts` with 4 methods (covert, airport, border, simultaneous). |
+| 2025-10-29T21:05:15Z | Extended PlagueState in `src/types/biowarfare.ts` to track deploymentHistory, countryInfections Map, globalSuspicionLevel, and attribution. |
+| 2025-10-29T21:10:30Z | Created DeploymentTargetSelector UI component (`src/components/DeploymentTargetSelector.tsx`) - multi-nation selection, method chooser, false flag support. |
+| 2025-10-29T21:12:45Z | Committed and pushed Part 1 (types + UI) of target selection system. |
+| 2025-10-29T21:15:00Z | Added deployBioWeapon function to `useEvolutionTree.ts` - initializes per-country infection tracking for selected targets. |
+| 2025-10-29T21:20:15Z | Implemented advanceCountryInfections in `useEvolutionTree.ts` - per-turn infection spread, detection system, country-to-country spread via air travel. |
+| 2025-10-29T21:25:30Z | Integrated deployment mechanics into `useBioWarfare.ts` - calls advanceCountryInfections each turn, passes nations array. |
+| 2025-10-29T21:27:45Z | Exported deployBioWeapon from useBioWarfare for UI integration. |
 
-**Requirements**:
-- Target selection UI to choose nations
-- Deployment methods (covert, airport, simultaneous)
-- False flag operations
-- Per-country infection tracking
-- Transport route spread mechanics
+**Status**: Core mechanics complete - deployment logic functional. Next: wire deployment UI into game and test.
 
-**Status**: Ready to begin implementation
+**Remaining**:
+- Integrate DeploymentTargetSelector into BioWarfareLab/Index
+- Update turn advancement to pass nations array
+- Test multi-target deployment
+- Test false flag attribution
+- Test cross-border spread mechanics

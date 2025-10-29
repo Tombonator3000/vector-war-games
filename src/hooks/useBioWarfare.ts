@@ -91,7 +91,7 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
   /**
    * Advance turn with evolution-enhanced mechanics
    */
-  const advanceBioWarfareTurn = useCallback((context: PandemicTurnContext): PandemicTurnEffect | null => {
+  const advanceBioWarfareTurn = useCallback((context: PandemicTurnContext, nations: any[]): PandemicTurnEffect | null => {
     const plagueType = evolution.plagueState.selectedPlagueType ? getPlagueTypeById(evolution.plagueState.selectedPlagueType) : null;
 
     // Advance lab construction if under construction
@@ -100,7 +100,12 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
       addNewsItem('science', `Bio Laboratory upgraded to Tier ${constructionResult.newTier}`, 'important');
     }
 
-    // Only process if plague is active
+    // Advance per-country infections if using targeted deployment
+    if (evolution.plagueState.countryInfections.size > 0) {
+      evolution.advanceCountryInfections(context.turn, nations);
+    }
+
+    // Only process legacy global pandemic if plague is active
     if (!evolution.plagueState.plagueStarted || !pandemic.pandemicState.active) {
       return null;
     }
@@ -279,6 +284,9 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
     cancelLabConstruction: bioLab.cancelConstruction,
     getConstructionOptions: bioLab.getConstructionOptions,
     isPlagueTypeUnlocked: bioLab.isPlagueTypeUnlocked,
+
+    // Deployment actions (new targeted system)
+    deployBioWeapon: evolution.deployBioWeapon,
 
     // Combined actions
     triggerBioWarfare,
