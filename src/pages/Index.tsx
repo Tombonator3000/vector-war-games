@@ -36,7 +36,7 @@ import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { GameHelper } from '@/components/GameHelper';
 import { useMultiplayer } from '@/contexts/MultiplayerProvider';
-import type { Nation, ConventionalWarfareDelta, NationCyberProfile } from '@/types/game';
+import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit } from '@/types/game';
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
 import { SyncStatusBadge } from '@/components/coop/SyncStatusBadge';
 import { ApprovalQueue } from '@/components/coop/ApprovalQueue';
@@ -132,6 +132,7 @@ interface GameState {
   events?: boolean;
   diplomacy?: DiplomacyState;
   conventional?: ConventionalState;
+  satelliteOrbits: SatelliteOrbit[];
 }
 
 type ThemeId =
@@ -188,6 +189,9 @@ const submarineIcon = loadIcon('/icons/submarine.svg');
 const MISSILE_ICON_BASE_SCALE = 0.14;
 const BOMBER_ICON_BASE_SCALE = 0.18;
 const SUBMARINE_ICON_BASE_SCALE = 0.2;
+const SATELLITE_ORBIT_RADIUS = 34;
+const SATELLITE_ORBIT_TTL_MS = 180000;
+const SATELLITE_ORBIT_SPEED = (Math.PI * 2) / 12000;
 
 const IntroLogo = () => (
   <svg
@@ -383,6 +387,7 @@ let S: LocalGameState = {
   empEffects: [],
   rings: [],
   refugeeCamps: [],
+  satelliteOrbits: [],
   screenShake: 0,
   fx: 1,
   nuclearWinterLevel: 0,
@@ -3015,6 +3020,121 @@ function drawIcon(
   ctx.restore();
 }
 
+function drawSatelliteIcon(x: number, y: number, rotation: number) {
+  if (!ctx) {
+    return;
+  }
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+
+  ctx.fillStyle = 'rgba(210,240,255,0.92)';
+  ctx.fillRect(-5, -2.5, 10, 5);
+
+  ctx.fillStyle = 'rgba(130,210,255,0.9)';
+  ctx.fillRect(-12, -1.5, 5, 3);
+  ctx.fillRect(7, -1.5, 5, 3);
+
+  ctx.beginPath();
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.arc(0, 0, 2.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawSatellites(nowMs: number) {
+  if (!ctx) {
+    return;
+  }
+
+  const orbits = S.satelliteOrbits ?? [];
+  if (orbits.length === 0) {
+    return;
+  }
+
+  const activeOrbits: SatelliteOrbit[] = [];
+  const player = PlayerManager.get();
+
+  orbits.forEach(orbit => {
+    const targetNation = nations.find(nation => nation.id === orbit.targetId);
+    if (!targetNation) {
+      return;
+    }
+
+    const owner =
+      player && player.id === orbit.ownerId
+        ? player
+        : nations.find(nation => nation.id === orbit.ownerId) ?? null;
+
+    const ttlExpired = nowMs - orbit.startedAt > orbit.ttl;
+    const hasCoverage = !!owner?.satellites?.[orbit.targetId];
+
+    if (ttlExpired || !hasCoverage) {
+      return;
+    }
+
+    activeOrbits.push(orbit);
+
+    const [targetX, targetY] = project(targetNation.lon, targetNation.lat);
+    if (!Number.isFinite(targetX) || !Number.isFinite(targetY)) {
+      return;
+    }
+
+    const elapsed = nowMs - orbit.startedAt;
+    const angle = orbit.phaseOffset + SATELLITE_ORBIT_SPEED * elapsed * orbit.direction;
+    const satelliteX = targetX + Math.cos(angle) * SATELLITE_ORBIT_RADIUS;
+    const satelliteY = targetY + Math.sin(angle) * SATELLITE_ORBIT_RADIUS;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(120,220,255,0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.arc(targetX, targetY, SATELLITE_ORBIT_RADIUS, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    const glowPulse = 0.55 + 0.35 * Math.sin(nowMs / 320 + orbit.phaseOffset);
+    ctx.globalAlpha = glowPulse * 0.6;
+    ctx.fillStyle = 'rgba(100,200,255,1)';
+    ctx.beginPath();
+    ctx.arc(satelliteX, satelliteY, 6 + glowPulse * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    drawSatelliteIcon(satelliteX, satelliteY, angle);
+  });
+
+  S.satelliteOrbits = activeOrbits;
+}
+
+function registerSatelliteOrbit(ownerId: string, targetId: string) {
+  const now = Date.now();
+  S.satelliteOrbits = S.satelliteOrbits ?? [];
+
+  const existing = S.satelliteOrbits.find(orbit => orbit.ownerId === ownerId && orbit.targetId === targetId);
+  if (existing) {
+    existing.startedAt = now;
+    existing.ttl = SATELLITE_ORBIT_TTL_MS;
+    existing.phaseOffset = Math.random() * Math.PI * 2;
+    existing.direction = Math.random() < 0.5 ? 1 : -1;
+    return;
+  }
+
+  S.satelliteOrbits.push({
+    ownerId,
+    targetId,
+    startedAt: now,
+    ttl: SATELLITE_ORBIT_TTL_MS,
+    phaseOffset: Math.random() * Math.PI * 2,
+    direction: Math.random() < 0.5 ? 1 : -1,
+  });
+}
+
 function drawMissiles() {
   if (!ctx) return;
 
@@ -3917,6 +4037,7 @@ function aiTurn(n: Nation) {
       n.satellites = n.satellites || {};
       n.satellites[target.id] = true;
       log(`${n.name} deploys satellite over ${target.name}`);
+      registerSatelliteOrbit(n.id, target.id);
       return;
     }
     
@@ -4305,6 +4426,8 @@ function gameLoop() {
     return;
   }
 
+  const nowMs = Date.now();
+
   ctx.imageSmoothingEnabled = !(currentTheme === 'retro80s' || currentTheme === 'wargames');
 
   ctx.clearRect(0, 0, W, H);
@@ -4320,6 +4443,7 @@ function gameLoop() {
   drawWorld(currentMapStyle);
   CityLights.draw(ctx, currentMapStyle);
   drawNations(currentMapStyle);
+  drawSatellites(nowMs);
   drawMissiles();
   drawBombers();
   drawSubmarines();
@@ -4606,6 +4730,9 @@ export default function NoradVector() {
       try {
         if (state.gameState) {
           S = { ...state.gameState };
+          if (!Array.isArray(S.satelliteOrbits)) {
+            S.satelliteOrbits = [];
+          }
         }
         if (state.nations) {
           nations = state.nations.map(nation => ({ ...nation }));
@@ -6293,6 +6420,7 @@ export default function NoradVector() {
           commander.satellites = commander.satellites || {};
           commander.satellites[target.id] = true;
           log(`Satellite deployed over ${target.name}`);
+          registerSatelliteOrbit(commander.id, target.id);
           updateDisplay();
           consumeAction();
           return true;
@@ -6368,6 +6496,7 @@ export default function NoradVector() {
           commander.deepRecon = commander.deepRecon || {};
           commander.deepRecon[target.id] = (commander.deepRecon[target.id] || 0) + 3;
           log(`Deep recon initiated over ${target.name}. Detailed intel for 3 turns.`);
+          registerSatelliteOrbit(commander.id, target.id);
           updateDisplay();
           consumeAction();
           return true;

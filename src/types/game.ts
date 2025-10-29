@@ -63,6 +63,15 @@ export interface Nation {
   cabinetApproval: number;
 }
 
+export interface SatelliteOrbit {
+  ownerId: string;
+  targetId: string;
+  startedAt: number;
+  ttl: number;
+  phaseOffset: number;
+  direction: 1 | -1;
+}
+
 export interface DiplomacyState {
   peaceTurns: number;
   lastEvaluatedTurn: number;
@@ -99,6 +108,7 @@ export interface GameState {
   globalRadiation?: number;
   events?: boolean;
   diplomacy?: DiplomacyState;
+  satelliteOrbits: SatelliteOrbit[];
 }
 
 export interface ConventionalWarfareDelta {
