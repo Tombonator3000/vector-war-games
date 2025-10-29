@@ -393,12 +393,10 @@ let worldData: any = null;
 let worldCountries: any = null;
 
 const baseAssetPath = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
-const flatRealisticTexturePath = `${
-  baseAssetPath.startsWith('/') ? baseAssetPath : `/${baseAssetPath}`
-}textures/earth_day.jpg`;
+const flatRealisticTexturePath = `${baseAssetPath}textures/earth_day.jpg`;
 const FLAT_REALISTIC_TEXTURE_URL =
   typeof window !== 'undefined' && typeof window.location?.origin === 'string'
-    ? `${window.location.origin}${flatRealisticTexturePath}`
+    ? new URL(flatRealisticTexturePath, window.location.origin).toString()
     : flatRealisticTexturePath;
 let flatRealisticTexture: HTMLImageElement | null = null;
 let flatRealisticTexturePromise: Promise<HTMLImageElement> | null = null;

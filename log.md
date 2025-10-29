@@ -112,3 +112,7 @@
 | 2025-10-29T13:27:02Z | Ran `npm run build` to confirm the new textured flat map renders without TypeScript or bundler issues. |
 | 2025-10-29T13:45:17Z | Recomputed flat-realistic texture URL resolution in `src/pages/Index.tsx` to avoid invalid `new URL` base usage during module evaluation. |
 | 2025-10-29T13:45:17Z | Executed `npm run build` to verify the flat texture URL fix compiles successfully. |
+| 2025-10-29T14:40:34Z | Reviewed AGENTS.md and prior GlobeScene base-path handling to scope texture URL fix follow-up. |
+| 2025-10-29T14:40:38Z | Inspected `src/pages/Index.tsx` flat texture path construction to diagnose remaining absolute URL gap. |
+| 2025-10-29T14:40:42Z | Updated flat-realistic texture URL logic to resolve relative bases against `window.location.origin`. |
+| 2025-10-29T14:41:10Z | Ran `npm run build` to confirm the updated texture URL resolution compiles cleanly. |
