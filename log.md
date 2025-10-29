@@ -68,3 +68,4 @@
 | 2025-10-29T07:57:40Z | Implemented wheel zoom focal point preservation by recalculating camera offsets in `src/pages/Index.tsx`. |
 | 2025-10-29T07:43:53+00:00 | Reviewed drag handling task instructions and repository guidelines. |
 | 2025-10-29T07:44:33+00:00 | Implemented canvas drag handling for both mouse buttons, tracked drag initiator, and suppressed context menu during right-drag pan. |
+| 2025-10-29T08:42:44+00:00 | Adjusted globe wheel zoom anchoring to use projector-aligned camera offsets and iterative refinement. |
