@@ -4390,6 +4390,7 @@ export default function NoradVector() {
   });
   const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
+  const lastTargetPingIdRef = useRef<string | null>(null);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
     const stored = Storage.getItem('conventional_state');
     if (stored) {
@@ -5084,9 +5085,41 @@ export default function NoradVector() {
     return targetableNations.filter(nation => isEligibleEnemyTarget(player, nation));
   }, [targetableNations]);
 
+  const selectedTarget = useMemo(() => {
+    if (!selectedTargetId) return null;
+    return attackableNations.find(nation => nation.id === selectedTargetId) ?? null;
+  }, [attackableNations, selectedTargetId]);
+
   const handleTargetSelect = useCallback((nationId: string) => {
+    AudioSys.playSFX('click');
     setSelectedTargetId(prev => (prev === nationId ? null : nationId));
   }, []);
+
+  useEffect(() => {
+    if (!selectedTarget) {
+      lastTargetPingIdRef.current = null;
+      return;
+    }
+
+    if (lastTargetPingIdRef.current === selectedTarget.id) {
+      return;
+    }
+
+    lastTargetPingIdRef.current = selectedTarget.id;
+    S.rings = S.rings || [];
+    S.rings.push({
+      lon: selectedTarget.lon,
+      lat: selectedTarget.lat,
+      r: 2,
+      max: 90,
+      speed: 2.4,
+      alpha: 0.85,
+      type: 'sonar',
+    });
+    if (uiUpdateCallback) {
+      uiUpdateCallback();
+    }
+  }, [selectedTarget]);
 
   const handleAttack = useCallback(() => {
     AudioSys.playSFX('click');
@@ -7491,6 +7524,72 @@ export default function NoradVector() {
             <ConflictResolutionDialog />
           </div>
 
+          <div className="pointer-events-auto fixed bottom-24 right-6 z-40 w-80 max-h-[60vh]">
+            <div className="rounded border border-red-500/60 bg-black/85 backdrop-blur-sm shadow-lg shadow-red-500/20">
+              <div className="flex items-center justify-between border-b border-red-500/30 px-3 py-2">
+                <span className="text-[10px] font-mono uppercase tracking-[0.35em] text-red-200">Strike Planner</span>
+                <span
+                  className={`text-[10px] font-mono ${selectedTarget ? 'text-red-300' : 'text-cyan-300/70'}`}
+                >
+                  {selectedTarget ? 'LOCKED' : 'STANDBY'}
+                </span>
+              </div>
+              <div className="max-h-48 overflow-y-auto divide-y divide-red-500/10">
+                {attackableNations.length === 0 ? (
+                  <div className="px-3 py-4 text-[11px] text-cyan-200/70">
+                    No hostile launch solutions available.
+                  </div>
+                ) : (
+                  attackableNations.map(nation => {
+                    const isSelected = nation.id === selectedTargetId;
+                    const population = Math.max(0, Math.round(nation.population ?? 0));
+                    const defense = Math.max(0, Math.round(nation.defense ?? 0));
+                    const missiles = Math.max(0, Math.round(Number(nation.missiles ?? 0)));
+                    const instability = Math.max(0, Math.round(Number(nation.instability ?? 0)));
+
+                    return (
+                      <button
+                        key={nation.id}
+                        type="button"
+                        onClick={() => handleTargetSelect(nation.id)}
+                        className={`flex w-full items-center justify-between gap-3 border-l-2 px-3 py-2 text-left text-[11px] font-mono transition ${
+                          isSelected
+                            ? 'border-red-300/90 bg-red-500/20 text-red-100 shadow-inner'
+                            : 'border-transparent text-cyan-200 hover:border-red-400/70 hover:bg-red-500/10'
+                        }`}
+                      >
+                        <span className="flex-1">
+                          <span className="block text-[12px] uppercase tracking-[0.25em]">{nation.name}</span>
+                          <span className="block text-[10px] text-cyan-300/70">
+                            POP {population}M • DEF {defense} • MISS {missiles}
+                          </span>
+                        </span>
+                        <span className={`text-[10px] ${isSelected ? 'text-red-100' : 'text-red-200/80'}`}>
+                          INSTAB {instability}
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              <div className="border-t border-red-500/30 px-3 py-2 text-[11px] text-cyan-200/80">
+                {selectedTarget ? (
+                  <div className="space-y-1">
+                    <p>
+                      Locked on <span className="text-red-200">{selectedTarget.name}</span>. Population&nbsp;
+                      {Math.max(0, Math.round(selectedTarget.population ?? 0))}M, defense{' '}
+                      {Math.max(0, Math.round(selectedTarget.defense ?? 0))}, missile capacity{' '}
+                      {Math.max(0, Math.round(Number(selectedTarget.missiles ?? 0)))}.
+                    </p>
+                    <p className="text-cyan-300/70">Confirm launch with ATTACK once satisfied with this solution.</p>
+                  </div>
+                ) : (
+                  <p>Select a hostile nation to arm the ATTACK command.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Minimal bottom utility stack */}
           <div className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50">
             <div className="flex flex-col gap-1">
@@ -7624,7 +7723,7 @@ export default function NoradVector() {
                     variant="ghost"
                     size="icon"
                     className="h-12 w-12 sm:h-14 sm:w-14 text-red-400 hover:text-red-300 hover:bg-red-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                    title="ATTACK - Launch nuclear strike"
+                    title="ATTACK - Launch nuclear strike (select target in Strike Planner)"
                   >
                     <Zap className="h-5 w-5" />
                     <span className="text-[8px] font-mono">ATTACK</span>

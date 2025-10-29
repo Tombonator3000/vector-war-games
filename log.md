@@ -129,3 +129,5 @@
 | 2025-11-07T09:27:41Z | Exposed `applyGovernanceDelta` from `useGovernance`, updated flashpoint morale handling to call the hook, and added persistence test coverage. |
 | 2025-11-07T09:35:06Z | Refined `syncNationMetrics` to emit `onMetricsSync` updates inside the state setter and cleaned up regression test scaffolding. |
 | 2025-11-07T09:36:58Z | Ran `npx vitest run useGovernance` to confirm governance delta regression passes alongside existing coverage. |
+| 2025-10-29T16:55:26Z | Reviewed root `AGENTS.md` guidance and surveyed `src/pages/Index.tsx` command HUD to plan strike target picker integration. |
+| 2025-10-29T16:55:35Z | Implemented strike planner sidebar listing `attackableNations`, added selection map pings and summary copy, and updated the ATTACK tooltip to reference the picker. |
