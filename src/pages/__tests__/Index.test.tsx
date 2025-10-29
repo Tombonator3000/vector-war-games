@@ -202,7 +202,7 @@ import Index from '@/pages/Index';
 describe('Index co-op toggle', () => {
   beforeEach(() => {
     ensureActionMock.mockClear();
-    registerStateListenerMock.mockImplementation(() => () => {});
+    registerStateListenerMock.mockImplementation(() => vi.fn());
     publishStateMock.mockClear();
     canExecuteMock.mockReturnValue(true);
     window.localStorage.clear();

@@ -81,6 +81,7 @@ export interface ConventionalNationRef {
   conventional?: NationConventionalProfile;
   controlledTerritories?: string[];
   morale?: number;
+  researched?: Record<string, boolean>;
 }
 
 interface UseConventionalWarfareOptions {

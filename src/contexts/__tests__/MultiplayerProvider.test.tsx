@@ -134,7 +134,7 @@ vi.mock('@/integrations/multiplayer/service', () => {
       emitEvent: emitEventLocal,
       reset: resetLocal,
       instances: instancesLocal,
-    },
+    } as MockControls,
   };
 });
 
@@ -147,7 +147,7 @@ let controls: MockControls = {
 
 describe('MultiplayerProvider', () => {
   beforeAll(async () => {
-    const module = await import('@/integrations/multiplayer/service');
+    const module = await import('@/integrations/multiplayer/service') as any;
     controls = module.__mockControls as MockControls;
   });
 
