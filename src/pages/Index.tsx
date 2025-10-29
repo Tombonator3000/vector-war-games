@@ -6549,9 +6549,12 @@ export default function NoradVector() {
         cam.y = Math.min(Math.max(cam.y, minCamY), maxCamY);
       };
 
+      let endedDragButton: number | null = null;
+
       const handleMouseDown = (e: MouseEvent) => {
         if (e.button !== 0 && e.button !== 2) return;
         isDragging = true;
+        endedDragButton = null;
         dragButton = e.button;
         hasDragged = false;
         suppressSecondaryContextMenu = false;
@@ -6577,6 +6580,8 @@ export default function NoradVector() {
       };
 
       const handleMouseUp = () => {
+        if (isDragging && dragButton !== null) {
+          endedDragButton = dragButton;
         if (dragButton === 2 && hasDragged) {
           suppressSecondaryContextMenu = true;
         }
@@ -6824,6 +6829,9 @@ export default function NoradVector() {
       };
 
       const handleContextMenu = (e: MouseEvent) => {
+        if ((isDragging && dragButton === 2) || endedDragButton === 2) {
+          e.preventDefault();
+          endedDragButton = null;
         if (suppressSecondaryContextMenu) {
           e.preventDefault();
           suppressSecondaryContextMenu = false;
