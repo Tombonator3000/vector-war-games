@@ -151,3 +151,36 @@
 2025-10-29T18:20:40Z Reviewed root `AGENTS.md` guidance before adjusting the strike planner interaction flow.
 2025-10-29T18:20:52Z Added strike planner toggle state, gated `handleAttack`, and rendered a close control in `src/pages/Index.tsx`.
 2025-10-29T19:04:10Z Restored `showPandemicPanel` computation in `src/pages/Index.tsx` to re-enable conditional pandemic HUD rendering after BioWarfare integration refactor.
+
+---
+
+## Bio-Warfare Tech Tree Implementation (Priority #1) - Session 2025-10-29
+
+| 2025-10-29T20:00:00Z | Continued bio-warfare development session from context summary. Previous session had started Priority #1 (tech tree) but left integration incomplete. |
+| 2025-10-29T20:05:15Z | Completed `src/hooks/useBioWarfare.ts` integration - added construction turn advancement in `advanceBioWarfareTurn()`, exported lab facility state and actions. |
+| 2025-10-29T20:10:30Z | Updated `src/components/PlagueTypeSelector.tsx` to restrict plague types by lab tier - added `isPlagueTypeAvailable()` check, basic plagues require Tier 3, advanced plagues require Tier 4. |
+| 2025-10-29T20:15:45Z | Modified `src/components/BioWarfareLab.tsx` to display current lab tier, show warning screen if tier < 3, pass lab tier to PlagueTypeSelector component. |
+| 2025-10-29T20:20:00Z | Integrated lab construction into `src/pages/Index.tsx` - destructured lab state from `useBioWarfare()`, added lab construction dialog state and handlers. |
+| 2025-10-29T20:25:15Z | Added LAB button to main UI command panel next to BIO button - shows current tier, animates during construction, displays progress in tooltip. |
+| 2025-10-29T20:30:30Z | Wired `BioLabConstruction` component with construction options, resource checks, and action handlers in main game loop. |
+| 2025-10-29T20:35:45Z | Fixed import path for `getBioLabTierDefinition` in `BioWarfareLab.tsx` to use `src/types/bioLab.ts` instead of hook export. |
+| 2025-10-29T20:40:00Z | Staged all tech tree integration files for commit including new types, hooks, components, and main game integration. |
+| 2025-10-29T20:42:15Z | Committed tech tree system with message "feat: implement bio-lab tech tree system for bio-warfare" detailing 5-tier progression and gating mechanics. |
+| 2025-10-29T20:43:30Z | Pushed commit to branch `claude/game-overview-repository-011CUbvL474vHmBdJ8rnPKUE` successfully. |
+| 2025-10-29T20:45:00Z | Priority #1 (Tech Tree System) marked complete - all 6 implementation tasks finished, tested, committed, and pushed. |
+| 2025-10-29T20:48:00Z | Created comprehensive session log in `log.md` documenting entire Priority #1 implementation workflow. |
+
+---
+
+## Next: Priority #2 - Target Selection System
+
+**Objective**: Implement deployment target selection allowing players to choose specific nations to attack with bio-weapons.
+
+**Requirements**:
+- Target selection UI to choose nations
+- Deployment methods (covert, airport, simultaneous)
+- False flag operations
+- Per-country infection tracking
+- Transport route spread mechanics
+
+**Status**: Ready to begin implementation

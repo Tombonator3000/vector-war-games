@@ -39,6 +39,11 @@ const INITIAL_PLAGUE_STATE: PlagueState = {
     geneticHardening: 0,
   },
   countriesInfected: [],
+  deploymentHistory: [],
+  countryInfections: new Map(),
+  globalSuspicionLevel: 0,
+  nationsKnowingTruth: [],
+  attributionAttempts: 0,
   cureProgress: 0,
   cureActive: false,
 };

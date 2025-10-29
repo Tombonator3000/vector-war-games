@@ -3,6 +3,8 @@
  * Inspired by Plague Inc gameplay mechanics
  */
 
+import type { CountryInfectionState, DeploymentTarget } from './bioDeployment';
+
 // ============================================================================
 // PLAGUE TYPES
 // ============================================================================
@@ -161,8 +163,17 @@ export interface PlagueState {
     geneticHardening: number; // 0-3
   };
 
-  // Countries infected (will expand later)
+  // Countries infected (legacy, for backward compatibility)
   countriesInfected: string[];
+
+  // Deployment & Target Selection
+  deploymentHistory: DeploymentTarget[]; // All past and active deployments
+  countryInfections: Map<string, CountryInfectionState>; // Per-country detailed tracking
+
+  // Detection & Attribution
+  globalSuspicionLevel: number; // 0-100, how suspicious the world is
+  nationsKnowingTruth: string[]; // Nations that confirmed player as source
+  attributionAttempts: number; // Times nations tried to identify source
 
   // Cure progress
   cureProgress: number; // 0-100
@@ -199,4 +210,17 @@ export interface EvolveNodePayload {
 export interface DevolveNodePayload {
   nodeId: EvolutionNodeId;
   refund?: number; // DNA refund amount (usually 25% or 50%)
+}
+
+// ============================================================================
+// DEPLOYMENT ACTIONS
+// ============================================================================
+
+export interface DeployBioWeaponPayload {
+  targets: Array<{
+    nationId: string;
+    deploymentMethod: string; // DeploymentMethodId from bioDeployment
+    useFalseFlag: boolean;
+    falseFlagNationId?: string;
+  }>;
 }
