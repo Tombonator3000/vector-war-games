@@ -65,3 +65,4 @@
 | 2025-10-29T00:01:32Z | Ran `npm run test` to confirm audio preference persistence changes did not break existing tests. |
 | 2025-10-29T07:43:53+00:00 | Reviewed drag handling task instructions and repository guidelines. |
 | 2025-10-29T07:44:33+00:00 | Implemented canvas drag handling for both mouse buttons, tracked drag initiator, and suppressed context menu during right-drag pan. |
+| 2025-10-29T07:59:45Z | Patched right-drag suppression to persist through mouseup by tracking drag distance and deferring context menu reset. |
