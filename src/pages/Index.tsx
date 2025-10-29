@@ -6527,6 +6527,8 @@ export default function NoradVector() {
       // Setup mouse and touch controls
       let isDragging = false;
       let dragButton: number | null = null;
+      let hasDragged = false;
+      let suppressSecondaryContextMenu = false;
       let dragStart = { x: 0, y: 0 };
       let touching = false;
       let touchStart = { x: 0, y: 0 };
@@ -6554,6 +6556,8 @@ export default function NoradVector() {
         isDragging = true;
         endedDragButton = null;
         dragButton = e.button;
+        hasDragged = false;
+        suppressSecondaryContextMenu = false;
         dragStart = { x: e.clientX, y: e.clientY };
       };
 
@@ -6562,6 +6566,9 @@ export default function NoradVector() {
 
         const dx = e.clientX - dragStart.x;
         const dy = e.clientY - dragStart.y;
+        if (dx !== 0 || dy !== 0) {
+          hasDragged = true;
+        }
         dragStart = { x: e.clientX, y: e.clientY };
 
         const rotationFactor = 0.85;
@@ -6575,6 +6582,8 @@ export default function NoradVector() {
       const handleMouseUp = () => {
         if (isDragging && dragButton !== null) {
           endedDragButton = dragButton;
+        if (dragButton === 2 && hasDragged) {
+          suppressSecondaryContextMenu = true;
         }
         isDragging = false;
         dragButton = null;
@@ -6823,7 +6832,12 @@ export default function NoradVector() {
         if ((isDragging && dragButton === 2) || endedDragButton === 2) {
           e.preventDefault();
           endedDragButton = null;
+        if (suppressSecondaryContextMenu) {
+          e.preventDefault();
+          suppressSecondaryContextMenu = false;
+          return;
         }
+        suppressSecondaryContextMenu = false;
       };
 
       canvas.addEventListener('mousedown', handleMouseDown);

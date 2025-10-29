@@ -67,3 +67,4 @@
 | 2025-10-29T07:44:33+00:00 | Implemented canvas drag handling for both mouse buttons, tracked drag initiator, and suppressed context menu during right-drag pan. |
 | 2025-10-29T07:58:38+00:00 | Reviewed Codex follow-up instructions for right-button drag context menu suppression. |
 | 2025-10-29T07:58:48+00:00 | Persisted right-button drag state until contextmenu to suppress post-drag menu. |
+| 2025-10-29T07:59:45Z | Patched right-drag suppression to persist through mouseup by tracking drag distance and deferring context menu reset. |
