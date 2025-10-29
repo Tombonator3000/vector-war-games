@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FlaskConical, Biohazard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -29,6 +29,13 @@ export function BioWarfareLab({
   onDevolveNode,
 }: BioWarfareLabProps) {
   const [showPlagueSelector, setShowPlagueSelector] = useState(false);
+
+  // Auto-open plague selector when lab opens and no plague selected
+  useEffect(() => {
+    if (open && !plagueState.plagueStarted) {
+      setShowPlagueSelector(true);
+    }
+  }, [open, plagueState.plagueStarted]);
 
   if (!enabled) {
     return null;

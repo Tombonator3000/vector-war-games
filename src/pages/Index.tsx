@@ -6925,10 +6925,24 @@ export default function NoradVector() {
 
   const handleBioWarfareLabToggle = useCallback(async () => {
     if (!bioWarfareAvailable) {
+      // Auto-enable settings if both are disabled
+      if (!pandemicIntegrationEnabled) {
+        setPandemicIntegrationEnabled(true);
+      }
+      if (!bioWarfareEnabled) {
+        setBioWarfareEnabled(true);
+      }
+
       toast({
-        title: 'BioForge offline',
-        description: 'Enable pandemic integration and bio-weapon ops in options to access the lab.'
+        title: 'BioForge Initialized',
+        description: 'Pandemic integration and bio-weapon systems activated. Opening lab...',
+        duration: 2000,
       });
+
+      // Open lab after short delay to show the toast
+      setTimeout(() => {
+        setIsBioWarfareOpen(true);
+      }, 500);
       return;
     }
 
@@ -6941,7 +6955,7 @@ export default function NoradVector() {
     if (!approved) return;
     AudioSys.playSFX('click');
     setIsBioWarfareOpen(true);
-  }, [bioWarfareAvailable, isBioWarfareOpen, requestApproval]);
+  }, [bioWarfareAvailable, isBioWarfareOpen, requestApproval, pandemicIntegrationEnabled, bioWarfareEnabled]);
 
 
   const handleCulture = useCallback(async () => {
