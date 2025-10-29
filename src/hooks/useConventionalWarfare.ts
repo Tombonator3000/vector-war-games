@@ -19,6 +19,7 @@ export interface ConventionalUnitTemplate {
   support: number;
   cost: ResourceCost;
   readinessImpact: number;
+  requiresResearch?: string;
 }
 
 export interface ConventionalUnitState {
@@ -102,6 +103,7 @@ const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
     support: 2,
     cost: { production: 12 },
     readinessImpact: 6,
+    requiresResearch: 'conventional_armored_doctrine',
   },
   {
     id: 'carrier_fleet',
@@ -113,6 +115,7 @@ const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
     support: 3,
     cost: { production: 16, uranium: 2 },
     readinessImpact: 8,
+    requiresResearch: 'conventional_carrier_battlegroups',
   },
   {
     id: 'air_wing',
@@ -124,6 +127,7 @@ const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
     support: 3,
     cost: { production: 14, intel: 4 },
     readinessImpact: 7,
+    requiresResearch: 'conventional_expeditionary_airframes',
   },
 ];
 
@@ -449,12 +453,26 @@ export function useConventionalWarfare({
       if (!template) {
         return { success: false, reason: 'Unknown unit template' } as const;
       }
+
+      const nation = getNation(nationId);
+      if (!nation) {
+        return { success: false, reason: 'Unknown nation' } as const;
+      }
+
+      if (template.requiresResearch && !nation.researched?.[template.requiresResearch]) {
+        return {
+          success: false,
+          reason: 'Requires research unlock',
+          requiresResearchId: template.requiresResearch,
+        } as const;
+      }
+
       if (!spendResources(nationId, template.cost)) {
         return { success: false, reason: 'Insufficient resources' } as const;
       }
 
-      const moraleModifier = calculateMoraleRecruitmentModifier(getNation(nationId)?.morale ?? 50);
-      const profile = getNation(nationId)?.conventional ?? createDefaultNationConventionalProfile();
+      const moraleModifier = calculateMoraleRecruitmentModifier(nation.morale ?? 50);
+      const profile = nation.conventional ?? createDefaultNationConventionalProfile();
       const readinessGain = Math.max(1, Math.round(5 * moraleModifier));
       const unitId = `${nationId}_${templateId}_${Date.now().toString(36)}`;
 
@@ -475,15 +493,12 @@ export function useConventionalWarfare({
         },
       }));
 
-      const nation = getNation(nationId);
-      if (nation) {
-        const nationProfile = nation.conventional ?? createDefaultNationConventionalProfile(profile.focus);
-        nation.conventional = {
-          ...nationProfile,
-          reserve: nationProfile.reserve + 1,
-          readiness: clamp(nationProfile.readiness + readinessGain * 0.5, 10, 100),
-        };
-      }
+      const nationProfile = nation.conventional ?? createDefaultNationConventionalProfile(profile.focus);
+      nation.conventional = {
+        ...nationProfile,
+        reserve: nationProfile.reserve + 1,
+        readiness: clamp(nationProfile.readiness + readinessGain * 0.5, 10, 100),
+      };
 
       onUpdateDisplay?.();
       onConsumeAction?.();

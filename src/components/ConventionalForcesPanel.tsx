@@ -14,6 +14,7 @@ interface ConventionalForcesPanelProps {
   profile: NationConventionalProfile;
   onTrain: (templateId: string) => void;
   onDeploy: (unitId: string, territoryId: string) => void;
+  researchUnlocks?: Record<string, boolean>;
 }
 
 export function ConventionalForcesPanel({
@@ -23,6 +24,7 @@ export function ConventionalForcesPanel({
   profile,
   onTrain,
   onDeploy,
+  researchUnlocks,
 }: ConventionalForcesPanelProps) {
   const [deploymentChoices, setDeploymentChoices] = useState<Record<string, string>>({});
 
@@ -56,44 +58,53 @@ export function ConventionalForcesPanel({
         </header>
 
         <div className="grid gap-3 md:grid-cols-3">
-          {templates.map(template => (
-            <div
-              key={template.id}
-              className="rounded border border-cyan-500/30 bg-black/60 p-3 transition hover:border-cyan-300/60"
-            >
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-cyan-200">{template.name}</h4>
-                <span className="rounded bg-cyan-500/20 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide text-cyan-300">
-                  {template.type}
-                </span>
-              </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-cyan-300/80">{template.description}</p>
-              <dl className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] font-mono text-cyan-300/90">
-                <div>
-                  <dt className="uppercase tracking-widest text-cyan-400/90">Attack</dt>
-                  <dd>{template.attack}</dd>
-                </div>
-                <div>
-                  <dt className="uppercase tracking-widest text-cyan-400/90">Defense</dt>
-                  <dd>{template.defense}</dd>
-                </div>
-                <div>
-                  <dt className="uppercase tracking-widest text-cyan-400/90">Support</dt>
-                  <dd>{template.support}</dd>
-                </div>
-                <div>
-                  <dt className="uppercase tracking-widest text-cyan-400/90">Readiness</dt>
-                  <dd>-{template.readinessImpact}</dd>
-                </div>
-              </dl>
-              <Button
-                onClick={() => onTrain(template.id)}
-                className="mt-4 w-full bg-cyan-500 text-black hover:bg-cyan-400"
+          {templates.map(template => {
+            const unlocked = !template.requiresResearch || !!researchUnlocks?.[template.requiresResearch];
+            return (
+              <div
+                key={template.id}
+                className="rounded border border-cyan-500/30 bg-black/60 p-3 transition hover:border-cyan-300/60"
               >
-                Queue {template.type.toUpperCase()}
-              </Button>
-            </div>
-          ))}
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-cyan-200">{template.name}</h4>
+                  <span className="rounded bg-cyan-500/20 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide text-cyan-300">
+                    {template.type}
+                  </span>
+                </div>
+                <p className="mt-2 text-[11px] leading-relaxed text-cyan-300/80">{template.description}</p>
+                <dl className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] font-mono text-cyan-300/90">
+                  <div>
+                    <dt className="uppercase tracking-widest text-cyan-400/90">Attack</dt>
+                    <dd>{template.attack}</dd>
+                  </div>
+                  <div>
+                    <dt className="uppercase tracking-widest text-cyan-400/90">Defense</dt>
+                    <dd>{template.defense}</dd>
+                  </div>
+                  <div>
+                    <dt className="uppercase tracking-widest text-cyan-400/90">Support</dt>
+                    <dd>{template.support}</dd>
+                  </div>
+                  <div>
+                    <dt className="uppercase tracking-widest text-cyan-400/90">Readiness</dt>
+                    <dd>-{template.readinessImpact}</dd>
+                  </div>
+                </dl>
+                {template.requiresResearch && !unlocked && (
+                  <p className="mt-2 text-[10px] font-mono uppercase tracking-[0.3em] text-amber-300/80">
+                    Requires {template.requiresResearch.replace(/_/g, ' ').toUpperCase()}
+                  </p>
+                )}
+                <Button
+                  onClick={() => onTrain(template.id)}
+                  className="mt-4 w-full bg-cyan-500 text-black hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-cyan-500/30 disabled:text-cyan-200/50"
+                  disabled={!unlocked}
+                >
+                  Queue {template.type.toUpperCase()}
+                </Button>
+              </div>
+            );
+          })}
         </div>
       </section>
 

@@ -38,6 +38,8 @@
 | 2025-10-28T15:55:14Z | Reviewed AGENTS instructions and scoped governance threshold update task. |
 | 2025-10-28T15:57:23Z | Updated political event conditions to include threshold key typing and stress requirements for election cycle. |
 | 2025-10-28T15:58:43Z | Refactored governance hook condition evaluation and event targeting to honor new threshold semantics and election auto-resolution. |
+| 2025-10-29T09:43:14Z | Added conventional research unlock projects, unit template prerequisites, and gating feedback across Index and warfare systems. |
+| 2025-10-29T09:43:17Z | Executed `npm run test` and `npm run test -- --run` to validate new gating coverage, updating multiplayer mocks to satisfy suites. |
 | 2025-10-28T15:59:01Z | Extended governance tests for election stress gating and quiet auto-resolution. |
 | 2025-10-28T16:00:33Z | Refined governance auto-resolution test assertions to monitor hook metrics state. |
 | 2025-10-28T16:00:47Z | Ran `npm run test -- useGovernance` to verify updated election gating behavior. |

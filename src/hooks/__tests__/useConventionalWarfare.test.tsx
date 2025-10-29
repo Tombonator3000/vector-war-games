@@ -21,6 +21,7 @@ interface MockNation {
   controlledTerritories: string[];
   intel?: number;
   uranium?: number;
+  researched?: Record<string, boolean>;
 }
 
 describe('useConventionalWarfare', () => {
@@ -40,6 +41,7 @@ describe('useConventionalWarfare', () => {
       controlledTerritories: [],
       intel: 20,
       uranium: 10,
+      researched: {},
     };
     rival = {
       id: 'ai_0',
@@ -50,6 +52,7 @@ describe('useConventionalWarfare', () => {
       controlledTerritories: [],
       intel: 15,
       uranium: 8,
+      researched: {},
     };
     latestState = createDefaultConventionalState([
       { id: player.id, isPlayer: true },
@@ -139,6 +142,43 @@ describe('useConventionalWarfare', () => {
     expect(consumeSpy).toHaveBeenCalled();
     expect(updateSpy).toHaveBeenCalled();
   });
+
+  it('requires prerequisite research before training advanced formations', () => {
+    const { result } = renderHook(() =>
+      useConventionalWarfare({
+        initialState: latestState,
+        currentTurn: 5,
+        getNation,
+        onStateChange: state => {
+          latestState = state;
+        },
+        onConsumeAction: consumeSpy,
+        onUpdateDisplay: updateSpy,
+      }),
+    );
+
+    let response;
+    act(() => {
+      response = result.current.trainUnit(player.id, 'air_wing');
+    });
+
+    expect(response.success).toBe(false);
+    expect(response.reason).toBe('Requires research unlock');
+    expect('requiresResearchId' in response ? response.requiresResearchId : undefined).toBe(
+      'conventional_expeditionary_airframes',
+    );
+    expect(player.production).toBe(50);
+
+    player.researched = { conventional_expeditionary_airframes: true };
+
+    act(() => {
+      response = result.current.trainUnit(player.id, 'air_wing');
+    });
+
+    expect(response.success).toBe(true);
+    expect(consumeSpy).toHaveBeenCalled();
+    expect(updateSpy).toHaveBeenCalled();
+  });
 });
 
 describe('Conventional warfare panels', () => {
@@ -164,11 +204,42 @@ describe('Conventional warfare panels', () => {
         profile={{ readiness: 80, reserve: 1, focus: 'army', deployedUnits: [] }}
         onTrain={handleTrain}
         onDeploy={vi.fn()}
+        researchUnlocks={{ conventional_armored_doctrine: true }}
       />,
     );
 
     fireEvent.click(screen.getByText(/Queue/i));
     expect(handleTrain).toHaveBeenCalledWith('armored_corps');
+  });
+
+  it('disables queue buttons when research prerequisites are unmet', () => {
+    const handleTrain = vi.fn();
+    render(
+      <ConventionalForcesPanel
+        templates={[
+          {
+            id: 'carrier_fleet',
+            type: 'navy',
+            name: 'Carrier Strike Group',
+            description: 'Carrier task force',
+            attack: 6,
+            defense: 8,
+            support: 3,
+            cost: { production: 16 },
+            readinessImpact: 8,
+            requiresResearch: 'conventional_carrier_battlegroups',
+          },
+        ]}
+        units={[]}
+        territories={[]}
+        profile={{ readiness: 70, reserve: 1, focus: 'navy', deployedUnits: [] }}
+        onTrain={handleTrain}
+        onDeploy={vi.fn()}
+        researchUnlocks={{}}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /Queue NAVY/i }).hasAttribute('disabled')).toBe(true);
   });
 
   it('invokes engagement callbacks from the territory panel', () => {

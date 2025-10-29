@@ -146,6 +146,11 @@ let controls: MockControls = {
 };
 
 describe('MultiplayerProvider', () => {
+  beforeAll(async () => {
+    const module = await import('@/integrations/multiplayer/service');
+    controls = module.__mockControls as MockControls;
+  });
+
   beforeEach(() => {
     controls.reset();
   });
