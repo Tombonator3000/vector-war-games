@@ -110,3 +110,5 @@
 | 2025-10-29T13:18:41Z | Replaced canvas mouse listeners with pointer events in `src/pages/Index.tsx`, added pointer capture handling, and updated cleanup for reliable drag release detection. |
 | 2025-10-29T13:26:57Z | Extended map style options with a flat-realistic texture mode, cached the earth texture for reuse, and aligned GlobeScene flat handling. |
 | 2025-10-29T13:27:02Z | Ran `npm run build` to confirm the new textured flat map renders without TypeScript or bundler issues. |
+| 2025-10-29T13:45:17Z | Recomputed flat-realistic texture URL resolution in `src/pages/Index.tsx` to avoid invalid `new URL` base usage during module evaluation. |
+| 2025-10-29T13:45:17Z | Executed `npm run build` to verify the flat texture URL fix compiles successfully. |
