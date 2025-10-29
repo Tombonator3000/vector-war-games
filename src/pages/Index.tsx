@@ -2,11 +2,13 @@ import { useEffect, useRef, useState, useCallback, useMemo, ReactNode, ChangeEve
 import { useNavigate } from 'react-router-dom';
 import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
@@ -146,6 +148,14 @@ type LayoutDensityOption = {
   label: string;
   description: string;
 };
+
+type DeliveryMethod = 'missile' | 'bomber' | 'submarine';
+
+interface PendingLaunchState {
+  target: Nation;
+  warheads: { yield: number; count: number; requiredDefcon: 1 | 2 }[];
+  deliveryOptions: { id: DeliveryMethod; label: string; count: number }[];
+}
 
 const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }[] = [
   { value: 'realistic', label: 'Realistic', description: 'Satellite imagery with terrain overlays.' },
@@ -4289,6 +4299,9 @@ export default function NoradVector() {
   const [modalContent, setModalContent] = useState<{ title: string; content: ModalContentValue }>({ title: '', content: '' });
   const [selectedLeader, setSelectedLeader] = useState<string | null>(null);
   const [selectedDoctrine, setSelectedDoctrine] = useState<string | null>(null);
+  const [pendingLaunch, setPendingLaunch] = useState<PendingLaunchState | null>(null);
+  const [selectedWarheadYield, setSelectedWarheadYield] = useState<number | null>(null);
+  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<DeliveryMethod | null>(null);
   const [theme, setTheme] = useState<ThemeId>('synthwave');
   const [layoutDensity, setLayoutDensity] = useState<LayoutDensity>(() => {
     const stored = Storage.getItem('layout_density');
@@ -5170,6 +5183,10 @@ export default function NoradVector() {
         if (!researchId) return true;
         return !!player.researched?.[researchId];
       })
+      .map(entry => ({
+        ...entry,
+        requiredDefcon: (entry.yield > 50 ? 1 : 2) as 1 | 2,
+      }))
       .sort((a, b) => b.yield - a.yield);
 
     if (warheadEntries.length === 0) {
@@ -5177,13 +5194,10 @@ export default function NoradVector() {
       return;
     }
 
-    const availableWarhead = warheadEntries.find(entry => {
-      const requiredDefcon = entry.yield > 50 ? 1 : 2;
-      return S.defcon <= requiredDefcon;
-    });
+    const deliverableWarheads = warheadEntries.filter(entry => S.defcon <= entry.requiredDefcon);
 
-    if (!availableWarhead) {
-      const minDefcon = Math.min(...warheadEntries.map(entry => (entry.yield > 50 ? 1 : 2)));
+    if (deliverableWarheads.length === 0) {
+      const minDefcon = Math.min(...warheadEntries.map(entry => entry.requiredDefcon));
       toast({
         title: 'DEFCON restriction',
         description: `Lower DEFCON to ${minDefcon} or less to deploy available warheads.`,
@@ -5191,69 +5205,114 @@ export default function NoradVector() {
       return;
     }
 
-    const yieldMT = availableWarhead.yield;
     const missileCount = player.missiles || 0;
     const bomberCount = player.bombers || 0;
     const submarineCount = player.submarines || 0;
 
-    let delivery: 'missile' | 'bomber' | 'submarine' | null = null;
-    if (missileCount > 0) delivery = 'missile';
-    else if (bomberCount > 0) delivery = 'bomber';
-    else if (submarineCount > 0) delivery = 'submarine';
-
-    if (!delivery) {
+    if (missileCount <= 0 && bomberCount <= 0 && submarineCount <= 0) {
       toast({ title: 'No launch platforms', description: 'Construct missiles, bombers, or submarines before attacking.' });
       return;
     }
 
-    const requirement = yieldMT > 50 ? 1 : 2;
-    const deliveryLabel = delivery === 'missile' ? 'ICBM' : delivery === 'bomber' ? 'Strategic Bomber' : 'Ballistic Submarine';
-    const confirmMessage = [
-      'AUTHORIZE NUCLEAR LAUNCH?',
-      '',
-      `Target: ${target.name}`,
-      `Population Estimate: ${Math.floor(target.population)}M`,
-      `Warhead Yield: ${yieldMT}MT`,
-      `Delivery System: ${deliveryLabel}`,
-      `Current DEFCON: ${S.defcon} (requires ≤ ${requirement})`,
-      '',
-      `Missiles Ready: ${missileCount}`,
-      `Bombers Ready: ${bomberCount}`,
-      `Submarines Ready: ${submarineCount}`,
-      '',
-      'Proceed with launch order?'
-    ].join('\n');
+    const deliveryOptions: PendingLaunchState['deliveryOptions'] = [
+      { id: 'missile', label: 'ICBM', count: missileCount },
+      { id: 'bomber', label: 'Strategic Bomber', count: bomberCount },
+      { id: 'submarine', label: 'Ballistic Submarine', count: submarineCount },
+    ];
 
-    if (!window.confirm(confirmMessage)) {
+    setPendingLaunch({
+      target,
+      warheads: deliverableWarheads,
+      deliveryOptions,
+    });
+    setSelectedWarheadYield(deliverableWarheads[0]?.yield ?? null);
+    const defaultDelivery = deliveryOptions.find(option => option.count > 0)?.id ?? null;
+    setSelectedDeliveryMethod(defaultDelivery);
+  }, [isGameStarted, selectedTargetId]);
+
+  const resetLaunchControl = useCallback(() => {
+    setPendingLaunch(null);
+    setSelectedWarheadYield(null);
+    setSelectedDeliveryMethod(null);
+  }, []);
+
+  const confirmPendingLaunch = useCallback(() => {
+    if (!pendingLaunch || selectedWarheadYield === null || !selectedDeliveryMethod) {
+      return;
+    }
+
+    const player = PlayerManager.get();
+    if (!player) {
+      resetLaunchControl();
+      return;
+    }
+
+    const selectedWarhead = pendingLaunch.warheads.find(warhead => warhead.yield === selectedWarheadYield);
+    if (!selectedWarhead) {
+      toast({ title: 'Warhead unavailable', description: 'Select a valid warhead yield before launching.' });
+      return;
+    }
+
+    if (S.defcon > selectedWarhead.requiredDefcon) {
+      toast({
+        title: 'DEFCON restriction',
+        description: `Lower DEFCON to ${selectedWarhead.requiredDefcon} or less to deploy a ${selectedWarheadYield}MT warhead.`,
+      });
+      return;
+    }
+
+    const availableWarheads = player.warheads?.[selectedWarheadYield] ?? 0;
+    if (availableWarheads <= 0) {
+      toast({ title: 'Warhead unavailable', description: 'Selected warhead is no longer ready for launch.' });
+      resetLaunchControl();
+      return;
+    }
+
+    const missileCount = player.missiles || 0;
+    const bomberCount = player.bombers || 0;
+    const submarineCount = player.submarines || 0;
+
+    if (selectedDeliveryMethod === 'missile' && missileCount <= 0) {
+      toast({ title: 'No ICBMs ready', description: 'Select another delivery platform or build additional missiles.' });
+      return;
+    }
+
+    if (selectedDeliveryMethod === 'bomber' && bomberCount <= 0) {
+      toast({ title: 'No bombers ready', description: 'Select another delivery platform or build additional bombers.' });
+      return;
+    }
+
+    if (selectedDeliveryMethod === 'submarine' && submarineCount <= 0) {
+      toast({ title: 'No submarines ready', description: 'Select another delivery platform or build additional submarines.' });
       return;
     }
 
     let launchSucceeded = false;
 
-    if (delivery === 'missile') {
-      launchSucceeded = launch(player, target, yieldMT);
+    if (selectedDeliveryMethod === 'missile') {
+      launchSucceeded = launch(player, pendingLaunch.target, selectedWarheadYield);
     } else {
       player.warheads = player.warheads || {};
-      const remaining = (player.warheads[yieldMT] || 0) - 1;
+      const remaining = (player.warheads[selectedWarheadYield] || 0) - 1;
       if (remaining <= 0) {
-        delete player.warheads[yieldMT];
+        delete player.warheads[selectedWarheadYield];
       } else {
-        player.warheads[yieldMT] = remaining;
+        player.warheads[selectedWarheadYield] = remaining;
       }
 
-      if (delivery === 'bomber') {
-        player.bombers = Math.max(0, (player.bombers || 0) - 1);
-        launchSucceeded = launchBomber(player, target, { yield: yieldMT });
+      if (selectedDeliveryMethod === 'bomber') {
+        player.bombers = Math.max(0, bomberCount - 1);
+        launchSucceeded = launchBomber(player, pendingLaunch.target, { yield: selectedWarheadYield });
         if (launchSucceeded) {
-          log(`${player.name} dispatches bomber strike (${yieldMT}MT) toward ${target.name}`);
+          log(`${player.name} dispatches bomber strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
           DoomsdayClock.tick(0.3);
           AudioSys.playSFX('launch');
         }
-      } else if (delivery === 'submarine') {
-        player.submarines = Math.max(0, (player.submarines || 0) - 1);
-        launchSucceeded = launchSubmarine(player, target, yieldMT);
+      } else if (selectedDeliveryMethod === 'submarine') {
+        player.submarines = Math.max(0, submarineCount - 1);
+        launchSucceeded = launchSubmarine(player, pendingLaunch.target, selectedWarheadYield);
         if (launchSucceeded) {
-          log(`${player.name} launches submarine strike (${yieldMT}MT) toward ${target.name}`);
+          log(`${player.name} launches submarine strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
           DoomsdayClock.tick(0.3);
         }
       }
@@ -5261,8 +5320,9 @@ export default function NoradVector() {
 
     if (launchSucceeded) {
       consumeAction();
+      resetLaunchControl();
     }
-  }, [isGameStarted, selectedTargetId]);
+  }, [pendingLaunch, resetLaunchControl, selectedDeliveryMethod, selectedWarheadYield]);
 
   const startGame = useCallback((leaderOverride?: string, doctrineOverride?: string) => {
     const leaderToUse = leaderOverride ?? selectedLeader;
@@ -8001,6 +8061,123 @@ export default function NoradVector() {
           updateDisplay();
         }}
       />
+
+      <Dialog open={Boolean(pendingLaunch)} onOpenChange={(open) => { if (!open) resetLaunchControl(); }}>
+        <DialogContent className="max-w-2xl border border-cyan-500 bg-black text-cyan-100">
+          <DialogHeader>
+            <DialogTitle className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300">Launch Control</DialogTitle>
+            <DialogDescription className="text-cyan-200/70">
+              Confirm strategic strike parameters before authorizing launch.
+            </DialogDescription>
+          </DialogHeader>
+          {pendingLaunch && (
+            <div className="space-y-6">
+              <div className="rounded border border-cyan-500/40 bg-cyan-950/20 p-4 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs uppercase tracking-[0.3em] text-cyan-400">Target</span>
+                  <span className="text-base font-semibold text-cyan-100">{pendingLaunch.target.name}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-cyan-200/80 sm:grid-cols-2 sm:text-sm">
+                  <div>Population Estimate: {Math.floor(pendingLaunch.target.population)}M</div>
+                  <div>Current DEFCON: {S.defcon}</div>
+                  <div>Actions Remaining: {S.actionsRemaining}</div>
+                  <div>Radiation Index: {Math.max(0, Math.round((S.globalRadiation || 0) * 10) / 10)}</div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">Warhead Yield</p>
+                <RadioGroup
+                  value={selectedWarheadYield !== null ? String(selectedWarheadYield) : undefined}
+                  onValueChange={(value) => setSelectedWarheadYield(Number(value))}
+                  className="space-y-3"
+                >
+                  {pendingLaunch.warheads.map(warhead => {
+                    const optionId = `warhead-${warhead.yield}`;
+                    const disabled = warhead.count <= 0 || S.defcon > warhead.requiredDefcon;
+                    return (
+                      <div
+                        key={warhead.yield}
+                        className={`flex items-start gap-3 rounded border border-cyan-500/40 bg-cyan-950/10 p-3 ${disabled ? 'opacity-50' : ''}`}
+                      >
+                        <RadioGroupItem
+                          value={String(warhead.yield)}
+                          id={optionId}
+                          disabled={disabled}
+                          className="mt-1 border-cyan-400 data-[state=checked]:border-cyan-200 data-[state=checked]:bg-cyan-400"
+                        />
+                        <Label htmlFor={optionId} className="flex-1 cursor-pointer text-sm text-cyan-100">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold">{warhead.yield}MT Payload</span>
+                            <span className="text-xs uppercase tracking-[0.25em] text-cyan-300">Stock: {warhead.count}</span>
+                          </div>
+                          <div className="mt-1 text-xs text-cyan-300/80">Requires DEFCON ≤ {warhead.requiredDefcon}</div>
+                        </Label>
+                      </div>
+                    );
+                  })}
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">Delivery Platform</p>
+                <RadioGroup
+                  value={selectedDeliveryMethod ?? undefined}
+                  onValueChange={(value) => setSelectedDeliveryMethod(value as DeliveryMethod)}
+                  className="space-y-3"
+                >
+                  {pendingLaunch.deliveryOptions.map(option => {
+                    const optionId = `delivery-${option.id}`;
+                    const disabled = option.count <= 0;
+                    return (
+                      <div
+                        key={option.id}
+                        className={`flex items-start gap-3 rounded border border-cyan-500/40 bg-cyan-950/10 p-3 ${disabled ? 'opacity-50' : ''}`}
+                      >
+                        <RadioGroupItem
+                          value={option.id}
+                          id={optionId}
+                          disabled={disabled}
+                          className="mt-1 border-cyan-400 data-[state=checked]:border-cyan-200 data-[state=checked]:bg-cyan-400"
+                        />
+                        <Label htmlFor={optionId} className="flex-1 cursor-pointer text-sm text-cyan-100">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold">{option.label}</span>
+                            <span className="text-xs uppercase tracking-[0.25em] text-cyan-300">Ready: {option.count}</span>
+                          </div>
+                          <div className="mt-1 text-xs text-cyan-300/80">
+                            {option.id === 'missile'
+                              ? 'High-speed ICBM launch with MIRV capability.'
+                              : option.id === 'bomber'
+                                ? 'Crewed bomber sortie risking enemy air defenses.'
+                                : 'Stealth launch from submerged ballistic submarine.'}
+                          </div>
+                        </Label>
+                      </div>
+                    );
+                  })}
+                </RadioGroup>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="mt-6 gap-3">
+            <Button
+              variant="outline"
+              onClick={resetLaunchControl}
+              className="border-cyan-500 text-cyan-200 hover:bg-cyan-500/10 hover:text-cyan-100"
+            >
+              Abort
+            </Button>
+            <Button
+              onClick={confirmPendingLaunch}
+              disabled={!pendingLaunch || selectedWarheadYield === null || !selectedDeliveryMethod}
+              className="bg-cyan-500 text-black hover:bg-cyan-400 disabled:opacity-50"
+            >
+              Confirm Launch
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="bg-black border border-cyan-500 text-cyan-500 max-w-2xl">
