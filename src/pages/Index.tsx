@@ -4703,7 +4703,7 @@ export default function NoradVector() {
     if (stored === 'true' || stored === 'false') {
       return stored === 'true';
     }
-    return true;
+    return false;
   });
   const [activeTrackId, setActiveTrackId] = useState<MusicTrackId | null>(AudioSys.getCurrentTrack());
   useEffect(() => {
