@@ -178,6 +178,11 @@ export interface PlagueState {
   // Cure progress
   cureProgress: number; // 0-100
   cureActive: boolean;
+
+  // Plague completion tracking
+  completedPlagues: string[]; // IDs of plagues that have met completion criteria
+  totalKills: number; // Cumulative kills across all game
+  maxInfectionReached: number; // Highest global infection % reached
 }
 
 // ============================================================================

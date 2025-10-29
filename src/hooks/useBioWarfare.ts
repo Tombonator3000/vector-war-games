@@ -195,6 +195,14 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
       });
     }
 
+    // Check plague completion and unlock next types
+    if (enhancedEffect.populationLoss && enhancedEffect.populationLoss > 0) {
+      evolution.checkPlagueCompletion(
+        pandemic.pandemicState.globalInfection,
+        enhancedEffect.populationLoss
+      );
+    }
+
     // Update cure progress (slowed by evolution)
     let cureIncrease = 1.5 * modifiers.cureSpeedMultiplier;
 
@@ -213,10 +221,47 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
 
     evolution.updateCureProgress(cureIncrease);
 
-    // Check if cure completed
-    if (evolution.plagueState.cureProgress >= 100) {
+    // Check if cure completed and activate cure deployment
+    if (evolution.plagueState.cureProgress >= 100 && !evolution.plagueState.cureActive) {
       addNewsItem('crisis', 'CURE DEPLOYED - Pathogen neutralization in progress', 'critical');
-      // TODO: Trigger cure deployment effects
+    }
+
+    // Apply cure deployment effects if active
+    if (evolution.plagueState.cureActive) {
+      // Calculate cure effectiveness based on lab tier and research
+      const labTier = bioLab.bioLabState.currentTier;
+      const cureEffectiveness = (labTier * 15) + (evolution.plagueState.cureProgress - 100) * 0.5;
+
+      // Cure reduces global infection rate
+      const cureInfectionReduction = Math.min(8, cureEffectiveness * 0.08); // Max 8% reduction per turn
+
+      // Cure reduces lethality
+      const cureLethalityReduction = Math.min(0.05, cureEffectiveness * 0.005); // Max 5% reduction
+
+      // Apply cure effects to pandemic state via containment boost
+      // This integrates with existing pandemic mechanics
+      pandemic.applyCountermeasure({
+        type: 'vaccine',
+        value: cureInfectionReduction,
+        label: `Cure deployment reducing infection by ${cureInfectionReduction.toFixed(1)}%`
+      });
+
+      // Enhanced effect with cure benefits
+      enhancedEffect.productionPenalty = Math.max(0, (enhancedEffect.productionPenalty || 0) - Math.floor(cureEffectiveness * 0.1));
+      enhancedEffect.instabilityIncrease = Math.max(0, (enhancedEffect.instabilityIncrease || 0) - Math.floor(cureEffectiveness * 0.05));
+
+      // Reduce population loss from cure
+      enhancedEffect.populationLoss = Math.max(0, Math.floor((enhancedEffect.populationLoss || 0) * (1 - cureLethalityReduction)));
+
+      // News update every 5 turns
+      if (context.turn % 5 === 0) {
+        const infectionLevel = pandemic.pandemicState.globalInfection;
+        if (infectionLevel < 20) {
+          addNewsItem('science', 'Cure nearly eradicated pathogen - final containment protocols active', 'important');
+        } else if (infectionLevel < 50) {
+          addNewsItem('science', `Cure deployment effective - infection declining to ${infectionLevel.toFixed(1)}%`, 'important');
+        }
+      }
     }
 
     return enhancedEffect;
