@@ -231,3 +231,6 @@
 2025-10-29T21:22:30Z Removed duplicate showPandemicPanel declaration to align with restored memoized pandemic panel gating logic.
 2025-10-29T21:23:35Z Restored usePandemic import in Index.tsx to satisfy runtime hook usage after module refactors.
 2025-10-29T21:24:15Z Re-ran npm run test -- --run; Vitest surfaced additional ReferenceError for playerNationId within Index.tsx during mocked rendering.
+2025-10-29T21:50:58Z Reviewed Codex follow-up request detailing CommonJS require usage in src/lib/aiBioWarfareIntegration.ts.
+2025-10-29T21:51:06Z Re-read repository AGENTS.md to confirm TypeScript import conventions for library modules.
+2025-10-29T21:51:10Z Replaced CommonJS require lookups in src/lib/aiBioWarfareIntegration.ts with ESM imports for BIO_LAB_TIERS and ALL_EVOLUTION_NODES.
