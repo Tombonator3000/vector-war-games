@@ -112,3 +112,5 @@
 | 2025-10-29T13:18:41Z | Replaced canvas mouse listeners with pointer events in `src/pages/Index.tsx`, added pointer capture handling, and updated cleanup for reliable drag release detection. |
 | 2025-10-29T13:26:57Z | Extended map style options with a flat-realistic texture mode, cached the earth texture for reuse, and aligned GlobeScene flat handling. |
 | 2025-10-29T13:27:02Z | Ran `npm run build` to confirm the new textured flat map renders without TypeScript or bundler issues. |
+| 2025-10-29T14:29:45+00:00 | Reviewed Supabase client fallback regression noted in Codex review and planned guard updates for import.meta env handling. |
+| 2025-10-29T14:29:53+00:00 | Updated Supabase client env guard to safely default when import.meta.env is missing in SSR contexts. |
