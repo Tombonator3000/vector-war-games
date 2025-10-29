@@ -79,6 +79,7 @@ export interface ConventionalNationRef {
   instability?: number;
   conventional?: NationConventionalProfile;
   controlledTerritories?: string[];
+  morale?: number;
 }
 
 interface UseConventionalWarfareOptions {

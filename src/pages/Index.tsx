@@ -34,7 +34,7 @@ import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { GameHelper } from '@/components/GameHelper';
 import { useMultiplayer } from '@/contexts/MultiplayerProvider';
-import type { GameState, Nation, ConventionalWarfareDelta, NationCyberProfile } from '@/types/game';
+import type { Nation, ConventionalWarfareDelta, NationCyberProfile } from '@/types/game';
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
 import { SyncStatusBadge } from '@/components/coop/SyncStatusBadge';
 import { ApprovalQueue } from '@/components/coop/ApprovalQueue';
@@ -82,53 +82,15 @@ const Storage = {
   }
 };
 
-// Game State Types
-interface Nation {
-  id: string;
-  isPlayer: boolean;
-  name: string;
-  leader: string;
-  doctrine?: string;
-  ai?: string;
-  lon: number;
-  lat: number;
-  color: string;
-  population: number;
-  missiles: number;
-  bombers?: number;
-  submarines?: number;
-  defense: number;
-  instability?: number;
-  morale: number;
-  publicOpinion: number;
-  electionTimer: number;
-  cabinetApproval: number;
-  production: number;
-  uranium: number;
-  intel: number;
-  cities?: number;
-  warheads: Record<number, number>;
-  researched?: Record<string, boolean>;
-  researchQueue?: { projectId: string; turnsRemaining: number; totalTurns: number } | null;
-  treaties?: Record<string, any>;
-  satellites?: Record<string, boolean>;
-  bordersClosedTurns?: number;
-  greenShiftTurns?: number;
-  threats?: Record<string, number>;
-  migrantsThisTurn?: number;
-  migrantsTotal?: number;
-  migrantsLastTurn?: number;
-  immigrants?: number;
-  coverOpsTurns?: number;
-  deepRecon?: Record<string, number>;
-  sanctionTurns?: number;
-  sanctioned?: boolean;
-  sanctionedBy?: Record<string, number>;
-  environmentPenaltyTurns?: number;
+// Game State Types - extending imported types with local properties
+type LocalNation = Nation & {
   conventional?: NationConventionalProfile;
   controlledTerritories?: string[];
-  cyber?: NationCyberProfile;
-}
+};
+
+type LocalGameState = GameState & {
+  conventional?: ConventionalState;
+};
 
 interface DiplomacyState {
   peaceTurns: number;
@@ -329,7 +291,7 @@ let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
 
 // Global game state
-let S: GameState = {
+let S: LocalGameState = {
   turn: 1,
   defcon: 5,
   phase: 'PLAYER',
@@ -355,7 +317,7 @@ let S: GameState = {
   conventional: createDefaultConventionalState()
 };
 
-let nations: Nation[] = [];
+let nations: LocalNation[] = [];
 let conventionalDeltas: ConventionalWarfareDelta[] = [];
 let suppressMultiplayerBroadcast = false;
 let multiplayerPublisher: (() => void) | null = null;
@@ -617,9 +579,9 @@ interface OperationAction {
 
 interface OperationModalProps {
   actions: OperationAction[];
-  player: Nation;
-  targetableNations: Nation[];
-  onExecute: (action: OperationAction, target?: Nation) => boolean;
+  player: LocalNation;
+  targetableNations: LocalNation[];
+  onExecute: (action: OperationAction, target?: LocalNation) => boolean;
   onClose: () => void;
   accent?: 'fuchsia' | 'cyan' | 'violet' | 'emerald' | 'amber';
 }
@@ -681,7 +643,7 @@ function OperationModal({ actions, player, targetableNations, onExecute, onClose
   const pendingAction = useMemo(() => actions.find(action => action.id === pendingActionId) || null, [actions, pendingActionId]);
 
   const availableTargets = useMemo(() => {
-    if (!pendingAction || !pendingAction.requiresTarget) return [] as Nation[];
+    if (!pendingAction || !pendingAction.requiresTarget) return [] as LocalNation[];
     const filter = pendingAction.targetFilter;
     return targetableNations.filter(nation => (filter ? filter(nation, player) : true));
   }, [pendingAction, targetableNations, player]);
@@ -797,13 +759,13 @@ function OperationModal({ actions, player, targetableNations, onExecute, onClose
 }
 
 interface IntelReportContentProps {
-  player: Nation;
+  player: LocalNation;
   onClose: () => void;
 }
 
 function IntelReportContent({ player, onClose }: IntelReportContentProps) {
   const visibleTargets = useMemo(() => {
-    if (!player.satellites) return [] as Nation[];
+    if (!player.satellites) return [] as LocalNation[];
     return nations.filter(nation => {
       if (nation.isPlayer) return false;
       if (!player.satellites?.[nation.id]) return false;
@@ -1836,7 +1798,7 @@ function initNations() {
   const playerLeaderName = S.selectedLeader || 'PLAYER';
   const playerLeaderConfig = leaders.find(l => l.name === playerLeaderName);
   const selectedDoctrine = (S.selectedDoctrine as DoctrineKey | null) || undefined;
-  const playerNation: Nation = {
+  const playerNation: LocalNation = {
     id: 'player',
     isPlayer: true,
     name: 'PLAYER',
@@ -1900,7 +1862,7 @@ function initNations() {
       : undefined;
 
     // Balanced starting resources - AI gets similar resources to player
-    const nation: Nation = {
+    const nation: LocalNation = {
       id: `ai_${i}`,
       isPlayer: false,
       name: pos.name,
@@ -4880,7 +4842,7 @@ export default function NoradVector() {
   }, []);
 
   const renderMilitaryModal = useCallback((): ReactNode => {
-    const player = PlayerManager.get();
+    const player = PlayerManager.get() as LocalNation | null;
     if (!player) {
       return <div className="text-sm text-cyan-200">No player nation data available.</div>;
     }

@@ -55,7 +55,7 @@ const createId = () =>
 const ensureAnonSession = async () => {
   const { data } = await supabase.auth.getSession();
   if (data.session) {
-    return data.session.id;
+    return data.session.access_token;
   }
 
   const authClient: typeof supabase.auth & { signInAnonymously?: () => Promise<unknown> } = supabase.auth as never;
@@ -64,7 +64,7 @@ const ensureAnonSession = async () => {
   }
 
   const refreshed = await supabase.auth.getSession();
-  return refreshed.data.session?.id ?? null;
+  return refreshed.data.session?.access_token ?? null;
 };
 
 const resolveRole = (selfId: string, peers: Record<string, MultiplayerPresenceState>): MultiplayerRole | null => {

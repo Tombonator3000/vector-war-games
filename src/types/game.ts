@@ -57,6 +57,10 @@ export interface Nation {
   sanctionedBy?: Record<string, number>;
   environmentPenaltyTurns?: number;
   cyber?: NationCyberProfile;
+  morale: number;
+  publicOpinion: number;
+  electionTimer: number;
+  cabinetApproval: number;
 }
 
 export interface DiplomacyState {

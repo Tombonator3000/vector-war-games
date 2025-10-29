@@ -88,7 +88,7 @@ export function GovernanceEventDialog({ open, event, metrics, onSelect, onDismis
   );
 }
 
-function summariseEffects(effects: Record<string, number | undefined>): string {
+function summariseEffects(effects: Record<string, number | undefined> | import('@/lib/events/politicalEvents').GovernanceDelta): string {
   const entries = Object.entries(effects)
     .filter(([, value]) => typeof value === 'number' && value !== 0)
     .map(([key, value]) => {
