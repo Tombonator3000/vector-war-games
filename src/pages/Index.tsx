@@ -6818,6 +6818,7 @@ export default function NoradVector() {
       let activePointerId: number | null = null;
 
       const handlePointerUp = (e: PointerEvent) => {
+        if (e.pointerType !== "mouse") return;
         if (canvas && activePointerId !== null && canvas.hasPointerCapture(activePointerId)) {
           canvas.releasePointerCapture(activePointerId);
           activePointerId = null;
@@ -6830,6 +6831,7 @@ export default function NoradVector() {
       };
 
       const handlePointerDown = (e: PointerEvent) => {
+        if (e.pointerType !== "mouse") return;
         if (e.button !== 0 && e.button !== 2) return;
         isDragging = true;
         dragButton = e.button;
@@ -6839,6 +6841,7 @@ export default function NoradVector() {
       };
 
       const handlePointerMove = (e: PointerEvent) => {
+        if (e.pointerType !== "mouse") return;
         if (!isDragging) return;
         if (e.buttons === 0) {
           handlePointerUp(e);
@@ -6858,6 +6861,7 @@ export default function NoradVector() {
       };
 
       const handlePointerCancel = (e: PointerEvent) => {
+        if (e.pointerType !== "mouse") return;
         handlePointerUp(e);
       };
 
