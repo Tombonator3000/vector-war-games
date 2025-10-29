@@ -134,3 +134,6 @@
 | 2025-10-29T17:06:39Z | Reviewed root `AGENTS.md` and scoped launch authorization UX updates for strategic strike flow. |
 | 2025-10-29T17:06:52Z | Refactored `src/pages/Index.tsx` to stage pending launch state and render the Launch Control confirmation dialog. |
 | 2025-10-29T17:06:54Z | Ran `npm run build` to ensure the Launch Control modal and strike flow changes compile without TypeScript errors. |
+2025-10-29T17:12:00Z Created vector icons for missile, bomber, and submarine under `public/icons/` to replace placeholder primitives.
+2025-10-29T17:14:30Z Refactored canvas rendering helpers in `src/pages/Index.tsx` to preload icons and centralize drawImage usage for missiles, bombers, and submarines.
+2025-10-29T17:16:30Z Ran `npm run dev` to verify icon rendering and scaling on the development server.
