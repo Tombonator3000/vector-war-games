@@ -4024,11 +4024,49 @@ export default function NoradVector() {
     }
     return 'realistic';
   });
-  const [musicEnabled, setMusicEnabled] = useState(AudioSys.musicEnabled);
-  const [sfxEnabled, setSfxEnabled] = useState(AudioSys.sfxEnabled);
-  const [musicVolume, setMusicVolume] = useState(AudioSys.musicVolume);
-  const [musicSelection, setMusicSelection] = useState<string>(() => AudioSys.getPreferredTrack() ?? 'random');
+  const storedMusicEnabled = Storage.getItem('audio_music_enabled');
+  const initialMusicEnabled = storedMusicEnabled === 'true' ? true : storedMusicEnabled === 'false' ? false : AudioSys.musicEnabled;
+  const storedSfxEnabled = Storage.getItem('audio_sfx_enabled');
+  const initialSfxEnabled = storedSfxEnabled === 'true' ? true : storedSfxEnabled === 'false' ? false : AudioSys.sfxEnabled;
+  const storedMusicVolume = Storage.getItem('audio_music_volume');
+  const initialMusicVolume = (() => {
+    if (storedMusicVolume !== null) {
+      const parsed = Number.parseFloat(storedMusicVolume);
+      if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 1) {
+        return parsed;
+      }
+    }
+    return AudioSys.musicVolume;
+  })();
+  const storedMusicTrack = Storage.getItem('audio_music_track');
+  const initialMusicSelection: string = (() => {
+    if (storedMusicTrack === 'random') {
+      return 'random';
+    }
+    if (storedMusicTrack) {
+      const metadata = AudioSys.getTrackMetadata(storedMusicTrack as MusicTrackId);
+      if (metadata) {
+        return metadata.id;
+      }
+    }
+    return AudioSys.getPreferredTrack() ?? 'random';
+  })();
+
+  const [musicEnabled, setMusicEnabled] = useState(initialMusicEnabled);
+  const [sfxEnabled, setSfxEnabled] = useState(initialSfxEnabled);
+  const [musicVolume, setMusicVolume] = useState(initialMusicVolume);
+  const [musicSelection, setMusicSelection] = useState<string>(initialMusicSelection);
   const [activeTrackId, setActiveTrackId] = useState<MusicTrackId | null>(AudioSys.getCurrentTrack());
+  useEffect(() => {
+    AudioSys.setMusicEnabled(initialMusicEnabled);
+    AudioSys.sfxEnabled = initialSfxEnabled;
+    AudioSys.setMusicVolume(initialMusicVolume);
+    if (initialMusicSelection === 'random') {
+      AudioSys.setPreferredTrack(null);
+    } else {
+      AudioSys.setPreferredTrack(initialMusicSelection as MusicTrackId);
+    }
+  }, [initialMusicEnabled, initialSfxEnabled, initialMusicVolume, initialMusicSelection]);
   const musicTracks = useMemo(() => AudioSys.getTracks(), []);
   const [pandemicIntegrationEnabled, setPandemicIntegrationEnabled] = useState(() => {
     const stored = Storage.getItem('option_pandemic_integration');
@@ -4552,17 +4590,20 @@ export default function NoradVector() {
 
   const handleMusicToggle = useCallback((checked: boolean) => {
     AudioSys.setMusicEnabled(checked);
+    Storage.setItem('audio_music_enabled', String(checked));
     setMusicEnabled(checked);
   }, []);
 
   const handleSfxToggle = useCallback((checked: boolean) => {
     AudioSys.sfxEnabled = checked;
+    Storage.setItem('audio_sfx_enabled', String(checked));
     setSfxEnabled(checked);
   }, []);
 
   const handleMusicVolumeChange = useCallback((value: number[]) => {
     const volume = Math.min(1, Math.max(0, value[0] ?? 0));
     AudioSys.setMusicVolume(volume);
+    Storage.setItem('audio_music_volume', String(volume));
     setMusicVolume(volume);
   }, []);
 
@@ -4571,8 +4612,10 @@ export default function NoradVector() {
     setMusicSelection(value);
     if (value === 'random') {
       AudioSys.setPreferredTrack(null);
+      Storage.setItem('audio_music_track', 'random');
     } else {
       AudioSys.setPreferredTrack(value as MusicTrackId);
+      Storage.setItem('audio_music_track', value);
     }
   }, []);
 
