@@ -1422,7 +1422,6 @@ body.theme-synthwave .theme-chip.is-active {
 }
 
 body.theme-synthwave .options-sheet {
-  position: relative;
   background: var(--synthwave-panel-inner);
   border: 1px solid var(--synthwave-hud-border);
   color: hsl(188 88% 86%);
@@ -1432,7 +1431,11 @@ body.theme-synthwave .options-sheet {
   overflow-y: auto;
 }
 
-body.theme-synthwave .options-sheet::before {
+body.theme-synthwave .options-sheet__decor {
+  position: relative;
+}
+
+body.theme-synthwave .options-sheet__decor::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -1443,7 +1446,7 @@ body.theme-synthwave .options-sheet::before {
   z-index: 2;
 }
 
-body.theme-synthwave .options-sheet::after {
+body.theme-synthwave .options-sheet__decor::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -1458,6 +1461,11 @@ body.theme-synthwave .options-sheet::after {
 }
 
 body.theme-synthwave .options-sheet > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.theme-synthwave .options-sheet__decor > * {
   position: relative;
   z-index: 1;
 }

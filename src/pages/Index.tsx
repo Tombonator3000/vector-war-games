@@ -7244,40 +7244,41 @@ export default function NoradVector() {
           side="right"
           className="options-sheet"
         >
-          <SheetHeader>
-            <SheetTitle className="options-sheet__title">COMMAND OPTIONS</SheetTitle>
-            <SheetDescription className="options-sheet__description">
-              Tune the command interface to match your control room preferences.
-            </SheetDescription>
-          </SheetHeader>
+          <div className="options-sheet__decor">
+            <SheetHeader>
+              <SheetTitle className="options-sheet__title">COMMAND OPTIONS</SheetTitle>
+              <SheetDescription className="options-sheet__description">
+                Tune the command interface to match your control room preferences.
+              </SheetDescription>
+            </SheetHeader>
 
-          <div className="options-section">
-            <h3 className="options-section__heading">VISUAL THEMES</h3>
-            <p className="options-section__subheading">Switch the world feed rendering profile.</p>
-            <div className="theme-grid">
-              {themeOptions.map(opt => {
-                const active = theme === opt.id;
-                return (
-                  <Button
-                    key={opt.id}
-                    onClick={() => setTheme(opt.id)}
-                    className={`theme-chip${active ? ' is-active' : ''}`}
-                    type="button"
-                  >
-                    {opt.label.toUpperCase()}
-                  </Button>
-                );
-              })}
+            <div className="options-section">
+              <h3 className="options-section__heading">VISUAL THEMES</h3>
+              <p className="options-section__subheading">Switch the world feed rendering profile.</p>
+              <div className="theme-grid">
+                {themeOptions.map(opt => {
+                  const active = theme === opt.id;
+                  return (
+                    <Button
+                      key={opt.id}
+                      onClick={() => setTheme(opt.id)}
+                      className={`theme-chip${active ? ' is-active' : ''}`}
+                      type="button"
+                    >
+                      {opt.label.toUpperCase()}
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          <div className="options-section">
-            <h3 className="options-section__heading">MAP DISPLAY STYLE</h3>
-            <p className="options-section__subheading">Choose how the global map is rendered.</p>
-            <div className="layout-grid">
-              {MAP_STYLE_OPTIONS.map((option) => {
-                const isActive = mapStyle === option.value;
-                return (
+            <div className="options-section">
+              <h3 className="options-section__heading">MAP DISPLAY STYLE</h3>
+              <p className="options-section__subheading">Choose how the global map is rendered.</p>
+              <div className="layout-grid">
+                {MAP_STYLE_OPTIONS.map((option) => {
+                  const isActive = mapStyle === option.value;
+                  return (
                   <button
                     key={option.value}
                     type="button"
@@ -7424,6 +7425,7 @@ export default function NoradVector() {
               />
             </div>
           </div>
+        </div>
         </SheetContent>
       </Sheet>
 
