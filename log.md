@@ -148,6 +148,9 @@
 2025-10-29T18:02:42Z Updated `src/pages/Index.tsx` to compute `showPandemicPanel` and render the pandemic HUD only when active outbreaks or the BioForge lab are open.
 2025-10-29T18:04:23Z Committed pandemic panel visibility change set with message "Conditionally render pandemic panel".
 2025-10-29T18:04:44Z Amended the commit to include updated log entries documenting the change workflow.
+2025-11-07T10:46:12Z Reviewed coop preference initialization in `src/pages/Index.tsx` to confirm stored-value handling before applying default change.
+2025-11-07T10:48:05Z Updated `coopEnabled` state initializer in `src/pages/Index.tsx` to default to `false` when no saved preference exists.
+2025-11-07T10:58:29Z Executed `npm run test` to verify multiplayer gating passes after coop default toggle update.
 2025-10-29T18:20:40Z Reviewed root `AGENTS.md` guidance before adjusting the strike planner interaction flow.
 2025-10-29T18:20:52Z Added strike planner toggle state, gated `handleAttack`, and rendered a close control in `src/pages/Index.tsx`.
 2025-10-29T19:04:10Z Restored `showPandemicPanel` computation in `src/pages/Index.tsx` to re-enable conditional pandemic HUD rendering after BioWarfare integration refactor.
@@ -219,3 +222,12 @@
 2025-10-29T21:22:41Z Passed sanitized nations array when advancing bio-warfare turn from Index.tsx pandemic handler.
 2025-10-29T21:22:51Z Attempted vitest run with --runInBand flag; command failed because option is unsupported.
 2025-10-29T21:23:19Z Ran vitest with --run; Index page test suite failed due to duplicate applyPandemicCountermeasure declaration (pre-existing).
+2025-10-29T21:16:30Z Reviewed root AGENTS.md to confirm repository-wide contribution standards for map style updates.
+2025-10-29T21:17:05Z Audited src/pages/Index.tsx initialization to locate currentMapStyle defaults and mapStyle persistence fallback.
+2025-10-29T21:18:05Z Updated currentMapStyle and mapStyle defaults to flat-realistic and added flat map re-centering guard when applying styles.
+2025-10-29T21:18:55Z Ran npm run test to validate suite; observed Vitest watch mode failure unrelated to map style defaults and exited watcher.
+2025-10-29T21:19:40Z Renamed BioWarfare countermeasure destructuring alias to prevent duplicate identifier errors when bundling tests.
+2025-10-29T21:21:55Z Executed npm run test -- --run; vitest reported failure from duplicate showPandemicPanel declarations in Index.tsx.
+2025-10-29T21:22:30Z Removed duplicate showPandemicPanel declaration to align with restored memoized pandemic panel gating logic.
+2025-10-29T21:23:35Z Restored usePandemic import in Index.tsx to satisfy runtime hook usage after module refactors.
+2025-10-29T21:24:15Z Re-ran npm run test -- --run; Vitest surfaced additional ReferenceError for playerNationId within Index.tsx during mocked rendering.
