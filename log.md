@@ -108,3 +108,5 @@
 | 2025-10-29T12:58:25Z | Removed redundant earth mesh rotation to realign 3D globe texture with projected overlays. |
 | 2025-10-29T12:59:15Z | Ran `npm run test` to confirm globe orientation fix passes existing suite. |
 | 2025-10-29T13:18:41Z | Replaced canvas mouse listeners with pointer events in `src/pages/Index.tsx`, added pointer capture handling, and updated cleanup for reliable drag release detection. |
+| 2025-10-29T13:26:57Z | Extended map style options with a flat-realistic texture mode, cached the earth texture for reuse, and aligned GlobeScene flat handling. |
+| 2025-10-29T13:27:02Z | Ran `npm run build` to confirm the new textured flat map renders without TypeScript or bundler issues. |
