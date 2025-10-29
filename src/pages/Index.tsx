@@ -5113,6 +5113,9 @@ export default function NoradVector() {
     calculateSpreadModifiers,
   } = useBioWarfare(addNewsItem);
 
+  const playerNationId =
+    PlayerManager.get()?.id ?? nations.find(nation => nation.isPlayer)?.id ?? 'player';
+
   const conventional = useConventionalWarfare({
     initialState: conventionalState,
     currentTurn: S.turn,

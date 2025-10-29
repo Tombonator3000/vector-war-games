@@ -231,3 +231,6 @@
 2025-10-29T21:22:30Z Removed duplicate showPandemicPanel declaration to align with restored memoized pandemic panel gating logic.
 2025-10-29T21:23:35Z Restored usePandemic import in Index.tsx to satisfy runtime hook usage after module refactors.
 2025-10-29T21:24:15Z Re-ran npm run test -- --run; Vitest surfaced additional ReferenceError for playerNationId within Index.tsx during mocked rendering.
+2025-10-29T21:58:45Z Reviewed runtime ReferenceError report for undefined playerNationId and traced usages across src/pages/Index.tsx bio-warfare integrations.
+2025-10-29T21:59:20Z Added PlayerManager-derived playerNationId fallback with nation list backup to prevent undefined accesses in lab management flows.
+2025-10-29T21:59:55Z Ran npm run test -- --run; Vitest suite passed with Index page scenarios confirming playerNationId availability.
