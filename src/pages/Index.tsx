@@ -5241,8 +5241,31 @@ export default function NoradVector() {
       return;
     }
 
+    if (!isGameStarted || S.gameOver) {
+      resetLaunchControl();
+      return;
+    }
+
     const player = PlayerManager.get();
     if (!player) {
+      resetLaunchControl();
+      return;
+    }
+
+    if (S.phase !== 'PLAYER') {
+      toast({ title: 'Cannot launch', description: 'Attacks are only available during your phase.' });
+      resetLaunchControl();
+      return;
+    }
+
+    if (S.actionsRemaining <= 0) {
+      toast({ title: 'No actions remaining', description: 'You must end your turn before launching another strike.' });
+      resetLaunchControl();
+      return;
+    }
+
+    if (!canPerformAction('attack', S.defcon)) {
+      toast({ title: 'DEFCON too high', description: 'Escalate to DEFCON 2 or lower before ordering an attack.' });
       resetLaunchControl();
       return;
     }
@@ -5322,7 +5345,13 @@ export default function NoradVector() {
       consumeAction();
       resetLaunchControl();
     }
-  }, [pendingLaunch, resetLaunchControl, selectedDeliveryMethod, selectedWarheadYield]);
+  }, [
+    isGameStarted,
+    pendingLaunch,
+    resetLaunchControl,
+    selectedDeliveryMethod,
+    selectedWarheadYield,
+  ]);
 
   const startGame = useCallback((leaderOverride?: string, doctrineOverride?: string) => {
     const leaderToUse = leaderOverride ?? selectedLeader;
