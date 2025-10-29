@@ -150,3 +150,4 @@
 2025-10-29T18:04:44Z Amended the commit to include updated log entries documenting the change workflow.
 2025-10-29T18:20:40Z Reviewed root `AGENTS.md` guidance before adjusting the strike planner interaction flow.
 2025-10-29T18:20:52Z Added strike planner toggle state, gated `handleAttack`, and rendered a close control in `src/pages/Index.tsx`.
+2025-10-29T19:04:10Z Restored `showPandemicPanel` computation in `src/pages/Index.tsx` to re-enable conditional pandemic HUD rendering after BioWarfare integration refactor.

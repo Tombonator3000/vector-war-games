@@ -4949,6 +4949,8 @@ export default function NoradVector() {
     calculateSpreadModifiers,
   } = useBioWarfare(addNewsItem);
 
+  const showPandemicPanel = pandemicIntegrationEnabled && (pandemicState.active || isBioWarfareOpen);
+
   const conventional = useConventionalWarfare({
     initialState: conventionalState,
     currentTurn: S.turn,
