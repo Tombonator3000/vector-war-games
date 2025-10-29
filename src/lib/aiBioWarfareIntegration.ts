@@ -5,7 +5,9 @@
 
 import type { Nation } from '@/types/game';
 import type { BioLabFacility } from '@/types/bioLab';
+import { BIO_LAB_TIERS } from '@/types/bioLab';
 import type { PlagueState, EvolutionNodeId } from '@/types/biowarfare';
+import { ALL_EVOLUTION_NODES } from '@/lib/evolutionData';
 import {
   shouldBuildBioLab,
   selectPlague,
@@ -124,7 +126,7 @@ export function processAIBioWarfareTurn(
 
     if (buildDecision.build && buildDecision.targetTier) {
       const tier = buildDecision.targetTier;
-      const tierDef = require('@/types/bioLab').BIO_LAB_TIERS[tier];
+      const tierDef = BIO_LAB_TIERS[tier];
 
       // Deduct resources
       nation.production -= tierDef.productionCost;
@@ -164,7 +166,7 @@ export function processAIBioWarfareTurn(
     const nodeToEvolve = selectEvolutionNode(plagueState, strategy, plagueState.dnaPoints);
 
     if (nodeToEvolve) {
-      const node = require('@/lib/evolutionData').ALL_EVOLUTION_NODES.find(
+      const node = ALL_EVOLUTION_NODES.find(
         (n: any) => n.id === nodeToEvolve
       );
 
