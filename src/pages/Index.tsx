@@ -45,8 +45,10 @@ import {
   useConventionalWarfare,
   type ConventionalState,
   type NationConventionalProfile,
+  type ForceType,
   createDefaultConventionalState,
   createDefaultNationConventionalProfile,
+  territoryAnchors,
 } from '@/hooks/useConventionalWarfare';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
@@ -132,6 +134,8 @@ interface GameState {
   events?: boolean;
   diplomacy?: DiplomacyState;
   conventional?: ConventionalState;
+  conventionalMovements?: ConventionalMovementMarker[];
+  conventionalUnits?: ConventionalUnitMarker[];
   satelliteOrbits: SatelliteOrbit[];
 }
 
@@ -173,6 +177,47 @@ const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }
 
 type CanvasIcon = HTMLImageElement | null;
 
+type ConventionalUnitMarker = {
+  unitId: string;
+  ownerId: string;
+  lon: number;
+  lat: number;
+  icon: CanvasIcon;
+  forceType: ForceType;
+};
+
+type ConventionalMovementMarker = {
+  id: string;
+  unitId: string;
+  ownerId: string;
+  forceType: ForceType;
+  icon: CanvasIcon;
+  startLon: number;
+  startLat: number;
+  endLon: number;
+  endLat: number;
+  fromTerritoryId: string | null;
+  toTerritoryId: string | null;
+  progress: number;
+  speed: number;
+  createdAt: number;
+};
+
+type ConventionalMovementRegistration = {
+  unitId: string;
+  templateId?: string;
+  ownerId: string;
+  fromTerritoryId?: string | null;
+  toTerritoryId?: string | null;
+  fallbackEnd?: { lon: number; lat: number } | null;
+};
+
+const CONVENTIONAL_ICON_BASE_SCALE: Record<ForceType, number> = {
+  army: 0.22,
+  navy: 0.24,
+  air: 0.2,
+};
+
 const loadIcon = (src: string): CanvasIcon => {
   if (typeof Image === 'undefined') {
     return null;
@@ -185,10 +230,20 @@ const loadIcon = (src: string): CanvasIcon => {
 const missileIcon = loadIcon('/icons/missile.svg');
 const bomberIcon = loadIcon('/icons/bomber.svg');
 const submarineIcon = loadIcon('/icons/submarine.svg');
+const armyIcon = loadIcon('/icons/army.svg');
+const navyIcon = loadIcon('/icons/navy.svg');
+const airIcon = loadIcon('/icons/air.svg');
+
+const conventionalIconLookup: Record<ForceType, CanvasIcon> = {
+  army: armyIcon,
+  navy: navyIcon,
+  air: airIcon,
+};
 
 const MISSILE_ICON_BASE_SCALE = 0.14;
 const BOMBER_ICON_BASE_SCALE = 0.18;
 const SUBMARINE_ICON_BASE_SCALE = 0.2;
+const easeInOutQuad = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const SATELLITE_ORBIT_RADIUS = 34;
 const SATELLITE_ORBIT_TTL_MS = 180000;
 const SATELLITE_ORBIT_SPEED = (Math.PI * 2) / 12000;
@@ -393,7 +448,9 @@ let S: LocalGameState = {
   nuclearWinterLevel: 0,
   globalRadiation: 0,
   diplomacy: createDefaultDiplomacyState(),
-  conventional: createDefaultConventionalState()
+  conventional: createDefaultConventionalState(),
+  conventionalMovements: [],
+  conventionalUnits: [],
 };
 
 let nations: LocalNation[] = [];
@@ -3341,9 +3398,94 @@ function drawSubmarines() {
   });
 }
 
+function drawConventionalForces() {
+  if (!ctx) return;
+
+  const movements = S.conventionalMovements ?? [];
+  const nextMovements: ConventionalMovementMarker[] = [];
+
+  movements.forEach((movement) => {
+    const [sx, sy] = project(movement.startLon, movement.startLat);
+    const [ex, ey] = project(movement.endLon, movement.endLat);
+    const dx = ex - sx;
+    const dy = ey - sy;
+    const distance = Math.hypot(dx, dy);
+    const nation = getNationById(movement.ownerId);
+    const color = nation?.color ?? '#38bdf8';
+
+    if (distance > 4) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    movement.progress = Math.min(1, movement.progress + movement.speed);
+    const eased = easeInOutQuad(movement.progress);
+    const x = sx + dx * eased;
+    const y = sy + dy * eased;
+    const angle = Math.atan2(dy, dx);
+
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    drawIcon(
+      movement.icon ?? conventionalIconLookup[movement.forceType],
+      x,
+      y,
+      angle,
+      CONVENTIONAL_ICON_BASE_SCALE[movement.forceType],
+      { alpha: 0.95 },
+    );
+
+    if (movement.progress < 1) {
+      nextMovements.push(movement);
+    }
+  });
+
+  S.conventionalMovements = nextMovements;
+
+  const unitMarkers = S.conventionalUnits ?? [];
+  unitMarkers.forEach((marker) => {
+    const [x, y] = project(marker.lon, marker.lat);
+    const nation = getNationById(marker.ownerId);
+    const color = nation?.color ?? '#22d3ee';
+
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = 'rgba(8,15,32,0.78)';
+    ctx.beginPath();
+    ctx.arc(x, y, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+    ctx.restore();
+
+    drawIcon(
+      marker.icon ?? conventionalIconLookup[marker.forceType],
+      x,
+      y,
+      0,
+      CONVENTIONAL_ICON_BASE_SCALE[marker.forceType],
+    );
+  });
+}
+
 function drawParticles() {
   if (!ctx) return;
-  
+
   S.particles = S.particles.filter((p: any) => {
     p.x += p.vx;
     p.y += p.vy;
@@ -4447,6 +4589,7 @@ function gameLoop() {
   drawMissiles();
   drawBombers();
   drawSubmarines();
+  drawConventionalForces();
   drawParticles();
   drawFX();
   
@@ -4882,9 +5025,55 @@ export default function NoradVector() {
   });
 
   useEffect(() => {
-    S.conventional = conventional.state;
+    const nextState = conventional.state;
+    if (!nextState) {
+      S.conventionalUnits = [];
+      S.conventionalMovements = S.conventionalMovements ?? [];
+      return;
+    }
+
+    S.conventional = nextState;
+
+    const deployedMarkers: ConventionalUnitMarker[] = [];
+    const activeUnitIds = new Set<string>();
+
+    Object.values(nextState.units ?? {}).forEach((unit) => {
+      activeUnitIds.add(unit.id);
+      if (unit.status !== 'deployed' || !unit.locationId) {
+        return;
+      }
+      const anchor = territoryAnchors[unit.locationId];
+      if (!anchor) {
+        return;
+      }
+      const template = nextState.templates[unit.templateId];
+      const forceType: ForceType = template?.type ?? 'army';
+      deployedMarkers.push({
+        unitId: unit.id,
+        ownerId: unit.ownerId,
+        lon: anchor.lon,
+        lat: anchor.lat,
+        icon: conventionalIconLookup[forceType],
+        forceType,
+      });
+    });
+
+    S.conventionalUnits = deployedMarkers;
+
+    const filteredMovements = (S.conventionalMovements ?? []).filter((movement) => {
+      if (!activeUnitIds.has(movement.unitId)) {
+        return false;
+      }
+      if (movement.toTerritoryId && !territoryAnchors[movement.toTerritoryId]) {
+        return false;
+      }
+      return true;
+    });
+
+    S.conventionalMovements = filteredMovements;
+
     try {
-      Storage.setItem('conventional_state', JSON.stringify(conventional.state));
+      Storage.setItem('conventional_state', JSON.stringify(nextState));
     } catch (error) {
       console.warn('Failed to persist conventional warfare state', error);
     }
@@ -4896,11 +5085,195 @@ export default function NoradVector() {
     templates: conventionalTemplatesMap,
     logs: conventionalLogs,
     trainUnit: trainConventionalUnit,
-    deployUnit: deployConventionalUnit,
-    resolveBorderConflict: resolveConventionalBorderConflict,
+    deployUnit: deployConventionalUnitBase,
+    resolveBorderConflict: resolveConventionalBorderConflictBase,
     resolveProxyEngagement: resolveConventionalProxyEngagement,
     getUnitsForNation: getConventionalUnitsForNation,
   } = conventional;
+
+  const getNationAnchor = useCallback((ownerId: string) => {
+    let nation = getNationById(ownerId);
+    if (!nation && ownerId === 'player') {
+      nation = nations.find((entry) => entry.isPlayer) ?? null;
+    }
+    return nation ? { lon: nation.lon, lat: nation.lat } : null;
+  }, []);
+
+  const registerConventionalMovement = useCallback(
+    ({
+      unitId,
+      templateId,
+      ownerId,
+      fromTerritoryId,
+      toTerritoryId,
+      fallbackEnd,
+    }: ConventionalMovementRegistration) => {
+      if (!ownerId) {
+        return;
+      }
+
+      const template = templateId ? conventionalTemplatesMap[templateId] : undefined;
+      const forceType: ForceType = template?.type ?? 'army';
+
+      const targetAnchor =
+        (toTerritoryId ? territoryAnchors[toTerritoryId] : undefined) ??
+        fallbackEnd ??
+        getNationAnchor(ownerId);
+
+      if (!targetAnchor) {
+        return;
+      }
+
+      const originAnchor =
+        (fromTerritoryId ? territoryAnchors[fromTerritoryId] : undefined) ??
+        getNationAnchor(ownerId) ??
+        targetAnchor;
+
+      const startLon = originAnchor.lon;
+      const startLat = originAnchor.lat;
+      const endLon = targetAnchor.lon;
+      const endLat = targetAnchor.lat;
+
+      if (Math.hypot(endLon - startLon, endLat - startLat) < 0.01) {
+        return;
+      }
+
+      const movement: ConventionalMovementMarker = {
+        id: `${unitId}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        unitId,
+        ownerId,
+        forceType,
+        icon: conventionalIconLookup[forceType],
+        startLon,
+        startLat,
+        endLon,
+        endLat,
+        fromTerritoryId: fromTerritoryId ?? null,
+        toTerritoryId: toTerritoryId ?? null,
+        progress: 0,
+        speed: 0.012 + Math.random() * 0.01,
+        createdAt: Date.now(),
+      };
+
+      const existing = (S.conventionalMovements ?? []).filter((entry) => entry.unitId !== unitId);
+      S.conventionalMovements = [...existing, movement];
+    },
+    [conventionalTemplatesMap, getNationAnchor],
+  );
+
+  const deployConventionalUnit = useCallback(
+    (unitId: string, territoryId: string) => {
+      const currentUnit = conventionalUnits[unitId] ?? conventional.state.units[unitId];
+      const fromTerritoryId = currentUnit?.locationId ?? null;
+      const ownerId = currentUnit?.ownerId ?? 'player';
+      const templateId = currentUnit?.templateId;
+
+      const result = deployConventionalUnitBase(unitId, territoryId);
+      if (result.success) {
+        registerConventionalMovement({
+          unitId,
+          templateId,
+          ownerId,
+          fromTerritoryId,
+          toTerritoryId: territoryId,
+        });
+      }
+      return result;
+    },
+    [conventional.state.units, conventionalUnits, deployConventionalUnitBase, registerConventionalMovement],
+  );
+
+  const findStagingTerritory = useCallback(
+    (ownerId: string, territoryId: string): string | null => {
+      const territory = conventionalTerritories[territoryId];
+      if (!territory) {
+        return null;
+      }
+      for (const neighborId of territory.neighbors) {
+        const neighbor = conventionalTerritories[neighborId];
+        if (neighbor && neighbor.controllingNationId === ownerId) {
+          return neighbor.id;
+        }
+      }
+      return null;
+    },
+    [conventionalTerritories],
+  );
+
+  const resolveConventionalBorderConflict = useCallback(
+    (territoryId: string, attackerId: string, defenderId: string) => {
+      const attackerUnitsBefore = Object.values(conventionalUnits).filter(
+        (unit) => unit.ownerId === attackerId && unit.locationId === territoryId && unit.status === 'deployed',
+      );
+      const defenderUnitsBefore = Object.values(conventionalUnits).filter(
+        (unit) => unit.ownerId === defenderId && unit.locationId === territoryId && unit.status === 'deployed',
+      );
+
+      const attackerOrigin = findStagingTerritory(attackerId, territoryId);
+      const defenderOrigin = findStagingTerritory(defenderId, territoryId);
+
+      const result = resolveConventionalBorderConflictBase(territoryId, attackerId, defenderId);
+      if (result.success) {
+        const attackerFallback = getNationAnchor(attackerId);
+        const defenderFallback = getNationAnchor(defenderId);
+
+        if (result.attackerVictory) {
+          attackerUnitsBefore.forEach((unit) => {
+            registerConventionalMovement({
+              unitId: unit.id,
+              templateId: unit.templateId,
+              ownerId: unit.ownerId,
+              fromTerritoryId: attackerOrigin ?? null,
+              toTerritoryId: territoryId,
+              fallbackEnd: attackerFallback,
+            });
+          });
+
+          defenderUnitsBefore.forEach((unit) => {
+            registerConventionalMovement({
+              unitId: unit.id,
+              templateId: unit.templateId,
+              ownerId: unit.ownerId,
+              fromTerritoryId: territoryId,
+              toTerritoryId: defenderOrigin,
+              fallbackEnd: defenderFallback,
+            });
+          });
+        } else {
+          attackerUnitsBefore.forEach((unit) => {
+            registerConventionalMovement({
+              unitId: unit.id,
+              templateId: unit.templateId,
+              ownerId: unit.ownerId,
+              fromTerritoryId: territoryId,
+              toTerritoryId: attackerOrigin,
+              fallbackEnd: attackerFallback,
+            });
+          });
+
+          defenderUnitsBefore.forEach((unit) => {
+            registerConventionalMovement({
+              unitId: unit.id,
+              templateId: unit.templateId,
+              ownerId: unit.ownerId,
+              fromTerritoryId: defenderOrigin ?? null,
+              toTerritoryId: territoryId,
+              fallbackEnd: defenderFallback,
+            });
+          });
+        }
+      }
+
+      return result;
+    },
+    [
+      conventionalUnits,
+      findStagingTerritory,
+      getNationAnchor,
+      registerConventionalMovement,
+      resolveConventionalBorderConflictBase,
+    ],
+  );
 
   useEffect(() => {
     (window as any).__cyberAdvance = advanceCyberTurn;
