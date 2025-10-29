@@ -1,3 +1,6 @@
+import type { BioLabFacility } from './bioLab';
+import type { PlagueState } from './biowarfare';
+
 export interface NationCyberProfile {
   readiness: number;
   maxReadiness: number;
@@ -61,6 +64,11 @@ export interface Nation {
   publicOpinion: number;
   electionTimer: number;
   cabinetApproval: number;
+
+  // Bio-warfare capabilities (AI nations)
+  bioLab?: BioLabFacility;
+  plagueState?: PlagueState;
+  bioStrategy?: 'stealth' | 'lethal' | 'balanced'; // AI evolution strategy
 }
 
 export interface SatelliteOrbit {

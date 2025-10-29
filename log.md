@@ -214,6 +214,14 @@
 2025-10-29T19:19:09Z Reintroduced showPandemicPanel memo in src/pages/Index.tsx to gate PandemicPanel rendering on integration, BioForge access, or active outbreaks.
 2025-10-29T19:19:47Z Ran npm run build to confirm the restored pandemic panel logic compiles without regressions.
 2025-10-29T19:20:24Z Committed pandemic panel visibility fix and log updates with message "Restore pandemic panel visibility guard".
+
+2025-10-29T21:20:10Z Reviewed Codex follow-up request for pandemic advance bug fix.
+2025-10-29T21:20:15Z Re-read root AGENTS.md for repository scope guidance.
+2025-10-29T21:20:24Z Inspected handlePandemicAdvance implementation in src/pages/Index.tsx to diagnose missing nations argument.
+2025-10-29T21:22:36Z Updated useBioWarfare advance turn hook to guard against missing nation arrays and rely on sanitized input.
+2025-10-29T21:22:41Z Passed sanitized nations array when advancing bio-warfare turn from Index.tsx pandemic handler.
+2025-10-29T21:22:51Z Attempted vitest run with --runInBand flag; command failed because option is unsupported.
+2025-10-29T21:23:19Z Ran vitest with --run; Index page test suite failed due to duplicate applyPandemicCountermeasure declaration (pre-existing).
 2025-10-29T21:16:30Z Reviewed root AGENTS.md to confirm repository-wide contribution standards for map style updates.
 2025-10-29T21:17:05Z Audited src/pages/Index.tsx initialization to locate currentMapStyle defaults and mapStyle persistence fallback.
 2025-10-29T21:18:05Z Updated currentMapStyle and mapStyle defaults to flat-realistic and added flat map re-centering guard when applying styles.
