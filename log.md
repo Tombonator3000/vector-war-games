@@ -144,3 +144,6 @@
 2025-11-07T09:58:25Z Implemented satellite orbit state tracking, canvas rendering, and deployment hooks for player and AI flows.
 2025-11-07T10:02:40Z Ran `npm run build` to verify satellite orbit integration compiles without errors.
 2025-11-07T10:05:55Z Ran `npm run dev` for manual satellite visualization spot check and terminated dev server after startup.
+2025-10-29T18:23:44Z Reviewed root AGENTS.md to confirm serialization constraints for multiplayer state.
+2025-10-29T18:24:11Z Updated conventional unit and movement markers to store force types only so multiplayer broadcasts remain serializable.
+2025-10-29T18:24:42Z Ran npm run test -- --run to verify conventional force rendering adjustments pass existing Vitest suite.
