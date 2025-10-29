@@ -108,3 +108,5 @@
 | 2025-10-29T12:58:25Z | Removed redundant earth mesh rotation to realign 3D globe texture with projected overlays. |
 | 2025-10-29T12:59:15Z | Ran `npm run test` to confirm globe orientation fix passes existing suite. |
 | 2025-10-29T13:18:41Z | Replaced canvas mouse listeners with pointer events in `src/pages/Index.tsx`, added pointer capture handling, and updated cleanup for reliable drag release detection. |
+| 2025-10-29T13:22:15Z | Reviewed pointer vs. touch handling on the globe canvas to scope regression from pointer event migration. |
+| 2025-10-29T13:24:03Z | Limited globe pointer handlers in `src/pages/Index.tsx` to mouse input so touch interactions continue to rely on dedicated touch listeners. |
