@@ -762,6 +762,66 @@ const RESEARCH_TREE: ResearchProject[] = [
     }
   },
   {
+    id: 'cyber_advanced_offense',
+    name: 'Advanced Offensive Algorithms',
+    description: 'AI-driven attack optimization increases offensive capability and reduces intrusion costs.',
+    category: 'intel',
+    turns: 4,
+    cost: { production: 35, intel: 30 },
+    prerequisites: ['cyber_ids'],
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'advanced_offense');
+    }
+  },
+  {
+    id: 'cyber_stealth',
+    name: 'Stealth Protocols',
+    description: 'Advanced obfuscation techniques reduce detection probability on cyber operations.',
+    category: 'intel',
+    turns: 3,
+    cost: { production: 30, intel: 35 },
+    prerequisites: ['cyber_ids'],
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'stealth_protocols');
+    }
+  },
+  {
+    id: 'cyber_attribution_obfuscation',
+    name: 'Attribution Obfuscation',
+    description: 'False flag operations and proxy networks confuse enemy attribution systems.',
+    category: 'intel',
+    turns: 4,
+    cost: { production: 40, intel: 40 },
+    prerequisites: ['cyber_ids'],
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'attribution_obfuscation');
+    }
+  },
+  {
+    id: 'cyber_ai_defense',
+    name: 'AI-Driven Cyber Defenses',
+    description: 'Autonomous defense systems detect and counter-attack intruders automatically.',
+    category: 'intel',
+    turns: 5,
+    cost: { production: 50, intel: 45 },
+    prerequisites: ['cyber_firewalls'],
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'ai_defense');
+    }
+  },
+  {
+    id: 'cyber_superweapon',
+    name: 'Cyber Superweapon',
+    description: 'Devastating one-time cyber attack capable of crippling target infrastructure completely.',
+    category: 'intel',
+    turns: 6,
+    cost: { production: 80, intel: 60, uranium: 20 },
+    prerequisites: ['cyber_advanced_offense', 'cyber_attribution_obfuscation'],
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'cyber_superweapon');
+    }
+  },
+  {
     id: 'conventional_armored_doctrine',
     name: 'Armored Maneuver Doctrine',
     description: 'Codify combined-arms tactics to unlock modern armored corps formations.',

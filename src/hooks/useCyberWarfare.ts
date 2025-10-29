@@ -40,7 +40,14 @@ export interface CyberOperationOutcome {
   severity?: 'minor' | 'major';
 }
 
-export type CyberResearchUnlock = 'firewalls' | 'intrusion_detection';
+export type CyberResearchUnlock =
+  | 'firewalls'
+  | 'intrusion_detection'
+  | 'advanced_offense'
+  | 'stealth_protocols'
+  | 'attribution_obfuscation'
+  | 'ai_defense'
+  | 'cyber_superweapon';
 
 export interface UseCyberWarfareOptions {
   currentTurn: number;
@@ -110,6 +117,36 @@ export const applyCyberResearchUnlock = (
       profile.detection += 12;
       profile.attribution += 18;
       profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 8);
+      break;
+    case 'advanced_offense':
+      profile.research.advancedOffense = true;
+      profile.offense += 10;
+      profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 10);
+      break;
+    case 'stealth_protocols':
+      profile.research.stealthProtocols = true;
+      profile.offense += 5;
+      // Detection reduction of 15% handled in executeIntrusion logic
+      profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 8);
+      break;
+    case 'attribution_obfuscation':
+      profile.research.attributionObfuscation = true;
+      profile.attribution += 15; // Makes YOUR attacks harder to attribute
+      profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 10);
+      break;
+    case 'ai_defense':
+      profile.research.aiDefense = true;
+      profile.defense += 10;
+      profile.detection += 10;
+      // 20% counter-attack chance handled in executeIntrusion logic
+      profile.maxReadiness += 10;
+      profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 15);
+      break;
+    case 'cyber_superweapon':
+      profile.research.cyberSuperweapon = true;
+      // Unlocks new action "Cyber Nuke" (one-time devastating attack)
+      profile.offense += 15;
+      profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 20);
       break;
   }
   nation.cyber = profile;
@@ -189,19 +226,21 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
     const offenseTerm = (attacker.offense - defender.defense) / 220;
     const readinessRatio = attacker.maxReadiness > 0 ? attacker.readiness / attacker.maxReadiness : 0;
     const readinessTerm = (readinessRatio - 0.5) * 0.35;
-    const researchBoost = attacker.research.intrusionDetection ? 0.05 : 0;
+    const researchBoost = (attacker.research.intrusionDetection ? 0.05 : 0) + (attacker.research.advancedOffense ? 0.08 : 0);
     return clamp(0.45 + offenseTerm + readinessTerm + researchBoost, 0.1, 0.95);
   }, []);
 
-  const computeDetectionChance = useCallback((targetProfile: NationCyberProfile) => {
+  const computeDetectionChance = useCallback((targetProfile: NationCyberProfile, attackerProfile: NationCyberProfile) => {
     const readinessPenalty = targetProfile.readiness < targetProfile.maxReadiness * 0.3 ? -0.08 : 0;
     const researchBonus = targetProfile.research.intrusionDetection ? 0.12 : 0;
-    return clamp(0.28 + targetProfile.detection / 150 + readinessPenalty + researchBonus, 0.12, 0.95);
+    const stealthReduction = attackerProfile.research.stealthProtocols ? -0.15 : 0; // Stealth protocols reduce detection by 15%
+    return clamp(0.28 + targetProfile.detection / 150 + readinessPenalty + researchBonus + stealthReduction, 0.12, 0.95);
   }, []);
 
-  const computeAttributionChance = useCallback((targetProfile: NationCyberProfile) => {
+  const computeAttributionChance = useCallback((targetProfile: NationCyberProfile, attackerProfile: NationCyberProfile) => {
     const researchBonus = targetProfile.research.intrusionDetection ? 0.1 : 0;
-    return clamp(0.35 + targetProfile.attribution / 190 + researchBonus, 0.15, 0.9);
+    const obfuscationReduction = attackerProfile.research.attributionObfuscation ? -0.25 : 0; // Attribution obfuscation makes your attacks harder to trace
+    return clamp(0.35 + targetProfile.attribution / 190 + researchBonus + obfuscationReduction, 0.15, 0.9);
   }, []);
 
   const computeFalseFlagChance = useCallback((targetProfile: NationCyberProfile) => {
@@ -223,20 +262,27 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
       }
       const profile = ensureProfile(nation);
       const remainingCooldown = getCooldown(nationId, action);
+
+      // Apply advanced offense cost reduction for intrusion (20%)
+      let effectiveCost = rule.cost;
+      if (action === 'intrusion' && profile.research.advancedOffense) {
+        effectiveCost = Math.round(rule.cost * 0.8); // 20% cost reduction
+      }
+
       if (remainingCooldown > 0) {
         return {
           id: action,
-          cost: rule.cost,
+          cost: effectiveCost,
           cooldown: rule.cooldown,
           remainingCooldown,
           canExecute: false,
           reason: `Cooldown: ${remainingCooldown} turn(s) remaining`,
         };
       }
-      if (profile.readiness < rule.cost) {
+      if (profile.readiness < effectiveCost) {
         return {
           id: action,
-          cost: rule.cost,
+          cost: effectiveCost,
           cooldown: rule.cooldown,
           canExecute: false,
           reason: 'Insufficient cyber readiness',
@@ -245,7 +291,7 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
       if (rule.requiresResearch && !nation.researched?.[rule.requiresResearch]) {
         return {
           id: action,
-          cost: rule.cost,
+          cost: effectiveCost,
           cooldown: rule.cooldown,
           canExecute: false,
           reason: 'Research prerequisite incomplete',
@@ -256,7 +302,7 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
         if (!target) {
           return {
             id: action,
-            cost: rule.cost,
+            cost: effectiveCost,
             cooldown: rule.cooldown,
             canExecute: false,
             reason: 'Select a valid target',
@@ -266,7 +312,7 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
         if (!scapegoat) {
           return {
             id: action,
-            cost: rule.cost,
+            cost: effectiveCost,
             cooldown: rule.cooldown,
             canExecute: false,
             reason: 'No viable rival to frame',
@@ -274,7 +320,7 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
         }
         return {
           id: action,
-          cost: rule.cost,
+          cost: effectiveCost,
           cooldown: rule.cooldown,
           canExecute: true,
           scapegoatId: scapegoat.id,
@@ -282,7 +328,7 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
       }
       return {
         id: action,
-        cost: rule.cost,
+        cost: effectiveCost,
         cooldown: rule.cooldown,
         canExecute: true,
       };
@@ -312,12 +358,18 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
         };
       }
 
-      attackerProfile.readiness = Math.max(0, attackerProfile.readiness - rule.cost);
+      // Apply advanced offense cost reduction for intrusion (20%)
+      let effectiveCost = rule.cost;
+      if (action === 'intrusion' && attackerProfile.research.advancedOffense) {
+        effectiveCost = Math.round(rule.cost * 0.8); // 20% cost reduction
+      }
+
+      attackerProfile.readiness = Math.max(0, attackerProfile.readiness - effectiveCost);
       setCooldown(attacker.id, action, rule.cooldown);
 
       const successChance = computeSuccessChance(attackerProfile, targetProfile);
-      const detectionChance = computeDetectionChance(targetProfile);
-      const attributionChance = computeAttributionChance(targetProfile);
+      const detectionChance = computeDetectionChance(targetProfile, attackerProfile);
+      const attributionChance = computeAttributionChance(targetProfile, attackerProfile);
       const falseFlagChance = computeFalseFlagChance(targetProfile);
 
       const success = rngRef.current() < successChance;
@@ -356,6 +408,13 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
           if (scapegoat) {
             increaseThreat(target, scapegoat.id, 18);
           }
+        }
+
+        // AI-Driven Cyber Defenses: 20% chance to counter-attack
+        if (detected && targetProfile.research.aiDefense && rngRef.current() < 0.2) {
+          const counterDamage = Math.round(8 + targetProfile.defense / 15);
+          attackerProfile.readiness = Math.max(0, attackerProfile.readiness - counterDamage);
+          onLog?.(`AI defense system counter-attacked ${attacker.name}, inflicting ${counterDamage} readiness damage`, 'warning');
         }
       } else {
         attackerProfile.readiness = Math.max(0, attackerProfile.readiness - 5);
