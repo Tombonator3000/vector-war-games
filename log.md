@@ -38,6 +38,9 @@
 | 2025-10-28T15:55:14Z | Reviewed AGENTS instructions and scoped governance threshold update task. |
 | 2025-10-28T15:57:23Z | Updated political event conditions to include threshold key typing and stress requirements for election cycle. |
 | 2025-10-28T15:58:43Z | Refactored governance hook condition evaluation and event targeting to honor new threshold semantics and election auto-resolution. |
+| 2025-10-29T11:12:47Z | Reviewed AGENTS instructions and inspected `Index.tsx` globe controls to plan zoom focal adjustments. |
+| 2025-10-29T11:12:52Z | Implemented projector-based wheel and pinch zoom recentering in `src/pages/Index.tsx` to stabilize hotspot focus. |
+| 2025-10-29T11:13:05Z | Ran `npm run test` to confirm suite passes after interaction updates. |
 | 2025-10-29T10:51:53Z | Reviewed AGENTS instructions and scoped co-op toggle disable requirements for Index UI. |
 | 2025-10-29T10:51:57Z | Implemented persisted co-op toggle, approval bypass logic, and conditional multiplayer UI in `src/pages/Index.tsx`. |
 | 2025-10-29T10:51:59Z | Added regression test `src/pages/__tests__/Index.test.tsx` with module mocks to confirm actions skip approvals when co-op is disabled. |
