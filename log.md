@@ -118,3 +118,7 @@
 | 2025-10-29T14:40:32Z | Replaced `new URL(... import.meta.env.BASE_URL)` usage with a base-path aware resolver in `src/pages/Index.tsx` to prevent runtime crashes. |
 | 2025-10-29T14:41:45Z | Relaunched Vite dev server and confirmed intro screen renders via Playwright screenshot capture. |
 | 2025-10-29T14:42:30Z | Executed `npm run test -- --run` to verify the intro screen fix passes the Vitest suite. |
+| 2025-10-29T15:38:12Z | Reviewed root `AGENTS.md` and scoped clamp latitude camera bounds fix requirements. |
+| 2025-10-29T15:38:45Z | Inspected `src/pages/Index.tsx` interaction handlers to trace globe camera latitude clamping logic. |
+| 2025-10-29T15:39:10Z | Updated `clampLatitude` helper to derive min/max camera Y bounds via `Math.min`/`Math.max` for consistent latitude limits. |
+| 2025-10-29T15:39:26Z | Ran `npm run test -- --run` to ensure interaction changes pass the Vitest suite. |
