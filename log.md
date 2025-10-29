@@ -203,3 +203,11 @@
 ✅ Full game integration
 
 **Next**: Commit final changes and create pull request.
+2025-10-29T18:38:20Z Reviewed root `AGENTS.md` to confirm logging duties and audio system expectations before implementing changes.
+2025-10-29T18:38:45Z Updated `AudioSys.playTrack` to resume the audio context and mark user interaction when the context runs so autoplay can start.
+2025-10-29T18:39:15Z Adjusted the turn one music autoplay effect to keep resuming and replaying until a track is active before recording completion.
+2025-10-29T18:39:45Z Added visibility and audio state listeners to resume context and restart preferred music when the page regains focus.
+2025-10-29T19:18:21Z Investigated runtime ReferenceError for missing showPandemicPanel gating in src/pages/Index.tsx rendering.
+2025-10-29T19:19:09Z Reintroduced showPandemicPanel memo in src/pages/Index.tsx to gate PandemicPanel rendering on integration, BioForge access, or active outbreaks.
+2025-10-29T19:19:47Z Ran npm run build to confirm the restored pandemic panel logic compiles without regressions.
+2025-10-29T19:20:24Z Committed pandemic panel visibility fix and log updates with message "Restore pandemic panel visibility guard".
