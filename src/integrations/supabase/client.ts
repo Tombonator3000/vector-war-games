@@ -27,7 +27,10 @@ const storage: StorageLike | undefined =
     ? window.localStorage
     : createMemoryStorage();
 
-const env = typeof import.meta !== 'undefined' ? import.meta.env : ({} as Record<string, string>);
+const env =
+  (typeof import.meta !== 'undefined' &&
+    (import.meta as { env?: Record<string, string | undefined> }).env) ??
+  ({} as Record<string, string | undefined>);
 
 const SUPABASE_URL = env.VITE_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
