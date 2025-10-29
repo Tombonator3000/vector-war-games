@@ -6,6 +6,7 @@ const STATUS_COPY: Record<string, { label: string; tone: string; icon: typeof Si
   connecting: { label: 'Linking…', tone: 'text-yellow-300', icon: RefreshCcw as typeof SignalHigh },
   ready: { label: 'Live Sync', tone: 'text-emerald-300', icon: SignalHigh },
   error: { label: 'Offline', tone: 'text-rose-400', icon: SignalLow },
+  unavailable: { label: 'Multiplayer Off', tone: 'text-slate-400', icon: SignalLow },
 };
 
 export const SyncStatusBadge = () => {

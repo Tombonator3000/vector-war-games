@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseFallback } from '@/integrations/supabase/client';
 import { MultiplayerTransport, type MultiplayerPresenceState, type MultiplayerStateEnvelope, type MultiplayerApprovalRequest, type MultiplayerApprovalResponse, type MultiplayerRole } from '@/integrations/multiplayer/service';
 import type { MultiplayerActionType, MultiplayerSharedState } from '@/types/game';
 
@@ -11,7 +11,7 @@ const ROLE_PERMISSIONS: Record<MultiplayerRole, Set<MultiplayerActionType>> = {
 
 const SESSION_STORAGE_KEY = 'norad_coop_session_id';
 
-type ConnectionState = 'idle' | 'connecting' | 'ready' | 'error';
+type ConnectionState = 'idle' | 'connecting' | 'ready' | 'error' | 'unavailable';
 
 type MultiplayerApproval = {
   request: MultiplayerApprovalRequest;
@@ -53,6 +53,9 @@ const createId = () =>
     : Math.random().toString(36).slice(2);
 
 const ensureAnonSession = async () => {
+  if (isSupabaseFallback) {
+    return null;
+  }
   const { data } = await supabase.auth.getSession();
   if (data.session) {
     return data.session.access_token;
@@ -97,8 +100,20 @@ export const MultiplayerProvider = ({ children }: { children: React.ReactNode })
   const resolversRef = useRef(new Map<string, (approved: boolean) => void>());
   const transportRef = useRef<MultiplayerTransport | null>(null);
   const [role, setRole] = useState<MultiplayerRole | null>(null);
+  const fallbackToastRef = useRef(false);
 
   useEffect(() => {
+    if (isSupabaseFallback) {
+      setConnection('unavailable');
+      if (!fallbackToastRef.current) {
+        toast({
+          title: 'Multiplayer unavailable',
+          description: 'Supabase credentials are missing. Local play remains available.',
+        });
+        fallbackToastRef.current = true;
+      }
+      return;
+    }
     const subscription = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session) {
         await ensureAnonSession();
@@ -116,7 +131,7 @@ export const MultiplayerProvider = ({ children }: { children: React.ReactNode })
   useEffect(() => {
     const transport = new MultiplayerTransport();
     transportRef.current = transport;
-    setConnection('connecting');
+    setConnection(isSupabaseFallback ? 'unavailable' : 'connecting');
 
     let isMounted = true;
 
@@ -124,7 +139,7 @@ export const MultiplayerProvider = ({ children }: { children: React.ReactNode })
       .join({ sessionId })
       .then(() => {
         if (!isMounted) return;
-        setConnection('ready');
+        setConnection(isSupabaseFallback ? 'unavailable' : 'ready');
         setRole(resolveRole(transport.getClientId(), presenceRef.current));
         transport.updatePresence({ ready: readyRef.current }).catch(() => {
           /* ignore */

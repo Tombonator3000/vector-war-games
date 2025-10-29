@@ -1,5 +1,5 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseFallback } from '@/integrations/supabase/client';
 import type { MultiplayerSharedState } from '@/types/game';
 
 export type MultiplayerRole = 'STRATEGIST' | 'TACTICIAN';
@@ -77,6 +77,11 @@ export class MultiplayerTransport {
       await this.leave();
     }
 
+    if (isSupabaseFallback) {
+      this.setupBroadcastFallback(options.metadata);
+      return;
+    }
+
     try {
       this.channel = supabase.channel(`coop:${options.sessionId}`, {
         config: { presence: { key: this.clientId } },
@@ -123,7 +128,7 @@ export class MultiplayerTransport {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.warn('[multiplayer] Failed to join Supabase channel, falling back to BroadcastChannel', error);
-      this.setupBroadcastFallback();
+      this.setupBroadcastFallback(options.metadata);
     }
   }
 
@@ -239,7 +244,7 @@ export class MultiplayerTransport {
     this.presenceListeners.forEach(listener => listener({ ...this.presenceState }));
   }
 
-  private setupBroadcastFallback() {
+  private setupBroadcastFallback(metadata?: Record<string, unknown>) {
     if (typeof BroadcastChannel === 'undefined') {
       return;
     }
@@ -258,6 +263,7 @@ export class MultiplayerTransport {
       lastSeen: nowIso(),
       role: undefined,
       ready: false,
+      ...(metadata as Partial<MultiplayerPresenceState>),
     };
     this.emitPresence();
   }

@@ -1,5 +1,7 @@
 # Activity Log
-
+2025-10-29T14:00:00+00:00 Adjusted Supabase client to provide fallback stub when credentials missing and added detection flag.
+2025-10-29T14:05:00+00:00 Updated MultiplayerProvider, SyncStatusBadge, and multiplayer transport to respect fallback mode.
+2025-10-29T14:10:00+00:00 Added regression test for missing Supabase credentials and updated existing mocks; ran `npm run test -- MultiplayerProvider` (initial failure due to missing mock export, resolved after update; subsequent run passed).
 | Timestamp (UTC) | Action |
 | --- | --- |
 | 2025-10-28T11:21:12+00:00 | Captured initial session timestamp to seed the logging process. |
