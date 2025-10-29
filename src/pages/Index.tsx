@@ -1250,13 +1250,22 @@ const AudioSys = {
     if (!this.musicEnabled) {
       return;
     }
-    if (!this.userInteractionPrimed) {
-      return;
-    }
     if (!this.audioContext) this.init();
     if (!this.audioContext) {
       return;
     }
+
+    if (!this.userInteractionPrimed) {
+      await this.resumeContext();
+      if (this.audioContext?.state === 'running') {
+        this.userInteractionPrimed = true;
+      }
+    }
+
+    if (!this.userInteractionPrimed) {
+      return;
+    }
+
     if (!forceRestart && this.currentTrackId === trackId && this.musicSource) {
       return;
     }
@@ -4778,13 +4787,69 @@ export default function NoradVector() {
       return;
     }
 
-    hasAutoplayedTurnOneMusicRef.current = true;
+    let cancelled = false;
 
     void (async () => {
-      await AudioSys.resumeContext();
-      await AudioSys.playPreferredTrack();
+      while (!cancelled && AudioSys.musicEnabled && !AudioSys.getCurrentTrack()) {
+        await AudioSys.resumeContext();
+        await AudioSys.playPreferredTrack();
+        if (AudioSys.getCurrentTrack()) {
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 250));
+      }
+
+      if (!cancelled && AudioSys.getCurrentTrack()) {
+        hasAutoplayedTurnOneMusicRef.current = true;
+      }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isGameStarted]);
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+      if (!AudioSys.musicEnabled) {
+        return;
+      }
+      void (async () => {
+        await AudioSys.resumeContext();
+        await AudioSys.playPreferredTrack({ forceRestart: false });
+      })();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    AudioSys.init();
+    const audioContext = AudioSys.audioContext;
+    const handleStateChange = (event: Event) => {
+      const context = event.target as AudioContext | null;
+      if (!context) {
+        return;
+      }
+      if (context.state !== 'running') {
+        return;
+      }
+      if (!AudioSys.musicEnabled) {
+        return;
+      }
+      void (async () => {
+        await AudioSys.resumeContext();
+        await AudioSys.playPreferredTrack({ forceRestart: false });
+      })();
+    };
+
+    audioContext?.addEventListener('statechange', handleStateChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      audioContext?.removeEventListener('statechange', handleStateChange);
+    };
+  }, []);
   const [uiTick, setUiTick] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
