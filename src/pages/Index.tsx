@@ -7955,8 +7955,24 @@ export default function NoradVector() {
               addNewsItem('crisis', `DEFCON ${S.defcon}: Flashpoint resolved - ${result.success ? 'Success' : 'Failure'}`, 'critical');
             }
             
-            if (outcome.morale) {
-              player.morale = Math.max(0, Math.min(100, (player.morale ?? 0) + outcome.morale));
+            if (player && player.id) {
+              const governanceDelta: GovernanceDelta = {};
+              if (typeof outcome.morale === 'number' && outcome.morale !== 0) {
+                governanceDelta.morale = outcome.morale;
+              }
+              if (typeof outcome.publicOpinion === 'number' && outcome.publicOpinion !== 0) {
+                governanceDelta.publicOpinion = outcome.publicOpinion;
+              }
+              if (typeof outcome.cabinetApproval === 'number' && outcome.cabinetApproval !== 0) {
+                governanceDelta.cabinetApproval = outcome.cabinetApproval;
+              }
+              if (typeof outcome.electionTimer === 'number' && outcome.electionTimer !== 0) {
+                governanceDelta.electionTimer = outcome.electionTimer;
+              }
+
+              if (Object.keys(governanceDelta).length > 0) {
+                governance.applyGovernanceDelta(player.id, governanceDelta);
+              }
             }
             
             if (outcome.intel) {

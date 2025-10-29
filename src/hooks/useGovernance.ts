@@ -177,6 +177,7 @@ export interface UseGovernanceReturn {
   activeEvent: GovernanceEventState | null;
   selectOption: (optionId: string) => { description: string; effects: GovernanceDelta } | null;
   dismissEvent: () => void;
+  applyGovernanceDelta: (nationId: string, delta: GovernanceDelta, description?: string) => void;
 }
 
 export function useGovernance({
@@ -227,22 +228,18 @@ export function useGovernance({
       nationId: string,
       updater: (metrics: GovernanceMetrics, nation: GovernanceNationRef | undefined) => GovernanceMetrics,
     ) => {
-      let updatedMetrics: GovernanceMetrics | null = null;
       setMetrics((prev) => {
         const nation = getNations().find((n) => n.id === nationId);
         const current = prev[nationId] ?? seedMetrics(nation);
-        updatedMetrics = updater(current, nation);
-        return { ...prev, [nationId]: updatedMetrics };
+        const next = updater(current, nation);
+        onMetricsSync?.(nationId, next);
+        return { ...prev, [nationId]: next };
       });
-
-      if (updatedMetrics) {
-        onMetricsSync?.(nationId, updatedMetrics);
-      }
     },
     [getNations, onMetricsSync],
   );
 
-  const applyDelta = useCallback(
+  const applyGovernanceDelta = useCallback(
     (nationId: string, delta: GovernanceDelta, description?: string) => {
       const nation = getNations().find((n) => n.id === nationId);
       syncNationMetrics(nationId, (current) => {
@@ -306,11 +303,11 @@ export function useGovernance({
         (a, b) => evaluateOptionExpectation(b) - evaluateOptionExpectation(a),
       )[0];
       const outcome = pickOutcome(bestOption);
-      applyDelta(nation.id, outcome.effects);
+      applyGovernanceDelta(nation.id, outcome.effects);
       recordEventTurn(nation.id, definition.id, currentTurn);
       return outcome;
     },
-    [applyDelta, currentTurn, recordEventTurn],
+    [applyGovernanceDelta, currentTurn, recordEventTurn],
   );
 
   const ensureElectionTimer = useCallback(() => {
@@ -427,21 +424,21 @@ export function useGovernance({
       const option = activeEvent.definition.options.find((opt) => opt.id === optionId);
       if (!option) return null;
       const outcome = pickOutcome(option);
-      applyDelta(activeEvent.nationId, outcome.effects, outcome.description);
+      applyGovernanceDelta(activeEvent.nationId, outcome.effects, outcome.description);
       setActiveEvent(null);
       return { description: outcome.description, effects: outcome.effects };
     },
-    [activeEvent, applyDelta],
+    [activeEvent, applyGovernanceDelta],
   );
 
   const dismissEvent = useCallback(() => {
     if (!activeEvent) return;
     const definition = activeEvent.definition;
     if (definition.fallbackDelta) {
-      applyDelta(activeEvent.nationId, definition.fallbackDelta, definition.fallbackSummary);
+      applyGovernanceDelta(activeEvent.nationId, definition.fallbackDelta, definition.fallbackSummary);
     }
     setActiveEvent(null);
-  }, [activeEvent, applyDelta]);
+  }, [activeEvent, applyGovernanceDelta]);
 
   const memoisedMetrics = useMemo(() => metrics, [metrics]);
 
@@ -450,6 +447,7 @@ export function useGovernance({
     activeEvent,
     selectOption,
     dismissEvent,
+    applyGovernanceDelta,
   };
 }
 

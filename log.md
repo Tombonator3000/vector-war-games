@@ -124,3 +124,8 @@
 | 2025-10-29T15:39:26Z | Ran `npm run test -- --run` to ensure interaction changes pass the Vitest suite. |
 | 2025-10-29T16:18:00Z | Reviewed `src/pages/Index.tsx` audio system logic to support turn-one music autoplay. |
 | 2025-10-29T16:18:30Z | Added turn-one autoplay effect and supporting ref in `src/pages/Index.tsx` to resume context and start music automatically. |
+| 2025-11-07T09:12:04Z | Reviewed root `AGENTS.md` to confirm governance hook exposure requirements and logging obligations. |
+| 2025-11-07T09:15:18Z | Inspected `src/hooks/useGovernance.ts` and `src/pages/Index.tsx` flashpoint handling to plan morale pipeline integration. |
+| 2025-11-07T09:27:41Z | Exposed `applyGovernanceDelta` from `useGovernance`, updated flashpoint morale handling to call the hook, and added persistence test coverage. |
+| 2025-11-07T09:35:06Z | Refined `syncNationMetrics` to emit `onMetricsSync` updates inside the state setter and cleaned up regression test scaffolding. |
+| 2025-11-07T09:36:58Z | Ran `npx vitest run useGovernance` to confirm governance delta regression passes alongside existing coverage. |
