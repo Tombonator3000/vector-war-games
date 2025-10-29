@@ -134,3 +134,6 @@
 | 2025-10-29T17:06:39Z | Reviewed root `AGENTS.md` and scoped launch authorization UX updates for strategic strike flow. |
 | 2025-10-29T17:06:52Z | Refactored `src/pages/Index.tsx` to stage pending launch state and render the Launch Control confirmation dialog. |
 | 2025-10-29T17:06:54Z | Ran `npm run build` to ensure the Launch Control modal and strike flow changes compile without TypeScript errors. |
+| 2025-11-07T10:05:12Z | Reviewed `confirmPendingLaunch` safeguards in `src/pages/Index.tsx` to ensure modal confirmation respects turn gating. |
+| 2025-11-07T10:12:33Z | Revalidated player phase, action count, and DEFCON constraints inside `confirmPendingLaunch` to block out-of-turn launches. |
+| 2025-11-07T10:29:04Z | Ran `npm run build` to confirm launch control validations compile cleanly with the production bundle. |
