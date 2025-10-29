@@ -21,6 +21,7 @@ import {
   type PandemicTurnContext
 } from '@/hooks/usePandemic';
 import { useBioWarfare } from '@/hooks/useBioWarfare';
+import { initializeAllAINations, processAllAINationsBioWarfare } from '@/lib/aiBioWarfareIntegration';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
@@ -2234,6 +2235,10 @@ function initNations() {
       .map(territory => territory.id);
   });
 
+  // Initialize AI bio-warfare capabilities
+  const difficulty = S.difficulty || 'medium';
+  initializeAllAINations(nations, difficulty);
+
   log('=== GAME START ===', 'success');
   log(`Leader: ${playerLeaderName}`, 'success');
   log(`Doctrine: ${S.selectedDoctrine}`, 'success');
@@ -4430,6 +4435,32 @@ function endTurn() {
       S.turn++;
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+
+      // Process AI bio-warfare for all AI nations
+      const difficulty = S.difficulty || 'medium';
+      processAllAINationsBioWarfare(nations, S.turn, difficulty, {
+        onLabConstructionStart: (nationId, tier) => {
+          const nation = nations.find(n => n.id === nationId);
+          if (nation && (window as any).__gameAddNewsItem) {
+            (window as any).__gameAddNewsItem('military', `${nation.name} has begun constructing bio-laboratory (Tier ${tier})`, 'alert');
+          }
+        },
+        onPlagueSelected: (nationId, plagueType) => {
+          const nation = nations.find(n => n.id === nationId);
+          if (nation && (window as any).__gameAddNewsItem) {
+            (window as any).__gameAddNewsItem('crisis', `INTELLIGENCE: ${nation.name} has initiated bio-weapon program`, 'critical');
+          }
+        },
+        onNodeEvolved: (nationId, nodeId) => {
+          // Silent - too many events otherwise
+        },
+        onDeployment: (nationId, targets) => {
+          const nation = nations.find(n => n.id === nationId);
+          if (nation && (window as any).__gameAddNewsItem) {
+            (window as any).__gameAddNewsItem('crisis', `ALERT: Bio-weapon deployment detected from ${nation.name}`, 'critical');
+          }
+        }
+      });
 
       (window as any).__cyberAdvance?.();
 
