@@ -63,3 +63,5 @@
 | 2025-10-29T00:00:55Z | Reviewed `src/pages/Index.tsx` audio state initialization to plan persistent settings work. |
 | 2025-10-29T00:01:02Z | Implemented local storage hydration and persistence for music/SFX toggles, volume, and track selection. |
 | 2025-10-29T00:01:32Z | Ran `npm run test` to confirm audio preference persistence changes did not break existing tests. |
+| 2025-10-29T07:43:53+00:00 | Reviewed drag handling task instructions and repository guidelines. |
+| 2025-10-29T07:44:33+00:00 | Implemented canvas drag handling for both mouse buttons, tracked drag initiator, and suppressed context menu during right-drag pan. |
