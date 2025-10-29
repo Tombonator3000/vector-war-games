@@ -4284,6 +4284,7 @@ export default function NoradVector() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gamePhase, setGamePhase] = useState('intro');
   const [isGameStarted, setIsGameStarted] = useState(false);
+  const hasAutoplayedTurnOneMusicRef = useRef(false);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState<{ title: string; content: ModalContentValue }>({ title: '', content: '' });
   const [selectedLeader, setSelectedLeader] = useState<string | null>(null);
@@ -4423,6 +4424,31 @@ export default function NoradVector() {
 
     setIsGameStarted(true);
   }, [gamePhase, isGameStarted, playerNameGlobal, selectedDoctrineGlobal, selectedLeaderGlobal]);
+
+  useEffect(() => {
+    if (!isGameStarted) {
+      return;
+    }
+
+    if (hasAutoplayedTurnOneMusicRef.current) {
+      return;
+    }
+
+    if (S.turn !== 1) {
+      return;
+    }
+
+    if (!AudioSys.musicEnabled) {
+      return;
+    }
+
+    hasAutoplayedTurnOneMusicRef.current = true;
+
+    void (async () => {
+      await AudioSys.resumeContext();
+      await AudioSys.playPreferredTrack();
+    })();
+  }, [isGameStarted]);
   const [uiTick, setUiTick] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
