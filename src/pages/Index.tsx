@@ -287,6 +287,7 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 ];
 
 let currentTheme: ThemeId = 'synthwave';
+let currentMapStyle: MapStyle = 'realistic';
 let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
@@ -1373,22 +1374,34 @@ const Atmosphere = {
     });
   },
   
-  draw(context: CanvasRenderingContext2D) {
+  draw(context: CanvasRenderingContext2D, style: MapStyle) {
     if (!this.initialized) return;
 
     const palette = THEME_SETTINGS[currentTheme];
+    const isNight = style === 'night';
+    const isWireframe = style === 'wireframe';
 
-    context.fillStyle = 'rgba(255,255,255,0.25)';
+    context.fillStyle = isNight ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.25)';
+    const starAlpha = isWireframe ? 0.45 : isNight ? 0.65 : 0.4;
     this.stars.forEach(star => {
-      context.globalAlpha = star.brightness * 0.4;
+      context.globalAlpha = star.brightness * starAlpha;
       context.fillRect(star.x, star.y, 1, 1);
     });
     context.globalAlpha = 1;
 
+    if (isWireframe) {
+      return;
+    }
+
+    const cloudAlpha = isNight ? 0.05 : style === 'political' ? 0.12 : 0.08;
     this.clouds.forEach(cloud => {
       context.save();
-      context.globalAlpha = 0.08;
-      context.fillStyle = palette.cloud;
+      context.globalAlpha = cloudAlpha;
+      if (style === 'political') {
+        context.fillStyle = 'rgba(255,180,120,0.45)';
+      } else {
+        context.fillStyle = palette.cloud;
+      }
       context.beginPath();
       context.ellipse(cloud.x, cloud.y, cloud.sizeX, cloud.sizeY, 0, 0, Math.PI * 2);
       context.fill();
@@ -1416,12 +1429,17 @@ const Ocean = {
     // Waves naturally animate via sin functions
   },
   
-  draw(context: CanvasRenderingContext2D) {
+  draw(context: CanvasRenderingContext2D, style: MapStyle) {
     const time = Date.now() / 1000;
     const palette = THEME_SETTINGS[currentTheme];
-    context.strokeStyle = palette.ocean;
-    context.globalAlpha = 0.35;
-    context.lineWidth = 1;
+    const isWireframe = style === 'wireframe';
+    const isNight = style === 'night';
+
+    context.save();
+    context.lineWidth = isWireframe ? 1.5 : 1;
+    context.globalAlpha = isNight ? 0.18 : isWireframe ? 0.45 : 0.35;
+    context.setLineDash(isWireframe ? [10, 6] : []);
+    context.strokeStyle = isWireframe ? '#4ef6ff' : palette.ocean;
 
     this.waves.forEach(wave => {
       context.beginPath();
@@ -1432,7 +1450,7 @@ const Ocean = {
       }
       context.stroke();
     });
-    context.globalAlpha = 1;
+    context.restore();
   }
 };
 
@@ -1477,20 +1495,34 @@ const CityLights = {
     return destroyed;
   },
   
-  draw(context: CanvasRenderingContext2D) {
+  draw(context: CanvasRenderingContext2D, style: MapStyle) {
+    if (style === 'wireframe') {
+      return;
+    }
+
     const time = Date.now();
     this.cities.forEach(city => {
       const [x, y] = project(city.lon, city.lat);
-      
+
       // Flickering light effect (satellite view)
       const flicker = 0.8 + Math.sin(time * 0.003 + city.lon + city.lat) * 0.2;
       const brightness = city.brightness * flicker;
-      
+
       // Glow effect
       context.save();
-      context.shadowColor = 'rgba(255,255,150,0.8)';
-      context.shadowBlur = 3;
-      context.fillStyle = `rgba(255,255,100,${brightness * 0.8})`;
+      if (style === 'night') {
+        context.shadowColor = 'rgba(255,220,140,0.9)';
+        context.shadowBlur = 4;
+        context.fillStyle = `rgba(255,210,120,${brightness})`;
+      } else if (style === 'political') {
+        context.shadowColor = 'rgba(255,200,80,0.75)';
+        context.shadowBlur = 3;
+        context.fillStyle = `rgba(255,200,80,${brightness * 0.7})`;
+      } else {
+        context.shadowColor = 'rgba(255,255,150,0.8)';
+        context.shadowBlur = 3;
+        context.fillStyle = `rgba(255,255,100,${brightness * 0.6})`;
+      }
       context.fillRect(x - 0.8, y - 0.8, 1.6, 1.6);
       context.restore();
     });
@@ -2539,18 +2571,36 @@ function toLonLat(x: number, y: number): [number, number] {
   return [lon, lat];
 }
 
-function drawWorld() {
+const POLITICAL_COLOR_PALETTE = [
+  '#f94144',
+  '#f3722c',
+  '#f9c74f',
+  '#90be6d',
+  '#43aa8b',
+  '#577590',
+  '#f9844a',
+  '#ffafcc'
+];
+
+function getPoliticalFill(index: number) {
+  return POLITICAL_COLOR_PALETTE[index % POLITICAL_COLOR_PALETTE.length];
+}
+
+function drawWorld(style: MapStyle) {
   if (!worldCountries || !ctx) return;
 
   const palette = THEME_SETTINGS[currentTheme];
 
+  const isPolitical = style === 'political';
+  const isNight = style === 'night';
+  const isWireframe = style === 'wireframe';
+
   ctx.save();
-  ctx.strokeStyle = palette.mapOutline;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = isWireframe ? 1.5 : 1;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
-  worldCountries.features.forEach((feature: any) => {
+  worldCountries.features.forEach((feature: any, index: number) => {
     ctx.beginPath();
     const coords = feature.geometry.coordinates;
 
@@ -2560,42 +2610,77 @@ function drawWorld() {
       coords.forEach((poly: any) => drawWorldPath(poly[0]));
     }
 
+    if (isPolitical) {
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = getPoliticalFill(index);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if (isNight) {
+      ctx.strokeStyle = 'rgba(170,210,255,0.35)';
+    } else if (isWireframe) {
+      ctx.strokeStyle = 'rgba(80,240,255,0.75)';
+    } else if (isPolitical) {
+      ctx.strokeStyle = 'rgba(40,40,40,0.5)';
+    } else {
+      ctx.strokeStyle = palette.mapOutline;
+    }
+
     ctx.stroke();
   });
 
   ctx.restore();
 
-  // Grid lines
-  ctx.save();
-  ctx.strokeStyle = palette.grid;
-  ctx.lineWidth = 0.5;
-
-  for (let lon = -180; lon <= 180; lon += 30) {
-    ctx.beginPath();
-    for (let lat = -90; lat <= 90; lat += 5) {
-      const [x, y] = project(lon, lat);
-      if (lat === -90) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+  const shouldDrawGrid = style !== 'realistic' && style !== 'night';
+  if (shouldDrawGrid) {
+    ctx.save();
+    if (isWireframe) {
+      ctx.strokeStyle = 'rgba(80,240,255,0.35)';
+      ctx.lineWidth = 0.7;
+    } else if (isPolitical) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 0.5;
+    } else {
+      ctx.strokeStyle = palette.grid;
+      ctx.lineWidth = 0.5;
     }
-    ctx.stroke();
+
+    for (let lon = -180; lon <= 180; lon += 30) {
+      ctx.beginPath();
+      for (let lat = -90; lat <= 90; lat += 5) {
+        const [x, y] = project(lon, lat);
+        if (lat === -90) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    for (let lat = -90; lat <= 90; lat += 30) {
+      ctx.beginPath();
+      for (let lon = -180; lon <= 180; lon += 5) {
+        const [x, y] = project(lon, lat);
+        if (lon === -180) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 
-  for (let lat = -90; lat <= 90; lat += 30) {
-    ctx.beginPath();
-    for (let lon = -180; lon <= 180; lon += 5) {
-      const [x, y] = project(lon, lat);
-      if (lon === -180) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+  if (style !== 'wireframe') {
+    const scanY = (Date.now() / 30) % H;
+    if (isNight) {
+      ctx.fillStyle = 'rgba(80,160,255,0.08)';
+    } else if (isPolitical) {
+      ctx.fillStyle = 'rgba(255,200,120,0.12)';
+    } else {
+      ctx.fillStyle = palette.radar;
     }
-    ctx.stroke();
+    ctx.fillRect(0, scanY, W, 2);
   }
-
-  ctx.restore();
-
-  // Radar sweep
-  const scanY = (Date.now() / 30) % H;
-  ctx.fillStyle = palette.radar;
-  ctx.fillRect(0, scanY, W, 2);
 }
 
 function drawWorldPath(coords: number[][]) {
@@ -2607,14 +2692,17 @@ function drawWorldPath(coords: number[][]) {
   });
 }
 
-function drawNations() {
+function drawNations(style: MapStyle) {
   if (!ctx || nations.length === 0) return;
+
+  const isWireframeStyle = style === 'wireframe';
+  const isNightStyle = style === 'night';
+  const isPoliticalStyle = style === 'political';
 
   nations.forEach(n => {
     if (n.population <= 0) return;
 
     const [x, y] = project(n.lon, n.lat);
-
     if (isNaN(x) || isNaN(y)) return;
 
     const isSelectedTarget = selectedTargetRefId === n.id;
@@ -2624,14 +2712,15 @@ function drawNations() {
       const radius = baseRadius + pulse * 10;
 
       ctx.save();
-      ctx.strokeStyle = n.color || '#ff6666';
-      ctx.globalAlpha = 0.85;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 6]);
+      const targetColor = isWireframeStyle ? '#4ef6ff' : (n.color || '#ff6666');
+      ctx.strokeStyle = targetColor;
+      ctx.globalAlpha = isWireframeStyle ? 0.9 : 0.85;
+      ctx.lineWidth = isWireframeStyle ? 1.5 : 2;
+      ctx.setLineDash(isWireframeStyle ? [4, 6] : [6, 6]);
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = isWireframeStyle ? 0.35 : 0.4;
       ctx.setLineDash([]);
       ctx.beginPath();
       ctx.arc(x, y, radius + 6, 0, Math.PI * 2);
@@ -2641,20 +2730,29 @@ function drawNations() {
 
     // Nation marker (triangle)
     ctx.save();
-    ctx.fillStyle = n.color;
     ctx.strokeStyle = n.color;
-    ctx.lineWidth = 2;
-    ctx.shadowColor = n.color;
-    ctx.shadowBlur = 20;
-
-    ctx.beginPath();
-    ctx.moveTo(x, y - 20);
-    ctx.lineTo(x - 15, y + 12);
-    ctx.lineTo(x + 15, y + 12);
-    ctx.closePath();
-    ctx.stroke();
-    ctx.globalAlpha = 0.3;
-    ctx.fill();
+    ctx.lineWidth = isWireframeStyle ? 1.5 : 2;
+    if (isWireframeStyle) {
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(x, y - 18);
+      ctx.lineTo(x - 14, y + 14);
+      ctx.lineTo(x + 14, y + 14);
+      ctx.closePath();
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = n.color;
+      ctx.shadowColor = isNightStyle ? '#ffe066' : n.color;
+      ctx.shadowBlur = isNightStyle ? 25 : 20;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 20);
+      ctx.lineTo(x - 15, y + 12);
+      ctx.lineTo(x + 15, y + 12);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.globalAlpha = isPoliticalStyle ? 0.4 : 0.3;
+      ctx.fill();
+    }
     ctx.globalAlpha = 1;
     ctx.restore();
 
@@ -2667,15 +2765,16 @@ function drawNations() {
         const radius = 35 + (i % 3) * 8;
         const cx = x + Math.cos(angle) * radius;
         const cy = y + Math.sin(angle) * radius;
-        
-        ctx.fillStyle = n.color;
-        ctx.globalAlpha = 0.6;
-        ctx.fillRect(cx - 3, cy - 3, 6, 6);
-        
-        ctx.strokeStyle = n.color;
-        ctx.globalAlpha = 0.8;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(cx - 3, cy - 3, 6, 6);
+
+        if (isWireframeStyle) {
+          ctx.strokeStyle = n.color;
+          ctx.globalAlpha = 0.6;
+          ctx.strokeRect(cx - 5, cy - 5, 10, 10);
+        } else {
+          ctx.fillStyle = n.color;
+          ctx.globalAlpha = isNightStyle ? 0.5 : 0.3;
+          ctx.fillRect(cx - 6, cy - 6, 12, 12);
+        }
       }
       ctx.restore();
     }
@@ -2703,30 +2802,35 @@ function drawNations() {
     const lx = x;
     const lyTop = (y - 36 * z) - (bh - (12 * z));
 
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    const frameFill = isWireframeStyle
+      ? 'rgba(0,0,0,0.7)'
+      : isNightStyle
+        ? 'rgba(0,0,0,0.6)'
+        : 'rgba(0,0,0,0.45)';
+    ctx.fillStyle = frameFill;
     ctx.fillRect(lx - bw / 2, lyTop, bw, bh);
 
-    ctx.globalAlpha = 0.4;
-    ctx.strokeStyle = n.color;
+    ctx.globalAlpha = isWireframeStyle ? 0.65 : 0.4;
+    ctx.strokeStyle = isWireframeStyle ? '#4ef6ff' : n.color;
     ctx.strokeRect(lx - bw / 2, lyTop, bw, bh);
     ctx.globalAlpha = 1;
 
     ctx.font = `bold ${Math.round(12 * z)}px monospace`;
-    ctx.fillStyle = n.color;
-    ctx.shadowColor = n.color;
-    ctx.shadowBlur = 8;
+    ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : n.color;
+    ctx.shadowColor = isNightStyle ? '#ffe066' : n.color;
+    ctx.shadowBlur = isNightStyle ? 10 : 6;
     ctx.fillText(displayName, lx, lyTop + pad + 12 * z);
     ctx.shadowBlur = 0;
 
     ctx.font = `${Math.round(11 * z)}px monospace`;
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = isPoliticalStyle ? '#ffecd1' : '#ffffff';
     ctx.fillText(nationName, lx, lyTop + pad + 12 * z + 12 * z);
 
     ctx.restore();
 
     // Population display
     ctx.save();
-    ctx.fillStyle = '#00ff00';
+    ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : isPoliticalStyle ? '#ffd166' : '#00ff00';
     ctx.font = `${Math.round(10 * z)}px monospace`;
     ctx.textAlign = 'center';
     ctx.fillText(`${Math.floor(n.population)}M`, x, y + 30 * z);
@@ -4031,16 +4135,16 @@ function gameLoop() {
   ctx.clearRect(0, 0, W, H);
 
   Atmosphere.update();
-  Atmosphere.draw(ctx);
+  Atmosphere.draw(ctx, currentMapStyle);
 
   Ocean.update();
-  Ocean.draw(ctx);
-  
+  Ocean.draw(ctx, currentMapStyle);
+
   cam.zoom += (cam.targetZoom - cam.zoom) * 0.1;
-  
-  drawWorld();
-  CityLights.draw(ctx);
-  drawNations();
+
+  drawWorld(currentMapStyle);
+  CityLights.draw(ctx, currentMapStyle);
+  drawNations(currentMapStyle);
   drawMissiles();
   drawBombers();
   drawSubmarines();
@@ -4088,6 +4192,9 @@ export default function NoradVector() {
     }
     return 'realistic';
   });
+  useEffect(() => {
+    currentMapStyle = mapStyle;
+  }, [mapStyle]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
   const initialMusicEnabled = storedMusicEnabled === 'true' ? true : storedMusicEnabled === 'false' ? false : AudioSys.musicEnabled;
   const storedSfxEnabled = Storage.getItem('audio_sfx_enabled');
@@ -4218,6 +4325,7 @@ export default function NoradVector() {
   }, [pandemicIntegrationEnabled, bioWarfareEnabled]);
   const bioWarfareAvailable = pandemicIntegrationEnabled && bioWarfareEnabled;
   const handleMapStyleChange = (style: MapStyle) => {
+    currentMapStyle = style;
     setMapStyle(style);
     Storage.setItem('map_style', style);
     AudioSys.playSFX('click');
