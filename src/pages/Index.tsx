@@ -5366,20 +5366,7 @@ export default function NoradVector() {
       enqueueAIProposalRef = null;
     };
   }, [setPendingAIProposals]);
-  const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
-    const stored = Storage.getItem('map_style');
-    if (
-      stored === 'realistic' ||
-      stored === 'wireframe' ||
-      stored === 'night' ||
-      stored === 'political' ||
-      stored === 'flat' ||
-      stored === 'flat-realistic'
-    ) {
-      return stored;
-    }
-    return 'flat-realistic';
-  });
+  const [mapStyle, setMapStyle] = useState<MapStyle>('flat-realistic');
 
   // Globe viewer type - Three.js or Cesium
   const [viewerType, setViewerType] = useState<'threejs' | 'cesium'>(() => {
@@ -5706,7 +5693,6 @@ export default function NoradVector() {
   const handleMapStyleChange = (style: MapStyle) => {
     currentMapStyle = style;
     setMapStyle(style);
-    Storage.setItem('map_style', style);
     AudioSys.playSFX('click');
     if (style === 'flat-realistic') {
       void preloadFlatRealisticTexture();
