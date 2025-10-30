@@ -19,7 +19,7 @@ export interface TradeRoute {
   toNationId: string;
   resource: ResourceType;
   amountPerTurn: number;
-  established Turn: number;
+  establishedTurn: number;
   maintenanceCost: number;
   active: boolean;
 }

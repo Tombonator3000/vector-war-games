@@ -200,7 +200,7 @@ export function calculateAllianceConsequences(
   }));
 
   if (relationshipChanges.length > 0) {
-    risks: Consequence[] = [
+    const risks: Consequence[] = [
       {
         description: `${relationshipChanges.length} nations may view you as hostile`,
         severity: 'negative',
