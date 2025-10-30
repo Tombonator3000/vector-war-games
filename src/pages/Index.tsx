@@ -15,6 +15,7 @@ import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
 import { BioLabConstruction } from '@/components/BioLabConstruction';
 import { Globe3D } from '@/components/Globe3D';
+import CesiumViewer from '@/components/CesiumViewer';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
 import {
   usePandemic,
@@ -5370,6 +5371,20 @@ export default function NoradVector() {
     return 'flat-realistic';
   });
 
+  // Globe viewer type - Three.js or Cesium
+  const [viewerType, setViewerType] = useState<'threejs' | 'cesium'>(() => {
+    const stored = Storage.getItem('viewer_type');
+    return stored === 'cesium' ? 'cesium' : 'threejs';
+  });
+
+  const toggleViewer = useCallback(() => {
+    setViewerType(prev => {
+      const newType = prev === 'threejs' ? 'cesium' : 'threejs';
+      Storage.setItem('viewer_type', newType);
+      return newType;
+    });
+  }, []);
+
   // Tutorial and phase transition system
   const tutorialContext = useTutorialContext();
   const [isPhaseTransitioning, setIsPhaseTransitioning] = useState(false);
@@ -9440,15 +9455,31 @@ export default function NoradVector() {
       <div className="command-interface__scanlines" aria-hidden="true" />
 
       <div className="map-shell">
-        <GlobeScene
-          ref={canvasRef}
-          cam={cam}
-          nations={nations}
-          worldCountries={worldCountries}
-          onProjectorReady={handleProjectorReady}
-          onPickerReady={handlePickerReady}
-          mapStyle={mapStyle}
-        />
+        {viewerType === 'threejs' ? (
+          <GlobeScene
+            ref={canvasRef}
+            cam={cam}
+            nations={nations}
+            worldCountries={worldCountries}
+            onProjectorReady={handleProjectorReady}
+            onPickerReady={handlePickerReady}
+            mapStyle={mapStyle}
+          />
+        ) : (
+          <CesiumViewer
+            territories={Object.values(conventional.state.territories)}
+            units={Object.values(conventional.state.units)}
+            nations={nations}
+            onTerritoryClick={(territoryId) => {
+              console.log('Territory clicked:', territoryId);
+            }}
+            onUnitClick={(unitId) => {
+              console.log('Unit clicked:', unitId);
+            }}
+            enableDayNight={true}
+            className="w-full h-full"
+          />
+        )}
 
         <div className="hud-layers pointer-events-none touch-none">
           {/* Minimal top status bar */}
@@ -9501,6 +9532,23 @@ export default function NoradVector() {
                 className="h-7 px-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
               >
                 OPTIONS
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  toggleViewer();
+                  AudioSys.playSFX('click');
+                  toast({
+                    title: viewerType === 'threejs' ? 'Switched to Cesium' : 'Switched to Three.js',
+                    description: viewerType === 'threejs'
+                      ? 'Enhanced geospatial visualization with territories and units'
+                      : 'Classic globe view',
+                  });
+                }}
+                className="h-7 px-2 text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+              >
+                {viewerType === 'threejs' ? '🌍 CESIUM' : '🗺️ CLASSIC'}
               </Button>
               <Button
                 size="sm"

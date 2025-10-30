@@ -44,6 +44,7 @@
     "@react-three/fiber": "^8.18.0",
     "@supabase/supabase-js": "^2.75.0",
     "@tanstack/react-query": "^5.83.0",
+    "cesium": "^1.134.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -89,6 +90,7 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19",
+    "vite-plugin-cesium": "^1.2.23",
     "vitest": "^2.1.8"
   }
 }
