@@ -14,7 +14,7 @@ import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
 import { BioLabConstruction } from '@/components/BioLabConstruction';
-import { Globe3D } from '@/components/Globe3D';
+import CesiumHeroGlobe from '@/components/CesiumHeroGlobe';
 import CesiumViewer from '@/components/CesiumViewer';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
 import {
@@ -405,15 +405,11 @@ const Starfield = () => {
 };
 
 // Realistic 3D Earth globe component with real textures and cloud layers
-const SpinningEarth = () => {
-  return (
-    <div className="earth-container" style={{ position: 'relative' }}>
-      <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-        <Globe3D />
-      </div>
-    </div>
-  );
-};
+const SpinningEarth = () => (
+  <div className="earth-container" style={{ position: 'relative' }}>
+    <CesiumHeroGlobe />
+  </div>
+);
 
 const DIPLOMATIC_VICTORY_CRITERIA = {
   allianceRatio: 0.6,

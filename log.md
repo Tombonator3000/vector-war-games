@@ -651,3 +651,7 @@ Looking for:
 - Reviewed CesiumViewer imagery initialization to plan migration toward streaming base layers and Ion token gating.
 - Replaced the static earth_day SingleTileImageryProvider with an OpenStreetMapImageryProvider fallback and conditional Cesium Ion asset loading when `VITE_CESIUM_ION_TOKEN` is provided.
 - Added defensive handling for Ion terrain provisioning, preserved the night lights overlay with reduced alpha for better visibility, and verified the viewer still initializes without credentials.
+
+## 2025-10-30T17:32:17+00:00
+- Implemented a dedicated `CesiumHeroGlobe` component for the intro screen, wiring it into `Index.tsx` to replace the legacy Three.js globe with Cesium's photorealistic Earth and gentle auto-rotation.
+- Added styling hooks in `index.css` to mask the Cesium canvas into a circular hero element, hide toolbars, and preserve the neon drop-shadow aesthetic on the landing layout.
