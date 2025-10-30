@@ -642,7 +642,6 @@ export function useConventionalWarfare({
         instabilityDelta[attackerId] = territory.instabilityModifier / 2;
       }
 
-      const attackerNation = getNation(attackerId);
       if (attackerNation) {
         const profile = attackerNation.conventional ?? createDefaultNationConventionalProfile();
         attackerNation.conventional = {
@@ -650,7 +649,6 @@ export function useConventionalWarfare({
           readiness: clamp(profile.readiness - (attackerVictory ? 6 : 12), 20, 100),
         };
       }
-      const defenderNation = getNation(defenderId);
       if (defenderNation) {
         const profile = defenderNation.conventional ?? createDefaultNationConventionalProfile();
         defenderNation.conventional = {
