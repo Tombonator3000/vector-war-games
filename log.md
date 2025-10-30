@@ -646,3 +646,8 @@ Looking for:
 - Updated CesiumViewer to use SingleTileImageryProvider with earth_day texture and added atmospheric effects for photographic globe rendering.
 - Layered semi-transparent night lights texture for specular highlights and ensured asset paths respect Vite base URL configuration.
 - Attempted to run `npm run dev -- --host 0.0.0.0 --port 4173` to manually verify Cesium toggle, but the dev server failed to start due to missing `vite-plugin-cesium` dependency.
+
+## 2025-10-30T17:15:00+00:00
+- Reviewed CesiumViewer imagery initialization to plan migration toward streaming base layers and Ion token gating.
+- Replaced the static earth_day SingleTileImageryProvider with an OpenStreetMapImageryProvider fallback and conditional Cesium Ion asset loading when `VITE_CESIUM_ION_TOKEN` is provided.
+- Added defensive handling for Ion terrain provisioning, preserved the night lights overlay with reduced alpha for better visibility, and verified the viewer still initializes without credentials.
