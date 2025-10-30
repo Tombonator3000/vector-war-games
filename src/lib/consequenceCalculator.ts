@@ -1,0 +1,405 @@
+import type {
+  ActionConsequences,
+  ConsequenceCalculationContext,
+  Consequence,
+} from '@/types/consequences';
+import type { Nation } from '@/types/game';
+
+/**
+ * Calculate consequences for launching a nuclear missile
+ */
+export function calculateMissileLaunchConsequences(
+  context: ConsequenceCalculationContext,
+  warheadYield: number,
+  deliveryMethod: 'missile' | 'bomber' | 'submarine'
+): ActionConsequences {
+  const { playerNation, targetNation, allNations, currentDefcon } = context;
+
+  if (!targetNation) {
+    throw new Error('Target nation required for missile launch');
+  }
+
+  // Calculate interception probability
+  const defenseStrength = targetNation.defense?.total || 0;
+  const interceptionChance = Math.min(75, defenseStrength * 2); // Max 75% intercept
+  const successProbability = 100 - interceptionChance;
+
+  // Calculate casualties
+  const estimatedCasualties = Math.floor(warheadYield * 1000000 * (1 + Math.random() * 0.5));
+  const casualtyRange = {
+    min: Math.floor(estimatedCasualties * 0.7),
+    max: Math.floor(estimatedCasualties * 1.3),
+  };
+
+  // Calculate DEFCON change
+  let defconChange = 0;
+  if (currentDefcon > 2) defconChange = -1;
+  if (currentDefcon > 3 && warheadYield >= 10) defconChange = -2;
+  const newDefcon = Math.max(1, currentDefcon + defconChange);
+
+  // Calculate relationship impacts
+  const relationshipChanges = allNations
+    .filter((n) => n.name !== playerNation.name && n.name !== targetNation.name)
+    .map((nation) => {
+      // Allies of target are angry
+      if (targetNation.alliances?.includes(nation.name)) {
+        return { nation: nation.name, change: -30 };
+      }
+      // Enemies of target might approve
+      if (nation.alliances?.includes(playerNation.name)) {
+        return { nation: nation.name, change: +10 };
+      }
+      // Neutral nations condemn nuclear use
+      return { nation: nation.name, change: -15 };
+    });
+
+  const immediate: Consequence[] = [
+    {
+      description: `DEFCON ${currentDefcon} → ${newDefcon} (${defconChange < 0 ? 'ESCALATION' : 'Unchanged'})`,
+      severity: defconChange < 0 ? 'critical' : 'neutral',
+      icon: '⚠️',
+    },
+    {
+      description: `Estimated casualties: ${casualtyRange.min.toLocaleString()}-${casualtyRange.max.toLocaleString()}`,
+      severity: 'negative',
+      icon: '💀',
+    },
+  ];
+
+  if (successProbability < 100) {
+    immediate.push({
+      description: `${interceptionChance}% chance of interception`,
+      severity: 'negative',
+      probability: interceptionChance,
+      icon: '🛡️',
+    });
+  }
+
+  const longTerm: Consequence[] = [
+    {
+      description: `${targetNation.name} will likely retaliate`,
+      severity: 'critical',
+      probability: targetNation.missiles?.total > 5 ? 90 : 50,
+      icon: '☢️',
+    },
+    {
+      description: 'Radiation zone created for 10-15 turns',
+      severity: 'negative',
+      icon: '☢️',
+    },
+    {
+      description: 'Nuclear winter effect may spread',
+      severity: 'critical',
+      probability: warheadYield >= 10 ? 40 : 10,
+      icon: '❄️',
+    },
+  ];
+
+  const risks: Consequence[] = [
+    {
+      description: `${targetNation.name} alliances may break with you`,
+      severity: 'negative',
+      probability: 60,
+      icon: '💔',
+    },
+  ];
+
+  // Check if this blocks diplomatic victory
+  const victoryImpact =
+    newDefcon <= 2
+      ? {
+          victoryType: 'Diplomatic Victory',
+          impact: 'BLOCKED - Peace requirement violated',
+        }
+      : undefined;
+
+  const warnings: string[] = [];
+  if (targetNation.alliances && targetNation.alliances.length > 2) {
+    warnings.push(`${targetNation.name} has ${targetNation.alliances.length} allies who may join the war!`);
+  }
+  if (newDefcon === 1) {
+    warnings.push('DEFCON 1: Total nuclear war imminent - mutual destruction likely!');
+  }
+  if (playerNation.defense?.total < 10) {
+    warnings.push('Your defense is weak - expect heavy retaliation casualties!');
+  }
+
+  return {
+    actionType: 'launch_missile',
+    actionTitle: `Launch ${warheadYield}MT Nuclear ${deliveryMethod === 'missile' ? 'Missile' : deliveryMethod === 'bomber' ? 'Bomber' : 'Submarine'}`,
+    actionDescription: `Strike ${targetNation.name} with nuclear weapons`,
+    targetName: targetNation.name,
+    immediate,
+    longTerm,
+    risks,
+    defconChange: { from: currentDefcon, to: newDefcon },
+    relationshipChanges,
+    victoryImpact,
+    successProbability,
+    successDescription: `${successProbability}% chance of successful strike`,
+    costs: {
+      uranium: warheadYield,
+      production: deliveryMethod === 'missile' ? 10 : deliveryMethod === 'bomber' ? 20 : 30,
+      actions: 1,
+    },
+    warnings,
+  };
+}
+
+/**
+ * Calculate consequences for forming an alliance
+ */
+export function calculateAllianceConsequences(
+  context: ConsequenceCalculationContext,
+  targetNation: Nation
+): ActionConsequences {
+  const { playerNation, allNations } = context;
+
+  // Calculate success probability based on relations
+  const currentRelation = 50; // TODO: Get actual relation score
+  const successProbability = Math.min(90, Math.max(10, currentRelation + 20));
+
+  const immediate: Consequence[] = [
+    {
+      description: `+20 Global Influence (→ ${(context.gameState?.diplomacy?.influenceScore || 0) + 20})`,
+      severity: 'positive',
+      icon: '📈',
+    },
+    {
+      description: `${targetNation.name} will defend you in wars`,
+      severity: 'positive',
+      icon: '🛡️',
+    },
+    {
+      description: 'Access to their controlled territories',
+      severity: 'positive',
+      icon: '🗺️',
+    },
+  ];
+
+  const longTerm: Consequence[] = [
+    {
+      description: 'Permanent 50 Production upkeep cost',
+      severity: 'negative',
+      icon: '💰',
+    },
+  ];
+
+  // Find enemies of target
+  const targetEnemies = allNations.filter(
+    (n) =>
+      n.name !== playerNation.name &&
+      n.name !== targetNation.name &&
+      targetNation.alliances &&
+      !targetNation.alliances.includes(n.name)
+  );
+
+  const relationshipChanges = targetEnemies.slice(0, 3).map((nation) => ({
+    nation: nation.name,
+    change: -15,
+  }));
+
+  if (relationshipChanges.length > 0) {
+    risks: Consequence[] = [
+      {
+        description: `${relationshipChanges.length} nations may view you as hostile`,
+        severity: 'negative',
+        probability: 60,
+        icon: '😠',
+      },
+    ];
+  }
+
+  // Calculate progress toward diplomatic victory
+  const currentAlliances = playerNation.alliances?.length || 0;
+  const totalNations = allNations.filter((n) => n.population > 0).length - 1;
+  const requiredAlliances = Math.ceil(totalNations * 0.6);
+  const newProgress = Math.min(100, ((currentAlliances + 1) / requiredAlliances) * 100);
+
+  const victoryImpact = {
+    victoryType: 'Diplomatic Victory',
+    impact: `${Math.round(newProgress)}% progress (+${Math.round((1 / requiredAlliances) * 100)}%)`,
+  };
+
+  return {
+    actionType: 'form_alliance',
+    actionTitle: `Form Alliance with ${targetNation.name}`,
+    actionDescription: 'Permanent diplomatic and military partnership',
+    targetName: targetNation.name,
+    immediate,
+    longTerm,
+    risks: [],
+    relationshipChanges,
+    victoryImpact,
+    successProbability,
+    successDescription: `${successProbability}% chance of acceptance`,
+    costs: {
+      production: 50,
+      actions: 1,
+    },
+    warnings:
+      successProbability < 50
+        ? ['Low acceptance chance - improve relations first']
+        : [],
+  };
+}
+
+/**
+ * Calculate consequences for cyber attack
+ */
+export function calculateCyberAttackConsequences(
+  context: ConsequenceCalculationContext,
+  targetNation: Nation,
+  attackType: 'intrusion' | 'sabotage' | 'false_flag'
+): ActionConsequences {
+  const { currentDefcon } = context;
+
+  const detectionChance = 40; // Base detection chance
+  const successProbability = 100 - detectionChance;
+
+  const immediate: Consequence[] = [
+    {
+      description: 'Steal 30-50 Intel from target',
+      severity: 'positive',
+      icon: '🔍',
+      probability: successProbability,
+    },
+    {
+      description: `Reduce target readiness by ${attackType === 'sabotage' ? '20%' : '10%'}`,
+      severity: 'positive',
+      icon: '⚡',
+    },
+  ];
+
+  const risks: Consequence[] = [
+    {
+      description: `${detectionChance}% chance of attribution`,
+      severity: 'negative',
+      probability: detectionChance,
+      icon: '🔍',
+    },
+  ];
+
+  if (detectionChance > 0) {
+    risks.push({
+      description: 'If detected: Relations drop by -25',
+      severity: 'critical',
+      probability: detectionChance,
+      icon: '😠',
+    });
+    if (currentDefcon <= 3) {
+      risks.push({
+        description: 'If detected: May trigger military response',
+        severity: 'critical',
+        probability: 30,
+        icon: '⚔️',
+      });
+    }
+  }
+
+  return {
+    actionType: 'cyber_attack',
+    actionTitle: `Cyber ${attackType === 'false_flag' ? 'False Flag' : attackType === 'sabotage' ? 'Sabotage' : 'Intrusion'}`,
+    actionDescription: `Hack ${targetNation.name}'s systems`,
+    targetName: targetNation.name,
+    immediate,
+    longTerm: [],
+    risks,
+    successProbability,
+    successDescription: `${successProbability}% chance to remain undetected`,
+    costs: {
+      intel: attackType === 'false_flag' ? 35 : 30,
+      actions: 1,
+    },
+  };
+}
+
+/**
+ * Calculate consequences for building a city
+ */
+export function calculateBuildCityConsequences(
+  context: ConsequenceCalculationContext
+): ActionConsequences {
+  const { playerNation, allNations } = context;
+
+  const currentCities = playerNation.cities || 0;
+  const requiredCities = 10;
+  const newProgress = Math.min(100, ((currentCities + 1) / requiredCities) * 100);
+
+  const immediate: Consequence[] = [
+    {
+      description: '+15 Production per turn (permanent)',
+      severity: 'positive',
+      icon: '🏭',
+    },
+    {
+      description: '+5M Population capacity',
+      severity: 'positive',
+      icon: '👥',
+    },
+    {
+      description: 'New strategic economic hub',
+      severity: 'positive',
+      icon: '🏙️',
+    },
+  ];
+
+  const longTerm: Consequence[] = [
+    {
+      description: 'Vulnerable to nuclear strikes',
+      severity: 'negative',
+      icon: '🎯',
+    },
+    {
+      description: 'Increases enemy targeting priority',
+      severity: 'negative',
+      icon: '⚠️',
+    },
+  ];
+
+  return {
+    actionType: 'build_city',
+    actionTitle: 'Build City',
+    actionDescription: 'Construct new economic center',
+    immediate,
+    longTerm,
+    risks: [],
+    victoryImpact: {
+      victoryType: 'Economic Victory',
+      impact: `${Math.round(newProgress)}% progress (+${Math.round((1 / requiredCities) * 100)}%)`,
+    },
+    costs: {
+      production: 150,
+    },
+  };
+}
+
+/**
+ * Main consequence calculator - routes to specific calculators
+ */
+export function calculateActionConsequences(
+  actionType: string,
+  context: ConsequenceCalculationContext,
+  actionParams: any
+): ActionConsequences | null {
+  switch (actionType) {
+    case 'launch_missile':
+      return calculateMissileLaunchConsequences(
+        context,
+        actionParams.warheadYield,
+        actionParams.deliveryMethod
+      );
+    case 'form_alliance':
+      return calculateAllianceConsequences(context, actionParams.targetNation);
+    case 'cyber_attack':
+      return calculateCyberAttackConsequences(
+        context,
+        actionParams.targetNation,
+        actionParams.attackType
+      );
+    case 'build_city':
+      return calculateBuildCityConsequences(context);
+    default:
+      return null;
+  }
+}

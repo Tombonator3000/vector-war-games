@@ -41,6 +41,15 @@ import { GameHelper } from '@/components/GameHelper';
 import { useMultiplayer } from '@/contexts/MultiplayerProvider';
 import { useTutorialContext } from '@/contexts/TutorialContext';
 import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
+import { useGameEra } from '@/hooks/useGameEra';
+import { useVictoryTracking } from '@/hooks/useVictoryTracking';
+import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
+import { VictoryDashboard } from '@/components/VictoryDashboard';
+import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
+import { LockedFeatureWrapper } from '@/components/LockedFeatureBadge';
+import { ERA_DEFINITIONS } from '@/types/era';
+import type { ActionConsequences } from '@/types/consequences';
+import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EndGameScreen } from '@/components/EndGameScreen';
@@ -5436,6 +5445,19 @@ export default function NoradVector() {
   const tutorialContext = useTutorialContext();
   const [isPhaseTransitioning, setIsPhaseTransitioning] = useState(false);
 
+  // Era system state
+  const [showEraTransition, setShowEraTransition] = useState(false);
+  const [eraTransitionData, setEraTransitionData] = useState<{
+    era: 'early' | 'mid' | 'late';
+    name: string;
+    description: string;
+    features: any[];
+  } | null>(null);
+
+  // Consequence preview state
+  const [consequencePreview, setConsequencePreview] = useState<ActionConsequences | null>(null);
+  const [consequenceCallback, setConsequenceCallback] = useState<(() => void) | null>(null);
+
   useEffect(() => {
     currentMapStyle = mapStyle;
     if (mapStyle === 'flat' || mapStyle === 'flat-realistic') {
@@ -5963,6 +5985,46 @@ export default function NoradVector() {
     onMetricsSync: handleGovernanceMetricsSync,
     onApplyDelta: handleGovernanceDelta,
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
+  });
+
+  // Era system for progressive complexity
+  const gameEra = useGameEra({
+    currentTurn: S.turn,
+    onEraChange: (newEra, oldEra) => {
+      const eraDef = ERA_DEFINITIONS[newEra];
+      const newFeatures = eraDef.unlockedFeatures.filter(
+        (feature) => !ERA_DEFINITIONS[oldEra].unlockedFeatures.includes(feature)
+      );
+
+      setEraTransitionData({
+        era: newEra,
+        name: eraDef.name,
+        description: eraDef.description,
+        features: newFeatures.map((f) => ({
+          feature: f,
+          name: f.replace(/_/g, ' ').toUpperCase(),
+          description: '',
+          unlockTurn: eraDef.startTurn,
+          category: 'military',
+        })),
+      });
+      setShowEraTransition(true);
+
+      addNewsItem(
+        'alert',
+        `🎯 ${eraDef.name} begins! New systems unlocked.`,
+        'high'
+      );
+    },
+  });
+
+  // Victory tracking system
+  const victoryAnalysis = useVictoryTracking({
+    nations,
+    playerName: S.playerName || 'Player',
+    currentTurn: S.turn,
+    defcon: S.defcon,
+    diplomacyState: S.diplomacy,
   });
 
   useEffect(() => {
@@ -10378,6 +10440,49 @@ export default function NoradVector() {
       {/* New Phase 1 Tutorial & Feedback Overlays */}
       <TutorialOverlay />
       <PhaseTransitionOverlay phase={S.phase} isTransitioning={isPhaseTransitioning} />
+
+      {/* Era Transition Overlay */}
+      {showEraTransition && eraTransitionData && (
+        <EraTransitionOverlay
+          isVisible={showEraTransition}
+          newEra={eraTransitionData.era}
+          eraName={eraTransitionData.name}
+          eraDescription={eraTransitionData.description}
+          unlockedFeatures={eraTransitionData.features}
+          onDismiss={() => setShowEraTransition(false)}
+        />
+      )}
+
+      {/* Victory Dashboard */}
+      {gamePhase === 'game' && !S.gameOver && (
+        <VictoryDashboard
+          paths={victoryAnalysis.paths}
+          closestVictory={victoryAnalysis.closestVictory}
+          turnsUntilClosestVictory={victoryAnalysis.turnsUntilClosestVictory}
+          recommendedPath={victoryAnalysis.recommendedPath}
+          warnings={victoryAnalysis.warnings}
+          currentTurn={S.turn}
+        />
+      )}
+
+      {/* Action Consequence Preview */}
+      {consequencePreview && (
+        <ActionConsequencePreview
+          consequences={consequencePreview}
+          onConfirm={() => {
+            if (consequenceCallback) {
+              consequenceCallback();
+            }
+            setConsequencePreview(null);
+            setConsequenceCallback(null);
+          }}
+          onCancel={() => {
+            setConsequencePreview(null);
+            setConsequenceCallback(null);
+          }}
+          isVisible={consequencePreview !== null}
+        />
+      )}
 
       <CivilizationInfoPanel
         nations={nations}
