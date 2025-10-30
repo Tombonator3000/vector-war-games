@@ -9181,10 +9181,12 @@ export default function NoradVector() {
             </div>
           </header>
 
-          <MoraleHeatmapOverlay
-            nations={nations.map(nation => ({ id: nation.id, name: nation.name, isPlayer: nation.isPlayer }))}
-            metrics={governance.metrics}
-          />
+          {!civInfoPanelOpen && (
+            <MoraleHeatmapOverlay
+              nations={nations.map(nation => ({ id: nation.id, name: nation.name, isPlayer: nation.isPlayer }))}
+              metrics={governance.metrics}
+            />
+          )}
           <div className="pointer-events-auto fixed top-14 right-6 z-40 w-64">
             <ElectionCountdownWidget metrics={governance.metrics['player']} />
           </div>
@@ -10072,7 +10074,7 @@ export default function NoradVector() {
           if (!player) return 0;
           return Math.min(100, ((player.culture || 0) / 100) * 100);
         })()}
-        isVisible={isGameStarted && S.turn >= 5}
+        isVisible={isGameStarted && S.turn >= 5 && !civInfoPanelOpen}
       />
 
       <CivilizationInfoPanel
@@ -10080,6 +10082,7 @@ export default function NoradVector() {
         isOpen={civInfoPanelOpen}
         onClose={() => setCivInfoPanelOpen(false)}
         currentTurn={S.turn}
+        governanceMetrics={governance.metrics}
       />
 
       <GameHelper
