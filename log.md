@@ -662,3 +662,7 @@ Looking for:
 
 ## 2025-10-31T00:00:00+00:00
 - Removed the Cesium/Classic toggle button from the HUD header and introduced a dedicated globe renderer selector within the options sheet, persisting choices and maintaining toast feedback.
+
+## 2025-10-30T18:37:48+00:00
+- Adjusted `calculateFlashpointProbability` to use a 6% base chance with an eased multiplier that reaches 2.5x by late mid-game, matching the balance notes from PR #175.
+- Added `generateTensionNews` and `generateFlashpointAftermathNews` helpers to `src/lib/politicalNews.ts` for richer flashpoint narration, replacing the previous placeholder implementations.
