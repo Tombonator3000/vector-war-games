@@ -15,7 +15,7 @@ import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
 import CesiumHeroGlobe from '@/components/CesiumHeroGlobe';
 import CesiumViewer from '@/components/CesiumViewer';
-import { useFlashpoints } from '@/hooks/useFlashpoints';
+import { useFlashpoints, type FlashpointOutcome } from '@/hooks/useFlashpoints';
 import {
   usePandemic,
   type PandemicTriggerPayload,
@@ -25,6 +25,7 @@ import {
 import { useBioWarfare } from '@/hooks/useBioWarfare';
 import { initializeAllAINations, processAllAINationsBioWarfare } from '@/lib/aiBioWarfareIntegration';
 import { FlashpointModal } from '@/components/FlashpointModal';
+import { FlashpointOutcomeModal } from '@/components/FlashpointOutcomeModal';
 import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
 import {
@@ -5868,6 +5869,7 @@ export default function NoradVector() {
 
   // News ticker and flashpoints
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
+  const [currentFlashpointOutcome, setCurrentFlashpointOutcome] = useState<FlashpointOutcome | null>(null);
   const { activeFlashpoint, triggerRandomFlashpoint, resolveFlashpoint, dismissFlashpoint } = useFlashpoints();
   const { distortNationIntel, generateFalseIntel } = useFogOfWar();
 
@@ -10406,6 +10408,9 @@ export default function NoradVector() {
             const option = activeFlashpoint.options.find(opt => opt.id === optionId);
             if (!option) return;
 
+            // Store outcome for display
+            setCurrentFlashpointOutcome(result.flashpointOutcome);
+
             // Apply consequences based on outcome
             const outcome = result.success ? option.outcome.success : option.outcome.failure;
 
@@ -10542,6 +10547,13 @@ export default function NoradVector() {
             dismissFlashpoint();
             addNewsItem('crisis', 'CRISIS UNRESOLVED - Default action taken', 'critical');
           }}
+        />
+      )}
+
+      {currentFlashpointOutcome && (
+        <FlashpointOutcomeModal
+          outcome={currentFlashpointOutcome}
+          onClose={() => setCurrentFlashpointOutcome(null)}
         />
       )}
 
