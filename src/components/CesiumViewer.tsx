@@ -1,5 +1,4 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
-import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import {
   Viewer,
   Ion,
@@ -50,7 +49,6 @@ import {
   UNIT_3D_MODELS,
   SATELLITE_ORBITS,
   calculateSatellitePosition,
-  type WeatherPattern,
   type SatelliteOrbit,
 } from '@/utils/cesiumTerritoryData';
 
@@ -120,8 +118,19 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   const viewerRef = useRef<Viewer | null>(null);
   const entitiesRef = useRef<Map<string, Entity>>(new Map());
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
-  const [weatherPatterns, setWeatherPatterns] = useState<WeatherPattern[]>([]);
   const animationFrameRef = useRef<number>();
+  const enableDayNightRef = useRef(enableDayNight);
+  const territoryClickRef = useRef(onTerritoryClick);
+  const unitClickRef = useRef(onUnitClick);
+
+  const applyDayNightSettings = useCallback((viewer: Viewer, enabled: boolean) => {
+    viewer.scene.globe.enableLighting = enabled;
+    viewer.clock.shouldAnimate = enabled;
+    viewer.clock.multiplier = enabled ? 100 : 1;
+    if (!enabled) {
+      viewer.clock.currentTime = JulianDate.now();
+    }
+  }, []);
 
   // Initialize Cesium Viewer
   useEffect(() => {
@@ -260,7 +269,14 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
     applyDayNightSettings(viewer, enableDayNight);
   }, [enableDayNight, applyDayNightSettings]);
-  }, [enableDayNight, enableTerrain, onTerritoryClick, onUnitClick]);
+
+  useEffect(() => {
+    territoryClickRef.current = onTerritoryClick;
+  }, [onTerritoryClick]);
+
+  useEffect(() => {
+    unitClickRef.current = onUnitClick;
+  }, [onUnitClick]);
 
   // Render territories with GeoJSON boundaries (Phase 2 improvement)
   useEffect(() => {
