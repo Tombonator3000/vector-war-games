@@ -2786,7 +2786,7 @@ function launch(from: Nation, to: Nation, yieldMT: number) {
     delete from.warheads[yieldMT];
   }
   from.missiles--;
-  
+
   S.missiles.push({
     from,
     to,
@@ -2799,10 +2799,19 @@ function launch(from: Nation, to: Nation, yieldMT: number) {
     target: to,
     color: from.color
   });
-  
+
   log(`${from.name} → ${to.name}: LAUNCH ${yieldMT}MT`);
   AudioSys.playSFX('launch');
   DoomsdayClock.tick(0.3);
+
+  // Toast feedback for player launches
+  if (from.isPlayer) {
+    toast({
+      title: '🚀 Missile Launched',
+      description: `${yieldMT}MT warhead inbound to ${to.name}. -1 missile, -1 warhead.`,
+      variant: 'destructive',
+    });
+  }
   
   // Generate news for launch
   if ((window as any).__gameAddNewsItem) {
@@ -4250,6 +4259,15 @@ function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
     from
   });
   AudioSys.playSFX('launch');
+
+  if (from.isPlayer) {
+    toast({
+      title: '🌊 Submarine Launched',
+      description: `SLBM strike inbound to ${to.name}. ${yieldMT}MT warhead deployed.`,
+      variant: 'destructive',
+    });
+  }
+
   return true;
 }
 
@@ -4257,14 +4275,22 @@ function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
 function launchBomber(from: Nation, to: Nation, payload: any) {
   const [sx, sy] = project(from.lon, from.lat);
   const [tx, ty] = project(to.lon, to.lat);
-  
+
   S.bombers.push({
     from, to,
     t: 0,
     sx, sy, tx, ty,
     payload
   });
-  
+
+  if (from.isPlayer) {
+    toast({
+      title: '✈️ Bomber Dispatched',
+      description: `Strategic bomber en route to ${to.name}. Payload armed.`,
+      variant: 'destructive',
+    });
+  }
+
   return true;
 }
 
@@ -8850,23 +8876,24 @@ export default function NoradVector() {
 
         <div className="hud-layers pointer-events-none touch-none">
           {/* Minimal top status bar */}
-          <header className="fixed top-0 left-0 right-0 h-10 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
+          <header className="fixed top-0 left-0 right-0 h-12 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
             <div className="flex items-center gap-6 text-xs font-mono">
-              <div className="flex items-center gap-2">
-                <span className="text-cyan-400">DEFCON</span>
-                <span className="text-neon-green font-bold" id="defcon">5</span>
+              {/* DEFCON - Enlarged for prominence */}
+              <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded">
+                <span className="text-cyan-400 text-sm">DEFCON</span>
+                <span className="text-neon-green font-bold text-2xl" id="defcon">5</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">TURN</span>
-                <span className="text-neon-green font-bold" id="turn">1</span>
+                <span className="text-neon-green font-bold text-base" id="turn">1</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">ACTIONS</span>
-                <span className="text-neon-green font-bold" id="actionsDisplay">1/1</span>
+                <span className="text-neon-green font-bold text-base" id="actionsDisplay">1/1</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">CYBER</span>
-                <span className="text-neon-green font-bold" id="cyberDisplay">60/100</span>
+                <span className="text-neon-green font-bold text-base" id="cyberDisplay">60/100</span>
               </div>
             </div>
 
