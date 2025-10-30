@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { FlaskConical, Biohazard, AlertTriangle, Target } from 'lucide-react';
+import { FlaskConical, Biohazard, AlertTriangle, Target, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/use-toast';
 import { PlagueTypeSelector } from '@/components/PlagueTypeSelector';
 import { DeploymentTargetSelector } from '@/components/DeploymentTargetSelector';
+import { BioforgeEliminationOverview } from '@/components/BioforgeEliminationOverview';
 import { DNAPointsDisplay } from '@/components/DNAPointsDisplay';
 import { EvolutionTreeFlow } from '@/components/EvolutionTreeFlow';
 import type { PlagueState } from '@/types/biowarfare';
@@ -49,6 +50,7 @@ export function BioWarfareLab({
 }: BioWarfareLabProps) {
   const [showPlagueSelector, setShowPlagueSelector] = useState(false);
   const [showDeploymentSelector, setShowDeploymentSelector] = useState(false);
+  const [showEliminationOverview, setShowEliminationOverview] = useState(false);
 
   // Auto-open plague selector when lab opens and no plague selected
   useEffect(() => {
@@ -84,6 +86,11 @@ export function BioWarfareLab({
   const currentLabDef = getBioLabTierDefinition(labTier);
   const canUseBioForge = labTier >= 3;
 
+  // Create nation name map for overview
+  const nationNames = new Map(
+    availableNations.map(nation => [nation.id, nation.name])
+  );
+
   const handleDeployment = (selections: Array<{
     nationId: string;
     nationName: string;
@@ -117,6 +124,14 @@ export function BioWarfareLab({
         playerActions={playerActions}
         playerIntel={playerIntel}
         onConfirmDeployment={handleDeployment}
+      />
+
+      {/* Elimination Overview */}
+      <BioforgeEliminationOverview
+        open={showEliminationOverview}
+        onOpenChange={setShowEliminationOverview}
+        plagueState={plagueState}
+        nationNames={nationNames}
       />
 
       {/* Main BioForge Lab Dialog */}
@@ -230,6 +245,16 @@ export function BioWarfareLab({
                   </div>
 
                   <div className="flex gap-2">
+                    {plagueState.countryInfections.size > 0 && (
+                      <Button
+                        size="sm"
+                        onClick={() => setShowEliminationOverview(true)}
+                        className="bg-orange-500 hover:bg-orange-400 text-black font-semibold text-xs"
+                      >
+                        <BarChart3 className="h-3 w-3 mr-1" />
+                        Impact Report
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       onClick={() => setShowDeploymentSelector(true)}
