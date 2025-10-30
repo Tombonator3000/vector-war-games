@@ -656,5 +656,9 @@ Looking for:
 - Implemented a dedicated `CesiumHeroGlobe` component for the intro screen, wiring it into `Index.tsx` to replace the legacy Three.js globe with Cesium's photorealistic Earth and gentle auto-rotation.
 - Added styling hooks in `index.css` to mask the Cesium canvas into a circular hero element, hide toolbars, and preserve the neon drop-shadow aesthetic on the landing layout.
 
+## 2025-10-30T18:08:11+00:00
+- Updated `src/pages/Index.tsx` to default the map style to `flat-realistic` without reading from persisted storage so new sessions always boot with the intended aesthetic.
+- Removed the `Storage.setItem('map_style', style)` call inside `handleMapStyleChange` to avoid writing outdated preferences while keeping audio feedback and texture preloading intact.
+
 ## 2025-10-31T00:00:00+00:00
 - Removed the Cesium/Classic toggle button from the HUD header and introduced a dedicated globe renderer selector within the options sheet, persisting choices and maintaining toast feedback.
