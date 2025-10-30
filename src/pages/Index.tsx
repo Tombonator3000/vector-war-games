@@ -77,7 +77,6 @@ import {
   applyCyberResearchUnlock,
 } from '@/hooks/useCyberWarfare';
 import { GovernanceEventDialog } from '@/components/governance/GovernanceEventDialog';
-import { MoraleHeatmapOverlay } from '@/components/governance/MoraleHeatmapOverlay';
 import { ElectionCountdownWidget } from '@/components/governance/ElectionCountdownWidget';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 
@@ -9286,12 +9285,6 @@ export default function NoradVector() {
             </div>
           </header>
 
-          {!civInfoPanelOpen && (
-            <MoraleHeatmapOverlay
-              nations={nations.map(nation => ({ id: nation.id, name: nation.name, isPlayer: nation.isPlayer }))}
-              metrics={governance.metrics}
-            />
-          )}
           <div className="pointer-events-auto fixed top-14 right-6 z-40 w-64">
             <ElectionCountdownWidget metrics={governance.metrics['player']} />
           </div>
