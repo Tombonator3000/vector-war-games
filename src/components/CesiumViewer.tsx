@@ -1,4 +1,4 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
 import {
   Viewer,
   Ion,
@@ -59,6 +59,14 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
   const territoryClickRef = useRef<CesiumViewerProps['onTerritoryClick']>(onTerritoryClick);
   const unitClickRef = useRef<CesiumViewerProps['onUnitClick']>(onUnitClick);
+  const enableDayNightRef = useRef(enableDayNight);
+
+  const applyDayNightSettings = useCallback((viewer: Viewer, lightingEnabled: boolean) => {
+    viewer.scene.globe.enableLighting = lightingEnabled;
+    if (lightingEnabled) {
+      viewer.clock.currentTime = JulianDate.now();
+    }
+  }, []);
 
   useEffect(() => {
     territoryClickRef.current = onTerritoryClick;
@@ -90,6 +98,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         });
 
         viewerRef.current = viewer;
+
+        applyDayNightSettings(viewer, enableDayNightRef.current);
 
         // Set camera to orbital view
         viewer.camera.setView({
@@ -152,13 +162,12 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   }, []);
 
   useEffect(() => {
-    if (!viewerRef.current) return;
+    enableDayNightRef.current = enableDayNight;
+    const viewer = viewerRef.current;
+    if (!viewer) return;
 
-    viewerRef.current.scene.globe.enableLighting = enableDayNight;
-    if (enableDayNight) {
-      viewerRef.current.clock.currentTime = JulianDate.now();
-    }
-  }, [enableDayNight]);
+    applyDayNightSettings(viewer, enableDayNight);
+  }, [enableDayNight, applyDayNightSettings]);
 
   // Render territories
   useEffect(() => {
