@@ -20,6 +20,7 @@ interface BioWarfareLabProps {
   labTier: BioLabTier;
   availableNations: Array<{ id: string; name: string; intelligence: number }>;
   playerActions: number;
+  playerIntel: number;
   onSelectPlagueType: (plagueTypeId: string) => void;
   onEvolveNode: (nodeId: string) => void;
   onDevolveNode: (nodeId: string) => void;
@@ -40,6 +41,7 @@ export function BioWarfareLab({
   labTier,
   availableNations,
   playerActions,
+  playerIntel,
   onSelectPlagueType,
   onEvolveNode,
   onDevolveNode,
@@ -113,6 +115,7 @@ export function BioWarfareLab({
         availableNations={availableNations}
         playerDNA={plagueState.dnaPoints}
         playerActions={playerActions}
+        playerIntel={playerIntel}
         onConfirmDeployment={handleDeployment}
       />
 

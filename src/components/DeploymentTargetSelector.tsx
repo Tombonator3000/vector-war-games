@@ -22,6 +22,7 @@ interface DeploymentTargetSelectorProps {
   availableNations: Array<{ id: string; name: string; intelligence: number }>;
   playerDNA: number;
   playerActions: number;
+  playerIntel: number;
   onConfirmDeployment: (selections: TargetSelection[]) => void;
 }
 
@@ -31,6 +32,7 @@ export function DeploymentTargetSelector({
   availableNations,
   playerDNA,
   playerActions,
+  playerIntel,
   onConfirmDeployment,
 }: DeploymentTargetSelectorProps) {
   const [selectedNations, setSelectedNations] = useState<Set<string>>(new Set());
@@ -102,7 +104,13 @@ export function DeploymentTargetSelector({
     return total + (method?.actionsRequired || 0);
   }, 0);
 
-  const canAfford = playerDNA >= totalDNACost && playerActions >= totalActions;
+  const totalIntelCost = Array.from(selectedNations).reduce((total, nationId) => {
+    const methodId = deploymentMethods.get(nationId) || 'covert';
+    const method = DEPLOYMENT_METHODS.find(m => m.id === methodId);
+    return total + (method?.intelCost || 0);
+  }, 0);
+
+  const canAfford = playerDNA >= totalDNACost && playerActions >= totalActions && playerIntel >= totalIntelCost;
 
   const handleConfirm = () => {
     const selections: TargetSelection[] = Array.from(selectedNations).map(nationId => {
@@ -149,6 +157,12 @@ export function DeploymentTargetSelector({
             <span className="text-red-400/70 uppercase">Available DNA:</span>{' '}
             <span className={`font-bold ${playerDNA >= totalDNACost ? 'text-red-300' : 'text-red-500'}`}>
               {playerDNA} / {totalDNACost}
+            </span>
+          </div>
+          <div>
+            <span className="text-red-400/70 uppercase">Intel:</span>{' '}
+            <span className={`font-bold ${playerIntel >= totalIntelCost ? 'text-red-300' : 'text-red-500'}`}>
+              {playerIntel} / {totalIntelCost}
             </span>
           </div>
           <div>
@@ -215,7 +229,7 @@ export function DeploymentTargetSelector({
                         >
                           {DEPLOYMENT_METHODS.map(m => {
                             const detectionChance = calculateDetectionChance(m, hasFalseFlag, nation.intelligence);
-                            const affordable = canAffordDeployment(m, playerDNA, playerActions);
+                            const affordable = canAffordDeployment(m, playerDNA, playerActions, playerIntel);
 
                             return (
                               <div key={m.id} className="flex items-start gap-2 mb-2">
@@ -227,7 +241,7 @@ export function DeploymentTargetSelector({
                                   >
                                     <div className="font-semibold">{m.name}</div>
                                     <div className="text-[10px] text-red-400/60 mt-0.5">
-                                      {m.dnaCost} DNA, {m.actionsRequired} Action(s)
+                                      {m.dnaCost} DNA, {m.intelCost} Intel, {m.actionsRequired} Action(s)
                                     </div>
                                     <div className="text-[10px] text-red-400/60">
                                       Detection: {detectionChance.toFixed(0)}% | Spread: {(m.spreadSpeed * 100).toFixed(0)}%
