@@ -593,3 +593,19 @@ Looking for:
 - Disabled ocean wave rendering in `src/pages/Index.tsx` to remove sine-band visuals per request.
 
 2025-10-30T13:29:22Z Removed synthwave gradient overlays from CSS selectors to clean background.
+
+## 2025-10-30T13:43:28+00:00
+- Reviewed AGENTS.md instructions and repository structure to comply with logging requirements.
+- Investigated runtime ReferenceErrors in src/pages/Index.tsx related to governance and setPendingAIProposals closures.
+- Audited Supabase multiplayer auth flow to understand 422 signup failures in preview builds.
+
+## 2025-10-30T13:48:53+00:00
+- Added global governance and diplomacy queue bridges in src/pages/Index.tsx to resolve ReferenceErrors triggered during AI missile launches.
+- Registered React effects to keep governance metrics accessible to legacy game loops and to queue AI proposals safely.
+- Hardened Supabase anonymous auth handling in src/contexts/MultiplayerProvider.tsx to treat 422 responses as unavailable multiplayer instead of fatal errors.
+
+## 2025-10-30T13:49:12+00:00
+- Attempted to run vitest with --runTestsByPath for MultiplayerProvider coverage; command failed because the flag is unsupported by the project's Vitest CLI.
+
+## 2025-10-30T13:49:35+00:00
+- Ran vitest targeting src/contexts/__tests__/MultiplayerProvider.test.tsx to verify multiplayer auth changes; all 3 tests passed.
