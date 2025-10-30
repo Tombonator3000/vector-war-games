@@ -14,7 +14,7 @@ import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
 import { BioLabConstruction } from '@/components/BioLabConstruction';
-import { Globe3D } from '@/components/Globe3D';
+import CesiumHeroGlobe from '@/components/CesiumHeroGlobe';
 import CesiumViewer from '@/components/CesiumViewer';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
 import {
@@ -405,15 +405,11 @@ const Starfield = () => {
 };
 
 // Realistic 3D Earth globe component with real textures and cloud layers
-const SpinningEarth = () => {
-  return (
-    <div className="earth-container" style={{ position: 'relative' }}>
-      <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-        <Globe3D />
-      </div>
-    </div>
-  );
-};
+const SpinningEarth = () => (
+  <div className="earth-container" style={{ position: 'relative' }}>
+    <CesiumHeroGlobe />
+  </div>
+);
 
 const DIPLOMATIC_VICTORY_CRITERIA = {
   allianceRatio: 0.6,
@@ -5328,6 +5324,7 @@ export default function NoradVector() {
   const [gamePhase, setGamePhase] = useState('intro');
   const [isGameStarted, setIsGameStarted] = useState(false);
   const hasAutoplayedTurnOneMusicRef = useRef(false);
+  const hasBootstrappedGameRef = useRef(false);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState<{ title: string; content: ModalContentValue }>({ title: '', content: '' });
   const [selectedLeader, setSelectedLeader] = useState<string | null>(null);
@@ -5565,6 +5562,35 @@ export default function NoradVector() {
       cancelled = true;
     };
   }, [isGameStarted]);
+
+  useEffect(() => {
+    if (!isGameStarted) {
+      return;
+    }
+
+    if (hasBootstrappedGameRef.current) {
+      return;
+    }
+
+    hasBootstrappedGameRef.current = true;
+
+    AudioSys.init();
+    Atmosphere.init();
+    Ocean.init();
+
+    if (nations.length === 0) {
+      initNations();
+      setConventionalState(S.conventional ?? createDefaultConventionalState());
+      CityLights.generate();
+    }
+
+    if (!gameLoopRunning) {
+      gameLoopRunning = true;
+      loadWorld().then(() => {
+        requestAnimationFrame(gameLoop);
+      });
+    }
+  }, [isGameStarted, setConventionalState]);
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible') {
@@ -5955,9 +5981,9 @@ export default function NoradVector() {
       setShowEraTransition(true);
 
       addNewsItem(
-        'alert',
+        'crisis',
         `🎯 ${eraDef.name} begins! New systems unlocked.`,
-        'high'
+        'urgent'
       );
     },
   });
@@ -8882,7 +8908,11 @@ export default function NoradVector() {
   }, []);
 
   useEffect(() => {
-    if (canvasRef.current && isGameStarted) {
+    if (!isGameStarted || viewerType !== 'threejs') {
+      return;
+    }
+
+    if (canvasRef.current) {
       canvas = canvasRef.current;
       ctx = canvas.getContext('2d')!;
 
@@ -8896,31 +8926,6 @@ export default function NoradVector() {
         window.addEventListener('resize', handleWindowResize);
       }
 
-      // Only initialize game systems once
-      if (nations.length === 0) {
-        // Initialize audio
-        AudioSys.init();
-        
-        // Initialize game systems
-        Atmosphere.init();
-        Ocean.init();
-        
-        // Initialize game
-        initNations();
-        setConventionalState(S.conventional ?? createDefaultConventionalState());
-        CityLights.generate();
-        
-        // Load world map and start game loop only once
-        if (!gameLoopRunning) {
-          gameLoopRunning = true;
-          loadWorld().then(() => {
-            requestAnimationFrame(gameLoop);
-          });
-        }
-      }
-      
-      // Setup mouse and touch controls
-      
       // Setup mouse and touch controls
       let isDragging = false;
       let dragButton: number | null = null;
@@ -9305,7 +9310,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, handleMilitary, handlePauseToggle, openModal, resizeCanvas]);
+  }, [isGameStarted, viewerType, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, handleMilitary, handlePauseToggle, openModal, resizeCanvas]);
 
 
   // Render functions for different phases
@@ -10240,8 +10245,8 @@ export default function NoradVector() {
           }))}
         playerActions={S.actionsRemaining}
         onSelectPlagueType={selectPlagueType}
-        onEvolveNode={evolveNode}
-        onDevolveNode={devolveNode}
+        onEvolveNode={(nodeId: string) => evolveNode({ nodeId: nodeId as any })}
+        onDevolveNode={(nodeId: string) => devolveNode({ nodeId: nodeId as any })}
         onDeployBioWeapon={handleDeployBioWeapon}
       />
 
@@ -10415,16 +10420,7 @@ export default function NoradVector() {
         }} 
       />
 
-      {showProgressiveTutorial && isGameStarted && (
-        <TutorialOverlay
-          steps={tutorialSteps}
-          onComplete={handleComplete}
-          onSkip={handleSkip}
-        />
-      )}
-
       {/* New Phase 1 Tutorial & Feedback Overlays */}
-      <TutorialOverlay />
       <PhaseTransitionOverlay phase={S.phase} isTransitioning={isPhaseTransitioning} />
 
       {/* Era Transition Overlay */}

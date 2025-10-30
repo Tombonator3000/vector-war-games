@@ -170,7 +170,7 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
       const deathDNA = Math.floor(enhancedEffect.populationLoss / 100000);
       if (deathDNA > 0) {
         dnaGained += deathDNA;
-        addNewsItem('science', `Casualties yield ${deathDNA} DNA from pathogen samples`, 'normal');
+        addNewsItem('science', `Casualties yield ${deathDNA} DNA from pathogen samples`, 'routine');
       }
     }
 

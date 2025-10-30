@@ -11,6 +11,11 @@ export interface NationCyberProfile {
   research?: {
     firewalls?: boolean;
     intrusionDetection?: boolean;
+    advancedOffense?: boolean;
+    stealthProtocols?: boolean;
+    attributionObfuscation?: boolean;
+    aiDefense?: boolean;
+    cyberSuperweapon?: boolean;
   };
   lastAttribution?: {
     turn: number;
@@ -75,6 +80,25 @@ export interface Nation {
   immigrationBonus?: number;
   satelliteIntelBonus?: number;
   treatyLockDuration?: number;
+
+  // Additional properties from research/doctrines
+  alliances?: string[];
+  readinessRegen?: number;
+  detectionReduction?: number;
+  buildCostReduction?: number;
+  maxProduction?: number;
+  maxIntel?: number;
+  maxUranium?: number;
+  cultureBombCostReduction?: number;
+  maxTreaties?: number;
+  stolenPopConversionRate?: number;
+  maxSatellites?: number;
+  enemyMissileAccuracyReduction?: number;
+  memeWaveEffectiveness?: number;
+  autoRevealEnemyResearch?: boolean;
+  hasRegimeDestabilization?: boolean;
+  eliminated?: boolean;
+  intelligence?: number;
 
   // Bio-warfare capabilities (AI nations)
   bioLab?: BioLabFacility;

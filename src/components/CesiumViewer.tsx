@@ -1,7 +1,10 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import {
   Viewer,
   Ion,
+  IonImageryProvider,
+  OpenStreetMapImageryProvider,
   createWorldTerrainAsync,
   Cartesian3,
   Color,
@@ -15,13 +18,57 @@ import {
   PolylineGlowMaterialProperty,
   ColorMaterialProperty,
   CallbackProperty,
+  PolygonHierarchy,
+  HeightReference,
+  SampledPositionProperty,
+  VelocityOrientationProperty,
+  BillboardGraphics,
+  ModelGraphics,
+  PointGraphics,
+  ImageryProvider,
+  TerrainProvider,
+  Ellipsoid,
+  Transforms,
+  Cartesian2,
+  Matrix4,
+  Quaternion,
+  HeadingPitchRoll,
+  ClockRange,
+  ClockStep,
+  TimeIntervalCollection,
+  TimeInterval,
+  SingleTileImageryProvider,
+  Rectangle,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import type { TerritoryState, ConventionalUnitState } from '@/hooks/useConventionalWarfare';
 import type { Nation } from '@/types/game';
+import {
+  getTerritoryPolygonHierarchy,
+  getTerritoryCenter,
+  generateWeatherPatterns,
+  UNIT_3D_MODELS,
+  SATELLITE_ORBITS,
+  calculateSatellitePosition,
+  type WeatherPattern,
+  type SatelliteOrbit,
+} from '@/utils/cesiumTerritoryData';
 
-// Disable Cesium Ion (use free base imagery instead)
-Ion.defaultAccessToken = '';
+const ionAccessToken = import.meta.env.VITE_CESIUM_ION_TOKEN ?? '';
+Ion.defaultAccessToken = ionAccessToken;
+const hasIonAccess = ionAccessToken.length > 0;
+
+const resolvePublicAssetPath = (assetPath: string) => {
+  const base = import.meta.env.BASE_URL ?? '/';
+  const trimmedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+  const trimmedAsset = assetPath.startsWith('/') ? assetPath.slice(1) : assetPath;
+
+  if (!trimmedBase) {
+    return `/${trimmedAsset}`;
+  }
+
+  return `${trimmedBase}/${trimmedAsset}`;
+};
 
 export interface CesiumViewerProps {
   territories?: TerritoryState[];
@@ -33,13 +80,23 @@ export interface CesiumViewerProps {
   showInfections?: boolean;
   infectionData?: Record<string, number>; // countryId -> infection percentage
   className?: string;
+  // Phase 2 & 3 features
+  enableTerrain?: boolean; // 3D terrain elevation
+  enable3DModels?: boolean; // Use 3D models for units instead of points
+  enableWeather?: boolean; // Show weather/cloud overlays
+  enableSatellites?: boolean; // Show satellite orbital views
+  enableParticleEffects?: boolean; // Advanced particle effects for explosions
+  animateUnits?: boolean; // Smooth unit movement animations
 }
 
 export interface CesiumViewerHandle {
   flyTo: (lon: number, lat: number, height?: number) => void;
-  addMissileTrajectory: (from: { lon: number; lat: number }, to: { lon: number; lat: number }) => void;
-  addExplosion: (lon: number, lat: number, radiusKm?: number) => void;
+  addMissileTrajectory: (from: { lon: number; lat: number }, to: { lon: number; lat: number }, animated?: boolean) => void;
+  addExplosion: (lon: number, lat: number, radiusKm?: number, useParticles?: boolean) => void;
   highlightTerritory: (territoryId: string) => void;
+  moveUnit: (unitId: string, fromLon: number, fromLat: number, toLon: number, toLat: number, durationSeconds?: number) => void;
+  focusSatellite: (satelliteId: string) => void;
+  addWeatherEvent: (lon: number, lat: number, type: 'storm' | 'clouds', intensity: number) => void;
 }
 
 const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
@@ -52,29 +109,19 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   showInfections = false,
   infectionData = {},
   className = '',
+  enableTerrain = true,
+  enable3DModels = true,
+  enableWeather = true,
+  enableSatellites = true,
+  enableParticleEffects = true,
+  animateUnits = true,
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const entitiesRef = useRef<Map<string, Entity>>(new Map());
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
-  const territoryClickRef = useRef<CesiumViewerProps['onTerritoryClick']>(onTerritoryClick);
-  const unitClickRef = useRef<CesiumViewerProps['onUnitClick']>(onUnitClick);
-  const enableDayNightRef = useRef(enableDayNight);
-
-  const applyDayNightSettings = useCallback((viewer: Viewer, lightingEnabled: boolean) => {
-    viewer.scene.globe.enableLighting = lightingEnabled;
-    if (lightingEnabled) {
-      viewer.clock.currentTime = JulianDate.now();
-    }
-  }, []);
-
-  useEffect(() => {
-    territoryClickRef.current = onTerritoryClick;
-  }, [onTerritoryClick]);
-
-  useEffect(() => {
-    unitClickRef.current = onUnitClick;
-  }, [onUnitClick]);
+  const [weatherPatterns, setWeatherPatterns] = useState<WeatherPattern[]>([]);
+  const animationFrameRef = useRef<number>();
 
   // Initialize Cesium Viewer
   useEffect(() => {
@@ -82,6 +129,30 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
     const initViewer = async () => {
       try {
+        let imageryProvider: ImageryProvider | undefined;
+        if (hasIonAccess) {
+          try {
+            imageryProvider = await IonImageryProvider.fromAssetId(2);
+          } catch (error) {
+            console.warn('Failed to load Cesium Ion imagery. Falling back to OpenStreetMap.', error);
+          }
+        }
+
+        if (!imageryProvider) {
+          imageryProvider = new OpenStreetMapImageryProvider({
+            url: 'https://a.tile.openstreetmap.org/',
+          });
+        }
+
+        let terrainProvider: TerrainProvider | undefined;
+        if (enableTerrain && hasIonAccess) {
+          try {
+            terrainProvider = await createWorldTerrainAsync();
+          } catch (error) {
+            console.warn('Failed to load Cesium Ion terrain. Continuing with ellipsoid terrain.', error);
+          }
+        }
+
         const viewer = new Viewer(containerRef.current!, {
           baseLayerPicker: false,
           geocoder: false,
@@ -94,12 +165,26 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           vrButton: false,
           infoBox: false,
           selectionIndicator: false,
-          imageryProvider: false, // We'll use natural earth color
+          imageryProvider: imageryProvider,
+          // Only use Cesium Ion terrain when a token is available; otherwise fall back to the default ellipsoid.
+          terrain: terrainProvider,
         });
 
         viewerRef.current = viewer;
 
         applyDayNightSettings(viewer, enableDayNightRef.current);
+        viewer.scene.globe.showGroundAtmosphere = true;
+        viewer.scene.skyAtmosphere.show = true;
+
+        const nightTextureUrl = resolvePublicAssetPath('textures/earth_specular.jpg');
+        const nightLayer = viewer.imageryLayers.addImageryProvider(
+          new SingleTileImageryProvider({
+            url: nightTextureUrl,
+            rectangle: Rectangle.fromDegrees(-180, -90, 180, 90),
+          })
+        );
+        nightLayer.alpha = 0.25;
+        nightLayer.brightness = 1.2;
 
         // Set camera to orbital view
         viewer.camera.setView({
@@ -115,15 +200,19 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         if (enableDayNight) {
           viewer.scene.globe.enableLighting = true;
           viewer.clock.currentTime = JulianDate.now();
+          // Animate the clock for realistic day/night progression
+          viewer.clock.shouldAnimate = true;
+          viewer.clock.multiplier = 100; // Speed up time
         }
 
         // Configure globe appearance
+        viewer.scene.globe.show = true;
         viewer.scene.globe.baseColor = Color.fromCssColorString('#0a1628');
         viewer.scene.backgroundColor = Color.BLACK;
         viewer.scene.skyBox.show = true;
 
-        // Enable depth testing for proper 3D rendering
-        viewer.scene.globe.depthTestAgainstTerrain = false;
+        // Enable depth testing when terrain meshes are available for accurate 3D intersections.
+        viewer.scene.globe.depthTestAgainstTerrain = Boolean(terrainProvider);
 
         // Setup click handler
         const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -151,6 +240,9 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
     initViewer();
 
     return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
       if (handlerRef.current) {
         handlerRef.current.destroy();
       }
@@ -168,8 +260,9 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
     applyDayNightSettings(viewer, enableDayNight);
   }, [enableDayNight, applyDayNightSettings]);
+  }, [enableDayNight, enableTerrain, onTerritoryClick, onUnitClick]);
 
-  // Render territories
+  // Render territories with GeoJSON boundaries (Phase 2 improvement)
   useEffect(() => {
     if (!viewerRef.current) return;
 
@@ -183,37 +276,17 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       }
     });
 
-    // Add new territory entities
+    // Add new territory entities with GeoJSON polygon boundaries
     territories.forEach(territory => {
       const nation = nations.find(n => n.id === territory.controllingNationId);
       const color = nation ? Color.fromCssColorString(nation.color) : Color.GRAY;
 
-      // Create a circular region for each territory (simplified)
-      // In production, you'd load actual GeoJSON boundaries
-      const entity = viewer.entities.add({
+      // Try to get GeoJSON boundary, fallback to circular region
+      const polygonCoords = getTerritoryPolygonHierarchy(territory.id);
+      const labelPosition = getTerritoryCenter(territory.id);
+
+      let entityConfig: any = {
         name: `territory-${territory.id}`,
-        position: Cartesian3.fromDegrees(territory.anchorLon, territory.anchorLat, 0),
-        ellipse: {
-          semiMinorAxis: 800000, // ~800km radius
-          semiMajorAxis: 800000,
-          material: color.withAlpha(0.4),
-          outline: true,
-          outlineColor: Color.WHITE.withAlpha(0.8),
-          outlineWidth: 2,
-          height: 0,
-        },
-        label: {
-          text: territory.name,
-          font: '14px monospace',
-          fillColor: Color.WHITE,
-          outlineColor: Color.BLACK,
-          outlineWidth: 2,
-          style: 1, // FILL_AND_OUTLINE
-          pixelOffset: new Cartesian3(0, -50, 0),
-          showBackground: true,
-          backgroundColor: Color.BLACK.withAlpha(0.7),
-          backgroundPadding: new Cartesian3(8, 4, 0),
-        },
         description: `
           <div style="padding: 10px;">
             <h3>${territory.name}</h3>
@@ -223,13 +296,59 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
             <p><strong>Conflict Risk:</strong> ${territory.conflictRisk}%</p>
           </div>
         `,
-      });
+      };
 
+      if (polygonCoords && polygonCoords.length > 0) {
+        // Use GeoJSON polygon boundary
+        entityConfig.polygon = {
+          hierarchy: new PolygonHierarchy(
+            Cartesian3.fromDegreesArray(polygonCoords)
+          ),
+          material: color.withAlpha(0.4),
+          outline: true,
+          outlineColor: Color.WHITE.withAlpha(0.8),
+          outlineWidth: 2,
+          height: 0,
+          extrudedHeight: 0,
+        };
+        entityConfig.position = labelPosition
+          ? Cartesian3.fromDegrees(labelPosition.lon, labelPosition.lat, 0)
+          : Cartesian3.fromDegrees(territory.anchorLon, territory.anchorLat, 0);
+      } else {
+        // Fallback to circular region
+        entityConfig.position = Cartesian3.fromDegrees(territory.anchorLon, territory.anchorLat, 0);
+        entityConfig.ellipse = {
+          semiMinorAxis: 800000,
+          semiMajorAxis: 800000,
+          material: color.withAlpha(0.4),
+          outline: true,
+          outlineColor: Color.WHITE.withAlpha(0.8),
+          outlineWidth: 2,
+          height: 0,
+        };
+      }
+
+      // Add label
+      entityConfig.label = {
+        text: territory.name,
+        font: '14px monospace',
+        fillColor: Color.WHITE,
+        outlineColor: Color.BLACK,
+        outlineWidth: 2,
+        style: 1, // FILL_AND_OUTLINE
+        pixelOffset: new Cartesian2(0, -50),
+        showBackground: true,
+        backgroundColor: Color.BLACK.withAlpha(0.7),
+        backgroundPadding: new Cartesian2(8, 4),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      };
+
+      const entity = viewer.entities.add(entityConfig);
       entitiesRef.current.set(`territory-${territory.id}`, entity);
     });
   }, [territories, nations]);
 
-  // Render military units
+  // Render military units with 3D models (Phase 2 improvement)
   useEffect(() => {
     if (!viewerRef.current) return;
 
@@ -253,41 +372,41 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       const nation = nations.find(n => n.id === unit.ownerId);
       const color = nation ? Color.fromCssColorString(nation.color) : Color.WHITE;
 
-      // Offset units slightly from territory center
+      // Offset units slightly from territory center for better visibility
       const offset = Math.random() * 200000 - 100000;
 
-      // Different symbols for different unit types
+      // Different symbols and models for different unit types
       let symbol = '🎖️';
       let heightOffset = 50000;
+      let modelConfig = UNIT_3D_MODELS.armored_corps;
 
       switch (unit.templateId) {
         case 'armored_corps':
           symbol = '🛡️';
           heightOffset = 0;
+          modelConfig = UNIT_3D_MODELS.armored_corps;
           break;
         case 'carrier_fleet':
           symbol = '⚓';
           heightOffset = 0;
+          modelConfig = UNIT_3D_MODELS.carrier_fleet;
           break;
         case 'air_wing':
           symbol = '✈️';
           heightOffset = 100000;
+          modelConfig = UNIT_3D_MODELS.air_wing;
           break;
       }
 
-      const entity = viewer.entities.add({
+      const position = Cartesian3.fromDegrees(
+        territory.anchorLon + offset / 100000,
+        territory.anchorLat + offset / 100000,
+        heightOffset
+      );
+
+      let entityConfig: any = {
         name: `unit-${unit.id}`,
-        position: Cartesian3.fromDegrees(
-          territory.anchorLon + offset / 100000,
-          territory.anchorLat + offset / 100000,
-          heightOffset
-        ),
-        point: {
-          pixelSize: 12,
-          color: color,
-          outlineColor: Color.WHITE,
-          outlineWidth: 2,
-        },
+        position: position,
         label: {
           text: `${symbol} ${unit.label}`,
           font: '12px monospace',
@@ -295,10 +414,11 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           outlineColor: Color.BLACK,
           outlineWidth: 2,
           style: 1, // FILL_AND_OUTLINE
-          pixelOffset: new Cartesian3(0, -20, 0),
+          pixelOffset: new Cartesian2(0, -20),
           showBackground: true,
           backgroundColor: color.withAlpha(0.8),
-          backgroundPadding: new Cartesian3(6, 3, 0),
+          backgroundPadding: new Cartesian2(6, 3),
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
         },
         description: `
           <div style="padding: 10px;">
@@ -310,11 +430,38 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
             <p><strong>Status:</strong> ${unit.status}</p>
           </div>
         `,
-      });
+      };
 
+      // Use 3D models if enabled and available, otherwise use enhanced point/billboard
+      if (enable3DModels) {
+        // For now, use billboards with colored icons since actual GLTF models need to be provided
+        // In production, you would load actual 3D models: entityConfig.model = { uri: modelConfig.url, ... }
+        entityConfig.billboard = {
+          image: createColoredCircleDataUri(color),
+          scale: 1.5,
+          verticalOrigin: 1, // BOTTOM
+          heightReference: HeightReference.NONE,
+        };
+        entityConfig.point = {
+          pixelSize: 16,
+          color: color,
+          outlineColor: Color.WHITE,
+          outlineWidth: 3,
+        };
+      } else {
+        // Fallback to point visualization
+        entityConfig.point = {
+          pixelSize: 12,
+          color: color,
+          outlineColor: Color.WHITE,
+          outlineWidth: 2,
+        };
+      }
+
+      const entity = viewer.entities.add(entityConfig);
       entitiesRef.current.set(`unit-${unit.id}`, entity);
     });
-  }, [units, territories, nations]);
+  }, [units, territories, nations, enable3DModels, enableTerrain]);
 
   // Render infection heatmaps
   useEffect(() => {
@@ -358,7 +505,136 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
     });
   }, [showInfections, infectionData, territories]);
 
-  // Expose methods via ref
+  // Weather overlay visualization (Phase 2 feature)
+  useEffect(() => {
+    if (!viewerRef.current || !enableWeather) return;
+
+    const viewer = viewerRef.current;
+
+    const updateWeather = () => {
+      // Clear old weather entities
+      entitiesRef.current.forEach((entity, key) => {
+        if (key.startsWith('weather-')) {
+          viewer.entities.remove(entity);
+          entitiesRef.current.delete(key);
+        }
+      });
+
+      // Generate and render weather patterns
+      const patterns = generateWeatherPatterns();
+      patterns.forEach((pattern, index) => {
+        const color = pattern.type === 'storm'
+          ? Color.GRAY.withAlpha(0.7 * pattern.intensity)
+          : Color.WHITE.withAlpha(0.3 * pattern.intensity);
+
+        const entity = viewer.entities.add({
+          name: `weather-${index}`,
+          position: Cartesian3.fromDegrees(pattern.lon, pattern.lat, 50000),
+          ellipse: {
+            semiMinorAxis: pattern.radius * 1000,
+            semiMajorAxis: pattern.radius * 1000,
+            material: new ColorMaterialProperty(
+              new CallbackProperty(() => {
+                const time = Date.now() / 2000;
+                const pulse = (Math.sin(time + index) + 1) / 2;
+                return color.withAlpha(color.alpha * (0.6 + pulse * 0.4));
+              }, false)
+            ),
+            height: 50000,
+          },
+        });
+
+        entitiesRef.current.set(`weather-${index}`, entity);
+      });
+    };
+
+    updateWeather();
+    // Update weather every 10 seconds
+    const weatherInterval = setInterval(updateWeather, 10000);
+
+    return () => clearInterval(weatherInterval);
+  }, [enableWeather]);
+
+  // Satellite orbital visualization (Phase 3 feature)
+  useEffect(() => {
+    if (!viewerRef.current || !enableSatellites) return;
+
+    const viewer = viewerRef.current;
+
+    // Clear old satellite entities
+    entitiesRef.current.forEach((entity, key) => {
+      if (key.startsWith('satellite-')) {
+        viewer.entities.remove(entity);
+        entitiesRef.current.delete(key);
+      }
+    });
+
+    // Add satellite orbits and entities
+    SATELLITE_ORBITS.forEach(satellite => {
+      const color = Color.fromCssColorString(satellite.color);
+
+      // Create orbital path
+      const pathPositions: Cartesian3[] = [];
+      for (let i = 0; i <= 360; i += 5) {
+        const angle = CesiumMath.toRadians(i);
+        const lat = Math.sin(angle) * satellite.inclination;
+        const lon = (angle * 180 / Math.PI) % 360 - 180;
+        pathPositions.push(Cartesian3.fromDegrees(lon, lat, satellite.altitude * 1000));
+      }
+
+      // Orbital path polyline
+      const orbitEntity = viewer.entities.add({
+        name: `satellite-orbit-${satellite.id}`,
+        polyline: {
+          positions: pathPositions,
+          width: 1,
+          material: color.withAlpha(0.5),
+        },
+      });
+      entitiesRef.current.set(`satellite-orbit-${satellite.id}`, orbitEntity);
+
+      // Animated satellite position
+      const satelliteEntity = viewer.entities.add({
+        name: `satellite-${satellite.id}`,
+        position: new CallbackProperty(() => {
+          const now = JulianDate.toDate(viewer.clock.currentTime);
+          const timeOffset = now.getTime() / 1000;
+          const pos = calculateSatellitePosition(satellite, timeOffset);
+          return Cartesian3.fromDegrees(pos.lon, pos.lat, pos.height);
+        }, false),
+        point: {
+          pixelSize: 8,
+          color: color,
+          outlineColor: Color.WHITE,
+          outlineWidth: 2,
+        },
+        label: {
+          text: satellite.name,
+          font: '10px monospace',
+          fillColor: Color.WHITE,
+          outlineColor: Color.BLACK,
+          outlineWidth: 1,
+          style: 1,
+          pixelOffset: new Cartesian2(0, -15),
+          showBackground: true,
+          backgroundColor: color.withAlpha(0.7),
+          backgroundPadding: new Cartesian2(4, 2),
+        },
+        description: `
+          <div style="padding: 10px;">
+            <h3>${satellite.name}</h3>
+            <p><strong>Altitude:</strong> ${satellite.altitude} km</p>
+            <p><strong>Inclination:</strong> ${satellite.inclination}°</p>
+            <p><strong>Period:</strong> ${satellite.period} min</p>
+          </div>
+        `,
+      });
+
+      entitiesRef.current.set(`satellite-${satellite.id}`, satelliteEntity);
+    });
+  }, [enableSatellites]);
+
+  // Expose methods via ref (Phase 2 & 3 enhanced API)
   useImperativeHandle(ref, () => ({
     flyTo: (lon: number, lat: number, height = 5000000) => {
       if (!viewerRef.current) return;
@@ -368,55 +644,172 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       });
     },
 
-    addMissileTrajectory: (from, to) => {
+    addMissileTrajectory: (from, to, animated = true) => {
       if (!viewerRef.current) return;
 
       const viewer = viewerRef.current;
-      const positions = calculateBallisticArc(from, to, 50);
+      const positions = calculateBallisticArc(from, to, 100);
 
-      const missile = viewer.entities.add({
-        name: `missile-${Date.now()}`,
-        polyline: {
-          positions: positions,
-          width: 3,
-          material: new PolylineGlowMaterialProperty({
-            glowPower: 0.3,
+      if (animated) {
+        // Phase 3: Animated missile with moving projectile
+        const startTime = JulianDate.now();
+        const stopTime = JulianDate.addSeconds(startTime, 5, new JulianDate());
+
+        const positionProperty = new SampledPositionProperty();
+        positions.forEach((pos, index) => {
+          const time = JulianDate.addSeconds(startTime, (index / positions.length) * 5, new JulianDate());
+          positionProperty.addSample(time, pos);
+        });
+
+        const missile = viewer.entities.add({
+          name: `missile-${Date.now()}`,
+          availability: new TimeIntervalCollection([
+            new TimeInterval({ start: startTime, stop: stopTime })
+          ]),
+          position: positionProperty,
+          orientation: new VelocityOrientationProperty(positionProperty),
+          point: {
+            pixelSize: 8,
             color: Color.YELLOW,
-          }),
-        },
-      });
+            outlineColor: Color.RED,
+            outlineWidth: 2,
+          },
+          path: {
+            resolution: 1,
+            material: new PolylineGlowMaterialProperty({
+              glowPower: 0.3,
+              color: Color.YELLOW,
+            }),
+            width: 3,
+            leadTime: 0,
+            trailTime: 2,
+          },
+        });
 
-      // Remove after 5 seconds
-      setTimeout(() => {
-        viewer.entities.remove(missile);
-      }, 5000);
+        // Remove after animation completes
+        setTimeout(() => {
+          viewer.entities.remove(missile);
+        }, 6000);
+      } else {
+        // Static trajectory line
+        const missile = viewer.entities.add({
+          name: `missile-${Date.now()}`,
+          polyline: {
+            positions: positions,
+            width: 3,
+            material: new PolylineGlowMaterialProperty({
+              glowPower: 0.3,
+              color: Color.YELLOW,
+            }),
+          },
+        });
+
+        setTimeout(() => {
+          viewer.entities.remove(missile);
+        }, 5000);
+      }
     },
 
-    addExplosion: (lon, lat, radiusKm = 50) => {
+    addExplosion: (lon, lat, radiusKm = 50, useParticles = enableParticleEffects) => {
       if (!viewerRef.current) return;
 
       const viewer = viewerRef.current;
-      const explosion = viewer.entities.add({
-        name: `explosion-${Date.now()}`,
-        position: Cartesian3.fromDegrees(lon, lat, 0),
-        ellipse: {
-          semiMinorAxis: radiusKm * 1000,
-          semiMajorAxis: radiusKm * 1000,
-          material: Color.ORANGE.withAlpha(0.7),
-          height: 0,
-        },
-        point: {
-          pixelSize: 20,
-          color: Color.RED,
-          outlineColor: Color.WHITE,
-          outlineWidth: 2,
-        },
-      });
+      const position = Cartesian3.fromDegrees(lon, lat, 0);
 
-      // Fade out and remove
-      setTimeout(() => {
-        viewer.entities.remove(explosion);
-      }, 3000);
+      if (useParticles) {
+        // Phase 2: Advanced particle effect explosion
+        const particles: Entity[] = [];
+        const particleCount = 30;
+
+        for (let i = 0; i < particleCount; i++) {
+          const angle = (i / particleCount) * Math.PI * 2;
+          const distance = radiusKm * 1000 * (0.5 + Math.random() * 0.5);
+
+          const endPosition = Cartesian3.fromDegrees(
+            lon + (Math.cos(angle) * distance) / 111000,
+            lat + (Math.sin(angle) * distance) / 111000,
+            Math.random() * 50000
+          );
+
+          const startTime = JulianDate.now();
+          const positionProperty = new SampledPositionProperty();
+          positionProperty.addSample(startTime, position);
+          positionProperty.addSample(
+            JulianDate.addSeconds(startTime, 1 + Math.random(), new JulianDate()),
+            endPosition
+          );
+
+          const particle = viewer.entities.add({
+            name: `explosion-particle-${Date.now()}-${i}`,
+            position: positionProperty,
+            point: {
+              pixelSize: 4 + Math.random() * 6,
+              color: new CallbackProperty(() => {
+                const elapsed = JulianDate.secondsDifference(JulianDate.now(), startTime);
+                const alpha = Math.max(0, 1 - elapsed / 1.5);
+                const colors = [Color.YELLOW, Color.ORANGE, Color.RED];
+                const colorIndex = Math.floor(Math.random() * colors.length);
+                return colors[colorIndex].withAlpha(alpha);
+              }, false),
+            },
+          });
+
+          particles.push(particle);
+        }
+
+        // Central blast
+        const blast = viewer.entities.add({
+          name: `explosion-blast-${Date.now()}`,
+          position: position,
+          ellipse: {
+            semiMinorAxis: new CallbackProperty(() => {
+              const t = (Date.now() % 2000) / 2000;
+              return radiusKm * 1000 * (1 + t * 2);
+            }, false),
+            semiMajorAxis: new CallbackProperty(() => {
+              const t = (Date.now() % 2000) / 2000;
+              return radiusKm * 1000 * (1 + t * 2);
+            }, false),
+            material: new CallbackProperty(() => {
+              const t = (Date.now() % 2000) / 2000;
+              return Color.ORANGE.withAlpha(0.8 * (1 - t));
+            }, false),
+            height: 0,
+          },
+          point: {
+            pixelSize: 30,
+            color: Color.WHITE,
+          },
+        });
+
+        // Cleanup after 2 seconds
+        setTimeout(() => {
+          particles.forEach(p => viewer.entities.remove(p));
+          viewer.entities.remove(blast);
+        }, 2000);
+      } else {
+        // Simple explosion
+        const explosion = viewer.entities.add({
+          name: `explosion-${Date.now()}`,
+          position: position,
+          ellipse: {
+            semiMinorAxis: radiusKm * 1000,
+            semiMajorAxis: radiusKm * 1000,
+            material: Color.ORANGE.withAlpha(0.7),
+            height: 0,
+          },
+          point: {
+            pixelSize: 20,
+            color: Color.RED,
+            outlineColor: Color.WHITE,
+            outlineWidth: 2,
+          },
+        });
+
+        setTimeout(() => {
+          viewer.entities.remove(explosion);
+        }, 3000);
+      }
     },
 
     highlightTerritory: (territoryId: string) => {
@@ -424,6 +817,91 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       if (entity && viewerRef.current) {
         viewerRef.current.selectedEntity = entity;
       }
+    },
+
+    moveUnit: (unitId: string, fromLon: number, fromLat: number, toLon: number, toLat: number, durationSeconds = 5) => {
+      if (!viewerRef.current) return;
+
+      const viewer = viewerRef.current;
+      const entity = entitiesRef.current.get(`unit-${unitId}`);
+      if (!entity) return;
+
+      const startTime = JulianDate.now();
+      const stopTime = JulianDate.addSeconds(startTime, durationSeconds, new JulianDate());
+
+      const positionProperty = new SampledPositionProperty();
+      positionProperty.addSample(startTime, Cartesian3.fromDegrees(fromLon, fromLat, 0));
+      positionProperty.addSample(stopTime, Cartesian3.fromDegrees(toLon, toLat, 0));
+
+      entity.position = positionProperty;
+
+      // Add movement trail
+      const trail = viewer.entities.add({
+        name: `unit-trail-${Date.now()}`,
+        polyline: {
+          positions: new CallbackProperty(() => {
+            const now = viewer.clock.currentTime;
+            const pos = entity.position?.getValue(now);
+            if (!pos) return [];
+            return [
+              Cartesian3.fromDegrees(fromLon, fromLat, 0),
+              pos,
+            ];
+          }, false),
+          width: 2,
+          material: Color.CYAN.withAlpha(0.5),
+        },
+      });
+
+      setTimeout(() => {
+        viewer.entities.remove(trail);
+      }, (durationSeconds + 1) * 1000);
+    },
+
+    focusSatellite: (satelliteId: string) => {
+      if (!viewerRef.current) return;
+
+      const entity = entitiesRef.current.get(`satellite-${satelliteId}`);
+      if (entity && viewerRef.current) {
+        viewerRef.current.trackedEntity = entity;
+        // Zoom to satellite orbital view
+        setTimeout(() => {
+          if (viewerRef.current) {
+            viewerRef.current.trackedEntity = undefined;
+          }
+        }, 10000);
+      }
+    },
+
+    addWeatherEvent: (lon: number, lat: number, type: 'storm' | 'clouds', intensity: number) => {
+      if (!viewerRef.current) return;
+
+      const viewer = viewerRef.current;
+      const color = type === 'storm'
+        ? Color.GRAY.withAlpha(0.7 * intensity)
+        : Color.WHITE.withAlpha(0.4 * intensity);
+
+      const weather = viewer.entities.add({
+        name: `weather-event-${Date.now()}`,
+        position: Cartesian3.fromDegrees(lon, lat, 50000),
+        ellipse: {
+          semiMinorAxis: 400000,
+          semiMajorAxis: 400000,
+          material: new ColorMaterialProperty(
+            new CallbackProperty(() => {
+              const time = Date.now() / 2000;
+              const pulse = (Math.sin(time) + 1) / 2;
+              return color.withAlpha(color.alpha * (0.6 + pulse * 0.4));
+            }, false)
+          ),
+          height: 50000,
+        },
+      });
+
+      // Remove after 30 seconds
+      setTimeout(() => {
+        viewer.entities.remove(weather);
+      }, 30000);
     },
   }));
 
@@ -468,4 +946,27 @@ function calculateBallisticArc(
     );
   }
   return positions;
+}
+
+// Helper function to create colored circle data URI for billboards
+function createColoredCircleDataUri(color: Color): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) return '';
+
+  // Draw circle with color
+  ctx.beginPath();
+  ctx.arc(16, 16, 14, 0, Math.PI * 2);
+  ctx.fillStyle = color.toCssColorString();
+  ctx.fill();
+
+  // Add white border
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  return canvas.toDataURL();
 }

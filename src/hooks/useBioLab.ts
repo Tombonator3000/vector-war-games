@@ -124,7 +124,7 @@ export function useBioLab(addNewsItem: AddNewsItem) {
     addNewsItem(
       'science',
       `Bio lab construction cancelled - refunded ${productionRefund} production, ${uraniumRefund} uranium`,
-      'normal'
+      'routine'
     );
 
     return {

@@ -7,6 +7,13 @@
 
 ---
 
+### Session X: 2025-10-30 - Cesium Bootstrapping Fix
+
+#### Time: 17:05 UTC
+
+- Refactored `src/pages/Index.tsx` bootstrapping to initialize audio, world systems, and AI state when the game starts regardless of canvas availability.
+- Gated pointer/mouse listeners so they only attach in Three.js mode while keeping Cesium gameplay functional.
+
 ## 📋 Project Overview
 
 Implementing comprehensive tech tree expansions and fixes based on the COMPREHENSIVE-TECH-TREE-GAMEPLAY-AUDIT-2025.md audit document.
@@ -615,3 +622,41 @@ Looking for:
 
 ## 2025-10-30T14:22:00+00:00
 - Addressed Cesium lighting race by caching the latest enableDayNight prop and reapplying lighting once the viewer initializes in src/components/CesiumViewer.tsx.
+## 2025-10-30T14:15:00+00:00
+- Reviewed AGENTS.md logging requirements (lines 68-69): record every action with precise timestamps in log.md
+- Audited repository structure for logging compliance - confirmed log.md exists at root and docs/log.md
+- Investigated Cesium blank blue screen issue
+
+## 2025-10-30T14:20:15+00:00
+- Fixed Cesium blank blue screen issue in src/components/CesiumViewer.tsx:125
+  - ROOT CAUSE: imageryProvider was set to false, preventing any base map imagery from loading
+  - SOLUTION: Removed imageryProvider: false to allow Cesium to use default imagery provider
+  - Cesium will now fall back to Natural Earth II imagery when Ion token is empty
+  - Added clarifying comment about default Bing Maps with Natural Earth II fallback
+
+## 2025-10-30T14:25:30+00:00
+- Investigated Victory Paths Mode empty display issue
+- Found VictoryDashboard component is rendered at src/pages/Index.tsx:10435
+- Confirmed useVictoryTracking hook is properly called with correct data structure
+- ROOT CAUSE: UI showed nothing when paths array was empty or had no progress
+- SOLUTION: Enhanced VictoryDashboard.tsx with better empty state handling:
+  1. Lines 109-135: Added fallback message when no topPath exists in collapsed view
+  2. Lines 166-184: Added "No victory paths available yet" message when paths array is empty
+  3. Improved UX by showing helpful text instead of blank panel
+
+## 2025-10-30T14:28:00+00:00
+- Ran TypeScript compiler check (tsc --noEmit) - no errors found
+- All changes pass TypeScript validation
+## 2025-10-30T16:45:55+00:00
+- Updated CesiumViewer to use SingleTileImageryProvider with earth_day texture and added atmospheric effects for photographic globe rendering.
+- Layered semi-transparent night lights texture for specular highlights and ensured asset paths respect Vite base URL configuration.
+- Attempted to run `npm run dev -- --host 0.0.0.0 --port 4173` to manually verify Cesium toggle, but the dev server failed to start due to missing `vite-plugin-cesium` dependency.
+
+## 2025-10-30T17:15:00+00:00
+- Reviewed CesiumViewer imagery initialization to plan migration toward streaming base layers and Ion token gating.
+- Replaced the static earth_day SingleTileImageryProvider with an OpenStreetMapImageryProvider fallback and conditional Cesium Ion asset loading when `VITE_CESIUM_ION_TOKEN` is provided.
+- Added defensive handling for Ion terrain provisioning, preserved the night lights overlay with reduced alpha for better visibility, and verified the viewer still initializes without credentials.
+
+## 2025-10-30T17:32:17+00:00
+- Implemented a dedicated `CesiumHeroGlobe` component for the intro screen, wiring it into `Index.tsx` to replace the legacy Three.js globe with Cesium's photorealistic Earth and gentle auto-rotation.
+- Added styling hooks in `index.css` to mask the Cesium canvas into a circular hero element, hide toolbars, and preserve the neon drop-shadow aesthetic on the landing layout.

@@ -475,24 +475,22 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
         <div className="bg-gray-800/50 p-3 rounded">
           <div className="text-sm text-gray-300 mb-2">Completed Projects</div>
           <div className="text-white font-bold text-lg mb-3">
-            {Object.keys(player.researched || {}).filter(k => player.researched[k]).length}
+            {Object.keys(player.researched || {}).filter(k => player.researched?.[k]).length}
           </div>
 
-          {player.researchQueue && player.researchQueue.length > 0 && (
+          {player.researchQueue && (
             <div className="border-t border-gray-700 pt-3 mt-3">
               <div className="text-sm text-gray-300 mb-2">Current Research</div>
-              {player.researchQueue.map((item, idx) => (
-                <div key={idx} className="mb-2">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-400">{item.projectId}</span>
-                    <span className="text-white">{item.turnsRemaining} turns</span>
-                  </div>
-                  {renderProgressBar(
-                    ((item.totalTurns - item.turnsRemaining) / item.totalTurns) * 100,
+              <div className="mb-2">
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-400">{player.researchQueue.projectId}</span>
+                  <span className="text-white">{player.researchQueue.turnsRemaining} turns</span>
+                </div>
+                {renderProgressBar(
+                    ((player.researchQueue.totalTurns - player.researchQueue.turnsRemaining) / player.researchQueue.totalTurns) * 100,
                     'bg-cyan-500'
                   )}
-                </div>
-              ))}
+              </div>
             </div>
           )}
         </div>
@@ -721,8 +719,8 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
       const hasAlliance = player.treaties?.[enemy.id]?.alliance;
       const hasTruce = (player.treaties?.[enemy.id]?.truceTurns || 0) > 0;
       const truceTurnsLeft = player.treaties?.[enemy.id]?.truceTurns || 0;
-      const isSanctioned = enemy.sanctioned?.includes(player.id);
-      const playerSanctionsEnemy = player.sanctioned?.includes(enemy.id);
+      const isSanctioned = Array.isArray(enemy.sanctioned) && enemy.sanctioned.includes(player.id);
+      const playerSanctionsEnemy = Array.isArray(player.sanctioned) && player.sanctioned.includes(enemy.id);
 
       return {
         nation: enemy,

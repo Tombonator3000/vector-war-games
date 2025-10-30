@@ -56,6 +56,7 @@ export interface TerritoryImprovementTemplate {
   buildCost: {
     production?: number;
     intel?: number;
+    uranium?: number;
     turns?: number;
   };
   maintenanceCost: number;

@@ -106,21 +106,30 @@ export function VictoryDashboard({
           </div>
 
           {/* Quick summary when collapsed */}
-          {!isExpanded && topPath && (
+          {!isExpanded && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-cyan-200">
-                  {topPath.icon} {topPath.name}
-                </span>
-                <span className={`font-mono font-bold ${colorClasses[topPath.color].text}`}>
-                  {Math.round(topPath.progress)}%
-                </span>
-              </div>
-              <Progress value={topPath.progress} className="h-2" />
-              {turnsUntilClosestVictory !== null && turnsUntilClosestVictory < 10 && (
-                <p className="text-[10px] text-yellow-400 animate-pulse">
-                  ⚡ ~{turnsUntilClosestVictory} turns to victory!
-                </p>
+              {topPath ? (
+                <>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-cyan-200">
+                      {topPath.icon} {topPath.name}
+                    </span>
+                    <span className={`font-mono font-bold ${colorClasses[topPath.color].text}`}>
+                      {Math.round(topPath.progress)}%
+                    </span>
+                  </div>
+                  <Progress value={topPath.progress} className="h-2" />
+                  {turnsUntilClosestVictory !== null && turnsUntilClosestVictory < 10 && (
+                    <p className="text-[10px] text-yellow-400 animate-pulse">
+                      ⚡ ~{turnsUntilClosestVictory} turns to victory!
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="text-xs text-gray-400">
+                  <p>Multiple victory paths available</p>
+                  <p className="text-[10px] text-gray-500 mt-1">Click to expand and view progress</p>
+                </div>
               )}
             </div>
           )}
@@ -154,18 +163,25 @@ export function VictoryDashboard({
 
                   {/* Victory paths */}
                   <div className="space-y-3">
-                    {sortedPaths.map((path) => (
-                      <VictoryPathCard
-                        key={path.type}
-                        path={path}
-                        isRecommended={path.type === recommendedPath}
-                        isSelected={selectedPath === path.type}
-                        onSelect={() =>
-                          setSelectedPath(selectedPath === path.type ? null : path.type)
-                        }
-                        colorClasses={colorClasses[path.color]}
-                      />
-                    ))}
+                    {sortedPaths.length > 0 ? (
+                      sortedPaths.map((path) => (
+                        <VictoryPathCard
+                          key={path.type}
+                          path={path}
+                          isRecommended={path.type === recommendedPath}
+                          isSelected={selectedPath === path.type}
+                          onSelect={() =>
+                            setSelectedPath(selectedPath === path.type ? null : path.type)
+                          }
+                          colorClasses={colorClasses[path.color]}
+                        />
+                      ))
+                    ) : (
+                      <div className="text-center text-xs text-gray-400 py-4">
+                        <p>No victory paths available yet</p>
+                        <p className="text-[10px] text-gray-500 mt-1">Victory tracking will activate as the game progresses</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </ScrollArea>

@@ -8,7 +8,7 @@ import type {
   ContinentBonus,
   TerritoryImprovement,
 } from '@/types/territory';
-import { CONTINENT_BONUSES, getNearControlContinents } from '@/types/territory';
+import { CONTINENT_BONUSES, getNearControlContinents, TERRITORY_IMPROVEMENTS } from '@/types/territory';
 
 interface TerritoryBonusPanelProps {
   controlledTerritories: string[];
@@ -172,8 +172,8 @@ export function TerritoryBonusPanel({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span>{improvement.improvement.icon}</span>
-                        <span className="text-gray-300">{improvement.improvement.name}</span>
+                        <span>{TERRITORY_IMPROVEMENTS[improvement.type]?.icon || '🏗️'}</span>
+                        <span className="text-gray-300">{improvement.name}</span>
                       </div>
                       <span className="text-gray-500 text-[10px]">
                         {improvement.territoryId}
