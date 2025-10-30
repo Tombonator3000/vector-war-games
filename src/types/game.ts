@@ -64,6 +64,17 @@ export interface Nation {
   publicOpinion: number;
   electionTimer: number;
   cabinetApproval: number;
+  productionMultiplier?: number;
+  uraniumPerTurn?: number;
+  hasASATCapability?: boolean;
+  orbitalStrikesAvailable?: number;
+  sabotageDetectionReduction?: number;
+  unitAttackBonus?: number;
+  unitDefenseBonus?: number;
+  combinedArmsBonus?: number;
+  immigrationBonus?: number;
+  satelliteIntelBonus?: number;
+  treatyLockDuration?: number;
 
   // Bio-warfare capabilities (AI nations)
   bioLab?: BioLabFacility;
