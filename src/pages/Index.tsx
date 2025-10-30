@@ -10475,6 +10475,10 @@ export default function NoradVector() {
         currentTurn={S.turn}
         governanceMetrics={governance.metrics}
         victoryAnalysis={victoryAnalysis}
+        onStartResearch={startResearch}
+        bioLabFacility={labFacility}
+        onStartBioLabConstruction={handleStartLabConstruction}
+        onCancelBioLabConstruction={handleCancelLabConstruction}
       />
 
       <GameHelper
