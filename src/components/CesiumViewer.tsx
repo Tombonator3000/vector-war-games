@@ -1,3 +1,4 @@
+import { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import {
   Viewer,
@@ -171,6 +172,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
         viewerRef.current = viewer;
 
+        applyDayNightSettings(viewer, enableDayNightRef.current);
         viewer.scene.globe.showGroundAtmosphere = true;
         viewer.scene.skyAtmosphere.show = true;
 
@@ -222,10 +224,10 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
             const entity = pickedObject.id as Entity;
             if (entity.name?.startsWith('territory-')) {
               const territoryId = entity.name.replace('territory-', '');
-              onTerritoryClick?.(territoryId);
+              territoryClickRef.current?.(territoryId);
             } else if (entity.name?.startsWith('unit-')) {
               const unitId = entity.name.replace('unit-', '');
-              onUnitClick?.(unitId);
+              unitClickRef.current?.(unitId);
             }
           }
         }, ScreenSpaceEventType.LEFT_CLICK);
@@ -249,6 +251,15 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         viewerRef.current = null;
       }
     };
+  }, []);
+
+  useEffect(() => {
+    enableDayNightRef.current = enableDayNight;
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    applyDayNightSettings(viewer, enableDayNight);
+  }, [enableDayNight, applyDayNightSettings]);
   }, [enableDayNight, enableTerrain, onTerritoryClick, onUnitClick]);
 
   // Render territories with GeoJSON boundaries (Phase 2 improvement)

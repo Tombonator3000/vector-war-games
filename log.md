@@ -617,6 +617,11 @@ Looking for:
 ## 2025-10-30T13:49:35+00:00
 - Ran vitest targeting src/contexts/__tests__/MultiplayerProvider.test.tsx to verify multiplayer auth changes; all 3 tests passed.
 
+## 2025-10-30T14:05:00+00:00
+- Updated src/components/CesiumViewer.tsx to stabilize Cesium Viewer initialization by persisting callback refs and decoupling lighting toggles from the mount effect.
+
+## 2025-10-30T14:22:00+00:00
+- Addressed Cesium lighting race by caching the latest enableDayNight prop and reapplying lighting once the viewer initializes in src/components/CesiumViewer.tsx.
 ## 2025-10-30T14:15:00+00:00
 - Reviewed AGENTS.md logging requirements (lines 68-69): record every action with precise timestamps in log.md
 - Audited repository structure for logging compliance - confirmed log.md exists at root and docs/log.md
