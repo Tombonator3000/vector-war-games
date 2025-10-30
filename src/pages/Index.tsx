@@ -5328,6 +5328,7 @@ export default function NoradVector() {
   const [gamePhase, setGamePhase] = useState('intro');
   const [isGameStarted, setIsGameStarted] = useState(false);
   const hasAutoplayedTurnOneMusicRef = useRef(false);
+  const hasBootstrappedGameRef = useRef(false);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState<{ title: string; content: ModalContentValue }>({ title: '', content: '' });
   const [selectedLeader, setSelectedLeader] = useState<string | null>(null);
@@ -5565,6 +5566,35 @@ export default function NoradVector() {
       cancelled = true;
     };
   }, [isGameStarted]);
+
+  useEffect(() => {
+    if (!isGameStarted) {
+      return;
+    }
+
+    if (hasBootstrappedGameRef.current) {
+      return;
+    }
+
+    hasBootstrappedGameRef.current = true;
+
+    AudioSys.init();
+    Atmosphere.init();
+    Ocean.init();
+
+    if (nations.length === 0) {
+      initNations();
+      setConventionalState(S.conventional ?? createDefaultConventionalState());
+      CityLights.generate();
+    }
+
+    if (!gameLoopRunning) {
+      gameLoopRunning = true;
+      loadWorld().then(() => {
+        requestAnimationFrame(gameLoop);
+      });
+    }
+  }, [isGameStarted, setConventionalState]);
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible') {
@@ -8882,7 +8912,11 @@ export default function NoradVector() {
   }, []);
 
   useEffect(() => {
-    if (canvasRef.current && isGameStarted) {
+    if (!isGameStarted || viewerType !== 'threejs') {
+      return;
+    }
+
+    if (canvasRef.current) {
       canvas = canvasRef.current;
       ctx = canvas.getContext('2d')!;
 
@@ -8896,31 +8930,6 @@ export default function NoradVector() {
         window.addEventListener('resize', handleWindowResize);
       }
 
-      // Only initialize game systems once
-      if (nations.length === 0) {
-        // Initialize audio
-        AudioSys.init();
-        
-        // Initialize game systems
-        Atmosphere.init();
-        Ocean.init();
-        
-        // Initialize game
-        initNations();
-        setConventionalState(S.conventional ?? createDefaultConventionalState());
-        CityLights.generate();
-        
-        // Load world map and start game loop only once
-        if (!gameLoopRunning) {
-          gameLoopRunning = true;
-          loadWorld().then(() => {
-            requestAnimationFrame(gameLoop);
-          });
-        }
-      }
-      
-      // Setup mouse and touch controls
-      
       // Setup mouse and touch controls
       let isDragging = false;
       let dragButton: number | null = null;
@@ -9305,7 +9314,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, handleMilitary, handlePauseToggle, openModal, resizeCanvas]);
+  }, [isGameStarted, viewerType, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, handleMilitary, handlePauseToggle, openModal, resizeCanvas]);
 
 
   // Render functions for different phases
