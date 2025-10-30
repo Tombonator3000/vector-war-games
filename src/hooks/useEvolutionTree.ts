@@ -257,7 +257,7 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
     });
 
     if (newsMessage) {
-      addNewsItem('science', newsMessage, success ? 'important' : 'normal');
+      addNewsItem('science', newsMessage, success ? 'important' : 'routine');
     }
 
     return success;
@@ -332,7 +332,7 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
     });
 
     if (newsMessage) {
-      addNewsItem('science', newsMessage, success ? 'normal' : 'normal');
+      addNewsItem('science', newsMessage, success ? 'routine' : 'routine');
     }
 
     return success;
@@ -346,7 +346,7 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
     }));
 
     if (event.message) {
-      addNewsItem('science', event.message, 'normal');
+      addNewsItem('science', event.message, 'routine');
     }
   }, [addNewsItem]);
 

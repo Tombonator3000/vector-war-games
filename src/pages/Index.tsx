@@ -5940,9 +5940,9 @@ export default function NoradVector() {
       setShowEraTransition(true);
 
       addNewsItem(
-        'alert',
+        'crisis',
         `🎯 ${eraDef.name} begins! New systems unlocked.`,
-        'high'
+        'urgent'
       );
     },
   });
@@ -10192,8 +10192,8 @@ export default function NoradVector() {
           }))}
         playerActions={S.actionsRemaining}
         onSelectPlagueType={selectPlagueType}
-        onEvolveNode={evolveNode}
-        onDevolveNode={devolveNode}
+        onEvolveNode={(nodeId: string) => evolveNode({ nodeId: nodeId as any })}
+        onDevolveNode={(nodeId: string) => devolveNode({ nodeId: nodeId as any })}
         onDeployBioWeapon={handleDeployBioWeapon}
       />
 
@@ -10367,16 +10367,7 @@ export default function NoradVector() {
         }} 
       />
 
-      {showProgressiveTutorial && isGameStarted && (
-        <TutorialOverlay
-          steps={tutorialSteps}
-          onComplete={handleComplete}
-          onSkip={handleSkip}
-        />
-      )}
-
       {/* New Phase 1 Tutorial & Feedback Overlays */}
-      <TutorialOverlay />
       <PhaseTransitionOverlay phase={S.phase} isTransitioning={isPhaseTransitioning} />
 
       {/* Era Transition Overlay */}

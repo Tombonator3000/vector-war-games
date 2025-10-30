@@ -77,6 +77,13 @@ export function initializeAINationBioWarfare(nation: Nation, difficulty: string)
       attributionAttempts: 0,
       cureProgress: 0,
       cureActive: false,
+      unlockedPlagueTypes: new Set(),
+      completedPlagues: new Set(),
+      plagueCompletionStats: {
+        totalKills: 0,
+        peakInfection: 0,
+        nationsInfected: 0,
+      },
     };
   }
 }

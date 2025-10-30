@@ -206,7 +206,7 @@ function calculateDominationVictory(player: Nation, aliveEnemies: Nation[]): Vic
       actionHint: 'Launch nuclear weapons or conventional assault',
       priority: 'critical',
     });
-    if (player.missiles.total < 10) {
+    if (player.missiles < 10) {
       milestones.push({
         description: 'Build more missiles for offensive capability',
         actionHint: 'Production → Build Missiles',
