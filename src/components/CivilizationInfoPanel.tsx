@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag } from 'lucide-react';
+import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag, Smile, Meh, Frown, AlertTriangle, Trophy, Skull, Building2, Sparkles } from 'lucide-react';
 import { Nation } from '../types/game';
+import type { GovernanceMetrics } from '@/hooks/useGovernance';
+import { motion } from 'framer-motion';
 
 interface CivilizationInfoPanelProps {
   nations: Nation[];
   isOpen: boolean;
   onClose: () => void;
   currentTurn: number;
+  governanceMetrics?: Record<string, GovernanceMetrics>;
 }
 
 type TabType = 'own-status' | 'enemy-status' | 'diplomacy';
@@ -15,7 +18,8 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   nations,
   isOpen,
   onClose,
-  currentTurn
+  currentTurn,
+  governanceMetrics = {}
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('own-status');
 
@@ -61,6 +65,39 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
       />
     </div>
   );
+
+  // Helper functions for morale display
+  const getMoraleColor = (value: number) => {
+    if (value >= 80) return 'linear-gradient(90deg, #34d399 0%, #22d3ee 100%)';
+    if (value >= 60) return 'linear-gradient(90deg, #38bdf8 0%, #818cf8 100%)';
+    if (value >= 40) return 'linear-gradient(90deg, #f59e0b 0%, #f97316 100%)';
+    return 'linear-gradient(90deg, #f87171 0%, #ef4444 100%)';
+  };
+
+  const getMoraleIcon = (value: number) => {
+    if (value >= 80) return Smile;
+    if (value >= 60) return Meh;
+    if (value >= 40) return Frown;
+    return AlertTriangle;
+  };
+
+  const getMoraleIconColor = (value: number) => {
+    if (value >= 80) return 'text-emerald-400';
+    if (value >= 60) return 'text-sky-400';
+    if (value >= 40) return 'text-amber-400';
+    return 'text-red-400';
+  };
+
+  const getMoraleLabel = (value: number) => {
+    if (value >= 80) return 'High';
+    if (value >= 60) return 'Good';
+    if (value >= 40) return 'Low';
+    return 'Critical';
+  };
+
+  const clamp = (value: number, min: number, max: number) => {
+    return Math.min(max, Math.max(min, value));
+  };
 
   const renderOwnStatus = () => (
     <div className="space-y-6">
@@ -156,44 +193,176 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
         </div>
       </div>
 
-      {/* Win Conditions Progress */}
+      {/* Victory Progress - Enhanced */}
       <div>
-        <h3 className="text-lg font-bold text-purple-400 mb-3 flex items-center gap-2">
-          <Award className="w-5 h-5" />
+        <h3 className="text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
+          <Trophy className={`w-5 h-5 ${Math.max(militaryProgress, economicProgress, culturalProgress) >= 70 ? 'text-yellow-400 animate-pulse' : 'text-cyan-400'}`} />
           Victory Progress
         </h3>
-        <div className="space-y-3">
-          <div className="bg-gray-800/50 p-3 rounded">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-300">Military Victory</span>
-              <span className="text-white font-bold">{militaryProgress.toFixed(1)}%</span>
+        <div className="bg-gray-800/50 p-4 rounded-lg border border-cyan-500/30">
+          <div className="space-y-4">
+            {/* Military Victory */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Skull className="w-4 h-4 text-red-400" />
+                  <span className="text-sm font-mono text-cyan-200">Military</span>
+                  {militaryProgress === Math.max(militaryProgress, economicProgress, culturalProgress) && militaryProgress >= 50 && (
+                    <span className="text-[10px] text-yellow-400 font-bold animate-pulse">
+                      LEADING
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm font-mono text-cyan-300 font-bold">
+                  {Math.round(militaryProgress)}%
+                </span>
+              </div>
+              <div className="relative h-3 bg-gray-900 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${militaryProgress}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  className={`h-full bg-red-500 ${militaryProgress >= 90 ? 'animate-pulse' : ''}`}
+                />
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                Eliminated {enemiesEliminated} / {totalNations - 1} nations
+              </div>
             </div>
-            {renderProgressBar(militaryProgress, 'bg-red-500')}
-            <div className="text-xs text-gray-400 mt-1">
-              Eliminated {enemiesEliminated} / {totalNations - 1} nations
+
+            {/* Economic Victory */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-green-400" />
+                  <span className="text-sm font-mono text-cyan-200">Economic</span>
+                  {economicProgress === Math.max(militaryProgress, economicProgress, culturalProgress) && economicProgress >= 50 && (
+                    <span className="text-[10px] text-yellow-400 font-bold animate-pulse">
+                      LEADING
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm font-mono text-cyan-300 font-bold">
+                  {Math.round(economicProgress)}%
+                </span>
+              </div>
+              <div className="relative h-3 bg-gray-900 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${economicProgress}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  className={`h-full bg-green-500 ${economicProgress >= 90 ? 'animate-pulse' : ''}`}
+                />
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                Control {player.cities} / 12 cities
+              </div>
+            </div>
+
+            {/* Cultural Victory */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm font-mono text-cyan-200">Cultural</span>
+                  {culturalProgress === Math.max(militaryProgress, economicProgress, culturalProgress) && culturalProgress >= 50 && (
+                    <span className="text-[10px] text-yellow-400 font-bold animate-pulse">
+                      LEADING
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm font-mono text-cyan-300 font-bold">
+                  {Math.round(culturalProgress)}%
+                </span>
+              </div>
+              <div className="relative h-3 bg-gray-900 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${culturalProgress}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  className={`h-full bg-purple-500 ${culturalProgress >= 90 ? 'animate-pulse' : ''}`}
+                />
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                Cultural influence: {(player as any).culture || 0} / 100
+              </div>
             </div>
           </div>
 
-          <div className="bg-gray-800/50 p-3 rounded">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-300">Economic Victory</span>
-              <span className="text-white font-bold">{economicProgress.toFixed(1)}%</span>
-            </div>
-            {renderProgressBar(economicProgress, 'bg-yellow-500')}
-            <div className="text-xs text-gray-400 mt-1">
-              Control {player.cities} / 12 cities
-            </div>
-          </div>
+          {/* Victory warning */}
+          {Math.max(militaryProgress, economicProgress, culturalProgress) >= 70 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded"
+            >
+              <p className="text-xs text-yellow-200 text-center font-mono">
+                ⚠️ Victory approaching! Press your advantage!
+              </p>
+            </motion.div>
+          )}
 
-          <div className="bg-gray-800/50 p-3 rounded">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-300">Cultural Victory</span>
-              <span className="text-white font-bold">{culturalProgress.toFixed(1)}%</span>
-            </div>
-            {renderProgressBar(culturalProgress, 'bg-purple-500')}
-            <div className="text-xs text-gray-400 mt-1">
-              Cultural influence: {(player as any).culture || 0} / 100
-            </div>
+          <p className="mt-3 text-[10px] text-cyan-400/60 text-center">
+            First to 100% wins
+          </p>
+        </div>
+      </div>
+
+      {/* Morale Outlook - All Nations */}
+      <div>
+        <h3 className="text-lg font-bold text-cyan-300 mb-3 flex items-center gap-2">
+          <Heart className="w-5 h-5" />
+          Morale Outlook
+        </h3>
+        <div className="bg-gray-800/50 p-4 rounded-lg border border-cyan-500/30">
+          <div className="space-y-3">
+            {nations.map((nation) => {
+              const snapshot = governanceMetrics[nation.id];
+              const morale = snapshot?.morale ?? nation.morale ?? 0;
+              const gradient = getMoraleColor(morale);
+              const MoraleIcon = getMoraleIcon(morale);
+              const moraleLabel = getMoraleLabel(morale);
+              const iconColor = getMoraleIconColor(morale);
+
+              return (
+                <motion.div
+                  key={nation.id}
+                  className="flex flex-col gap-1.5"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <MoraleIcon className={`w-4 h-4 ${iconColor}`} />
+                      <span className={`font-semibold ${nation.isPlayer ? 'text-emerald-300' : 'text-cyan-200/90'}`}>
+                        {nation.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] uppercase tracking-wider font-bold ${iconColor}`}>
+                        {moraleLabel}
+                      </span>
+                      <span className="font-mono text-cyan-100 font-bold">{Math.round(morale)}%</span>
+                    </div>
+                  </div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-900/50 border border-slate-700/50">
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ background: gradient }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${clamp(morale, 0, 100)}%` }}
+                      transition={{ duration: 0.5, ease: 'easeOut' }}
+                    />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+          <div className="mt-4 pt-3 border-t border-cyan-500/20">
+            <p className="text-[10px] text-cyan-400/60 text-center">
+              Population sentiment indicator
+            </p>
           </div>
         </div>
       </div>
