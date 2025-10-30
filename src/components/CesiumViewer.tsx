@@ -122,7 +122,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           vrButton: false,
           infoBox: false,
           selectionIndicator: false,
-          imageryProvider: false, // We'll use natural earth color
+          // Use default Bing Maps imagery (will fall back to Natural Earth II if no Ion token)
           terrain: enableTerrain ? await createWorldTerrainAsync() : undefined,
         });
 
