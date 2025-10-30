@@ -588,3 +588,6 @@ Looking for:
 
 ## 2025-10-30T08:46:27+00:00
 - Ran `npm run test`; Vitest reported pre-existing failure in `src/hooks/__tests__/useConventionalWarfare.test.tsx` (duplicate identifier) unrelated to interface update.
+
+## 2025-10-30T13:23:27+00:00
+- Disabled ocean wave rendering in `src/pages/Index.tsx` to remove sine-band visuals per request.
