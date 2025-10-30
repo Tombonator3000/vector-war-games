@@ -4561,10 +4561,7 @@ function aiTurn(n: Nation) {
     if (proposal) {
       // Queue the proposal to show to player
       setPendingAIProposals(prev => [...prev, proposal]);
-      addTacticalLog(
-        `${n.name} has sent a diplomatic proposal to ${player.name}.`,
-        n.id
-      );
+      log(`${n.name} has sent a diplomatic proposal to ${player.name}.`);
       return;
     }
   }
@@ -7503,7 +7500,7 @@ export default function NoradVector() {
             commander.intel -= 15;
             commander.uranium -= 5;
             log(`ASAT strike destroys ${target.name}'s satellite!`, 'alert');
-            increaseThreat(target, commander.id, 15);
+            adjustThreat(target, commander.id, 15);
           }
           updateDisplay();
           consumeAction();
@@ -7549,7 +7546,7 @@ export default function NoradVector() {
             commander.orbitalStrikesAvailable = (commander.orbitalStrikesAvailable || 1) - 1;
 
             log(`☄️ ORBITAL STRIKE devastates ${target.name}: ${popLoss}M casualties, ${warheadsDestroyed} warheads destroyed!`, 'alert');
-            increaseThreat(target, commander.id, 35);
+            adjustThreat(target, commander.id, 35);
             S.defcon = Math.max(1, S.defcon - 1);
           }
           updateDisplay();
@@ -7585,7 +7582,7 @@ export default function NoradVector() {
 
             if (Math.random() < actualDetectionChance) {
               log(`Sabotage successful: ${target.name}'s ${type}MT warhead destroyed (DETECTED).`, 'warning');
-              increaseThreat(target, commander.id, 20);
+              adjustThreat(target, commander.id, 20);
             } else {
               log(`Sabotage successful: ${target.name}'s ${type}MT warhead destroyed.`);
             }
@@ -8461,18 +8458,18 @@ export default function NoradVector() {
     switch (activeDiplomacyProposal.type) {
       case 'alliance':
         aiFormAlliance(proposer, target);
-        addTacticalLog(`${target.name} accepts alliance with ${proposer.name}!`, proposer.id);
+        log(`${target.name} accepts alliance with ${proposer.name}!`);
         break;
 
       case 'truce':
         const duration = activeDiplomacyProposal.terms.duration || 3;
         aiSignMutualTruce(proposer, target, duration, 'Diplomatic agreement');
-        addTacticalLog(`${target.name} accepts ${duration}-turn truce with ${proposer.name}.`, proposer.id);
+        log(`${target.name} accepts ${duration}-turn truce with ${proposer.name}.`);
         break;
 
       case 'non-aggression':
         aiSignNonAggressionPact(proposer, target);
-        addTacticalLog(`${target.name} signs non-aggression pact with ${proposer.name}.`, proposer.id);
+        log(`${target.name} signs non-aggression pact with ${proposer.name}.`);
         break;
 
       case 'aid-request':
@@ -8480,14 +8477,14 @@ export default function NoradVector() {
           target.production -= 20;
           proposer.production += 15;
           if (proposer.instability) proposer.instability = Math.max(0, proposer.instability - 10);
-          addTacticalLog(`${target.name} provides economic aid to ${proposer.name}.`, proposer.id);
+          log(`${target.name} provides economic aid to ${proposer.name}.`);
         }
         break;
 
       case 'sanction-lift':
         if (target.sanctionedBy?.[proposer.id]) {
           delete target.sanctionedBy[proposer.id];
-          addTacticalLog(`${target.name} lifts sanctions against ${proposer.name}.`, proposer.id);
+          log(`${target.name} lifts sanctions against ${proposer.name}.`);
         }
         break;
 
@@ -8495,7 +8492,7 @@ export default function NoradVector() {
         aiSignMutualTruce(proposer, target, 5, 'Peace agreement');
         adjustThreat(proposer, target.id, -5);
         adjustThreat(target, proposer.id, -5);
-        addTacticalLog(`${target.name} accepts peace with ${proposer.name}.`, proposer.id);
+        log(`${target.name} accepts peace with ${proposer.name}.`);
         break;
     }
 
@@ -8508,7 +8505,7 @@ export default function NoradVector() {
     });
 
     setActiveDiplomacyProposal(null);
-  }, [activeDiplomacyProposal, getNationById, addTacticalLog, toast]);
+  }, [activeDiplomacyProposal, getNationById, toast]);
 
   const handleRejectProposal = useCallback(() => {
     if (!activeDiplomacyProposal) return;
@@ -8524,10 +8521,7 @@ export default function NoradVector() {
     // Damage relations for rejection (-6 penalty like Civ 6)
     adjustThreat(proposer, target.id, 6);
 
-    addTacticalLog(
-      `${target.name} rejects ${proposer.name}'s diplomatic proposal. Relations have deteriorated.`,
-      proposer.id
-    );
+    log(`${target.name} rejects ${proposer.name}'s diplomatic proposal. Relations have deteriorated.`);
 
     toast({
       title: 'Proposal Rejected',
@@ -8536,7 +8530,7 @@ export default function NoradVector() {
     });
 
     setActiveDiplomacyProposal(null);
-  }, [activeDiplomacyProposal, getNationById, addTacticalLog, toast]);
+  }, [activeDiplomacyProposal, getNationById, toast]);
 
   // Show pending AI proposals when phase transitions to player
   useEffect(() => {
