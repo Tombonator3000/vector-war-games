@@ -33,7 +33,8 @@ import {
   ClockStep,
   TimeIntervalCollection,
   TimeInterval,
-  OpenStreetMapImageryProvider,
+  SingleTileImageryProvider,
+  Rectangle,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import type { TerritoryState, ConventionalUnitState } from '@/hooks/useConventionalWarfare';
@@ -51,6 +52,18 @@ import {
 
 // Disable Cesium Ion (use free base imagery instead)
 Ion.defaultAccessToken = '';
+
+const resolvePublicAssetPath = (assetPath: string) => {
+  const base = import.meta.env.BASE_URL ?? '/';
+  const trimmedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+  const trimmedAsset = assetPath.startsWith('/') ? assetPath.slice(1) : assetPath;
+
+  if (!trimmedBase) {
+    return `/${trimmedAsset}`;
+  }
+
+  return `${trimmedBase}/${trimmedAsset}`;
+};
 
 export interface CesiumViewerProps {
   territories?: TerritoryState[];
@@ -111,9 +124,10 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
     const initViewer = async () => {
       try {
-        // Create OpenStreetMap imagery provider (free, no token required)
-        const imageryProvider = new OpenStreetMapImageryProvider({
-          url: 'https://a.tile.openstreetmap.org/',
+        const dayTextureUrl = resolvePublicAssetPath('textures/earth_day.jpg');
+        const imageryProvider = new SingleTileImageryProvider({
+          url: dayTextureUrl,
+          rectangle: Rectangle.fromDegrees(-180, -90, 180, 90),
         });
 
         // Note: terrain requires Cesium Ion access token, so we skip it when Ion is disabled
@@ -135,6 +149,19 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         });
 
         viewerRef.current = viewer;
+
+        viewer.scene.globe.showGroundAtmosphere = true;
+        viewer.scene.skyAtmosphere.show = true;
+
+        const nightTextureUrl = resolvePublicAssetPath('textures/earth_specular.jpg');
+        const nightLayer = viewer.imageryLayers.addImageryProvider(
+          new SingleTileImageryProvider({
+            url: nightTextureUrl,
+            rectangle: Rectangle.fromDegrees(-180, -90, 180, 90),
+          })
+        );
+        nightLayer.alpha = 0.35;
+        nightLayer.brightness = 1.2;
 
         // Set camera to orbital view
         viewer.camera.setView({

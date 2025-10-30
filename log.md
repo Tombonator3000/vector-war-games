@@ -635,3 +635,7 @@ Looking for:
 ## 2025-10-30T14:28:00+00:00
 - Ran TypeScript compiler check (tsc --noEmit) - no errors found
 - All changes pass TypeScript validation
+## 2025-10-30T16:45:55+00:00
+- Updated CesiumViewer to use SingleTileImageryProvider with earth_day texture and added atmospheric effects for photographic globe rendering.
+- Layered semi-transparent night lights texture for specular highlights and ensured asset paths respect Vite base URL configuration.
+- Attempted to run `npm run dev -- --host 0.0.0.0 --port 4173` to manually verify Cesium toggle, but the dev server failed to start due to missing `vite-plugin-cesium` dependency.
