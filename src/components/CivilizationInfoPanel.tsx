@@ -445,6 +445,11 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
       </div>
 
       {enemies.map((enemy) => {
+        // Check if player has intel coverage on this enemy
+        const hasSatelliteCoverage = player.satellites?.[enemy.id] || false;
+        const hasDeepRecon = player.deepRecon?.[enemy.id] || false;
+        const hasIntelCoverage = hasSatelliteCoverage || hasDeepRecon;
+
         const militaryPower = calculateMilitaryPower(enemy);
         const playerMilitaryPower = calculateMilitaryPower(player);
         const powerRatio = playerMilitaryPower > 0
@@ -510,111 +515,139 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
               </div>
             </div>
 
-            {/* Military Comparison */}
-            <div className="mb-3">
-              <div className="flex justify-between text-xs text-gray-400 mb-1">
-                <span>Military Power vs You</span>
-                <span className={powerRatio > 120 ? 'text-red-400' : powerRatio < 80 ? 'text-green-400' : 'text-yellow-400'}>
-                  {powerRatio.toFixed(0)}%
-                </span>
-              </div>
-              {renderProgressBar(
-                Math.min(100, powerRatio),
-                powerRatio > 120 ? 'bg-red-500' : powerRatio < 80 ? 'bg-green-500' : 'bg-yellow-500'
-              )}
-            </div>
-
-            {/* Resources Grid */}
-            <div className="grid grid-cols-4 gap-2 mb-3">
-              <div className="bg-gray-900/50 p-2 rounded text-center">
-                <Target className="w-3 h-3 text-red-400 mx-auto mb-1" />
-                <div className="text-xs text-gray-400">Missiles</div>
-                <div className="text-white font-bold text-sm">{enemy.missiles}</div>
-              </div>
-
-              <div className="bg-gray-900/50 p-2 rounded text-center">
-                <Plane className="w-3 h-3 text-blue-400 mx-auto mb-1" />
-                <div className="text-xs text-gray-400">Bombers</div>
-                <div className="text-white font-bold text-sm">{enemy.bombers}</div>
-              </div>
-
-              <div className="bg-gray-900/50 p-2 rounded text-center">
-                <Anchor className="w-3 h-3 text-cyan-400 mx-auto mb-1" />
-                <div className="text-xs text-gray-400">Subs</div>
-                <div className="text-white font-bold text-sm">{enemy.submarines}</div>
-              </div>
-
-              <div className="bg-gray-900/50 p-2 rounded text-center">
-                <Shield className="w-3 h-3 text-green-400 mx-auto mb-1" />
-                <div className="text-xs text-gray-400">Defense</div>
-                <div className="text-white font-bold text-sm">{enemy.defense}</div>
-              </div>
-            </div>
-
-            {/* Victory Progress */}
-            <div className="border-t border-gray-700 pt-3">
-              <div className="flex justify-between text-xs text-gray-400 mb-2">
-                <span>Closest to Victory</span>
-                <span className={maxProgress > 70 ? 'text-red-400 font-bold' : 'text-gray-300'}>
-                  {maxProgress.toFixed(1)}%
-                </span>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <div className="text-xs text-gray-500 w-16">Military</div>
-                  <div className="flex-1">
-                    {renderProgressBar(enemyMilitaryProgress, 'bg-red-500')}
-                  </div>
-                  <div className="text-xs text-gray-400 w-12 text-right">
-                    {enemyMilitaryProgress.toFixed(0)}%
-                  </div>
+            {/* Intel Coverage Status or Detailed Info */}
+            {!hasIntelCoverage ? (
+              <div className="bg-gray-900/70 border border-yellow-500/30 rounded p-6 text-center">
+                <Target className="w-12 h-12 text-yellow-400 mx-auto mb-3 opacity-50" />
+                <div className="text-yellow-400 font-bold mb-2">Intelligence Required</div>
+                <div className="text-gray-400 text-sm mb-3">
+                  Deploy satellites or conduct deep reconnaissance to gather intelligence on this nation
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-xs text-gray-500 w-16">Economic</div>
-                  <div className="flex-1">
-                    {renderProgressBar(enemyEconomicProgress, 'bg-yellow-500')}
-                  </div>
-                  <div className="text-xs text-gray-400 w-12 text-right">
-                    {enemyEconomicProgress.toFixed(0)}%
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-xs text-gray-500 w-16">Cultural</div>
-                  <div className="flex-1">
-                    {renderProgressBar(enemyCulturalProgress, 'bg-purple-500')}
-                  </div>
-                  <div className="text-xs text-gray-400 w-12 text-right">
-                    {enemyCulturalProgress.toFixed(0)}%
-                  </div>
+                <div className="text-xs text-gray-500">
+                  Use the Intel panel to unlock detailed military and economic data
                 </div>
               </div>
+            ) : (
+              <>
+                {/* Intel Coverage Indicator */}
+                <div className="mb-3 bg-blue-500/10 border border-blue-500/30 rounded p-2">
+                  <div className="flex items-center justify-center gap-2 text-xs text-blue-300">
+                    <Target className="w-3 h-3" />
+                    <span>
+                      {hasSatelliteCoverage && 'Satellite Coverage Active'}
+                      {hasDeepRecon && hasSatelliteCoverage && ' + '}
+                      {hasDeepRecon && 'Deep Reconnaissance Active'}
+                    </span>
+                  </div>
+                </div>
 
-              {maxProgress > 70 && (
-                <div className="mt-2 text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded text-center">
-                  Warning: Close to victory!
+                {/* Military Comparison */}
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs text-gray-400 mb-1">
+                    <span>Military Power vs You</span>
+                    <span className={powerRatio > 120 ? 'text-red-400' : powerRatio < 80 ? 'text-green-400' : 'text-yellow-400'}>
+                      {powerRatio.toFixed(0)}%
+                    </span>
+                  </div>
+                  {renderProgressBar(
+                    Math.min(100, powerRatio),
+                    powerRatio > 120 ? 'bg-red-500' : powerRatio < 80 ? 'bg-green-500' : 'bg-yellow-500'
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Additional Stats */}
-            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-700">
-              <div className="text-center">
-                <div className="text-xs text-gray-500">Population</div>
-                <div className="text-white text-sm font-bold">
-                  {(enemy.population / 1000000).toFixed(1)}M
+                {/* Resources Grid */}
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  <div className="bg-gray-900/50 p-2 rounded text-center">
+                    <Target className="w-3 h-3 text-red-400 mx-auto mb-1" />
+                    <div className="text-xs text-gray-400">Missiles</div>
+                    <div className="text-white font-bold text-sm">{enemy.missiles}</div>
+                  </div>
+
+                  <div className="bg-gray-900/50 p-2 rounded text-center">
+                    <Plane className="w-3 h-3 text-blue-400 mx-auto mb-1" />
+                    <div className="text-xs text-gray-400">Bombers</div>
+                    <div className="text-white font-bold text-sm">{enemy.bombers}</div>
+                  </div>
+
+                  <div className="bg-gray-900/50 p-2 rounded text-center">
+                    <Anchor className="w-3 h-3 text-cyan-400 mx-auto mb-1" />
+                    <div className="text-xs text-gray-400">Subs</div>
+                    <div className="text-white font-bold text-sm">{enemy.submarines}</div>
+                  </div>
+
+                  <div className="bg-gray-900/50 p-2 rounded text-center">
+                    <Shield className="w-3 h-3 text-green-400 mx-auto mb-1" />
+                    <div className="text-xs text-gray-400">Defense</div>
+                    <div className="text-white font-bold text-sm">{enemy.defense}</div>
+                  </div>
                 </div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-gray-500">Cities</div>
-                <div className="text-white text-sm font-bold">{enemy.cities}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-gray-500">Morale</div>
-                <div className="text-white text-sm font-bold">
-                  {enemy.morale.toFixed(0)}%
+
+                {/* Victory Progress */}
+                <div className="border-t border-gray-700 pt-3">
+                  <div className="flex justify-between text-xs text-gray-400 mb-2">
+                    <span>Closest to Victory</span>
+                    <span className={maxProgress > 70 ? 'text-red-400 font-bold' : 'text-gray-300'}>
+                      {maxProgress.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-gray-500 w-16">Military</div>
+                      <div className="flex-1">
+                        {renderProgressBar(enemyMilitaryProgress, 'bg-red-500')}
+                      </div>
+                      <div className="text-xs text-gray-400 w-12 text-right">
+                        {enemyMilitaryProgress.toFixed(0)}%
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-gray-500 w-16">Economic</div>
+                      <div className="flex-1">
+                        {renderProgressBar(enemyEconomicProgress, 'bg-yellow-500')}
+                      </div>
+                      <div className="text-xs text-gray-400 w-12 text-right">
+                        {enemyEconomicProgress.toFixed(0)}%
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-gray-500 w-16">Cultural</div>
+                      <div className="flex-1">
+                        {renderProgressBar(enemyCulturalProgress, 'bg-purple-500')}
+                      </div>
+                      <div className="text-xs text-gray-400 w-12 text-right">
+                        {enemyCulturalProgress.toFixed(0)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  {maxProgress > 70 && (
+                    <div className="mt-2 text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded text-center">
+                      Warning: Close to victory!
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
+
+                {/* Additional Stats */}
+                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-700">
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500">Population</div>
+                    <div className="text-white text-sm font-bold">
+                      {(enemy.population / 1000000).toFixed(1)}M
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500">Cities</div>
+                    <div className="text-white text-sm font-bold">{enemy.cities}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500">Morale</div>
+                    <div className="text-white text-sm font-bold">
+                      {enemy.morale.toFixed(0)}%
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         );
       })}
