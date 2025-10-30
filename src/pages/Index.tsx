@@ -5314,6 +5314,24 @@ export default function NoradVector() {
     return hasSeenTutorial !== 'true';
   });
 
+  // Tutorial restart callbacks
+  const handleRestartModalTutorial = useCallback(() => {
+    Storage.removeItem('has_seen_tutorial');
+    setShowTutorial(true);
+    toast({
+      title: 'Tutorial restarted',
+      description: 'The introductory tutorial will now be shown.',
+    });
+  }, []);
+
+  const handleRestartInteractiveTutorial = useCallback(() => {
+    tutorialContext.enableTutorial();
+    toast({
+      title: 'Interactive guide restarted',
+      description: 'The in-game interactive tutorial will now restart from the beginning.',
+    });
+  }, [tutorialContext]);
+
   useEffect(() => {
     Storage.setItem('option_coop_enabled', coopEnabled ? 'true' : 'false');
   }, [coopEnabled]);
@@ -9853,7 +9871,10 @@ export default function NoradVector() {
         currentTurn={S.turn}
       />
 
-      <GameHelper />
+      <GameHelper
+        onRestartModalTutorial={handleRestartModalTutorial}
+        onRestartInteractiveTutorial={handleRestartInteractiveTutorial}
+      />
     </div>
   );
 }

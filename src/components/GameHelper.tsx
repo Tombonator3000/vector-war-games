@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { HelpCircle, Target, Zap, Shield, Radio, Factory, Users, AlertTriangle } from 'lucide-react';
+import { HelpCircle, Target, Zap, Shield, Radio, Factory, Users, AlertTriangle, RotateCcw, GraduationCap } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 interface HelpTopic {
   id: string;
@@ -91,10 +92,30 @@ const helpTopics: HelpTopic[] = [
 
 interface GameHelperProps {
   triggerButton?: boolean;
+  onRestartModalTutorial?: () => void;
+  onRestartInteractiveTutorial?: () => void;
 }
 
-export function GameHelper({ triggerButton = true }: GameHelperProps) {
+export function GameHelper({
+  triggerButton = true,
+  onRestartModalTutorial,
+  onRestartInteractiveTutorial
+}: GameHelperProps) {
   const [open, setOpen] = useState(false);
+
+  const handleRestartModal = () => {
+    if (onRestartModalTutorial) {
+      onRestartModalTutorial();
+      setOpen(false);
+    }
+  };
+
+  const handleRestartInteractive = () => {
+    if (onRestartInteractiveTutorial) {
+      onRestartInteractiveTutorial();
+      setOpen(false);
+    }
+  };
 
   return (
     <>
@@ -149,6 +170,43 @@ export function GameHelper({ triggerButton = true }: GameHelperProps) {
               ))}
             </Accordion>
           </div>
+
+          {(onRestartModalTutorial || onRestartInteractiveTutorial) && (
+            <>
+              <Separator className="my-6" />
+              <div className="space-y-3">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4 text-primary" />
+                  Tutorial Opsjoner
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  Start guidene på nytt for å lære spillmekanikkene igjen
+                </p>
+                <div className="space-y-2">
+                  {onRestartModalTutorial && (
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={handleRestartModal}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Start innledende tutorial på nytt
+                    </Button>
+                  )}
+                  {onRestartInteractiveTutorial && (
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={handleRestartInteractive}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Start interaktiv guide på nytt
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="mt-6 p-4 rounded-lg bg-muted">
             <h4 className="font-semibold mb-2 flex items-center gap-2">
