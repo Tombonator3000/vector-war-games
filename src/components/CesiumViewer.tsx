@@ -57,6 +57,16 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   const viewerRef = useRef<Viewer | null>(null);
   const entitiesRef = useRef<Map<string, Entity>>(new Map());
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
+  const territoryClickRef = useRef<CesiumViewerProps['onTerritoryClick']>(onTerritoryClick);
+  const unitClickRef = useRef<CesiumViewerProps['onUnitClick']>(onUnitClick);
+
+  useEffect(() => {
+    territoryClickRef.current = onTerritoryClick;
+  }, [onTerritoryClick]);
+
+  useEffect(() => {
+    unitClickRef.current = onUnitClick;
+  }, [onUnitClick]);
 
   // Initialize Cesium Viewer
   useEffect(() => {
@@ -115,10 +125,10 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
             const entity = pickedObject.id as Entity;
             if (entity.name?.startsWith('territory-')) {
               const territoryId = entity.name.replace('territory-', '');
-              onTerritoryClick?.(territoryId);
+              territoryClickRef.current?.(territoryId);
             } else if (entity.name?.startsWith('unit-')) {
               const unitId = entity.name.replace('unit-', '');
-              onUnitClick?.(unitId);
+              unitClickRef.current?.(unitId);
             }
           }
         }, ScreenSpaceEventType.LEFT_CLICK);
@@ -139,7 +149,16 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         viewerRef.current = null;
       }
     };
-  }, [enableDayNight, onTerritoryClick, onUnitClick]);
+  }, []);
+
+  useEffect(() => {
+    if (!viewerRef.current) return;
+
+    viewerRef.current.scene.globe.enableLighting = enableDayNight;
+    if (enableDayNight) {
+      viewerRef.current.clock.currentTime = JulianDate.now();
+    }
+  }, [enableDayNight]);
 
   // Render territories
   useEffect(() => {

@@ -609,3 +609,6 @@ Looking for:
 
 ## 2025-10-30T13:49:35+00:00
 - Ran vitest targeting src/contexts/__tests__/MultiplayerProvider.test.tsx to verify multiplayer auth changes; all 3 tests passed.
+
+## 2025-10-30T14:05:00+00:00
+- Updated src/components/CesiumViewer.tsx to stabilize Cesium Viewer initialization by persisting callback refs and decoupling lighting toggles from the mount effect.
