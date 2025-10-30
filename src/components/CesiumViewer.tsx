@@ -110,6 +110,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
     const initViewer = async () => {
       try {
+        // Note: terrain requires Cesium Ion access token, so we skip it when Ion is disabled
         const viewer = new Viewer(containerRef.current!, {
           baseLayerPicker: false,
           geocoder: false,
@@ -122,8 +123,9 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           vrButton: false,
           infoBox: false,
           selectionIndicator: false,
-          // Use default Bing Maps imagery (will fall back to Natural Earth II if no Ion token)
-          terrain: enableTerrain ? await createWorldTerrainAsync() : undefined,
+          // Use default imagery provider (Bing Maps with Natural Earth II fallback)
+          // Terrain is disabled because it requires Cesium Ion access token
+          terrain: undefined,
         });
 
         viewerRef.current = viewer;
@@ -153,7 +155,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         viewer.scene.skyBox.show = true;
 
         // Enable depth testing for proper 3D rendering with terrain
-        viewer.scene.globe.depthTestAgainstTerrain = enableTerrain;
+        // Disabled because terrain requires Cesium Ion access token
+        viewer.scene.globe.depthTestAgainstTerrain = false;
 
         // Setup click handler
         const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -372,7 +375,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           image: createColoredCircleDataUri(color),
           scale: 1.5,
           verticalOrigin: 1, // BOTTOM
-          heightReference: enableTerrain ? HeightReference.CLAMP_TO_GROUND : HeightReference.NONE,
+          heightReference: HeightReference.NONE,
         };
         entityConfig.point = {
           pixelSize: 16,
