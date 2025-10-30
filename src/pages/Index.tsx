@@ -42,6 +42,7 @@ import { useMultiplayer } from '@/contexts/MultiplayerProvider';
 import { useTutorialContext } from '@/contexts/TutorialContext';
 import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
 import { VictoryProgressPanel } from '@/components/VictoryProgressPanel';
+import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit } from '@/types/game';
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
 import { SyncStatusBadge } from '@/components/coop/SyncStatusBadge';
@@ -5080,6 +5081,7 @@ export default function NoradVector() {
     return 'compact';
   });
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [civInfoPanelOpen, setCivInfoPanelOpen] = useState(false);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
     const stored = Storage.getItem('map_style');
     if (
@@ -8685,6 +8687,11 @@ export default function NoradVector() {
             e.preventDefault();
             handleAttackRef.current?.();
             break;
+          case 'i':
+          case 'I':
+            e.preventDefault();
+            setCivInfoPanelOpen(prev => !prev);
+            break;
           case 'Enter': /* end turn */ break;
           case ' ':
             e.preventDefault();
@@ -8911,6 +8918,18 @@ export default function NoradVector() {
                 <span className="text-cyan-400">DOOMSDAY</span>{' '}
                 <span id="doomsdayTime" className="font-bold">7:00</span>
               </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setCivInfoPanelOpen(true);
+                  AudioSys.playSFX('click');
+                }}
+                className="h-7 px-2 text-xs text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10"
+                title="Empire Status (Press I)"
+              >
+                EMPIRE INFO
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"
@@ -9825,6 +9844,13 @@ export default function NoradVector() {
           return Math.min(100, ((player.culture || 0) / 100) * 100);
         })()}
         isVisible={isGameStarted && S.turn >= 5}
+      />
+
+      <CivilizationInfoPanel
+        nations={nations}
+        isOpen={civInfoPanelOpen}
+        onClose={() => setCivInfoPanelOpen(false)}
+        currentTurn={S.turn}
       />
 
       <GameHelper />
