@@ -1,5 +1,6 @@
 import type { BioLabFacility } from './bioLab';
 import type { PlagueState } from './biowarfare';
+import type { ScenarioConfig } from './scenario';
 
 export interface NationCyberProfile {
   readiness: number;
@@ -135,6 +136,7 @@ export interface GameState {
   selectedDoctrine: string | null;
   playerName?: string;
   difficulty?: string;
+  scenario?: ScenarioConfig;
   missiles: any[];
   bombers: any[];
   submarines?: any[];
