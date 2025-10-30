@@ -206,4 +206,167 @@ export const politicalEvents: PoliticalEventDefinition[] = [
     fallbackDelta: { morale: -8, publicOpinion: -10, cabinetApproval: -12, instability: 10 },
     fallbackSummary: 'Scandal festers unchecked, crippling legitimacy.',
   },
+  {
+    id: 'mass_uprising',
+    title: 'Mass Uprising Threatens Government',
+    summary: 'Widespread protests and civil unrest paralyze the capital. Military loyalty questioned.',
+    severity: 'critical',
+    cooldownTurns: 8,
+    conditions: {
+      moraleBelow: 35,
+      publicOpinionBelow: 35,
+      minTurn: 8,
+      requireAny: ['moraleBelow', 'publicOpinionBelow'],
+    },
+    options: [
+      {
+        id: 'negotiate_protesters',
+        label: 'Negotiate with Opposition',
+        description: 'Open dialogue with protest leaders and make concessions to restore order.',
+        outcomes: [
+          {
+            id: 'negotiation_success',
+            description: 'Talks succeed. Protests dissipate as reforms are announced.',
+            chance: 0.55,
+            effects: { morale: 12, publicOpinion: 15, cabinetApproval: 8, instability: -15 },
+          },
+          {
+            id: 'negotiation_fail',
+            description: 'Opposition rejects offers. Demands for regime change intensify.',
+            chance: 0.45,
+            effects: { morale: -8, publicOpinion: -10, cabinetApproval: -12, instability: 20 },
+          },
+        ],
+      },
+      {
+        id: 'military_crackdown',
+        label: 'Deploy Security Forces',
+        description: 'Use military and police to restore order through force.',
+        outcomes: [
+          {
+            id: 'crackdown_success',
+            description: 'Protests crushed. Order restored but at terrible cost to legitimacy.',
+            chance: 0.4,
+            effects: { morale: -5, publicOpinion: -15, cabinetApproval: -10, instability: 10 },
+          },
+          {
+            id: 'crackdown_backfire',
+            description: 'Security forces refuse orders! Government authority collapses!',
+            chance: 0.6,
+            effects: { morale: -20, publicOpinion: -20, cabinetApproval: -25, instability: 30 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -15, publicOpinion: -18, cabinetApproval: -20, instability: 25 },
+    fallbackSummary: 'Government paralyzed by street protests. Authority crumbling.',
+  },
+  {
+    id: 'government_crisis',
+    title: 'Government Legitimacy Crisis',
+    summary: 'Coalition fracturing. Ministers resign. Opposition demands immediate elections.',
+    severity: 'critical',
+    cooldownTurns: 6,
+    conditions: {
+      cabinetApprovalBelow: 30,
+      publicOpinionBelow: 35,
+      minTurn: 6,
+    },
+    options: [
+      {
+        id: 'snap_elections',
+        label: 'Call Snap Elections',
+        description: 'Hold emergency elections to restore democratic legitimacy.',
+        outcomes: [
+          {
+            id: 'election_mandate',
+            description: 'Surprise victory! Fresh mandate silences critics.',
+            chance: 0.35,
+            effects: { morale: 15, publicOpinion: 18, cabinetApproval: 20, instability: -20, electionTimer: 12 },
+          },
+          {
+            id: 'election_defeat',
+            description: 'Crushing defeat. Opposition assumes power peacefully.',
+            chance: 0.65,
+            effects: { morale: -12, publicOpinion: -15, cabinetApproval: -18, instability: 15, electionTimer: 12 },
+          },
+        ],
+      },
+      {
+        id: 'emergency_powers',
+        label: 'Invoke Emergency Powers',
+        description: 'Suspend normal procedures and rule by decree to stabilize situation.',
+        outcomes: [
+          {
+            id: 'emergency_stabilize',
+            description: 'Decisive action breaks political deadlock. Crisis contained.',
+            chance: 0.3,
+            effects: { morale: 8, publicOpinion: -5, cabinetApproval: 10, instability: -8 },
+          },
+          {
+            id: 'emergency_autocracy',
+            description: 'International condemnation! Branded as authoritarian coup!',
+            chance: 0.7,
+            effects: { morale: -10, publicOpinion: -25, cabinetApproval: -15, instability: 25 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -12, publicOpinion: -15, cabinetApproval: -18, instability: 20 },
+    fallbackSummary: 'Government paralysis deepens. Calls for regime change multiply.',
+  },
+  {
+    id: 'military_unrest',
+    title: 'Military Loyalty Questioned',
+    summary: 'Reports of dissent in officer corps. Coup rumors circulate in capital.',
+    severity: 'critical',
+    cooldownTurns: 10,
+    conditions: {
+      moraleBelow: 30,
+      cabinetApprovalBelow: 30,
+      minTurn: 10,
+    },
+    options: [
+      {
+        id: 'purge_officers',
+        label: 'Purge Disloyal Officers',
+        description: 'Remove suspected coup plotters and promote loyalists.',
+        outcomes: [
+          {
+            id: 'purge_prevents_coup',
+            description: 'Coup plot disrupted. Loyalist officers strengthen grip.',
+            chance: 0.5,
+            effects: { morale: 5, cabinetApproval: 8, instability: -12, production: -5 },
+          },
+          {
+            id: 'purge_triggers_coup',
+            description: 'Purge backfires! Officers launch preemptive coup!',
+            chance: 0.5,
+            effects: { morale: -25, publicOpinion: -30, cabinetApproval: -35, instability: 40 },
+          },
+        ],
+      },
+      {
+        id: 'appease_military',
+        label: 'Increase Military Budget',
+        description: 'Boost defense spending and grant military greater autonomy.',
+        outcomes: [
+          {
+            id: 'appease_success',
+            description: 'Military satisfied. Coup threat recedes for now.',
+            chance: 0.65,
+            effects: { morale: 8, cabinetApproval: 6, instability: -10, production: -15, uranium: 5 },
+          },
+          {
+            id: 'appease_emboldened',
+            description: 'Military emboldened by weakness. Demand even more control!',
+            chance: 0.35,
+            effects: { morale: -5, publicOpinion: -8, cabinetApproval: -10, instability: 15, production: -20 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -15, publicOpinion: -12, cabinetApproval: -20, instability: 22 },
+    fallbackSummary: 'Military unrest festers. Civil-military relations deteriorate.',
+  },
 ];

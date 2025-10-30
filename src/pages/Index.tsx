@@ -48,6 +48,15 @@ import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrb
 import type { DiplomacyProposal } from '@/types/diplomacy';
 import { evaluateProposal, shouldAIInitiateProposal } from '@/lib/aiDiplomacyEvaluator';
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
+import {
+  checkPoliticalGameOver,
+  generatePoliticalWarnings,
+  shouldRegimeChangeOccur,
+  executeRegimeChange,
+  generateRegimeChangeNews,
+  type AIPersonality,
+} from '@/lib/regimeChange';
+import { generateTurnNews } from '@/lib/politicalNews';
 import { SyncStatusBadge } from '@/components/coop/SyncStatusBadge';
 import { ApprovalQueue } from '@/components/coop/ApprovalQueue';
 import { ConflictResolutionDialog } from '@/components/coop/ConflictResolutionDialog';
@@ -4402,6 +4411,21 @@ function checkVictory() {
   const alive = nations.filter(n => n.population > 0);
   const totalPop = alive.reduce((sum, n) => sum + n.population, 0);
 
+  // Check for political collapse (inspired by Paradox/Total War games)
+  const playerGovernance = governance.metrics[player.id];
+  if (playerGovernance) {
+    const politicalCheck = checkPoliticalGameOver(
+      playerGovernance.publicOpinion,
+      playerGovernance.cabinetApproval,
+      playerGovernance.morale
+    );
+
+    if (politicalCheck.gameOver && politicalCheck.reason) {
+      endGame(false, politicalCheck.reason);
+      return;
+    }
+  }
+
   const diplomacyResult = evaluateDiplomaticProgress(player);
   if (diplomacyResult.victory && diplomacyResult.message) {
     endGame(true, diplomacyResult.message);
@@ -4922,18 +4946,105 @@ function endTurn() {
           (window as any).__gameAddNewsItem?.('crisis', `CRITICAL: ${flashpoint.title}`, 'critical');
         }
       }
-      
-      // Generate routine news
-      if ((window as any).__gameAddNewsItem && S.turn % 3 === 0) {
-        const newsTemplates = [
-          { category: 'diplomatic' as const, text: 'International tensions remain high', priority: 'routine' as const },
-          { category: 'intel' as const, text: 'Satellite reconnaissance continues', priority: 'routine' as const },
-          { category: 'military' as const, text: 'Military readiness exercises ongoing', priority: 'routine' as const },
-        ];
-        const randomNews = newsTemplates[Math.floor(Math.random() * newsTemplates.length)];
-        (window as any).__gameAddNewsItem(randomNews.category, randomNews.text, randomNews.priority);
+
+      // Check for AI regime changes (inspired by Hearts of Iron 4 & Civilization 6)
+      const aiNationsForRegimeCheck = nations.filter(n => !n.isPlayer && n.population > 0);
+      aiNationsForRegimeCheck.forEach(nation => {
+        const metrics = governance.metrics[nation.id];
+        if (!metrics) return;
+
+        const shouldChange = shouldRegimeChangeOccur(
+          nation.instability || 0,
+          metrics.publicOpinion,
+          metrics.morale,
+          metrics.cabinetApproval,
+          false // We'd need to track failed elections to pass true here
+        );
+
+        if (shouldChange && nation.ai) {
+          const result = executeRegimeChange(
+            nation.ai as AIPersonality,
+            nation.leader,
+            nation.instability || 0
+          );
+
+          if (result.occurred && result.newPersonality && result.newLeader && result.newMetrics) {
+            // Apply regime change
+            nation.ai = result.newPersonality;
+            nation.leader = result.newLeader;
+
+            // Apply military losses (divisions, missiles reduced)
+            if (result.militaryLosses) {
+              nation.missiles = Math.floor(nation.missiles * (1 - result.militaryLosses));
+              if (nation.bombers) {
+                nation.bombers = Math.floor(nation.bombers * (1 - result.militaryLosses));
+              }
+              if (nation.submarines) {
+                nation.submarines = Math.floor(nation.submarines * (1 - result.militaryLosses));
+              }
+            }
+
+            // Reset governance metrics
+            governance.applyGovernanceDelta(nation.id, {
+              morale: result.newMetrics.morale - metrics.morale,
+              publicOpinion: result.newMetrics.publicOpinion - metrics.publicOpinion,
+              cabinetApproval: result.newMetrics.cabinetApproval - metrics.cabinetApproval,
+              electionTimer: result.newMetrics.electionTimer - metrics.electionTimer,
+            });
+
+            nation.instability = result.newMetrics.instability;
+
+            // Generate breaking news
+            const newsItem = generateRegimeChangeNews(nation.name, result);
+            if ((window as any).__gameAddNewsItem) {
+              (window as any).__gameAddNewsItem('crisis', newsItem.text, newsItem.priority);
+            }
+          }
+        }
+      });
+
+      // Generate political warnings for player
+      const playerForWarnings = PlayerManager.get();
+      if (playerForWarnings) {
+        const playerMetrics = governance.metrics[playerForWarnings.id];
+        if (playerMetrics) {
+          const warnings = generatePoliticalWarnings(
+            playerMetrics.publicOpinion,
+            playerMetrics.cabinetApproval,
+            playerMetrics.morale
+          );
+
+          warnings.forEach(warning => {
+            if ((window as any).__gameAddNewsItem) {
+              (window as any).__gameAddNewsItem('crisis', warning.text, warning.priority);
+            }
+          });
+        }
       }
-      
+
+      // Generate enhanced political news (every 2-3 turns)
+      if ((window as any).__gameAddNewsItem && S.turn % 2 === 0) {
+        const newsNations = nations
+          .filter(n => n.population > 0)
+          .map(n => {
+            const metrics = governance.metrics[n.id];
+            return {
+              name: n.name,
+              morale: metrics?.morale || 60,
+              publicOpinion: metrics?.publicOpinion || 60,
+              cabinetApproval: metrics?.cabinetApproval || 60,
+              instability: n.instability || 0,
+              ai: (n.ai || 'balanced') as AIPersonality,
+              isPlayer: n.isPlayer,
+            };
+          });
+
+        const turnNews = generateTurnNews(newsNations, S.turn);
+        turnNews.forEach(item => {
+          (window as any).__gameAddNewsItem(item.category, item.text, item.priority);
+        });
+      }
+
       updateDisplay();
       checkVictory();
     }, 1500);
