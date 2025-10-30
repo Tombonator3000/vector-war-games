@@ -944,7 +944,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="bg-gray-900 border-2 border-yellow-600 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div className="bg-gray-900 border-2 border-yellow-600 rounded-lg shadow-2xl w-full h-full flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-yellow-900 to-yellow-700 p-4 flex justify-between items-center rounded-t-lg">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
