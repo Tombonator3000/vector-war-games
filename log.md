@@ -671,3 +671,9 @@ Looking for:
 
 ## 2025-10-31T00:00:00+00:00
 - Removed the Cesium/Classic toggle button from the HUD header and introduced a dedicated globe renderer selector within the options sheet, persisting choices and maintaining toast feedback.
+
+## 2025-10-30T18:57:33+00:00
+- Reviewed the repository contribution guidelines and reproduced the Vite preview failure that occurs when the production build has not been generated.
+- Updated `package.json` to have `npm run preview` trigger a fresh build before launching `vite preview`, preventing the "Preview has not been built yet" error when assets are missing.
+- Repaired `src/components/CesiumViewer.tsx` by reintroducing the `applyDayNightSettings` helper, restoring ref synchronization for click callbacks, and cleaning up stray braces that broke the production build.
+- Installed the missing `reactflow` dependency and ran `npm run build` followed by `npm run preview` to confirm the build completes and the preview server starts without errors.
