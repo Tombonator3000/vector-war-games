@@ -243,7 +243,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       if (polygonCoords && polygonCoords.length > 0) {
         // Use GeoJSON polygon boundary
         entityConfig.polygon = {
-          hierarchy: PolygonHierarchy.fromCartesianArray(
+          hierarchy: new PolygonHierarchy(
             Cartesian3.fromDegreesArray(polygonCoords)
           ),
           material: color.withAlpha(0.4),
