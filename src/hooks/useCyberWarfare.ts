@@ -40,7 +40,14 @@ export interface CyberOperationOutcome {
   severity?: 'minor' | 'major';
 }
 
-export type CyberResearchUnlock = 'firewalls' | 'intrusion_detection';
+export type CyberResearchUnlock =
+  | 'firewalls'
+  | 'intrusion_detection'
+  | 'advanced_offense'
+  | 'stealth_protocols'
+  | 'attribution_obfuscation'
+  | 'ai_defense'
+  | 'cyber_superweapon';
 
 export interface UseCyberWarfareOptions {
   currentTurn: number;
@@ -110,6 +117,34 @@ export const applyCyberResearchUnlock = (
       profile.detection += 12;
       profile.attribution += 18;
       profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 8);
+      break;
+    case 'advanced_offense':
+      profile.research.advancedOffense = true;
+      profile.offense += 10;
+      // Intrusion cost reduction will be handled in action execution
+      profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 5);
+      break;
+    case 'stealth_protocols':
+      profile.research.stealthProtocols = true;
+      profile.detection -= 15; // Harder for enemies to detect
+      profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 8);
+      break;
+    case 'attribution_obfuscation':
+      profile.research.attributionObfuscation = true;
+      profile.attribution -= 25; // Enemy attribution is less accurate
+      profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 10);
+      break;
+    case 'ai_defense':
+      profile.research.aiDefense = true;
+      profile.defense += 10;
+      profile.maxReadiness += 10;
+      // Counter-attack chance will be handled separately
+      profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 15);
+      break;
+    case 'cyber_superweapon':
+      profile.research.cyberSuperweapon = true;
+      // Unlocks special cyber nuke action
+      profile.readiness = Math.min(profile.maxReadiness, profile.readiness + 20);
       break;
   }
   nation.cyber = profile;

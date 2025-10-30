@@ -195,6 +195,18 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
       });
     }
 
+    // Update plague completion stats
+    const deathsThisTurn = enhancedEffect?.populationLoss || 0;
+    const nationsInfected = evolution.plagueState.countryInfections.size;
+    evolution.updatePlagueStats(
+      pandemic.pandemicState.globalInfection,
+      deathsThisTurn,
+      nationsInfected
+    );
+
+    // Check for plague completion and unlock next types
+    evolution.checkPlagueCompletion();
+
     // Update cure progress (slowed by evolution)
     let cureIncrease = 1.5 * modifiers.cureSpeedMultiplier;
 
@@ -214,9 +226,54 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
     evolution.updateCureProgress(cureIncrease);
 
     // Check if cure completed
-    if (evolution.plagueState.cureProgress >= 100) {
+    if (evolution.plagueState.cureProgress >= 100 && !evolution.plagueState.cureActive) {
       addNewsItem('crisis', 'CURE DEPLOYED - Pathogen neutralization in progress', 'critical');
-      // TODO: Trigger cure deployment effects
+
+      // Activate cure deployment
+      evolution.activateCure();
+    }
+
+    // Apply cure deployment effects if cure is active
+    if (evolution.plagueState.cureActive) {
+      const labTier = bioLab.labFacility.tier;
+      const cureProgress = evolution.plagueState.cureProgress;
+      const stats = evolution.plagueState.calculatedStats;
+
+      // Calculate cure effectiveness (0-100%)
+      // Based on: lab tier, cure progress, and cure resistance
+      const labBonus = labTier * 15; // Tier 1=15%, Tier 2=30%, Tier 3=45%, Tier 4=60%
+      const progressBonus = Math.min(cureProgress - 100, 50) * 0.5; // Up to +25% for overcure
+      const resistancePenalty = stats.cureResistance * 1.5; // -1.5% per resistance point
+      const cureEffectiveness = Math.max(10, Math.min(100, labBonus + progressBonus - resistancePenalty));
+
+      // Apply cure effects to reduce infection and lethality
+      const infectionReduction = (cureEffectiveness * 0.01) * 2.5; // 0.25-2.5 per turn
+      const lethalityReduction = (cureEffectiveness * 0.005) * 1.0; // 0.05-0.5 per turn
+
+      // Reduce global infection
+      if (pandemic.pandemicState.globalInfection > 0) {
+        pandemic.applyCountermeasure({
+          type: 'vaccine',
+          value: infectionReduction,
+          label: `Cure distribution reduces infection by ${infectionReduction.toFixed(1)}%`,
+        });
+      }
+
+      // Reduce lethality by modifying pandemic state if it has a method for it
+      // Note: This is a simplified approach - in production you'd want a dedicated method
+      if (enhancedEffect && pandemic.pandemicState.lethality > 0) {
+        enhancedEffect.populationLoss = Math.max(0, (enhancedEffect.populationLoss || 0) * (1 - cureEffectiveness * 0.01));
+      }
+
+      // Add news update every 5 turns
+      if (context.turn % 5 === 0 && pandemic.pandemicState.globalInfection > 5) {
+        addNewsItem('science', `Cure deployment ${cureEffectiveness.toFixed(0)}% effective - infection declining`, 'important');
+      }
+
+      // Check if pandemic is effectively neutralized
+      if (pandemic.pandemicState.globalInfection < 2 && pandemic.pandemicState.lethality < 0.05) {
+        addNewsItem('science', 'Pandemic effectively neutralized by cure deployment', 'critical');
+      }
     }
 
     return enhancedEffect;
@@ -281,6 +338,7 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
     evolveNode: evolution.evolveNode,
     devolveNode: evolution.devolveNode,
     addDNAPoints: evolution.addDNAPoints,
+    activateCure: evolution.activateCure,
 
     // Lab actions
     startLabConstruction: bioLab.startConstruction,

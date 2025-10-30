@@ -84,7 +84,7 @@ export const BIO_LAB_TIERS: BioLabTierDefinition[] = [
     description: 'Basic disease tracking and pandemic response capabilities. Required for vaccine development.',
     productionCost: 50,
     uraniumCost: 0,
-    constructionTurns: 5,
+    constructionTurns: 4,
     requiresTier: null,
     unlocks: [
       'Disease surveillance',
@@ -101,7 +101,7 @@ export const BIO_LAB_TIERS: BioLabTierDefinition[] = [
     description: 'Sophisticated pathogen analysis and vaccine development. Enhanced disease tracking.',
     productionCost: 150,
     uraniumCost: 0,
-    constructionTurns: 8,
+    constructionTurns: 6,
     requiresTier: 1,
     unlocks: [
       'Pathogen sequencing',
@@ -118,7 +118,7 @@ export const BIO_LAB_TIERS: BioLabTierDefinition[] = [
     description: 'CLASSIFIED: Offensive biological weapon development. Pathogen engineering and evolution tree access.',
     productionCost: 300,
     uraniumCost: 50,
-    constructionTurns: 12,
+    constructionTurns: 9,
     requiresTier: 2,
     unlocks: [
       '⚠️ Offensive bio-weapon development',
@@ -136,7 +136,7 @@ export const BIO_LAB_TIERS: BioLabTierDefinition[] = [
     description: 'HIGHLY CLASSIFIED: Advanced bio-weapon engineering. Unlock exotic plague types and reduced evolution costs.',
     productionCost: 500,
     uraniumCost: 100,
-    constructionTurns: 15,
+    constructionTurns: 12,
     requiresTier: 3,
     unlocks: [
       'Advanced plague types (Parasite, Prion, Nano-virus, Bio-weapon)',

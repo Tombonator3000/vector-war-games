@@ -46,6 +46,13 @@ const INITIAL_PLAGUE_STATE: PlagueState = {
   attributionAttempts: 0,
   cureProgress: 0,
   cureActive: false,
+  unlockedPlagueTypes: new Set(['bacteria', 'virus'] as PlagueTypeId[]), // Bacteria and Virus unlocked by default
+  completedPlagues: new Set(),
+  plagueCompletionStats: {
+    totalKills: 0,
+    peakInfection: 0,
+    nationsInfected: 0,
+  },
 };
 
 export function useEvolutionTree(addNewsItem: AddNewsItem) {
@@ -59,23 +66,32 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
       return false;
     }
 
-    if (!plagueType.unlocked) {
-      addNewsItem('crisis', `${plagueType.name} not yet unlocked - complete prerequisite campaigns`, 'important');
-      return false;
-    }
+    // Check if plague type is unlocked (runtime check against plague state)
+    setPlagueState((prev) => {
+      if (!prev.unlockedPlagueTypes.has(plagueTypeId)) {
+        addNewsItem('crisis', `${plagueType.name} not yet unlocked - complete prerequisite campaigns`, 'important');
+        return prev;
+      }
 
-    setPlagueState((prev) => ({
-      ...prev,
-      selectedPlagueType: plagueTypeId,
-      plagueStarted: true,
-      cureActive: plagueType.startWithCure,
-    }));
+      addNewsItem(
+        'science',
+        `BioForge initialized ${plagueType.name} pathogen - ${plagueType.specialMechanic}`,
+        'important'
+      );
 
-    addNewsItem(
-      'science',
-      `BioForge initialized ${plagueType.name} pathogen - ${plagueType.specialMechanic}`,
-      'important'
-    );
+      return {
+        ...prev,
+        selectedPlagueType: plagueTypeId,
+        plagueStarted: true,
+        cureActive: plagueType.startWithCure,
+        // Reset completion stats for new plague run
+        plagueCompletionStats: {
+          totalKills: 0,
+          peakInfection: 0,
+          nationsInfected: 0,
+        },
+      };
+    });
 
     return true;
   }, [addNewsItem]);
@@ -560,6 +576,85 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
     });
   }, [addNewsItem]);
 
+  // Activate cure deployment
+  const activateCure = useCallback(() => {
+    setPlagueState((prev) => ({
+      ...prev,
+      cureActive: true,
+    }));
+  }, []);
+
+  // Update plague completion stats
+  const updatePlagueStats = useCallback((globalInfection: number, deaths: number, nationsInfected: number) => {
+    setPlagueState((prev) => {
+      const updated = {
+        ...prev,
+        plagueCompletionStats: {
+          totalKills: prev.plagueCompletionStats.totalKills + deaths,
+          peakInfection: Math.max(prev.plagueCompletionStats.peakInfection, globalInfection),
+          nationsInfected: Math.max(prev.plagueCompletionStats.nationsInfected, nationsInfected),
+        },
+      };
+      return updated;
+    });
+  }, []);
+
+  // Check for plague completion and unlock next type
+  const checkPlagueCompletion = useCallback(() => {
+    setPlagueState((prev) => {
+      if (!prev.selectedPlagueType || !prev.plagueStarted) return prev;
+      if (prev.completedPlagues.has(prev.selectedPlagueType)) return prev;
+
+      const stats = prev.plagueCompletionStats;
+
+      // Completion criteria: 50%+ peak infection OR 1000+ total kills
+      const hasCompletedPlague = stats.peakInfection >= 50 || stats.totalKills >= 1000;
+
+      if (!hasCompletedPlague) return prev;
+
+      // Mark current plague as completed
+      const newCompletedPlagues = new Set(prev.completedPlagues);
+      newCompletedPlagues.add(prev.selectedPlagueType);
+
+      // Determine next plague to unlock based on completion tree
+      const unlockedTypes = new Set(prev.unlockedPlagueTypes);
+      let newlyUnlockedType: PlagueTypeId | null = null;
+
+      const unlockMap: Record<PlagueTypeId, PlagueTypeId> = {
+        'bacteria': 'fungus',
+        'virus': 'parasite',
+        'fungus': 'parasite', // Alternative path
+        'parasite': 'prion',
+        'prion': 'nano-virus',
+        'nano-virus': 'bio-weapon',
+        'bio-weapon': 'bio-weapon', // Final type
+      };
+
+      const nextType = unlockMap[prev.selectedPlagueType];
+      if (nextType && !unlockedTypes.has(nextType)) {
+        unlockedTypes.add(nextType);
+        newlyUnlockedType = nextType;
+      }
+
+      if (newlyUnlockedType) {
+        const nextPlagueType = getPlagueTypeById(newlyUnlockedType);
+        if (nextPlagueType) {
+          addNewsItem(
+            'science',
+            `🧬 PLAGUE MASTERY: ${nextPlagueType.name} pathogen unlocked! (${stats.peakInfection.toFixed(0)}% infection, ${stats.totalKills} kills)`,
+            'critical'
+          );
+        }
+      }
+
+      return {
+        ...prev,
+        completedPlagues: newCompletedPlagues,
+        unlockedPlagueTypes: unlockedTypes,
+      };
+    });
+  }, [addNewsItem]);
+
   // Get available nodes (can be unlocked now)
   const availableNodes = useMemo(() => {
     return ALL_EVOLUTION_NODES.filter((node) =>
@@ -576,6 +671,9 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
     addDNAPoints,
     triggerRandomMutation,
     updateCureProgress,
+    activateCure,
+    updatePlagueStats,
+    checkPlagueCompletion,
     infectCountry,
     deployBioWeapon,
     advanceCountryInfections,
