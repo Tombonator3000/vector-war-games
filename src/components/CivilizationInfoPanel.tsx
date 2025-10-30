@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag, Smile, Meh, Frown, AlertTriangle, Trophy, Skull, Building2, Sparkles } from 'lucide-react';
+import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag, Smile, Meh, Frown, AlertTriangle, Trophy, Skull, Building2, Sparkles, Calendar, ThumbsUp } from 'lucide-react';
 import { Nation } from '../types/game';
 import type { GovernanceMetrics } from '@/hooks/useGovernance';
 import { motion } from 'framer-motion';
@@ -142,6 +142,68 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Election Countdown */}
+      {governanceMetrics['player'] && (
+        <div>
+          <h3 className="text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Election Countdown
+          </h3>
+          <div className={`p-4 rounded-lg border ${
+            governanceMetrics['player'].electionTimer <= 2
+              ? 'bg-red-500/10 border-red-500/60'
+              : governanceMetrics['player'].electionTimer <= 5
+              ? 'bg-amber-400/10 border-amber-400/60'
+              : 'bg-cyan-500/10 border-cyan-500/40'
+          }`}>
+            <div className="mb-4">
+              <div className="text-xs uppercase tracking-[0.3em] text-cyan-200/80 mb-2">
+                Next Election
+              </div>
+              <div className="text-3xl font-mono text-cyan-100 font-bold">
+                {governanceMetrics['player'].electionTimer} turns
+              </div>
+              {governanceMetrics['player'].electionTimer <= 2 && (
+                <div className="mt-2 bg-black/40 px-2 py-1 inline-block rounded">
+                  <span className="text-xs uppercase tracking-[0.2em] text-red-300 font-bold">
+                    Mandate At Risk
+                  </span>
+                </div>
+              )}
+              {governanceMetrics['player'].electionTimer > 2 && governanceMetrics['player'].electionTimer <= 5 && (
+                <div className="mt-2 bg-black/40 px-2 py-1 inline-block rounded">
+                  <span className="text-xs uppercase tracking-[0.2em] text-amber-300 font-bold">
+                    Campaign Sprint
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-800/50 p-3 rounded">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs text-gray-300">Public Opinion</span>
+                </div>
+                <span className="text-white font-bold text-xl">
+                  {Math.round(governanceMetrics['player'].publicOpinion)}%
+                </span>
+              </div>
+
+              <div className="bg-gray-800/50 p-3 rounded">
+                <div className="flex items-center gap-2 mb-1">
+                  <ThumbsUp className="w-4 h-4 text-green-400" />
+                  <span className="text-xs text-gray-300">Cabinet Approval</span>
+                </div>
+                <span className="text-white font-bold text-xl">
+                  {Math.round(governanceMetrics['player'].cabinetApproval)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Military Strength */}
       <div>
