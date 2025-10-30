@@ -25,6 +25,40 @@ export interface FlashpointOption {
     success: Record<string, any>;
     failure: Record<string, any>;
   };
+  successNarrative?: string; // Narrative description of success
+  failureNarrative?: string; // Narrative description of failure
+}
+
+export interface FlashpointOutcome {
+  title: string;
+  success: boolean;
+  choiceMade: string;
+  choiceDescription: string;
+  narrativeOutcome: string;
+  consequences: {
+    label: string;
+    value: string | number;
+    type: 'positive' | 'negative' | 'neutral';
+  }[];
+  followUpHint?: string;
+}
+
+export interface FlashpointHistoryEntry {
+  event: FlashpointEvent;
+  choice: string;
+  choiceText: string;
+  result: 'success' | 'failure';
+  turn: number;
+  outcome: Record<string, any>;
+  narrativeOutcome: string;
+}
+
+export interface PlayerReputation {
+  aggressive: number; // 0-100, how often player chooses military options
+  diplomatic: number; // 0-100, how often player chooses diplomatic options
+  cautious: number; // 0-100, how often player chooses safe/defensive options
+  reckless: number; // 0-100, how often player chooses high-risk options
+  successRate: number; // 0-100, overall success rate
 }
 
 // Follow-up flashpoint templates triggered by specific outcomes
@@ -204,6 +238,274 @@ const FOLLOWUP_FLASHPOINTS: Record<string, Record<string, Omit<FlashpointEvent, 
       ],
       consequences: {}
     }
+  },
+  'accidental_launch': {
+    'hotline_success': {
+      title: 'DIPLOMATIC BREAKTHROUGH: Crisis Hotline Upgrade',
+      description: 'The successful hotline intervention revealed critical gaps in our early warning systems. Both sides agree to establish an enhanced crisis communication network. However, hardliners question our restraint.',
+      category: 'accident',
+      severity: 'major',
+      timeLimit: 75,
+      options: [
+        {
+          id: 'joint_system',
+          text: 'Joint Early Warning System',
+          description: 'Integrate detection systems with former adversaries',
+          advisorSupport: ['diplomatic', 'science'],
+          advisorOppose: ['military', 'intel'],
+          outcome: {
+            probability: 0.7,
+            success: { defcon: 4, diplomacy: +25, newAlliance: true },
+            failure: { securityBreach: true, intel: -15 }
+          }
+        },
+        {
+          id: 'upgrade_only',
+          text: 'Upgrade Our Systems Only',
+          description: 'Modernize detection without sharing technology',
+          advisorSupport: ['military', 'intel'],
+          advisorOppose: ['diplomatic'],
+          outcome: {
+            probability: 0.85,
+            success: { intel: +10, systemsImproved: true },
+            failure: { missedOpportunity: true }
+          }
+        }
+      ],
+      consequences: {}
+    },
+    'hotline_failure': {
+      title: 'FALLOUT: Radiation Detected Over Europe',
+      description: 'Moscow was destroyed. Nuclear winter is beginning. Millions will die from fallout and starvation. Remaining world powers demand immediate de-escalation and reparations. Your own population is in shock.',
+      category: 'accident',
+      severity: 'catastrophic',
+      timeLimit: 45,
+      options: [
+        {
+          id: 'accept_blame',
+          text: 'Accept Responsibility',
+          description: 'Admit the accident, offer massive humanitarian aid',
+          advisorSupport: ['diplomatic', 'pr'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.5,
+            success: { morale: -40, production: -300, warCrimesPrevented: true },
+            failure: { morale: -50, tribunalConvened: true, regimeChange: true }
+          }
+        },
+        {
+          id: 'deny_everything',
+          text: 'Deny and Fortify',
+          description: 'Claim Russian false flag, prepare for retaliation',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'pr', 'science'],
+          outcome: {
+            probability: 0.3,
+            success: { morale: -25, defcon: 1, isolationComplete: true },
+            failure: { globalCoalitionAgainstUs: true, economicCollapse: true }
+          }
+        }
+      ],
+      consequences: {}
+    },
+    'intercept_failure': {
+      title: 'AFTERMATH: Moscow Destroyed',
+      description: 'Interception failed. Moscow is gone. 12 million dead. Russian leadership claims you deliberately launched. Full nuclear exchange appears imminent. You have minutes to prevent total annihilation.',
+      category: 'accident',
+      severity: 'catastrophic',
+      timeLimit: 30,
+      options: [
+        {
+          id: 'emergency_surrender',
+          text: 'Emergency Surrender Terms',
+          description: 'Offer unconditional surrender to stop launch',
+          advisorSupport: [],
+          advisorOppose: ['military', 'pr', 'intel'],
+          outcome: {
+            probability: 0.4,
+            success: { regimeFalls: true, millionsSaved: true, defcon: 3 },
+            failure: { nuclearWar: true, worldEnds: true }
+          }
+        },
+        {
+          id: 'launch_all',
+          text: 'Launch Everything',
+          description: 'If we die, everyone dies',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'science', 'pr'],
+          outcome: {
+            probability: 1.0,
+            success: { nuclearWar: true, worldEnds: true, humanExtinction: true },
+            failure: { nuclearWar: true, worldEnds: true, humanExtinction: true }
+          }
+        }
+      ],
+      consequences: {}
+    }
+  },
+  'alien_contact': {
+    'first_contact_success': {
+      title: 'FIRST CONTACT: Alien Technology Offer',
+      description: 'Communication successful. The alien visitors are explorers, not conquerors. They offer access to advanced propulsion technology in exchange for biological samples and cultural data. This could revolutionize civilization - or be a Trojan horse.',
+      category: 'blackswan',
+      severity: 'major',
+      timeLimit: 90,
+      options: [
+        {
+          id: 'accept_exchange',
+          text: 'Accept Technology Exchange',
+          description: 'Share samples and data, gain alien technology',
+          advisorSupport: ['science', 'economic'],
+          advisorOppose: ['intel', 'military'],
+          outcome: {
+            probability: 0.6,
+            success: { techLeapForward: true, production: +200, scienceRevolution: true },
+            failure: { alienAgentDetected: true, populationAbducted: 10000 }
+          }
+        },
+        {
+          id: 'limited_contact',
+          text: 'Limited Cultural Exchange Only',
+          description: 'Share only non-sensitive information',
+          advisorSupport: ['diplomatic', 'intel'],
+          advisorOppose: ['science'],
+          outcome: {
+            probability: 0.8,
+            success: { alienGoodwill: true, futureOpportunities: true },
+            failure: { aliensOffended: true, opportunityLost: true }
+          }
+        },
+        {
+          id: 'demand_more',
+          text: 'Demand Weapons Technology',
+          description: 'Leverage our strategic position for military tech',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'science'],
+          outcome: {
+            probability: 0.3,
+            success: { alienWeapons: true, militarySupremacy: true },
+            failure: { aliensDepartHostile: true, markForDeletion: true }
+          }
+        }
+      ],
+      consequences: {}
+    },
+    'first_contact_failure': {
+      title: 'CRISIS: Alien Ultimatum',
+      description: 'The aliens interpreted our communication attempt as a threat. They have deployed what appears to be weapons platforms into low orbit. Deadline: 24 hours to completely disarm all nuclear arsenals or face "corrective action."',
+      category: 'blackswan',
+      severity: 'catastrophic',
+      timeLimit: 60,
+      options: [
+        {
+          id: 'comply_disarm',
+          text: 'Comply: Begin Disarmament',
+          description: 'Dismantle nuclear arsenal, hope for mercy',
+          advisorSupport: ['diplomatic'],
+          advisorOppose: ['military', 'intel'],
+          outcome: {
+            probability: 0.5,
+            success: { alienOccupation: true, nuclearAge: false, peaceThroughSubmission: true },
+            failure: { aliens: 'unsatisfied', humanSlavery: true }
+          }
+        },
+        {
+          id: 'coordinate_defense',
+          text: 'Coordinate Global Defense',
+          description: 'Unite all nations against alien threat',
+          advisorSupport: ['military', 'diplomatic'],
+          advisorOppose: [],
+          outcome: {
+            probability: 0.4,
+            success: { humanUnity: true, aliensRepelled: true, newEra: true },
+            failure: { orbitalBombardment: true, casualties: 500000000 }
+          }
+        },
+        {
+          id: 'launch_at_aliens',
+          text: 'Nuclear Strike on Alien Ships',
+          description: 'Use our arsenal while we still have it',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'science', 'intel', 'pr'],
+          outcome: {
+            probability: 0.15,
+            success: { miracleVictory: true, alienShipsDestroyed: true, heroicResistance: true },
+            failure: { planetSterilization: true, humanExtinction: true }
+          }
+        }
+      ],
+      consequences: {}
+    },
+    'orbital_strike_success': {
+      title: 'AFTERMATH: Alien Wreckage Recovery',
+      description: 'Impossible odds overcome - alien fleet severely damaged and retreating. Wreckage of alien vessels is raining down globally. Nations scramble to secure crash sites. Whoever controls this technology controls the future.',
+      category: 'blackswan',
+      severity: 'critical',
+      timeLimit: 75,
+      options: [
+        {
+          id: 'secure_all',
+          text: 'Secure All Crash Sites',
+          description: 'Global military operation to claim all wreckage',
+          advisorSupport: ['military', 'science'],
+          advisorOppose: ['diplomatic'],
+          outcome: {
+            probability: 0.5,
+            success: { alienTechMonopoly: true, scienceLeap: +300, globalTension: true },
+            failure: { internationalWar: true, techLost: true }
+          }
+        },
+        {
+          id: 'share_tech',
+          text: 'Propose International Sharing',
+          description: 'Create global research consortium',
+          advisorSupport: ['diplomatic', 'science'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.7,
+            success: { globalCooperation: true, peacefulFuture: true, diplomacy: +40 },
+            failure: { rivalsCheated: true, techStolen: true }
+          }
+        }
+      ],
+      consequences: {}
+    }
+  },
+  'bio_terror': {
+    'bioshield_success': {
+      title: 'BIO-TERROR TRACE: Supply Chain Compromised',
+      description: 'Project BIOSHIELD contained the outbreak, but forensic analysis reveals the pathogen was inserted through our own military supply contractors. The infiltration may go to the highest levels. Trust no one.',
+      category: 'terrorist',
+      severity: 'critical',
+      timeLimit: 60,
+      options: [
+        {
+          id: 'purge_contractors',
+          text: 'Emergency Contractor Purge',
+          description: 'Terminate and investigate all supply chain vendors',
+          advisorSupport: ['military', 'intel'],
+          advisorOppose: ['economic'],
+          outcome: {
+            probability: 0.65,
+            success: { infiltratorsFound: 12, networkExposed: true, intel: +20 },
+            failure: { economicDisruption: true, production: -150, morale: -15 }
+          }
+        },
+        {
+          id: 'covert_trace',
+          text: 'Covert Investigation',
+          description: 'Monitor suspects to identify full network',
+          advisorSupport: ['intel'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.5,
+            success: { deepNetworkExposed: true, mastermindsIdentified: true },
+            failure: { secondAttack: true, casualties: 25000 }
+          }
+        }
+      ],
+      consequences: {}
+    }
   }
 };
 
@@ -225,7 +527,9 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
           probability: 0.4,
           success: { morale: -5, intel: +10, threatNeutralized: true },
           failure: { morale: -20, casualties: 100000, nuclearExplosion: true }
-        }
+        },
+        successNarrative: 'Back-channel negotiations succeed. The terrorist cell agrees to surrender the plutonium in exchange for political concessions. FBI secures the material before it can be weaponized. Crisis averted, though critics question whether we negotiated with terrorists.',
+        failureNarrative: 'Negotiations collapse when the terrorist cell realizes we were stalling. In retaliation, they detonate a dirty bomb in lower Manhattan. Casualties exceed 100,000. The city is contaminated with radiation. Intelligence agencies face severe criticism for the failed approach.'
       },
       {
         id: 'raid',
@@ -237,7 +541,9 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
           probability: 0.6,
           success: { morale: +10, intel: +5, threatNeutralized: true },
           failure: { casualties: 5000, internationalIncident: true, morale: -15 }
-        }
+        },
+        successNarrative: 'SEAL Team Six raids the terrorist compound in a lightning operation. All plutonium recovered, terrorist cell neutralized with minimal collateral damage. National morale soars. Intelligence recovered from the raid reveals broader network connections.',
+        failureNarrative: 'The raid goes wrong when terrorists are alerted by local security. Firefight erupts in a crowded area, killing 5,000 civilians. The plutonium is moved before teams arrive. International condemnation follows the botched operation. The threat remains active.'
       },
       {
         id: 'evacuate',
@@ -249,7 +555,9 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
           probability: 0.9,
           success: { livesSaved: 8000000, economicDamage: -200, morale: -30, panic: true },
           failure: { morale: -40, economicDamage: -250 }
-        }
+        },
+        successNarrative: 'Emergency evacuation of Manhattan succeeds despite massive chaos. Over 8 million people relocated to safety before the threatened deadline. Terrorists never detonate - likely deterred by the empty target. Economic damage is severe, and public confidence shaken, but lives are saved.',
+        failureNarrative: 'Evacuation descends into panic and chaos. Traffic gridlock traps millions. Emergency services overwhelmed. Though no bomb detonates, the chaotic evacuation itself causes massive economic damage and loss of life through accidents and stampedes. National confidence collapses.'
       }
     ],
     consequences: {}
@@ -690,10 +998,180 @@ export function calculateFlashpointProbability(turn: number, defcon: number) {
   return Math.min(Math.max(probability, 0), 1);
 }
 
+// Helper function to inject historical context into flashpoint descriptions
+function injectHistoricalContext(
+  flashpoint: FlashpointEvent,
+  history: FlashpointHistoryEntry[],
+  reputation: PlayerReputation
+): FlashpointEvent {
+  if (history.length === 0) return flashpoint;
+
+  const recentHistory = history.slice(-5); // Last 5 flashpoints
+  let contextAddition = '';
+
+  // Add reputation-based context
+  if (reputation.aggressive > 70) {
+    contextAddition += ' Intelligence reports that your aggressive posture in recent crises has emboldened hardliners.';
+  } else if (reputation.diplomatic > 70) {
+    contextAddition += ' Your diplomatic approach in recent crises has gained international trust, though some see it as weakness.';
+  }
+
+  // Reference specific past events
+  const hadNuclearEvent = recentHistory.some(h => h.event.category === 'terrorist' || h.event.title.includes('Nuclear'));
+  const hadCoupEvent = recentHistory.some(h => h.event.category === 'coup');
+  const hadAlienEvent = recentHistory.some(h => h.event.title.includes('EXTRATERRESTRIAL'));
+
+  if (flashpoint.category === 'terrorist' && hadNuclearEvent) {
+    contextAddition += ' Terrorist cells may be emboldened by previous nuclear incidents.';
+  }
+
+  if (flashpoint.category === 'coup' && hadCoupEvent) {
+    contextAddition += ' This coup follows the pattern established in previous destabilization events.';
+  }
+
+  if (flashpoint.title.includes('EXTRATERRESTRIAL') && hadAlienEvent) {
+    contextAddition += ' The alien visitors have returned - or perhaps they never truly left.';
+  }
+
+  // Success rate context
+  if (reputation.successRate < 40) {
+    contextAddition += ' Critics point to your recent failures as evidence of incompetence.';
+  } else if (reputation.successRate > 80) {
+    contextAddition += ' Your track record of successful crisis management has earned you significant credibility.';
+  }
+
+  if (contextAddition) {
+    return {
+      ...flashpoint,
+      description: flashpoint.description + contextAddition
+    };
+  }
+
+  return flashpoint;
+}
+
+// Helper function to generate narrative outcome description
+function generateNarrativeOutcome(option: FlashpointOption, success: boolean, outcome: Record<string, any>): string {
+  // Use custom narrative if provided
+  if (success && option.successNarrative) {
+    return option.successNarrative;
+  }
+  if (!success && option.failureNarrative) {
+    return option.failureNarrative;
+  }
+
+  // Generate generic narrative based on outcome
+  let narrative = success ? 'Your decision was successful. ' : 'The operation failed. ';
+
+  if (outcome.morale) {
+    narrative += outcome.morale > 0 ? 'Public morale has improved. ' : 'Public morale has declined. ';
+  }
+  if (outcome.casualties) {
+    narrative += `Casualties reported: ${outcome.casualties.toLocaleString()}. `;
+  }
+  if (outcome.threatNeutralized) {
+    narrative += 'The immediate threat has been neutralized. ';
+  }
+  if (outcome.newAlliance) {
+    narrative += 'A new alliance has been formed. ';
+  }
+  if (outcome.war) {
+    narrative += 'This action has triggered a state of war. ';
+  }
+
+  return narrative || (success ? 'The situation has been resolved favorably.' : 'The situation has deteriorated.');
+}
+
+// Helper function to format consequences for display
+function formatConsequences(outcome: Record<string, any>): Array<{ label: string; value: string | number; type: 'positive' | 'negative' | 'neutral' }> {
+  const consequences: Array<{ label: string; value: string | number; type: 'positive' | 'negative' | 'neutral' }> = [];
+
+  if (typeof outcome.morale === 'number') {
+    consequences.push({
+      label: 'Morale',
+      value: outcome.morale > 0 ? `+${outcome.morale}` : `${outcome.morale}`,
+      type: outcome.morale > 0 ? 'positive' : 'negative'
+    });
+  }
+
+  if (typeof outcome.intel === 'number') {
+    consequences.push({
+      label: 'Intelligence',
+      value: outcome.intel > 0 ? `+${outcome.intel}` : `${outcome.intel}`,
+      type: outcome.intel > 0 ? 'positive' : 'negative'
+    });
+  }
+
+  if (typeof outcome.production === 'number') {
+    consequences.push({
+      label: 'Production',
+      value: outcome.production > 0 ? `+${outcome.production}` : `${outcome.production}`,
+      type: outcome.production > 0 ? 'positive' : 'negative'
+    });
+  }
+
+  if (outcome.casualties) {
+    consequences.push({
+      label: 'Casualties',
+      value: outcome.casualties.toLocaleString(),
+      type: 'negative'
+    });
+  }
+
+  if (outcome.defcon) {
+    consequences.push({
+      label: 'DEFCON',
+      value: outcome.defcon,
+      type: outcome.defcon < 3 ? 'negative' : 'neutral'
+    });
+  }
+
+  if (outcome.threatNeutralized) {
+    consequences.push({
+      label: 'Status',
+      value: 'Threat Neutralized',
+      type: 'positive'
+    });
+  }
+
+  if (outcome.newAlliance) {
+    consequences.push({
+      label: 'Diplomacy',
+      value: 'New Alliance Formed',
+      type: 'positive'
+    });
+  }
+
+  if (outcome.war) {
+    consequences.push({
+      label: 'War Status',
+      value: 'War Declared',
+      type: 'negative'
+    });
+  }
+
+  if (outcome.nuclearExplosion) {
+    consequences.push({
+      label: 'Critical Event',
+      value: 'Nuclear Detonation',
+      type: 'negative'
+    });
+  }
+
+  return consequences;
+}
+
 export function useFlashpoints() {
   const [activeFlashpoint, setActiveFlashpoint] = useState<FlashpointEvent | null>(null);
-  const [flashpointHistory, setFlashpointHistory] = useState<Array<{ event: FlashpointEvent; choice: string; result: 'success' | 'failure' }>>([]);
+  const [flashpointHistory, setFlashpointHistory] = useState<FlashpointHistoryEntry[]>([]);
   const [pendingFollowUps, setPendingFollowUps] = useState<Array<{ parentId: string; category: string; outcome: string; triggerAtTurn: number }>>([]);
+  const [playerReputation, setPlayerReputation] = useState<PlayerReputation>({
+    aggressive: 50,
+    diplomatic: 50,
+    cautious: 50,
+    reckless: 50,
+    successRate: 50
+  });
 
   const triggerRandomFlashpoint = useCallback((turn: number, defcon: number) => {
     // Check for pending follow-ups first
@@ -701,12 +1179,16 @@ export function useFlashpoints() {
     if (followUp) {
       const followUpTemplate = FOLLOWUP_FLASHPOINTS[followUp.category]?.[followUp.outcome];
       if (followUpTemplate) {
-        const flashpoint: FlashpointEvent = {
+        const baseFlashpoint: FlashpointEvent = {
           ...followUpTemplate,
           id: `flashpoint_followup_${Date.now()}`,
           triggeredAt: Date.now(),
           triggeredBy: followUp.parentId
         };
+
+        // Inject historical context
+        const flashpoint = injectHistoricalContext(baseFlashpoint, flashpointHistory, playerReputation);
+
         setPendingFollowUps(prev => prev.filter(f => f !== followUp));
         setActiveFlashpoint(flashpoint);
         return flashpoint;
@@ -717,34 +1199,96 @@ export function useFlashpoints() {
 
     if (Math.random() < probability) {
       const template = FLASHPOINT_TEMPLATES[Math.floor(Math.random() * FLASHPOINT_TEMPLATES.length)];
-      const flashpoint: FlashpointEvent = {
+      const baseFlashpoint: FlashpointEvent = {
         ...template,
         id: `flashpoint_${Date.now()}`,
         triggeredAt: Date.now()
       };
+
+      // Inject historical context into new flashpoints
+      const flashpoint = injectHistoricalContext(baseFlashpoint, flashpointHistory, playerReputation);
+
       setActiveFlashpoint(flashpoint);
       return flashpoint;
     }
     return null;
-  }, [pendingFollowUps]);
+  }, [pendingFollowUps, flashpointHistory, playerReputation]);
 
-  const resolveFlashpoint = useCallback((optionId: string, flashpoint: FlashpointEvent, currentTurn: number): { success: boolean; outcome: Record<string, any>; dnaAwarded?: number } => {
+  const resolveFlashpoint = useCallback((optionId: string, flashpoint: FlashpointEvent, currentTurn: number): {
+    success: boolean;
+    outcome: Record<string, any>;
+    dnaAwarded?: number;
+    flashpointOutcome: FlashpointOutcome;
+  } => {
     const option = flashpoint.options.find(opt => opt.id === optionId);
-    if (!option) return { success: false, outcome: {} };
+    if (!option) return {
+      success: false,
+      outcome: {},
+      flashpointOutcome: {
+        title: flashpoint.title,
+        success: false,
+        choiceMade: 'Unknown',
+        choiceDescription: 'Invalid option',
+        narrativeOutcome: 'An error occurred processing your decision.',
+        consequences: [],
+      }
+    };
 
     const success = Math.random() < option.outcome.probability;
     const outcome = success ? option.outcome.success : option.outcome.failure;
 
-    setFlashpointHistory(prev => [...prev, { event: flashpoint, choice: optionId, result: success ? 'success' : 'failure' }]);
-    setActiveFlashpoint(null);
+    // Generate narrative outcome
+    const narrativeOutcome = generateNarrativeOutcome(option, success, outcome);
 
-    // Schedule follow-up flashpoints based on outcome
+    // Format consequences for display
+    const formattedConsequences = formatConsequences(outcome);
+
+    // Update player reputation based on choice
+    setPlayerReputation(prev => {
+      const totalChoices = flashpointHistory.length + 1;
+      const successCount = flashpointHistory.filter(h => h.result === 'success').length + (success ? 1 : 0);
+
+      let reputationUpdate = { ...prev };
+
+      // Update aggressive score (military options)
+      if (option.advisorSupport.includes('military')) {
+        reputationUpdate.aggressive = Math.min(100, prev.aggressive + 2);
+      }
+
+      // Update diplomatic score
+      if (option.advisorSupport.includes('diplomatic')) {
+        reputationUpdate.diplomatic = Math.min(100, prev.diplomatic + 2);
+      }
+
+      // Update cautious score (high probability options)
+      if (option.outcome.probability >= 0.7) {
+        reputationUpdate.cautious = Math.min(100, prev.cautious + 2);
+      }
+
+      // Update reckless score (low probability options)
+      if (option.outcome.probability <= 0.4) {
+        reputationUpdate.reckless = Math.min(100, prev.reckless + 2);
+      }
+
+      // Update overall success rate
+      reputationUpdate.successRate = Math.round((successCount / totalChoices) * 100);
+
+      return reputationUpdate;
+    });
+
+    // Determine follow-up hint
     const followUpKey = `${optionId}_${success ? 'success' : 'failure'}`;
     const categoryKey = flashpoint.title.includes('Nuclear Materials') ? 'nuclear_materials' :
                         flashpoint.title.includes('COUP') ? 'military_coup' :
-                        flashpoint.title.includes('ROGUE AI') ? 'rogue_ai' : null;
+                        flashpoint.title.includes('ROGUE AI') ? 'rogue_ai' :
+                        flashpoint.title.includes('ACCIDENTAL LAUNCH') ? 'accidental_launch' :
+                        flashpoint.title.includes('EXTRATERRESTRIAL') ? 'alien_contact' :
+                        flashpoint.title.includes('BIO-TERROR') ? 'bio_terror' : null;
 
+    let followUpHint: string | undefined;
     if (categoryKey && FOLLOWUP_FLASHPOINTS[categoryKey]?.[followUpKey]) {
+      followUpHint = 'Intelligence suggests this situation may have further developments. Remain vigilant.';
+
       setPendingFollowUps(prev => [...prev, {
         parentId: flashpoint.id,
         category: categoryKey,
@@ -752,6 +1296,20 @@ export function useFlashpoints() {
         triggerAtTurn: currentTurn + Math.floor(Math.random() * 3) + 2 // 2-4 turns later
       }]);
     }
+
+    // Store detailed history
+    const historyEntry: FlashpointHistoryEntry = {
+      event: flashpoint,
+      choice: optionId,
+      choiceText: option.text,
+      result: success ? 'success' : 'failure',
+      turn: currentTurn,
+      outcome,
+      narrativeOutcome
+    };
+
+    setFlashpointHistory(prev => [...prev, historyEntry]);
+    setActiveFlashpoint(null);
 
     // Award DNA points based on flashpoint outcomes (if bio-warfare related or successful intel)
     let dnaAwarded = 0;
@@ -761,8 +1319,19 @@ export function useFlashpoints() {
       dnaAwarded = Math.floor(outcome.intel / 10); // 1 DNA per 10 intel gained
     }
 
-    return { success, outcome, dnaAwarded };
-  }, []);
+    // Create FlashpointOutcome for display
+    const flashpointOutcome: FlashpointOutcome = {
+      title: flashpoint.title,
+      success,
+      choiceMade: option.text,
+      choiceDescription: option.description,
+      narrativeOutcome,
+      consequences: formattedConsequences,
+      followUpHint
+    };
+
+    return { success, outcome, dnaAwarded, flashpointOutcome };
+  }, [flashpointHistory]);
 
   const dismissFlashpoint = useCallback(() => {
     setActiveFlashpoint(null);
@@ -771,6 +1340,7 @@ export function useFlashpoints() {
   return {
     activeFlashpoint,
     flashpointHistory,
+    playerReputation,
     triggerRandomFlashpoint,
     resolveFlashpoint,
     dismissFlashpoint,
