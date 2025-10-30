@@ -358,6 +358,114 @@ const IntroLogo = () => (
   </svg>
 );
 
+// Animated starfield background component
+const Starfield = () => {
+  const stars = React.useMemo(() => {
+    return Array.from({ length: 200 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 2 + 0.5,
+      duration: Math.random() * 3 + 2,
+      delay: Math.random() * 2
+    }));
+  }, []);
+
+  return (
+    <div className="starfield">
+      {stars.map(star => (
+        <div
+          key={star.id}
+          className="star"
+          style={{
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            animationDuration: `${star.duration}s`,
+            animationDelay: `${star.delay}s`
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+// Spinning Earth globe component
+const SpinningEarth = () => {
+  return (
+    <div className="earth-container">
+      <svg className="earth-globe" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          {/* Earth gradient */}
+          <radialGradient id="earth-gradient" cx="35%" cy="35%">
+            <stop offset="0%" stopColor="#4a9eff" />
+            <stop offset="50%" stopColor="#2b6cb0" />
+            <stop offset="100%" stopColor="#1a365d" />
+          </radialGradient>
+
+          {/* Glow effect */}
+          <radialGradient id="earth-glow" cx="50%" cy="50%">
+            <stop offset="70%" stopColor="rgba(0, 150, 255, 0.3)" />
+            <stop offset="100%" stopColor="rgba(0, 150, 255, 0)" />
+          </radialGradient>
+
+          {/* Atmosphere glow */}
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Outer glow */}
+        <circle cx="200" cy="200" r="110" fill="url(#earth-glow)" opacity="0.6" />
+
+        {/* Main Earth sphere */}
+        <circle cx="200" cy="200" r="90" fill="url(#earth-gradient)" filter="url(#glow)" />
+
+        {/* Animated continents - simplified shapes that rotate */}
+        <g className="continents">
+          {/* North America */}
+          <path d="M 180 140 Q 170 135 165 145 L 160 155 Q 162 160 168 158 L 175 150 Z"
+                fill="#2d5016" opacity="0.9" />
+
+          {/* South America */}
+          <path d="M 185 180 Q 183 185 180 195 L 178 205 Q 180 208 185 205 L 188 195 Q 190 185 185 180 Z"
+                fill="#2d5016" opacity="0.9" />
+
+          {/* Europe */}
+          <path d="M 205 145 L 210 142 Q 215 143 218 148 L 215 153 Q 210 155 205 152 Z"
+                fill="#2d5016" opacity="0.9" />
+
+          {/* Africa */}
+          <path d="M 210 165 Q 208 170 205 180 L 207 195 Q 212 198 215 193 L 218 180 Q 220 170 215 165 Z"
+                fill="#2d5016" opacity="0.9" />
+
+          {/* Asia */}
+          <path d="M 225 140 L 245 138 Q 250 142 248 148 L 240 155 Q 230 157 225 152 Z"
+                fill="#2d5016" opacity="0.9" />
+
+          {/* Australia */}
+          <path d="M 245 195 Q 250 195 252 200 L 250 205 Q 245 206 243 202 Z"
+                fill="#2d5016" opacity="0.9" />
+
+          {/* Cloud layer */}
+          <ellipse cx="170" cy="160" rx="12" ry="6" fill="white" opacity="0.3" />
+          <ellipse cx="220" cy="175" rx="15" ry="7" fill="white" opacity="0.25" />
+          <ellipse cx="235" cy="150" rx="10" ry="5" fill="white" opacity="0.3" />
+        </g>
+
+        {/* Atmosphere rim light */}
+        <circle cx="200" cy="200" r="90" fill="none"
+                stroke="rgba(100, 180, 255, 0.4)" strokeWidth="2" />
+      </svg>
+    </div>
+  );
+};
+
 const DIPLOMATIC_VICTORY_CRITERIA = {
   allianceRatio: 0.6,
   requiredDefcon: 4,
@@ -9190,17 +9298,36 @@ export default function NoradVector() {
   // Render functions for different phases
   const renderIntroScreen = () => (
     <div className="intro-screen">
-      <div className="intro-screen__grid" aria-hidden="true" />
+      <Starfield />
       <div className="intro-screen__scanlines" aria-hidden="true" />
 
-      <div className="intro-screen__content">
+      <div className="intro-screen__left">
+        <SpinningEarth />
+      </div>
+
+      <div className="intro-screen__right">
         <IntroLogo />
 
         <p className="intro-screen__tagline">Want to play a game?</p>
 
-        <button onClick={() => setGamePhase('leader')} className="intro-screen__cta">
-          Start Game
-        </button>
+        <div className="intro-screen__menu">
+          <button onClick={() => setGamePhase('leader')} className="intro-screen__menu-btn intro-screen__menu-btn--primary">
+            <span className="intro-screen__menu-btn-icon">▶</span>
+            Start Game
+          </button>
+          <button className="intro-screen__menu-btn" onClick={() => alert('Campaign mode coming soon!')}>
+            <span className="intro-screen__menu-btn-icon">⚔</span>
+            Campaign
+          </button>
+          <button className="intro-screen__menu-btn" onClick={() => alert('Options coming soon!')}>
+            <span className="intro-screen__menu-btn-icon">⚙</span>
+            Options
+          </button>
+          <button className="intro-screen__menu-btn" onClick={() => alert('Credits coming soon!')}>
+            <span className="intro-screen__menu-btn-icon">★</span>
+            Credits
+          </button>
+        </div>
       </div>
     </div>
   );
