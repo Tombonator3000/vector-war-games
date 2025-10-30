@@ -6,7 +6,7 @@ import { toast } from '@/components/ui/use-toast';
 import { PlagueTypeSelector } from '@/components/PlagueTypeSelector';
 import { DeploymentTargetSelector } from '@/components/DeploymentTargetSelector';
 import { DNAPointsDisplay } from '@/components/DNAPointsDisplay';
-import { EvolutionTree } from '@/components/EvolutionTree';
+import { EvolutionTreeFlow } from '@/components/EvolutionTreeFlow';
 import type { PlagueState } from '@/types/biowarfare';
 import type { BioLabTier } from '@/types/bioLab';
 import { getPlagueTypeById } from '@/lib/evolutionData';
@@ -253,8 +253,8 @@ export function BioWarfareLab({
                   </div>
                 )}
 
-                {/* Evolution Tree */}
-                <EvolutionTree
+                {/* Evolution Tree Flow */}
+                <EvolutionTreeFlow
                   plagueState={plagueState}
                   onEvolve={handleEvolve}
                   onDevolve={handleDevolve}
