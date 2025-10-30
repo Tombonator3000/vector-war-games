@@ -2127,13 +2127,6 @@ const Ocean = {
   
   init() {
     this.waves = [];
-    for (let i = 0; i < 10; i++) {
-      this.waves.push({
-        y: H * 0.7 + i * 5,
-        offset: Math.random() * Math.PI * 2,
-        amplitude: 2 + Math.random() * 3
-      });
-    }
   },
   
   update() {
@@ -2141,27 +2134,9 @@ const Ocean = {
   },
   
   draw(context: CanvasRenderingContext2D, style: MapStyle) {
-    const time = Date.now() / 1000;
-    const palette = THEME_SETTINGS[currentTheme];
-    const isWireframe = style === 'wireframe';
-    const isNight = style === 'night';
-
-    context.save();
-    context.lineWidth = isWireframe ? 1.5 : 1;
-    context.globalAlpha = isNight ? 0.18 : isWireframe ? 0.45 : 0.35;
-    context.setLineDash(isWireframe ? [10, 6] : []);
-    context.strokeStyle = isWireframe ? '#4ef6ff' : palette.ocean;
-
-    this.waves.forEach(wave => {
-      context.beginPath();
-      for (let x = 0; x < W; x += 5) {
-        const y = wave.y + Math.sin((x / 50) + time + wave.offset) * wave.amplitude;
-        if (x === 0) context.moveTo(x, y);
-        else context.lineTo(x, y);
-      }
-      context.stroke();
-    });
-    context.restore();
+    // Ocean rendering intentionally disabled to remove sine-wave bands.
+    this.waves = [];
+    return;
   }
 };
 
