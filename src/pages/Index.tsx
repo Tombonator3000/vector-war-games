@@ -762,6 +762,66 @@ const RESEARCH_TREE: ResearchProject[] = [
     }
   },
   {
+    id: 'cyber_advanced_offense',
+    name: 'Advanced Offensive Algorithms',
+    description: 'AI-driven attack optimization reduces intrusion costs and increases success rates.',
+    category: 'cyber',
+    turns: 4,
+    cost: { production: 35, intel: 30 },
+    prerequisites: ['cyber_ids'],
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'advanced_offense');
+    }
+  },
+  {
+    id: 'cyber_stealth',
+    name: 'Stealth Protocols',
+    description: 'Advanced obfuscation techniques reduce detection chance on all cyber operations.',
+    category: 'cyber',
+    turns: 3,
+    cost: { production: 30, intel: 35 },
+    prerequisites: ['cyber_ids'],
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'stealth_protocols');
+    }
+  },
+  {
+    id: 'cyber_attribution_obfuscation',
+    name: 'Attribution Obfuscation',
+    description: 'False flag operations and proxy networks confuse enemy attribution efforts.',
+    category: 'cyber',
+    turns: 4,
+    cost: { production: 40, intel: 40 },
+    prerequisites: ['cyber_ids'],
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'attribution_obfuscation');
+    }
+  },
+  {
+    id: 'cyber_ai_defense',
+    name: 'AI-Driven Cyber Defenses',
+    description: 'Autonomous defense systems automatically counter-attack intruders.',
+    category: 'cyber',
+    turns: 5,
+    cost: { production: 50, intel: 45 },
+    prerequisites: ['cyber_firewalls'],
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'ai_defense');
+    }
+  },
+  {
+    id: 'cyber_superweapon',
+    name: 'Cyber Superweapon',
+    description: 'Devastating one-time cyber attack capable of crippling enemy infrastructure for 3 turns.',
+    category: 'cyber',
+    turns: 6,
+    cost: { production: 80, intel: 60, uranium: 20 },
+    prerequisites: ['cyber_advanced_offense', 'cyber_attribution_obfuscation'],
+    onComplete: nation => {
+      applyCyberResearchUnlock(nation, 'cyber_superweapon');
+    }
+  },
+  {
     id: 'conventional_armored_doctrine',
     name: 'Armored Maneuver Doctrine',
     description: 'Codify combined-arms tactics to unlock modern armored corps formations.',
@@ -797,6 +857,197 @@ const RESEARCH_TREE: ResearchProject[] = [
     onComplete: nation => {
       nation.researched = nation.researched || {};
       nation.researched.conventional_expeditionary_airframes = true;
+    }
+  },
+  {
+    id: 'conventional_combined_arms',
+    name: 'Combined Arms Doctrine',
+    description: 'Coordinated multi-domain operations grant +10% attack when multiple unit types are deployed.',
+    category: 'conventional',
+    turns: 3,
+    cost: { production: 30, intel: 20 },
+    prerequisites: ['conventional_armored_doctrine'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_combined_arms = true;
+      nation.combinedArmsBonus = 0.10;
+    }
+  },
+  {
+    id: 'conventional_advanced_logistics',
+    name: 'Advanced Logistics',
+    description: 'Streamlined supply chains increase readiness regeneration by +1 per turn for all units.',
+    category: 'conventional',
+    turns: 3,
+    cost: { production: 35, intel: 15 },
+    prerequisites: ['conventional_armored_doctrine'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_advanced_logistics = true;
+      nation.readinessRegen = (nation.readinessRegen || 0) + 1;
+    }
+  },
+  {
+    id: 'conventional_electronic_warfare',
+    name: 'Electronic Warfare Suite',
+    description: 'Advanced ECM/ECCM systems reduce enemy detection by 20% in controlled territories.',
+    category: 'conventional',
+    turns: 4,
+    cost: { production: 40, intel: 35 },
+    prerequisites: ['conventional_carrier_battlegroups', 'conventional_expeditionary_airframes'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_electronic_warfare = true;
+      nation.detectionReduction = (nation.detectionReduction || 0) + 0.20;
+    }
+  },
+  {
+    id: 'conventional_force_modernization',
+    name: 'Force Modernization',
+    description: 'Comprehensive upgrade program permanently enhances all existing units (+1 attack, +1 defense).',
+    category: 'conventional',
+    turns: 5,
+    cost: { production: 60, intel: 30 },
+    prerequisites: ['conventional_combined_arms', 'conventional_advanced_logistics'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_force_modernization = true;
+      // Apply permanent upgrades to all units
+      nation.unitAttackBonus = (nation.unitAttackBonus || 0) + 1;
+      nation.unitDefenseBonus = (nation.unitDefenseBonus || 0) + 1;
+    }
+  },
+  {
+    id: 'economy_automation',
+    name: 'Industrial Automation',
+    description: 'Automated factories increase production efficiency by 15%.',
+    category: 'economy',
+    turns: 2,
+    cost: { production: 20 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.economy_automation = true;
+      nation.productionMultiplier = (nation.productionMultiplier || 1.0) * 1.15;
+    }
+  },
+  {
+    id: 'economy_extraction',
+    name: 'Advanced Resource Extraction',
+    description: 'Deep mining and advanced refining increase uranium output by +1 per turn.',
+    category: 'economy',
+    turns: 3,
+    cost: { production: 30, intel: 10 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.economy_extraction = true;
+      nation.uraniumPerTurn = (nation.uraniumPerTurn || 0) + 1;
+    }
+  },
+  {
+    id: 'economy_efficiency',
+    name: 'Economic Efficiency',
+    description: 'Streamlined production reduces all construction costs by 10%.',
+    category: 'economy',
+    turns: 3,
+    cost: { production: 25, intel: 15 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.economy_efficiency = true;
+      nation.buildCostReduction = (nation.buildCostReduction || 0) + 0.1;
+    }
+  },
+  {
+    id: 'economy_mobilization',
+    name: 'Total Mobilization',
+    description: 'War economy maximizes output (+20% production) but increases domestic tension (+5% instability).',
+    category: 'economy',
+    turns: 4,
+    cost: { production: 40, intel: 20 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.economy_mobilization = true;
+      nation.productionMultiplier = (nation.productionMultiplier || 1.0) * 1.20;
+      nation.instability = (nation.instability || 0) + 5;
+    }
+  },
+  {
+    id: 'economy_stockpiling',
+    name: 'Resource Stockpiling',
+    description: 'Strategic reserves increase maximum resource capacity by 50 for all resources.',
+    category: 'economy',
+    turns: 2,
+    cost: { production: 15 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.economy_stockpiling = true;
+      nation.maxProduction = (nation.maxProduction || 1000) + 50;
+      nation.maxIntel = (nation.maxIntel || 500) + 50;
+      nation.maxUranium = (nation.maxUranium || 200) + 50;
+    }
+  },
+  {
+    id: 'culture_social_media',
+    name: 'Social Media Dominance',
+    description: 'Global social networks amplify cultural influence, reducing culture bomb cost by 25%.',
+    category: 'culture',
+    turns: 2,
+    cost: { production: 20, intel: 20 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.culture_social_media = true;
+      nation.cultureBombCostReduction = (nation.cultureBombCostReduction || 0) + 0.25;
+    }
+  },
+  {
+    id: 'culture_influence',
+    name: 'Global Influence Network',
+    description: 'Diplomatic channels enable more simultaneous treaties (+1 treaty slot).',
+    category: 'culture',
+    turns: 3,
+    cost: { production: 30, intel: 30 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.culture_influence = true;
+      nation.maxTreaties = (nation.maxTreaties || 3) + 1;
+    }
+  },
+  {
+    id: 'culture_soft_power',
+    name: 'Soft Power Projection',
+    description: 'Cultural appeal attracts skilled immigrants (+20% immigration success).',
+    category: 'culture',
+    turns: 4,
+    cost: { production: 35, intel: 35 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.culture_soft_power = true;
+      nation.immigrationBonus = (nation.immigrationBonus || 1.0) * 1.20;
+    }
+  },
+  {
+    id: 'culture_hegemony',
+    name: 'Cultural Hegemony',
+    description: 'Total cultural dominance converts stolen population 50% faster.',
+    category: 'culture',
+    turns: 5,
+    cost: { production: 50, intel: 50 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.culture_hegemony = true;
+      nation.stolenPopConversionRate = (nation.stolenPopConversionRate || 1.0) * 1.50;
+    }
+  },
+  {
+    id: 'culture_immunity',
+    name: 'Diplomatic Immunity',
+    description: 'Ironclad treaties cannot be broken by AI for 5 turns after signing.',
+    category: 'culture',
+    turns: 3,
+    cost: { production: 25, intel: 40 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.culture_immunity = true;
+      nation.treatyLockDuration = 5;
     }
   }
 ];

@@ -178,6 +178,16 @@ export interface PlagueState {
   // Cure progress
   cureProgress: number; // 0-100
   cureActive: boolean;
+
+  // Plague type progression
+  unlockedPlagueTypes: Set<PlagueTypeId>; // All unlocked plague types
+  completedPlagues: Set<PlagueTypeId>; // Plagues that have been completed
+  plagueCompletionStats: {
+    // Current run stats
+    totalKills: number; // Total deaths across all nations
+    peakInfection: number; // Peak global infection %
+    nationsInfected: number; // Number of nations infected
+  };
 }
 
 // ============================================================================
