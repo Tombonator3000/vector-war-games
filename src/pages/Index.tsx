@@ -13,7 +13,6 @@ import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRigh
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
-import { BioLabConstruction } from '@/components/BioLabConstruction';
 import CesiumHeroGlobe from '@/components/CesiumHeroGlobe';
 import CesiumViewer from '@/components/CesiumViewer';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
@@ -5430,6 +5429,7 @@ export default function NoradVector() {
   });
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [civInfoPanelOpen, setCivInfoPanelOpen] = useState(false);
+  const [civInfoDefaultTab, setCivInfoDefaultTab] = useState<'own-status' | 'enemy-status' | 'diplomacy' | 'research'>('own-status');
   const [activeDiplomacyProposal, setActiveDiplomacyProposal] = useState<DiplomacyProposal | null>(null);
   const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
 
@@ -5571,7 +5571,6 @@ export default function NoradVector() {
     return true;
   });
   const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
-  const [isLabConstructionOpen, setIsLabConstructionOpen] = useState(false);
   const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const lastTargetPingIdRef = useRef<string | null>(null);
@@ -7713,8 +7712,9 @@ export default function NoradVector() {
     const approved = await requestApproval('RESEARCH', { description: 'Research directive access' });
     if (!approved) return;
     AudioSys.playSFX('click');
-    openModal('RESEARCH DIRECTORATE', renderResearchModal);
-  }, [openModal, renderResearchModal, requestApproval]);
+    setCivInfoDefaultTab('research');
+    setCivInfoPanelOpen(true);
+  }, [requestApproval]);
 
   const handleIntel = useCallback(async () => {
     const approved = await requestApproval('INTEL', { description: 'Intelligence operations authorization' });
@@ -8169,8 +8169,9 @@ export default function NoradVector() {
   }, [bioWarfareAvailable, isBioWarfareOpen, requestApproval, pandemicIntegrationEnabled, bioWarfareEnabled]);
 
   const handleLabConstructionToggle = useCallback(() => {
-    setIsLabConstructionOpen(!isLabConstructionOpen);
-  }, [isLabConstructionOpen]);
+    setCivInfoDefaultTab('research');
+    setCivInfoPanelOpen(true);
+  }, []);
 
   const handleStartLabConstruction = useCallback((tier: number) => {
     const player = getNationById(playerNationId);
@@ -8184,7 +8185,6 @@ export default function NoradVector() {
         description: result.message,
         duration: 3000,
       });
-      setIsLabConstructionOpen(false);
     } else {
       toast({
         title: 'Construction Failed',
@@ -10386,20 +10386,6 @@ export default function NoradVector() {
         onDeployBioWeapon={handleDeployBioWeapon}
       />
 
-      <BioLabConstruction
-        open={isLabConstructionOpen}
-        onOpenChange={setIsLabConstructionOpen}
-        labFacility={labFacility}
-        constructionOptions={getConstructionOptions(
-          getNationById(playerNationId)?.production || 0,
-          getNationById(playerNationId)?.uranium || 0
-        )}
-        playerProduction={getNationById(playerNationId)?.production || 0}
-        playerUranium={getNationById(playerNationId)?.uranium || 0}
-        onStartConstruction={handleStartLabConstruction}
-        onCancelConstruction={handleCancelLabConstruction}
-      />
-
       {showPandemicPanel && (
         <PandemicPanel
           state={pandemicState}
@@ -10612,6 +10598,7 @@ export default function NoradVector() {
         bioLabFacility={labFacility}
         onStartBioLabConstruction={handleStartLabConstruction}
         onCancelBioLabConstruction={handleCancelLabConstruction}
+        defaultTab={civInfoDefaultTab}
       />
 
       <GameHelper

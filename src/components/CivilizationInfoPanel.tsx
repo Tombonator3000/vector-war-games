@@ -21,6 +21,7 @@ interface CivilizationInfoPanelProps {
   bioLabFacility?: BioLabFacility;
   onStartBioLabConstruction?: (tier: BioLabTier) => void;
   onCancelBioLabConstruction?: () => void;
+  defaultTab?: TabType;
 }
 
 type TabType = 'own-status' | 'enemy-status' | 'diplomacy' | 'research';
@@ -37,8 +38,16 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   bioLabFacility,
   onStartBioLabConstruction,
   onCancelBioLabConstruction,
+  defaultTab = 'own-status',
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('own-status');
+  const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
+
+  // Reset to default tab when panel opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setActiveTab(defaultTab);
+    }
+  }, [isOpen, defaultTab]);
 
   if (!isOpen) return null;
 
