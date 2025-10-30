@@ -260,12 +260,16 @@ const templateLookup = UNIT_TEMPLATES.reduce<Record<string, ConventionalUnitTemp
   return acc;
 }, {});
 
-const computeUnitAttack = (unit: ConventionalUnitState): number => {
+const computeUnitAttack = (unit: ConventionalUnitState, nation?: ConventionalNationRef): number => {
   const template = templateLookup[unit.templateId];
   if (!template) return 0;
   const readinessFactor = unit.readiness / 100;
   const experienceBonus = 1 + unit.experience * 0.05;
-  return template.attack * readinessFactor * experienceBonus + template.support;
+  const baseAttack = template.attack * readinessFactor * experienceBonus + template.support;
+
+  // Apply tech bonuses from Force Modernization
+  const techBonus = (nation as any)?.unitAttackBonus || 0;
+  return baseAttack + techBonus;
 };
 
 export const territoryAnchors = DEFAULT_TERRITORIES.reduce<Record<string, { lon: number; lat: number }>>((acc, territory) => {
@@ -273,12 +277,16 @@ export const territoryAnchors = DEFAULT_TERRITORIES.reduce<Record<string, { lon:
   return acc;
 }, {});
 
-const computeUnitDefense = (unit: ConventionalUnitState): number => {
+const computeUnitDefense = (unit: ConventionalUnitState, nation?: ConventionalNationRef): number => {
   const template = templateLookup[unit.templateId];
   if (!template) return 0;
   const readinessFactor = unit.readiness / 100;
   const experienceBonus = 1 + unit.experience * 0.05;
-  return template.defense * readinessFactor * experienceBonus + template.support * 0.5;
+  const baseDefense = template.defense * readinessFactor * experienceBonus + template.support * 0.5;
+
+  // Apply tech bonuses from Force Modernization
+  const techBonus = (nation as any)?.unitDefenseBonus || 0;
+  return baseDefense + techBonus;
 };
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -588,8 +596,21 @@ export function useConventionalWarfare({
         (unit) => unit.locationId === territoryId && unit.status === 'deployed',
       );
 
-      const attackerPower = attackerUnits.reduce((total, unit) => total + computeUnitAttack(unit), 0);
-      const defenderPower = defenderUnits.reduce((total, unit) => total + computeUnitDefense(unit), 0);
+      const attackerNation = getNation(attackerId);
+      const defenderNation = getNation(defenderId);
+
+      // Calculate attack and defense power with tech bonuses
+      let attackerPower = attackerUnits.reduce((total, unit) => total + computeUnitAttack(unit, attackerNation), 0);
+      const defenderPower = defenderUnits.reduce((total, unit) => total + computeUnitDefense(unit, defenderNation), 0);
+
+      // Apply Combined Arms Doctrine bonus if multiple unit types present
+      if (attackerNation && (attackerNation as any).combinedArmsBonus) {
+        const unitTypes = new Set(attackerUnits.map(u => templateLookup[u.templateId]?.type).filter(Boolean));
+        if (unitTypes.size >= 2) {
+          const bonus = (attackerNation as any).combinedArmsBonus;
+          attackerPower = attackerPower * (1 + bonus);
+        }
+      }
 
       const readinessEdge = (getNation(attackerId)?.conventional?.readiness ?? 60) -
         (getNation(defenderId)?.conventional?.readiness ?? 60);
