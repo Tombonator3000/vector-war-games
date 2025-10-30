@@ -33,6 +33,7 @@ import {
   ClockStep,
   TimeIntervalCollection,
   TimeInterval,
+  OpenStreetMapImageryProvider,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import type { TerritoryState, ConventionalUnitState } from '@/hooks/useConventionalWarfare';
@@ -110,6 +111,11 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
     const initViewer = async () => {
       try {
+        // Create OpenStreetMap imagery provider (free, no token required)
+        const imageryProvider = new OpenStreetMapImageryProvider({
+          url: 'https://a.tile.openstreetmap.org/',
+        });
+
         // Note: terrain requires Cesium Ion access token, so we skip it when Ion is disabled
         const viewer = new Viewer(containerRef.current!, {
           baseLayerPicker: false,
@@ -123,7 +129,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           vrButton: false,
           infoBox: false,
           selectionIndicator: false,
-          // Use default imagery provider (Bing Maps with Natural Earth II fallback)
+          imageryProvider: imageryProvider,
           // Terrain is disabled because it requires Cesium Ion access token
           terrain: undefined,
         });
@@ -150,6 +156,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         }
 
         // Configure globe appearance
+        viewer.scene.globe.show = true;
         viewer.scene.globe.baseColor = Color.fromCssColorString('#0a1628');
         viewer.scene.backgroundColor = Color.BLACK;
         viewer.scene.skyBox.show = true;
