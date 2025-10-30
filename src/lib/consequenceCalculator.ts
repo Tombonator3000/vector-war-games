@@ -375,6 +375,286 @@ export function calculateBuildCityConsequences(
 }
 
 /**
+ * Calculate consequences for deploying conventional forces
+ */
+export function calculateConventionalDeploymentConsequences(
+  context: ConsequenceCalculationContext,
+  targetTerritory: string,
+  forceType: 'army' | 'navy' | 'air'
+): ActionConsequences {
+  const { playerNation, currentDefcon } = context;
+
+  const immediate: Consequence[] = [
+    {
+      description: `Deploy ${forceType} unit to ${targetTerritory}`,
+      severity: 'positive',
+      icon: forceType === 'army' ? '⚔️' : forceType === 'navy' ? '⚓' : '✈️',
+    },
+    {
+      description: 'Increases territorial control',
+      severity: 'positive',
+      icon: '🗺️',
+    },
+  ];
+
+  const longTerm: Consequence[] = [
+    {
+      description: 'Unit requires 5 Production/turn upkeep',
+      severity: 'negative',
+      icon: '💰',
+    },
+  ];
+
+  const risks: Consequence[] = [];
+  if (currentDefcon <= 3) {
+    risks.push({
+      description: 'May trigger border conflicts',
+      severity: 'negative',
+      probability: 40,
+      icon: '⚔️',
+    });
+  }
+
+  return {
+    actionType: 'deploy_conventional',
+    actionTitle: `Deploy ${forceType.toUpperCase()} Unit`,
+    actionDescription: `Station forces in ${targetTerritory}`,
+    immediate,
+    longTerm,
+    risks,
+    costs: {
+      production: 30,
+      actions: 1,
+    },
+  };
+}
+
+/**
+ * Calculate consequences for breaking an alliance
+ */
+export function calculateBreakAllianceConsequences(
+  context: ConsequenceCalculationContext,
+  targetNation: Nation
+): ActionConsequences {
+  const { allNations } = context;
+
+  const immediate: Consequence[] = [
+    {
+      description: `${targetNation.name} relations drop to HOSTILE`,
+      severity: 'critical',
+      icon: '😠',
+    },
+    {
+      description: 'Lose access to their territories',
+      severity: 'negative',
+      icon: '🗺️',
+    },
+    {
+      description: 'No longer receive defensive support',
+      severity: 'negative',
+      icon: '🛡️',
+    },
+  ];
+
+  const risks: Consequence[] = [
+    {
+      description: `${targetNation.name} may declare war`,
+      severity: 'critical',
+      probability: 60,
+      icon: '⚔️',
+    },
+    {
+      description: 'Other nations lose trust (-10 global influence)',
+      severity: 'negative',
+      icon: '📉',
+    },
+  ];
+
+  const alliedNations = allNations.filter(
+    (n) => targetNation.alliances?.includes(n.name)
+  );
+
+  if (alliedNations.length > 0) {
+    risks.push({
+      description: `${targetNation.name}'s ${alliedNations.length} allies may turn hostile`,
+      severity: 'critical',
+      probability: 50,
+      icon: '💔',
+    });
+  }
+
+  return {
+    actionType: 'break_alliance',
+    actionTitle: `Break Alliance with ${targetNation.name}`,
+    actionDescription: 'Terminate diplomatic partnership',
+    immediate,
+    longTerm: [],
+    risks,
+    victoryImpact: {
+      victoryType: 'Diplomatic Victory',
+      impact: 'Significant setback to progress',
+    },
+    costs: {
+      actions: 1,
+    },
+    warnings: ['This action cannot be undone and will severely damage relations'],
+  };
+}
+
+/**
+ * Calculate consequences for declaring war
+ */
+export function calculateDeclareWarConsequences(
+  context: ConsequenceCalculationContext,
+  targetNation: Nation
+): ActionConsequences {
+  const { allNations, currentDefcon } = context;
+
+  let defconChange = 0;
+  if (currentDefcon > 2) defconChange = -1;
+  const newDefcon = Math.max(1, currentDefcon + defconChange);
+
+  const targetAllies = allNations.filter(
+    (n) => targetNation.alliances?.includes(n.name)
+  );
+
+  const immediate: Consequence[] = [
+    {
+      description: 'State of war declared',
+      severity: 'critical',
+      icon: '⚔️',
+    },
+    {
+      description: `DEFCON ${currentDefcon} → ${newDefcon}`,
+      severity: 'critical',
+      icon: '⚠️',
+    },
+  ];
+
+  if (targetAllies.length > 0) {
+    immediate.push({
+      description: `${targetAllies.length} allied nations join the war`,
+      severity: 'critical',
+      icon: '🌍',
+    });
+  }
+
+  const longTerm: Consequence[] = [
+    {
+      description: 'Global opinion decreases by 15',
+      severity: 'negative',
+      icon: '📉',
+    },
+    {
+      description: 'War economy: +20% Production, -10% Morale',
+      severity: 'neutral',
+      icon: '⚖️',
+    },
+  ];
+
+  return {
+    actionType: 'declare_war',
+    actionTitle: `Declare War on ${targetNation.name}`,
+    actionDescription: 'Formal state of hostilities',
+    immediate,
+    longTerm,
+    risks: [
+      {
+        description: 'May escalate to nuclear conflict',
+        severity: 'critical',
+        probability: 30,
+        icon: '☢️',
+      },
+    ],
+    defconChange: { from: currentDefcon, to: newDefcon },
+    victoryImpact: {
+      victoryType: 'Diplomatic Victory',
+      impact: 'BLOCKED - Cannot achieve while at war',
+    },
+    costs: {
+      actions: 1,
+    },
+    warnings:
+      targetAllies.length > 2
+        ? [`${targetNation.name} has ${targetAllies.length} allies who will join the war!`]
+        : [],
+  };
+}
+
+/**
+ * Calculate consequences for bio-weapon deployment
+ */
+export function calculateBioWeaponDeploymentConsequences(
+  context: ConsequenceCalculationContext,
+  targetNations: Nation[],
+  plagueType: string
+): ActionConsequences {
+  const { currentDefcon } = context;
+
+  const totalPopulation = targetNations.reduce((sum, n) => sum + n.population, 0);
+  const estimatedCasualties = Math.floor(totalPopulation * 0.3); // 30% infection rate
+
+  const immediate: Consequence[] = [
+    {
+      description: `Deploy ${plagueType} to ${targetNations.length} nation${
+        targetNations.length > 1 ? 's' : ''
+      }`,
+      severity: 'critical',
+      icon: '🦠',
+    },
+    {
+      description: `Estimated casualties: ${estimatedCasualties.toLocaleString()}`,
+      severity: 'critical',
+      icon: '💀',
+    },
+  ];
+
+  const risks: Consequence[] = [
+    {
+      description: '40% chance of detection and attribution',
+      severity: 'critical',
+      probability: 40,
+      icon: '🔍',
+    },
+    {
+      description: 'If detected: All nations declare war',
+      severity: 'critical',
+      probability: 40,
+      icon: '⚔️',
+    },
+    {
+      description: 'Plague may spread to your population',
+      severity: 'critical',
+      probability: 25,
+      icon: '🦠',
+    },
+  ];
+
+  return {
+    actionType: 'deploy_bio_weapon',
+    actionTitle: `Deploy ${plagueType}`,
+    actionDescription: `Biological attack on ${targetNations.map((n) => n.name).join(', ')}`,
+    immediate,
+    longTerm: [
+      {
+        description: 'Global pandemic may destabilize all nations',
+        severity: 'critical',
+        icon: '🌍',
+      },
+    ],
+    risks,
+    costs: {
+      intel: 50,
+      actions: 1,
+    },
+    warnings: [
+      'Bio-weapons are considered crimes against humanity',
+      'Detection will result in global condemnation',
+    ],
+  };
+}
+
+/**
  * Main consequence calculator - routes to specific calculators
  */
 export function calculateActionConsequences(
@@ -391,11 +671,27 @@ export function calculateActionConsequences(
       );
     case 'form_alliance':
       return calculateAllianceConsequences(context, actionParams.targetNation);
+    case 'break_alliance':
+      return calculateBreakAllianceConsequences(context, actionParams.targetNation);
     case 'cyber_attack':
       return calculateCyberAttackConsequences(
         context,
         actionParams.targetNation,
         actionParams.attackType
+      );
+    case 'declare_war':
+      return calculateDeclareWarConsequences(context, actionParams.targetNation);
+    case 'deploy_conventional':
+      return calculateConventionalDeploymentConsequences(
+        context,
+        actionParams.territory,
+        actionParams.forceType
+      );
+    case 'deploy_bio_weapon':
+      return calculateBioWeaponDeploymentConsequences(
+        context,
+        actionParams.targetNations,
+        actionParams.plagueType
       );
     case 'build_city':
       return calculateBuildCityConsequences(context);
