@@ -43,7 +43,10 @@ import { useTutorialContext } from '@/contexts/TutorialContext';
 import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
 import { VictoryProgressPanel } from '@/components/VictoryProgressPanel';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
+import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit } from '@/types/game';
+import type { DiplomacyProposal } from '@/types/diplomacy';
+import { evaluateProposal, shouldAIInitiateProposal } from '@/lib/aiDiplomacyEvaluator';
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
 import { SyncStatusBadge } from '@/components/coop/SyncStatusBadge';
 import { ApprovalQueue } from '@/components/coop/ApprovalQueue';
@@ -4552,6 +4555,20 @@ function aiTurn(n: Nation) {
     return;
   }
 
+  // Check if AI wants to initiate a proposal to the player
+  if (player && !n.isPlayer) {
+    const proposal = shouldAIInitiateProposal(n, player, S.turn);
+    if (proposal) {
+      // Queue the proposal to show to player
+      setPendingAIProposals(prev => [...prev, proposal]);
+      addTacticalLog(
+        `${n.name} has sent a diplomatic proposal to ${player.name}.`,
+        n.id
+      );
+      return;
+    }
+  }
+
   const diplomacyBias = 0.18 + Math.max(0, defenseMod * 0.5) + (n.ai === 'defensive' ? 0.1 : 0) + (n.ai === 'balanced' ? 0.05 : 0);
   if (Math.random() < diplomacyBias) {
     if (aiAttemptDiplomacy(n)) {
@@ -5082,6 +5099,8 @@ export default function NoradVector() {
   });
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [civInfoPanelOpen, setCivInfoPanelOpen] = useState(false);
+  const [activeDiplomacyProposal, setActiveDiplomacyProposal] = useState<DiplomacyProposal | null>(null);
+  const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
     const stored = Storage.getItem('map_style');
     if (
@@ -8143,9 +8162,38 @@ export default function NoradVector() {
       switch (action.id) {
         case 'truce':
           if (!target) return false;
-          ensureTreaty(commander, target).truceTurns = 2;
-          ensureTreaty(target, commander).truceTurns = 2;
-          log(`Truce declared with ${target.name} for 2 turns.`);
+          // Create proposal for AI to evaluate
+          const truceProposal: DiplomacyProposal = {
+            id: `player-truce-${S.turn}-${Date.now()}`,
+            type: 'truce',
+            proposerId: commander.id,
+            targetId: target.id,
+            terms: { duration: 2 },
+            message: `${commander.name} proposes a 2-turn truce with ${target.name}.`,
+            turn: S.turn,
+            playerInitiated: true
+          };
+
+          const truceResponse = evaluateProposal(truceProposal, target, commander, nations);
+
+          if (truceResponse.accepted) {
+            ensureTreaty(commander, target).truceTurns = 2;
+            ensureTreaty(target, commander).truceTurns = 2;
+            log(`${target.name} accepts truce for 2 turns. ${truceResponse.reason}`);
+            toast({
+              title: 'Truce Accepted',
+              description: `${target.name} agrees to a 2-turn ceasefire.`
+            });
+          } else {
+            log(`${target.name} rejects truce proposal. ${truceResponse.reason}`);
+            toast({
+              title: 'Truce Rejected',
+              description: truceResponse.reason,
+              variant: 'destructive'
+            });
+            // Penalty for rejection
+            adjustThreat(target, commander.id, 3);
+          }
           updateDisplay();
           consumeAction();
           return true;
@@ -8198,13 +8246,43 @@ export default function NoradVector() {
             toast({ title: 'Insufficient resources', description: 'You need 10 PRODUCTION and 40 INTEL to form an alliance.' });
             return false;
           }
-          commander.production = Math.max(0, (commander.production || 0) - 10);
-          commander.intel -= 40;
-          ensureTreaty(commander, target).truceTurns = 999;
-          ensureTreaty(commander, target).alliance = true;
-          ensureTreaty(target, commander).truceTurns = 999;
-          ensureTreaty(target, commander).alliance = true;
-          log(`Alliance formed with ${target.name}.`);
+
+          // Create alliance proposal for AI to evaluate
+          const allianceProposal: DiplomacyProposal = {
+            id: `player-alliance-${S.turn}-${Date.now()}`,
+            type: 'alliance',
+            proposerId: commander.id,
+            targetId: target.id,
+            terms: {},
+            message: `${commander.name} proposes a permanent alliance with ${target.name}.`,
+            turn: S.turn,
+            playerInitiated: true
+          };
+
+          const allianceResponse = evaluateProposal(allianceProposal, target, commander, nations);
+
+          if (allianceResponse.accepted) {
+            commander.production = Math.max(0, (commander.production || 0) - 10);
+            commander.intel -= 40;
+            ensureTreaty(commander, target).truceTurns = 999;
+            ensureTreaty(commander, target).alliance = true;
+            ensureTreaty(target, commander).truceTurns = 999;
+            ensureTreaty(target, commander).alliance = true;
+            log(`${target.name} accepts alliance! ${allianceResponse.reason}`);
+            toast({
+              title: 'Alliance Formed',
+              description: `${target.name} agrees to a permanent alliance!`
+            });
+          } else {
+            log(`${target.name} rejects alliance proposal. ${allianceResponse.reason}`);
+            toast({
+              title: 'Alliance Rejected',
+              description: allianceResponse.reason,
+              variant: 'destructive'
+            });
+            // Penalty for rejection
+            adjustThreat(target, commander.id, 4);
+          }
           updateDisplay();
           consumeAction();
           return true;
@@ -8265,10 +8343,40 @@ export default function NoradVector() {
             toast({ title: 'Insufficient intel', description: 'You need 15 INTEL for a non-aggression pact.' });
             return false;
           }
-          commander.intel -= 15;
-          ensureTreaty(commander, target).truceTurns = 5;
-          ensureTreaty(target, commander).truceTurns = 5;
-          log(`Non-aggression pact signed with ${target.name} for 5 turns.`);
+
+          // Create non-aggression pact proposal for AI to evaluate
+          const pactProposal: DiplomacyProposal = {
+            id: `player-pact-${S.turn}-${Date.now()}`,
+            type: 'non-aggression',
+            proposerId: commander.id,
+            targetId: target.id,
+            terms: { duration: 5 },
+            message: `${commander.name} proposes a 5-turn non-aggression pact with ${target.name}.`,
+            turn: S.turn,
+            playerInitiated: true
+          };
+
+          const pactResponse = evaluateProposal(pactProposal, target, commander, nations);
+
+          if (pactResponse.accepted) {
+            commander.intel -= 15;
+            ensureTreaty(commander, target).truceTurns = 5;
+            ensureTreaty(target, commander).truceTurns = 5;
+            log(`${target.name} accepts non-aggression pact. ${pactResponse.reason}`);
+            toast({
+              title: 'Pact Accepted',
+              description: `${target.name} agrees to a 5-turn non-aggression pact.`
+            });
+          } else {
+            log(`${target.name} rejects non-aggression pact. ${pactResponse.reason}`);
+            toast({
+              title: 'Pact Rejected',
+              description: pactResponse.reason,
+              variant: 'destructive'
+            });
+            // Penalty for rejection
+            adjustThreat(target, commander.id, 3);
+          }
           updateDisplay();
           consumeAction();
           return true;
@@ -8336,6 +8444,109 @@ export default function NoradVector() {
   useEffect(() => {
     handleAttackRef.current = handleAttack;
   }, [handleAttack]);
+
+  // Diplomacy Proposal Handlers
+  const handleAcceptProposal = useCallback(() => {
+    if (!activeDiplomacyProposal) return;
+
+    const proposer = getNationById(activeDiplomacyProposal.proposerId);
+    const target = getNationById(activeDiplomacyProposal.targetId);
+
+    if (!proposer || !target) {
+      setActiveDiplomacyProposal(null);
+      return;
+    }
+
+    // Execute the diplomatic action based on proposal type
+    switch (activeDiplomacyProposal.type) {
+      case 'alliance':
+        aiFormAlliance(proposer, target);
+        addTacticalLog(`${target.name} accepts alliance with ${proposer.name}!`, proposer.id);
+        break;
+
+      case 'truce':
+        const duration = activeDiplomacyProposal.terms.duration || 3;
+        aiSignMutualTruce(proposer, target, duration, 'Diplomatic agreement');
+        addTacticalLog(`${target.name} accepts ${duration}-turn truce with ${proposer.name}.`, proposer.id);
+        break;
+
+      case 'non-aggression':
+        aiSignNonAggressionPact(proposer, target);
+        addTacticalLog(`${target.name} signs non-aggression pact with ${proposer.name}.`, proposer.id);
+        break;
+
+      case 'aid-request':
+        if (target.production >= 20) {
+          target.production -= 20;
+          proposer.production += 15;
+          if (proposer.instability) proposer.instability = Math.max(0, proposer.instability - 10);
+          addTacticalLog(`${target.name} provides economic aid to ${proposer.name}.`, proposer.id);
+        }
+        break;
+
+      case 'sanction-lift':
+        if (target.sanctionedBy?.[proposer.id]) {
+          delete target.sanctionedBy[proposer.id];
+          addTacticalLog(`${target.name} lifts sanctions against ${proposer.name}.`, proposer.id);
+        }
+        break;
+
+      case 'peace-offer':
+        aiSignMutualTruce(proposer, target, 5, 'Peace agreement');
+        adjustThreat(proposer, target.id, -5);
+        adjustThreat(target, proposer.id, -5);
+        addTacticalLog(`${target.name} accepts peace with ${proposer.name}.`, proposer.id);
+        break;
+    }
+
+    // Improve relations
+    adjustThreat(proposer, target.id, -2);
+
+    toast({
+      title: 'Proposal Accepted',
+      description: `You have accepted ${proposer.name}'s proposal.`
+    });
+
+    setActiveDiplomacyProposal(null);
+  }, [activeDiplomacyProposal, getNationById, addTacticalLog, toast]);
+
+  const handleRejectProposal = useCallback(() => {
+    if (!activeDiplomacyProposal) return;
+
+    const proposer = getNationById(activeDiplomacyProposal.proposerId);
+    const target = getNationById(activeDiplomacyProposal.targetId);
+
+    if (!proposer || !target) {
+      setActiveDiplomacyProposal(null);
+      return;
+    }
+
+    // Damage relations for rejection (-6 penalty like Civ 6)
+    adjustThreat(proposer, target.id, 6);
+
+    addTacticalLog(
+      `${target.name} rejects ${proposer.name}'s diplomatic proposal. Relations have deteriorated.`,
+      proposer.id
+    );
+
+    toast({
+      title: 'Proposal Rejected',
+      description: `You have rejected ${proposer.name}'s proposal. Relations have worsened.`,
+      variant: 'destructive'
+    });
+
+    setActiveDiplomacyProposal(null);
+  }, [activeDiplomacyProposal, getNationById, addTacticalLog, toast]);
+
+  // Show pending AI proposals when phase transitions to player
+  useEffect(() => {
+    if (S.phase === 'PLAYER' && pendingAIProposals.length > 0 && !activeDiplomacyProposal) {
+      // Show the first pending proposal
+      const nextProposal = pendingAIProposals[0];
+      setActiveDiplomacyProposal(nextProposal);
+      setPendingAIProposals(prev => prev.slice(1));
+    }
+  }, [S.phase, pendingAIProposals, activeDiplomacyProposal]);
 
   const handleEndTurn = useCallback(() => {
     AudioSys.playSFX('endturn');
@@ -9875,6 +10086,25 @@ export default function NoradVector() {
         onRestartModalTutorial={handleRestartModalTutorial}
         onRestartInteractiveTutorial={handleRestartInteractiveTutorial}
       />
+
+      {/* Diplomacy Proposal Overlay */}
+      {activeDiplomacyProposal && (() => {
+        const proposer = getNationById(activeDiplomacyProposal.proposerId);
+        const target = getNationById(activeDiplomacyProposal.targetId);
+
+        if (!proposer || !target) return null;
+
+        return (
+          <DiplomacyProposalOverlay
+            proposal={activeDiplomacyProposal}
+            proposer={proposer}
+            target={target}
+            onAccept={handleAcceptProposal}
+            onReject={handleRejectProposal}
+            onClose={() => setActiveDiplomacyProposal(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
