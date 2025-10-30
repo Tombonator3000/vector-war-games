@@ -41,7 +41,6 @@ import { GameHelper } from '@/components/GameHelper';
 import { useMultiplayer } from '@/contexts/MultiplayerProvider';
 import { useTutorialContext } from '@/contexts/TutorialContext';
 import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
-import { VictoryProgressPanel } from '@/components/VictoryProgressPanel';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EndGameScreen } from '@/components/EndGameScreen';
@@ -78,7 +77,6 @@ import {
   applyCyberResearchUnlock,
 } from '@/hooks/useCyberWarfare';
 import { GovernanceEventDialog } from '@/components/governance/GovernanceEventDialog';
-import { ElectionCountdownWidget } from '@/components/governance/ElectionCountdownWidget';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 
 // Storage wrapper for localStorage
@@ -9515,9 +9513,6 @@ export default function NoradVector() {
             </div>
           </header>
 
-          <div className="pointer-events-auto fixed top-14 right-6 z-40 w-64">
-            <ElectionCountdownWidget metrics={governance.metrics['player']} />
-          </div>
           {coopEnabled ? (
             <div className="fixed top-14 right-4 pointer-events-auto touch-auto z-40 w-72">
               <ApprovalQueue />
@@ -10383,27 +10378,6 @@ export default function NoradVector() {
       {/* New Phase 1 Tutorial & Feedback Overlays */}
       <TutorialOverlay />
       <PhaseTransitionOverlay phase={S.phase} isTransitioning={isPhaseTransitioning} />
-      <VictoryProgressPanel
-        militaryProgress={(() => {
-          const player = PlayerManager.get();
-          if (!player) return 0;
-          const totalNations = nations.length;
-          const enemiesEliminated = nations.filter(n => !n.isPlayer && n.population <= 0).length;
-          return (enemiesEliminated / Math.max(1, totalNations - 1)) * 100;
-        })()}
-        economicProgress={(() => {
-          const player = PlayerManager.get();
-          if (!player) return 0;
-          const citiesNeeded = 12;
-          return Math.min(100, ((player.cities || 1) / citiesNeeded) * 100);
-        })()}
-        culturalProgress={(() => {
-          const player = PlayerManager.get();
-          if (!player) return 0;
-          return Math.min(100, ((player.culture || 0) / 100) * 100);
-        })()}
-        isVisible={isGameStarted && S.turn >= 5 && !civInfoPanelOpen}
-      />
 
       <CivilizationInfoPanel
         nations={nations}
