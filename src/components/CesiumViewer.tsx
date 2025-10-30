@@ -2,6 +2,8 @@ import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 're
 import {
   Viewer,
   Ion,
+  IonImageryProvider,
+  OpenStreetMapImageryProvider,
   createWorldTerrainAsync,
   Cartesian3,
   Color,
@@ -22,7 +24,8 @@ import {
   BillboardGraphics,
   ModelGraphics,
   PointGraphics,
-  Terrain,
+  ImageryProvider,
+  TerrainProvider,
   Ellipsoid,
   Transforms,
   Cartesian2,
@@ -50,8 +53,9 @@ import {
   type SatelliteOrbit,
 } from '@/utils/cesiumTerritoryData';
 
-// Disable Cesium Ion (use free base imagery instead)
-Ion.defaultAccessToken = '';
+const ionAccessToken = import.meta.env.VITE_CESIUM_ION_TOKEN ?? '';
+Ion.defaultAccessToken = ionAccessToken;
+const hasIonAccess = ionAccessToken.length > 0;
 
 const resolvePublicAssetPath = (assetPath: string) => {
   const base = import.meta.env.BASE_URL ?? '/';
@@ -124,13 +128,30 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
     const initViewer = async () => {
       try {
-        const dayTextureUrl = resolvePublicAssetPath('textures/earth_day.jpg');
-        const imageryProvider = new SingleTileImageryProvider({
-          url: dayTextureUrl,
-          rectangle: Rectangle.fromDegrees(-180, -90, 180, 90),
-        });
+        let imageryProvider: ImageryProvider | undefined;
+        if (hasIonAccess) {
+          try {
+            imageryProvider = await IonImageryProvider.fromAssetId(2);
+          } catch (error) {
+            console.warn('Failed to load Cesium Ion imagery. Falling back to OpenStreetMap.', error);
+          }
+        }
 
-        // Note: terrain requires Cesium Ion access token, so we skip it when Ion is disabled
+        if (!imageryProvider) {
+          imageryProvider = new OpenStreetMapImageryProvider({
+            url: 'https://a.tile.openstreetmap.org/',
+          });
+        }
+
+        let terrainProvider: TerrainProvider | undefined;
+        if (enableTerrain && hasIonAccess) {
+          try {
+            terrainProvider = await createWorldTerrainAsync();
+          } catch (error) {
+            console.warn('Failed to load Cesium Ion terrain. Continuing with ellipsoid terrain.', error);
+          }
+        }
+
         const viewer = new Viewer(containerRef.current!, {
           baseLayerPicker: false,
           geocoder: false,
@@ -144,8 +165,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           infoBox: false,
           selectionIndicator: false,
           imageryProvider: imageryProvider,
-          // Terrain is disabled because it requires Cesium Ion access token
-          terrain: undefined,
+          // Only use Cesium Ion terrain when a token is available; otherwise fall back to the default ellipsoid.
+          terrain: terrainProvider,
         });
 
         viewerRef.current = viewer;
@@ -160,7 +181,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
             rectangle: Rectangle.fromDegrees(-180, -90, 180, 90),
           })
         );
-        nightLayer.alpha = 0.35;
+        nightLayer.alpha = 0.25;
         nightLayer.brightness = 1.2;
 
         // Set camera to orbital view
@@ -188,9 +209,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         viewer.scene.backgroundColor = Color.BLACK;
         viewer.scene.skyBox.show = true;
 
-        // Enable depth testing for proper 3D rendering with terrain
-        // Disabled because terrain requires Cesium Ion access token
-        viewer.scene.globe.depthTestAgainstTerrain = false;
+        // Enable depth testing when terrain meshes are available for accurate 3D intersections.
+        viewer.scene.globe.depthTestAgainstTerrain = Boolean(terrainProvider);
 
         // Setup click handler
         const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
