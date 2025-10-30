@@ -7,6 +7,13 @@
 
 ---
 
+### Session X: 2025-10-30 - Cesium Bootstrapping Fix
+
+#### Time: 17:05 UTC
+
+- Refactored `src/pages/Index.tsx` bootstrapping to initialize audio, world systems, and AI state when the game starts regardless of canvas availability.
+- Gated pointer/mouse listeners so they only attach in Three.js mode while keeping Cesium gameplay functional.
+
 ## 📋 Project Overview
 
 Implementing comprehensive tech tree expansions and fixes based on the COMPREHENSIVE-TECH-TREE-GAMEPLAY-AUDIT-2025.md audit document.
