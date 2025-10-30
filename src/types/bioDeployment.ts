@@ -13,6 +13,7 @@ export interface DeploymentMethod {
   // Costs
   dnaCost: number;
   actionsRequired: number;
+  intelCost: number; // Intelligence points required for deployment
 
   // Characteristics
   initialInfectionRate: number; // Base infection spread speed
@@ -104,6 +105,7 @@ export const DEPLOYMENT_METHODS: DeploymentMethod[] = [
     description: 'Sleeper agents deploy pathogen discreetly. Slow spread but very hard to detect.',
     dnaCost: 5,
     actionsRequired: 1,
+    intelCost: 10,
     initialInfectionRate: 0.5,
     detectionRisk: 10,
     spreadSpeed: 0.8,
@@ -118,6 +120,7 @@ export const DEPLOYMENT_METHODS: DeploymentMethod[] = [
     description: 'Release pathogen at major travel hub. Fast spread via air travel, moderate detection risk.',
     dnaCost: 10,
     actionsRequired: 1,
+    intelCost: 15,
     initialInfectionRate: 1.5,
     detectionRisk: 35,
     spreadSpeed: 1.5,
@@ -133,6 +136,7 @@ export const DEPLOYMENT_METHODS: DeploymentMethod[] = [
     description: 'Deploy along porous borders. Spreads to neighboring nations naturally.',
     dnaCost: 8,
     actionsRequired: 1,
+    intelCost: 12,
     initialInfectionRate: 1.0,
     detectionRisk: 20,
     spreadSpeed: 1.2,
@@ -148,6 +152,7 @@ export const DEPLOYMENT_METHODS: DeploymentMethod[] = [
     description: 'Deploy to multiple nations at once. Maximum chaos, high cost, extreme detection risk.',
     dnaCost: 25,
     actionsRequired: 2,
+    intelCost: 30,
     initialInfectionRate: 1.2,
     detectionRisk: 60,
     spreadSpeed: 1.3,
@@ -168,9 +173,10 @@ export function getDeploymentMethod(id: DeploymentMethodId): DeploymentMethod {
 export function canAffordDeployment(
   method: DeploymentMethod,
   dnaPoints: number,
-  actions: number
+  actions: number,
+  intel: number
 ): boolean {
-  return dnaPoints >= method.dnaCost && actions >= method.actionsRequired;
+  return dnaPoints >= method.dnaCost && actions >= method.actionsRequired && intel >= method.intelCost;
 }
 
 export function calculateDetectionChance(

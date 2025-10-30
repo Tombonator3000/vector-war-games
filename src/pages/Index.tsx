@@ -24,6 +24,7 @@ import {
 } from '@/hooks/usePandemic';
 import { useBioWarfare } from '@/hooks/useBioWarfare';
 import { initializeAllAINations, processAllAINationsBioWarfare } from '@/lib/aiBioWarfareIntegration';
+import { DEPLOYMENT_METHODS } from '@/types/bioDeployment';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import { FlashpointOutcomeModal } from '@/components/FlashpointOutcomeModal';
 import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
@@ -8216,6 +8217,18 @@ export default function NoradVector() {
     useFalseFlag: boolean;
     falseFlagNationId: string | null;
   }>) => {
+    // Calculate total intel cost
+    const totalIntelCost = selections.reduce((total, selection) => {
+      const method = DEPLOYMENT_METHODS.find(m => m.id === selection.deploymentMethod);
+      return total + (method?.intelCost || 0);
+    }, 0);
+
+    // Deduct intel from player
+    const player = PlayerManager.get();
+    if (player) {
+      player.intel = Math.max(0, (player.intel || 0) - totalIntelCost);
+    }
+
     deployBioWeapon(selections, S.turn);
   }, [deployBioWeapon, S.turn]);
 
@@ -10382,6 +10395,7 @@ export default function NoradVector() {
             intelligence: n.intelligence || 50,
           }))}
         playerActions={S.actionsRemaining}
+        playerIntel={PlayerManager.get()?.intel || 0}
         onSelectPlagueType={selectPlagueType}
         onEvolveNode={(nodeId: string) => evolveNode({ nodeId: nodeId as any })}
         onDevolveNode={(nodeId: string) => devolveNode({ nodeId: nodeId as any })}
