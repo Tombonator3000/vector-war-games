@@ -499,9 +499,10 @@ export function calculateFlashpointProbability(turn: number, defcon: number) {
   const normalizedTurn = Math.max(turn, 0);
   const normalizedDefcon = Math.min(Math.max(defcon, 1), 5);
 
-  // Turn multiplier now starts at 1x and grows to 2.5x over time
-  // This ensures flashpoints happen from the very beginning
-  const turnMultiplier = 1 + Math.min(normalizedTurn / 75, 1.5);
+  // Start at 1x and ease up to 2.5x around late mid-game.
+  // Using an eased curve keeps early turns hot enough without immediately spiking.
+  const turnProgress = Math.min(normalizedTurn / 100, 1);
+  const turnMultiplier = 1 + 1.5 * Math.pow(turnProgress, 1.1);
 
   const probability = baseProbability * (6 - normalizedDefcon) * turnMultiplier;
 
