@@ -52,7 +52,7 @@ export function VictoryProgressPanel({
     <motion.div
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="fixed top-24 right-6 z-30 w-72"
+      className="fixed top-48 right-6 z-30 w-72"
     >
       <Card className="bg-black/90 border-cyan-500/60 shadow-xl shadow-cyan-500/20">
         <div className="p-4">

@@ -20,7 +20,14 @@ export function TutorialOverlay() {
     setTargetElement(element);
 
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Only scroll if element is significantly off-screen
+      const rect = element.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const isOffScreen = rect.top < 80 || rect.bottom > viewportHeight - 80;
+
+      if (isOffScreen) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
   }, [currentStep, tutorialEnabled]);
 
@@ -35,19 +42,85 @@ export function TutorialOverlay() {
 
     const rect = targetElement.getBoundingClientRect();
     const padding = 20;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Estimate card dimensions (max-w-md = 448px)
+    const cardWidth = 448;
+    const cardHeight = 250; // Approximate height
+
+    let top = 0;
+    let left = 0;
+    let transform = '';
 
     switch (currentStep.position) {
       case 'top':
-        return { top: `${rect.top - padding}px`, left: `${rect.left + rect.width / 2}px`, transform: 'translate(-50%, -100%)' };
+        top = rect.top - padding;
+        left = rect.left + rect.width / 2;
+        transform = 'translate(-50%, -100%)';
+
+        // Check if card would go off top
+        if (top - cardHeight < padding) {
+          // Switch to bottom position
+          top = rect.bottom + padding;
+          transform = 'translate(-50%, 0)';
+        }
+        break;
       case 'bottom':
-        return { top: `${rect.bottom + padding}px`, left: `${rect.left + rect.width / 2}px`, transform: 'translate(-50%, 0)' };
+        top = rect.bottom + padding;
+        left = rect.left + rect.width / 2;
+        transform = 'translate(-50%, 0)';
+
+        // Check if card would go off bottom
+        if (top + cardHeight > viewportHeight - padding) {
+          // Switch to top position
+          top = rect.top - padding;
+          transform = 'translate(-50%, -100%)';
+        }
+        break;
       case 'left':
-        return { top: `${rect.top + rect.height / 2}px`, left: `${rect.left - padding}px`, transform: 'translate(-100%, -50%)' };
+        top = rect.top + rect.height / 2;
+        left = rect.left - padding;
+        transform = 'translate(-100%, -50%)';
+
+        // Check if card would go off left
+        if (left - cardWidth < padding) {
+          // Switch to right position
+          left = rect.right + padding;
+          transform = 'translate(0, -50%)';
+        }
+        break;
       case 'right':
-        return { top: `${rect.top + rect.height / 2}px`, left: `${rect.right + padding}px`, transform: 'translate(0, -50%)' };
+        top = rect.top + rect.height / 2;
+        left = rect.right + padding;
+        transform = 'translate(0, -50%)';
+
+        // Check if card would go off right
+        if (left + cardWidth > viewportWidth - padding) {
+          // Switch to left position
+          left = rect.left - padding;
+          transform = 'translate(-100%, -50%)';
+        }
+        break;
       default:
         return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
     }
+
+    // Final boundary checks to clamp position within viewport
+    if (transform === 'translate(-50%, -50%)') {
+      // Center vertical alignment
+      top = Math.max(cardHeight / 2 + padding, Math.min(viewportHeight - cardHeight / 2 - padding, top));
+    } else if (transform === 'translate(-50%, 0)' || transform === 'translate(-50%, -100%)') {
+      // Horizontal centering - ensure it doesn't go off sides
+      const halfCardWidth = cardWidth / 2;
+      left = Math.max(halfCardWidth + padding, Math.min(viewportWidth - halfCardWidth - padding, left));
+    } else if (transform === 'translate(0, -50%)' || transform === 'translate(-100%, -50%)') {
+      // Vertical centering - ensure it doesn't go off top/bottom
+      const halfCardHeight = cardHeight / 2;
+      top = Math.max(halfCardHeight + padding, Math.min(viewportHeight - halfCardHeight - padding, top));
+    }
+
+    return { top: `${top}px`, left: `${left}px`, transform };
   };
 
   return (
@@ -86,7 +159,7 @@ export function TutorialOverlay() {
           className="absolute pointer-events-auto"
           style={getPosition()}
         >
-          <Card className="p-6 max-w-md bg-gradient-to-br from-cyan-950/95 to-black/95 backdrop-blur-xl border-2 border-cyan-500/60 shadow-2xl shadow-cyan-500/20">
+          <Card className="p-6 max-w-md max-h-[80vh] overflow-y-auto bg-gradient-to-br from-cyan-950/95 to-black/95 backdrop-blur-xl border-2 border-cyan-500/60 shadow-2xl shadow-cyan-500/20">
             <div className="flex items-start justify-between mb-4">
               <Badge variant="outline" className="text-xs border-cyan-500/50 text-cyan-300">
                 Tutorial
