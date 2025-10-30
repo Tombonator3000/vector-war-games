@@ -2937,9 +2937,13 @@ function productionPhase() {
       }
     }
 
+    // Apply economy tech bonuses
+    const economyProdMult = n.productionMultiplier || 1.0;
+    const economyUraniumBonus = n.uraniumPerTurn || 0;
+
     const moraleMultiplier = calculateMoraleProductionMultiplier(n.morale ?? 0);
-    n.production += Math.floor(baseProd * prodMult * moraleMultiplier);
-    n.uranium += Math.floor(baseUranium * uranMult * moraleMultiplier);
+    n.production += Math.floor(baseProd * prodMult * economyProdMult * moraleMultiplier);
+    n.uranium += Math.floor(baseUranium * uranMult * moraleMultiplier) + economyUraniumBonus;
     n.intel += Math.floor(baseIntel * moraleMultiplier);
     
     // Instability effects
@@ -7249,6 +7253,25 @@ export default function NoradVector() {
         disabled: (player.intel || 0) < 5,
         disabledReason: 'Requires 5 INTEL to deploy a satellite.',
       },
+      ...(player.hasASATCapability ? [{
+        id: 'asat_strike' as const,
+        title: 'ASAT STRIKE',
+        subtitle: 'Destroy enemy satellite',
+        costText: 'Cost: 15 INTEL + 5 URANIUM',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 15 || (player.uranium || 0) < 5,
+        disabledReason: 'Requires 15 INTEL and 5 URANIUM to launch ASAT weapon.',
+        targetFilter: (nation: Nation) => nation.satellites && Object.keys(nation.satellites).length > 0,
+      }] : []),
+      ...(((player.orbitalStrikesAvailable || 0) > 0) ? [{
+        id: 'orbital_strike' as const,
+        title: 'ORBITAL STRIKE',
+        subtitle: `Kinetic bombardment (${player.orbitalStrikesAvailable} left)`,
+        costText: 'Cost: 50 INTEL + 30 URANIUM',
+        requiresTarget: true,
+        disabled: (player.intel || 0) < 50 || (player.uranium || 0) < 30,
+        disabledReason: 'Requires 50 INTEL and 30 URANIUM for orbital strike.',
+      }] : []),
       {
         id: 'sabotage',
         title: 'SABOTAGE',
@@ -7272,10 +7295,25 @@ export default function NoradVector() {
         id: 'culture_bomb',
         title: 'CULTURE BOMB',
         subtitle: 'Steal 10% population',
-        costText: 'Cost: 20 INTEL',
+        costText: (() => {
+          const baseCost = 20;
+          const reduction = player.cultureBombCostReduction || 0;
+          const actualCost = Math.ceil(baseCost * (1 - reduction));
+          return `Cost: ${actualCost} INTEL${reduction > 0 ? ` (-${Math.floor(reduction * 100)}%)` : ''}`;
+        })(),
         requiresTarget: true,
-        disabled: (player.intel || 0) < 20,
-        disabledReason: 'Requires 20 INTEL to deploy a culture bomb.',
+        disabled: (() => {
+          const baseCost = 20;
+          const reduction = player.cultureBombCostReduction || 0;
+          const actualCost = Math.ceil(baseCost * (1 - reduction));
+          return (player.intel || 0) < actualCost;
+        })(),
+        disabledReason: (() => {
+          const baseCost = 20;
+          const reduction = player.cultureBombCostReduction || 0;
+          const actualCost = Math.ceil(baseCost * (1 - reduction));
+          return `Requires ${actualCost} INTEL to deploy a culture bomb.`;
+        })(),
         targetFilter: nation => nation.population > 5,
       },
       {
@@ -7353,11 +7391,94 @@ export default function NoradVector() {
             toast({ title: 'Insufficient intel', description: 'You need 5 INTEL to deploy a satellite.' });
             return false;
           }
-          commander.intel -= 5;
-          commander.satellites = commander.satellites || {};
-          commander.satellites[target.id] = true;
-          log(`Satellite deployed over ${target.name}`);
-          registerSatelliteOrbit(commander.id, target.id);
+          {
+            // Check satellite limit
+            const maxSats = commander.maxSatellites || 3;
+            const currentSats = Object.keys(commander.satellites || {}).filter(id => commander.satellites?.[id]).length;
+            if (currentSats >= maxSats) {
+              toast({ title: 'Satellite limit reached', description: `Maximum ${maxSats} satellites deployed. Research Advanced Satellite Network for more slots.` });
+              return false;
+            }
+
+            commander.intel -= 5;
+            commander.satellites = commander.satellites || {};
+            commander.satellites[target.id] = true;
+            log(`Satellite deployed over ${target.name}`);
+            registerSatelliteOrbit(commander.id, target.id);
+          }
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'asat_strike':
+          if (!target) return false;
+          if ((commander.intel || 0) < 15 || (commander.uranium || 0) < 5) {
+            toast({ title: 'Insufficient resources', description: 'You need 15 INTEL and 5 URANIUM for ASAT strike.' });
+            return false;
+          }
+          {
+            const targetSatellites = Object.keys(target.satellites || {}).filter(id => target.satellites?.[id]);
+            if (targetSatellites.length === 0) {
+              toast({ title: 'No satellites', description: `${target.name} has no satellites to destroy.` });
+              return false;
+            }
+            // Destroy a random satellite
+            const randomSat = targetSatellites[Math.floor(Math.random() * targetSatellites.length)];
+            if (target.satellites) {
+              delete target.satellites[randomSat];
+            }
+            commander.intel -= 15;
+            commander.uranium -= 5;
+            log(`ASAT strike destroys ${target.name}'s satellite!`, 'alert');
+            increaseThreat(target, commander.id, 15);
+          }
+          updateDisplay();
+          consumeAction();
+          return true;
+
+        case 'orbital_strike':
+          if (!target) return false;
+          if ((commander.intel || 0) < 50 || (commander.uranium || 0) < 30) {
+            toast({ title: 'Insufficient resources', description: 'You need 50 INTEL and 30 URANIUM for orbital strike.' });
+            return false;
+          }
+          if ((commander.orbitalStrikesAvailable || 0) <= 0) {
+            toast({ title: 'No strikes available', description: 'No orbital strikes remaining.' });
+            return false;
+          }
+          {
+            // Orbital strike: massive damage
+            const popLoss = Math.floor(target.population * 0.15);
+            const prodLoss = Math.floor((target.production || 0) * 0.20);
+            const warheadTypes = Object.keys(target.warheads || {});
+            const warheadsDestroyed = Math.min(3, warheadTypes.length);
+
+            target.population = Math.max(0, target.population - popLoss);
+            target.production = Math.max(0, (target.production || 0) - prodLoss);
+
+            // Destroy random warheads
+            for (let i = 0; i < warheadsDestroyed; i++) {
+              if (warheadTypes.length > 0) {
+                const idx = Math.floor(Math.random() * warheadTypes.length);
+                const type = Number(warheadTypes[idx]);
+                if (target.warheads && target.warheads[type]) {
+                  target.warheads[type] = Math.max(0, target.warheads[type] - 1);
+                  if (target.warheads[type] <= 0) {
+                    delete target.warheads[type];
+                  }
+                }
+                warheadTypes.splice(idx, 1);
+              }
+            }
+
+            commander.intel -= 50;
+            commander.uranium -= 30;
+            commander.orbitalStrikesAvailable = (commander.orbitalStrikesAvailable || 1) - 1;
+
+            log(`☄️ ORBITAL STRIKE devastates ${target.name}: ${popLoss}M casualties, ${warheadsDestroyed} warheads destroyed!`, 'alert');
+            increaseThreat(target, commander.id, 35);
+            S.defcon = Math.max(1, S.defcon - 1);
+          }
           updateDisplay();
           consumeAction();
           return true;
@@ -7383,7 +7504,18 @@ export default function NoradVector() {
               }
             }
             commander.intel -= 10;
-            log(`Sabotage successful: ${target.name}'s ${type}MT warhead destroyed.`);
+
+            // Apply sabotage detection reduction from Deep Cover Operations tech
+            const baseDetectionChance = 0.40;
+            const detectionReduction = commander.sabotageDetectionReduction || 0;
+            const actualDetectionChance = Math.max(0.05, baseDetectionChance - detectionReduction);
+
+            if (Math.random() < actualDetectionChance) {
+              log(`Sabotage successful: ${target.name}'s ${type}MT warhead destroyed (DETECTED).`, 'warning');
+              increaseThreat(target, commander.id, 20);
+            } else {
+              log(`Sabotage successful: ${target.name}'s ${type}MT warhead destroyed.`);
+            }
           }
           updateDisplay();
           consumeAction();
@@ -7395,22 +7527,40 @@ export default function NoradVector() {
             toast({ title: 'Insufficient intel', description: 'You need 15 INTEL for propaganda operations.' });
             return false;
           }
-          commander.intel -= 15;
-          target.instability = (target.instability || 0) + 20;
-          log(`Propaganda campaign spikes instability in ${target.name}.`);
+          {
+            commander.intel -= 15;
+
+            // Apply propaganda effectiveness bonus from Propaganda Mastery tech
+            const baseInstability = 20;
+            const effectiveness = commander.memeWaveEffectiveness || 1.0;
+            const actualInstability = Math.floor(baseInstability * effectiveness);
+
+            target.instability = (target.instability || 0) + actualInstability;
+            log(`Propaganda campaign spikes instability in ${target.name} (+${actualInstability}).`);
+          }
           updateDisplay();
           consumeAction();
           return true;
 
         case 'culture_bomb':
           if (!target) return false;
-          if ((commander.intel || 0) < 20) {
-            toast({ title: 'Insufficient intel', description: 'You need 20 INTEL for a culture bomb.' });
-            return false;
-          }
           {
-            const stolen = Math.max(1, Math.floor(target.population * 0.1));
-            commander.intel -= 20;
+            // Apply culture bomb cost reduction from tech
+            const baseCost = 20;
+            const costReduction = commander.cultureBombCostReduction || 0;
+            const actualCost = Math.ceil(baseCost * (1 - costReduction));
+
+            if ((commander.intel || 0) < actualCost) {
+              toast({ title: 'Insufficient intel', description: `You need ${actualCost} INTEL for a culture bomb.` });
+              return false;
+            }
+
+            // Apply stolen pop conversion rate bonus
+            const baseStolen = Math.floor(target.population * 0.1);
+            const conversionRate = commander.stolenPopConversionRate || 1.0;
+            const stolen = Math.max(1, Math.floor(baseStolen * conversionRate));
+
+            commander.intel -= actualCost;
             target.population = Math.max(0, target.population - stolen);
             commander.population += stolen;
             commander.migrantsThisTurn = (commander.migrantsThisTurn || 0) + stolen;
