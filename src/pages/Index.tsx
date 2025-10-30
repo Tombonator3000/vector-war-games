@@ -47,7 +47,6 @@ import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
 import { useGameEra } from '@/hooks/useGameEra';
 import { useVictoryTracking } from '@/hooks/useVictoryTracking';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
-import { VictoryDashboard } from '@/components/VictoryDashboard';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
 import { LockedFeatureWrapper } from '@/components/LockedFeatureBadge';
 import { ERA_DEFINITIONS } from '@/types/era';
@@ -10450,18 +10449,6 @@ export default function NoradVector() {
         />
       )}
 
-      {/* Victory Dashboard */}
-      {gamePhase === 'game' && !S.gameOver && (
-        <VictoryDashboard
-          paths={victoryAnalysis.paths}
-          closestVictory={victoryAnalysis.closestVictory}
-          turnsUntilClosestVictory={victoryAnalysis.turnsUntilClosestVictory}
-          recommendedPath={victoryAnalysis.recommendedPath}
-          warnings={victoryAnalysis.warnings}
-          currentTurn={S.turn}
-        />
-      )}
-
       {/* Action Consequence Preview */}
       {consequencePreview && (
         <ActionConsequencePreview
@@ -10487,6 +10474,7 @@ export default function NoradVector() {
         onClose={() => setCivInfoPanelOpen(false)}
         currentTurn={S.turn}
         governanceMetrics={governance.metrics}
+        victoryAnalysis={victoryAnalysis}
       />
 
       <GameHelper

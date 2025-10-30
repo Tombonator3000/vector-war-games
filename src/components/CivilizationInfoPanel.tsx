@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag, Smile, Meh, Frown, AlertTriangle, Trophy, Skull, Building2, Sparkles, Calendar, ThumbsUp } from 'lucide-react';
 import { Nation } from '../types/game';
 import type { GovernanceMetrics } from '@/hooks/useGovernance';
+import type { VictoryAnalysis } from '@/types/victory';
+import { VictoryPathsSection } from './VictoryPathsSection';
 import { motion } from 'framer-motion';
 
 interface CivilizationInfoPanelProps {
@@ -10,6 +12,7 @@ interface CivilizationInfoPanelProps {
   onClose: () => void;
   currentTurn: number;
   governanceMetrics?: Record<string, GovernanceMetrics>;
+  victoryAnalysis: VictoryAnalysis;
 }
 
 type TabType = 'own-status' | 'enemy-status' | 'diplomacy';
@@ -19,7 +22,8 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   isOpen,
   onClose,
   currentTurn,
-  governanceMetrics = {}
+  governanceMetrics = {},
+  victoryAnalysis,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('own-status');
 
@@ -101,6 +105,11 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
 
   const renderOwnStatus = () => (
     <div className="space-y-6">
+      <VictoryPathsSection
+        {...victoryAnalysis}
+        currentTurn={currentTurn}
+      />
+
       {/* Resources Section */}
       <div>
         <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
