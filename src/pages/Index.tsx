@@ -44,6 +44,7 @@ import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
 import { VictoryProgressPanel } from '@/components/VictoryProgressPanel';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
+import { EndGameScreen } from '@/components/EndGameScreen';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit } from '@/types/game';
 import type { DiplomacyProposal } from '@/types/diplomacy';
 import { evaluateProposal, shouldAIInitiateProposal } from '@/lib/aiDiplomacyEvaluator';
@@ -155,6 +156,17 @@ interface GameState {
   conventionalMovements?: ConventionalMovementMarker[];
   conventionalUnits?: ConventionalUnitMarker[];
   satelliteOrbits: SatelliteOrbit[];
+
+  // Game statistics tracking
+  statistics?: {
+    nukesLaunched: number;
+    nukesReceived: number;
+    enemiesDestroyed: number;
+  };
+
+  // End game screen state
+  showEndGameScreen?: boolean;
+  endGameStatistics?: any;
 }
 
 type ThemeId =
@@ -469,6 +481,12 @@ let S: LocalGameState = {
   conventional: createDefaultConventionalState(),
   conventionalMovements: [],
   conventionalUnits: [],
+  statistics: {
+    nukesLaunched: 0,
+    nukesReceived: 0,
+    enemiesDestroyed: 0,
+  },
+  showEndGameScreen: false,
 };
 
 let nations: LocalNation[] = [];
@@ -2819,6 +2837,12 @@ function launch(from: Nation, to: Nation, yieldMT: number) {
   AudioSys.playSFX('launch');
   DoomsdayClock.tick(0.3);
 
+  // Track statistics
+  if (from.isPlayer) {
+    if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
+    S.statistics.nukesLaunched++;
+  }
+
   // Toast feedback for player launches
   if (from.isPlayer) {
     toast({
@@ -4245,11 +4269,26 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
   if (target) {
     const reduction = Math.max(0, 1 - target.defense * 0.05);
     const damage = yieldMT * reduction;
+    const oldPopulation = target.population;
     target.population = Math.max(0, target.population - damage);
     target.instability = Math.min(100, (target.instability || 0) + yieldMT);
-    
+
     log(`💥 ${yieldMT}MT detonation at ${target.name}! -${Math.floor(damage)}M`, "alert");
-    
+
+    // Track statistics
+    if (target.isPlayer) {
+      if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
+      S.statistics.nukesReceived++;
+    }
+    // Track if target was destroyed by this nuke
+    if (oldPopulation > 0 && target.population <= 0 && !target.isPlayer) {
+      const player = PlayerManager.get();
+      if (player) {
+        if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
+        S.statistics.enemiesDestroyed++;
+      }
+    }
+
     if (yieldMT >= 50) {
       DoomsdayClock.tick(0.5);
     }
@@ -4275,7 +4314,11 @@ function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
   });
   AudioSys.playSFX('launch');
 
+  // Track statistics for submarine launches
   if (from.isPlayer) {
+    if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
+    S.statistics.nukesLaunched++;
+
     toast({
       title: '🌊 Submarine Launched',
       description: `SLBM strike inbound to ${to.name}. ${yieldMT}MT warhead deployed.`,
@@ -4298,7 +4341,11 @@ function launchBomber(from: Nation, to: Nation, payload: any) {
     payload
   });
 
+  // Track statistics for bombers as nuclear launches
   if (from.isPlayer) {
+    if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
+    S.statistics.nukesLaunched++;
+
     toast({
       title: '✈️ Bomber Dispatched',
       description: `Strategic bomber en route to ${to.name}. Payload armed.`,
@@ -4466,22 +4513,78 @@ function checkVictory() {
 // End game
 function endGame(victory: boolean, message: string) {
   S.gameOver = true;
-  
+
   const player = PlayerManager.get();
-  const score = S.turn * 10 + (player?.population || 0) * 5;
-  
+  if (!player) return;
+
+  const score = S.turn * 10 + player.population * 5 + player.missiles * 20;
+  const timestamp = new Date().toISOString();
+
+  // Count alliances and wars
+  const alliances = Object.values(player.treaties || {}).filter((t: any) => t.alliance).length;
+  const wars = nations.filter(n => n.id !== player.id && n.population > 0 && !player.treaties?.[n.id]?.alliance).length;
+
+  // Calculate doomsday minutes (from a 7:00 countdown)
+  const doomsdayMinutes = Math.max(0, 7 - (5 - S.defcon) * 1.5);
+
+  // Collect comprehensive game statistics
+  const statistics = {
+    playerName: S.playerName || S.selectedLeader || 'Player',
+    leader: S.selectedLeader || 'Unknown Leader',
+    doctrine: S.selectedDoctrine || 'None',
+    turns: S.turn,
+    finalScore: Math.floor(score),
+    victory,
+    victoryMessage: message,
+
+    // Nation statistics
+    finalPopulation: player.population,
+    finalProduction: player.production,
+    finalCities: player.cities || 0,
+    finalMissiles: player.missiles,
+    finalBombers: player.bombers || 0,
+    finalSubmarines: player.submarines || 0,
+    finalDefense: player.defense,
+    finalUranium: player.uranium,
+    finalIntel: player.intel,
+
+    // Governance
+    finalMorale: player.morale,
+    finalPublicOpinion: player.publicOpinion,
+    finalCabinetApproval: player.cabinetApproval,
+
+    // Military actions
+    nukesLaunched: S.statistics?.nukesLaunched || 0,
+    nukesReceived: S.statistics?.nukesReceived || 0,
+    enemiesDestroyed: S.statistics?.enemiesDestroyed || 0,
+
+    // Diplomacy
+    alliances,
+    wars,
+
+    // Game state
+    finalDefcon: S.defcon,
+    doomsdayMinutes,
+
+    timestamp,
+  };
+
   // Save highscore
   const highscores = JSON.parse(Storage.getItem('highscores') || '[]');
   highscores.push({
-    name: S.playerName || S.selectedLeader || 'Player',
-    doctrine: S.selectedDoctrine || null,
-    score,
+    name: statistics.playerName,
+    doctrine: statistics.doctrine,
+    score: statistics.finalScore,
     turns: S.turn,
-    date: new Date().toISOString()
+    date: timestamp
   });
   highscores.sort((a: any, b: any) => b.score - a.score);
   Storage.setItem('highscores', JSON.stringify(highscores.slice(0, 10)));
-  
+
+  // Store statistics for end game screen
+  S.endGameStatistics = statistics;
+  S.showEndGameScreen = true;
+
   if (victory) {
     log('🏆 VICTORY ACHIEVED!', 'success');
     log(`Victory Condition: ${message}`, 'success');
@@ -10206,6 +10309,20 @@ export default function NoradVector() {
           />
         );
       })()}
+
+      {/* End Game Screen */}
+      {S.showEndGameScreen && S.endGameStatistics && (
+        <EndGameScreen
+          statistics={S.endGameStatistics}
+          highscores={JSON.parse(Storage.getItem('highscores') || '[]')}
+          onRestart={() => {
+            window.location.reload();
+          }}
+          onMainMenu={() => {
+            navigate('/');
+          }}
+        />
+      )}
     </div>
   );
 }
