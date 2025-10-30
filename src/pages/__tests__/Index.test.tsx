@@ -97,10 +97,6 @@ vi.mock('@/components/governance/GovernanceEventDialog', () => ({
   GovernanceEventDialog: () => null,
 }));
 
-vi.mock('@/components/governance/MoraleHeatmapOverlay', () => ({
-  MoraleHeatmapOverlay: () => null,
-}));
-
 vi.mock('@/components/governance/ElectionCountdownWidget', () => ({
   ElectionCountdownWidget: () => <div data-testid="election-widget" />,
 }));
