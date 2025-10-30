@@ -360,7 +360,7 @@ const IntroLogo = () => (
 
 // Animated starfield background component
 const Starfield = () => {
-  const stars = React.useMemo(() => {
+  const stars = useMemo(() => {
     return Array.from({ length: 200 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,

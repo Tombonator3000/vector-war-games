@@ -588,3 +588,5 @@ Looking for:
 
 ## 2025-10-30T08:46:27+00:00
 - Ran `npm run test`; Vitest reported pre-existing failure in `src/hooks/__tests__/useConventionalWarfare.test.tsx` (duplicate identifier) unrelated to interface update.
+## 2025-10-30T12:35:19+00:00
+- Replaced `React.useMemo` with the already imported `useMemo` in `src/pages/Index.tsx` to prevent a runtime reference error flagged during review.
