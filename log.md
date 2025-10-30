@@ -665,5 +665,9 @@ Looking for:
 - Updated `src/pages/Index.tsx` to default the map style to `flat-realistic` without reading from persisted storage so new sessions always boot with the intended aesthetic.
 - Removed the `Storage.setItem('map_style', style)` call inside `handleMapStyleChange` to avoid writing outdated preferences while keeping audio feedback and texture preloading intact.
 
+## 2025-10-30T18:30:24+00:00
+- Routed victory tracking data into the Civilization Status Report, embedding a collapsible Victory Paths section within the Empire Info tab experience.
+- Retired the floating VictoryDashboard overlay in favor of the new integrated `VictoryPathsSection` component and updated `Index.tsx` wiring.
+
 ## 2025-10-31T00:00:00+00:00
 - Removed the Cesium/Classic toggle button from the HUD header and introduced a dedicated globe renderer selector within the options sheet, persisting choices and maintaining toast feedback.
