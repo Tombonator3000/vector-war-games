@@ -591,3 +591,5 @@ Looking for:
 
 ## 2025-10-30T13:23:27+00:00
 - Disabled ocean wave rendering in `src/pages/Index.tsx` to remove sine-band visuals per request.
+
+2025-10-30T13:29:22Z Removed synthwave gradient overlays from CSS selectors to clean background.
