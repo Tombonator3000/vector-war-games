@@ -635,7 +635,7 @@ interface ResearchProject {
   id: string;
   name: string;
   description: string;
-  category: 'warhead' | 'defense' | 'intel' | 'delivery' | 'conventional';
+  category: 'warhead' | 'defense' | 'intel' | 'delivery' | 'conventional' | 'cyber' | 'economy' | 'culture' | 'space' | 'intelligence';
   turns: number;
   cost: ResourceCost;
   yield?: number;
@@ -1048,6 +1048,129 @@ const RESEARCH_TREE: ResearchProject[] = [
       nation.researched = nation.researched || {};
       nation.researched.culture_immunity = true;
       nation.treatyLockDuration = 5;
+    }
+  },
+  {
+    id: 'space_satellite_network',
+    name: 'Advanced Satellite Network',
+    description: 'Expanded orbital infrastructure provides +1 additional satellite deployment slot.',
+    category: 'space',
+    turns: 3,
+    cost: { production: 35, intel: 25 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.space_satellite_network = true;
+      nation.maxSatellites = (nation.maxSatellites || 3) + 1;
+    }
+  },
+  {
+    id: 'space_recon_optics',
+    name: 'Enhanced Recon Optics',
+    description: 'Advanced imaging sensors increase satellite intelligence gathering by 50%.',
+    category: 'space',
+    turns: 3,
+    cost: { production: 30, intel: 30 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.space_recon_optics = true;
+      nation.satelliteIntelBonus = (nation.satelliteIntelBonus || 1.0) * 1.50;
+    }
+  },
+  {
+    id: 'space_asat_weapons',
+    name: 'Anti-Satellite Weapons',
+    description: 'Ground-based and orbital ASAT systems enable destruction of enemy satellites.',
+    category: 'space',
+    turns: 4,
+    cost: { production: 45, intel: 35, uranium: 10 },
+    prerequisites: ['space_satellite_network'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.space_asat_weapons = true;
+      nation.hasASATCapability = true;
+    }
+  },
+  {
+    id: 'space_weapon_platform',
+    name: 'Space Weapon Platform',
+    description: 'Orbital strike capability delivers precision kinetic bombardment (1 use per game).',
+    category: 'space',
+    turns: 5,
+    cost: { production: 60, intel: 40, uranium: 20 },
+    prerequisites: ['space_asat_weapons'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.space_weapon_platform = true;
+      nation.orbitalStrikesAvailable = (nation.orbitalStrikesAvailable || 0) + 1;
+    }
+  },
+  {
+    id: 'space_gps_warfare',
+    name: 'GPS Warfare',
+    description: 'Satellite navigation disruption reduces enemy missile accuracy by 20%.',
+    category: 'space',
+    turns: 3,
+    cost: { production: 40, intel: 35 },
+    prerequisites: ['space_satellite_network'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.space_gps_warfare = true;
+      nation.enemyMissileAccuracyReduction = (nation.enemyMissileAccuracyReduction || 0) + 0.20;
+    }
+  },
+  {
+    id: 'intelligence_deep_cover',
+    name: 'Deep Cover Operations',
+    description: 'Sleeper agents and NOC operatives reduce sabotage detection by 30%.',
+    category: 'intelligence',
+    turns: 3,
+    cost: { production: 25, intel: 30 },
+    prerequisites: ['counterintel'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.intelligence_deep_cover = true;
+      nation.sabotageDetectionReduction = (nation.sabotageDetectionReduction || 0) + 0.30;
+    }
+  },
+  {
+    id: 'intelligence_propaganda',
+    name: 'Propaganda Mastery',
+    description: 'Psyops and memetic warfare increase meme wave effectiveness by 50%.',
+    category: 'intelligence',
+    turns: 3,
+    cost: { production: 20, intel: 25 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.intelligence_propaganda = true;
+      nation.memeWaveEffectiveness = (nation.memeWaveEffectiveness || 1.0) * 1.50;
+    }
+  },
+  {
+    id: 'intelligence_sigint',
+    name: 'Signals Intelligence',
+    description: 'NSA-tier SIGINT automatically reveals enemy research projects.',
+    category: 'intelligence',
+    turns: 4,
+    cost: { production: 30, intel: 40 },
+    prerequisites: ['counterintel'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.intelligence_sigint = true;
+      nation.autoRevealEnemyResearch = true;
+    }
+  },
+  {
+    id: 'intelligence_covert_action',
+    name: 'Covert Action Programs',
+    description: 'CIA-style regime destabilization: +15% enemy instability per turn when activated.',
+    category: 'intelligence',
+    turns: 5,
+    cost: { production: 50, intel: 50 },
+    prerequisites: ['intelligence_deep_cover', 'intelligence_sigint'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.intelligence_covert_action = true;
+      nation.hasRegimeDestabilization = true;
     }
   }
 ];
@@ -6522,7 +6645,12 @@ export default function NoradVector() {
       { id: 'delivery', label: 'Strategic Delivery Systems' },
       { id: 'defense', label: 'Defense Initiatives' },
       { id: 'intel', label: 'Intelligence Operations' },
+      { id: 'cyber', label: 'Cyber Warfare' },
       { id: 'conventional', label: 'Conventional Forces' },
+      { id: 'economy', label: 'Economic Development' },
+      { id: 'culture', label: 'Cultural Influence' },
+      { id: 'space', label: 'Space Superiority' },
+      { id: 'intelligence', label: 'Covert Operations' },
     ];
 
     const formatCost = (cost: ResourceCost) => {
