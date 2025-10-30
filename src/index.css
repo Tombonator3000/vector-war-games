@@ -387,6 +387,29 @@ body {
   filter: drop-shadow(0 0 40px rgba(74, 158, 255, 0.4));
 }
 
+.hero-cesium-globe {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  box-shadow: inset 0 0 40px rgba(0, 40, 120, 0.35);
+}
+
+.hero-cesium-globe .cesium-viewer,
+.hero-cesium-globe .cesium-widget,
+.hero-cesium-globe canvas {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+}
+
+.hero-cesium-globe .cesium-viewer-bottom,
+.hero-cesium-globe .cesium-viewer-toolbar {
+  display: none !important;
+}
+
 .earth-globe {
   width: 100%;
   height: 100%;
