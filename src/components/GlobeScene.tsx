@@ -230,20 +230,64 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
         const position = latLonToVector3(light.lon, light.lat, EARTH_RADIUS + 0.012);
         const nation = nations.find(n => n.id === light.nationId);
         const color = nation?.color || '#ffdd00';
-        
+
         return (
-          <mesh key={light.id} position={position.toArray() as [number, number, number]}>
-            <sphereGeometry args={[0.032, 8, 8]} />
-            <meshBasicMaterial 
-              color={color} 
-              transparent
-              opacity={light.brightness}
-              toneMapped={false}
-            />
-          </mesh>
+          <group key={light.id} position={position.toArray() as [number, number, number]}>
+            {/* Main bright core */}
+            <mesh>
+              <sphereGeometry args={[0.035, 8, 8]} />
+              <meshBasicMaterial
+                color={color}
+                transparent
+                opacity={light.brightness * 0.95}
+                toneMapped={false}
+              />
+            </mesh>
+            {/* Outer glow for bloom effect */}
+            <mesh>
+              <sphereGeometry args={[0.055, 8, 8]} />
+              <meshBasicMaterial
+                color={color}
+                transparent
+                opacity={light.brightness * 0.25}
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
         );
       })}
     </group>
+  );
+}
+
+function Atmosphere() {
+  const atmosphereVertexShader = `
+    varying vec3 vNormal;
+    void main() {
+      vNormal = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `;
+
+  const atmosphereFragmentShader = `
+    varying vec3 vNormal;
+    void main() {
+      float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+      gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
+    }
+  `;
+
+  return (
+    <mesh scale={1.12}>
+      <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
+      <shaderMaterial
+        vertexShader={atmosphereVertexShader}
+        fragmentShader={atmosphereFragmentShader}
+        blending={THREE.AdditiveBlending}
+        side={THREE.BackSide}
+        transparent
+      />
+    </mesh>
   );
 }
 
@@ -277,18 +321,21 @@ function EarthRealistic({
   }, [dayMap, normalMap, specularMap]);
 
   return (
-    <mesh ref={earthRef} castShadow receiveShadow>
-      <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
-      <meshPhongMaterial
-        map={dayMap}
-        normalMap={normalMap}
-        specularMap={specularMap}
-        shininess={30}
-        normalScale={new THREE.Vector2(1.5, 1.5)}
-        emissive={new THREE.Color('#000814')}
-        emissiveIntensity={0.15}
-      />
-    </mesh>
+    <group>
+      <mesh ref={earthRef} castShadow receiveShadow>
+        <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
+        <meshPhongMaterial
+          map={dayMap}
+          normalMap={normalMap}
+          specularMap={specularMap}
+          shininess={30}
+          normalScale={new THREE.Vector2(1.5, 1.5)}
+          emissive={new THREE.Color('#000814')}
+          emissiveIntensity={0.15}
+        />
+      </mesh>
+      <Atmosphere />
+    </group>
   );
 }
 

@@ -8,6 +8,7 @@ import PhaseOne from "./pages/PhaseOne";
 import NotFound from "./pages/NotFound";
 import PhaseTwo from "./pages/PhaseTwo";
 import { MultiplayerProvider } from "@/contexts/MultiplayerProvider";
+import { TutorialProvider } from "@/contexts/TutorialContext";
 
 const queryClient = new QueryClient();
 
@@ -16,17 +17,19 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <MultiplayerProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/fase-1" element={<PhaseOne />} />
-            <Route path="/fase-2" element={<PhaseTwo />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </MultiplayerProvider>
+      <TutorialProvider>
+        <MultiplayerProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/fase-1" element={<PhaseOne />} />
+              <Route path="/fase-2" element={<PhaseTwo />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </MultiplayerProvider>
+      </TutorialProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

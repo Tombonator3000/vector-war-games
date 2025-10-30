@@ -1,57 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { X, ArrowRight } from 'lucide-react';
+import { useTutorialContext } from '@/contexts/TutorialContext';
 
-interface TutorialStep {
-  id: string;
-  title: string;
-  description: string;
-  target?: string;
-  position: 'top' | 'bottom' | 'left' | 'right' | 'center';
-  allowSkip?: boolean;
-}
-
-interface TutorialOverlayProps {
-  steps: TutorialStep[];
-  onComplete: () => void;
-  onSkip: () => void;
-}
-
-export function TutorialOverlay({ steps, onComplete, onSkip }: TutorialOverlayProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+export function TutorialOverlay() {
+  const { currentStep, tutorialEnabled, dismissCurrentStep, skipTutorial } = useTutorialContext();
   const [targetElement, setTargetElement] = useState<HTMLElement | null>(null);
 
-  const step = steps[currentStep];
-
   useEffect(() => {
-    if (step.target) {
-      const element = document.querySelector(step.target) as HTMLElement;
-      setTargetElement(element);
-      
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    } else {
+    if (!currentStep?.highlightElement || !tutorialEnabled) {
       setTargetElement(null);
+      return;
     }
-  }, [step]);
 
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      onComplete();
-    }
-  };
+    const element = document.querySelector(currentStep.highlightElement) as HTMLElement;
+    setTargetElement(element);
 
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  };
+  }, [currentStep, tutorialEnabled]);
+
+  if (!tutorialEnabled || !currentStep) {
+    return null;
+  }
 
   const getPosition = () => {
     if (!targetElement) {
@@ -61,7 +36,7 @@ export function TutorialOverlay({ steps, onComplete, onSkip }: TutorialOverlayPr
     const rect = targetElement.getBoundingClientRect();
     const padding = 20;
 
-    switch (step.position) {
+    switch (currentStep.position) {
       case 'top':
         return { top: `${rect.top - padding}px`, left: `${rect.left + rect.width / 2}px`, transform: 'translate(-50%, -100%)' };
       case 'bottom':
@@ -78,81 +53,76 @@ export function TutorialOverlay({ steps, onComplete, onSkip }: TutorialOverlayPr
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[9999] pointer-events-none">
-        {/* Spotlight effect */}
+        {/* Dark overlay with spotlight effect */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-black/70 pointer-events-auto"
+          onClick={dismissCurrentStep}
+        />
+
+        {/* Highlight border around target element */}
         {targetElement && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/60 pointer-events-auto"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="absolute border-2 border-cyan-400 rounded animate-pulse shadow-[0_0_20px_rgba(34,211,238,0.6)] pointer-events-none"
             style={{
-              clipPath: targetElement
-                ? `polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${targetElement.getBoundingClientRect().left - 8}px ${targetElement.getBoundingClientRect().top - 8}px, ${targetElement.getBoundingClientRect().left - 8}px ${targetElement.getBoundingClientRect().bottom + 8}px, ${targetElement.getBoundingClientRect().right + 8}px ${targetElement.getBoundingClientRect().bottom + 8}px, ${targetElement.getBoundingClientRect().right + 8}px ${targetElement.getBoundingClientRect().top - 8}px, ${targetElement.getBoundingClientRect().left - 8}px ${targetElement.getBoundingClientRect().top - 8}px)`
-                : undefined,
+              top: `${targetElement.getBoundingClientRect().top - 4}px`,
+              left: `${targetElement.getBoundingClientRect().left - 4}px`,
+              width: `${targetElement.getBoundingClientRect().width + 8}px`,
+              height: `${targetElement.getBoundingClientRect().height + 8}px`,
             }}
           />
         )}
 
         {/* Tutorial card */}
         <motion.div
-          key={step.id}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
+          key={currentStep.stage}
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
           className="absolute pointer-events-auto"
           style={getPosition()}
         >
-          <Card className="p-6 max-w-md bg-background/95 backdrop-blur-xl border-primary/20 shadow-2xl">
+          <Card className="p-6 max-w-md bg-gradient-to-br from-cyan-950/95 to-black/95 backdrop-blur-xl border-2 border-cyan-500/60 shadow-2xl shadow-cyan-500/20">
             <div className="flex items-start justify-between mb-4">
-              <Badge variant="outline" className="text-xs">
-                Steg {currentStep + 1} av {steps.length}
+              <Badge variant="outline" className="text-xs border-cyan-500/50 text-cyan-300">
+                Tutorial
               </Badge>
-              {step.allowSkip !== false && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onSkip}
-                  className="h-6 w-6 -mt-2 -mr-2"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={skipTutorial}
+                className="h-6 w-6 -mt-2 -mr-2 text-cyan-400 hover:text-cyan-300"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
 
-            <h3 className="text-xl font-bold mb-2 text-primary">{step.title}</h3>
-            <p className="text-sm text-muted-foreground mb-6">{step.description}</p>
+            <h3 className="text-xl font-bold mb-2 text-cyan-100 uppercase tracking-wider">
+              {currentStep.title}
+            </h3>
+            <p className="text-sm text-cyan-200/80 mb-6 leading-relaxed">
+              {currentStep.description}
+            </p>
 
             <div className="flex items-center justify-between gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrevious}
-                disabled={currentStep === 0}
+              <button
+                onClick={skipTutorial}
+                className="text-xs text-cyan-400/70 hover:text-cyan-400 transition"
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Forrige
-              </Button>
+                Skip Tutorial
+              </button>
 
-              <div className="flex gap-1">
-                {steps.map((_, idx) => (
-                  <div
-                    key={idx}
-                    className={`h-1.5 rounded-full transition-all ${
-                      idx === currentStep ? 'w-6 bg-primary' : 'w-1.5 bg-muted'
-                    }`}
-                  />
-                ))}
-              </div>
-
-              <Button size="sm" onClick={handleNext}>
-                {currentStep < steps.length - 1 ? (
-                  <>
-                    Neste
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </>
-                ) : (
-                  'Fullfør'
-                )}
+              <Button
+                size="sm"
+                onClick={dismissCurrentStep}
+                className="bg-cyan-500 text-black hover:bg-cyan-400 flex items-center gap-2"
+              >
+                Next
+                <ArrowRight className="h-3 w-3" />
               </Button>
             </div>
           </Card>

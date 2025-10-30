@@ -39,6 +39,9 @@ import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { GameHelper } from '@/components/GameHelper';
 import { useMultiplayer } from '@/contexts/MultiplayerProvider';
+import { useTutorialContext } from '@/contexts/TutorialContext';
+import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
+import { VictoryProgressPanel } from '@/components/VictoryProgressPanel';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit } from '@/types/game';
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
 import { SyncStatusBadge } from '@/components/coop/SyncStatusBadge';
@@ -2786,7 +2789,7 @@ function launch(from: Nation, to: Nation, yieldMT: number) {
     delete from.warheads[yieldMT];
   }
   from.missiles--;
-  
+
   S.missiles.push({
     from,
     to,
@@ -2799,10 +2802,19 @@ function launch(from: Nation, to: Nation, yieldMT: number) {
     target: to,
     color: from.color
   });
-  
+
   log(`${from.name} → ${to.name}: LAUNCH ${yieldMT}MT`);
   AudioSys.playSFX('launch');
   DoomsdayClock.tick(0.3);
+
+  // Toast feedback for player launches
+  if (from.isPlayer) {
+    toast({
+      title: '🚀 Missile Launched',
+      description: `${yieldMT}MT warhead inbound to ${to.name}. -1 missile, -1 warhead.`,
+      variant: 'destructive',
+    });
+  }
   
   // Generate news for launch
   if ((window as any).__gameAddNewsItem) {
@@ -4250,6 +4262,15 @@ function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
     from
   });
   AudioSys.playSFX('launch');
+
+  if (from.isPlayer) {
+    toast({
+      title: '🌊 Submarine Launched',
+      description: `SLBM strike inbound to ${to.name}. ${yieldMT}MT warhead deployed.`,
+      variant: 'destructive',
+    });
+  }
+
   return true;
 }
 
@@ -4257,14 +4278,22 @@ function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
 function launchBomber(from: Nation, to: Nation, payload: any) {
   const [sx, sy] = project(from.lon, from.lat);
   const [tx, ty] = project(to.lon, to.lat);
-  
+
   S.bombers.push({
     from, to,
     t: 0,
     sx, sy, tx, ty,
     payload
   });
-  
+
+  if (from.isPlayer) {
+    toast({
+      title: '✈️ Bomber Dispatched',
+      description: `Strategic bomber en route to ${to.name}. Payload armed.`,
+      variant: 'destructive',
+    });
+  }
+
   return true;
 }
 
@@ -5065,6 +5094,11 @@ export default function NoradVector() {
     }
     return 'flat-realistic';
   });
+
+  // Tutorial and phase transition system
+  const tutorialContext = useTutorialContext();
+  const [isPhaseTransitioning, setIsPhaseTransitioning] = useState(false);
+
   useEffect(() => {
     currentMapStyle = mapStyle;
     if (mapStyle === 'flat' || mapStyle === 'flat-realistic') {
@@ -8850,23 +8884,24 @@ export default function NoradVector() {
 
         <div className="hud-layers pointer-events-none touch-none">
           {/* Minimal top status bar */}
-          <header className="fixed top-0 left-0 right-0 h-10 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
+          <header className="fixed top-0 left-0 right-0 h-12 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
             <div className="flex items-center gap-6 text-xs font-mono">
-              <div className="flex items-center gap-2">
-                <span className="text-cyan-400">DEFCON</span>
-                <span className="text-neon-green font-bold" id="defcon">5</span>
+              {/* DEFCON - Enlarged for prominence */}
+              <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded">
+                <span className="text-cyan-400 text-sm">DEFCON</span>
+                <span className="text-neon-green font-bold text-2xl" id="defcon">5</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">TURN</span>
-                <span className="text-neon-green font-bold" id="turn">1</span>
+                <span className="text-neon-green font-bold text-base" id="turn">1</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">ACTIONS</span>
-                <span className="text-neon-green font-bold" id="actionsDisplay">1/1</span>
+                <span className="text-neon-green font-bold text-base" id="actionsDisplay">1/1</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">CYBER</span>
-                <span className="text-neon-green font-bold" id="cyberDisplay">60/100</span>
+                <span className="text-neon-green font-bold text-base" id="cyberDisplay">60/100</span>
               </div>
             </div>
 
@@ -9007,6 +9042,7 @@ export default function NoradVector() {
                     variant="ghost"
                     size="icon"
                     data-role-locked={!buildAllowed}
+                    data-tutorial="build-button"
                     className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
                       buildAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                     }`}
@@ -9016,33 +9052,39 @@ export default function NoradVector() {
                     <span className="text-[8px] font-mono">BUILD</span>
                   </Button>
 
-                  <Button
-                    onClick={handleResearch}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!researchAllowed}
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      researchAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={researchAllowed ? 'RESEARCH - Technology advancement' : 'Strategist approval required to manage research'}
-                  >
-                    <Microscope className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">RESEARCH</span>
-                  </Button>
+                  {tutorialContext.progressDisclosure.showResearch && (
+                    <Button
+                      onClick={handleResearch}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!researchAllowed}
+                      data-tutorial="research-button"
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        researchAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={researchAllowed ? 'RESEARCH - Technology advancement' : 'Strategist approval required to manage research'}
+                    >
+                      <Microscope className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">RESEARCH</span>
+                    </Button>
+                  )}
 
-                  <Button
-                    onClick={handleIntel}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!intelAllowed}
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      intelAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={intelAllowed ? 'INTEL - Intelligence operations' : 'Tactician authorization required to operate intel'}
-                  >
-                    <Satellite className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">INTEL</span>
-                  </Button>
+                  {tutorialContext.progressDisclosure.showIntel && (
+                    <Button
+                      onClick={handleIntel}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!intelAllowed}
+                      data-tutorial="intel-button"
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        intelAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={intelAllowed ? 'INTEL - Intelligence operations' : 'Tactician authorization required to operate intel'}
+                    >
+                      <Satellite className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">INTEL</span>
+                    </Button>
+                  )}
 
                   <Button
                     onClick={handleBioWarfareLabToggle}
@@ -9085,47 +9127,53 @@ export default function NoradVector() {
                     <span className="text-[8px] font-mono">LAB</span>
                   </Button>
 
-                  <Button
-                    onClick={handleCulture}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!cultureAllowed}
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={cultureAllowed ? 'CULTURE - Cultural warfare' : 'Requires co-commander approval to launch culture ops'}
-                  >
-                    <Radio className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">CULTURE</span>
-                  </Button>
+                  {tutorialContext.progressDisclosure.showCulture && (
+                    <Button
+                      onClick={handleCulture}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!cultureAllowed}
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={cultureAllowed ? 'CULTURE - Cultural warfare' : 'Requires co-commander approval to launch culture ops'}
+                    >
+                      <Radio className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">CULTURE</span>
+                    </Button>
+                  )}
 
-                  <Button
-                    onClick={handleImmigration}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!immigrationAllowed}
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      immigrationAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={immigrationAllowed ? 'IMMIGRATION - Population management' : 'Immigration changes require strategist approval'}
-                  >
-                    <Users className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">IMMIGR</span>
-                  </Button>
+                  {tutorialContext.progressDisclosure.showDiplomacy && (
+                    <Button
+                      onClick={handleImmigration}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!immigrationAllowed}
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        immigrationAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={immigrationAllowed ? 'IMMIGRATION - Population management' : 'Immigration changes require strategist approval'}
+                    >
+                      <Users className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">IMMIGR</span>
+                    </Button>
+                  )}
 
-                  <Button
-                    onClick={handleDiplomacy}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!diplomacyAllowed}
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      diplomacyAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                  {tutorialContext.progressDisclosure.showDiplomacy && (
+                    <Button
+                      onClick={handleDiplomacy}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!diplomacyAllowed}
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        diplomacyAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                     }`}
-                    title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
-                  >
-                    <Handshake className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">DIPLO</span>
-                  </Button>
+                      title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
+                    >
+                      <Handshake className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">DIPLO</span>
+                    </Button>
+                  )}
 
                   <Button
                     onClick={handleMilitary}
@@ -9747,13 +9795,38 @@ export default function NoradVector() {
       />
 
       {showProgressiveTutorial && isGameStarted && (
-        <TutorialOverlay 
+        <TutorialOverlay
           steps={tutorialSteps}
           onComplete={handleComplete}
           onSkip={handleSkip}
         />
       )}
-      
+
+      {/* New Phase 1 Tutorial & Feedback Overlays */}
+      <TutorialOverlay />
+      <PhaseTransitionOverlay phase={S.phase} isTransitioning={isPhaseTransitioning} />
+      <VictoryProgressPanel
+        militaryProgress={(() => {
+          const player = PlayerManager.get();
+          if (!player) return 0;
+          const totalNations = nations.length;
+          const enemiesEliminated = nations.filter(n => !n.isPlayer && n.population <= 0).length;
+          return (enemiesEliminated / Math.max(1, totalNations - 1)) * 100;
+        })()}
+        economicProgress={(() => {
+          const player = PlayerManager.get();
+          if (!player) return 0;
+          const citiesNeeded = 12;
+          return Math.min(100, ((player.cities || 1) / citiesNeeded) * 100);
+        })()}
+        culturalProgress={(() => {
+          const player = PlayerManager.get();
+          if (!player) return 0;
+          return Math.min(100, ((player.culture || 0) / 100) * 100);
+        })()}
+        isVisible={isGameStarted && S.turn >= 5}
+      />
+
       <GameHelper />
     </div>
   );
