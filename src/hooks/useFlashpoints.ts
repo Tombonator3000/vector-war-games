@@ -495,10 +495,14 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
 ];
 
 export function calculateFlashpointProbability(turn: number, defcon: number) {
-  const baseProbability = 0.02; // 2% per turn
+  const baseProbability = 0.06; // 6% per turn (increased from 2% for more frequent flashpoints)
   const normalizedTurn = Math.max(turn, 0);
   const normalizedDefcon = Math.min(Math.max(defcon, 1), 5);
-  const turnMultiplier = Math.min(normalizedTurn / 50, 2); // Caps at 2x
+
+  // Turn multiplier now starts at 1x and grows to 2.5x over time
+  // This ensures flashpoints happen from the very beginning
+  const turnMultiplier = 1 + Math.min(normalizedTurn / 75, 1.5);
+
   const probability = baseProbability * (6 - normalizedDefcon) * turnMultiplier;
 
   return Math.min(Math.max(probability, 0), 1);

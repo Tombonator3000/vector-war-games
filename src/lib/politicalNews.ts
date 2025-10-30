@@ -254,6 +254,104 @@ function getCommentaryTemplates(
 }
 
 /**
+ * Generate tension-building news that hints at possible flashpoints
+ * Call this to create atmosphere before potential crises
+ */
+export function generateTensionNews(defcon: number, turn: number): PoliticalNewsItem | null {
+  // More likely to generate tension news at lower DEFCON levels
+  const chance = defcon <= 3 ? 0.3 : 0.15;
+  if (Math.random() > chance) return null;
+
+  const tensionTemplates = [
+    'Intelligence reports unusual military activity in contested regions.',
+    'Diplomatic channels report increased communications traffic.',
+    'SIGINT detects heightened chatter among rogue actors.',
+    'Global security analysts warn of emerging flashpoint risks.',
+    'Strategic command reports anomalies in early warning systems.',
+    'International observers note rising tensions in multiple hotspots.',
+    'CIA briefing highlights potential crisis scenarios developing.',
+    'NSA intercepts suggest coordinated activities by hostile groups.',
+    'Pentagon increases readiness posture amid uncertain threats.',
+    'State Department issues travel warnings for volatile regions.',
+  ];
+
+  return {
+    category: 'intel',
+    text: tensionTemplates[Math.floor(Math.random() * tensionTemplates.length)],
+    priority: defcon <= 2 ? 'urgent' : 'important',
+  };
+}
+
+/**
+ * Generate news about flashpoint aftermath and consequences
+ */
+export function generateFlashpointAftermathNews(
+  flashpointType: string,
+  success: boolean,
+  severity: 'major' | 'critical' | 'catastrophic'
+): PoliticalNewsItem {
+  const aftermathTemplates: Record<string, { success: string[]; failure: string[] }> = {
+    terrorist: {
+      success: [
+        'Counter-terrorism operation succeeds, threat neutralized.',
+        'Special forces operation prevents catastrophic attack.',
+        'Intelligence breakthrough foils major terrorist plot.',
+      ],
+      failure: [
+        'Security failure: Terrorist operation causes major casualties.',
+        'Counter-terrorism operation fails, situation deteriorates.',
+        'Crisis escalates as containment efforts prove insufficient.',
+      ],
+    },
+    coup: {
+      success: [
+        'Political crisis resolved through diplomatic intervention.',
+        'Military coup thwarted, stability restored.',
+        'International coalition prevents regime collapse.',
+      ],
+      failure: [
+        'Coup succeeds, regional instability spreads.',
+        'Failed intervention leads to hostile new regime.',
+        'Power vacuum creates dangerous security situation.',
+      ],
+    },
+    accident: {
+      success: [
+        'Nuclear incident averted through quick action.',
+        'Accident contained, catastrophe prevented.',
+        'Crisis de-escalation successful, war avoided.',
+      ],
+      failure: [
+        'Accident spirals into major international incident.',
+        'Failed containment leads to regional catastrophe.',
+        'Situation deteriorates beyond control.',
+      ],
+    },
+    blackswan: {
+      success: [
+        'Unprecedented crisis managed through decisive action.',
+        'Black swan event contained, new protocols established.',
+        'Unthinkable scenario averted by bold leadership.',
+      ],
+      failure: [
+        'Unprecedented crisis overwhelms response capabilities.',
+        'Black swan event triggers cascading failures.',
+        'Unthinkable scenario becomes reality.',
+      ],
+    },
+  };
+
+  const templates = aftermathTemplates[flashpointType] || aftermathTemplates.blackswan;
+  const list = success ? templates.success : templates.failure;
+
+  return {
+    category: success ? 'diplomatic' : 'crisis',
+    text: list[Math.floor(Math.random() * list.length)],
+    priority: severity === 'catastrophic' ? 'critical' : success ? 'important' : 'urgent',
+  };
+}
+
+/**
  * Generate multiple news items for current turn
  * Call this each turn to create dynamic news feed
  */
