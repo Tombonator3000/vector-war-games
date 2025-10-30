@@ -15,6 +15,7 @@ interface ConventionalForcesPanelProps {
   onTrain: (templateId: string) => void;
   onDeploy: (unitId: string, territoryId: string) => void;
   researchUnlocks?: Record<string, boolean>;
+  playerPopulation?: number;
 }
 
 export function ConventionalForcesPanel({
@@ -25,6 +26,7 @@ export function ConventionalForcesPanel({
   onTrain,
   onDeploy,
   researchUnlocks,
+  playerPopulation,
 }: ConventionalForcesPanelProps) {
   const [deploymentChoices, setDeploymentChoices] = useState<Record<string, string>>({});
 
@@ -50,6 +52,10 @@ export function ConventionalForcesPanel({
           <div>
             <p className="text-xs font-mono uppercase tracking-[0.35em] text-cyan-400">Force Readiness</p>
             <h3 className="text-lg font-semibold text-cyan-200">{Math.round(profile.readiness)}%</h3>
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-mono uppercase tracking-[0.35em] text-cyan-400">Population</p>
+            <h3 className="text-lg font-semibold text-cyan-200">{playerPopulation ? `${Math.floor(playerPopulation)}M` : 'N/A'}</h3>
           </div>
           <div className="text-right">
             <p className="text-xs font-mono uppercase tracking-[0.35em] text-cyan-400">Reserve Pool</p>

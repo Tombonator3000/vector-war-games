@@ -7011,6 +7011,7 @@ export default function NoradVector() {
           onTrain={handleTrain}
           onDeploy={handleDeployUnit}
           researchUnlocks={player.researched ?? {}}
+          playerPopulation={player.population}
         />
 
         <section className="rounded border border-cyan-500/40 bg-black/60 p-4">
@@ -7024,6 +7025,7 @@ export default function NoradVector() {
             playerId={player.id}
             onBorderConflict={handleBorderConflict}
             onProxyEngagement={handleProxyEngagement}
+            playerPopulation={player.population}
           />
         </section>
 
@@ -9323,41 +9325,85 @@ export default function NoradVector() {
 
 
   // Render functions for different phases
-  const renderIntroScreen = () => (
-    <div className="intro-screen">
-      <Starfield />
-      <div className="intro-screen__scanlines" aria-hidden="true" />
+  const renderIntroScreen = () => {
+    const highscores = JSON.parse(Storage.getItem('highscores') || '[]').slice(0, 5); // Top 5
 
-      <div className="intro-screen__left">
-        <SpinningEarth />
-      </div>
+    return (
+      <div className="intro-screen">
+        <Starfield />
+        <div className="intro-screen__scanlines" aria-hidden="true" />
 
-      <div className="intro-screen__right">
-        <IntroLogo />
+        <div className="intro-screen__left">
+          <SpinningEarth />
 
-        <p className="intro-screen__tagline">Want to play a game?</p>
+          {/* Highscore Section */}
+          {highscores.length > 0 && (
+            <div className="absolute bottom-8 left-8 bg-black/80 border border-cyan-500/50 rounded-lg p-4 w-80 backdrop-blur-sm">
+              <h3 className="text-lg font-mono text-cyan-400 mb-3 tracking-wider uppercase flex items-center gap-2">
+                <span className="text-yellow-400">★</span>
+                Hall of Fame
+                <span className="text-yellow-400">★</span>
+              </h3>
+              <div className="space-y-2">
+                {highscores.map((hs: any, index: number) => (
+                  <div
+                    key={index}
+                    className={`flex items-center justify-between text-xs font-mono p-2 rounded ${
+                      index === 0 ? 'bg-yellow-500/20 border border-yellow-500/30' :
+                      index === 1 ? 'bg-gray-500/20 border border-gray-500/30' :
+                      index === 2 ? 'bg-orange-500/20 border border-orange-500/30' :
+                      'bg-cyan-500/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`font-bold ${
+                        index === 0 ? 'text-yellow-400' :
+                        index === 1 ? 'text-gray-300' :
+                        index === 2 ? 'text-orange-400' :
+                        'text-cyan-400'
+                      }`}>
+                        #{index + 1}
+                      </span>
+                      <span className="text-cyan-200 truncate max-w-[120px]">{hs.name}</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-yellow-400 font-bold">{hs.score.toLocaleString()}</span>
+                      <span className="text-cyan-300/70 text-[10px]">{hs.turns} turns</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
-        <div className="intro-screen__menu">
-          <button onClick={() => setGamePhase('leader')} className="intro-screen__menu-btn intro-screen__menu-btn--primary">
-            <span className="intro-screen__menu-btn-icon">▶</span>
-            Start Game
-          </button>
-          <button className="intro-screen__menu-btn" onClick={() => alert('Campaign mode coming soon!')}>
-            <span className="intro-screen__menu-btn-icon">⚔</span>
-            Campaign
-          </button>
-          <button className="intro-screen__menu-btn" onClick={() => alert('Options coming soon!')}>
-            <span className="intro-screen__menu-btn-icon">⚙</span>
-            Options
-          </button>
-          <button className="intro-screen__menu-btn" onClick={() => alert('Credits coming soon!')}>
-            <span className="intro-screen__menu-btn-icon">★</span>
-            Credits
-          </button>
+        <div className="intro-screen__right">
+          <IntroLogo />
+
+          <p className="intro-screen__tagline">Want to play a game?</p>
+
+          <div className="intro-screen__menu">
+            <button onClick={() => setGamePhase('leader')} className="intro-screen__menu-btn intro-screen__menu-btn--primary">
+              <span className="intro-screen__menu-btn-icon">▶</span>
+              Start Game
+            </button>
+            <button className="intro-screen__menu-btn" onClick={() => alert('Campaign mode coming soon!')}>
+              <span className="intro-screen__menu-btn-icon">⚔</span>
+              Campaign
+            </button>
+            <button className="intro-screen__menu-btn" onClick={() => alert('Options coming soon!')}>
+              <span className="intro-screen__menu-btn-icon">⚙</span>
+              Options
+            </button>
+            <button className="intro-screen__menu-btn" onClick={() => alert('Credits coming soon!')}>
+              <span className="intro-screen__menu-btn-icon">★</span>
+              Credits
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderLeaderSelection = () => (
     <div ref={interfaceRef} className="command-interface">
@@ -10283,6 +10329,7 @@ export default function NoradVector() {
           state={pandemicState}
           enabled={pandemicIntegrationEnabled}
           biowarfareEnabled={bioWarfareEnabled}
+          playerPopulation={PlayerManager.get()?.population}
         />
       )}
 
@@ -10290,7 +10337,7 @@ export default function NoradVector() {
         <FlashpointModal
           flashpoint={activeFlashpoint}
           onResolve={(optionId) => {
-            const result = resolveFlashpoint(optionId, activeFlashpoint);
+            const result = resolveFlashpoint(optionId, activeFlashpoint, S.turn);
             const player = PlayerManager.get();
             if (!player) return;
 
@@ -10299,6 +10346,16 @@ export default function NoradVector() {
 
             // Apply consequences based on outcome
             const outcome = result.success ? option.outcome.success : option.outcome.failure;
+
+            // Award DNA points if applicable
+            if (result.dnaAwarded && result.dnaAwarded > 0) {
+              addDNAPoints({
+                reason: 'milestone',
+                amount: result.dnaAwarded,
+                message: `Flashpoint resolved: +${result.dnaAwarded} DNA from intel/samples`,
+              });
+              addNewsItem('science', `Flashpoint intel secured: +${result.dnaAwarded} DNA points`, 'important');
+            }
             
             if (outcome.defcon) {
               S.defcon = Math.max(1, Math.min(5, outcome.defcon));

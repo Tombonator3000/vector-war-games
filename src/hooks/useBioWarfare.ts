@@ -101,6 +101,14 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
       const constructionResult = bioLab.advanceConstruction();
       if (constructionResult.completed && constructionResult.newTier) {
         addNewsItem('science', `Bio Laboratory upgraded to Tier ${constructionResult.newTier}`, 'important');
+
+        // Award DNA for lab tier upgrade
+        const tierDNA = constructionResult.newTier * 5; // 5, 10, 15, 20 DNA for tiers 1-4
+        evolution.addDNAPoints({
+          reason: 'milestone',
+          amount: tierDNA,
+          message: `Lab Tier ${constructionResult.newTier} unlocked: +${tierDNA} DNA from research breakthrough`,
+        });
       }
 
       // Advance per-country infections if using targeted deployment
@@ -185,6 +193,15 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
     // DNA from active outbreaks (1 DNA per active outbreak region)
     if (pandemic.pandemicState.outbreaks.length > 0) {
       dnaGained += pandemic.pandemicState.outbreaks.length;
+    }
+
+    // Passive DNA generation based on lab tier (only if plague is active)
+    const labTier = bioLab.labFacility.tier;
+    if (labTier > 0 && evolution.plagueState.plagueStarted) {
+      const passiveDNA = Math.floor(labTier / 2); // 0, 0, 1, 2 DNA per turn for tiers 1-4
+      if (passiveDNA > 0) {
+        dnaGained += passiveDNA;
+      }
     }
 
     // Award DNA

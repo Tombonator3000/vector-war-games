@@ -8,6 +8,7 @@ interface TerritoryMapPanelProps {
   playerId: string;
   onBorderConflict: (territoryId: string, defenderId: string) => void;
   onProxyEngagement: (territoryId: string, opposingId: string) => void;
+  playerPopulation?: number;
 }
 
 export function TerritoryMapPanel({
@@ -16,6 +17,7 @@ export function TerritoryMapPanel({
   playerId,
   onBorderConflict,
   onProxyEngagement,
+  playerPopulation,
 }: TerritoryMapPanelProps) {
   const unitsByTerritory = useMemo(() => {
     return units.reduce<Record<string, ConventionalUnitState[]>>((acc, unit) => {
@@ -35,6 +37,12 @@ export function TerritoryMapPanel({
 
   return (
     <div className="space-y-3">
+      {playerPopulation !== undefined && (
+        <div className="mb-3 rounded border border-cyan-500/30 bg-black/40 p-3 text-center">
+          <p className="text-xs font-mono uppercase tracking-[0.3em] text-cyan-400">National Population</p>
+          <h3 className="text-lg font-semibold text-cyan-200">{Math.floor(playerPopulation)}M Citizens</h3>
+        </div>
+      )}
       {sortedTerritories.map(territory => {
         const stationed = unitsByTerritory[territory.id] ?? [];
         const playerPresence = stationed.filter(unit => unit.ownerId === playerId).length;
