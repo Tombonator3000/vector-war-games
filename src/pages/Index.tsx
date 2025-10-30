@@ -89,6 +89,17 @@ import {
 } from '@/hooks/useCyberWarfare';
 import { GovernanceEventDialog } from '@/components/governance/GovernanceEventDialog';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
+import { getDefaultScenario, type ScenarioConfig, SCENARIOS } from '@/types/scenario';
+import { getGameTimestamp, turnsUntilEvent, isEventTurn } from '@/lib/timeSystem';
+import {
+  calculatePublicOpinion,
+  runElection,
+  applyElectionConsequences,
+  modifyOpinionFromAction,
+  getElectionStatusMessage,
+  type ElectionResult,
+} from '@/lib/electionSystem';
+import { enhancedAIActions } from '@/lib/aiActionEnhancements';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -528,6 +539,7 @@ let S: LocalGameState = {
   gameOver: false,
   selectedLeader: null,
   selectedDoctrine: null,
+  scenario: getDefaultScenario(),
   missiles: [],
   bombers: [],
   submarines: [],
@@ -2881,6 +2893,11 @@ function launch(from: Nation, to: Nation, yieldMT: number) {
   if (from.isPlayer) {
     if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
     S.statistics.nukesLaunched++;
+
+    // Update public opinion (nuclear launches are unpopular)
+    if (S.scenario?.electionConfig) {
+      modifyOpinionFromAction(from, 'LAUNCH_MISSILE', true, S.scenario.electionConfig);
+    }
   }
 
   // Toast feedback for player launches
@@ -3122,6 +3139,41 @@ function productionPhase() {
     n.migrantsLastTurn = n.migrantsThisTurn || 0;
     n.migrantsThisTurn = 0;
   });
+
+  // Handle Elections
+  if (S.scenario?.electionConfig.enabled) {
+    nations.forEach(n => {
+      // Update public opinion based on current state
+      n.publicOpinion = calculatePublicOpinion(n, nations, S.scenario!.electionConfig);
+
+      // Decrease election timer
+      if (n.electionTimer > 0) {
+        n.electionTimer--;
+      }
+
+      // Check if it's election time
+      if (n.electionTimer === 0 && S.scenario?.electionConfig.interval > 0) {
+        const result = runElection(n, nations, S.scenario.electionConfig);
+
+        const electionLog = applyElectionConsequences(
+          n,
+          result,
+          S.scenario.electionConfig,
+          leaders
+        );
+
+        log(`${n.name}: ${electionLog.message}`, result.winner === 'incumbent' ? 'success' : 'alert');
+
+        if (electionLog.gameOver && n.isPlayer) {
+          S.gameOver = true;
+          S.overlay = { text: 'VOTED OUT - GAME OVER', ttl: 5000 };
+        }
+
+        // Reset election timer
+        n.electionTimer = S.scenario.electionConfig.interval;
+      }
+    });
+  }
 
   nations.forEach(n => advanceResearch(n, 'PRODUCTION'));
 }
@@ -4990,6 +5042,30 @@ function aiTurn(n: Nation) {
       log(`${n.name} proposes de-escalation to DEFCON ${S.defcon}`);
       return;
     }
+  }
+
+  // 10. ENHANCED AI ACTIONS - Cyber, Immigration, Conventional Warfare
+  const enhancedActionExecuted = enhancedAIActions(
+    n,
+    nations,
+    S.turn,
+    COSTS,
+    {
+      templates: (window as any).__conventionalWarfare?.templates,
+      trainUnit: (window as any).__conventionalWarfare?.trainUnit,
+      deployUnit: (window as any).__conventionalWarfare?.deployUnit,
+      resolveBorderConflict: (window as any).__conventionalWarfare?.resolveBorderConflict,
+      getUnitsForNation: (window as any).__conventionalWarfare?.getUnitsForNation,
+    },
+    {
+      launchCyberAttack: (window as any).__cyberWarfare?.launchCyberAttack,
+    },
+    log
+  );
+
+  if (enhancedActionExecuted) {
+    updateDisplay();
+    return;
   }
 
   const cyberOutcome = (window as any).__cyberAiPlan?.(n.id);
