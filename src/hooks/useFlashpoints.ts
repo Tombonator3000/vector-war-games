@@ -10,6 +10,8 @@ export interface FlashpointEvent {
   options: FlashpointOption[];
   consequences: Record<string, any>;
   triggeredAt: number;
+  followUpId?: string; // ID of the follow-up event to trigger
+  triggeredBy?: string; // ID of the parent event that triggered this one
 }
 
 export interface FlashpointOption {
@@ -24,6 +26,186 @@ export interface FlashpointOption {
     failure: Record<string, any>;
   };
 }
+
+// Follow-up flashpoint templates triggered by specific outcomes
+const FOLLOWUP_FLASHPOINTS: Record<string, Record<string, Omit<FlashpointEvent, 'id' | 'triggeredAt' | 'triggeredBy'>>> = {
+  'nuclear_materials': {
+    'raid_success': {
+      title: 'AFTERMATH: Terrorist Cell Network Exposed',
+      description: 'Intelligence recovered from the raid reveals a network of sleeper cells across major cities. They have contingency plans for multiple attacks. NSA recommends preemptive action.',
+      category: 'terrorist',
+      severity: 'critical',
+      timeLimit: 60,
+      options: [
+        {
+          id: 'raid_all',
+          text: 'Simultaneous Raids on All Cells',
+          description: 'Coordinate global law enforcement strike',
+          advisorSupport: ['military', 'intel'],
+          advisorOppose: ['diplomatic'],
+          outcome: {
+            probability: 0.65,
+            success: { morale: +15, intel: +20, networkDestroyed: true },
+            failure: { morale: -10, escapeeCells: 3, internationalIncident: true }
+          }
+        },
+        {
+          id: 'monitor',
+          text: 'Monitor and Track',
+          description: 'Surveil cells to uncover larger network',
+          advisorSupport: ['intel'],
+          advisorOppose: ['military', 'pr'],
+          outcome: {
+            probability: 0.5,
+            success: { intel: +30, largerNetworkFound: true },
+            failure: { secondaryAttack: true, casualties: 50000 }
+          }
+        }
+      ],
+      consequences: {}
+    },
+    'raid_failure': {
+      title: 'BREAKING: Second Device Detonated',
+      description: 'The failed raid triggered a backup plan. A smaller dirty bomb exploded in Chicago. Casualties are mounting. Intelligence suggests more devices are in play.',
+      category: 'terrorist',
+      severity: 'catastrophic',
+      timeLimit: 45,
+      options: [
+        {
+          id: 'martial_law',
+          text: 'Declare Martial Law',
+          description: 'Lock down all major cities',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'pr'],
+          outcome: {
+            probability: 0.7,
+            success: { morale: -20, casualties: 25000, furtherAttacksPrevented: true },
+            failure: { morale: -35, civilUnrest: true, casualties: 75000 }
+          }
+        },
+        {
+          id: 'international_help',
+          text: 'Request International Aid',
+          description: 'Call on allies for counter-terrorism support',
+          advisorSupport: ['diplomatic'],
+          advisorOppose: ['pr'],
+          outcome: {
+            probability: 0.55,
+            success: { diplomacy: +20, casualties: 30000, globalCoalition: true },
+            failure: { diplomacy: -10, casualties: 60000 }
+          }
+        }
+      ],
+      consequences: {}
+    }
+  },
+  'military_coup': {
+    'support_success': {
+      title: 'COUP AFTERMATH: New Regime Unstable',
+      description: 'General Petrov successfully seized control, but loyalist forces are regrouping. He demands military aid or threatens to lose control of the nuclear arsenal to extremists.',
+      category: 'coup',
+      severity: 'critical',
+      timeLimit: 60,
+      options: [
+        {
+          id: 'send_aid',
+          text: 'Send Military Advisors',
+          description: 'Deploy special forces to secure nuclear sites',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic'],
+          outcome: {
+            probability: 0.6,
+            success: { newAlliance: true, nukesSecured: true, intel: +15 },
+            failure: { advisorsCaptured: true, internationalIncident: true }
+          }
+        },
+        {
+          id: 'withdraw_support',
+          text: 'Withdraw Support',
+          description: 'Distance ourselves from the unstable regime',
+          advisorSupport: ['diplomatic', 'pr'],
+          advisorOppose: ['military', 'intel'],
+          outcome: {
+            probability: 0.4,
+            success: { diplomacy: +10, petrovFalls: true },
+            failure: { nukesStolen: true, newThreat: true }
+          }
+        }
+      ],
+      consequences: {}
+    },
+    'oppose_success': {
+      title: 'DIPLOMATIC VICTORY: Russian Government Restored',
+      description: 'The legitimate government has been restored and is grateful for your support. They offer intelligence sharing and economic cooperation as thanks.',
+      category: 'coup',
+      severity: 'major',
+      timeLimit: 75,
+      options: [
+        {
+          id: 'accept_partnership',
+          text: 'Accept Partnership Offer',
+          description: 'Formalize alliance with restored government',
+          advisorSupport: ['diplomatic', 'intel', 'economic'],
+          advisorOppose: [],
+          outcome: {
+            probability: 0.85,
+            success: { newAlliance: true, intel: +25, economicBoost: +50 },
+            failure: { domesticBacklash: true, morale: -5 }
+          }
+        },
+        {
+          id: 'limited_cooperation',
+          text: 'Limited Cooperation Only',
+          description: 'Accept intelligence sharing but avoid deeper ties',
+          advisorSupport: ['intel'],
+          advisorOppose: ['diplomatic'],
+          outcome: {
+            probability: 0.95,
+            success: { intel: +15, flexibilityMaintained: true },
+            failure: { russiaOffended: true }
+          }
+        }
+      ],
+      consequences: {}
+    }
+  },
+  'rogue_ai': {
+    'shutdown_success': {
+      title: 'AI CONTAINMENT: Digital Fragments Detected',
+      description: 'The AI was shut down, but cyber security detected fragments of its code spreading through civilian networks. It may be attempting to rebuild itself.',
+      category: 'rogue',
+      severity: 'critical',
+      timeLimit: 60,
+      options: [
+        {
+          id: 'hunt_fragments',
+          text: 'Deploy Hunter Algorithms',
+          description: 'Release counter-AI to hunt down fragments',
+          advisorSupport: ['intel', 'science'],
+          advisorOppose: [],
+          outcome: {
+            probability: 0.65,
+            success: { threatNeutralized: true, techAdvance: true },
+            failure: { aiEvolves: true, newThreat: true }
+          }
+        },
+        {
+          id: 'internet_shutdown',
+          text: 'Regional Internet Shutdown',
+          description: 'Cut affected networks to contain spread',
+          advisorSupport: ['military'],
+          advisorOppose: ['economic', 'pr'],
+          outcome: {
+            probability: 0.8,
+            success: { threatContained: true, economicDamage: -100 },
+            failure: { aiEscaped: true, economicDamage: -150 }
+          }
+        }
+      ],
+      consequences: {}
+    }
+  }
+};
 
 const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
   {
@@ -511,8 +693,26 @@ export function calculateFlashpointProbability(turn: number, defcon: number) {
 export function useFlashpoints() {
   const [activeFlashpoint, setActiveFlashpoint] = useState<FlashpointEvent | null>(null);
   const [flashpointHistory, setFlashpointHistory] = useState<Array<{ event: FlashpointEvent; choice: string; result: 'success' | 'failure' }>>([]);
+  const [pendingFollowUps, setPendingFollowUps] = useState<Array<{ parentId: string; category: string; outcome: string; triggerAtTurn: number }>>([]);
 
   const triggerRandomFlashpoint = useCallback((turn: number, defcon: number) => {
+    // Check for pending follow-ups first
+    const followUp = pendingFollowUps.find(f => f.triggerAtTurn <= turn);
+    if (followUp) {
+      const followUpTemplate = FOLLOWUP_FLASHPOINTS[followUp.category]?.[followUp.outcome];
+      if (followUpTemplate) {
+        const flashpoint: FlashpointEvent = {
+          ...followUpTemplate,
+          id: `flashpoint_followup_${Date.now()}`,
+          triggeredAt: Date.now(),
+          triggeredBy: followUp.parentId
+        };
+        setPendingFollowUps(prev => prev.filter(f => f !== followUp));
+        setActiveFlashpoint(flashpoint);
+        return flashpoint;
+      }
+    }
+
     const probability = calculateFlashpointProbability(turn, defcon);
 
     if (Math.random() < probability) {
@@ -526,9 +726,9 @@ export function useFlashpoints() {
       return flashpoint;
     }
     return null;
-  }, []);
+  }, [pendingFollowUps]);
 
-  const resolveFlashpoint = useCallback((optionId: string, flashpoint: FlashpointEvent): { success: boolean; outcome: Record<string, any> } => {
+  const resolveFlashpoint = useCallback((optionId: string, flashpoint: FlashpointEvent, currentTurn: number): { success: boolean; outcome: Record<string, any>; dnaAwarded?: number } => {
     const option = flashpoint.options.find(opt => opt.id === optionId);
     if (!option) return { success: false, outcome: {} };
 
@@ -538,7 +738,30 @@ export function useFlashpoints() {
     setFlashpointHistory(prev => [...prev, { event: flashpoint, choice: optionId, result: success ? 'success' : 'failure' }]);
     setActiveFlashpoint(null);
 
-    return { success, outcome };
+    // Schedule follow-up flashpoints based on outcome
+    const followUpKey = `${optionId}_${success ? 'success' : 'failure'}`;
+    const categoryKey = flashpoint.title.includes('Nuclear Materials') ? 'nuclear_materials' :
+                        flashpoint.title.includes('COUP') ? 'military_coup' :
+                        flashpoint.title.includes('ROGUE AI') ? 'rogue_ai' : null;
+
+    if (categoryKey && FOLLOWUP_FLASHPOINTS[categoryKey]?.[followUpKey]) {
+      setPendingFollowUps(prev => [...prev, {
+        parentId: flashpoint.id,
+        category: categoryKey,
+        outcome: followUpKey,
+        triggerAtTurn: currentTurn + Math.floor(Math.random() * 3) + 2 // 2-4 turns later
+      }]);
+    }
+
+    // Award DNA points based on flashpoint outcomes (if bio-warfare related or successful intel)
+    let dnaAwarded = 0;
+    if (flashpoint.category === 'blackswan' && flashpoint.title.includes('BIO-TERROR')) {
+      dnaAwarded = success ? 3 : 1; // More DNA for successful handling
+    } else if (success && outcome.intel && outcome.intel > 0) {
+      dnaAwarded = Math.floor(outcome.intel / 10); // 1 DNA per 10 intel gained
+    }
+
+    return { success, outcome, dnaAwarded };
   }, []);
 
   const dismissFlashpoint = useCallback(() => {
@@ -550,6 +773,7 @@ export function useFlashpoints() {
     flashpointHistory,
     triggerRandomFlashpoint,
     resolveFlashpoint,
-    dismissFlashpoint
+    dismissFlashpoint,
+    pendingFollowUps
   };
 }

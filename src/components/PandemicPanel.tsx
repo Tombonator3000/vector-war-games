@@ -5,6 +5,7 @@ interface PandemicPanelProps {
   state: PandemicState;
   enabled?: boolean;
   biowarfareEnabled?: boolean;
+  playerPopulation?: number;
 }
 
 const STAGE_CONFIG = {
@@ -39,7 +40,7 @@ function ProgressBar({ value, color, background = 'bg-cyan-500/10' }: { value: n
   );
 }
 
-export function PandemicPanel({ state, enabled = true, biowarfareEnabled = true }: PandemicPanelProps) {
+export function PandemicPanel({ state, enabled = true, biowarfareEnabled = true, playerPopulation }: PandemicPanelProps) {
   const stage = STAGE_CONFIG[state.stage] ?? STAGE_CONFIG.outbreak;
   const infection = Math.round(state.globalInfection);
   const containment = Math.round(state.containmentEffort);
@@ -58,7 +59,12 @@ export function PandemicPanel({ state, enabled = true, biowarfareEnabled = true 
           <Biohazard className="h-4 w-4 text-red-400" />
           BIOSHIELD
         </div>
-        <span className={`${stage.color} text-[10px] tracking-wide`}>{stage.label}</span>
+        <div className="flex flex-col items-end">
+          <span className={`${stage.color} text-[10px] tracking-wide`}>{stage.label}</span>
+          {playerPopulation !== undefined && (
+            <span className="text-[9px] text-cyan-400">POP: {Math.floor(playerPopulation)}M</span>
+          )}
+        </div>
       </div>
 
       {disabledMessage ? (
