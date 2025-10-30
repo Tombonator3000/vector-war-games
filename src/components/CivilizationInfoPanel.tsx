@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag, Smile, Meh, Frown, AlertTriangle, Trophy, Skull, Building2, Sparkles, Calendar, ThumbsUp } from 'lucide-react';
+import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag, Smile, Meh, Frown, AlertTriangle, Trophy, Skull, Building2, Sparkles, Calendar, ThumbsUp, FlaskConical } from 'lucide-react';
 import { Nation } from '../types/game';
 import type { GovernanceMetrics } from '@/hooks/useGovernance';
 import type { VictoryAnalysis } from '@/types/victory';
+import type { BioLabFacility, BioLabTier } from '@/types/bioLab';
 import { VictoryPathsSection } from './VictoryPathsSection';
+import { ResearchTreeFlow } from './ResearchTreeFlow';
+import { BioLabTreeFlow } from './BioLabTreeFlow';
 import { motion } from 'framer-motion';
 
 interface CivilizationInfoPanelProps {
@@ -13,9 +16,14 @@ interface CivilizationInfoPanelProps {
   currentTurn: number;
   governanceMetrics?: Record<string, GovernanceMetrics>;
   victoryAnalysis: VictoryAnalysis;
+  onStartResearch?: (nodeId: string) => void;
+  onCancelResearch?: (nodeId: string) => void;
+  bioLabFacility?: BioLabFacility;
+  onStartBioLabConstruction?: (tier: BioLabTier) => void;
+  onCancelBioLabConstruction?: () => void;
 }
 
-type TabType = 'own-status' | 'enemy-status' | 'diplomacy';
+type TabType = 'own-status' | 'enemy-status' | 'diplomacy' | 'research';
 
 export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   nations,
@@ -24,6 +32,11 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   currentTurn,
   governanceMetrics = {},
   victoryAnalysis,
+  onStartResearch,
+  onCancelResearch,
+  bioLabFacility,
+  onStartBioLabConstruction,
+  onCancelBioLabConstruction,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('own-status');
 
@@ -850,6 +863,76 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
     );
   };
 
+  const renderResearch = () => {
+    if (!player) return null;
+
+    const currentResearch = player.researchQueue
+      ? {
+          projectId: player.researchQueue.projectId,
+          progress: player.researchQueue.totalTurns - player.researchQueue.turnsRemaining,
+        }
+      : undefined;
+
+    return (
+      <div className="space-y-6">
+        {/* Research Trees */}
+        {onStartResearch && (
+          <div>
+            <ResearchTreeFlow
+              nation={player}
+              onStartResearch={onStartResearch}
+              onCancelResearch={onCancelResearch}
+              currentResearch={currentResearch}
+            />
+          </div>
+        )}
+
+        {/* Bio-Lab Infrastructure Tree */}
+        {bioLabFacility && onStartBioLabConstruction && (
+          <div className="mt-8">
+            <BioLabTreeFlow
+              facility={bioLabFacility}
+              playerProduction={player.production}
+              playerUranium={player.uranium}
+              onStartConstruction={onStartBioLabConstruction}
+              onCancelConstruction={onCancelBioLabConstruction}
+            />
+          </div>
+        )}
+
+        {/* Research Stats Summary */}
+        <div className="bg-gray-800/50 border border-cyan-500/30 rounded-lg p-4">
+          <h4 className="text-sm font-bold text-cyan-300 mb-3">Research Statistics</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gray-900/50 p-3 rounded">
+              <div className="text-xs text-gray-400 mb-1">Projects Completed</div>
+              <div className="text-xl font-bold text-cyan-300">
+                {Object.keys(player.researched || {}).filter(k => player.researched?.[k]).length}
+              </div>
+            </div>
+            {currentResearch && (
+              <div className="bg-gray-900/50 p-3 rounded">
+                <div className="text-xs text-gray-400 mb-1">Current Project</div>
+                <div className="text-sm font-bold text-amber-300">{currentResearch.projectId}</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {player.researchQueue?.turnsRemaining} turns remaining
+                </div>
+              </div>
+            )}
+            {bioLabFacility && bioLabFacility.tier > 0 && (
+              <div className="bg-gray-900/50 p-3 rounded">
+                <div className="text-xs text-gray-400 mb-1">Bio-Lab Tier</div>
+                <div className="text-xl font-bold text-purple-300">
+                  Tier {bioLabFacility.tier}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
       <div className="bg-gray-900 border-2 border-yellow-600 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -883,6 +966,19 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
             </div>
           </button>
           <button
+            onClick={() => setActiveTab('research')}
+            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+              activeTab === 'research'
+                ? 'bg-gray-900 text-yellow-400 border-b-2 border-yellow-400'
+                : 'text-gray-400 hover:text-white hover:bg-gray-700'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <FlaskConical className="w-4 h-4" />
+              Research
+            </div>
+          </button>
+          <button
             onClick={() => setActiveTab('enemy-status')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
               activeTab === 'enemy-status'
@@ -913,6 +1009,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'own-status' && renderOwnStatus()}
+          {activeTab === 'research' && renderResearch()}
           {activeTab === 'enemy-status' && renderEnemyStatus()}
           {activeTab === 'diplomacy' && renderDiplomacy()}
         </div>
