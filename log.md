@@ -612,3 +612,6 @@ Looking for:
 
 ## 2025-10-30T14:05:00+00:00
 - Updated src/components/CesiumViewer.tsx to stabilize Cesium Viewer initialization by persisting callback refs and decoupling lighting toggles from the mount effect.
+
+## 2025-10-30T14:22:00+00:00
+- Addressed Cesium lighting race by caching the latest enableDayNight prop and reapplying lighting once the viewer initializes in src/components/CesiumViewer.tsx.
