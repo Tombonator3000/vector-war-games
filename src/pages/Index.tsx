@@ -218,6 +218,19 @@ const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }
   },
 ];
 
+const VIEWER_OPTIONS: { value: 'threejs' | 'cesium'; label: string; description: string }[] = [
+  {
+    value: 'threejs',
+    label: 'Classic',
+    description: 'Three.js tactical globe with retro vector styling.',
+  },
+  {
+    value: 'cesium',
+    label: 'Cesium',
+    description: 'Photorealistic Cesium globe with geospatial overlays.',
+  },
+];
+
 type CanvasIcon = HTMLImageElement | null;
 
 type ConventionalUnitMarker = {
@@ -5374,11 +5387,22 @@ export default function NoradVector() {
     return stored === 'cesium' ? 'cesium' : 'threejs';
   });
 
-  const toggleViewer = useCallback(() => {
+  const handleViewerSelect = useCallback((nextType: 'threejs' | 'cesium') => {
     setViewerType(prev => {
-      const newType = prev === 'threejs' ? 'cesium' : 'threejs';
-      Storage.setItem('viewer_type', newType);
-      return newType;
+      if (prev === nextType) {
+        return prev;
+      }
+
+      Storage.setItem('viewer_type', nextType);
+      toast({
+        title: nextType === 'cesium' ? 'Switched to Cesium' : 'Switched to Three.js',
+        description:
+          nextType === 'cesium'
+            ? 'Enhanced geospatial visualization with territories and units'
+            : 'Classic globe view',
+      });
+
+      return nextType;
     });
   }, []);
 
@@ -9541,23 +9565,6 @@ export default function NoradVector() {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => {
-                  toggleViewer();
-                  AudioSys.playSFX('click');
-                  toast({
-                    title: viewerType === 'threejs' ? 'Switched to Cesium' : 'Switched to Three.js',
-                    description: viewerType === 'threejs'
-                      ? 'Enhanced geospatial visualization with territories and units'
-                      : 'Classic globe view',
-                  });
-                }}
-                className="h-7 px-2 text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
-              >
-                {viewerType === 'threejs' ? '🌍 CESIUM' : '🗺️ CLASSIC'}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
                 onClick={toggleFullscreen}
                 className="h-7 px-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
               >
@@ -9893,20 +9900,42 @@ export default function NoradVector() {
                 {MAP_STYLE_OPTIONS.map((option) => {
                   const isActive = mapStyle === option.value;
                   return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => handleMapStyleChange(option.value)}
-                    className={`layout-chip${isActive ? ' is-active' : ''}`}
-                    aria-pressed={isActive}
-                  >
-                    <span className="layout-chip__label">{option.label}</span>
-                    <span className="layout-chip__description">{option.description}</span>
-                  </button>
-                );
-              })}
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => handleMapStyleChange(option.value)}
+                      className={`layout-chip${isActive ? ' is-active' : ''}`}
+                      aria-pressed={isActive}
+                    >
+                      <span className="layout-chip__label">{option.label}</span>
+                      <span className="layout-chip__description">{option.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+
+            <div className="options-section">
+              <h3 className="options-section__heading">GLOBE RENDERER</h3>
+              <p className="options-section__subheading">Select the engine powering the strategic world view.</p>
+              <div className="layout-grid">
+                {VIEWER_OPTIONS.map((option) => {
+                  const isActive = viewerType === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => handleViewerSelect(option.value)}
+                      className={`layout-chip${isActive ? ' is-active' : ''}`}
+                      aria-pressed={isActive}
+                    >
+                      <span className="layout-chip__label">{option.label}</span>
+                      <span className="layout-chip__description">{option.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
           <div className="options-section">
             <h3 className="options-section__heading">HUD LAYOUT</h3>

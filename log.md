@@ -655,3 +655,6 @@ Looking for:
 ## 2025-10-30T17:32:17+00:00
 - Implemented a dedicated `CesiumHeroGlobe` component for the intro screen, wiring it into `Index.tsx` to replace the legacy Three.js globe with Cesium's photorealistic Earth and gentle auto-rotation.
 - Added styling hooks in `index.css` to mask the Cesium canvas into a circular hero element, hide toolbars, and preserve the neon drop-shadow aesthetic on the landing layout.
+
+## 2025-10-31T00:00:00+00:00
+- Removed the Cesium/Classic toggle button from the HUD header and introduced a dedicated globe renderer selector within the options sheet, persisting choices and maintaining toast feedback.
