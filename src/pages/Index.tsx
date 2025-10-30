@@ -31,6 +31,7 @@ import {
   type GovernanceNationRef,
   type GovernanceMetrics,
   type GovernanceDelta,
+  type UseGovernanceReturn,
   calculateMoraleProductionMultiplier,
   calculateMoraleRecruitmentModifier,
 } from '@/hooks/useGovernance';
@@ -113,6 +114,9 @@ type LocalNation = Nation & {
 type LocalGameState = GameState & {
   conventional?: ConventionalState;
 };
+
+let governanceApiRef: UseGovernanceReturn | null = null;
+let enqueueAIProposalRef: ((proposal: DiplomacyProposal) => void) | null = null;
 
 interface DiplomacyState {
   peaceTurns: number;
@@ -4539,7 +4543,7 @@ function checkVictory() {
   const totalPop = alive.reduce((sum, n) => sum + n.population, 0);
 
   // Check for political collapse (inspired by Paradox/Total War games)
-  const playerGovernance = governance.metrics[player.id];
+  const playerGovernance = governanceApiRef?.metrics[player.id];
   if (playerGovernance) {
     const politicalCheck = checkPoliticalGameOver(
       playerGovernance.publicOpinion,
@@ -4767,7 +4771,11 @@ function aiTurn(n: Nation) {
     const proposal = shouldAIInitiateProposal(n, player, S.turn);
     if (proposal) {
       // Queue the proposal to show to player
-      setPendingAIProposals(prev => [...prev, proposal]);
+      if (enqueueAIProposalRef) {
+        enqueueAIProposalRef(proposal);
+      } else {
+        console.warn('[ai] Pending AI proposal handler missing; dropping proposal', proposal);
+      }
       log(`${n.name} has sent a diplomatic proposal to ${player.name}.`);
       return;
     }
@@ -5130,8 +5138,8 @@ function endTurn() {
       // Check for AI regime changes (inspired by Hearts of Iron 4 & Civilization 6)
       const aiNationsForRegimeCheck = nations.filter(n => !n.isPlayer && n.population > 0);
       aiNationsForRegimeCheck.forEach(nation => {
-        const metrics = governance.metrics[nation.id];
-        if (!metrics) return;
+        const metrics = governanceApiRef?.metrics[nation.id];
+        if (!metrics || !governanceApiRef) return;
 
         const shouldChange = shouldRegimeChangeOccur(
           nation.instability || 0,
@@ -5165,7 +5173,7 @@ function endTurn() {
             }
 
             // Reset governance metrics
-            governance.applyGovernanceDelta(nation.id, {
+            governanceApiRef.applyGovernanceDelta(nation.id, {
               morale: result.newMetrics.morale - metrics.morale,
               publicOpinion: result.newMetrics.publicOpinion - metrics.publicOpinion,
               cabinetApproval: result.newMetrics.cabinetApproval - metrics.cabinetApproval,
@@ -5186,7 +5194,7 @@ function endTurn() {
       // Generate political warnings for player
       const playerForWarnings = PlayerManager.get();
       if (playerForWarnings) {
-        const playerMetrics = governance.metrics[playerForWarnings.id];
+        const playerMetrics = governanceApiRef?.metrics[playerForWarnings.id];
         if (playerMetrics) {
           const warnings = generatePoliticalWarnings(
             playerMetrics.publicOpinion,
@@ -5207,7 +5215,7 @@ function endTurn() {
         const newsNations = nations
           .filter(n => n.population > 0)
           .map(n => {
-            const metrics = governance.metrics[n.id];
+            const metrics = governanceApiRef?.metrics[n.id];
             return {
               name: n.name,
               morale: metrics?.morale || 60,
@@ -5392,6 +5400,15 @@ export default function NoradVector() {
   const [civInfoPanelOpen, setCivInfoPanelOpen] = useState(false);
   const [activeDiplomacyProposal, setActiveDiplomacyProposal] = useState<DiplomacyProposal | null>(null);
   const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
+
+  useEffect(() => {
+    enqueueAIProposalRef = (proposal) => {
+      setPendingAIProposals(prev => [...prev, proposal]);
+    };
+    return () => {
+      enqueueAIProposalRef = null;
+    };
+  }, [setPendingAIProposals]);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
     const stored = Storage.getItem('map_style');
     if (
@@ -5939,6 +5956,15 @@ export default function NoradVector() {
     onApplyDelta: handleGovernanceDelta,
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
   });
+
+  useEffect(() => {
+    governanceApiRef = governance;
+    return () => {
+      if (governanceApiRef === governance) {
+        governanceApiRef = null;
+      }
+    };
+  }, [governance]);
 
   useEffect(() => {
     const nextState = conventional.state;

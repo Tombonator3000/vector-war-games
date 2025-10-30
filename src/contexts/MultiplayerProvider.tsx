@@ -13,6 +13,8 @@ const SESSION_STORAGE_KEY = 'norad_coop_session_id';
 
 type ConnectionState = 'idle' | 'connecting' | 'ready' | 'error' | 'unavailable';
 
+let supabaseAnonUnavailable = false;
+
 type MultiplayerApproval = {
   request: MultiplayerApprovalRequest;
   status: 'pending' | 'approved' | 'rejected';
@@ -56,18 +58,53 @@ const ensureAnonSession = async () => {
   if (isSupabaseFallback) {
     return null;
   }
-  const { data } = await supabase.auth.getSession();
+
+  if (supabaseAnonUnavailable) {
+    throw new Error('anon-auth-unavailable');
+  }
+
+  const { data, error } = await supabase.auth.getSession();
+  if (error) {
+    console.warn('[multiplayer] session lookup failed', error);
+  }
   if (data.session) {
     return data.session.access_token;
   }
 
-  const authClient: typeof supabase.auth & { signInAnonymously?: () => Promise<unknown> } = supabase.auth as never;
-  if (typeof authClient.signInAnonymously === 'function') {
-    await authClient.signInAnonymously();
+  const authClient: typeof supabase.auth & {
+    signInAnonymously?: () => Promise<{ error?: unknown }>;
+  } = supabase.auth as never;
+
+  if (typeof authClient.signInAnonymously !== 'function') {
+    supabaseAnonUnavailable = true;
+    throw new Error('anon-auth-unavailable');
+  }
+
+  try {
+    const result = await authClient.signInAnonymously();
+    if (result && 'error' in result && result.error) {
+      console.warn('[multiplayer] anonymous sign-in failed', result.error);
+      supabaseAnonUnavailable = true;
+      throw new Error('anon-auth-unavailable');
+    }
+  } catch (err) {
+    console.warn('[multiplayer] anonymous sign-in threw', err);
+    supabaseAnonUnavailable = true;
+    throw new Error('anon-auth-unavailable');
   }
 
   const refreshed = await supabase.auth.getSession();
-  return refreshed.data.session?.access_token ?? null;
+  if (refreshed.error) {
+    console.warn('[multiplayer] session refresh failed', refreshed.error);
+    return refreshed.data.session?.access_token ?? null;
+  }
+
+  if (!refreshed.data.session) {
+    supabaseAnonUnavailable = true;
+    throw new Error('anon-auth-unavailable');
+  }
+
+  return refreshed.data.session.access_token;
 };
 
 const resolveRole = (selfId: string, peers: Record<string, MultiplayerPresenceState>): MultiplayerRole | null => {
@@ -103,26 +140,48 @@ export const MultiplayerProvider = ({ children }: { children: React.ReactNode })
   const fallbackToastRef = useRef(false);
 
   useEffect(() => {
-    if (isSupabaseFallback) {
+    const notifyUnavailable = () => {
       setConnection('unavailable');
       if (!fallbackToastRef.current) {
         toast({
           title: 'Multiplayer unavailable',
-          description: 'Supabase credentials are missing. Local play remains available.',
+          description: 'Supabase credentials are missing or anonymous access is disabled. Local play remains available.',
         });
         fallbackToastRef.current = true;
       }
+    };
+
+    if (isSupabaseFallback) {
+      notifyUnavailable();
       return;
     }
     const subscription = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session) {
-        await ensureAnonSession();
+        try {
+          await ensureAnonSession();
+        } catch (error) {
+          if ((error as Error)?.message === 'anon-auth-unavailable') {
+            notifyUnavailable();
+          } else {
+            console.warn('[multiplayer] auth state refresh failed', error);
+          }
+        }
       }
     });
-    ensureAnonSession().catch(() => {
-      toast({ title: 'Multiplayer auth failed', description: 'Unable to initialise Supabase session.' });
-      setConnection('error');
-    });
+    ensureAnonSession()
+      .then(token => {
+        if (!token) {
+          notifyUnavailable();
+        }
+      })
+      .catch(error => {
+        if ((error as Error)?.message === 'anon-auth-unavailable') {
+          notifyUnavailable();
+          return;
+        }
+        toast({ title: 'Multiplayer auth failed', description: 'Unable to initialise Supabase session.' });
+        setConnection('error');
+      });
     return () => {
       subscription.data.subscription.unsubscribe();
     };
