@@ -237,6 +237,94 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
     },
     startingDefcon: 5,
   },
+
+  greatOldOnes: {
+    id: 'greatOldOnes',
+    name: 'Great Old Ones Conversion Crisis',
+    description: 'May 2025: Cultists awaken eldritch entities. Prevent the conversion of humanity before reality itself unravels.',
+    timeConfig: {
+      unit: 'day',
+      unitsPerTurn: 1,
+      startYear: 2025,
+      startMonth: 5,
+      displayFormat: 'DD MMM YYYY',
+    },
+    electionConfig: {
+      interval: 0, // No elections during existential crisis
+      enabled: false,
+      minMoraleThreshold: 0,
+      minPublicOpinionThreshold: 0,
+      actionInfluenceMultiplier: 3.0, // Actions have triple impact (cosmic horror)
+      foreignInfluenceEnabled: false, // Beyond politics
+      loseElectionConsequence: 'none',
+    },
+    startingDefcon: 2, // High alert - cosmic threat detected
+    modifiers: {
+      timeSpeedMultiplier: 0.4, // Even faster paced than Cuban Crisis
+      startingResourcesMultiplier: 1.2, // Slightly more resources to fight cosmic threat
+    },
+    eraOverrides: {
+      // Modern era - all features unlocked to fight cosmic horror
+      early: {
+        endTurn: 10,
+        unlockedFeatures: [
+          'nuclear_missiles',
+          'nuclear_bombers',
+          'defense_systems',
+          'basic_diplomacy',
+          'basic_research',
+          'conventional_warfare',
+          'territory_control',
+          'advanced_diplomacy',
+          'submarines',
+          'cyber_warfare',
+          'space_weapons',
+          'ai_systems',
+        ],
+      },
+      mid: {
+        startTurn: 11,
+        endTurn: 25,
+        unlockedFeatures: [
+          'nuclear_missiles',
+          'nuclear_bombers',
+          'defense_systems',
+          'basic_diplomacy',
+          'basic_research',
+          'conventional_warfare',
+          'territory_control',
+          'advanced_diplomacy',
+          'submarines',
+          'cyber_warfare',
+          'space_weapons',
+          'ai_systems',
+          'propaganda_victory',
+          'economic_warfare',
+        ],
+      },
+      late: {
+        startTurn: 26,
+        endTurn: 40,
+        unlockedFeatures: [
+          'nuclear_missiles',
+          'nuclear_bombers',
+          'defense_systems',
+          'basic_diplomacy',
+          'basic_research',
+          'conventional_warfare',
+          'territory_control',
+          'advanced_diplomacy',
+          'submarines',
+          'cyber_warfare',
+          'space_weapons',
+          'ai_systems',
+          'propaganda_victory',
+          'economic_warfare',
+          'quantum_computing',
+        ],
+      },
+    },
+  },
 };
 
 /**
