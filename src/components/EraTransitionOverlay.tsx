@@ -64,16 +64,15 @@ export function EraTransitionOverlay({
           className="relative z-10 max-w-2xl w-full"
         >
           <Card
-            className={`bg-gradient-to-br ${ERA_COLORS[newEra]} backdrop-blur-xl border-2 shadow-2xl`}
+            className={`bg-gradient-to-br ${ERA_COLORS[newEra]} backdrop-blur-xl border-2 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden`}
           >
-            <div className="p-8">
+            <div className="p-6 sm:p-8 overflow-y-auto flex flex-col gap-6">
               {/* Header */}
-              <div className="flex flex-col items-center mb-6">
+              <div className="flex flex-col items-center gap-4 text-center">
                 <motion.div
                   initial={{ scale: 0, rotate: -180 }}
                   animate={{ scale: 1, rotate: 0 }}
                   transition={{ delay: 0.2, type: 'spring', damping: 10 }}
-                  className="mb-4"
                 >
                   {ERA_ICONS[newEra]}
                 </motion.div>
@@ -85,17 +84,17 @@ export function EraTransitionOverlay({
                   New Era Unlocked
                 </Badge>
 
-                <h2 className="text-4xl font-bold text-white mb-2 text-center uppercase tracking-wider">
+                <h2 className="text-3xl sm:text-4xl font-bold text-white text-center uppercase tracking-wider">
                   {eraName}
                 </h2>
 
-                <p className="text-white/80 text-center text-lg">{eraDescription}</p>
+                <p className="text-white/80 text-base sm:text-lg">{eraDescription}</p>
               </div>
 
               {/* Unlocked Features */}
               {unlockedFeatures.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-white font-semibold mb-4 text-center text-lg uppercase tracking-wide">
+                <div className="flex flex-col gap-4">
+                  <h3 className="text-white font-semibold text-center text-lg uppercase tracking-wide">
                     🎉 Systems Now Available
                   </h3>
 
@@ -135,7 +134,8 @@ export function EraTransitionOverlay({
                 <Button
                   onClick={onDismiss}
                   size="lg"
-                  className="bg-white text-black hover:bg-white/90 font-bold uppercase tracking-wider px-8"
+                  autoFocus
+                  className="bg-white text-black hover:bg-white/90 font-bold uppercase tracking-wider px-8 w-full sm:w-auto"
                 >
                   Continue
                 </Button>

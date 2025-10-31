@@ -708,3 +708,9 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Added Cuban Crisis-specific flashpoint chains, scenario-aware flashpoint selection, and aligned tests with the updated probability model.
 ## 2025-10-31T10:54:18Z
 - Added scenario-driven era override typing, Cuban Crisis pacing updates, dynamic era unlock handling in `useGameEra`, and refreshed UI feature lock displays to respect scenario-specific unlock data.
+## 2025-10-31T11:17:21+00:00
+- Reviewed the EraTransitionOverlay component and surrounding page wiring to understand the Continue button behavior and responsiveness requirements.
+## 2025-10-31T11:18:10+00:00
+- Updated the EraTransitionOverlay layout to add responsive spacing, scrolling, and an auto-focused full-width Continue button that triggers the dismiss handler for reliable modal closure on smaller viewports.
+## 2025-10-31T11:18:26+00:00
+- Removed an empty className attribute left over from the icon animation wrapper to keep the overlay markup tidy.
