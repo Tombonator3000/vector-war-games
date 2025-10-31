@@ -7,9 +7,9 @@
 ## Progress Overview
 
 **Original Size:** 10,937 lines
-**Current Size:** 9,494 lines
-**Reduction:** 1,443 lines (-13.2%)
-**Status:** Phases 1-6 Complete, Phase 7 In Progress (6.2 of 7 phases, 89% done)
+**Current Size:** 8,428 lines
+**Reduction:** 2,509 lines (-22.9%)
+**Status:** Phases 1-6 Complete, Phase 7 In Progress (6.15 of 7 phases, 88% done)
 
 ---
 
@@ -364,7 +364,7 @@ PlayerManager.reset();
 
 ---
 
-### Phase 7: Simplify Main Component (In Progress - Partially Implemented) ⏳
+### Phase 7: Simplify Main Component (In Progress - 15% Complete) ⏳
 
 **Completed Sub-phases:**
 - ✅ Screen components extracted (128 lines reduced)
@@ -372,11 +372,20 @@ PlayerManager.reset();
   - LeaderSelectionScreen (70 lines)
   - DoctrineSelectionScreen (75 lines)
 
+- ✅ **Game constants extracted (600 lines)** ⭐ NEW
+  - Created `src/lib/gameConstants.ts` (600 lines)
+  - Extracted COSTS, RESEARCH_TREE, RESEARCH_LOOKUP, WARHEAD_YIELD_TO_ID
+  - Exported ResourceCost type and ResearchProject interface
+  - Centralized game configuration data
+
+- ✅ **Modal components extracted (1,066 lines reduced)** ⭐ NEW
+  - BuildModal (257 lines) - Production and construction interface
+  - ResearchModal (171 lines) - Research tree management
+  - MilitaryModal (217 lines) - Conventional warfare interface
+  - Total extracted: 645 lines of component code
+  - Replaced with lightweight wrappers in Index.tsx
+
 **Remaining Sub-phases:**
-- 📋 Modal components (882 lines potential reduction)
-  - BuildModal (383 lines) - Production and construction interface
-  - ResearchModal (327 lines) - Research tree management
-  - MilitaryModal (172 lines) - Conventional warfare interface
 - 📋 Custom hooks (~500 lines potential reduction)
   - useModalManager
   - useGameAudio
@@ -392,9 +401,10 @@ PlayerManager.reset();
 
 **Progress:**
 - Target: Reduce NoradVector from 5,336 → <3,000 lines
-- Current: 5,208 lines (128 line reduction so far)
-- Remaining: Need ~2,200 more lines reduced
-- Phase 7 Status: ~5% complete
+- Original: 9,494 lines (Phase 6 completion)
+- Current: 8,428 lines (1,066 line reduction in Phase 7)
+- Remaining: Need ~1,100 more lines reduced to reach <3,000 target
+- Phase 7 Status: ~15% complete (modal extraction done)
 
 **Estimated Remaining Effort:** 10-14 hours
 
@@ -417,11 +427,10 @@ PlayerManager.reset();
 - **Utility Modules:** 0
 - **TypeScript Errors:** 1 (fixed)
 
-### After Phase 1-6
-- **Total Lines:** 9,661 (-1,276)
-- **Main Component:** ~4,700 lines
-- **Helper Functions:** ~4,900 lines
-- **Extracted Modules:** 15 files, 2,461 lines
+### After Phase 1-7 (Partial)
+- **Total Lines:** 10,318 (-2,619)
+- **Main Component (Index.tsx):** 8,428 lines (-2,509)
+- **Extracted Modules:** 22 files, 4,151 lines
 - **TypeScript Errors:** 0
 
 ### Target (All Phases Complete)
