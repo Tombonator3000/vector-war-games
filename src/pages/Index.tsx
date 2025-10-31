@@ -52,13 +52,13 @@ import { useVictoryTracking } from '@/hooks/useVictoryTracking';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
 import { LockedFeatureWrapper } from '@/components/LockedFeatureBadge';
-import { ERA_DEFINITIONS } from '@/types/era';
+import { FEATURE_UNLOCK_INFO } from '@/types/era';
 import type { ActionConsequences } from '@/types/consequences';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EndGameScreen } from '@/components/EndGameScreen';
-import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit } from '@/types/game';
+import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
 import type { DiplomacyProposal } from '@/types/diplomacy';
 import { evaluateProposal, shouldAIInitiateProposal } from '@/lib/aiDiplomacyEvaluator';
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
@@ -103,6 +103,7 @@ import {
   type ElectionResult,
 } from '@/lib/electionSystem';
 import { enhancedAIActions } from '@/lib/aiActionEnhancements';
+import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -182,6 +183,7 @@ interface GameState {
   conventionalMovements?: ConventionalMovementMarker[];
   conventionalUnits?: ConventionalUnitMarker[];
   satelliteOrbits: SatelliteOrbit[];
+  falloutMarks: FalloutMark[];
 
   // Game statistics tracking
   statistics?: {
@@ -302,6 +304,7 @@ const submarineIcon = loadIcon('/icons/submarine.svg');
 const armyIcon = loadIcon('/icons/army.svg');
 const navyIcon = loadIcon('/icons/navy.svg');
 const airIcon = loadIcon('/icons/air.svg');
+const radiationIcon = loadIcon('/icons/radiation.svg');
 
 const conventionalIconLookup: Record<ForceType, CanvasIcon> = {
   army: armyIcon,
@@ -312,10 +315,15 @@ const conventionalIconLookup: Record<ForceType, CanvasIcon> = {
 const MISSILE_ICON_BASE_SCALE = 0.14;
 const BOMBER_ICON_BASE_SCALE = 0.18;
 const SUBMARINE_ICON_BASE_SCALE = 0.2;
+const RADIATION_ICON_BASE_SCALE = 0.16;
 const easeInOutQuad = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const SATELLITE_ORBIT_RADIUS = 34;
 const SATELLITE_ORBIT_TTL_MS = 180000;
 const SATELLITE_ORBIT_SPEED = (Math.PI * 2) / 12000;
+const MAX_FALLOUT_MARKS = 36;
+const FALLOUT_GROWTH_RATE = 1.1; // units per second
+const FALLOUT_DECAY_DELAY_MS = 12000;
+const FALLOUT_DECAY_RATE = 0.04; // intensity per second once decay begins
 
 const IntroLogo = () => (
   <svg
@@ -552,6 +560,7 @@ let S: LocalGameState = {
   empEffects: [],
   rings: [],
   refugeeCamps: [],
+  falloutMarks: [],
   satelliteOrbits: [],
   screenShake: 0,
   fx: 1,
@@ -591,6 +600,7 @@ let startCtx: CanvasRenderingContext2D;
 let W = 1600, H = 900;
 let globeProjector: ProjectorFn | null = null;
 let globePicker: PickerFn | null = null;
+let lastFxTimestamp: number | null = null;
 
 // Camera system
 const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
@@ -1772,6 +1782,7 @@ const AudioSys = {
 
       const source = this.audioContext.createBufferSource();
       source.buffer = buffer;
+      const offset = Math.random() * Math.max(buffer.duration - 0.5, 0);
       source.loop = this.preferredTrackId !== null;
       source.connect(gainNode);
       source.onended = () => {
@@ -1782,7 +1793,7 @@ const AudioSys = {
           }
         }
       };
-      source.start(0);
+      source.start(0, offset);
       this.musicSource = source;
       this.currentTrackId = trackId;
       this.notifyTrackListeners(trackId);
@@ -4086,9 +4097,153 @@ function drawParticles() {
   });
 }
 
+function drawFalloutMarks(deltaMs: number) {
+  if (!ctx || currentMapStyle !== 'flat-realistic') {
+    return;
+  }
+
+  if (!Array.isArray(S.falloutMarks)) {
+    S.falloutMarks = [];
+    return;
+  }
+
+  const now = Date.now();
+  const deltaSeconds = Math.max(0.016, deltaMs / 1000);
+  const updatedMarks: FalloutMark[] = [];
+
+  for (const mark of S.falloutMarks) {
+    const next: FalloutMark = { ...mark };
+
+    const growthFactor = Math.min(1, next.growthRate * deltaSeconds);
+    if (next.radius < next.targetRadius) {
+      const radiusDelta = (next.targetRadius - next.radius) * growthFactor;
+      next.radius = Math.min(next.targetRadius, next.radius + radiusDelta);
+    }
+
+    if (next.intensity < next.targetIntensity) {
+      const intensityDelta = (next.targetIntensity - next.intensity) * (growthFactor * 0.8);
+      next.intensity = Math.min(next.targetIntensity, next.intensity + intensityDelta);
+    }
+
+    if (now - next.lastStrikeAt > next.decayDelayMs) {
+      const decayAmount = next.decayRate * deltaSeconds;
+      next.intensity = Math.max(0, next.intensity - decayAmount);
+      next.targetIntensity = Math.max(0, next.targetIntensity - decayAmount * 0.5);
+      const shrink = next.targetRadius * decayAmount * 0.2;
+      if (next.radius > next.targetRadius * 0.6) {
+        next.radius = Math.max(next.targetRadius * 0.6, next.radius - shrink);
+      }
+    }
+
+    next.updatedAt = now;
+    const [px, py] = project(next.lon, next.lat);
+    next.canvasX = px;
+    next.canvasY = py;
+
+    if (next.intensity <= 0.015) {
+      continue;
+    }
+
+    updatedMarks.push(next);
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = Math.min(0.85, next.intensity + 0.05);
+    const gradient = ctx.createRadialGradient(px, py, Math.max(4, next.radius * 0.25), px, py, next.radius);
+    gradient.addColorStop(0, 'rgba(120,255,180,0.75)');
+    gradient.addColorStop(0.45, 'rgba(60,200,120,0.35)');
+    gradient.addColorStop(1, 'rgba(10,80,30,0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(px, py, next.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    drawIcon(radiationIcon, px, py, 0, RADIATION_ICON_BASE_SCALE, {
+      alpha: Math.min(0.9, next.intensity + 0.15),
+    });
+  }
+
+  if (updatedMarks.length > MAX_FALLOUT_MARKS) {
+    updatedMarks
+      .sort((a, b) => a.lastStrikeAt - b.lastStrikeAt)
+      .splice(0, updatedMarks.length - MAX_FALLOUT_MARKS);
+  }
+
+  S.falloutMarks = updatedMarks;
+}
+
+function upsertFalloutMark(x: number, y: number, lon: number, lat: number, yieldMT: number) {
+  if (!Array.isArray(S.falloutMarks)) {
+    S.falloutMarks = [];
+  }
+
+  const now = Date.now();
+  const intensityBoost = Math.min(1, 0.25 + yieldMT / 160);
+  const baseRadius = Math.max(24, Math.sqrt(Math.max(1, yieldMT)) * 12);
+  const growthRate = FALLOUT_GROWTH_RATE * (0.8 + Math.sqrt(Math.max(1, yieldMT)) * 0.02);
+  const decayDelay = Math.max(FALLOUT_DECAY_DELAY_MS, 8000 + yieldMT * 180);
+  const decayRate = FALLOUT_DECAY_RATE * (0.6 + Math.sqrt(Math.max(1, yieldMT)) * 0.015);
+  const mergeThreshold = Math.max(baseRadius * 0.6, 30);
+
+  let targetMark: FalloutMark | undefined;
+  for (const mark of S.falloutMarks) {
+    const dist = Math.hypot(mark.canvasX - x, mark.canvasY - y);
+    if (dist <= Math.max(mergeThreshold, mark.radius * 0.8)) {
+      targetMark = mark;
+      break;
+    }
+  }
+
+  if (targetMark) {
+    targetMark.lon = (targetMark.lon + lon) / 2;
+    targetMark.lat = (targetMark.lat + lat) / 2;
+    targetMark.canvasX = x;
+    targetMark.canvasY = y;
+    targetMark.targetRadius = Math.max(targetMark.targetRadius, baseRadius * 1.1);
+    targetMark.radius = Math.min(targetMark.targetRadius, targetMark.radius + baseRadius * 0.15);
+    targetMark.targetIntensity = Math.min(1, targetMark.targetIntensity + intensityBoost * 0.7);
+    targetMark.intensity = Math.min(1, targetMark.intensity + intensityBoost * 0.35);
+    targetMark.lastStrikeAt = now;
+    targetMark.updatedAt = now;
+    targetMark.growthRate = Math.max(targetMark.growthRate, growthRate);
+    targetMark.decayDelayMs = Math.max(targetMark.decayDelayMs, decayDelay);
+    targetMark.decayRate = Math.max(targetMark.decayRate, decayRate);
+  } else {
+    const newMark: FalloutMark = {
+      id: `fallout_${now}_${Math.random().toString(36).slice(2, 8)}`,
+      lon,
+      lat,
+      canvasX: x,
+      canvasY: y,
+      radius: Math.max(18, baseRadius * 0.45),
+      targetRadius: baseRadius,
+      intensity: Math.min(1, intensityBoost * 0.6),
+      targetIntensity: intensityBoost,
+      createdAt: now,
+      updatedAt: now,
+      lastStrikeAt: now,
+      growthRate,
+      decayDelayMs: decayDelay,
+      decayRate,
+    };
+    S.falloutMarks.push(newMark);
+  }
+
+  if (S.falloutMarks.length > MAX_FALLOUT_MARKS) {
+    S.falloutMarks
+      .sort((a, b) => a.lastStrikeAt - b.lastStrikeAt)
+      .splice(0, S.falloutMarks.length - MAX_FALLOUT_MARKS);
+  }
+}
+
 function drawFX() {
   if (!ctx) return;
-  
+
+  const now = Date.now();
+  const deltaMs = lastFxTimestamp === null ? 16 : Math.max(1, now - lastFxTimestamp);
+  lastFxTimestamp = now;
+
   if (S.screenShake && S.screenShake > 0) {
     const shakeX = (Math.random() - 0.5) * S.screenShake;
     const shakeY = (Math.random() - 0.5) * S.screenShake;
@@ -4096,7 +4251,11 @@ function drawFX() {
     ctx.translate(shakeX, shakeY);
     S.screenShake *= 0.9;
   }
-  
+
+  if (currentMapStyle === 'flat-realistic') {
+    drawFalloutMarks(deltaMs);
+  }
+
   // Rings and explosions
   S.rings = S.rings || [];
   S.rings.forEach((b: any, i: number) => {
@@ -4248,6 +4407,9 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
   }
 
   const [elon, elat] = toLonLat(x, y);
+  if (Number.isFinite(elon) && Number.isFinite(elat)) {
+    upsertFalloutMark(x, y, elon, elat, yieldMT);
+  }
 
   // Create mushroom cloud particles
   const mushroomStemHeight = 20 * scale;
@@ -5306,7 +5468,14 @@ function updateDisplay() {
   const maxActions = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
   const actionsEl = document.getElementById('actionsDisplay');
   if (actionsEl) actionsEl.textContent = `${S.actionsRemaining}/${maxActions}`;
-  
+
+  const gameTimeEl = document.getElementById('gameTimeDisplay');
+  if (gameTimeEl) {
+    const timeConfig = S.scenario?.timeConfig ?? getDefaultScenario().timeConfig;
+    const timestamp = getGameTimestamp(Math.max(0, S.turn - 1), timeConfig);
+    gameTimeEl.textContent = timestamp;
+  }
+
   const phaseEl = document.getElementById('phaseBadge');
   if (phaseEl) phaseEl.textContent = S.phase;
   
@@ -5437,6 +5606,18 @@ export default function NoradVector() {
   const hasBootstrappedGameRef = useRef(false);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState<{ title: string; content: ModalContentValue }>({ title: '', content: '' });
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string>(() => {
+    const stored = Storage.getItem('selected_scenario');
+    if (stored && stored in SCENARIOS) {
+      return stored;
+    }
+    return S.scenario?.id ?? getDefaultScenario().id;
+  });
+  const [isScenarioPanelOpen, setIsScenarioPanelOpen] = useState(false);
+  const scenarioOptions = useMemo(() => Object.values(SCENARIOS), []);
+  const selectedScenario = useMemo(() => {
+    return SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
+  }, [selectedScenarioId]);
   const [selectedLeader, setSelectedLeader] = useState<string | null>(null);
   const [selectedDoctrine, setSelectedDoctrine] = useState<string | null>(null);
   const [pendingLaunch, setPendingLaunch] = useState<PendingLaunchState | null>(null);
@@ -5465,6 +5646,33 @@ export default function NoradVector() {
     };
   }, [setPendingAIProposals]);
   const [mapStyle, setMapStyle] = useState<MapStyle>('flat-realistic');
+
+  useEffect(() => {
+    const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
+    S.scenario = scenario;
+    Storage.setItem('selected_scenario', scenario.id);
+  }, [selectedScenarioId]);
+
+  const handleScenarioSelect = useCallback((scenarioId: string) => {
+    if (!(scenarioId in SCENARIOS)) {
+      return;
+    }
+    setSelectedScenarioId(scenarioId);
+    setIsScenarioPanelOpen(false);
+  }, []);
+
+  const handleIntroStart = useCallback(() => {
+    const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
+    S.scenario = scenario;
+    S.turn = 1;
+    S.phase = 'PLAYER';
+    S.gameOver = false;
+    S.paused = false;
+    S.defcon = scenario.startingDefcon;
+    S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+    updateDisplay();
+    setGamePhase('leader');
+  }, [selectedScenarioId, setGamePhase]);
 
   // Globe viewer type - Three.js or Cesium
   const [viewerType, setViewerType] = useState<'threejs' | 'cesium'>(() => {
@@ -5822,8 +6030,14 @@ export default function NoradVector() {
     if (!coopEnabled) {
       return;
     }
+    const sanitizedState: LocalGameState = {
+      ...S,
+      falloutMarks: Array.isArray(S.falloutMarks)
+        ? S.falloutMarks.map(mark => ({ ...mark }))
+        : [],
+    };
     publishState({
-      gameState: { ...S },
+      gameState: sanitizedState,
       nations: nations.map(nation => ({ ...nation })),
       conventionalDeltas: conventionalDeltas.map(delta => ({ ...delta })),
     });
@@ -5847,9 +6061,18 @@ export default function NoradVector() {
       suppressMultiplayerBroadcast = true;
       try {
         if (state.gameState) {
-          S = { ...state.gameState };
+          const remoteState = state.gameState as Partial<LocalGameState>;
+          S = {
+            ...remoteState,
+            falloutMarks: Array.isArray(remoteState.falloutMarks)
+              ? remoteState.falloutMarks.map(mark => ({ ...mark }))
+              : [],
+          } as LocalGameState;
           if (!Array.isArray(S.satelliteOrbits)) {
             S.satelliteOrbits = [];
+          }
+          if (!Array.isArray(S.falloutMarks)) {
+            S.falloutMarks = [];
           }
         }
         if (state.nations) {
@@ -6068,23 +6291,25 @@ export default function NoradVector() {
   // Era system for progressive complexity
   const gameEra = useGameEra({
     currentTurn: S.turn,
-    onEraChange: (newEra, oldEra) => {
-      const eraDef = ERA_DEFINITIONS[newEra];
+    scenario: S.scenario,
+    onEraChange: (newEra, oldEra, definitions) => {
+      const eraDef = definitions[newEra];
+      const previousEraFeatures = definitions[oldEra]?.unlockedFeatures ?? [];
       const newFeatures = eraDef.unlockedFeatures.filter(
-        (feature) => !ERA_DEFINITIONS[oldEra].unlockedFeatures.includes(feature)
+        (feature) => !previousEraFeatures.includes(feature)
       );
 
       setEraTransitionData({
         era: newEra,
         name: eraDef.name,
         description: eraDef.description,
-        features: newFeatures.map((f) => ({
-          feature: f,
-          name: f.replace(/_/g, ' ').toUpperCase(),
-          description: '',
-          unlockTurn: eraDef.startTurn,
-          category: 'military',
-        })),
+        features: newFeatures.map((feature) => {
+          const info = FEATURE_UNLOCK_INFO[feature];
+          return {
+            ...info,
+            unlockTurn: eraDef.startTurn,
+          };
+        }),
       });
       setShowEraTransition(true);
 
@@ -6526,6 +6751,7 @@ export default function NoradVector() {
           actionsRemaining: S.actionsRemaining,
           selectedLeader: S.selectedLeader,
           selectedDoctrine: S.selectedDoctrine,
+          scenarioId: S.scenario?.id ?? getDefaultScenario().id,
           doomsdayMinutes: DoomsdayClock.minutes,
           conventional: S.conventional,
         },
@@ -9441,79 +9667,91 @@ export default function NoradVector() {
     const highscores = JSON.parse(Storage.getItem('highscores') || '[]').slice(0, 5); // Top 5
 
     return (
-      <div className="intro-screen">
-        <Starfield />
-        <div className="intro-screen__scanlines" aria-hidden="true" />
+      <>
+        <ScenarioSelectionPanel
+          open={isScenarioPanelOpen}
+          onOpenChange={setIsScenarioPanelOpen}
+          scenarios={scenarioOptions}
+          selectedScenarioId={selectedScenarioId}
+          onSelect={handleScenarioSelect}
+        />
+        <div className="intro-screen">
+          <Starfield />
+          <div className="intro-screen__scanlines" aria-hidden="true" />
 
-        <div className="intro-screen__left">
-          <SpinningEarth />
+          <div className="intro-screen__left">
+            <SpinningEarth />
 
-          {/* Highscore Section */}
-          {highscores.length > 0 && (
-            <div className="absolute bottom-8 left-8 bg-black/80 border border-cyan-500/50 rounded-lg p-4 w-80 backdrop-blur-sm">
-              <h3 className="text-lg font-mono text-cyan-400 mb-3 tracking-wider uppercase flex items-center gap-2">
-                <span className="text-yellow-400">★</span>
-                Hall of Fame
-                <span className="text-yellow-400">★</span>
-              </h3>
-              <div className="space-y-2">
-                {highscores.map((hs: any, index: number) => (
-                  <div
-                    key={index}
-                    className={`flex items-center justify-between text-xs font-mono p-2 rounded ${
-                      index === 0 ? 'bg-yellow-500/20 border border-yellow-500/30' :
-                      index === 1 ? 'bg-gray-500/20 border border-gray-500/30' :
-                      index === 2 ? 'bg-orange-500/20 border border-orange-500/30' :
-                      'bg-cyan-500/10'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={`font-bold ${
-                        index === 0 ? 'text-yellow-400' :
-                        index === 1 ? 'text-gray-300' :
-                        index === 2 ? 'text-orange-400' :
-                        'text-cyan-400'
-                      }`}>
-                        #{index + 1}
-                      </span>
-                      <span className="text-cyan-200 truncate max-w-[120px]">{hs.name}</span>
+            {/* Highscore Section */}
+            {highscores.length > 0 && (
+              <div className="absolute bottom-8 left-8 bg-black/80 border border-cyan-500/50 rounded-lg p-4 w-80 backdrop-blur-sm">
+                <h3 className="text-lg font-mono text-cyan-400 mb-3 tracking-wider uppercase flex items-center gap-2">
+                  <span className="text-yellow-400">★</span>
+                  Hall of Fame
+                  <span className="text-yellow-400">★</span>
+                </h3>
+                <div className="space-y-2">
+                  {highscores.map((hs: any, index: number) => (
+                    <div
+                      key={index}
+                      className={`flex items-center justify-between text-xs font-mono p-2 rounded ${
+                        index === 0 ? 'bg-yellow-500/20 border border-yellow-500/30' :
+                        index === 1 ? 'bg-gray-500/20 border border-gray-500/30' :
+                        index === 2 ? 'bg-orange-500/20 border border-orange-500/30' :
+                        'bg-cyan-500/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`font-bold ${
+                          index === 0 ? 'text-yellow-400' :
+                          index === 1 ? 'text-gray-300' :
+                          index === 2 ? 'text-orange-400' :
+                          'text-cyan-400'
+                        }`}>
+                          #{index + 1}
+                        </span>
+                        <span className="text-cyan-200 truncate max-w-[120px]">{hs.name}</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-yellow-400 font-bold">{hs.score.toLocaleString()}</span>
+                        <span className="text-cyan-300/70 text-[10px]">{hs.turns} turns</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-yellow-400 font-bold">{hs.score.toLocaleString()}</span>
-                      <span className="text-cyan-300/70 text-[10px]">{hs.turns} turns</span>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+            )}
+          </div>
+
+          <div className="intro-screen__right">
+            <IntroLogo />
+
+            <p className="intro-screen__tagline">Want to play a game?</p>
+
+            <div className="intro-screen__menu">
+              <button onClick={handleIntroStart} className="intro-screen__menu-btn intro-screen__menu-btn--primary">
+                <span className="intro-screen__menu-btn-icon">▶</span>
+                Start Game
+                <span className="mt-1 block text-[10px] uppercase tracking-[0.35em] text-cyan-300">
+                  {selectedScenario.name}
+                </span>
+              </button>
+              <button className="intro-screen__menu-btn" onClick={() => setIsScenarioPanelOpen(true)}>
+                <span className="intro-screen__menu-btn-icon">⚔</span>
+                Campaigns
+              </button>
+              <button className="intro-screen__menu-btn" onClick={() => alert('Options coming soon!')}>
+                <span className="intro-screen__menu-btn-icon">⚙</span>
+                Options
+              </button>
+              <button className="intro-screen__menu-btn" onClick={() => alert('Credits coming soon!')}>
+                <span className="intro-screen__menu-btn-icon">★</span>
+                Credits
+              </button>
             </div>
-          )}
-        </div>
-
-        <div className="intro-screen__right">
-          <IntroLogo />
-
-          <p className="intro-screen__tagline">Want to play a game?</p>
-
-          <div className="intro-screen__menu">
-            <button onClick={() => setGamePhase('leader')} className="intro-screen__menu-btn intro-screen__menu-btn--primary">
-              <span className="intro-screen__menu-btn-icon">▶</span>
-              Start Game
-            </button>
-            <button className="intro-screen__menu-btn" onClick={() => alert('Campaign mode coming soon!')}>
-              <span className="intro-screen__menu-btn-icon">⚔</span>
-              Campaign
-            </button>
-            <button className="intro-screen__menu-btn" onClick={() => alert('Options coming soon!')}>
-              <span className="intro-screen__menu-btn-icon">⚙</span>
-              Options
-            </button>
-            <button className="intro-screen__menu-btn" onClick={() => alert('Credits coming soon!')}>
-              <span className="intro-screen__menu-btn-icon">★</span>
-              Credits
-            </button>
           </div>
         </div>
-      </div>
+      </>
     );
   };
 
@@ -9669,6 +9907,10 @@ export default function NoradVector() {
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">ACTIONS</span>
                 <span className="text-neon-green font-bold text-base" id="actionsDisplay">1/1</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-cyan-400">DATE</span>
+                <span className="text-neon-green font-bold text-base" id="gameTimeDisplay">—</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">CYBER</span>

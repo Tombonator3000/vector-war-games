@@ -3,6 +3,8 @@
  * Defines time progression, election mechanics, and scenario-specific settings
  */
 
+import type { GameEra, GameFeature } from './era';
+
 export type TimeUnit = 'year' | 'month' | 'week' | 'day';
 
 export interface TimeConfig {
@@ -45,6 +47,20 @@ export interface ElectionConfig {
   loseElectionConsequence: 'gameOver' | 'leaderChange' | 'instability' | 'none';
 }
 
+export type ScenarioEraOverrides = Partial<
+  Record<
+    GameEra,
+    {
+      /** Custom era start turn */
+      startTurn?: number;
+      /** Custom era end turn */
+      endTurn?: number;
+      /** Replace unlocked features for the era */
+      unlockedFeatures?: GameFeature[];
+    }
+  >
+>;
+
 export interface ScenarioConfig {
   /** Scenario identifier */
   id: string;
@@ -75,6 +91,9 @@ export interface ScenarioConfig {
     /** Starting resources modifier */
     startingResourcesMultiplier?: number;
   };
+
+  /** Era-specific overrides for unlock pacing */
+  eraOverrides?: ScenarioEraOverrides;
 }
 
 /**
@@ -84,16 +103,15 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
   coldWar: {
     id: 'coldWar',
     name: 'Cold War Era',
-    description: 'Classic Cold War scenario - 1 turn = 1 month',
+    description: 'Classic Cold War scenario starting in 1950 with annual turns (1 turn = 1 year)',
     timeConfig: {
-      unit: 'month',
+      unit: 'year',
       unitsPerTurn: 1,
-      startYear: 1960,
-      startMonth: 1,
-      displayFormat: 'MMM YYYY',
+      startYear: 1950,
+      displayFormat: 'YYYY',
     },
     electionConfig: {
-      interval: 12, // Elections every 12 turns (1 year)
+      interval: 4, // Elections every 4 turns (4-year cycle)
       enabled: true,
       minMoraleThreshold: 30,
       minPublicOpinionThreshold: 25,
@@ -127,6 +145,43 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
     startingDefcon: 3,
     modifiers: {
       timeSpeedMultiplier: 0.5, // Faster paced
+    },
+    eraOverrides: {
+      early: {
+        endTurn: 3,
+      },
+      mid: {
+        startTurn: 4,
+        endTurn: 6,
+        unlockedFeatures: [
+          'nuclear_missiles',
+          'nuclear_bombers',
+          'defense_systems',
+          'basic_diplomacy',
+          'basic_research',
+          'conventional_warfare',
+          'territory_control',
+          'advanced_diplomacy',
+        ],
+      },
+      late: {
+        startTurn: 7,
+        endTurn: 14,
+        unlockedFeatures: [
+          'nuclear_missiles',
+          'nuclear_bombers',
+          'defense_systems',
+          'basic_diplomacy',
+          'basic_research',
+          'conventional_warfare',
+          'territory_control',
+          'cyber_warfare',
+          'advanced_diplomacy',
+          'submarines',
+          'satellites',
+          'propaganda_victory',
+        ],
+      },
     },
   },
 

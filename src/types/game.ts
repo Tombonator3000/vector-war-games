@@ -2,6 +2,24 @@ import type { BioLabFacility } from './bioLab';
 import type { PlagueState } from './biowarfare';
 import type { ScenarioConfig } from './scenario';
 
+export interface FalloutMark {
+  id: string;
+  lon: number;
+  lat: number;
+  canvasX: number;
+  canvasY: number;
+  radius: number;
+  targetRadius: number;
+  intensity: number;
+  targetIntensity: number;
+  createdAt: number;
+  updatedAt: number;
+  lastStrikeAt: number;
+  growthRate: number;
+  decayDelayMs: number;
+  decayRate: number;
+}
+
 export interface RelationshipEvent {
   turn: number;
   withNation: string;
@@ -163,6 +181,7 @@ export interface GameState {
   globalRadiation?: number;
   events?: boolean;
   diplomacy?: DiplomacyState;
+  falloutMarks: FalloutMark[];
   satelliteOrbits: SatelliteOrbit[];
 }
 

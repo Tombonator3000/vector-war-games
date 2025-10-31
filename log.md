@@ -679,3 +679,38 @@ Looking for:
 - Installed the missing `reactflow` dependency and ran `npm run build` followed by `npm run preview` to confirm the build completes and the preview server starts without errors.
 ## 2025-10-31T06:39:45+00:00
 - Routed shadcn dialog portals through a fullscreen-aware container that prioritizes `document.fullscreenElement` with SSR guardrails so HUD overlays remain interactive when the game enters fullscreen.
+## 2025-10-31T07:48:20+00:00
+- Reviewed repository root instructions in `AGENTS.md` to confirm coding and logging requirements for this task.
+## 2025-10-31T07:48:54+00:00
+- Surveyed project structure and located `src/pages/Index.tsx` to plan HUD date display update.
+## 2025-10-31T07:49:48+00:00
+- Added HUD date display container and wired `updateDisplay` to surface scenario timestamps via `getGameTimestamp`.
+## 2025-10-31T08:42:50+00:00
+- Randomized music playback offsets by updating `AudioSys.playTrack` to start sources at a random position within each buffer.
+
+## 2025-10-31T09:19:01+00:00
+- Extended the shared `GameState` typing with structured `falloutMarks`, added the radiation icon asset, and wired lingering fal
+lout visuals, decay, and multiplayer syncing into `Index.tsx`.
+
+## 2025-10-31T09:56:55+00:00
+- Moved the Cold War scenario start year to 1950, refreshed the description to highlight the earlier entry point, and added targeted time system tests to verify era unlocks now align with the 1960s and 1970s after rerunning `npm run test -- timeSystem`.
+
+## 2025-10-31T10:33:00+00:00
+- Shifted the Cold War scenario to yearly turns by updating the time and election cadence configuration and confirming HUD timestamp formatting stays consistent across the codebase.
+
+## 2025-10-31T11:06:15+00:00
+- Reviewed the intro screen flow and scenario state handling to plan a selectable campaign experience leveraging the existing SCENARIOS definitions.
+
+## 2025-10-31T11:32:48+00:00
+- Built the ScenarioSelectionPanel modal, integrated scenario persistence, DEFCON initialization, and save metadata updates to ensure the chosen scenario propagates into the campaign start sequence.
+
+## 2025-10-31T10:33:58Z
+- Added Cuban Crisis-specific flashpoint chains, scenario-aware flashpoint selection, and aligned tests with the updated probability model.
+## 2025-10-31T10:54:18Z
+- Added scenario-driven era override typing, Cuban Crisis pacing updates, dynamic era unlock handling in `useGameEra`, and refreshed UI feature lock displays to respect scenario-specific unlock data.
+## 2025-10-31T11:17:21+00:00
+- Reviewed the EraTransitionOverlay component and surrounding page wiring to understand the Continue button behavior and responsiveness requirements.
+## 2025-10-31T11:18:10+00:00
+- Updated the EraTransitionOverlay layout to add responsive spacing, scrolling, and an auto-focused full-width Continue button that triggers the dismiss handler for reliable modal closure on smaller viewports.
+## 2025-10-31T11:18:26+00:00
+- Removed an empty className attribute left over from the icon animation wrapper to keep the overlay markup tidy.
