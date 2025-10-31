@@ -76,6 +76,7 @@ export interface PandemicTurnEffect {
   intelGain?: number;
   resolved?: boolean;
   summary?: string;
+  casualtyTotals?: Record<string, number>;
 }
 
 type AddNewsItem = (category: NewsItem['category'], text: string, priority: NewsItem['priority']) => void;

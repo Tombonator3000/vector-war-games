@@ -19,6 +19,93 @@ import {
   type AIBioStrategy,
 } from './aiBioWarfare';
 
+function advanceAINationCountryInfections(
+  plagueState: PlagueState,
+  allNations: Nation[],
+  currentTurn: number,
+): Record<string, number> {
+  const casualtyTotals: Record<string, number> = {};
+  const nationLookup = new Map(allNations.map(nation => [nation.id, nation]));
+  const newCountryInfections = new Map(plagueState.countryInfections);
+
+  let dnaGained = 0;
+  let newDetections = 0;
+  let totalDeaths = 0;
+
+  newCountryInfections.forEach((infection, nationId) => {
+    if (!infection.infected) {
+      return;
+    }
+
+    const nation = nationLookup.get(nationId);
+    const populationMillions = typeof nation?.population === 'number' ? Math.max(0, nation.population) : 0;
+
+    if (!nation || populationMillions <= 0) {
+      newCountryInfections.set(nationId, {
+        ...infection,
+        infected: false,
+        infectionLevel: 0,
+        deathRate: 0,
+      });
+      return;
+    }
+
+    const spreadRate = 0.5 + (plagueState.calculatedStats.totalInfectivity / 100);
+    const containmentPenalty = infection.containmentLevel / 100;
+    const effectiveSpread = spreadRate * (1 - containmentPenalty);
+    const newInfectionLevel = Math.min(100, infection.infectionLevel + effectiveSpread);
+
+    const lethalityFactor = plagueState.calculatedStats.totalLethality / 100;
+    const population = Math.max(0, populationMillions * 1_000_000);
+    const newDeaths = Math.floor(
+      infection.infectionLevel * population * lethalityFactor * 0.001
+    );
+
+    const updatedInfection = {
+      ...infection,
+      infectionLevel: newInfectionLevel,
+      deaths: infection.deaths + newDeaths,
+      deathRate: newDeaths,
+    };
+
+    if (newDeaths > 0) {
+      casualtyTotals[nationId] = (casualtyTotals[nationId] ?? 0) + newDeaths;
+      totalDeaths += newDeaths;
+      dnaGained += Math.floor(newDeaths / 10000);
+    }
+
+    if (!infection.detectedBioWeapon && newInfectionLevel > 10) {
+      const detectionChance = Math.min(80, newInfectionLevel * 2);
+      if (Math.random() * 100 < detectionChance) {
+        updatedInfection.detectedBioWeapon = true;
+        updatedInfection.detectionTurn = currentTurn;
+        updatedInfection.suspicionLevel = 50;
+        newDetections++;
+      }
+    }
+
+    newCountryInfections.set(nationId, updatedInfection);
+  });
+
+  newCountryInfections.forEach((infection) => {
+    if (infection.infected && infection.infectionLevel > plagueState.plagueCompletionStats.peakInfection) {
+      plagueState.plagueCompletionStats.peakInfection = infection.infectionLevel;
+    }
+  });
+
+  plagueState.countryInfections = newCountryInfections;
+  plagueState.dnaPoints += dnaGained;
+  plagueState.globalSuspicionLevel = Math.min(100, plagueState.globalSuspicionLevel + newDetections * 5);
+  plagueState.plagueCompletionStats.totalKills += totalDeaths;
+  const activeInfections = Array.from(newCountryInfections.values()).filter(infection => infection.infected).length;
+  plagueState.plagueCompletionStats.nationsInfected = Math.max(
+    plagueState.plagueCompletionStats.nationsInfected,
+    activeInfections,
+  );
+
+  return casualtyTotals;
+}
+
 /**
  * Initialize bio-warfare state for a nation (call once at game start or nation creation)
  */
@@ -245,6 +332,22 @@ export function processAIBioWarfareTurn(
       if (onDeployment) {
         onDeployment(nation.id, targets);
       }
+    }
+  }
+
+  let casualtyTotals: Record<string, number> | null = null;
+  if (plagueState.countryInfections.size > 0) {
+    casualtyTotals = advanceAINationCountryInfections(plagueState, allNations, currentTurn);
+  }
+
+  if (casualtyTotals) {
+    for (const [nationId, deaths] of Object.entries(casualtyTotals)) {
+      if (deaths <= 0) continue;
+      const target = allNations.find(n => n.id === nationId);
+      if (!target) continue;
+      const populationLoss = deaths / 1_000_000;
+      if (populationLoss <= 0) continue;
+      target.population = Math.max(0, target.population - populationLoss);
     }
   }
 }

@@ -173,8 +173,9 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
       }
 
       // Advance per-country infections if using targeted deployment
+      let casualtyTotals: Record<string, number> | null = null;
       if (evolution.plagueState.countryInfections.size > 0) {
-        evolution.advanceCountryInfections(context.turn, resolvedNations);
+        casualtyTotals = evolution.advanceCountryInfections(context.turn, resolvedNations);
       }
 
       // Only process legacy global pandemic if plague is active
@@ -246,6 +247,7 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
       productionPenalty: baseEffect.productionPenalty,
       instabilityIncrease: baseEffect.instabilityIncrease,
       actionsPenalty: baseEffect.actionsPenalty,
+      casualtyTotals: casualtyTotals ?? undefined,
     };
 
     // Award DNA based on effects
