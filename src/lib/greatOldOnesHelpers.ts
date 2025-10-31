@@ -15,7 +15,7 @@ import type {
   CultistCell,
   RitualSite,
 } from '../types/greatOldOnes';
-import { calculateVeilStatus } from '../types/greatOldOnes';
+import { DOCTRINES, calculateVeilStatus } from '../types/greatOldOnes';
 
 // ============================================================================
 // INITIALIZATION

@@ -739,5 +739,8 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 ## 2025-10-31T16:52:50+00:00
 - Updated Cuban Crisis nation setup to reference dynamic nation IDs for threats, alliances, and relationships per Codex review request.
 
+## 2025-10-31T22:59:15+00:00
+- Restored runtime import of `DOCTRINES` in `greatOldOnesHelpers` to resolve missing constant regression noted during Codex review.
+
 ## 2025-11-02T00:00:00+00:00
 - Removed erroneous type-only import for `DOCTRINES` in `greatOldOnesHelpers` per Codex follow-up review instructions.
