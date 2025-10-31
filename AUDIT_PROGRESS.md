@@ -192,18 +192,24 @@
 ### High Priority (P0-P1)
 
 **Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 12-16 hours remaining)
-- **Status:** IN PROGRESS (Phases 1-6 of 7 complete, 86% done)
+- **Status:** Phases 1-6 Complete ✅ | Phase 7 Planned (not yet implemented)
 - **Progress:** 10,937 → 9,661 lines (-1,276 lines, -11.7%)
-- **Completed:**
+- **Completed Phases (6 of 7, 86% done):**
   - ✅ Phase 1: Extracted utility functions (gameUtils, nationUtils, renderingUtils)
   - ✅ Phase 2: Extracted AI diplomacy logic (aiDiplomacyActions)
   - ✅ Phase 3: Extracted game phase handlers (launch, resolution, production)
   - ✅ Phase 4: Extracted world rendering system (drawWorld, drawNations)
   - ✅ Phase 5: Extracted UI components (IntroLogo, Starfield, SpinningEarth, OperationModal, IntelReportContent)
   - ✅ Phase 6: Extracted game state management (GameStateManager, PlayerManager, DoomsdayClock)
-- **Remaining Phases:**
-  - Phase 7: Simplify main NoradVector component (12-16 hours)
-- **Files Created:**
+- **Remaining Phase:**
+  - 📋 Phase 7: Simplify main NoradVector component (12-16 hours) - **Planned but not implemented**
+    - Extract 3 modal components (882 lines)
+    - Extract 3 screen components (176 lines)
+    - Create 5 custom hooks (~500 lines)
+    - Extract 5 UI components (~800 lines)
+    - Target: Reduce NoradVector from 5,336 → <3,000 lines
+    - **See:** `PHASE_7_PLAN.md` for complete implementation guide
+- **Files Created (15 files, 2,461 lines):**
   - `src/lib/gameUtils.ts` (70 lines)
   - `src/lib/nationUtils.ts` (45 lines)
   - `src/lib/renderingUtils.ts` (95 lines)
@@ -219,7 +225,9 @@
   - `src/state/PlayerManager.ts` (75 lines)
   - `src/state/DoomsdayClock.ts` (95 lines)
   - `src/state/index.ts` (19 lines)
-- **See:** `REFACTORING_SUMMARY.md` for detailed breakdown
+- **Documentation:**
+  - `REFACTORING_SUMMARY.md` - Detailed phase breakdown and progress
+  - `PHASE_7_PLAN.md` - Complete implementation guide for Phase 7
 
 **Issue #7: Fix Type Safety Issues** (12-15 hours)
 - **Problem:** 89 instances of `as any` bypassing TypeScript
