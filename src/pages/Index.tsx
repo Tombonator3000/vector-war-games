@@ -8110,7 +8110,7 @@ export default function NoradVector() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showModal} onOpenChange={setShowModal}>
+      <Dialog open={showModal} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="bg-black border border-cyan-500 text-cyan-500 max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-cyan-400">{modalContent.title}</DialogTitle>
