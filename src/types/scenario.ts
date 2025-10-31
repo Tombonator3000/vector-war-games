@@ -84,11 +84,11 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
   coldWar: {
     id: 'coldWar',
     name: 'Cold War Era',
-    description: 'Classic Cold War scenario with annual turns (1 turn = 1 year)',
+    description: 'Classic Cold War scenario starting in 1950 with annual turns (1 turn = 1 year)',
     timeConfig: {
       unit: 'year',
       unitsPerTurn: 1,
-      startYear: 1960,
+      startYear: 1950,
       displayFormat: 'YYYY',
     },
     electionConfig: {
