@@ -192,8 +192,8 @@
 ### High Priority (P0-P1)
 
 **Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 8-10 hours remaining)
-- **Status:** Phases 1-6 Complete ✅ | Phase 7 In Progress (~15% done)
-- **Progress:** 10,937 → 8,428 lines (-2,509 lines, -22.9%)
+- **Status:** Phases 1-6 Complete ✅ | Phase 7 In Progress (~17% done)
+- **Progress:** 10,937 → 8,413 lines (-2,524 lines, -23.1%)
 - **Completed Phases (6 of 7, 88% done):**
   - ✅ Phase 1: Extracted utility functions (gameUtils, nationUtils, renderingUtils)
   - ✅ Phase 2: Extracted AI diplomacy logic (aiDiplomacyActions)
@@ -209,9 +209,11 @@
       - gameConstants.ts with COSTS, RESEARCH_TREE, etc.
     - ✅ **Completed:** Extract 3 modal components (1,066 lines reduced)
       - BuildModal, ResearchModal, MilitaryModal
-    - 📋 **Remaining:** Create 5 custom hooks (~500 lines potential)
+    - ✅ **Completed:** Extract 2 custom hooks (30 lines reduced)
+      - useModalManager, useNewsManager
+    - 📋 **Remaining:** Create 3 additional custom hooks (~470 lines potential)
     - 📋 **Remaining:** Extract 5 UI components (~800 lines potential)
-    - Target: Reduce Index.tsx from 8,428 → <3,000 lines (need ~5,428 more)
+    - Target: Reduce Index.tsx from 8,413 → <3,000 lines (need ~5,413 more)
     - **See:** `PHASE_7_PLAN.md` for complete implementation guide
 - **Files Created (22 files, 4,151 lines):**
   - `src/lib/gameUtils.ts` (70 lines)
@@ -236,6 +238,8 @@
   - `src/components/game/BuildModal.tsx` (257 lines)
   - `src/components/game/ResearchModal.tsx` (171 lines)
   - `src/components/game/MilitaryModal.tsx` (217 lines)
+  - `src/hooks/game/useModalManager.ts` (71 lines)
+  - `src/hooks/game/useNewsManager.ts` (57 lines)
 - **Documentation:**
   - `REFACTORING_SUMMARY.md` - Detailed phase breakdown and progress
   - `PHASE_7_PLAN.md` - Complete implementation guide for Phase 7

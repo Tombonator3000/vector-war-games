@@ -147,6 +147,8 @@ import { BuildModal } from '@/components/game/BuildModal';
 import { ResearchModal } from '@/components/game/ResearchModal';
 import { MilitaryModal } from '@/components/game/MilitaryModal';
 import { COSTS, RESEARCH_TREE, RESEARCH_LOOKUP, WARHEAD_RESEARCH_IDS, WARHEAD_YIELD_TO_ID, type ResourceCost, type ResearchProject } from '@/lib/gameConstants';
+import { useModalManager, type ModalContentValue } from '@/hooks/game/useModalManager';
+import { useNewsManager } from '@/hooks/game/useNewsManager';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -557,7 +559,7 @@ function applyDoctrineEffects(nation: Nation, doctrineKey?: DoctrineKey) {
 // Game constants (COSTS, RESEARCH_TREE, RESEARCH_LOOKUP, WARHEAD_YIELD_TO_ID, etc.)
 // now imported from @/lib/gameConstants (Phase 7 refactoring)
 
-type ModalContentValue = string | ReactNode | (() => ReactNode);
+// ModalContentValue type now imported from @/hooks/game/useModalManager (Phase 7 refactoring)
 
 // PlayerManager class now imported from @/state (Phase 6 refactoring)
 
@@ -3722,8 +3724,9 @@ export default function NoradVector() {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const hasAutoplayedTurnOneMusicRef = useRef(false);
   const hasBootstrappedGameRef = useRef(false);
-  const [showModal, setShowModal] = useState(false);
-  const [modalContent, setModalContent] = useState<{ title: string; content: ModalContentValue }>({ title: '', content: '' });
+
+  // Modal management - Extracted to useModalManager hook (Phase 7 refactoring)
+  const { showModal, modalContent, openModal, closeModal } = useModalManager();
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>(() => {
     const stored = Storage.getItem('selected_scenario');
     if (stored && stored in SCENARIOS) {
@@ -4234,21 +4237,12 @@ export default function NoradVector() {
   }, []);
 
   // News ticker and flashpoints
-  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
+  // News management - Extracted to useNewsManager hook (Phase 7 refactoring)
+  const { newsItems, addNewsItem } = useNewsManager();
   const [currentFlashpointOutcome, setCurrentFlashpointOutcome] = useState<FlashpointOutcome | null>(null);
   const { activeFlashpoint, triggerRandomFlashpoint, resolveFlashpoint, dismissFlashpoint } = useFlashpoints();
   const { distortNationIntel, generateFalseIntel } = useFogOfWar();
 
-  const addNewsItem = useCallback((category: NewsItem['category'], text: string, priority: NewsItem['priority']) => {
-    const item: NewsItem = {
-      id: `news_${Date.now()}_${Math.random()}`,
-      text,
-      priority,
-      category,
-      timestamp: Date.now()
-    };
-    setNewsItems(prev => [...prev, item].slice(-20)); // Keep last 20 items
-  }, []);
 
   const getAllNations = useCallback(() => nations, []);
 
@@ -5337,15 +5331,6 @@ export default function NoradVector() {
     S.playerName = leaderToUse;
     setIsGameStarted(true);
   }, [selectedLeader, selectedDoctrine]);
-
-  const openModal = useCallback((title: string, content: ModalContentValue) => {
-    setModalContent({ title, content });
-    setShowModal(true);
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setShowModal(false);
-  }, []);
 
   // MilitaryModal - Extracted to src/components/game/MilitaryModal.tsx (Phase 7 refactoring)
   const renderMilitaryModal = useCallback((): ReactNode => {
