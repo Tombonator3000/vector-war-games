@@ -1,6 +1,7 @@
 import type { BioLabFacility } from './bioLab';
 import type { PlagueState } from './biowarfare';
 import type { ScenarioConfig } from './scenario';
+import type { GreatOldOnesState } from './greatOldOnes';
 
 export interface FalloutMark {
   id: string;
@@ -183,6 +184,9 @@ export interface GameState {
   diplomacy?: DiplomacyState;
   falloutMarks: FalloutMark[];
   satelliteOrbits: SatelliteOrbit[];
+
+  /** Great Old Ones campaign mode state */
+  greatOldOnes?: GreatOldOnesState;
 }
 
 export interface ConventionalWarfareDelta {
