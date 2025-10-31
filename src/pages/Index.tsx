@@ -56,7 +56,7 @@ import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EndGameScreen } from '@/components/EndGameScreen';
-import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit } from '@/types/game';
+import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
 import type { DiplomacyProposal } from '@/types/diplomacy';
 import { evaluateProposal, shouldAIInitiateProposal } from '@/lib/aiDiplomacyEvaluator';
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
@@ -180,6 +180,7 @@ interface GameState {
   conventionalMovements?: ConventionalMovementMarker[];
   conventionalUnits?: ConventionalUnitMarker[];
   satelliteOrbits: SatelliteOrbit[];
+  falloutMarks: FalloutMark[];
 
   // Game statistics tracking
   statistics?: {
@@ -300,6 +301,7 @@ const submarineIcon = loadIcon('/icons/submarine.svg');
 const armyIcon = loadIcon('/icons/army.svg');
 const navyIcon = loadIcon('/icons/navy.svg');
 const airIcon = loadIcon('/icons/air.svg');
+const radiationIcon = loadIcon('/icons/radiation.svg');
 
 const conventionalIconLookup: Record<ForceType, CanvasIcon> = {
   army: armyIcon,
@@ -310,10 +312,15 @@ const conventionalIconLookup: Record<ForceType, CanvasIcon> = {
 const MISSILE_ICON_BASE_SCALE = 0.14;
 const BOMBER_ICON_BASE_SCALE = 0.18;
 const SUBMARINE_ICON_BASE_SCALE = 0.2;
+const RADIATION_ICON_BASE_SCALE = 0.16;
 const easeInOutQuad = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const SATELLITE_ORBIT_RADIUS = 34;
 const SATELLITE_ORBIT_TTL_MS = 180000;
 const SATELLITE_ORBIT_SPEED = (Math.PI * 2) / 12000;
+const MAX_FALLOUT_MARKS = 36;
+const FALLOUT_GROWTH_RATE = 1.1; // units per second
+const FALLOUT_DECAY_DELAY_MS = 12000;
+const FALLOUT_DECAY_RATE = 0.04; // intensity per second once decay begins
 
 const IntroLogo = () => (
   <svg
@@ -550,6 +557,7 @@ let S: LocalGameState = {
   empEffects: [],
   rings: [],
   refugeeCamps: [],
+  falloutMarks: [],
   satelliteOrbits: [],
   screenShake: 0,
   fx: 1,
@@ -589,6 +597,7 @@ let startCtx: CanvasRenderingContext2D;
 let W = 1600, H = 900;
 let globeProjector: ProjectorFn | null = null;
 let globePicker: PickerFn | null = null;
+let lastFxTimestamp: number | null = null;
 
 // Camera system
 const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
@@ -4083,9 +4092,153 @@ function drawParticles() {
   });
 }
 
+function drawFalloutMarks(deltaMs: number) {
+  if (!ctx || currentMapStyle !== 'flat-realistic') {
+    return;
+  }
+
+  if (!Array.isArray(S.falloutMarks)) {
+    S.falloutMarks = [];
+    return;
+  }
+
+  const now = Date.now();
+  const deltaSeconds = Math.max(0.016, deltaMs / 1000);
+  const updatedMarks: FalloutMark[] = [];
+
+  for (const mark of S.falloutMarks) {
+    const next: FalloutMark = { ...mark };
+
+    const growthFactor = Math.min(1, next.growthRate * deltaSeconds);
+    if (next.radius < next.targetRadius) {
+      const radiusDelta = (next.targetRadius - next.radius) * growthFactor;
+      next.radius = Math.min(next.targetRadius, next.radius + radiusDelta);
+    }
+
+    if (next.intensity < next.targetIntensity) {
+      const intensityDelta = (next.targetIntensity - next.intensity) * (growthFactor * 0.8);
+      next.intensity = Math.min(next.targetIntensity, next.intensity + intensityDelta);
+    }
+
+    if (now - next.lastStrikeAt > next.decayDelayMs) {
+      const decayAmount = next.decayRate * deltaSeconds;
+      next.intensity = Math.max(0, next.intensity - decayAmount);
+      next.targetIntensity = Math.max(0, next.targetIntensity - decayAmount * 0.5);
+      const shrink = next.targetRadius * decayAmount * 0.2;
+      if (next.radius > next.targetRadius * 0.6) {
+        next.radius = Math.max(next.targetRadius * 0.6, next.radius - shrink);
+      }
+    }
+
+    next.updatedAt = now;
+    const [px, py] = project(next.lon, next.lat);
+    next.canvasX = px;
+    next.canvasY = py;
+
+    if (next.intensity <= 0.015) {
+      continue;
+    }
+
+    updatedMarks.push(next);
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = Math.min(0.85, next.intensity + 0.05);
+    const gradient = ctx.createRadialGradient(px, py, Math.max(4, next.radius * 0.25), px, py, next.radius);
+    gradient.addColorStop(0, 'rgba(120,255,180,0.75)');
+    gradient.addColorStop(0.45, 'rgba(60,200,120,0.35)');
+    gradient.addColorStop(1, 'rgba(10,80,30,0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(px, py, next.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    drawIcon(radiationIcon, px, py, 0, RADIATION_ICON_BASE_SCALE, {
+      alpha: Math.min(0.9, next.intensity + 0.15),
+    });
+  }
+
+  if (updatedMarks.length > MAX_FALLOUT_MARKS) {
+    updatedMarks
+      .sort((a, b) => a.lastStrikeAt - b.lastStrikeAt)
+      .splice(0, updatedMarks.length - MAX_FALLOUT_MARKS);
+  }
+
+  S.falloutMarks = updatedMarks;
+}
+
+function upsertFalloutMark(x: number, y: number, lon: number, lat: number, yieldMT: number) {
+  if (!Array.isArray(S.falloutMarks)) {
+    S.falloutMarks = [];
+  }
+
+  const now = Date.now();
+  const intensityBoost = Math.min(1, 0.25 + yieldMT / 160);
+  const baseRadius = Math.max(24, Math.sqrt(Math.max(1, yieldMT)) * 12);
+  const growthRate = FALLOUT_GROWTH_RATE * (0.8 + Math.sqrt(Math.max(1, yieldMT)) * 0.02);
+  const decayDelay = Math.max(FALLOUT_DECAY_DELAY_MS, 8000 + yieldMT * 180);
+  const decayRate = FALLOUT_DECAY_RATE * (0.6 + Math.sqrt(Math.max(1, yieldMT)) * 0.015);
+  const mergeThreshold = Math.max(baseRadius * 0.6, 30);
+
+  let targetMark: FalloutMark | undefined;
+  for (const mark of S.falloutMarks) {
+    const dist = Math.hypot(mark.canvasX - x, mark.canvasY - y);
+    if (dist <= Math.max(mergeThreshold, mark.radius * 0.8)) {
+      targetMark = mark;
+      break;
+    }
+  }
+
+  if (targetMark) {
+    targetMark.lon = (targetMark.lon + lon) / 2;
+    targetMark.lat = (targetMark.lat + lat) / 2;
+    targetMark.canvasX = x;
+    targetMark.canvasY = y;
+    targetMark.targetRadius = Math.max(targetMark.targetRadius, baseRadius * 1.1);
+    targetMark.radius = Math.min(targetMark.targetRadius, targetMark.radius + baseRadius * 0.15);
+    targetMark.targetIntensity = Math.min(1, targetMark.targetIntensity + intensityBoost * 0.7);
+    targetMark.intensity = Math.min(1, targetMark.intensity + intensityBoost * 0.35);
+    targetMark.lastStrikeAt = now;
+    targetMark.updatedAt = now;
+    targetMark.growthRate = Math.max(targetMark.growthRate, growthRate);
+    targetMark.decayDelayMs = Math.max(targetMark.decayDelayMs, decayDelay);
+    targetMark.decayRate = Math.max(targetMark.decayRate, decayRate);
+  } else {
+    const newMark: FalloutMark = {
+      id: `fallout_${now}_${Math.random().toString(36).slice(2, 8)}`,
+      lon,
+      lat,
+      canvasX: x,
+      canvasY: y,
+      radius: Math.max(18, baseRadius * 0.45),
+      targetRadius: baseRadius,
+      intensity: Math.min(1, intensityBoost * 0.6),
+      targetIntensity: intensityBoost,
+      createdAt: now,
+      updatedAt: now,
+      lastStrikeAt: now,
+      growthRate,
+      decayDelayMs: decayDelay,
+      decayRate,
+    };
+    S.falloutMarks.push(newMark);
+  }
+
+  if (S.falloutMarks.length > MAX_FALLOUT_MARKS) {
+    S.falloutMarks
+      .sort((a, b) => a.lastStrikeAt - b.lastStrikeAt)
+      .splice(0, S.falloutMarks.length - MAX_FALLOUT_MARKS);
+  }
+}
+
 function drawFX() {
   if (!ctx) return;
-  
+
+  const now = Date.now();
+  const deltaMs = lastFxTimestamp === null ? 16 : Math.max(1, now - lastFxTimestamp);
+  lastFxTimestamp = now;
+
   if (S.screenShake && S.screenShake > 0) {
     const shakeX = (Math.random() - 0.5) * S.screenShake;
     const shakeY = (Math.random() - 0.5) * S.screenShake;
@@ -4093,7 +4246,11 @@ function drawFX() {
     ctx.translate(shakeX, shakeY);
     S.screenShake *= 0.9;
   }
-  
+
+  if (currentMapStyle === 'flat-realistic') {
+    drawFalloutMarks(deltaMs);
+  }
+
   // Rings and explosions
   S.rings = S.rings || [];
   S.rings.forEach((b: any, i: number) => {
@@ -4245,6 +4402,9 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
   }
 
   const [elon, elat] = toLonLat(x, y);
+  if (Number.isFinite(elon) && Number.isFinite(elat)) {
+    upsertFalloutMark(x, y, elon, elat, yieldMT);
+  }
 
   // Create mushroom cloud particles
   const mushroomStemHeight = 20 * scale;
@@ -5822,8 +5982,14 @@ export default function NoradVector() {
     if (!coopEnabled) {
       return;
     }
+    const sanitizedState: LocalGameState = {
+      ...S,
+      falloutMarks: Array.isArray(S.falloutMarks)
+        ? S.falloutMarks.map(mark => ({ ...mark }))
+        : [],
+    };
     publishState({
-      gameState: { ...S },
+      gameState: sanitizedState,
       nations: nations.map(nation => ({ ...nation })),
       conventionalDeltas: conventionalDeltas.map(delta => ({ ...delta })),
     });
@@ -5847,9 +6013,18 @@ export default function NoradVector() {
       suppressMultiplayerBroadcast = true;
       try {
         if (state.gameState) {
-          S = { ...state.gameState };
+          const remoteState = state.gameState as Partial<LocalGameState>;
+          S = {
+            ...remoteState,
+            falloutMarks: Array.isArray(remoteState.falloutMarks)
+              ? remoteState.falloutMarks.map(mark => ({ ...mark }))
+              : [],
+          } as LocalGameState;
           if (!Array.isArray(S.satelliteOrbits)) {
             S.satelliteOrbits = [];
+          }
+          if (!Array.isArray(S.falloutMarks)) {
+            S.falloutMarks = [];
           }
         }
         if (state.nations) {
