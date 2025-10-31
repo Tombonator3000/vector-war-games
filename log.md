@@ -679,3 +679,9 @@ Looking for:
 - Installed the missing `reactflow` dependency and ran `npm run build` followed by `npm run preview` to confirm the build completes and the preview server starts without errors.
 ## 2025-10-31T06:39:45+00:00
 - Routed shadcn dialog portals through a fullscreen-aware container that prioritizes `document.fullscreenElement` with SSR guardrails so HUD overlays remain interactive when the game enters fullscreen.
+## 2025-10-31T07:48:20+00:00
+- Reviewed repository root instructions in `AGENTS.md` to confirm coding and logging requirements for this task.
+## 2025-10-31T07:48:54+00:00
+- Surveyed project structure and located `src/pages/Index.tsx` to plan HUD date display update.
+## 2025-10-31T07:49:48+00:00
+- Added HUD date display container and wired `updateDisplay` to surface scenario timestamps via `getGameTimestamp`.

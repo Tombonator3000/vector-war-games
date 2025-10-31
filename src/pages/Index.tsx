@@ -5298,7 +5298,14 @@ function updateDisplay() {
   const maxActions = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
   const actionsEl = document.getElementById('actionsDisplay');
   if (actionsEl) actionsEl.textContent = `${S.actionsRemaining}/${maxActions}`;
-  
+
+  const gameTimeEl = document.getElementById('gameTimeDisplay');
+  if (gameTimeEl) {
+    const timeConfig = S.scenario?.timeConfig ?? getDefaultScenario().timeConfig;
+    const timestamp = getGameTimestamp(Math.max(0, S.turn - 1), timeConfig);
+    gameTimeEl.textContent = timestamp;
+  }
+
   const phaseEl = document.getElementById('phaseBadge');
   if (phaseEl) phaseEl.textContent = S.phase;
   
@@ -9661,6 +9668,10 @@ export default function NoradVector() {
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">ACTIONS</span>
                 <span className="text-neon-green font-bold text-base" id="actionsDisplay">1/1</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-cyan-400">DATE</span>
+                <span className="text-neon-green font-bold text-base" id="gameTimeDisplay">—</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">CYBER</span>
