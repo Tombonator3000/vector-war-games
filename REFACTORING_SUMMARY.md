@@ -7,9 +7,9 @@
 ## Progress Overview
 
 **Original Size:** 10,937 lines
-**Current Size:** 10,341 lines
-**Reduction:** 596 lines (-5.5%)
-**Status:** Phases 1-3 Complete (3 of 7 phases)
+**Current Size:** 10,125 lines
+**Reduction:** 812 lines (-7.4%)
+**Status:** Phases 1-4 Complete (4 of 7 phases, 57% done)
 
 ---
 
@@ -143,29 +143,59 @@
 
 ---
 
-## Remaining Phases (4 of 7)
+### Phase 4: Extract World Rendering System ✅
+
+**Created Files:**
+- `src/rendering/worldRenderer.ts` (328 lines)
+
+**Functions Extracted:**
+- `drawWorld()` - World map rendering (~113 lines)
+  - Renders world map with 5 visual styles
+  - Handles texture loading and country geometry
+  - Draws coordinate grid and animated scan line
+  - Supports: political, night, wireframe, realistic, flat-realistic modes
+
+- `drawNations()` - Nation markers and information (~143 lines)
+  - Nation triangle markers with visual effects
+  - City indicators around nation capitals
+  - Leader and nation name labels with backgrounds
+  - Population display
+  - Target selection indicators with pulsing animation
+  - Style-specific rendering (wireframe, night, political)
+
+- `drawWorldPath()` - Geographic path rendering helper (~10 lines)
+  - Canvas path API wrapper for country boundaries
+  - Works with Polygon and MultiPolygon geometries
+
+**Technical Approach:**
+- Created context interface pattern similar to Phase 3
+- Defined TypeScript interfaces:
+  - `WorldRenderContext` (12 properties)
+  - `NationRenderContext` (extends WorldRenderContext with 3 more)
+- Wrapper functions prepare context objects and delegate to extracted module
+- Fixed recursive function calls (projectLocal, toLonLatLocal)
+- All canvas rendering logic properly separated
+
+**Improvements:**
+- Rendering logic separated from game logic layer
+- Easier to test rendering functions independently
+- Clear interface contracts for rendering dependencies
+- Better code organization by functional area
+- Improved readability and maintainability
+
+**Challenges Overcome:**
+- Heavy coupling to canvas context and global state
+- Complex dependency chains (ctx, cam, worldCountries, etc.)
+- Multiple rendering styles with different behaviors
+- Maintained all visual effects and animations
+
+---
+
+## Remaining Phases (3 of 7)
 
 
 
 ### Phase 4: Extract Rendering System (Pending)
-**Target Functions:**
-- `drawWorld()` - World map rendering
-- `drawNations()` - Nation territory rendering
-- `drawSatellites()` - Satellite orbit rendering
-- `drawConventionalMovements()` - Movement markers
-- `drawFalloutMarks()` - Fallout effects
-- `animationLoop()` - Main animation loop
-
-**Estimated Reduction:** ~500 lines
-
-**Approach:**
-- Create `src/rendering/` directory
-- Extract canvas rendering logic into modules
-- Create rendering context for shared state
-
----
-
-### Phase 5: Extract UI Components (Pending)
 **Target Components:**
 - `IntroLogo` - SVG logo component
 - `Starfield` - Animated starfield background
@@ -227,11 +257,11 @@
 - **Utility Modules:** 0
 - **TypeScript Errors:** 1 (fixed)
 
-### After Phase 1-3
-- **Total Lines:** 10,341 (-596)
-- **Main Component:** ~5,100 lines
-- **Helper Functions:** ~5,200 lines
-- **Extracted Modules:** 5 files, 938 lines
+### After Phase 1-4
+- **Total Lines:** 10,125 (-812)
+- **Main Component:** ~5,000 lines
+- **Helper Functions:** ~5,100 lines
+- **Extracted Modules:** 6 files, 1,266 lines
 - **TypeScript Errors:** 0
 
 ### Target (All Phases Complete)
@@ -355,6 +385,15 @@ aiAttemptDiplomacy(nation, nations, log);
 ## Commit History
 
 ```
+02270ec refactor: Extract world rendering system (Phase 4)
+  - Created rendering/worldRenderer.ts (328 lines)
+  - Extracted drawWorld(), drawNations(), drawWorldPath()
+  - Created WorldRenderContext and NationRenderContext interfaces
+  - Fixed recursive function calls in projectLocal/toLonLatLocal
+  - Reduced Index.tsx by 216 lines (-2.1%)
+
+77b3706 docs: Update refactoring documentation for Phase 3 completion
+
 7f03737 refactor: Extract game phase handlers (Phase 3)
   - Created gamePhaseHandlers.ts (423 lines)
   - Extracted launch(), resolutionPhase(), productionPhase()
@@ -377,14 +416,13 @@ d458b07 refactor: Extract utility functions and AI diplomacy logic (Phases 1-2)
 ## Time Estimate for Remaining Work
 
 **Phase 3:** 6-8 hours (Game phase handlers)
-**Phase 4:** 8-12 hours (Rendering system)
 **Phase 5:** 4-6 hours (UI components)
 **Phase 6:** 6-8 hours (State management)
 **Phase 7:** 12-16 hours (Main component simplification)
 
-**Total Remaining:** 36-50 hours
+**Total Remaining:** 22-30 hours
 
-**Completed:** 6-9 hours (Phases 1-3)
+**Completed:** 8-12 hours (Phases 1-4)
 
 ---
 

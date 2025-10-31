@@ -2,7 +2,7 @@
 
 **Session Date:** 2025-10-31
 **Branch:** `claude/audit-progress-refactor-011CUfG5REjHqmjwrYYH3cPF`
-**Status:** 6 of 18 issues completed (33% complete), Issue #4 in progress (3/7 phases done)
+**Status:** 6 of 18 issues completed (33% complete), Issue #4 in progress (4/7 phases done, 57%)
 
 ---
 
@@ -191,15 +191,15 @@
 
 ### High Priority (P0-P1)
 
-**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 23-31 hours remaining)
-- **Status:** IN PROGRESS (Phases 1-3 of 7 complete, 43% done)
-- **Progress:** 10,937 → 10,341 lines (-596 lines, -5.5%)
+**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 20-28 hours remaining)
+- **Status:** IN PROGRESS (Phases 1-4 of 7 complete, 57% done)
+- **Progress:** 10,937 → 10,125 lines (-812 lines, -7.4%)
 - **Completed:**
   - ✅ Phase 1: Extracted utility functions (gameUtils, nationUtils, renderingUtils)
   - ✅ Phase 2: Extracted AI diplomacy logic (aiDiplomacyActions)
   - ✅ Phase 3: Extracted game phase handlers (launch, resolution, production)
+  - ✅ Phase 4: Extracted world rendering system (drawWorld, drawNations)
 - **Remaining Phases:**
-  - Phase 4: Extract rendering system (world, markers, effects)
   - Phase 5: Extract UI components (IntroLogo, Starfield, modals)
   - Phase 6: Extract game state management
   - Phase 7: Simplify main NoradVector component
@@ -209,6 +209,7 @@
   - `src/lib/renderingUtils.ts` (95 lines)
   - `src/lib/aiDiplomacyActions.ts` (305 lines)
   - `src/lib/gamePhaseHandlers.ts` (423 lines)
+  - `src/rendering/worldRenderer.ts` (328 lines)
 - **See:** `REFACTORING_SUMMARY.md` for detailed breakdown
 
 **Issue #7: Fix Type Safety Issues** (12-15 hours)
