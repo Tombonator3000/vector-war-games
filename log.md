@@ -677,3 +677,8 @@ Looking for:
 - Updated `package.json` to have `npm run preview` trigger a fresh build before launching `vite preview`, preventing the "Preview has not been built yet" error when assets are missing.
 - Repaired `src/components/CesiumViewer.tsx` by reintroducing the `applyDayNightSettings` helper, restoring ref synchronization for click callbacks, and cleaning up stray braces that broke the production build.
 - Installed the missing `reactflow` dependency and ran `npm run build` followed by `npm run preview` to confirm the build completes and the preview server starts without errors.
+
+## 2025-10-31T08:34:40+00:00
+- Removed duplicate city progress declarations in `src/lib/consequenceCalculator.ts`, relying on the existing `safePercentage` helper.
+- Updated `src/hooks/useFlashpoints.ts` to pull randomness from `useOptionalRNG` with a Math.random-backed fallback so the hook works without an `RNGProvider`.
+- Ran `npm run test -- useFlashpoints`; hook-related tests now pass while probability tests continue to fail due to pre-existing expectation mismatches.
