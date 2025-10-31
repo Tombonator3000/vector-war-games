@@ -1630,8 +1630,8 @@ export function useFlashpoints() {
 
     // Determine follow-up hint using helper function for more reliable mapping
     const followUpKey = `${optionId}_${success ? 'success' : 'failure'}`;
-    const categoryKey = getFlashpointCategoryKey(flashpoint.title);
     const categoryKey = flashpoint.followUpId ??
+                        getFlashpointCategoryKey(flashpoint.title) ??
                         (flashpoint.title.includes('Nuclear Materials') ? 'nuclear_materials' :
                         flashpoint.title.includes('COUP') ? 'military_coup' :
                         flashpoint.title.includes('ROGUE AI') ? 'rogue_ai' :

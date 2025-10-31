@@ -104,6 +104,21 @@ import {
 } from '@/lib/electionSystem';
 import { enhancedAIActions } from '@/lib/aiActionEnhancements';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
+import { canAfford, pay, getCityCost, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
+import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
+import { project, toLonLat, getPoliticalFill, resolvePublicAssetPath, POLITICAL_COLOR_PALETTE, type ProjectionContext } from '@/lib/renderingUtils';
+import {
+  aiSignMutualTruce,
+  aiSignNonAggressionPact,
+  aiFormAlliance,
+  aiSendAid,
+  aiImposeSanctions,
+  aiBreakTreaties,
+  aiRespondToSanctions,
+  aiHandleTreatyStrain,
+  aiHandleDiplomaticUrgencies,
+  aiAttemptDiplomacy,
+} from '@/lib/aiDiplomacyActions';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -609,17 +624,7 @@ const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
 let worldData: any = null;
 let worldCountries: any = null;
 
-const resolvePublicAssetPath = (assetPath: string) => {
-  const base = import.meta.env.BASE_URL ?? '/';
-  const trimmedBase = base.endsWith('/') ? base.slice(0, -1) : base;
-  const trimmedAsset = assetPath.startsWith('/') ? assetPath.slice(1) : assetPath;
-
-  if (!trimmedBase) {
-    return `/${trimmedAsset}`;
-  }
-
-  return `${trimmedBase}/${trimmedAsset}`;
-};
+// resolvePublicAssetPath moved to @/lib/renderingUtils
 
 const FLAT_REALISTIC_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day.jpg');
 let flatRealisticTexture: HTMLImageElement | null = null;
@@ -2155,7 +2160,7 @@ const CityLights = {
   destroyNear(x: number, y: number, radius: number): number {
     let destroyed = 0;
     this.cities = this.cities.filter(city => {
-      const [cx, cy] = project(city.lon, city.lat);
+      const [cx, cy] = projectLocal(city.lon, city.lat);
       const dist = Math.hypot(cx - x, cy - y);
       if (dist < radius) {
         destroyed++;
@@ -2173,7 +2178,7 @@ const CityLights = {
 
     const time = Date.now();
     this.cities.forEach(city => {
-      const [x, y] = project(city.lon, city.lat);
+      const [x, y] = projectLocal(city.lon, city.lat);
 
       // Flickering light effect (satellite view)
       const flicker = 0.8 + Math.sin(time * 0.003 + city.lon + city.lat) * 0.2;
@@ -2202,273 +2207,8 @@ const CityLights = {
 };
 
 // Helper functions
-function canAfford(nation: Nation, cost: Record<string, number>): boolean {
-  return Object.entries(cost).every(([resource, amount]) => {
-    const current = nation[resource as keyof Nation] as number || 0;
-    return current >= amount;
-  });
-}
-
-function pay(nation: Nation, cost: Record<string, number>) {
-  Object.entries(cost).forEach(([resource, amount]) => {
-    const key = resource as keyof Nation;
-    const currentValue = nation[key] as number;
-    (nation[key] as number) = currentValue - amount;
-  });
-}
-
-function getCityCost(nation: Nation) {
-  const cityCount = nation.cities || 1;
-  return { production: 20 + (cityCount - 1) * 5 };
-}
-
-function canPerformAction(action: string, defcon: number): boolean {
-  if (action === 'attack') return defcon <= 2;
-  if (action === 'escalate') return defcon > 1;
-  return true;
-}
-
-function hasActivePeaceTreaty(player: Nation | null, target: Nation): boolean {
-  if (!player) return false;
-  const treaty = player.treaties?.[target.id];
-  if (!treaty) return false;
-  if (treaty.alliance) return true;
-  if (typeof treaty.truceTurns === 'number' && treaty.truceTurns > 0) return true;
-  return false;
-}
-
-function isEligibleEnemyTarget(player: Nation | null, target: Nation): boolean {
-  if (target.isPlayer) return false;
-  if (target.population <= 0) return false;
-  if (hasActivePeaceTreaty(player, target)) return false;
-  return true;
-}
-
-function getNationById(id: string): Nation | undefined {
-  return nations.find(n => n.id === id);
-}
-
-function ensureTreatyRecord(self: Nation, other: Nation) {
-  self.treaties = self.treaties || {};
-  self.treaties[other.id] = self.treaties[other.id] || {};
-  return self.treaties[other.id];
-}
-
-function adjustThreat(nation: Nation, otherId: string, delta: number) {
-  nation.threats = nation.threats || {};
-  const next = Math.max(0, Math.min(100, (nation.threats[otherId] || 0) + delta));
-  if (next <= 0) {
-    delete nation.threats[otherId];
-  } else {
-    nation.threats[otherId] = next;
-  }
-}
-
-function aiLogDiplomacy(actor: Nation, message: string) {
-  log(`${actor.name} ${message}`);
-}
-
-function aiSignMutualTruce(actor: Nation, target: Nation, turns: number, reason?: string) {
-  const treaty = ensureTreatyRecord(actor, target);
-  const reciprocal = ensureTreatyRecord(target, actor);
-  treaty.truceTurns = Math.max(treaty.truceTurns || 0, turns);
-  reciprocal.truceTurns = Math.max(reciprocal.truceTurns || 0, turns);
-  aiLogDiplomacy(actor, `agrees to a ${turns}-turn truce with ${target.name}${reason ? ` (${reason})` : ''}.`);
-  adjustThreat(actor, target.id, -3);
-  adjustThreat(target, actor.id, -2);
-}
-
-function aiSignNonAggressionPact(actor: Nation, target: Nation): boolean {
-  const cost = { intel: 15 };
-  if (!canAfford(actor, cost)) return false;
-  pay(actor, cost);
-  aiSignMutualTruce(actor, target, 5, 'non-aggression pact');
-  return true;
-}
-
-function aiFormAlliance(actor: Nation, target: Nation): boolean {
-  const cost = { production: 10, intel: 40 };
-  if (!canAfford(actor, cost)) return false;
-  pay(actor, cost);
-  const treaty = ensureTreatyRecord(actor, target);
-  const reciprocal = ensureTreatyRecord(target, actor);
-  treaty.truceTurns = 999;
-  reciprocal.truceTurns = 999;
-  treaty.alliance = true;
-  reciprocal.alliance = true;
-  aiLogDiplomacy(actor, `enters an alliance with ${target.name}.`);
-  adjustThreat(actor, target.id, -5);
-  adjustThreat(target, actor.id, -5);
-  return true;
-}
-
-function aiSendAid(actor: Nation, target: Nation): boolean {
-  const cost = { production: 20 };
-  if (!canAfford(actor, cost)) return false;
-  pay(actor, cost);
-  target.instability = Math.max(0, (target.instability || 0) - 10);
-  aiLogDiplomacy(actor, `sends economic aid to ${target.name}, reducing their instability.`);
-  adjustThreat(target, actor.id, -2);
-  return true;
-}
-
-function aiImposeSanctions(actor: Nation, target: Nation): boolean {
-  if (target.sanctioned && target.sanctionedBy?.[actor.id]) return false;
-  const cost = { intel: 15 };
-  if (!canAfford(actor, cost)) return false;
-  pay(actor, cost);
-  target.sanctioned = true;
-  target.sanctionTurns = Math.max(5, (target.sanctionTurns || 0) + 5);
-  target.sanctionedBy = target.sanctionedBy || {};
-  target.sanctionedBy[actor.id] = (target.sanctionedBy[actor.id] || 0) + 5;
-  aiLogDiplomacy(actor, `imposes sanctions on ${target.name}.`);
-  adjustThreat(target, actor.id, 3);
-  return true;
-}
-
-function aiBreakTreaties(actor: Nation, target: Nation, reason?: string): boolean {
-  const treaty = ensureTreatyRecord(actor, target);
-  const reciprocal = ensureTreatyRecord(target, actor);
-  const hadAgreements = !!(treaty.truceTurns || treaty.alliance);
-  if (!hadAgreements) return false;
-  delete treaty.truceTurns;
-  delete reciprocal.truceTurns;
-  delete treaty.alliance;
-  delete reciprocal.alliance;
-  aiLogDiplomacy(actor, `terminates agreements with ${target.name}${reason ? ` (${reason})` : ''}.`);
-  adjustThreat(actor, target.id, 6);
-  adjustThreat(target, actor.id, 8);
-  return true;
-}
-
-function aiRespondToSanctions(actor: Nation): boolean {
-  if (!actor.sanctioned || !actor.sanctionedBy) return false;
-  const sanctioners = Object.keys(actor.sanctionedBy)
-    .map(id => getNationById(id))
-    .filter((nation): nation is Nation => !!nation && nation.population > 0);
-
-  if (sanctioners.length === 0) return false;
-
-  const prioritized = sanctioners.sort((a, b) => {
-    const aThreat = actor.threats?.[a.id] || 0;
-    const bThreat = actor.threats?.[b.id] || 0;
-    return bThreat - aThreat;
-  });
-
-  const topSanctioner = prioritized[0];
-  if (!topSanctioner) return false;
-
-  // Try counter-sanctions if affordable and no alliance
-  const treaty = actor.treaties?.[topSanctioner.id];
-  if ((!treaty || !treaty.alliance) && aiImposeSanctions(actor, topSanctioner)) {
-    aiLogDiplomacy(actor, `retaliates against ${topSanctioner.name} for sanctions.`);
-    return true;
-  }
-
-  // Attempt to de-escalate via truce if counter-sanctions failed
-  if (!treaty?.truceTurns) {
-    aiSignMutualTruce(actor, topSanctioner, 2, 'attempting to ease sanctions');
-    return true;
-  }
-
-  return false;
-}
-
-function aiHandleTreatyStrain(actor: Nation): boolean {
-  if (!actor.treaties) return false;
-  const strained = Object.entries(actor.treaties)
-    .map(([id, treaty]) => ({ id, treaty, partner: getNationById(id) }))
-    .filter(({ treaty, partner }) => partner && (treaty?.truceTurns || treaty?.alliance));
-
-  for (const { id, treaty, partner } of strained) {
-    if (!partner) continue;
-    const threat = actor.threats?.[id] || 0;
-    if (threat > 12) {
-      return aiBreakTreaties(actor, partner, 'due to rising hostilities');
-    }
-    if (treaty?.alliance && partner.sanctionedBy?.[actor.id]) {
-      // Alliance member sanctioning us is a breach
-      return aiBreakTreaties(actor, partner, 'after alliance breach');
-    }
-  }
-
-  return false;
-}
-
-function aiHandleDiplomaticUrgencies(actor: Nation): boolean {
-  if (aiRespondToSanctions(actor)) {
-    return true;
-  }
-
-  if (aiHandleTreatyStrain(actor)) {
-    return true;
-  }
-
-  return false;
-}
-
-function aiAttemptDiplomacy(actor: Nation): boolean {
-  const others = nations.filter(n => n !== actor && n.population > 0);
-  if (others.length === 0) return false;
-
-  const sortedByThreat = others
-    .map(target => ({ target, threat: actor.threats?.[target.id] || 0 }))
-    .sort((a, b) => b.threat - a.threat);
-
-  const highest = sortedByThreat[0];
-  if (highest && highest.threat >= 8) {
-    const treaty = actor.treaties?.[highest.target.id];
-    if (!treaty?.truceTurns) {
-      if (highest.threat >= 12 && aiSignNonAggressionPact(actor, highest.target)) {
-        return true;
-      }
-      aiSignMutualTruce(actor, highest.target, 2, 'to diffuse tensions');
-      return true;
-    }
-    if (!treaty?.alliance && highest.threat >= 15 && aiBreakTreaties(actor, highest.target, 'after repeated provocations')) {
-      return true;
-    }
-  }
-
-  // Sanction persistently hostile nations
-  const sanctionTarget = sortedByThreat.find(entry => entry.threat >= 10 && !actor.treaties?.[entry.target.id]?.alliance);
-  if (sanctionTarget && Math.random() < 0.6 && aiImposeSanctions(actor, sanctionTarget.target)) {
-    return true;
-  }
-
-  // Support unstable allies or low-threat partners
-  const aidCandidate = others
-    .filter(target => (actor.treaties?.[target.id]?.alliance || actor.treaties?.[target.id]?.truceTurns) && (target.instability || 0) >= 10)
-    .sort((a, b) => (b.instability || 0) - (a.instability || 0))[0];
-
-  if (aidCandidate && aiSendAid(actor, aidCandidate)) {
-    return true;
-  }
-
-  // Form alliances with trusted nations occasionally
-  if (Math.random() < 0.15) {
-    const allianceCandidate = others
-      .filter(target => {
-        const threat = actor.threats?.[target.id] || 0;
-        const treaty = actor.treaties?.[target.id];
-        return threat <= 2 && !(treaty?.alliance);
-      })
-      .sort((a, b) => (actor.threats?.[a.id] || 0) - (actor.threats?.[b.id] || 0))[0];
-
-    if (allianceCandidate && aiFormAlliance(actor, allianceCandidate)) {
-      return true;
-    }
-  }
-
-  // Offer truces when moderately threatened
-  const moderateThreat = sortedByThreat.find(entry => entry.threat >= 5 && !(actor.treaties?.[entry.target.id]?.truceTurns));
-  if (moderateThreat && Math.random() < 0.6) {
-    aiSignMutualTruce(actor, moderateThreat.target, 2);
-    return true;
-  }
-
-  return false;
-}
+// Game utility functions moved to @/lib/gameUtils and @/lib/nationUtils
+// AI diplomacy functions moved to @/lib/aiDiplomacyActions
 
 function startResearch(tier: number | string): boolean {
   const player = PlayerManager.get();
@@ -2761,7 +2501,7 @@ function maybeBanter(nation: Nation, chance: number, pool?: string) {
 }
 
 // Immigration functions
-const hasOpenBorders = (nation?: Nation | null) => (nation?.bordersClosedTurns ?? 0) <= 0;
+// hasOpenBorders moved to @/lib/nationUtils
 
 function performImmigration(type: string, target: Nation) {
   const player = PlayerManager.get();
@@ -2976,8 +2716,8 @@ function resolutionPhase() {
   S.missiles.forEach(missile => {
     if (missile.t >= 1) {
       explode(
-        project(missile.toLon, missile.toLat)[0],
-        project(missile.toLon, missile.toLat)[1],
+        projectLocal(missile.toLon, missile.toLat)[0],
+        projectLocal(missile.toLon, missile.toLat)[1],
         missile.target,
         missile.yield
       );
@@ -2996,7 +2736,7 @@ function resolutionPhase() {
     zone.intensity *= 0.95;
 
     nations.forEach(n => {
-      const [x, y] = project(n.lon, n.lat);
+      const [x, y] = projectLocal(n.lon, n.lat);
       const dist = Math.hypot(x - zone.x, y - zone.y);
       if (dist < zone.radius) {
         const damage = zone.intensity * 3;
@@ -3284,47 +3024,14 @@ async function loadWorld() {
 }
 
 // Drawing functions
-function project(lon: number, lat: number): [number, number] {
-  if (globeProjector) {
-    const { x, y } = globeProjector(lon, lat);
-    return [x, y];
-  }
-
-  const x = ((lon + 180) / 360) * W * cam.zoom + cam.x;
-  const y = ((90 - lat) / 180) * H * cam.zoom + cam.y;
-  return [x, y];
+// Rendering utility functions - using extracted utilities from @/lib/renderingUtils
+// Wrapper functions that use the global rendering context
+function projectLocal(lon: number, lat: number): [number, number] {
+  return projectLocal(lon, lat, { W, H, cam, globeProjector, globePicker });
 }
 
-// Convert screen coordinates to longitude/latitude
-function toLonLat(x: number, y: number): [number, number] {
-  if (globePicker) {
-    const hit = globePicker(x, y);
-    if (hit) {
-      return [hit.lon, hit.lat];
-    }
-  }
-
-  // Account for camera transformation
-  const adjustedX = (x - cam.x) / cam.zoom;
-  const adjustedY = (y - cam.y) / cam.zoom;
-  const lon = (adjustedX / W) * 360 - 180;
-  const lat = 90 - (adjustedY / H) * 180;
-  return [lon, lat];
-}
-
-const POLITICAL_COLOR_PALETTE = [
-  '#f94144',
-  '#f3722c',
-  '#f9c74f',
-  '#90be6d',
-  '#43aa8b',
-  '#577590',
-  '#f9844a',
-  '#ffafcc'
-];
-
-function getPoliticalFill(index: number) {
-  return POLITICAL_COLOR_PALETTE[index % POLITICAL_COLOR_PALETTE.length];
+function toLonLatLocal(x: number, y: number): [number, number] {
+  return toLonLatLocal(x, y, { W, H, cam, globeProjector, globePicker });
 }
 
 function drawWorld(style: MapStyle) {
@@ -3408,7 +3115,7 @@ function drawWorld(style: MapStyle) {
     for (let lon = -180; lon <= 180; lon += 30) {
       ctx.beginPath();
       for (let lat = -90; lat <= 90; lat += 5) {
-        const [x, y] = project(lon, lat);
+        const [x, y] = projectLocal(lon, lat);
         if (lat === -90) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -3418,7 +3125,7 @@ function drawWorld(style: MapStyle) {
     for (let lat = -90; lat <= 90; lat += 30) {
       ctx.beginPath();
       for (let lon = -180; lon <= 180; lon += 5) {
-        const [x, y] = project(lon, lat);
+        const [x, y] = projectLocal(lon, lat);
         if (lon === -180) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -3444,7 +3151,7 @@ function drawWorld(style: MapStyle) {
 function drawWorldPath(coords: number[][]) {
   if (!ctx) return;
   coords.forEach((coord, i) => {
-    const [x, y] = project(coord[0], coord[1]);
+    const [x, y] = projectLocal(coord[0], coord[1]);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
@@ -3460,7 +3167,7 @@ function drawNations(style: MapStyle) {
   nations.forEach(n => {
     if (n.population <= 0) return;
 
-    const [x, y] = project(n.lon, n.lat);
+    const [x, y] = projectLocal(n.lon, n.lat);
     if (isNaN(x) || isNaN(y)) return;
 
     const isSelectedTarget = selectedTargetRefId === n.id;
@@ -3689,7 +3396,7 @@ function drawSatellites(nowMs: number) {
 
     activeOrbits.push(orbit);
 
-    const [targetX, targetY] = project(targetNation.lon, targetNation.lat);
+    const [targetX, targetY] = projectLocal(targetNation.lon, targetNation.lat);
     if (!Number.isFinite(targetX) || !Number.isFinite(targetY)) {
       return;
     }
@@ -3753,8 +3460,8 @@ function drawMissiles() {
   S.missiles.forEach((m: any, i: number) => {
     m.t = Math.min(1, m.t + 0.016);
     
-    const [sx, sy] = project(m.fromLon, m.fromLat);
-    const [tx, ty] = project(m.toLon, m.toLat);
+    const [sx, sy] = projectLocal(m.fromLon, m.fromLat);
+    const [tx, ty] = projectLocal(m.toLon, m.toLat);
     
     const u = 1 - m.t;
     const cx = (sx + tx) / 2;
@@ -3960,12 +3667,12 @@ function drawConventionalForces() {
   const nextMovements: ConventionalMovementMarker[] = [];
 
   movements.forEach((movement) => {
-    const [sx, sy] = project(movement.startLon, movement.startLat);
-    const [ex, ey] = project(movement.endLon, movement.endLat);
+    const [sx, sy] = projectLocal(movement.startLon, movement.startLat);
+    const [ex, ey] = projectLocal(movement.endLon, movement.endLat);
     const dx = ex - sx;
     const dy = ey - sy;
     const distance = Math.hypot(dx, dy);
-    const nation = getNationById(movement.ownerId);
+    const nation = getNationById(nations, movement.ownerId);
     const color = nation?.color ?? '#38bdf8';
 
     if (distance > 4) {
@@ -4013,8 +3720,8 @@ function drawConventionalForces() {
 
   const unitMarkers = S.conventionalUnits ?? [];
   unitMarkers.forEach((marker) => {
-    const [x, y] = project(marker.lon, marker.lat);
-    const nation = getNationById(marker.ownerId);
+    const [x, y] = projectLocal(marker.lon, marker.lat);
+    const nation = getNationById(nations, marker.ownerId);
     const color = nation?.color ?? '#22d3ee';
 
     ctx.save();
@@ -4141,7 +3848,7 @@ function drawFalloutMarks(deltaMs: number) {
     }
 
     next.updatedAt = now;
-    const [px, py] = project(next.lon, next.lat);
+    const [px, py] = projectLocal(next.lon, next.lat);
     next.canvasX = px;
     next.canvasY = py;
 
@@ -4281,7 +3988,7 @@ function drawFX() {
     let rx = typeof b.x === 'number' ? b.x : 0;
     let ry = typeof b.y === 'number' ? b.y : 0;
     if (b.lon !== undefined && b.lat !== undefined) {
-      const projected = project(b.lon, b.lat);
+      const projected = projectLocal(b.lon, b.lat);
       rx = projected[0];
       ry = projected[1];
     }
@@ -4411,7 +4118,7 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
     maybeBanter(target, 0.7);
   }
 
-  const [elon, elat] = toLonLat(x, y);
+  const [elon, elat] = toLonLatLocal(x, y);
   if (Number.isFinite(elon) && Number.isFinite(elat)) {
     upsertFalloutMark(x, y, elon, elat, yieldMT);
   }
@@ -4518,7 +4225,7 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
     });
     
     nations.forEach(n => {
-      const [nx, ny] = project(n.lon, n.lat);
+      const [nx, ny] = projectLocal(n.lon, n.lat);
       const dist = Math.hypot(nx - x, ny - y);
       if (dist < Math.sqrt(yieldMT) * 15) {
         n.defense = Math.max(0, n.defense - 3);
@@ -4563,8 +4270,8 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
 
 // Launch submarine
 function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
-  const [fx, fy] = project(from.lon, from.lat);
-  const [tx, ty] = project(to.lon, to.lat);
+  const [fx, fy] = projectLocal(from.lon, from.lat);
+  const [tx, ty] = projectLocal(to.lon, to.lat);
   S.submarines = S.submarines || [];
   S.submarines.push({
     x: fx + (Math.random() - 0.5) * 50,
@@ -4595,8 +4302,8 @@ function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
 
 // Launch bomber
 function launchBomber(from: Nation, to: Nation, payload: any) {
-  const [sx, sy] = project(from.lon, from.lat);
-  const [tx, ty] = project(to.lon, to.lat);
+  const [sx, sy] = projectLocal(from.lon, from.lat);
+  const [tx, ty] = projectLocal(to.lon, to.lat);
 
   S.bombers.push({
     from, to,
@@ -4941,7 +4648,7 @@ function aiTurn(n: Nation) {
   // Strategic decision tree
   const r = Math.random();
 
-  if (aiHandleDiplomaticUrgencies(n)) {
+  if (aiHandleDiplomaticUrgencies(n, nations, log)) {
     return;
   }
 
@@ -4962,7 +4669,7 @@ function aiTurn(n: Nation) {
 
   const diplomacyBias = 0.18 + Math.max(0, defenseMod * 0.5) + (n.ai === 'defensive' ? 0.1 : 0) + (n.ai === 'balanced' ? 0.05 : 0);
   if (Math.random() < diplomacyBias) {
-    if (aiAttemptDiplomacy(n)) {
+    if (aiAttemptDiplomacy(n, nations, log)) {
       return;
     }
   }
@@ -6255,7 +5962,7 @@ export default function NoradVector() {
 
   const handleGovernanceMetricsSync = useCallback(
     (nationId: string, metrics: GovernanceMetrics) => {
-      const nation = getNationById(nationId);
+      const nation = getNationById(nations, nationId);
       if (!nation) return;
       nation.morale = metrics.morale;
       nation.publicOpinion = metrics.publicOpinion;
@@ -6267,7 +5974,7 @@ export default function NoradVector() {
 
   const handleGovernanceDelta = useCallback(
     (nationId: string, delta: GovernanceDelta) => {
-      const nation = getNationById(nationId);
+      const nation = getNationById(nations, nationId);
       if (!nation) return;
       if (typeof delta.instability === 'number') {
         nation.instability = Math.max(0, (nation.instability || 0) + delta.instability);
@@ -6412,7 +6119,7 @@ export default function NoradVector() {
   } = conventional;
 
   const getNationAnchor = useCallback((ownerId: string) => {
-    let nation = getNationById(ownerId);
+    let nation = getNationById(nations, ownerId);
     if (!nation && ownerId === 'player') {
       nation = nations.find((entry) => entry.isPlayer) ?? null;
     }
@@ -8429,7 +8136,7 @@ export default function NoradVector() {
   }, []);
 
   const handleStartLabConstruction = useCallback((tier: number) => {
-    const player = getNationById(playerNationId);
+    const player = getNationById(nations, playerNationId);
     if (!player) return;
 
     const result = startLabConstruction(tier as BioLabTier, player.production, player.uranium);
@@ -9160,8 +8867,8 @@ export default function NoradVector() {
   const handleAcceptProposal = useCallback(() => {
     if (!activeDiplomacyProposal) return;
 
-    const proposer = getNationById(activeDiplomacyProposal.proposerId);
-    const target = getNationById(activeDiplomacyProposal.targetId);
+    const proposer = getNationById(nations, activeDiplomacyProposal.proposerId);
+    const target = getNationById(nations, activeDiplomacyProposal.targetId);
 
     if (!proposer || !target) {
       setActiveDiplomacyProposal(null);
@@ -9224,8 +8931,8 @@ export default function NoradVector() {
   const handleRejectProposal = useCallback(() => {
     if (!activeDiplomacyProposal) return;
 
-    const proposer = getNationById(activeDiplomacyProposal.proposerId);
-    const target = getNationById(activeDiplomacyProposal.targetId);
+    const proposer = getNationById(nations, activeDiplomacyProposal.proposerId);
+    const target = getNationById(nations, activeDiplomacyProposal.targetId);
 
     if (!proposer || !target) {
       setActiveDiplomacyProposal(null);
@@ -9358,9 +9065,9 @@ export default function NoradVector() {
         const rect = canvas.getBoundingClientRect();
         const focalX = e.clientX - rect.left;
         const focalY = e.clientY - rect.top;
-        const [focalLon, focalLat] = toLonLat(focalX, focalY);
+        const [focalLon, focalLat] = toLonLatLocal(focalX, focalY);
         const prevZoom = cam.zoom;
-        const [projectedX, projectedY] = project(focalLon, focalLat);
+        const [projectedX, projectedY] = projectLocal(focalLon, focalLat);
 
         const zoomIntensity = 0.0015;
         const delta = Math.exp(-e.deltaY * zoomIntensity);
@@ -9413,9 +9120,9 @@ export default function NoradVector() {
             const rect = canvas.getBoundingClientRect();
             const midpointX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
             const midpointY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
-            const [focalLon, focalLat] = toLonLat(midpointX, midpointY);
+            const [focalLon, focalLat] = toLonLatLocal(midpointX, midpointY);
             const prevZoom = cam.zoom;
-            const [projectedX, projectedY] = project(focalLon, focalLat);
+            const [projectedX, projectedY] = projectLocal(focalLon, focalLat);
             const newZoom = Math.max(0.5, Math.min(3, initialPinchZoom * scaleFactor));
             const zoomScale = prevZoom > 0 ? newZoom / prevZoom : 1;
 
@@ -9464,7 +9171,7 @@ export default function NoradVector() {
                 if (n.isPlayer) continue;
                 if (!player.satellites[n.id]) continue;
                 if (n.population <= 0) continue;
-                const [nx, ny] = project(n.lon, n.lat);
+                const [nx, ny] = projectLocal(n.lon, n.lat);
                 const dist = Math.hypot(mx - nx, my - ny);
                 
                 if (dist < 30) { // Larger hit area for touch
@@ -9505,7 +9212,7 @@ export default function NoradVector() {
           if (n.isPlayer) continue;
           if (!player.satellites[n.id]) continue;
           if (n.population <= 0) continue;
-          const [nx, ny] = project(n.lon, n.lat);
+          const [nx, ny] = projectLocal(n.lon, n.lat);
           const dist = Math.hypot(mx - nx, my - ny);
           
           if (dist < 20) {
@@ -9540,7 +9247,7 @@ export default function NoradVector() {
           return;
         }
         
-        const [lon, lat] = toLonLat(mx, my);
+        const [lon, lat] = toLonLatLocal(mx, my);
         const newZoom = Math.min(3, cam.targetZoom * 1.5);
         cam.targetZoom = newZoom;
         cam.zoom = newZoom;
@@ -10902,8 +10609,8 @@ export default function NoradVector() {
 
       {/* Diplomacy Proposal Overlay */}
       {activeDiplomacyProposal && (() => {
-        const proposer = getNationById(activeDiplomacyProposal.proposerId);
-        const target = getNationById(activeDiplomacyProposal.targetId);
+        const proposer = getNationById(nations, activeDiplomacyProposal.proposerId);
+        const target = getNationById(nations, activeDiplomacyProposal.targetId);
 
         if (!proposer || !target) return null;
 
