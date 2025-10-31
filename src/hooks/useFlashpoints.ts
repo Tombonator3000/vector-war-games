@@ -1387,6 +1387,250 @@ const SCENARIO_FLASHPOINTS: Record<string, Omit<FlashpointEvent, 'id' | 'trigger
       ],
       consequences: {}
     }
+  ],
+
+  greatOldOnes: [
+    {
+      title: 'THE AWAKENING: R\'lyeh Rises',
+      description:
+        'May 1, 2025: Seismic sensors detect impossible geometries emerging from the South Pacific. The sunken city of R\'lyeh has risen. Cultists worldwide celebrate as reality itself begins to unravel. Your scientific advisors report that the laws of physics are... changing. Citizens report hearing whispers in their dreams. Mass hysteria is spreading. Three major cities have already fallen into cultist control. The Great Old Ones are awakening, and humanity\'s time is running out.',
+      category: 'blackswan',
+      severity: 'catastrophic',
+      timeLimit: 120,
+      followUpId: 'reality_breach',
+      options: [
+        {
+          id: 'nuclear_strike',
+          text: 'Nuclear Strike on R\'lyeh',
+          description: 'Launch a massive nuclear strike on the risen city. Use every weapon at our disposal to destroy whatever has emerged before it fully awakens.',
+          advisorSupport: ['military'],
+          advisorOppose: ['science', 'diplomatic'],
+          outcome: {
+            probability: 0.3,
+            success: { ryehDestroyed: true, radiationSpread: true, morale: +15, defcon: 1 },
+            failure: { nukesFail: true, entityAngered: true, massConversions: true, defcon: 1 }
+          },
+          successNarrative:
+            'The nuclear warheads detonate in a blinding flash. For a moment, reality screams. The city sinks back beneath the waves, but the radiation has spread across the Pacific. You\'ve bought humanity time, but at what cost? The whispers have only grown louder.',
+          failureNarrative:
+            'The missiles detonate, but the explosions are... wrong. The light bends. Time stutters. The entity within R\'lyeh awakens fully, and its rage is terrible to behold. Cities around the world spontaneously convert to worship. You have accelerated the very thing you sought to prevent.'
+        },
+        {
+          id: 'containment',
+          text: 'Global Quarantine Protocol',
+          description: 'Establish a massive military perimeter around R\'lyeh and all affected cities. Prevent the contamination from spreading while we search for another solution.',
+          advisorSupport: ['military', 'science'],
+          advisorOppose: [],
+          outcome: {
+            probability: 0.6,
+            success: { quarantineEstablished: true, timeGained: true, morale: +8, defcon: 2 },
+            failure: { quarantineBreached: true, militaryConverts: true, civilUnrest: true }
+          },
+          successNarrative:
+            'Naval and air forces establish a 200-mile exclusion zone. Scientists begin studying the phenomenon from a safe distance. You\'ve contained the immediate threat, but reports of cultist activity continue to emerge from within the quarantine zone.',
+          failureNarrative:
+            'The quarantine fails. Soldiers stationed near R\'lyeh begin hearing the whispers. Within hours, entire battalions have converted. They turn their weapons on their own command structure. The infection spreads exponentially.'
+        },
+        {
+          id: 'study',
+          text: 'Scientific Investigation',
+          description: 'Send our best scientists and researchers to study the phenomenon. Perhaps understanding it is the key to stopping it.',
+          advisorSupport: ['science'],
+          advisorOppose: ['military', 'pr'],
+          outcome: {
+            probability: 0.5,
+            success: { knowledgeGained: true, vulnerabilityFound: true, scientistsScarred: true },
+            failure: { scientistsConverted: true, knowledgeDangerous: true, sanityLoss: true }
+          },
+          successNarrative:
+            'Your scientists make a breakthrough - the entities are vulnerable to specific quantum frequencies. But the cost is high. Half your research team has gone mad from what they\'ve seen. The survivors will never be the same.',
+          failureNarrative:
+            'Your lead scientists arrive at R\'lyeh and begin their studies. The last transmission is garbled: "We understand now... we SEE... Cthulhu fhtagn..." They have joined the enemy. And they know all your secrets.'
+        }
+      ],
+      consequences: {}
+    },
+    {
+      title: 'REALITY BREACH: The Stars Are Right',
+      description:
+        'May 7, 2025: Astrophysicists report impossible stellar alignments. Stars that shouldn\'t exist appear in the night sky. Gravity fluctuates randomly in major population centers. People are aging backwards in some areas, rapidly in others. The fabric of reality is tearing. Cultists claim the Great Old Ones are "correcting" reality to its "true form". Your scientists estimate you have 72 hours before the breaches become permanent and irreversible.',
+      category: 'blackswan',
+      severity: 'catastrophic',
+      timeLimit: 90,
+      triggeredBy: 'reality_breach',
+      followUpId: 'conversion_wave',
+      options: [
+        {
+          id: 'reality_anchors',
+          text: 'Deploy Reality Anchor Network',
+          description: 'Use experimental quantum technology to stabilize local spacetime. Deploy anchors in major cities to prevent further reality degradation.',
+          advisorSupport: ['science'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.55,
+            success: { realityStabilized: true, citiesSaved: true, morale: +10 },
+            failure: { anchorsBackfire: true, worseReality: true, casualties: 100000 }
+          },
+          successNarrative:
+            'The quantum anchors activate. Reality... firms. The impossible angles straighten. Time flows normally again. You\'ve stabilized the major population centers, creating islands of sanity in an increasingly mad world.',
+          failureNarrative:
+            'The anchors activate, but they interact catastrophically with the eldritch energies. The reality breaches expand. Entire city blocks phase out of existence. The screams echo across dimensions.'
+        },
+        {
+          id: 'mass_evacuation',
+          text: 'Evacuate Affected Zones',
+          description: 'Pull everyone out of the affected areas. Sacrifice the territory to save the people. Establish new safe zones far from the breaches.',
+          advisorSupport: ['diplomatic', 'pr'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.65,
+            success: { populationSaved: true, territoryLost: true, morale: +5, refugeeCrisis: true },
+            failure: { evacuationChaos: true, massDeaths: true, publicPanic: true }
+          },
+          successNarrative:
+            'The evacuation is chaotic but successful. Millions flee the breach zones. You\'ve saved lives, but abandoned vast territories to the cosmic horror. The refugee crisis strains your remaining infrastructure.',
+          failureNarrative:
+            'Panic ensues. The highways become deathtraps. People trample each other trying to escape. Many are left behind in the chaos, condemned to face the reality breaches alone.'
+        },
+        {
+          id: 'ritual_counter',
+          text: 'Counter-Ritual (Desperate)',
+          description: 'Captured cultists claim there\'s a counter-ritual that can close the breaches. It requires... sacrifices. Volunteer or conscripted. This path damns your soul.',
+          advisorSupport: [],
+          advisorOppose: ['diplomatic', 'pr', 'science'],
+          outcome: {
+            probability: 0.4,
+            success: { breachesClosed: true, darkPact: true, morale: -20, publicOutrage: true },
+            failure: { ritualBackfires: true, entitySummoned: true, massConversion: true }
+          },
+          successNarrative:
+            'The ritual works. Reality stabilizes. But you\'ve crossed a line that can never be uncrossed. You used the enemy\'s own methods. History will judge you harshly, but humanity survives... changed.',
+          failureNarrative:
+            'The ritual goes catastrophically wrong. Instead of closing the breaches, you\'ve opened a direct gateway. Something immense and terrible steps through. Your screams join the cosmic chorus.'
+        }
+      ],
+      consequences: {}
+    },
+    {
+      title: 'MASS CONVERSION: Cities of Madness',
+      description:
+        'May 15, 2025: Los Angeles, Tokyo, and Mumbai have fallen. Their entire populations converted overnight. They now worship the Great Old Ones and actively spread the conversion. Converted cities emit reality-warping fields. Military forces refuse to engage - they fear conversion more than death. The converted claim they are "awakened" and see reality truly. They seem... happy. Some of your own advisors are beginning to question whether resistance is futile.',
+      category: 'rogue',
+      severity: 'catastrophic',
+      timeLimit: 100,
+      triggeredBy: 'conversion_wave',
+      followUpId: 'final_choice',
+      options: [
+        {
+          id: 'orbital_strike',
+          text: 'Orbital Kinetic Strike',
+          description: 'Use kinetic bombardment from space to destroy the converted cities. Kill millions to save billions. Become the monster to fight monsters.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'pr', 'science'],
+          outcome: {
+            probability: 0.45,
+            success: { citiesDestroyed: true, conversionStopped: true, morale: -25, warCrimes: true },
+            failure: { strikesFail: true, massConversion: true, rebellion: true }
+          },
+          successNarrative:
+            'The kinetic strikes rain down from orbit. Cities are obliterated in seconds. 50 million dead. The conversion stops spreading. You\'ve saved humanity, but you\'ve become history\'s greatest mass murderer. You weep at what you\'ve done.',
+          failureNarrative:
+            'The strikes detonate, but the converted cities are protected by impossible geometries. The weapons bounce off reality itself. Your own forces, witnessing this miracle, begin to convert. They turn their orbital platforms against you.'
+        },
+        {
+          id: 'isolation',
+          text: 'Total Isolation Protocol',
+          description: 'Build massive walls around converted cities. Cut all communication. Let them have their madness while protecting the unaffected. Focus on saving who we can.',
+          advisorSupport: ['diplomatic', 'military'],
+          advisorOppose: [],
+          outcome: {
+            probability: 0.7,
+            success: { isolationHolds: true, stabilizationAchieved: true, morale: +5 },
+            failure: { wallsBreached: true, conversionSpreads: true, civilWar: true }
+          },
+          successNarrative:
+            'Massive barriers are erected in record time. The converted cities are sealed off. You\'ve created a strange new world - islands of sanity surrounded by oceans of madness. But the isolation holds.',
+          failureNarrative:
+            'The converted march against your walls. They don\'t attack with weapons - they sing. The guards on the walls begin to hear the song. One by one, they join the chorus and open the gates.'
+        },
+        {
+          id: 'negotiation',
+          text: 'Attempt Diplomatic Contact',
+          description: 'The converted claim they\'re happy, that they\'ve transcended. Perhaps... we can negotiate? Find a way to coexist? This may be humanity\'s surrender.',
+          advisorSupport: ['diplomatic'],
+          advisorOppose: ['military', 'pr'],
+          outcome: {
+            probability: 0.35,
+            success: { peacefulCoexistence: true, partialConversion: true, newOrder: true },
+            failure: { diplomatConverted: true, rapidConversion: true, humanityLost: true }
+          },
+          successNarrative:
+            'The converted agree to a boundary. They will not spread beyond their cities if you do not attack them. It\'s not victory, but it\'s survival. Humanity is forever divided between the converted and the resistant. The new normal.',
+          failureNarrative:
+            'Your diplomats enter the converted cities. They return changed. "You don\'t understand," they say with glowing eyes. "This is ascension. This is joy. Join us." The conversion accelerates exponentially.'
+        }
+      ],
+      consequences: {}
+    },
+    {
+      title: 'THE FINAL CHOICE: Cthulhu Fhtagn',
+      description:
+        'May 30, 2025: Cthulhu himself rises from R\'lyeh. The entity is kilometers tall, defying physics and sanity. Half of humanity has already converted. Your quantum scientists have developed a weapon that might work - it will tear open reality itself, potentially destroying the entity... and possibly our entire dimension. The alternative: surrender and join the conversion. The converted live in ecstatic union with cosmic consciousness. Your people are exhausted. Some ask: why resist ascension? This is the end. What is your final answer to the cosmos?',
+      category: 'blackswan',
+      severity: 'catastrophic',
+      timeLimit: 180,
+      triggeredBy: 'final_choice',
+      options: [
+        {
+          id: 'reality_bomb',
+          text: 'Deploy the Reality Bomb',
+          description: 'Activate the quantum weapon. Risk destroying our entire dimension to eliminate the Great Old Ones. Gamble everything on one final throw.',
+          advisorSupport: ['military', 'science'],
+          advisorOppose: [],
+          outcome: {
+            probability: 0.5,
+            success: { entityDestroyed: true, dimensionScarred: true, pyrrhicVictory: true },
+            failure: { realityDestroyed: true, totalAnnihilation: true }
+          },
+          successNarrative:
+            'You give the order. The weapon fires. Reality screams, tears, then... settles. Cthulhu is gone. The converted collapse, freed from the psychic influence. But spacetime is permanently scarred. The stars are wrong, forever. You\'ve saved humanity, but we live in a broken universe now. You\'ll never know if it was worth it.',
+          failureNarrative:
+            'The weapon fires. Reality doesn\'t just tear - it shatters. The last thing you see is the cosmos unraveling like a tapestry. Existence itself ceases. In trying to save everything, you\'ve destroyed all. The Great Old Ones laugh in the void.'
+        },
+        {
+          id: 'last_stand',
+          text: 'Humanity\'s Last Stand',
+          description: 'Gather every remaining human, every weapon, every ounce of courage. Make one final conventional assault. Die with honor rather than surrender our humanity.',
+          advisorSupport: ['military', 'pr'],
+          advisorOppose: ['science'],
+          outcome: {
+            probability: 0.15,
+            success: { miracleVictory: true, legendBorn: true, humanityRedeemed: true },
+            failure: { nobleDefeat: true, extinctionWithHonor: true }
+          },
+          successNarrative:
+            'Against all odds, against all reason, humanity fights. And somehow - impossibly - you find Cthulhu\'s weakness. The entity retreats. It will be eons before it can return. Humanity survives by sheer defiance. You\'ve proven that will and courage can defy even cosmic horror. Legends will tell of this day for millennia.',
+          failureNarrative:
+            'Humanity fights with everything it has. It\'s not enough. It was never going to be enough. But you fought. You didn\'t surrender. You didn\'t convert. As consciousness fades, you take pride in that. Humanity died standing up.'
+        },
+        {
+          id: 'accept_ascension',
+          text: 'Accept Ascension',
+          description: 'The converted are happy. They\'ve transcended pain, fear, mortality. Perhaps they\'re right. Perhaps this is evolution, not invasion. Join them. End the suffering.',
+          advisorSupport: [],
+          advisorOppose: ['military', 'pr', 'science'],
+          outcome: {
+            probability: 0.95,
+            success: { peacefulConversion: true, humanityTranscended: true, newExistence: true },
+            failure: { } // This path has no real failure - success is surrender
+          },
+          successNarrative:
+            'You give the order to stand down. One by one, humanity accepts the gift. The whispers become songs. The fear becomes joy. You feel yourself changing, expanding, becoming part of something vast and terrible and beautiful. Humanity as a species ends, but humanity as a consciousness joins the eternal cosmic dance. Cthulhu fhtagn. And in the end, you understand why they were smiling.',
+          failureNarrative: '' // No failure narrative for successful conversion
+        }
+      ],
+      consequences: {}
+    }
   ]
 };
 
