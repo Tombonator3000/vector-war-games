@@ -2,7 +2,7 @@
 
 **Session Date:** 2025-10-31
 **Branch:** `claude/audit-progress-refactor-011CUfG5REjHqmjwrYYH3cPF`
-**Status:** 6 of 18 issues completed (33% complete), Issue #4 in progress (4/7 phases done, 57%)
+**Status:** 6 of 18 issues completed (33% complete), Issue #4 in progress (6/7 phases done, 86%)
 
 ---
 
@@ -191,19 +191,27 @@
 
 ### High Priority (P0-P1)
 
-**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 18-24 hours remaining)
-- **Status:** IN PROGRESS (Phases 1-5 of 7 complete, 71% done)
-- **Progress:** 10,937 → 9,739 lines (-1,198 lines, -11.0%)
-- **Completed:**
+**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 10-14 hours remaining)
+- **Status:** Phases 1-6 Complete ✅ | Phase 7 In Progress (~5% done)
+- **Progress:** 10,937 → 9,494 lines (-1,443 lines, -13.2%)
+- **Completed Phases (6 of 7, 86% done):**
   - ✅ Phase 1: Extracted utility functions (gameUtils, nationUtils, renderingUtils)
   - ✅ Phase 2: Extracted AI diplomacy logic (aiDiplomacyActions)
   - ✅ Phase 3: Extracted game phase handlers (launch, resolution, production)
   - ✅ Phase 4: Extracted world rendering system (drawWorld, drawNations)
   - ✅ Phase 5: Extracted UI components (IntroLogo, Starfield, SpinningEarth, OperationModal, IntelReportContent)
-- **Remaining Phases:**
-  - Phase 6: Extract game state management
-  - Phase 7: Simplify main NoradVector component
-- **Files Created:**
+  - ✅ Phase 6: Extracted game state management (GameStateManager, PlayerManager, DoomsdayClock)
+- **Remaining Phase:**
+  - 📋 Phase 7: Simplify main NoradVector component (10-14 hours remaining) - **In Progress (~5% done)**
+    - ✅ **Completed:** Extract 3 screen components (128 lines reduced)
+      - IntroScreen, LeaderSelectionScreen, DoctrineSelectionScreen
+    - 📋 **Remaining:** Extract 3 modal components (882 lines potential)
+      - BuildModal, ResearchModal, MilitaryModal
+    - 📋 **Remaining:** Create 5 custom hooks (~500 lines potential)
+    - 📋 **Remaining:** Extract 5 UI components (~800 lines potential)
+    - Target: Reduce NoradVector from 5,208 → <3,000 lines (need ~2,200 more)
+    - **See:** `PHASE_7_PLAN.md` for complete implementation guide
+- **Files Created (18 files, 2,740 lines):**
   - `src/lib/gameUtils.ts` (70 lines)
   - `src/lib/nationUtils.ts` (45 lines)
   - `src/lib/renderingUtils.ts` (95 lines)
@@ -215,7 +223,16 @@
   - `src/components/intro/SpinningEarth.tsx` (14 lines)
   - `src/components/modals/OperationModal.tsx` (212 lines)
   - `src/components/modals/IntelReportContent.tsx` (94 lines)
-- **See:** `REFACTORING_SUMMARY.md` for detailed breakdown
+  - `src/state/GameStateManager.ts` (560 lines)
+  - `src/state/PlayerManager.ts` (75 lines)
+  - `src/state/DoomsdayClock.ts` (95 lines)
+  - `src/state/index.ts` (19 lines)
+  - `src/components/setup/IntroScreen.tsx` (134 lines)
+  - `src/components/setup/LeaderSelectionScreen.tsx` (70 lines)
+  - `src/components/setup/DoctrineSelectionScreen.tsx` (75 lines)
+- **Documentation:**
+  - `REFACTORING_SUMMARY.md` - Detailed phase breakdown and progress
+  - `PHASE_7_PLAN.md` - Complete implementation guide for Phase 7
 
 **Issue #7: Fix Type Safety Issues** (12-15 hours)
 - **Problem:** 89 instances of `as any` bypassing TypeScript

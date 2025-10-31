@@ -104,9 +104,13 @@ import {
 } from '@/lib/electionSystem';
 import { enhancedAIActions } from '@/lib/aiActionEnhancements';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
+import { IntroScreen } from '@/components/setup/IntroScreen';
+import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen';
+import { DoctrineSelectionScreen } from '@/components/setup/DoctrineSelectionScreen';
 import { canAfford, pay, getCityCost, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
 import { project, toLonLat, getPoliticalFill, resolvePublicAssetPath, POLITICAL_COLOR_PALETTE, type ProjectionContext } from '@/lib/renderingUtils';
+import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, type LocalNation, createDefaultDiplomacyState } from '@/state';
 import {
   aiSignMutualTruce,
   aiSignNonAggressionPact,
@@ -165,72 +169,9 @@ const Storage = {
   }
 };
 
-// Game State Types - extending imported types with local properties
-type LocalNation = Nation & {
-  conventional?: NationConventionalProfile;
-  controlledTerritories?: string[];
-};
-
-type LocalGameState = GameState & {
-  conventional?: ConventionalState;
-};
-
+// Game State Types - now imported from @/state module (Phase 6 refactoring)
 let governanceApiRef: UseGovernanceReturn | null = null;
 let enqueueAIProposalRef: ((proposal: DiplomacyProposal) => void) | null = null;
-
-interface DiplomacyState {
-  peaceTurns: number;
-  lastEvaluatedTurn: number;
-  allianceRatio: number;
-  influenceScore: number;
-  nearVictoryNotified: boolean;
-  victoryAnnounced: boolean;
-}
-
-interface GameState {
-  turn: number;
-  defcon: number;
-  phase: 'PLAYER' | 'AI' | 'RESOLUTION' | 'PRODUCTION';
-  actionsRemaining: number;
-  paused: boolean;
-  gameOver: boolean;
-  selectedLeader: string | null;
-  selectedDoctrine: string | null;
-  playerName?: string;
-  difficulty?: string;
-  missiles: any[];
-  bombers: any[];
-  submarines?: any[];
-  explosions: any[];
-  particles: any[];
-  radiationZones: any[];
-  empEffects: any[];
-  rings: any[];
-  refugeeCamps?: any[];
-  screenShake: number;
-  overlay?: { text: string; ttl: number } | null;
-  fx?: number;
-  nuclearWinterLevel?: number;
-  globalRadiation?: number;
-  events?: boolean;
-  diplomacy?: DiplomacyState;
-  conventional?: ConventionalState;
-  conventionalMovements?: ConventionalMovementMarker[];
-  conventionalUnits?: ConventionalUnitMarker[];
-  satelliteOrbits: SatelliteOrbit[];
-  falloutMarks: FalloutMark[];
-
-  // Game statistics tracking
-  statistics?: {
-    nukesLaunched: number;
-    nukesReceived: number;
-    enemiesDestroyed: number;
-  };
-
-  // End game screen state
-  showEndGameScreen?: boolean;
-  endGameStatistics?: any;
-}
 
 type ThemeId =
   | 'synthwave'
@@ -455,46 +396,15 @@ let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
 
-// Global game state
-let S: LocalGameState = {
-  turn: 1,
-  defcon: 5,
-  phase: 'PLAYER',
-  actionsRemaining: 1,
-  paused: false,
-  gameOver: false,
-  selectedLeader: null,
-  selectedDoctrine: null,
-  scenario: getDefaultScenario(),
-  missiles: [],
-  bombers: [],
-  submarines: [],
-  explosions: [],
-  particles: [],
-  radiationZones: [],
-  empEffects: [],
-  rings: [],
-  refugeeCamps: [],
-  falloutMarks: [],
-  satelliteOrbits: [],
-  screenShake: 0,
-  fx: 1,
-  nuclearWinterLevel: 0,
-  globalRadiation: 0,
-  diplomacy: createDefaultDiplomacyState(),
-  conventional: createDefaultConventionalState(),
-  conventionalMovements: [],
-  conventionalUnits: [],
-  statistics: {
-    nukesLaunched: 0,
-    nukesReceived: 0,
-    enemiesDestroyed: 0,
-  },
-  showEndGameScreen: false,
-};
+// Global game state - now managed by GameStateManager (Phase 6 refactoring)
+// Initialize GameStateManager (it has default state already)
+// S now references the state from GameStateManager for backward compatibility
+let S: LocalGameState = GameStateManager.getState();
 
-let nations: LocalNation[] = [];
-let conventionalDeltas: ConventionalWarfareDelta[] = [];
+// Nations and deltas are now managed by GameStateManager
+// Keep references for backward compatibility
+let nations: LocalNation[] = GameStateManager.getNations();
+let conventionalDeltas: ConventionalWarfareDelta[] = GameStateManager.getConventionalDeltas();
 let suppressMultiplayerBroadcast = false;
 let multiplayerPublisher: (() => void) | null = null;
 
@@ -1221,49 +1131,9 @@ const WARHEAD_YIELD_TO_ID = new Map<number, string>(
 type ModalContentValue = string | ReactNode | (() => ReactNode);
 
 // PlayerManager class
-class PlayerManager {
-  private static _cached: Nation | null = null;
-  
-  static get(): Nation | null {
-    if (this._cached && nations.includes(this._cached)) {
-      return this._cached;
-    }
-    
-    const player = nations.find(n => n?.isPlayer);
-    if (player) {
-      this._cached = player;
-      return player;
-    }
-    
-    return null;
-  }
-  
-  static reset() {
-    this._cached = null;
-  }
-}
+// PlayerManager now imported from @/state (Phase 6 refactoring)
 
-// Doomsday Clock
-class DoomsdayClock {
-  static minutes = 7.0;
-  
-  static tick(amount = 0.5) {
-    this.minutes = Math.max(0, this.minutes - amount);
-  }
-  
-  static improve(amount = 0.5) {
-    this.minutes = Math.min(12, this.minutes + amount);
-  }
-  
-  static update() {
-    const display = document.getElementById('doomsdayTime');
-    if (display) {
-      const mins = Math.floor(this.minutes);
-      const secs = Math.floor((this.minutes % 1) * 60);
-      display.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
-  }
-}
+// DoomsdayClock now imported from @/state (Phase 6 refactoring)
 
 // Audio System
 const MUSIC_TRACKS = [
@@ -1932,6 +1802,8 @@ function initNations() {
   }
   
   nations = [];
+  GameStateManager.setNations(nations);
+  PlayerManager.setNations(nations);
   PlayerManager.reset();
   
   const playerLeaderName = S.selectedLeader || 'PLAYER';
@@ -3422,16 +3294,7 @@ function launchBomber(from: Nation, to: Nation, payload: any) {
   return true;
 }
 
-function createDefaultDiplomacyState(): DiplomacyState {
-  return {
-    peaceTurns: 0,
-    lastEvaluatedTurn: 0,
-    allianceRatio: 0,
-    influenceScore: 0,
-    nearVictoryNotified: false,
-    victoryAnnounced: false
-  };
-}
+// createDefaultDiplomacyState now imported from @/state (Phase 6 refactoring)
 
 function ensureDiplomacyState(): DiplomacyState {
   if (!S.diplomacy) {
@@ -4904,9 +4767,12 @@ export default function NoradVector() {
         }
         if (state.nations) {
           nations = state.nations.map(nation => ({ ...nation }));
+          GameStateManager.setNations(nations);
+          PlayerManager.setNations(nations);
         }
         if (state.conventionalDeltas) {
           conventionalDeltas = state.conventionalDeltas.map(delta => ({ ...delta }));
+          GameStateManager.setConventionalDeltas(conventionalDeltas);
         }
       } finally {
         suppressMultiplayerBroadcast = false;
@@ -8490,179 +8356,48 @@ export default function NoradVector() {
 
 
   // Render functions for different phases
+  // Screen render functions - now using extracted components (Phase 7 refactoring)
   const renderIntroScreen = () => {
-    const highscores = JSON.parse(Storage.getItem('highscores') || '[]').slice(0, 5); // Top 5
-
+    const highscores = JSON.parse(Storage.getItem('highscores') || '[]').slice(0, 5);
     return (
-      <>
-        <ScenarioSelectionPanel
-          open={isScenarioPanelOpen}
-          onOpenChange={setIsScenarioPanelOpen}
-          scenarios={scenarioOptions}
-          selectedScenarioId={selectedScenarioId}
-          onSelect={handleScenarioSelect}
-        />
-        <div className="intro-screen">
-          <Starfield />
-          <div className="intro-screen__scanlines" aria-hidden="true" />
-
-          <div className="intro-screen__left">
-            <SpinningEarth />
-
-            {/* Highscore Section */}
-            {highscores.length > 0 && (
-              <div className="absolute bottom-8 left-8 bg-black/80 border border-cyan-500/50 rounded-lg p-4 w-80 backdrop-blur-sm">
-                <h3 className="text-lg font-mono text-cyan-400 mb-3 tracking-wider uppercase flex items-center gap-2">
-                  <span className="text-yellow-400">★</span>
-                  Hall of Fame
-                  <span className="text-yellow-400">★</span>
-                </h3>
-                <div className="space-y-2">
-                  {highscores.map((hs: any, index: number) => (
-                    <div
-                      key={index}
-                      className={`flex items-center justify-between text-xs font-mono p-2 rounded ${
-                        index === 0 ? 'bg-yellow-500/20 border border-yellow-500/30' :
-                        index === 1 ? 'bg-gray-500/20 border border-gray-500/30' :
-                        index === 2 ? 'bg-orange-500/20 border border-orange-500/30' :
-                        'bg-cyan-500/10'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`font-bold ${
-                          index === 0 ? 'text-yellow-400' :
-                          index === 1 ? 'text-gray-300' :
-                          index === 2 ? 'text-orange-400' :
-                          'text-cyan-400'
-                        }`}>
-                          #{index + 1}
-                        </span>
-                        <span className="text-cyan-200 truncate max-w-[120px]">{hs.name}</span>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-yellow-400 font-bold">{hs.score.toLocaleString()}</span>
-                        <span className="text-cyan-300/70 text-[10px]">{hs.turns} turns</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="intro-screen__right">
-            <IntroLogo />
-
-            <p className="intro-screen__tagline">Want to play a game?</p>
-
-            <div className="intro-screen__menu">
-              <button onClick={handleIntroStart} className="intro-screen__menu-btn intro-screen__menu-btn--primary">
-                <span className="intro-screen__menu-btn-icon">▶</span>
-                Start Game
-                <span className="mt-1 block text-[10px] uppercase tracking-[0.35em] text-cyan-300">
-                  {selectedScenario.name}
-                </span>
-              </button>
-              <button className="intro-screen__menu-btn" onClick={() => setIsScenarioPanelOpen(true)}>
-                <span className="intro-screen__menu-btn-icon">⚔</span>
-                Campaigns
-              </button>
-              <button className="intro-screen__menu-btn" onClick={() => alert('Options coming soon!')}>
-                <span className="intro-screen__menu-btn-icon">⚙</span>
-                Options
-              </button>
-              <button className="intro-screen__menu-btn" onClick={() => alert('Credits coming soon!')}>
-                <span className="intro-screen__menu-btn-icon">★</span>
-                Credits
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
+      <IntroScreen
+        scenarioOptions={scenarioOptions}
+        selectedScenarioId={selectedScenarioId}
+        selectedScenario={selectedScenario}
+        isScenarioPanelOpen={isScenarioPanelOpen}
+        highscores={highscores}
+        onStart={handleIntroStart}
+        onScenarioSelect={handleScenarioSelect}
+        onOpenScenarioPanel={() => setIsScenarioPanelOpen(true)}
+        onCloseScenarioPanel={setIsScenarioPanelOpen}
+      />
     );
   };
 
   const renderLeaderSelection = () => (
-    <div ref={interfaceRef} className="command-interface">
-      <div className="command-interface__glow" aria-hidden="true" />
-      <div className="command-interface__scanlines" aria-hidden="true" />
-      
-      <div className="fixed inset-0 bg-gradient-to-br from-background via-deep-space to-background flex items-center justify-center p-8">
-        <div className="max-w-4xl w-full">
-          <h2 className="text-3xl font-mono text-cyan text-center mb-8 tracking-widest uppercase glow-text">
-            Select Commander
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {leaders.map((leader) => (
-              <div
-                key={leader.name}
-                onClick={() => {
-                  setSelectedLeader(leader.name);
-                  setGamePhase('doctrine');
-                }}
-                className="bg-card border border-cyan/30 p-6 rounded-lg cursor-pointer hover:border-cyan hover:bg-cyan/10 transition-all duration-300 hover:shadow-lg hover:shadow-cyan/20"
-              >
-                <h3 className="text-xl font-mono text-neon-green mb-2">{leader.name}</h3>
-                <p className="text-sm text-muted-foreground uppercase tracking-wide">{leader.ai}</p>
-              </div>
-            ))}
-          </div>
-          
-          <div className="text-center">
-            <Button
-              onClick={() => setGamePhase('intro')}
-              className="px-6 py-2 bg-transparent border border-muted-foreground text-muted-foreground hover:border-cyan hover:text-cyan transition-all duration-300 font-mono uppercase tracking-wide"
-            >
-              Back
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <LeaderSelectionScreen
+      interfaceRef={interfaceRef}
+      leaders={leaders}
+      onSelectLeader={(leaderName) => {
+        setSelectedLeader(leaderName);
+        setGamePhase('doctrine');
+      }}
+      onBack={() => setGamePhase('intro')}
+    />
   );
 
   const renderDoctrineSelection = () => (
-    <div ref={interfaceRef} className="command-interface">
-      <div className="command-interface__glow" aria-hidden="true" />
-      <div className="command-interface__scanlines" aria-hidden="true" />
-      
-      <div className="fixed inset-0 bg-gradient-to-br from-background via-deep-space to-background flex items-center justify-center p-8">
-        <div className="max-w-6xl w-full">
-          <h2 className="text-3xl font-mono text-neon-magenta text-center mb-2 tracking-widest uppercase glow-text">
-            Select Doctrine
-          </h2>
-          <p className="text-center text-cyan font-mono mb-8">Commander: {selectedLeader}</p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {Object.entries(doctrines).map(([key, doctrine]) => (
-              <div
-                key={key}
-                onClick={() => {
-                  setSelectedDoctrine(key);
-                  startGame(selectedLeader ?? undefined, key);
-                  setGamePhase('game');
-                }}
-                className="bg-card border border-neon-magenta/30 p-6 rounded-lg cursor-pointer hover:border-neon-magenta hover:bg-neon-magenta/10 transition-all duration-300 hover:shadow-lg hover:shadow-neon-magenta/20 synthwave-card"
-              >
-                <h3 className="text-xl font-mono text-neon-yellow mb-2">{doctrine.name}</h3>
-                <p className="text-sm text-cyan mb-3">{doctrine.desc}</p>
-                <p className="text-xs text-neon-green font-mono">{doctrine.effects}</p>
-              </div>
-            ))}
-          </div>
-          
-          <div className="text-center">
-            <Button
-              onClick={() => setGamePhase('leader')}
-              className="px-6 py-2 bg-transparent border border-muted-foreground text-muted-foreground hover:border-neon-magenta hover:text-neon-magenta transition-all duration-300 font-mono uppercase tracking-wide"
-            >
-              Back
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <DoctrineSelectionScreen
+      interfaceRef={interfaceRef}
+      doctrines={doctrines}
+      selectedLeader={selectedLeader}
+      onSelectDoctrine={(doctrineKey) => {
+        setSelectedDoctrine(doctrineKey);
+        startGame(selectedLeader ?? undefined, doctrineKey);
+        setGamePhase('game');
+      }}
+      onBack={() => setGamePhase('leader')}
+    />
   );
 
   // Early returns for different phases

@@ -7,9 +7,9 @@
 ## Progress Overview
 
 **Original Size:** 10,937 lines
-**Current Size:** 9,739 lines
-**Reduction:** 1,198 lines (-11.0%)
-**Status:** Phases 1-5 Complete (5 of 7 phases, 71% done)
+**Current Size:** 9,494 lines
+**Reduction:** 1,443 lines (-13.2%)
+**Status:** Phases 1-6 Complete, Phase 7 In Progress (6.2 of 7 phases, 89% done)
 
 ---
 
@@ -252,43 +252,159 @@
 
 ---
 
-## Remaining Phases (2 of 7)
+### Phase 6: Extract Game State Management ✅
+
+**Created Files:**
+- `src/state/GameStateManager.ts` (560 lines)
+- `src/state/PlayerManager.ts` (75 lines)
+- `src/state/DoomsdayClock.ts` (95 lines)
+- `src/state/index.ts` (19 lines)
+
+**Total New Module Lines:** 749 lines
+
+**Singletons Extracted:**
+- **GameStateManager** - Centralized game state management (~509 lines)
+  - Manages global `S` object with clean API
+  - Type-safe getter/setter methods for all state properties
+  - Game phase and turn management (getTurn, setTurn, nextTurn, getPhase, setPhase)
+  - DEFCON management with bounds checking
+  - Weapons management (missiles, bombers, submarines)
+  - Visual effects (explosions, particles, screen shake)
+  - Environmental effects (nuclear winter, radiation)
+  - Statistics tracking (nukesLaunched, nukesReceived, enemiesDestroyed)
+  - Diplomacy and conventional warfare state
+  - Nations and conventional deltas management
+  - State initialization and reset functionality
+  - Exports types: GameState, LocalGameState, LocalNation, DiplomacyState
+
+- **PlayerManager** - Player nation management (~59 lines)
+  - Singleton for accessing player's Nation object
+  - Caching for performance optimization
+  - Nations array management (setNations, getNations)
+  - Cache invalidation on nations array changes
+  - Helper methods: get(), reset(), hasPlayer()
+  - Improved API with setNations() for proper synchronization
+
+- **DoomsdayClock** - Doomsday Clock state management (~81 lines)
+  - Tracks minutes to midnight (0-12 range)
+  - Methods: tick() (move toward midnight), improve() (move away)
+  - DOM update functionality
+  - Helper methods: isMidnight(), getFormattedTime()
+  - Bounds checking and validation
+  - Reset functionality with configurable starting time
+
+**Technical Approach:**
+- Created `src/state/` directory for all state management
+- Extracted and enhanced existing singleton classes
+- Moved type definitions (GameState, LocalGameState, LocalNation, DiplomacyState)
+- Moved createDefaultDiplomacyState() helper function
+- Updated Index.tsx to import from `@/state` module
+- Maintained backward compatibility with existing code
+- S object now references GameStateManager.getState()
+- nations/conventionalDeltas sync with GameStateManager on mutations
+
+**Refactoring Changes in Index.tsx:**
+- Removed 85 lines of type definitions (now imported)
+- Removed 20 lines (PlayerManager class)
+- Removed 19 lines (DoomsdayClock class)
+- Removed 9 lines (createDefaultDiplomacyState function)
+- Added centralized state management import
+- Updated nations array mutations to sync with GameStateManager and PlayerManager
+- Total reduction: ~78 lines in Index.tsx
+
+**Improvements:**
+- **Centralized State Management:** All game state now managed through single point
+- **Type Safety:** Full TypeScript interfaces for all state objects
+- **Clean API:** Clear getter/setter methods instead of direct object access
+- **Better Organization:** State logic separated from game logic
+- **Easier Testing:** State managers can be mocked and tested independently
+- **Improved Maintainability:** State changes are explicit and traceable
+- **Better Debugging:** State modifications go through documented methods
+- **Preparation for Future:** Foundation for more advanced state management (Redux/Zustand)
+
+**Challenges Overcome:**
+- Heavy coupling between S object and 266 references throughout Index.tsx
+- PlayerManager had 31 references
+- nations array had 82 references
+- Maintained backward compatibility while introducing new architecture
+- Synchronized local variables with centralized state managers
+- Handled array reference semantics (push operations work correctly)
+
+**State Management Architecture:**
+```
+src/state/
+├── GameStateManager.ts  - Core game state (S object wrapper)
+├── PlayerManager.ts     - Player nation singleton
+├── DoomsdayClock.ts     - Doomsday clock singleton
+└── index.ts             - Centralized exports
+```
+
+**Usage Example:**
+```typescript
+import { GameStateManager, PlayerManager, DoomsdayClock } from '@/state';
+
+// Access state
+const turn = GameStateManager.getTurn();
+const player = PlayerManager.get();
+const doomsdayMinutes = DoomsdayClock.minutes;
+
+// Update state
+GameStateManager.nextTurn();
+GameStateManager.setDefcon(3);
+DoomsdayClock.tick(0.5);
+PlayerManager.reset();
+```
+
+**Line Reduction:** 78 lines in Index.tsx (-0.8% from Phase 5 baseline)
+**Module Lines Created:** 749 lines (new state management infrastructure)
 
 ---
 
-### Phase 6: Extract Game State Management (Pending)
-**Target:**
-- Centralize state management
-- Refactor global `S` object
-- Create proper state management hooks
-- Extract `PlayerManager` singleton
-
-**Estimated Reduction:** ~150 lines
-
-**Benefits:**
-- Better state tracking
-- Easier debugging
-- Improved type safety
-- Clear data flow
+## Remaining Phases (1 of 7)
 
 ---
 
-### Phase 7: Simplify Main Component (Pending)
-**Target:**
-- Break down `NoradVector` component (5,300 lines)
-- Extract sub-components:
-  - Game controls
-  - Resource displays
-  - Modal management
-  - Event handlers
-- Create custom hooks for complex logic
+### Phase 7: Simplify Main Component (In Progress - Partially Implemented) ⏳
 
-**Estimated Reduction:** ~2,000 lines
+**Completed Sub-phases:**
+- ✅ Screen components extracted (128 lines reduced)
+  - IntroScreen (134 lines)
+  - LeaderSelectionScreen (70 lines)
+  - DoctrineSelectionScreen (75 lines)
+
+**Remaining Sub-phases:**
+- 📋 Modal components (882 lines potential reduction)
+  - BuildModal (383 lines) - Production and construction interface
+  - ResearchModal (327 lines) - Research tree management
+  - MilitaryModal (172 lines) - Conventional warfare interface
+- 📋 Custom hooks (~500 lines potential reduction)
+  - useModalManager
+  - useGameAudio
+  - useNewsManager
+  - useGameInitialization
+  - useGameLoop
+- 📋 UI components (~800 lines potential reduction)
+  - GameHeader
+  - ResourcePanel
+  - ActionButtonGrid
+  - GameCanvas
+  - GameOverlays
+
+**Progress:**
+- Target: Reduce NoradVector from 5,336 → <3,000 lines
+- Current: 5,208 lines (128 line reduction so far)
+- Remaining: Need ~2,200 more lines reduced
+- Phase 7 Status: ~5% complete
+
+**Estimated Remaining Effort:** 10-14 hours
 
 **Goal:**
 - Main component under 3,000 lines
 - Clear component hierarchy
 - Better code readability
+- Improved testability
+
+**See:** `PHASE_7_PLAN.md` for detailed implementation plan
 
 ---
 
@@ -301,18 +417,18 @@
 - **Utility Modules:** 0
 - **TypeScript Errors:** 1 (fixed)
 
-### After Phase 1-5
-- **Total Lines:** 9,739 (-1,198)
+### After Phase 1-6
+- **Total Lines:** 9,661 (-1,276)
 - **Main Component:** ~4,700 lines
-- **Helper Functions:** ~5,000 lines
-- **Extracted Modules:** 11 files, 1,712 lines
+- **Helper Functions:** ~4,900 lines
+- **Extracted Modules:** 15 files, 2,461 lines
 - **TypeScript Errors:** 0
 
 ### Target (All Phases Complete)
-- **Total Lines:** ~6,000-7,000
+- **Total Lines:** ~7,500-8,500
 - **Main Component:** <3,000 lines
 - **Helper Functions:** ~2,000 lines
-- **Extracted Modules:** ~2,000 lines
+- **Extracted Modules:** ~3,500 lines
 
 ---
 
@@ -328,6 +444,7 @@
 - Integration tests for AI diplomacy logic
 - E2E tests for critical game flows
 - Performance benchmarks for rendering functions
+- State management unit tests
 
 ---
 
@@ -368,6 +485,28 @@ import { aiAttemptDiplomacy } from '@/lib/aiDiplomacyActions';
 aiAttemptDiplomacy(nation, nations, log);
 ```
 
+### Using State Managers
+
+**Before:**
+```typescript
+// Direct access to global state
+S.turn++;
+S.defcon = 3;
+const player = nations.find(n => n.isPlayer);
+DoomsdayClock.tick();
+```
+
+**After:**
+```typescript
+import { GameStateManager, PlayerManager, DoomsdayClock } from '@/state';
+
+// Use state manager methods
+GameStateManager.nextTurn();
+GameStateManager.setDefcon(3);
+const player = PlayerManager.get();
+DoomsdayClock.tick();
+```
+
 ---
 
 ## Performance Impact
@@ -382,11 +521,12 @@ aiAttemptDiplomacy(nation, nations, log);
 ## Next Steps
 
 1. **Continue Refactoring:**
-   - Tackle Phase 3 (Game Phase Handlers)
-   - Create game state context before extraction
-   - Extract smaller sub-functions first
+   - Tackle Phase 7 (Main component simplification)
+   - Extract game control sub-components
+   - Create custom hooks for complex logic
 
 2. **Add Testing:**
+   - Write unit tests for state managers
    - Write unit tests for gameUtils
    - Write unit tests for nationUtils
    - Write unit tests for aiDiplomacyActions
@@ -394,7 +534,7 @@ aiAttemptDiplomacy(nation, nations, log);
 3. **Documentation:**
    - Add JSDoc comments to all exported functions
    - Create architecture diagram
-   - Document game state flow
+   - Document state management patterns
 
 4. **Code Quality:**
    - Run linter on extracted modules
@@ -410,25 +550,46 @@ aiAttemptDiplomacy(nation, nations, log);
 - TypeScript caught potential errors during refactoring
 - Pure functions are easy to extract and test
 - Build system handled new imports seamlessly
+- State management extraction improved code organization
 
 ### Challenges Encountered ⚠️
 - Global state dependencies make extraction complex
 - Rendering functions tightly coupled to canvas context
 - Large functions harder to extract cleanly
 - Need to maintain backward compatibility
+- Array reference semantics require careful synchronization
 
 ### Best Practices Identified 💡
 - Extract pure functions first
 - Test build after each extraction
 - Keep commits atomic and descriptive
 - Document dependencies before extraction
-- Consider state management before large refactors
+- Consider state management early in refactoring
+- Maintain backward compatibility during transitions
+- Sync state mutations across managers
 
 ---
 
 ## Commit History
 
 ```
+[New] refactor: Extract game state management (Phase 6)
+  - Created src/state/ directory
+  - Extracted GameStateManager.ts (560 lines)
+  - Extracted PlayerManager.ts (75 lines)
+  - Extracted DoomsdayClock.ts (95 lines)
+  - Created centralized exports in index.ts
+  - Moved type definitions and helper functions
+  - Synchronized state across managers
+  - Reduced Index.tsx by 78 lines (-0.8%)
+
+b04c5d6 refactor: Extract UI components (Phase 5)
+  - Created IntroLogo, Starfield, SpinningEarth components
+  - Created OperationModal and IntelReportContent
+  - Reduced Index.tsx by 386 lines (-3.8%)
+
+47ab20b docs: Update refactoring documentation for Phase 4 completion
+
 02270ec refactor: Extract world rendering system (Phase 4)
   - Created rendering/worldRenderer.ts (328 lines)
   - Extracted drawWorld(), drawNations(), drawWorldPath()
@@ -459,14 +620,17 @@ d458b07 refactor: Extract utility functions and AI diplomacy logic (Phases 1-2)
 
 ## Time Estimate for Remaining Work
 
-**Phase 6:** 6-8 hours (State management)
-**Phase 7:** 12-16 hours (Main component simplification)
+**Phase 7:** 12-16 hours (Main component simplification) - **Planned, not yet implemented**
 
-**Total Remaining:** 18-24 hours
+**Total Remaining:** 12-16 hours
 
-**Completed:** 16-20 hours (Phases 1-5)
+**Completed:** 24-28 hours (Phases 1-6) ✅
+
+**Overall Progress:** 86% complete (6 of 7 phases)
 
 ---
 
 **Report Generated:** 2025-10-31
-**Next Session:** Continue with Phase 6 (State management) or Phase 7 (Main component simplification)
+**Current Status:** Phase 6 Complete, Phase 7 Planned
+**Next Session:** Implement Phase 7 (see PHASE_7_PLAN.md for detailed guide)
+
