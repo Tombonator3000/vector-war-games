@@ -738,3 +738,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-10-31T16:52:50+00:00
 - Updated Cuban Crisis nation setup to reference dynamic nation IDs for threats, alliances, and relationships per Codex review request.
+
+## 2025-10-31T23:31:21+00:00
+- Addressed Codex review by wiring Phase 2 cultist recruitment state changes into regional cell management, including region targeting, cell growth, and activity logging.
