@@ -10,7 +10,10 @@ import { IntroLogo } from '@/components/intro/IntroLogo';
 import { Starfield } from '@/components/intro/Starfield';
 import { SpinningEarth } from '@/components/intro/SpinningEarth';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { OptionsMenu } from '@/components/OptionsMenu';
 import type { ScenarioConfig } from '@/types/scenario';
+import { useState } from 'react';
 
 interface HighScore {
   name: string;
@@ -50,6 +53,8 @@ export function IntroScreen({
   onOpenScenarioPanel,
   onCloseScenarioPanel,
 }: IntroScreenProps) {
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+
   return (
     <>
       <ScenarioSelectionPanel
@@ -59,6 +64,17 @@ export function IntroScreen({
         selectedScenarioId={selectedScenarioId}
         onSelect={onScenarioSelect}
       />
+      <Dialog open={isOptionsOpen} onOpenChange={setIsOptionsOpen}>
+        <DialogContent className="options-sheet max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="options-sheet__title">COMMAND OPTIONS</DialogTitle>
+            <DialogDescription className="options-sheet__description">
+              Tune the command interface to match your control room preferences.
+            </DialogDescription>
+          </DialogHeader>
+          <OptionsMenu showInGameFeatures={false} />
+        </DialogContent>
+      </Dialog>
       <div className="intro-screen">
         <Starfield />
         <div className="intro-screen__scanlines" aria-hidden="true" />
@@ -124,7 +140,7 @@ export function IntroScreen({
               <span className="intro-screen__menu-btn-icon">⚔</span>
               Campaigns
             </button>
-            <button className="intro-screen__menu-btn" onClick={() => alert('Options coming soon!')}>
+            <button className="intro-screen__menu-btn" onClick={() => setIsOptionsOpen(true)}>
               <span className="intro-screen__menu-btn-icon">⚙</span>
               Options
             </button>
