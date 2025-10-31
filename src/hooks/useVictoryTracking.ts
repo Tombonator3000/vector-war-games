@@ -7,6 +7,7 @@ import type {
   VictoryMilestone,
   VictoryType,
 } from '@/types/victory';
+import { safePercentage, safeDivide } from '@/lib/safeMath';
 
 interface UseVictoryTrackingProps {
   nations: Nation[];
@@ -195,7 +196,7 @@ function calculateDominationVictory(player: Nation, aliveEnemies: Nation[]): Vic
     },
   ];
 
-  const progress = aliveEnemies.length === 0 ? 100 : (enemiesDestroyed / 10) * 100;
+  const progress = aliveEnemies.length === 0 ? 100 : safePercentage(enemiesDestroyed, 10, 0);
 
   const milestones: VictoryMilestone[] = [];
   if (aliveEnemies.length > 0) {
@@ -244,7 +245,7 @@ function calculateEconomicVictory(player: Nation): VictoryPath {
     },
   ];
 
-  const progress = Math.min(100, (currentCities / requiredCities) * 100);
+  const progress = Math.min(100, safePercentage(currentCities, requiredCities, 0));
 
   const milestones: VictoryMilestone[] = [];
   if (!conditions[0].isMet) {
@@ -278,7 +279,7 @@ function calculateEconomicVictory(player: Nation): VictoryPath {
 function calculateDemographicVictory(player: Nation, allNations: Nation[]): VictoryPath {
   const totalPopulation = allNations.reduce((sum, n) => sum + n.population, 0);
   const playerPopulation = player.population;
-  const populationPercent = totalPopulation > 0 ? (playerPopulation / totalPopulation) * 100 : 0;
+  const populationPercent = safePercentage(playerPopulation, totalPopulation, 0);
   const requiredPercent = 60;
   const currentInstability = player.instability || 0;
   const maxInstability = 30;
@@ -450,10 +451,10 @@ function calculateCulturalVictory(player: Nation, allNations: Nation[]): Victory
 function calculateOverallProgress(conditions: VictoryCondition[]): number {
   if (conditions.length === 0) return 0;
   const totalProgress = conditions.reduce((sum, condition) => {
-    const conditionProgress = Math.min(100, (condition.current / condition.required) * 100);
+    const conditionProgress = Math.min(100, safePercentage(condition.current, condition.required, 0));
     return sum + conditionProgress;
   }, 0);
-  return Math.round(totalProgress / conditions.length);
+  return Math.round(safeDivide(totalProgress, conditions.length, 0));
 }
 
 function estimateTurnsToVictory(conditions: VictoryCondition[], avgTurnsPerCondition: number): number | null {

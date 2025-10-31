@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { calculateMoraleRecruitmentModifier } from './useGovernance';
 import { useRNG } from '@/contexts/RNGContext';
+import { safeDivide, safeClamp } from '@/lib/safeMath';
 
 export type ForceType = 'army' | 'navy' | 'air';
 
@@ -290,7 +291,8 @@ const computeUnitDefense = (unit: ConventionalUnitState, nation?: ConventionalNa
   return baseDefense + techBonus;
 };
 
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+// Deprecated: Use safeClamp from safeMath instead
+const clamp = safeClamp;
 
 export function createDefaultConventionalState(nations: Array<{ id: string; isPlayer?: boolean }> = []): ConventionalState {
   const territories = DEFAULT_TERRITORIES.reduce<Record<string, TerritoryState>>((acc, territory) => {
@@ -619,9 +621,9 @@ export function useConventionalWarfare({
         (getNation(defenderId)?.conventional?.readiness ?? 60);
       const readinessModifier = readinessEdge / 200;
 
-      const baseOdds = attackerPower / Math.max(attackerPower + defenderPower, 1);
+      const baseOdds = safeDivide(attackerPower, attackerPower + defenderPower, 0.5);
       const tensionModifier = territory.conflictRisk / 200;
-      const odds = clamp(baseOdds + readinessModifier + tensionModifier - 0.1, 0.15, 0.85);
+      const odds = safeClamp(baseOdds + readinessModifier + tensionModifier - 0.1, 0.15, 0.85);
 
       const roll = rng.next();
       const attackerVictory = roll < odds;

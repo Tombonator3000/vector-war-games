@@ -13,6 +13,7 @@ import {
   getAcceptanceThreshold,
   generateDiplomaticMessage
 } from '@/types/diplomacy';
+import { safeRatio } from '@/lib/safeMath';
 
 /**
  * Evaluate whether AI should accept a player's diplomatic proposal
@@ -52,7 +53,7 @@ function calculateEvaluationFactors(
   // Military power ratio (their strength / our strength)
   const proposerPower = calculateMilitaryPower(proposerNation);
   const aiPower = calculateMilitaryPower(aiNation);
-  const militaryRatio = aiPower > 0 ? proposerPower / aiPower : 1;
+  const militaryRatio = safeRatio(proposerPower, aiPower, 1);
 
   // Relationship score based on treaties
   const relationshipScore = calculateRelationshipScore(aiNation, proposerNation);
