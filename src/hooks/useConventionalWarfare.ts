@@ -270,7 +270,7 @@ const computeUnitAttack = (unit: ConventionalUnitState, nation?: ConventionalNat
   const baseAttack = template.attack * readinessFactor * experienceBonus + template.support;
 
   // Apply tech bonuses from Force Modernization
-  const techBonus = (nation as any)?.unitAttackBonus || 0;
+  const techBonus = nation?.unitAttackBonus || 0;
   return baseAttack + techBonus;
 };
 
@@ -287,7 +287,7 @@ const computeUnitDefense = (unit: ConventionalUnitState, nation?: ConventionalNa
   const baseDefense = template.defense * readinessFactor * experienceBonus + template.support * 0.5;
 
   // Apply tech bonuses from Force Modernization
-  const techBonus = (nation as any)?.unitDefenseBonus || 0;
+  const techBonus = nation?.unitDefenseBonus || 0;
   return baseDefense + techBonus;
 };
 
@@ -466,18 +466,18 @@ export function useConventionalWarfare({
       if ((cost.production ?? 0) > nation.production) {
         return false;
       }
-      if ((cost.intel ?? 0) > (nation as any).intel) {
+      if ((cost.intel ?? 0) > nation.intel) {
         return false;
       }
-      if ((cost.uranium ?? 0) > (nation as any).uranium) {
+      if ((cost.uranium ?? 0) > nation.uranium) {
         return false;
       }
       nation.production -= cost.production ?? 0;
-      if (typeof (nation as any).intel === 'number') {
-        (nation as any).intel = Math.max(0, (nation as any).intel - (cost.intel ?? 0));
+      if (typeof nation.intel === 'number') {
+        nation.intel = Math.max(0, nation.intel - (cost.intel ?? 0));
       }
-      if (typeof (nation as any).uranium === 'number') {
-        (nation as any).uranium = Math.max(0, (nation as any).uranium - (cost.uranium ?? 0));
+      if (typeof nation.uranium === 'number') {
+        nation.uranium = Math.max(0, nation.uranium - (cost.uranium ?? 0));
       }
       return true;
     },
@@ -609,10 +609,10 @@ export function useConventionalWarfare({
       const defenderPower = defenderUnits.reduce((total, unit) => total + computeUnitDefense(unit, defenderNation), 0);
 
       // Apply Combined Arms Doctrine bonus if multiple unit types present
-      if (attackerNation && (attackerNation as any).combinedArmsBonus) {
+      if (attackerNation?.combinedArmsBonus) {
         const unitTypes = new Set(attackerUnits.map(u => templateLookup[u.templateId]?.type).filter(Boolean));
         if (unitTypes.size >= 2) {
-          const bonus = (attackerNation as any).combinedArmsBonus;
+          const bonus = attackerNation.combinedArmsBonus;
           attackerPower = attackerPower * (1 + bonus);
         }
       }

@@ -64,6 +64,8 @@ export interface PandemicTurnContext {
   turn: number;
   defcon: number;
   playerPopulation: number;
+  difficulty?: string; // Game difficulty: 'easy', 'normal', 'hard', 'expert'
+  plagueOwnerId?: string; // Nation ID of plague owner (for AI vs player differentiation)
 }
 
 export interface PandemicTurnEffect {

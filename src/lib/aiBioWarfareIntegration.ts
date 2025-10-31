@@ -6,7 +6,8 @@
 import type { Nation } from '@/types/game';
 import type { BioLabFacility } from '@/types/bioLab';
 import { BIO_LAB_TIERS } from '@/types/bioLab';
-import type { PlagueState, EvolutionNodeId } from '@/types/biowarfare';
+import type { PlagueState, EvolutionNodeId, TransmissionId, SymptomId, AbilityId } from '@/types/biowarfare';
+import type { DeploymentMethodId } from '@/types/bioDeployment';
 import { ALL_EVOLUTION_NODES } from '@/lib/evolutionData';
 import {
   shouldBuildBioLab,
@@ -184,13 +185,13 @@ export function processAIBioWarfareTurn(
         // Add to unlocked nodes
         plagueState.unlockedNodes.add(nodeToEvolve);
 
-        // Update category arrays
+        // Update category arrays - type assertions are safe because category determines the union type
         if (node.category === 'transmission') {
-          plagueState.activeTransmissions.push(nodeToEvolve as any);
+          plagueState.activeTransmissions.push(nodeToEvolve as TransmissionId);
         } else if (node.category === 'symptom') {
-          plagueState.activeSymptoms.push(nodeToEvolve as any);
+          plagueState.activeSymptoms.push(nodeToEvolve as SymptomId);
         } else if (node.category === 'ability') {
-          plagueState.activeAbilities.push(nodeToEvolve as any);
+          plagueState.activeAbilities.push(nodeToEvolve as AbilityId);
         }
 
         // Recalculate stats (simplified)
@@ -214,7 +215,7 @@ export function processAIBioWarfareTurn(
       // Mark as deployed
       plagueState.deploymentHistory.push(...targets.map(t => ({
         nationId: t.nationId,
-        deploymentMethod: t.deploymentMethod as any,
+        deploymentMethod: t.deploymentMethod,
         useFalseFlag: t.useFalseFlag,
         falseFlagNationId: t.falseFlagNationId || undefined,
         deployedTurn: currentTurn,

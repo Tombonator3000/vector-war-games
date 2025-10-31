@@ -299,7 +299,7 @@ export function aiCyberWarfareAction(
 
   // Launch the attack
   try {
-    const result = launchCyberAttack(aiNation.id, target.id, attackType as any);
+    const result = launchCyberAttack(aiNation.id, target.id, attackType);
     if (result.success) {
       log(`${aiNation.name} launches ${attackType} cyber attack on ${target.name}`);
       return true;

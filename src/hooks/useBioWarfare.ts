@@ -10,7 +10,7 @@ import { useBioLab } from './useBioLab';
 import { useRNG } from '@/contexts/RNGContext';
 import type { PandemicTurnContext, PandemicTurnEffect } from './usePandemic';
 import type { NewsItem } from '@/components/NewsTicker';
-import type { PlagueState } from '@/types/biowarfare';
+import type { PlagueState, SymptomId } from '@/types/biowarfare';
 import { getPlagueTypeById } from '@/lib/evolutionData';
 
 type AddNewsItem = (category: NewsItem['category'], text: string, priority: NewsItem['priority']) => void;
@@ -91,6 +91,33 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
   }, []);
 
   /**
+   * Calculate auto-evolution frequency based on difficulty
+   * Returns the turn interval for bio-weapon auto-evolution
+   */
+  const getAutoEvolutionInterval = useCallback((difficulty?: string): number => {
+    switch (difficulty) {
+      case 'easy': return 15; // Very slow evolution
+      case 'normal': return 10; // Moderate evolution
+      case 'hard': return 7; // Aggressive evolution
+      case 'expert': return 5; // Very aggressive evolution
+      default: return 10; // Default to normal
+    }
+  }, []);
+
+  /**
+   * Calculate mutation chance multiplier based on difficulty
+   */
+  const getMutationChanceMultiplier = useCallback((difficulty?: string): number => {
+    switch (difficulty) {
+      case 'easy': return 0.5; // 50% of base chance
+      case 'normal': return 1.0; // 100% of base chance
+      case 'hard': return 1.5; // 150% of base chance
+      case 'expert': return 2.0; // 200% of base chance
+      default: return 1.0;
+    }
+  }, []);
+
+  /**
    * Advance turn with evolution-enhanced mechanics
    */
   const advanceBioWarfareTurn = useCallback(
@@ -98,6 +125,8 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
       const resolvedNations = Array.isArray(nations) ? nations : [];
 
       const plagueType = evolution.plagueState.selectedPlagueType ? getPlagueTypeById(evolution.plagueState.selectedPlagueType) : null;
+      const difficulty = context.difficulty || 'normal';
+      const isPlayerPlague = context.plagueOwnerId ? resolvedNations.find((n: any) => n.id === context.plagueOwnerId)?.isPlayer : false;
 
       // Advance lab construction if under construction
       const constructionResult = bioLab.advanceConstruction();
@@ -126,35 +155,52 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
       // Calculate modifiers from evolution
       const modifiers = calculateSpreadModifiers(evolution.plagueState);
 
-      // Bio-weapon: Auto-increasing lethality (evolve random lethal symptom every 5 turns)
-      if (plagueType?.autoIncreasingLethality && context.turn % 5 === 0) {
-        // Force-evolve a random lethal symptom if available
-        const lethalSymptoms = ['total-organ-failure', 'hemorrhagic-shock', 'necrosis', 'cytokine-storm', 'systemic-infection', 'liquefaction'];
-        const availableLethal = lethalSymptoms.filter(
-          (id) => !evolution.plagueState.unlockedNodes.has(id as any)
-        );
-        if (availableLethal.length > 0) {
-          const randomSymptom = rng.choice(availableLethal);
-          evolution.evolveNode({ nodeId: randomSymptom as any, forced: true });
-          addNewsItem('crisis', `Bio-weapon unstable mutation: ${randomSymptom} evolved automatically`, 'urgent');
+      // Get evolution scaling based on difficulty
+      const autoEvolutionInterval = getAutoEvolutionInterval(difficulty);
+      const mutationMultiplier = getMutationChanceMultiplier(difficulty);
+
+      // Bio-weapon: Auto-increasing lethality (difficulty-scaled evolution)
+      // Only auto-evolve for AI plagues or on harder difficulties for player
+      if (plagueType?.autoIncreasingLethality && context.turn % autoEvolutionInterval === 0) {
+        // On easy/normal difficulty, player plagues don't auto-evolve aggressively
+        const shouldAutoEvolve = !isPlayerPlague || difficulty === 'hard' || difficulty === 'expert';
+
+        if (shouldAutoEvolve) {
+          // Force-evolve a random lethal symptom if available
+          const lethalSymptoms: SymptomId[] = ['total-organ-failure', 'hemorrhagic-shock', 'necrosis', 'cytokine-storm', 'systemic-infection', 'liquefaction'];
+          const availableLethal = lethalSymptoms.filter(
+            (id) => !evolution.plagueState.unlockedNodes.has(id)
+          );
+          if (availableLethal.length > 0) {
+            const randomSymptom = rng.choice(availableLethal);
+            evolution.evolveNode({ nodeId: randomSymptom, forced: true });
+            addNewsItem('crisis', `Bio-weapon unstable mutation: ${randomSymptom} evolved automatically`, 'urgent');
+          }
         }
       }
 
-    // Virus: Random mutations
-    if (plagueType?.id === 'virus' && rng.nextBool(plagueType.naturalMutationRate)) {
-      evolution.triggerRandomMutation();
+    // Virus: Random mutations (scaled by difficulty)
+    if (plagueType?.id === 'virus') {
+      const scaledMutationRate = plagueType.naturalMutationRate * mutationMultiplier;
+      if (rng.nextBool(scaledMutationRate)) {
+        evolution.triggerRandomMutation();
+      }
     }
 
-    // Prion: Random late-game lethal symptom mutation
-    if (plagueType?.id === 'prion' && pandemic.pandemicState.globalInfection > 40 && rng.nextBool(0.15)) {
-      const lethalSymptoms = ['necrosis', 'paralysis', 'coma', 'total-organ-failure'];
-      const availableSymptoms = lethalSymptoms.filter(
-        (id) => !evolution.plagueState.unlockedNodes.has(id as any)
-      );
-      if (availableSymptoms.length > 0) {
-        const randomSymptom = rng.choice(availableSymptoms);
-        evolution.evolveNode({ nodeId: randomSymptom as any, forced: true });
-        addNewsItem('science', `Prion cascade: ${randomSymptom} manifested`, 'important');
+    // Prion: Random late-game lethal symptom mutation (scaled by difficulty)
+    if (plagueType?.id === 'prion' && pandemic.pandemicState.globalInfection > 40) {
+      // Base 15% chance, scaled by difficulty
+      const prionMutationChance = 0.15 * mutationMultiplier;
+      if (rng.nextBool(prionMutationChance)) {
+        const lethalSymptoms: SymptomId[] = ['necrosis', 'paralysis', 'coma', 'total-organ-failure'];
+        const availableSymptoms = lethalSymptoms.filter(
+          (id) => !evolution.plagueState.unlockedNodes.has(id)
+        );
+        if (availableSymptoms.length > 0) {
+          const randomSymptom = rng.choice(availableSymptoms);
+          evolution.evolveNode({ nodeId: randomSymptom, forced: true });
+          addNewsItem('science', `Prion cascade: ${randomSymptom} manifested`, 'important');
+        }
       }
     }
 
@@ -296,7 +342,7 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
     }
 
     return enhancedEffect;
-  }, [pandemic, evolution, bioLab, calculateSpreadModifiers, addNewsItem]);
+  }, [pandemic, evolution, bioLab, calculateSpreadModifiers, addNewsItem, getAutoEvolutionInterval, getMutationChanceMultiplier, rng]);
 
   /**
    * Trigger pandemic with evolution consideration

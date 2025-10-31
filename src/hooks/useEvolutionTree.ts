@@ -2,11 +2,15 @@ import { useState, useCallback, useMemo } from 'react';
 import type {
   PlagueState,
   EvolutionNodeId,
+  TransmissionId,
+  SymptomId,
+  AbilityId,
   EvolveNodePayload,
   DevolveNodePayload,
   DNAGainEvent,
   PlagueTypeId,
 } from '@/types/biowarfare';
+import type { DeploymentMethodId } from '@/types/bioDeployment';
 import {
   ALL_EVOLUTION_NODES,
   getNodeById,
@@ -226,15 +230,15 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
 
       const newDnaPoints = forced ? prev.dnaPoints : prev.dnaPoints - actualCost;
 
-      // Categorize the node
+      // Categorize the node - type assertions are safe because category determines the union type
       const newTransmissions = node.category === 'transmission'
-        ? [...prev.activeTransmissions, nodeId as any]
+        ? [...prev.activeTransmissions, nodeId as TransmissionId]
         : prev.activeTransmissions;
       const newSymptoms = node.category === 'symptom'
-        ? [...prev.activeSymptoms, nodeId as any]
+        ? [...prev.activeSymptoms, nodeId as SymptomId]
         : prev.activeSymptoms;
       const newAbilities = node.category === 'ability'
-        ? [...prev.activeAbilities, nodeId as any]
+        ? [...prev.activeAbilities, nodeId as AbilityId]
         : prev.activeAbilities;
 
       // Recalculate stats
@@ -426,14 +430,14 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
   const deployBioWeapon = useCallback((deployments: Array<{
     nationId: string;
     nationName: string;
-    deploymentMethod: string;
+    deploymentMethod: DeploymentMethodId;
     useFalseFlag: boolean;
     falseFlagNationId: string | null;
   }>, currentTurn: number) => {
     setPlagueState((prev) => {
       const newDeployments = deployments.map(d => ({
         nationId: d.nationId,
-        deploymentMethod: d.deploymentMethod as any,
+        deploymentMethod: d.deploymentMethod,
         useFalseFlag: d.useFalseFlag,
         falseFlagNationId: d.falseFlagNationId || undefined,
         deployedTurn: currentTurn,
