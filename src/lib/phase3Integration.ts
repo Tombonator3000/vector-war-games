@@ -367,6 +367,27 @@ function processCounterOccultTurn(
   const newUnity = calculateGlobalUnity(state);
   phase3.counterOccult.globalUnity.unityScore = newUnity;
 
+  const unityVictoryThreshold = 90;
+  const unityEnablesVictory = newUnity >= unityVictoryThreshold;
+  const victoryPreviouslyPossible = phase3.counterOccult.globalUnity.victoryPossible;
+  phase3.counterOccult.globalUnity.victoryPossible = unityEnablesVictory;
+
+  if (!victoryPreviouslyPossible && unityEnablesVictory) {
+    events.push({
+      type: 'victory_warning',
+      message: 'Human resistance can now achieve victory!',
+      description: `Unity has reached ${newUnity.toFixed(0)}%, enabling coordinated global action.`,
+      importance: 'critical',
+    });
+  } else if (victoryPreviouslyPossible && !unityEnablesVictory) {
+    events.push({
+      type: 'victory_warning_retracted',
+      message: 'Human victory threat subsides—for now.',
+      description: `Unity fell below the ${unityVictoryThreshold}% danger threshold.`,
+      importance: 'medium',
+    });
+  }
+
   if (newUnity > 70 && phase3.counterOccult.globalUnity.alliances.length < 2) {
     // Form new alliance
     const allianceTypes: Array<'religious' | 'scientific' | 'military' | 'political'> = [
