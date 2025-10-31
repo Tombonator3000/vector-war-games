@@ -687,3 +687,7 @@ Looking for:
 - Added HUD date display container and wired `updateDisplay` to surface scenario timestamps via `getGameTimestamp`.
 ## 2025-10-31T08:42:50+00:00
 - Randomized music playback offsets by updating `AudioSys.playTrack` to start sources at a random position within each buffer.
+
+## 2025-10-31T09:19:01+00:00
+- Extended the shared `GameState` typing with structured `falloutMarks`, added the radiation icon asset, and wired lingering fal
+lout visuals, decay, and multiplayer syncing into `Index.tsx`.
