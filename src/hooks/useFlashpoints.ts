@@ -362,6 +362,270 @@ const FOLLOWUP_FLASHPOINTS: Record<string, Record<string, Omit<FlashpointEvent, 
     }
   },
   cuban_crisis: {
+    dramatic_reveal_success: {
+      title: 'GLOBAL SUPPORT: Non-Aligned Nations Rally',
+      description:
+        'October 26, 1962: Stevenson\'s UN presentation has swayed global opinion. India, Brazil, and other non-aligned nations condemn Soviet deception. Even France offers support. But now you must deliver on the promise - peaceful resolution or military action. The world is watching.',
+      category: 'rogue',
+      severity: 'major',
+      timeLimit: 75,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'leverage_support',
+          text: 'Leverage Global Support',
+          description: 'Use international pressure to force Soviet withdrawal. Threaten UN resolution authorizing force.',
+          advisorSupport: ['diplomatic', 'pr'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.65,
+            success: { unPressure: true, diplomacy: +12, sovietConcessions: true },
+            failure: { sovietVeto: true, unStalemate: true, morale: -8 }
+          },
+          successNarrative:
+            'The threat of UN action, backed by unprecedented global consensus, rattles Moscow. Khrushchev signals willingness to negotiate seriously. Your diplomatic gambit is paying off.',
+          failureNarrative:
+            'The Soviet Union vetoes the UN resolution. China and Cuba dig in. Your moment of diplomatic triumph fades as the crisis drags on without resolution.'
+        },
+        {
+          id: 'press_advantage',
+          text: 'Press Military Advantage',
+          description: 'With global support secured, authorize more aggressive quarantine enforcement. Board Soviet ships if needed.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic'],
+          outcome: {
+            probability: 0.5,
+            success: { militaryPressure: true, defcon: 2, morale: +10 },
+            failure: { navalIncident: true, casualties: 100, escalationRisk: true }
+          },
+          successNarrative:
+            'Backed by global opinion, Navy boarding parties inspect Soviet freighters. The Soviets comply, knowing the world is against them. The blockade is total.',
+          failureNarrative:
+            'Soviet escorts resist boarding. A brief naval skirmish erupts. Casualties mount. The diplomatic advantage you gained at the UN evaporates in gunfire.'
+        }
+      ],
+      consequences: {}
+    },
+    dramatic_reveal_failure: {
+      title: 'SETBACK: Propaganda War Intensifies',
+      description:
+        'October 26, 1962: Soviet propaganda has effectively countered your UN presentation. They claim the photos are doctored CIA fabrications. Worse, they\'re circulating evidence of US-backed coups in Guatemala and Iran to question your moral authority. The narrative is slipping away.',
+      category: 'rogue',
+      severity: 'major',
+      timeLimit: 60,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'release_more',
+          text: 'Release More Intelligence',
+          description: 'Declassify additional U-2 photos, intercepts, and human intelligence to prove Soviet deception.',
+          advisorSupport: ['pr', 'diplomatic'],
+          advisorOppose: ['intel'],
+          outcome: {
+            probability: 0.6,
+            success: { narrativeRecovered: true, diplomacy: +8, morale: +5 },
+            failure: { sourcesCompromised: true, intel: -15, sovietAgentsExposed: true }
+          },
+          successNarrative:
+            'The additional evidence is overwhelming. Even skeptics acknowledge the missile threat is real. But you\'ve burned sources and methods that took years to develop.',
+          failureNarrative:
+            'Declassifying the intelligence exposes your agents and collection methods. Soviet counterintelligence rolls up your networks in Eastern Europe. The intelligence cost is devastating.'
+        },
+        {
+          id: 'shift_strategy',
+          text: 'Abandon UN, Focus on Action',
+          description: 'Stop fighting the propaganda war. Let actions speak louder - tighten the quarantine and prepare for strikes.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'pr'],
+          outcome: {
+            probability: 0.55,
+            success: { actionFocused: true, militaryReadiness: +10, defcon: 2 },
+            failure: { internationalIsolation: true, diplomacy: -12 }
+          },
+          successNarrative:
+            'You stop worrying about world opinion and focus on results. The military respects your decisiveness. Quarantine enforcement intensifies.',
+          failureNarrative:
+            'Abandoning the diplomatic front allows Soviet propaganda to run wild. Non-aligned nations question your intentions. You look like an aggressor.'
+        }
+      ],
+      consequences: {}
+    },
+    approve_defcon2_success: {
+      title: 'HAIR TRIGGER: Soviet Response to DEFCON 2',
+      description:
+        'October 25, 1962, 3:00 AM: Soviet GRU reports that US strategic forces have gone to DEFCON 2. Moscow is alarmed. The Politburo convenes in emergency session. Khrushchev must decide: match the escalation or back down? Meanwhile, your Strategic Air Command is now on hair-trigger alert. Any mistake could be catastrophic.',
+      category: 'rogue',
+      severity: 'catastrophic',
+      timeLimit: 45,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'maintain_pressure',
+          text: 'Maintain Maximum Pressure',
+          description: 'Keep SAC at DEFCON 2. Show no weakness. Force Khrushchev to blink first.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'science'],
+          outcome: {
+            probability: 0.5,
+            success: { sovietYields: true, diplomacy: +15, morale: +12, crisisShortened: true },
+            failure: { mutualEscalation: true, defcon: 1, accidentalLaunch: true }
+          },
+          successNarrative:
+            'The pressure works. Soviet intelligence reports convince Khrushchev that you\'re prepared for war. He cannot match your strategic superiority. Within days, he signals willingness to withdraw the missiles. Your gamble paid off.',
+          failureNarrative:
+            'Moscow matches your escalation. Soviet forces go to maximum alert. Then disaster: a US bomber experiences radio failure and strays into Soviet airspace. Soviet air defenses shoot it down. DEFCON 1. Nuclear war is minutes away.'
+        },
+        {
+          id: 'strategic_deescalate',
+          text: 'Signal Willingness to De-escalate',
+          description: 'Having shown strength, now show restraint. Privately signal through back-channels that you\'ll reduce alert levels if Soviets withdraw missiles.',
+          advisorSupport: ['diplomatic', 'intel'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.7,
+            success: { diplomaticOpening: true, defcon: 3, negotiationPath: true },
+            failure: { perceivedWeak: true, sovietDemands: true, morale: -10 }
+          },
+          successNarrative:
+            'Your combination of strength and restraint impresses Khrushchev. He sees you as a rational actor who can be negotiated with. Back-channels open. A path to resolution emerges.',
+          failureNarrative:
+            'Khrushchev interprets your de-escalation as weakness. He increases demands, now insisting on removal of Jupiter missiles from Turkey AND Italy, plus closure of Guantanamo. Your bargaining position has deteriorated.'
+        }
+      ],
+      consequences: {}
+    },
+    approve_defcon2_failure: {
+      title: 'ALERT: Soviet Strategic Forces at Maximum Readiness',
+      description:
+        'October 25, 1962: The Soviet Union has matched your DEFCON 2 alert. Worse, an error-prone early warning system on both sides increases the risk of false alarms. At 4:15 AM, NORAD reports possible Soviet ICBM launches from Plesetsk. It\'s almost certainly a sensor glitch - but you have 4 minutes to decide.',
+      category: 'accident',
+      severity: 'catastrophic',
+      timeLimit: 30,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'hold_fire',
+          text: 'Trust Your Instincts - Hold Fire',
+          description: 'It\'s a false alarm. It has to be. Khrushchev wouldn\'t launch over Cuba. Wait for confirmation.',
+          advisorSupport: ['diplomatic', 'science'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.85,
+            success: { falseAlarm: true, disasterAvoided: true, defcon: 3 },
+            failure: { realLaunch: true, delayedResponse: true, casualtiesMillions: true }
+          },
+          successNarrative:
+            'You hold your nerve. Two minutes later, the alarm is confirmed false - geese flew through a radar beam. You just prevented nuclear war through sheer will. Both sides agree to improve early warning communications.',
+          failureNarrative:
+            'It wasn\'t a false alarm. A rogue Soviet commander launched without authorization. Your delay in responding allows the first strike to land. US retaliation is late. Millions die in both countries.'
+        },
+        {
+          id: 'launch_response',
+          text: 'Execute Nuclear Response',
+          description: 'You cannot risk American cities. Launch on warning. Retaliate immediately.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'science', 'pr'],
+          outcome: {
+            probability: 0.95,
+            success: { mutualDestruction: true, worldEnds: true, humanExtinction: true },
+            failure: { mutualDestruction: true, worldEnds: true, humanExtinction: true }
+          },
+          successNarrative:
+            'You authorize launch. Within minutes, ICBMs are flying in both directions. It was a false alarm. You\'ve just ended human civilization over a flock of geese.',
+          failureNarrative:
+            'Launch order issued. Strategic Air Command executes. Soviet retaliation follows. Within 60 minutes, every major city in both hemispheres is destroyed. Nuclear winter begins.'
+        }
+      ],
+      consequences: {}
+    },
+    respond_first_success: {
+      title: 'RESOLUTION: October 28, 1962',
+      description:
+        'Sunday morning, October 28, 1962: Radio Moscow announces that Khrushchev has ordered the missiles dismantled and returned to the Soviet Union. The crisis is over. In your private office, you know the full story - the secret Turkey trade that saved the world. But publicly, this is your victory. How will you shape the peace?',
+      category: 'rogue',
+      severity: 'major',
+      timeLimit: 90,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'magnanimous',
+          text: 'Magnanimous Victory',
+          description: 'No gloating. Praise Khrushchev\'s statesmanship. Emphasize shared responsibility to prevent nuclear war. Build on this moment.',
+          advisorSupport: ['diplomatic', 'science'],
+          advisorOppose: ['military', 'pr'],
+          outcome: {
+            probability: 0.8,
+            success: { hotlineEstablished: true, testBanTreaty: true, diplomacy: +25, coldWarEased: true },
+            failure: { domesticBacklash: true, republicansAttack: true, morale: -8 }
+          },
+          successNarrative:
+            'Your gracious response establishes the Washington-Moscow hotline within months. The Limited Test Ban Treaty follows in 1963. You\'ve turned the crisis into a foundation for détente. History will remember this as your finest hour.',
+          failureNarrative:
+            'Republicans savage your "weak" response. "Why didn\'t we invade?" they demand. You\'re accused of letting Khrushchev off the hook. The 1964 election looks uncertain.'
+        },
+        {
+          id: 'claim_victory',
+          text: 'Claim Total Victory',
+          description: 'This is an American triumph. Khrushchev blinked. We stood firm and won. No mention of concessions.',
+          advisorSupport: ['military', 'pr'],
+          advisorOppose: ['diplomatic'],
+          outcome: {
+            probability: 0.7,
+            success: { domesticTriumph: true, morale: +20, electionAssured: true },
+            failure: { khrushchevHumiliated: true, sovietHardline: true, coldWarIntensifies: true }
+          },
+          successNarrative:
+            'Your approval rating soars. Americans feel secure and proud. The 1964 election is a landslide. But you\'ve missed the chance to build a lasting peace with Moscow.',
+          failureNarrative:
+            'Khrushchev is humiliated before the Politburo. Hardliners gain power. The secret Turkey deal is leaked by angry Soviet officials. You look like a liar and a bully. US-Soviet relations enter a deep freeze.'
+        }
+      ],
+      consequences: {}
+    },
+    secret_deal_success: {
+      title: 'THE SECRET HOLDS: A Fragile Peace',
+      description:
+        'November 1962: The crisis has ended, but the secret Turkey deal weighs on you. Jupiters must be quietly withdrawn over the next 6 months. If the secret leaks, your presidency is over. Meanwhile, CIA reports suggest Soviet hardliners are plotting against Khrushchev for his "retreat" from Cuba.',
+      category: 'rogue',
+      severity: 'major',
+      timeLimit: 75,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'verify_removal',
+          text: 'Demand Verification of Cuban Missiles',
+          description: 'Send UN inspectors to verify Soviet missile removal from Cuba. Set precedent for arms control verification.',
+          advisorSupport: ['diplomatic', 'intel'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.6,
+            success: { verificationSucceeds: true, armsControlPrecedent: true, diplomacy: +15 },
+            failure: { castroRefuses: true, sovietEmbarrassment: true, tensionsRise: true }
+          },
+          successNarrative:
+            'UN inspectors confirm all missiles have been removed. The verification process becomes a template for future arms control treaties. A crisis becomes a blueprint for peace.',
+          failureNarrative:
+            'Castro refuses to allow inspections, calling them a violation of Cuban sovereignty. Khrushchev is powerless to force the issue. You must rely on U-2 surveillance alone.'
+        },
+        {
+          id: 'protect_khrushchev',
+          text: 'Protect Khrushchev from Hardliners',
+          description: 'Use CIA back-channels to warn Khrushchev of coup plots. He needs to survive for the secret deal to work.',
+          advisorSupport: ['intel', 'diplomatic'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.55,
+            success: { khrushchevSurvives: true, secretPartnershipFormed: true, diplomacy: +20 },
+            failure: { coupSucceeds: true, hardlinersControl: true, coldWarIntensifies: true }
+          },
+          successNarrative:
+            'Your warning allows Khrushchev to outmaneuver his opponents. A covert partnership forms between you and the Soviet premier. This crisis has created an unlikely alliance for peace.',
+          failureNarrative:
+            'Despite your warning, hardliners force Khrushchev from power in 1964. The new Soviet leadership is more aggressive. The secret deal dies with Khrushchev\'s authority.'
+        }
+      ],
+      consequences: {}
+    },
     hold_quarantine_success: {
       title: 'CRISIS: Soviet Submarine B-59 Cornered',
       description:
@@ -807,6 +1071,318 @@ const SCENARIO_FLASHPOINTS: Record<string, Omit<FlashpointEvent, 'id' | 'trigger
             'Your public proposal gives Khrushchev an honorable exit. The Soviets withdraw missiles from Cuba. In secret, you agree to remove Jupiter missiles from Turkey in 6 months. Critics call it appeasement, but you averted Armageddon.',
           failureNarrative:
             'Khrushchev rejects the proposal as unequal. The Soviets accelerate missile deployment. Intelligence confirms IRBMs are now fully operational and fueled. The American public demands action.'
+        }
+      ],
+      consequences: {}
+    },
+    {
+      title: 'UN SECURITY COUNCIL: Stevenson vs. Zorin',
+      description:
+        'October 25, 1962: The UN Security Council convenes in emergency session. Soviet Ambassador Valerian Zorin denies the missiles exist, calling your evidence "falsified." Ambassador Adlai Stevenson has photographic proof ready. This is your chance to win the court of global opinion - or be exposed as a warmonger if the evidence is not convincing enough.',
+      category: 'rogue',
+      severity: 'major',
+      timeLimit: 75,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'dramatic_reveal',
+          text: 'Stevenson\'s Dramatic Presentation',
+          description: '"Don\'t wait for the translation!" Present the U-2 photos to the world. Confront Zorin directly and demand an answer. Make this a Perry Mason moment.',
+          advisorSupport: ['diplomatic', 'pr'],
+          advisorOppose: ['intel'],
+          outcome: {
+            probability: 0.8,
+            success: { globalSupportWon: true, diplomacy: +15, morale: +10, sovietIsolated: true },
+            failure: { photosQuestioned: true, diplomacy: -8, morale: -5 }
+          },
+          successNarrative:
+            'Stevenson stands and addresses Zorin: "Do you, Ambassador Zorin, deny that the USSR has placed and is placing medium and intermediate-range missiles in Cuba? Yes or no? Don\'t wait for the translation! Yes or no?" Zorin deflects. Stevenson unveils the photos. "I am prepared to wait for my answer until Hell freezes over." The chamber erupts. The world sees the truth. Even neutral nations rally to your side.',
+          failureNarrative:
+            'Stevenson\'s presentation is met with skepticism. Soviet propaganda dismisses the photos as doctored. Non-aligned nations remain cautious, unwilling to back either superpower. The public relations victory you sought slips away.'
+        },
+        {
+          id: 'measured_diplomacy',
+          text: 'Measured Diplomatic Approach',
+          description: 'Present evidence calmly, focus on negotiated settlement. Avoid inflammatory rhetoric that could back Khrushchev into a corner.',
+          advisorSupport: ['diplomatic'],
+          advisorOppose: ['pr', 'military'],
+          outcome: {
+            probability: 0.65,
+            success: { negotiationOpening: true, diplomacy: +10, defcon: 3 },
+            failure: { perceivedWeakness: true, morale: -10, hardlinersEmboldened: true }
+          },
+          successNarrative:
+            'Your measured tone opens back-channels. U Thant, the UN Secretary-General, proposes a cooling-off period. Khrushchev privately signals willingness to negotiate. The crisis may yet be resolved peacefully.',
+          failureNarrative:
+            'Your restraint is interpreted as weakness. Khrushchev doubles down publicly. Castro feels emboldened. The Joint Chiefs are furious at the "missed opportunity" to rally world opinion against Moscow.'
+        }
+      ],
+      consequences: {}
+    },
+    {
+      title: 'STRATEGIC AIR COMMAND: LeMay Demands DEFCON 2',
+      description:
+        'October 24, 1962: General Curtis LeMay, Commander of Strategic Air Command, is pushing for DEFCON 2 - one step from nuclear war. SAC wants to disperse bombers, load nuclear weapons, and put ICBMs on high alert. LeMay argues this shows resolve and readiness. McNamara warns it could trigger Soviet pre-emption. This would be the first time SAC has ever gone to DEFCON 2.',
+      category: 'rogue',
+      severity: 'critical',
+      timeLimit: 60,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'approve_defcon2',
+          text: 'Approve DEFCON 2',
+          description: 'Authorize SAC to go to DEFCON 2. Put the nuclear arsenal on hair-trigger. Show Khrushchev you mean business.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'science'],
+          outcome: {
+            probability: 0.6,
+            success: { defcon: 2, sovietBacked: true, morale: +8, deterrenceStrong: true },
+            failure: { sovietPreemption: true, defcon: 1, accidentalWarRisk: true }
+          },
+          successNarrative:
+            'SAC goes to DEFCON 2 for the first time in history. B-52s disperse to civilian airports. ICBMs are fueled and targeted. Soviet intelligence detects the heightened alert. Khrushchev, shaken by your resolve, begins to reconsider his position. The gambit worked - but you\'re now one miscommunication from Armageddon.',
+          failureNarrative:
+            'The Soviet Union interprets DEFCON 2 as preparation for first strike. Khrushchev orders his own forces to maximum alert. An accidental radar contact nearly triggers Soviet launch. The world teeters on the brink of nuclear holocaust.'
+        },
+        {
+          id: 'maintain_defcon3',
+          text: 'Maintain DEFCON 3',
+          description: 'Overrule LeMay. Keep forces at DEFCON 3. Avoid the risk of accidental war while maintaining credible deterrence.',
+          advisorSupport: ['diplomatic', 'science'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.7,
+            success: { accidentPrevented: true, diplomacy: +8, stability: true },
+            failure: { lemayFurious: true, militaryMorale: -10, perceivedWeakness: true }
+          },
+          successNarrative:
+            'You deny LeMay\'s request. DEFCON 3 is sufficient, you argue - we\'re ready, but not on hair-trigger. The decision prevents several near-accidents in the following days when bomber crews and missile officers report false alarms. Your caution may have prevented accidental war.',
+          failureNarrative:
+            'LeMay openly questions your resolve. Military morale suffers. Worse, Soviet intelligence interprets your restraint as lack of will. Khrushchev feels he can push harder. The quarantine is tested more aggressively.'
+        }
+      ],
+      consequences: {}
+    },
+    {
+      title: 'THE TWO TELEGRAMS: Khrushchev\'s Contradictory Messages',
+      description:
+        'October 26-27, 1962: Two letters arrive from Khrushchev within 24 hours. The first (October 26, evening) is emotional and conciliatory: he offers to remove missiles if you pledge not to invade Cuba. The second (October 27, morning) is formal and harsh: he demands you also remove Jupiter missiles from Turkey. Which telegram represents his true position? Was he overruled by hardliners? ExComm is divided.',
+      category: 'rogue',
+      severity: 'critical',
+      timeLimit: 75,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'respond_first',
+          text: 'Accept First Letter (RFK Gambit)',
+          description: 'Robert Kennedy\'s idea: respond to the first letter, ignore the second. Accept the Cuba non-invasion pledge, make no mention of Turkey.',
+          advisorSupport: ['diplomatic', 'intel'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.65,
+            success: { crisisResolving: true, diplomacy: +18, defcon: 3, turkeyMissilesSecret: true },
+            failure: { khrushchevRejects: true, turkeyCrisis: true, natoTensions: true }
+          },
+          successNarrative:
+            'You respond only to the first letter. Publicly, you promise not to invade Cuba if missiles are withdrawn. Privately, Robert Kennedy meets Ambassador Dobrynin and offers a secret deal: the Jupiters in Turkey will be removed in 6 months, but this must never be disclosed. Khrushchev accepts. On October 28, Radio Moscow announces Soviet missiles will be dismantled. The crisis ends. Your brother\'s gambit saved the world.',
+          failureNarrative:
+            'Khrushchev insists the Turkey trade must be public and immediate. NATO allies are outraged at the proposal. Turkey threatens to withdraw from the alliance. The crisis deepens as the alliance fractures.'
+        },
+        {
+          id: 'public_trade',
+          text: 'Public Turkey-Cuba Trade',
+          description: 'Accept the second letter. Publicly announce a missile swap: Soviet missiles out of Cuba, American Jupiters out of Turkey.',
+          advisorSupport: ['diplomatic'],
+          advisorOppose: ['military', 'intel', 'pr'],
+          outcome: {
+            probability: 0.5,
+            success: { tradeMade: true, diplomacy: +12, natoAngered: true, morale: -8 },
+            failure: { natoCollapse: true, allianceBroken: true, turkeyDefects: true }
+          },
+          successNarrative:
+            'You announce the trade publicly. Khrushchev accepts immediately. The missiles are withdrawn from both Cuba and Turkey. Critics savage you for "appeasement" and "betraying Turkey." NATO allies feel sold out. But nuclear war is avoided. History will judge whether the price was worth it.',
+          failureNarrative:
+            'NATO erupts in fury. Turkey sees the unilateral deal as betrayal and considers leaving the alliance. The Soviets sense NATO is fracturing and press their advantage in Berlin. The alliance you sought to protect is shattered.'
+        },
+        {
+          id: 'reject_both',
+          text: 'Reject Both Letters',
+          description: 'The letters are contradictory and therefore meaningless. Demand unconditional withdrawal or face air strikes on Monday.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'science'],
+          outcome: {
+            probability: 0.3,
+            success: { sovietBackdown: true, morale: +15, defcon: 2, warRisk: true },
+            failure: { nuclearWar: true, worldEnds: true }
+          },
+          successNarrative:
+            'Your ultimatum is stark. Khrushchev, realizing you will strike if he refuses, orders the missiles withdrawn. He cannot afford war over Cuba. You win decisively - but allies are shaken by how close you came to the brink.',
+          failureNarrative:
+            'Khrushchev cannot back down without concessions. On Monday, October 29, air strikes begin. Soviet forces in Cuba fire back. Tactical nuclear weapons are used. Within hours, ICBMs fly. The Northern Hemisphere is destroyed in nuclear fire.'
+        }
+      ],
+      consequences: {}
+    },
+    {
+      title: 'BACK CHANNEL: RFK-Dobrynin Meeting',
+      description:
+        'October 27, 1962, 7:45 PM: Your brother Robert Kennedy secretly meets Soviet Ambassador Anatoly Dobrynin at the Justice Department. Time is running out - Major Anderson was shot down this morning, and the military wants retaliation strikes tomorrow. Bobby can offer a secret deal, but it requires trust between mortal enemies. One misstep could leak and destroy your presidency.',
+      category: 'rogue',
+      severity: 'critical',
+      timeLimit: 60,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'secret_deal',
+          text: 'Offer Secret Turkey Trade',
+          description: 'Bobby offers: Soviet missiles out of Cuba publicly, Jupiter missiles out of Turkey secretly in 4-6 months. If USSR discloses the deal, it\'s off.',
+          advisorSupport: ['diplomatic', 'intel'],
+          advisorOppose: ['military', 'pr'],
+          outcome: {
+            probability: 0.7,
+            success: { secretDealAccepted: true, crisisEnds: true, diplomacy: +20, historicPeace: true },
+            failure: { dealLeaked: true, impeachmentThreat: true, natoFury: true }
+          },
+          successNarrative:
+            'Dobrynin cables Moscow immediately. At 9 AM Sunday, October 28, Radio Moscow announces Khrushchev has ordered the missiles dismantled and returned to the Soviet Union. The Jupiter missiles will be quietly removed from Turkey in April 1963. The secret holds for decades. You and Khrushchev have saved the world.',
+          failureNarrative:
+            'The deal is leaked to the press within days. Republicans demand impeachment for "secret appeasement." Turkey publicly denounces the betrayal. Khrushchev is emboldened by your political weakness and presses for more concessions in Berlin.'
+        },
+        {
+          id: 'non_invasion_only',
+          text: 'Non-Invasion Pledge Only',
+          description: 'Offer only a pledge not to invade Cuba. No mention of Turkey. Force Khrushchev to back down without getting anything except peace.',
+          advisorSupport: ['military', 'pr'],
+          advisorOppose: ['diplomatic'],
+          outcome: {
+            probability: 0.45,
+            success: { sovietAccepts: true, morale: +15, totalVictory: true },
+            failure: { sovietRefuses: true, strikesTomorrow: true, warImminent: true }
+          },
+          successNarrative:
+            'Khrushchev surprises everyone by accepting. Soviet intelligence reports have convinced him you will invade Cuba if he refuses. He cannot afford to lose Soviet troops in a war he cannot win. He withdraws the missiles. You\'ve won a complete diplomatic victory.',
+          failureNarrative:
+            'Dobrynin reports that Khrushchev needs something to show his Politburo. Without the Turkey trade, the hardliners will force him to stand firm. Air strikes are scheduled for tomorrow morning. War appears inevitable.'
+        },
+        {
+          id: 'ultimatum',
+          text: 'Final Ultimatum',
+          description: 'Bobby delivers an ultimatum: missiles out in 48 hours or we invade. No deals, no trades. This is your last offer.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'intel'],
+          outcome: {
+            probability: 0.35,
+            success: { khrushchevCapitulates: true, morale: +20, hardlineVictory: true },
+            failure: { invasionBegins: true, nuclearExchangeRisk: true, casualties: 50000 }
+          },
+          successNarrative:
+            'Your ultimatum, delivered through your brother, is unambiguous. Khrushchev recognizes he is cornered. The Soviet Politburo orders withdrawal. You have won decisively - though the victory is pyrrhic. US-Soviet relations are poisoned for years.',
+          failureNarrative:
+            'Khrushchev refuses to be threatened. On October 29, Operation Scabbard begins: massive air strikes on Cuba. Soviet forces fight back. The invasion becomes a bloodbath. Tactical nukes are used. The crisis spirals into nuclear war.'
+        }
+      ],
+      consequences: {}
+    },
+    {
+      title: 'JUPITER MISSILES: Turkey\'s Obsolete Deterrent',
+      description:
+        'October 25, 1962: The Jupiter missiles in Turkey have become a crisis point. These 1950s-era missiles are obsolete, vulnerable, and provocative - sitting just across the Black Sea from the Soviet Union. Khrushchev sees them as a dagger pointed at Moscow. ExComm discovers, to your horror, that you ordered their removal months ago but the order was never executed. Now they\'re a bargaining chip - or a liability.',
+      category: 'rogue',
+      severity: 'major',
+      timeLimit: 75,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'secret_removal',
+          text: 'Arrange Quiet Removal',
+          description: 'Work with Turkey to remove the Jupiters quietly over the next few months, framing it as a routine modernization. Avoid public linkage to Cuba.',
+          advisorSupport: ['diplomatic', 'intel'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.6,
+            success: { jupitersRemoved: true, diplomacy: +10, turkeyAppeased: true, sovietsNoteGesture: true },
+            failure: { turkeyRefuses: true, publicEmbarrassment: true, natoWeakened: true }
+          },
+          successNarrative:
+            'You negotiate with Turkish Prime Minister İsmet İnönü. Turkey agrees to the quiet removal if you deploy Polaris submarine patrols in the Mediterranean - a superior deterrent anyway. By spring 1963, the Jupiters are gone, replaced by sea-based missiles. The gesture helps de-escalate the crisis.',
+          failureNarrative:
+            'Turkey leaks the removal plan to prove they weren\'t consulted. The press exposes the "secret deal." You\'re accused of appeasing Moscow. NATO unity suffers as allies question American commitment to their defense.'
+        },
+        {
+          id: 'keep_jupiters',
+          text: 'Refuse Any Jupiter Trade',
+          description: 'The Jupiters stay. Linking them to Cuba would weaken NATO and reward Soviet aggression. Turkey\'s security is non-negotiable.',
+          advisorSupport: ['military', 'pr'],
+          advisorOppose: ['diplomatic'],
+          outcome: {
+            probability: 0.5,
+            success: { natoStrong: true, morale: +10, sovietFrustrated: true },
+            failure: { cubanCrisisLonger: true, khrushchevDemandsTrade: true, defcon: 1 }
+          },
+          successNarrative:
+            'You stand firm on the Jupiters. NATO allies rally to your support. Khrushchev eventually backs down, realizing the Cuba gambit has failed. The missiles are withdrawn. NATO emerges stronger and more unified.',
+          failureNarrative:
+            'Khrushchev insists the Jupiters must be part of any deal. The crisis drags on for weeks. Military incidents multiply. The risk of accidental war increases daily. Eventually, a Soviet submarine captain makes a fateful mistake...'
+        }
+      ],
+      consequences: {}
+    },
+    {
+      title: 'EXCOMM DEBATE: Hawks vs. Doves',
+      description:
+        'October 19, 1962: The Executive Committee is deeply divided. General Curtis LeMay insists air strikes are the only option: "This is almost as bad as the appeasement at Munich." Dean Rusk argues for diplomacy. Robert McNamara warns that any military action risks uncontrollable escalation. You must choose a course, but ExComm cannot reach consensus. Your advisors are waiting for your decision.',
+      category: 'rogue',
+      severity: 'major',
+      timeLimit: 90,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'side_hawks',
+          text: 'Side with the Hawks (LeMay)',
+          description: 'Accept the Joint Chiefs\' recommendation. Plan for air strikes and potential invasion. Show strength, accept the risks.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'science'],
+          outcome: {
+            probability: 0.45,
+            success: { militaryReadiness: true, morale: +10, strikesPrepared: true },
+            failure: { prematureStrike: true, warTriggered: true, alliesAlienated: true }
+          },
+          successNarrative:
+            'You authorize preparation for air strikes. The military appreciates your resolve. SAC intensifies readiness. The show of strength convinces Khrushchev you are serious. But you\'re on a collision course with war.',
+          failureNarrative:
+            'Emboldened by your support, LeMay orders unauthorized aggressive reconnaissance flights over Cuba. A plane is shot down. The pre-planned retaliation begins before you intend it. The war starts by accident.'
+        },
+        {
+          id: 'side_doves',
+          text: 'Side with the Doves (Rusk/McNamara)',
+          description: 'Pursue diplomatic and economic pressure. Avoid military action except as last resort. Give Khrushchev time to back down.',
+          advisorSupport: ['diplomatic', 'science'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.6,
+            success: { diplomaticSpace: true, diplomacy: +15, backChannelsOpen: true },
+            failure: { missilesOperational: true, morale: -15, militaryMutiny: true }
+          },
+          successNarrative:
+            'You choose the quarantine over strikes. The delay gives diplomacy time to work. Back-channels open with Moscow. A negotiated settlement becomes possible. The Joint Chiefs are furious, but you believe you chose wisely.',
+          failureNarrative:
+            'While you negotiate, the missiles become operational. Intelligence confirms nuclear warheads have arrived in Cuba. Now you face operational nuclear missiles 90 miles from Florida. The military loses confidence in your leadership.'
+        },
+        {
+          id: 'split_difference',
+          text: 'Compromise: Quarantine with Strike Prep',
+          description: 'Implement the naval quarantine but prepare for air strikes if it fails. Keep all options open. Try to satisfy both hawks and doves.',
+          advisorSupport: ['military', 'diplomatic'],
+          advisorOppose: [],
+          outcome: {
+            probability: 0.7,
+            success: { balancedApproach: true, morale: +8, diplomacy: +8, flexibility: true },
+            failure: { halfMeasures: true, neitherHappySatis: true, confusedSignals: true }
+          },
+          successNarrative:
+            'Your compromise satisfies both camps. The quarantine shows resolve while avoiding immediate war. Meanwhile, strike packages are prepared as backup. The approach gives you maximum flexibility as the crisis unfolds.',
+          failureNarrative:
+            'Neither hawks nor doves are satisfied with half-measures. The military complains the quarantine is insufficient; diplomats fear the strike preparations will provoke Moscow. Your advisors lose confidence in your decision-making.'
         }
       ],
       consequences: {}
