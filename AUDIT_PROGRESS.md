@@ -2,7 +2,7 @@
 
 **Session Date:** 2025-10-31
 **Branch:** `claude/audit-progress-refactor-011CUfG5REjHqmjwrYYH3cPF`
-**Status:** 6 of 18 issues completed (33% complete), Issue #4 in progress (4/7 phases done, 57%)
+**Status:** 6 of 18 issues completed (33% complete), Issue #4 in progress (6/7 phases done, 86%)
 
 ---
 
@@ -191,18 +191,18 @@
 
 ### High Priority (P0-P1)
 
-**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 18-24 hours remaining)
-- **Status:** IN PROGRESS (Phases 1-5 of 7 complete, 71% done)
-- **Progress:** 10,937 → 9,739 lines (-1,198 lines, -11.0%)
+**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 12-16 hours remaining)
+- **Status:** IN PROGRESS (Phases 1-6 of 7 complete, 86% done)
+- **Progress:** 10,937 → 9,661 lines (-1,276 lines, -11.7%)
 - **Completed:**
   - ✅ Phase 1: Extracted utility functions (gameUtils, nationUtils, renderingUtils)
   - ✅ Phase 2: Extracted AI diplomacy logic (aiDiplomacyActions)
   - ✅ Phase 3: Extracted game phase handlers (launch, resolution, production)
   - ✅ Phase 4: Extracted world rendering system (drawWorld, drawNations)
   - ✅ Phase 5: Extracted UI components (IntroLogo, Starfield, SpinningEarth, OperationModal, IntelReportContent)
+  - ✅ Phase 6: Extracted game state management (GameStateManager, PlayerManager, DoomsdayClock)
 - **Remaining Phases:**
-  - Phase 6: Extract game state management
-  - Phase 7: Simplify main NoradVector component
+  - Phase 7: Simplify main NoradVector component (12-16 hours)
 - **Files Created:**
   - `src/lib/gameUtils.ts` (70 lines)
   - `src/lib/nationUtils.ts` (45 lines)
@@ -215,6 +215,10 @@
   - `src/components/intro/SpinningEarth.tsx` (14 lines)
   - `src/components/modals/OperationModal.tsx` (212 lines)
   - `src/components/modals/IntelReportContent.tsx` (94 lines)
+  - `src/state/GameStateManager.ts` (560 lines)
+  - `src/state/PlayerManager.ts` (75 lines)
+  - `src/state/DoomsdayClock.ts` (95 lines)
+  - `src/state/index.ts` (19 lines)
 - **See:** `REFACTORING_SUMMARY.md` for detailed breakdown
 
 **Issue #7: Fix Type Safety Issues** (12-15 hours)

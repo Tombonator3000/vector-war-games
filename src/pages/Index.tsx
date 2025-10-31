@@ -107,6 +107,7 @@ import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 import { canAfford, pay, getCityCost, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
 import { project, toLonLat, getPoliticalFill, resolvePublicAssetPath, POLITICAL_COLOR_PALETTE, type ProjectionContext } from '@/lib/renderingUtils';
+import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, type LocalNation, createDefaultDiplomacyState } from '@/state';
 import {
   aiSignMutualTruce,
   aiSignNonAggressionPact,
@@ -165,72 +166,9 @@ const Storage = {
   }
 };
 
-// Game State Types - extending imported types with local properties
-type LocalNation = Nation & {
-  conventional?: NationConventionalProfile;
-  controlledTerritories?: string[];
-};
-
-type LocalGameState = GameState & {
-  conventional?: ConventionalState;
-};
-
+// Game State Types - now imported from @/state module (Phase 6 refactoring)
 let governanceApiRef: UseGovernanceReturn | null = null;
 let enqueueAIProposalRef: ((proposal: DiplomacyProposal) => void) | null = null;
-
-interface DiplomacyState {
-  peaceTurns: number;
-  lastEvaluatedTurn: number;
-  allianceRatio: number;
-  influenceScore: number;
-  nearVictoryNotified: boolean;
-  victoryAnnounced: boolean;
-}
-
-interface GameState {
-  turn: number;
-  defcon: number;
-  phase: 'PLAYER' | 'AI' | 'RESOLUTION' | 'PRODUCTION';
-  actionsRemaining: number;
-  paused: boolean;
-  gameOver: boolean;
-  selectedLeader: string | null;
-  selectedDoctrine: string | null;
-  playerName?: string;
-  difficulty?: string;
-  missiles: any[];
-  bombers: any[];
-  submarines?: any[];
-  explosions: any[];
-  particles: any[];
-  radiationZones: any[];
-  empEffects: any[];
-  rings: any[];
-  refugeeCamps?: any[];
-  screenShake: number;
-  overlay?: { text: string; ttl: number } | null;
-  fx?: number;
-  nuclearWinterLevel?: number;
-  globalRadiation?: number;
-  events?: boolean;
-  diplomacy?: DiplomacyState;
-  conventional?: ConventionalState;
-  conventionalMovements?: ConventionalMovementMarker[];
-  conventionalUnits?: ConventionalUnitMarker[];
-  satelliteOrbits: SatelliteOrbit[];
-  falloutMarks: FalloutMark[];
-
-  // Game statistics tracking
-  statistics?: {
-    nukesLaunched: number;
-    nukesReceived: number;
-    enemiesDestroyed: number;
-  };
-
-  // End game screen state
-  showEndGameScreen?: boolean;
-  endGameStatistics?: any;
-}
 
 type ThemeId =
   | 'synthwave'
@@ -455,46 +393,15 @@ let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
 
-// Global game state
-let S: LocalGameState = {
-  turn: 1,
-  defcon: 5,
-  phase: 'PLAYER',
-  actionsRemaining: 1,
-  paused: false,
-  gameOver: false,
-  selectedLeader: null,
-  selectedDoctrine: null,
-  scenario: getDefaultScenario(),
-  missiles: [],
-  bombers: [],
-  submarines: [],
-  explosions: [],
-  particles: [],
-  radiationZones: [],
-  empEffects: [],
-  rings: [],
-  refugeeCamps: [],
-  falloutMarks: [],
-  satelliteOrbits: [],
-  screenShake: 0,
-  fx: 1,
-  nuclearWinterLevel: 0,
-  globalRadiation: 0,
-  diplomacy: createDefaultDiplomacyState(),
-  conventional: createDefaultConventionalState(),
-  conventionalMovements: [],
-  conventionalUnits: [],
-  statistics: {
-    nukesLaunched: 0,
-    nukesReceived: 0,
-    enemiesDestroyed: 0,
-  },
-  showEndGameScreen: false,
-};
+// Global game state - now managed by GameStateManager (Phase 6 refactoring)
+// Initialize GameStateManager (it has default state already)
+// S now references the state from GameStateManager for backward compatibility
+let S: LocalGameState = GameStateManager.getState();
 
-let nations: LocalNation[] = [];
-let conventionalDeltas: ConventionalWarfareDelta[] = [];
+// Nations and deltas are now managed by GameStateManager
+// Keep references for backward compatibility
+let nations: LocalNation[] = GameStateManager.getNations();
+let conventionalDeltas: ConventionalWarfareDelta[] = GameStateManager.getConventionalDeltas();
 let suppressMultiplayerBroadcast = false;
 let multiplayerPublisher: (() => void) | null = null;
 
@@ -1221,49 +1128,9 @@ const WARHEAD_YIELD_TO_ID = new Map<number, string>(
 type ModalContentValue = string | ReactNode | (() => ReactNode);
 
 // PlayerManager class
-class PlayerManager {
-  private static _cached: Nation | null = null;
-  
-  static get(): Nation | null {
-    if (this._cached && nations.includes(this._cached)) {
-      return this._cached;
-    }
-    
-    const player = nations.find(n => n?.isPlayer);
-    if (player) {
-      this._cached = player;
-      return player;
-    }
-    
-    return null;
-  }
-  
-  static reset() {
-    this._cached = null;
-  }
-}
+// PlayerManager now imported from @/state (Phase 6 refactoring)
 
-// Doomsday Clock
-class DoomsdayClock {
-  static minutes = 7.0;
-  
-  static tick(amount = 0.5) {
-    this.minutes = Math.max(0, this.minutes - amount);
-  }
-  
-  static improve(amount = 0.5) {
-    this.minutes = Math.min(12, this.minutes + amount);
-  }
-  
-  static update() {
-    const display = document.getElementById('doomsdayTime');
-    if (display) {
-      const mins = Math.floor(this.minutes);
-      const secs = Math.floor((this.minutes % 1) * 60);
-      display.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
-  }
-}
+// DoomsdayClock now imported from @/state (Phase 6 refactoring)
 
 // Audio System
 const MUSIC_TRACKS = [
@@ -1932,6 +1799,8 @@ function initNations() {
   }
   
   nations = [];
+  GameStateManager.setNations(nations);
+  PlayerManager.setNations(nations);
   PlayerManager.reset();
   
   const playerLeaderName = S.selectedLeader || 'PLAYER';
@@ -3422,16 +3291,7 @@ function launchBomber(from: Nation, to: Nation, payload: any) {
   return true;
 }
 
-function createDefaultDiplomacyState(): DiplomacyState {
-  return {
-    peaceTurns: 0,
-    lastEvaluatedTurn: 0,
-    allianceRatio: 0,
-    influenceScore: 0,
-    nearVictoryNotified: false,
-    victoryAnnounced: false
-  };
-}
+// createDefaultDiplomacyState now imported from @/state (Phase 6 refactoring)
 
 function ensureDiplomacyState(): DiplomacyState {
   if (!S.diplomacy) {
@@ -4904,9 +4764,12 @@ export default function NoradVector() {
         }
         if (state.nations) {
           nations = state.nations.map(nation => ({ ...nation }));
+          GameStateManager.setNations(nations);
+          PlayerManager.setNations(nations);
         }
         if (state.conventionalDeltas) {
           conventionalDeltas = state.conventionalDeltas.map(delta => ({ ...delta }));
+          GameStateManager.setConventionalDeltas(conventionalDeltas);
         }
       } finally {
         suppressMultiplayerBroadcast = false;
