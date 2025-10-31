@@ -3,6 +3,24 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { calculateFlashpointProbability, useFlashpoints } from '../useFlashpoints';
 
+vi.mock('@/contexts/RNGContext', () => {
+  const rng = {
+    next: () => Math.random(),
+    nextInt: (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min,
+    choice: <T>(array: T[]) => {
+      if (array.length === 0) {
+        throw new Error('Cannot choose from empty array');
+      }
+      const index = Math.floor(Math.random() * array.length);
+      return array[index];
+    },
+  };
+
+  return {
+    useRNG: () => ({ rng }),
+  };
+});
+
 describe('useFlashpoints', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -95,17 +113,21 @@ describe('calculateFlashpointProbability', () => {
     const lowTurnLowTension = calculateFlashpointProbability(10, 5);
     const highTurnHighTension = calculateFlashpointProbability(100, 1);
 
-    expect(lowTurnLowTension).toBeCloseTo(0.02 * (6 - 5) * (10 / 50));
-    expect(highTurnHighTension).toBeCloseTo(0.02 * (6 - 1) * 2); // turn multiplier capped at 2
+    const expectedLow = 0.06 * (6 - 5) * (1 + Math.min(10 / 75, 1.5));
+    const expectedHigh = 0.06 * (6 - 1) * (1 + Math.min(100 / 75, 1.5));
+
+    expect(lowTurnLowTension).toBeCloseTo(expectedLow);
+    expect(highTurnHighTension).toBeCloseTo(expectedHigh);
     expect(highTurnHighTension).toBeGreaterThan(lowTurnLowTension);
   });
 
   it('clamps probability within the 0-1 range and normalizes inputs', () => {
-    expect(calculateFlashpointProbability(-5, 10)).toBe(0); // negative turns treated as zero
+    const normalizedLow = calculateFlashpointProbability(-5, 10);
+    expect(normalizedLow).toBeCloseTo(0.06 * (6 - 5) * 1);
 
     const clampedHigh = calculateFlashpointProbability(5000, -3);
     expect(clampedHigh).toBeLessThanOrEqual(1);
     expect(clampedHigh).toBeGreaterThanOrEqual(0);
-    expect(clampedHigh).toBeCloseTo(0.02 * (6 - 1) * 2); // defcon and turn values are normalized
+    expect(clampedHigh).toBeCloseTo(0.06 * (6 - 1) * (1 + 1.5)); // defcon and turn values are normalized
   });
 });

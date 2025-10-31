@@ -344,6 +344,228 @@ const FOLLOWUP_FLASHPOINTS: Record<string, Record<string, Omit<FlashpointEvent, 
       consequences: {}
     }
   },
+  cuban_crisis: {
+    hold_quarantine_success: {
+      title: 'FOLLOW-ON: Soviet Submarine B-59 Detected',
+      description:
+        'Signals intelligence reports a Foxtrot-class submarine attempting to slip beneath the quarantine line. Admiral Anderson recommends dropping practice depth charges to force it to surface.',
+      category: 'rogue',
+      severity: 'critical',
+      timeLimit: 60,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'signal_surface',
+          text: 'Signal to Surface with Practice Charges',
+          description: 'Deploy low-yield depth charges to compel compliance without provoking escalation.',
+          advisorSupport: ['military', 'intel'],
+          advisorOppose: ['diplomatic'],
+          outcome: {
+            probability: 0.55,
+            success: { submarineSurfaces: true, defcon: 2, morale: +8 },
+            failure: { nuclearTorpedoArmed: true, defcon: 1, casualties: 120 }
+          },
+          successNarrative:
+            'The Soviet captain surfaces, furious but compliant. Photographers capture the confrontation, proving the quarantine holds.',
+          failureNarrative:
+            'Crew aboard B-59 believe war has begun. A nuclear torpedo launch nearly occurs before frantic back-channel messages halt the attack.'
+        },
+        {
+          id: 'shadow_sub',
+          text: 'Shadow the Submarine Quietly',
+          description: 'Maintain sonar contact and wait for Moscow to order a withdrawal.',
+          advisorSupport: ['intel'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.7,
+            success: { submarineWithdraws: true, diplomacy: +10, morale: +4 },
+            failure: { contactLost: true, unknownWarheadStatus: true }
+          },
+          successNarrative:
+            'Hours of tense stalking end with the Foxtrot-class reversing course. Khrushchev signals a willingness to negotiate a settlement.',
+          failureNarrative:
+            'Contact is lost in the thermal layer. Fleet Command fears the submarine may surface near a carrier group with nuclear armament.'
+        }
+      ],
+      consequences: {}
+    },
+    hold_quarantine_failure: {
+      title: 'CRITICAL: Freighter Breaks Quarantine Line',
+      description:
+        'A Soviet freighter ignored hails and plowed through the picket line. Reports of small-arms fire and a ramming attempt are coming in. Moscow calls the blockade an act of war.',
+      category: 'rogue',
+      severity: 'catastrophic',
+      timeLimit: 45,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'escalate_quarantine',
+          text: 'Tighten Quarantine with Live Fire Authorization',
+          description: 'Authorize naval commanders to disable violators with live rounds.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'pr'],
+          outcome: {
+            probability: 0.5,
+            success: { convoyRepelled: true, defcon: 1, morale: -10 },
+            failure: { sovietCounterfire: true, casualties: 220, nuclearExchangeRisk: true }
+          },
+          successNarrative:
+            'Gunnery from the blockade cripples the freighter before it reaches Cuban waters. The White House Situation Room braces for retaliation.',
+          failureNarrative:
+            'Return fire erupts from escorts. A cruiser is hit, and DEFCON procedures accelerate toward full nuclear release.'
+        },
+        {
+          id: 'seek_un_censure',
+          text: 'Seek Immediate UN Censure',
+          description: 'Broadcast evidence of the breach and demand Security Council intervention.',
+          advisorSupport: ['diplomatic', 'pr'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.6,
+            success: { diplomacy: +15, globalSupport: true, defcon: 3 },
+            failure: { diplomacy: -10, sovietNarrativeWins: true }
+          },
+          successNarrative:
+            'Allied ambassadors rally to your side. World opinion labels Moscow the aggressor, buying precious time for negotiation.',
+          failureNarrative:
+            'Soviet delegates flood the airwaves accusing you of piracy. Non-aligned nations hesitate to back your enforcement actions.'
+        }
+      ],
+      consequences: {}
+    },
+    board_ships_success: {
+      title: 'INTEL COUP: Missile Components Uncovered',
+      description:
+        'Inspection teams seized photographic proof of nuclear warheads aboard the seized freighter. The CIA urges a controlled release to sway global opinion, while the Pentagon wants leverage kept secret.',
+      category: 'rogue',
+      severity: 'major',
+      timeLimit: 60,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'public_disclosure',
+          text: 'Release Evidence to the World',
+          description: 'Expose the missile cargo to lock in global support for the quarantine.',
+          advisorSupport: ['pr', 'diplomatic'],
+          advisorOppose: ['intel'],
+          outcome: {
+            probability: 0.75,
+            success: { diplomacy: +20, morale: +12, sovietsCornered: true },
+            failure: { sovietsDeny: true, propagandaCounterattack: true }
+          },
+          successNarrative:
+            'UN ambassadors gasp at the photographic evidence. Khrushchev signals willingness to bargain removal for a no-invasion pledge.',
+          failureNarrative:
+            'Moscow dismisses the photos as fabrications and accuses Washington of planting contraband aboard the freighter.'
+        },
+        {
+          id: 'leverage_secret',
+          text: 'Hold Evidence for Back-Channel Leverage',
+          description: 'Keep the discovery quiet and pressure Moscow privately.',
+          advisorSupport: ['intel'],
+          advisorOppose: ['pr'],
+          outcome: {
+            probability: 0.55,
+            success: { secretDealPossible: true, defcon: 3, diplomacy: +8 },
+            failure: { leakOccurs: true, credibilityHit: true }
+          },
+          successNarrative:
+            'A confidential note reaches the Kremlin outlining a missiles-for-Jupiter-trade. Negotiators sense a narrow path to peace.',
+          failureNarrative:
+            'Journalists sniff out the interdiction. Allies question why proof of missile shipments was suppressed.'
+        }
+      ],
+      consequences: {}
+    },
+    board_ships_failure: {
+      title: 'CRISIS: U-2 Recon Jet Shot Down over Cuba',
+      description:
+        'Major Rudolf Anderson’s U-2 was downed by a Soviet SAM battery. Hawks demand retaliation. Moscow claims defensive action and warns against further violations.',
+      category: 'rogue',
+      severity: 'critical',
+      timeLimit: 45,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'strike_site',
+          text: 'Strike the SAM Battery',
+          description: 'Launch a limited air raid to punish the responsible site.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'pr'],
+          outcome: {
+            probability: 0.45,
+            success: { siteDestroyed: true, morale: +5, defcon: 1 },
+            failure: { sovietCasualties: true, invasionCountdown: true }
+          },
+          successNarrative:
+            'F-105s obliterate the SAM site. The Kremlin goes silent, but submarine patrols surge around the quarantine line.',
+          failureNarrative:
+            'A dogfight with MiG escorts erupts. Soviet casualties mount, and invasion forces in Cuba ready their missiles.'
+        },
+        {
+          id: 'pause_overflights',
+          text: 'Suspend Overflights and Demand Apology',
+          description: 'Halt recon missions temporarily while pressing for diplomatic redress.',
+          advisorSupport: ['diplomatic'],
+          advisorOppose: ['military', 'intel'],
+          outcome: {
+            probability: 0.6,
+            success: { tensionsEase: true, diplomacy: +12, defcon: 3 },
+            failure: { sovietsEntrench: true, missileDeploymentAccelerates: true }
+          },
+          successNarrative:
+            'The Kremlin issues a regretful statement and proposes talks in New York, hinting at reciprocal concessions.',
+          failureNarrative:
+            'Soviet commanders rush more anti-air units into Cuba. Reconnaissance gap widens just as missile fueling accelerates.'
+        }
+      ],
+      consequences: {}
+    },
+    allow_passage_failure: {
+      title: 'FLASH: IRBM Launchers Now Operational',
+      description:
+        'Having allowed the convoy through, CIA photos confirm medium-range ballistic missiles in Cuba are now fueled. Strike windows are closing rapidly.',
+      category: 'rogue',
+      severity: 'catastrophic',
+      timeLimit: 45,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'preemptive_strike',
+          text: 'Authorize Air Strike on Launch Sites',
+          description: 'Launch Operation Scabbard to destroy missiles before they fire.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic', 'pr'],
+          outcome: {
+            probability: 0.35,
+            success: { missilesDestroyed: true, defcon: 1, invasionImminent: true },
+            failure: { sovietRetaliation: true, nuclearExchangeRisk: true }
+          },
+          successNarrative:
+            'A coordinated strike cripples several launchers, but Soviet troops prepare retaliatory salvos from surviving sites.',
+          failureNarrative:
+            'MiGs scramble and intercept the strike package. Nuclear-ready missiles roar skyward toward American cities.'
+        },
+        {
+          id: 'backchannel_offer',
+          text: 'Offer Jupiter Missile Trade',
+          description: 'Privately trade Turkish Jupiter missiles for the removal of Cuban IRBMs.',
+          advisorSupport: ['diplomatic'],
+          advisorOppose: ['military'],
+          outcome: {
+            probability: 0.65,
+            success: { tradeAccepted: true, defcon: 3, diplomacy: +18 },
+            failure: { proposalLeaked: true, natoBacklash: true }
+          },
+          successNarrative:
+            'Khrushchev quietly agrees to dismantle the IRBMs in exchange for a timed withdrawal of missiles in Turkey.',
+          failureNarrative:
+            'Allied governments recoil at the unilateral offer, fracturing NATO unity as the launch crews in Cuba arm their warheads.'
+        }
+      ],
+      consequences: {}
+    }
+  },
   'alien_contact': {
     'first_contact_success': {
       title: 'FIRST CONTACT: Alien Technology Offer',
@@ -508,6 +730,102 @@ const FOLLOWUP_FLASHPOINTS: Record<string, Record<string, Omit<FlashpointEvent, 
       consequences: {}
     }
   }
+};
+
+const SCENARIO_FLASHPOINTS: Record<string, Omit<FlashpointEvent, 'id' | 'triggeredAt'>[]> = {
+  cubanCrisis: [
+    {
+      title: 'CUBAN CRISIS: Soviet Convoy Tests Quarantine',
+      description:
+        'Reconnaissance confirms a Soviet convoy and submarine screen will cross the quarantine line within the hour. The ExComm is split between holding position, boarding vessels, or letting them pass to buy time for diplomacy.',
+      category: 'rogue',
+      severity: 'critical',
+      timeLimit: 75,
+      followUpId: 'cuban_crisis',
+      options: [
+        {
+          id: 'hold_quarantine',
+          text: 'Hold the Naval Quarantine',
+          description: 'Maintain the line with destroyers at the ready and demand Soviet ships stop.',
+          advisorSupport: ['military'],
+          advisorOppose: ['diplomatic'],
+          outcome: {
+            probability: 0.6,
+            success: { convoyTurnsBack: true, defcon: 2, morale: +6 },
+            failure: { freighterBreakthrough: true, casualties: 40, defcon: 1 }
+          },
+          successNarrative:
+            'Soviet ships reduce speed and eventually reverse course after tense hails. The world watches live footage of your destroyers holding the line.',
+          failureNarrative:
+            'A Soviet freighter ignores orders and collides with a destroyer, tearing open its hull as gunfire erupts across the blockade.'
+        },
+        {
+          id: 'board_ships',
+          text: 'Board and Inspect Lead Freighter',
+          description: 'Send Marines to seize cargo and gather proof of nuclear warheads en route to Cuba.',
+          advisorSupport: ['intel', 'military'],
+          advisorOppose: ['diplomatic', 'pr'],
+          outcome: {
+            probability: 0.5,
+            success: { missilesFound: true, diplomacy: +10, morale: +4 },
+            failure: { boardingRepulsed: true, u2ShotDown: true, defcon: 1 }
+          },
+          successNarrative:
+            'Marines discover missile components stacked in the hold. Cameras document the contraband before a storm forces withdrawal.',
+          failureNarrative:
+            'A firefight on the deck forces a retreat. Minutes later, SAM batteries in Cuba shoot down a high-flying U-2 recon jet.'
+        },
+        {
+          id: 'allow_passage',
+          text: 'Allow Temporary Passage',
+          description: 'Open a narrow lane to avoid clashes while pursuing a back-channel settlement.',
+          advisorSupport: ['diplomatic'],
+          advisorOppose: ['military', 'intel'],
+          outcome: {
+            probability: 0.4,
+            success: { talksScheduled: true, defcon: 3, diplomacy: +8 },
+            failure: { missilesAssembled: true, defcon: 1, morale: -12 }
+          },
+          successNarrative:
+            'Khrushchev agrees to exploratory talks in exchange for a narrow, time-limited corridor. Tension eases as the world debates your restraint.',
+          failureNarrative:
+            'Satellite imagery later confirms IRBM launchers now operational in Cuba. Allies question whether leniency invited disaster.'
+        }
+      ],
+      consequences: {}
+    }
+  ]
+};
+
+type WindowWithScenario = Window & {
+  S?: {
+    scenario?: {
+      id?: string;
+    } | null;
+  };
+};
+
+const getActiveScenarioId = (): string | undefined => {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+
+  const globalWindow = window as WindowWithScenario;
+  const scenarioId = globalWindow.S?.scenario?.id;
+  if (scenarioId) {
+    return scenarioId;
+  }
+
+  try {
+    const stored = globalWindow.localStorage?.getItem('selected_scenario');
+    if (stored) {
+      return stored;
+    }
+  } catch {
+    // Ignore storage access errors (e.g., privacy mode or server rendering)
+  }
+
+  return undefined;
 };
 
 const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
@@ -1200,7 +1518,10 @@ export function useFlashpoints() {
     const probability = calculateFlashpointProbability(turn, defcon);
 
     if (rng.next() < probability) {
-      const template = rng.choice(FLASHPOINT_TEMPLATES);
+      const scenarioId = getActiveScenarioId();
+      const scenarioTemplates = scenarioId ? SCENARIO_FLASHPOINTS[scenarioId] : undefined;
+      const templatePool = scenarioTemplates && scenarioTemplates.length > 0 ? scenarioTemplates : FLASHPOINT_TEMPLATES;
+      const template = rng.choice(templatePool);
       const baseFlashpoint: FlashpointEvent = {
         ...template,
         id: `flashpoint_${Date.now()}`,
@@ -1280,12 +1601,13 @@ export function useFlashpoints() {
 
     // Determine follow-up hint
     const followUpKey = `${optionId}_${success ? 'success' : 'failure'}`;
-    const categoryKey = flashpoint.title.includes('Nuclear Materials') ? 'nuclear_materials' :
+    const categoryKey = flashpoint.followUpId ??
+                        (flashpoint.title.includes('Nuclear Materials') ? 'nuclear_materials' :
                         flashpoint.title.includes('COUP') ? 'military_coup' :
                         flashpoint.title.includes('ROGUE AI') ? 'rogue_ai' :
                         flashpoint.title.includes('ACCIDENTAL LAUNCH') ? 'accidental_launch' :
                         flashpoint.title.includes('EXTRATERRESTRIAL') ? 'alien_contact' :
-                        flashpoint.title.includes('BIO-TERROR') ? 'bio_terror' : null;
+                        flashpoint.title.includes('BIO-TERROR') ? 'bio_terror' : null);
 
     let followUpHint: string | undefined;
     if (categoryKey && FOLLOWUP_FLASHPOINTS[categoryKey]?.[followUpKey]) {
