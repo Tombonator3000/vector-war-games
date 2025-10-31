@@ -529,11 +529,11 @@ function preloadFlatRealisticTexture() {
 }
 
 // Leaders configuration
-const leaders: { name: string; ai: string; color: string }[] = [
+const leaders: { name: string; ai: string; color: string; isHistoricalCubanCrisis?: boolean }[] = [
   // Historical leaders (for Cuban Crisis scenario)
-  { name: 'John F. Kennedy', ai: 'balanced', color: '#0047AB' }, // US President, balanced approach during crisis
-  { name: 'Nikita Khrushchev', ai: 'aggressive', color: '#CC0000' }, // Soviet Premier, aggressive but pragmatic
-  { name: 'Fidel Castro', ai: 'aggressive', color: '#CE1126' }, // Cuban leader, revolutionary and aggressive
+  { name: 'John F. Kennedy', ai: 'balanced', color: '#0047AB', isHistoricalCubanCrisis: true }, // US President, balanced approach during crisis
+  { name: 'Nikita Khrushchev', ai: 'aggressive', color: '#CC0000', isHistoricalCubanCrisis: true }, // Soviet Premier, aggressive but pragmatic
+  { name: 'Fidel Castro', ai: 'aggressive', color: '#CE1126', isHistoricalCubanCrisis: true }, // Cuban leader, revolutionary and aggressive
   // Parody leaders (for other scenarios)
   { name: 'Ronnie Raygun', ai: 'aggressive', color: '#ff5555' },
   { name: 'Tricky Dick', ai: 'defensive', color: '#5599ff' },
@@ -7596,17 +7596,25 @@ export default function NoradVector() {
     );
   };
 
-  const renderLeaderSelection = () => (
-    <LeaderSelectionScreen
-      interfaceRef={interfaceRef}
-      leaders={leaders}
-      onSelectLeader={(leaderName) => {
-        setSelectedLeader(leaderName);
-        setGamePhase('doctrine');
-      }}
-      onBack={() => setGamePhase('intro')}
-    />
-  );
+  const renderLeaderSelection = () => {
+    // Filter leaders based on scenario - only historical leaders for Cuban Crisis
+    const isCubanCrisisScenario = S.scenario?.id === 'cubanCrisis';
+    const availableLeaders = isCubanCrisisScenario
+      ? leaders.filter(l => l.isHistoricalCubanCrisis === true)
+      : leaders;
+
+    return (
+      <LeaderSelectionScreen
+        interfaceRef={interfaceRef}
+        leaders={availableLeaders}
+        onSelectLeader={(leaderName) => {
+          setSelectedLeader(leaderName);
+          setGamePhase('doctrine');
+        }}
+        onBack={() => setGamePhase('intro')}
+      />
+    );
+  };
 
   const renderDoctrineSelection = () => (
     <DoctrineSelectionScreen
