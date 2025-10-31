@@ -6238,6 +6238,7 @@ export default function NoradVector() {
     onMetricsSync: handleGovernanceMetricsSync,
     onApplyDelta: handleGovernanceDelta,
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
+    defaultElectionInterval: S.scenario?.electionConfig.interval,
   });
 
   // Era system for progressive complexity
