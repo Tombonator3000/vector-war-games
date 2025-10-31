@@ -14,6 +14,7 @@ import {
   generateDiplomaticMessage
 } from '@/types/diplomacy';
 import { safeRatio } from '@/lib/safeMath';
+import { getRelationship } from '@/lib/relationshipUtils';
 
 /**
  * Evaluate whether AI should accept a player's diplomatic proposal
@@ -22,9 +23,10 @@ export function evaluateProposal(
   proposal: DiplomacyProposal,
   aiNation: Nation,
   proposerNation: Nation,
-  allNations: Nation[]
+  allNations: Nation[],
+  rng?: { next: () => number }
 ): DiplomacyResponse {
-  const factors = calculateEvaluationFactors(proposal, aiNation, proposerNation, allNations);
+  const factors = calculateEvaluationFactors(proposal, aiNation, proposerNation, allNations, rng);
   const score = calculateAcceptanceScore(factors);
   const threshold = getAcceptanceThreshold(proposal.type);
 
@@ -45,7 +47,8 @@ function calculateEvaluationFactors(
   proposal: DiplomacyProposal,
   aiNation: Nation,
   proposerNation: Nation,
-  allNations: Nation[]
+  allNations: Nation[],
+  rng?: { next: () => number }
 ): DiplomacyEvaluationFactors {
   // Threat level from proposer (-10 friendly to +10 hostile)
   const threatLevel = (aiNation.threats?.[proposerNation.id] || 0) / 10;
@@ -55,7 +58,7 @@ function calculateEvaluationFactors(
   const aiPower = calculateMilitaryPower(aiNation);
   const militaryRatio = safeRatio(proposerPower, aiPower, 1);
 
-  // Relationship score based on treaties
+  // Relationship score based on actual relationships and treaties
   const relationshipScore = calculateRelationshipScore(aiNation, proposerNation);
 
   // Personality bias based on AI type
@@ -65,7 +68,8 @@ function calculateEvaluationFactors(
   const strategicValue = calculateStrategicValue(proposal, aiNation, proposerNation, allNations);
 
   // Random factor for unpredictability (-10 to +10)
-  const randomFactor = (Math.random() * 20) - 10;
+  const randomValue = rng ? rng.next() : Math.random();
+  const randomFactor = (randomValue * 20) - 10;
 
   // Recent history modifier (simplified for now)
   const recentHistory = 0;
@@ -95,10 +99,13 @@ function calculateMilitaryPower(nation: Nation): number {
 }
 
 /**
- * Calculate relationship score based on existing treaties
+ * Calculate relationship score based on actual relationships and treaties
+ * Primary component is the relationship value (-100 to +100), with treaty modifiers
  */
 function calculateRelationshipScore(nation1: Nation, nation2: Nation): number {
-  let score = 0;
+  // Start with actual relationship value (-100 to +100), scaled to reasonable range
+  const baseRelationship = getRelationship(nation1, nation2.id);
+  let score = baseRelationship / 2; // Scale to -50 to +50
 
   // Check for existing alliance
   if (nation1.treaties?.[nation2.id]?.alliance) {
@@ -329,7 +336,8 @@ function generateResponseReason(
 export function shouldAIInitiateProposal(
   aiNation: Nation,
   playerNation: Nation,
-  turn: number
+  turn: number,
+  rng?: { next: () => number }
 ): DiplomacyProposal | null {
   const threatLevel = aiNation.threats?.[playerNation.id] || 0;
   const hasAlliance = aiNation.treaties?.[playerNation.id]?.alliance;
@@ -341,7 +349,8 @@ export function shouldAIInitiateProposal(
 
   // Random chance based on AI type
   const diplomaticChance = aiType === 'defensive' ? 0.15 : aiType === 'aggressive' ? 0.05 : 0.1;
-  if (Math.random() > diplomaticChance) return null;
+  const randomValue = rng ? rng.next() : Math.random();
+  if (randomValue > diplomaticChance) return null;
 
   // Defensive AI seeks alliances when threatened
   if (aiType === 'defensive' && threatLevel > 8 && !hasTruce) {
@@ -375,7 +384,8 @@ export function shouldAIInitiateProposal(
   }
 
   // AI requests aid when unstable
-  if (aiNation.instability && aiNation.instability > 60 && Math.random() > 0.7) {
+  const aidRandom = rng ? rng.next() : Math.random();
+  if (aiNation.instability && aiNation.instability > 60 && aidRandom > 0.7) {
     return {
       id: `ai-proposal-${turn}-${aiNation.id}`,
       type: 'aid-request',
@@ -389,7 +399,8 @@ export function shouldAIInitiateProposal(
   }
 
   // AI requests sanction lift
-  if (aiNation.sanctionedBy?.[playerNation.id] && Math.random() > 0.8) {
+  const sanctionRandom = rng ? rng.next() : Math.random();
+  if (aiNation.sanctionedBy?.[playerNation.id] && sanctionRandom > 0.8) {
     return {
       id: `ai-proposal-${turn}-${aiNation.id}`,
       type: 'sanction-lift',
@@ -403,7 +414,8 @@ export function shouldAIInitiateProposal(
   }
 
   // Aggressive AI may demand tribute
-  if (aiType === 'aggressive' && aiPower > playerPower * 1.8 && Math.random() > 0.9) {
+  const tributeRandom = rng ? rng.next() : Math.random();
+  if (aiType === 'aggressive' && aiPower > playerPower * 1.8 && tributeRandom > 0.9) {
     return {
       id: `ai-proposal-${turn}-${aiNation.id}`,
       type: 'demand-surrender',

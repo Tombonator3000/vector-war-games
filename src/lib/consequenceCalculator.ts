@@ -5,6 +5,7 @@ import type {
 } from '@/types/consequences';
 import type { Nation } from '@/types/game';
 import { safePercentage } from '@/lib/safeMath';
+import { getRelationship } from '@/lib/relationshipUtils';
 
 /**
  * Calculate consequences for launching a nuclear missile
@@ -157,7 +158,7 @@ export function calculateAllianceConsequences(
   const { playerNation, allNations } = context;
 
   // Calculate success probability based on relations
-  const currentRelation = 50; // TODO: Get actual relation score
+  const currentRelation = getRelationship(playerNation, targetNation.id);
   const successProbability = Math.min(90, Math.max(10, currentRelation + 20));
 
   const immediate: Consequence[] = [
