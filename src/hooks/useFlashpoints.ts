@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
-import { useRNG } from '@/contexts/RNGContext';
+import { useState, useCallback, useRef } from 'react';
+import { useOptionalRNG } from '@/contexts/RNGContext';
+import type { SeededRandom } from '@/lib/seededRandom';
 
 export interface FlashpointEvent {
   id: string;
@@ -1162,8 +1163,28 @@ function formatConsequences(outcome: Record<string, any>): Array<{ label: string
   return consequences;
 }
 
+type RNGLike = Pick<SeededRandom, 'next' | 'nextInt' | 'choice'>;
+
 export function useFlashpoints() {
-  const { rng } = useRNG();
+  const rngContext = useOptionalRNG();
+  const fallbackRNGRef = useRef<RNGLike | null>(null);
+
+  if (!rngContext && !fallbackRNGRef.current) {
+    fallbackRNGRef.current = {
+      next: () => Math.random(),
+      nextInt: (min: number, max: number) =>
+        Math.floor(Math.random() * (max - min + 1)) + min,
+      choice: <T>(array: T[]) => {
+        if (array.length === 0) {
+          throw new Error('Cannot choose from empty array');
+        }
+        const index = Math.floor(Math.random() * array.length);
+        return array[index];
+      }
+    };
+  }
+
+  const rng = rngContext?.rng ?? fallbackRNGRef.current!;
   const [activeFlashpoint, setActiveFlashpoint] = useState<FlashpointEvent | null>(null);
   const [flashpointHistory, setFlashpointHistory] = useState<FlashpointHistoryEntry[]>([]);
   const [pendingFollowUps, setPendingFollowUps] = useState<Array<{ parentId: string; category: string; outcome: string; triggerAtTurn: number }>>([]);
