@@ -685,3 +685,5 @@ Looking for:
 - Surveyed project structure and located `src/pages/Index.tsx` to plan HUD date display update.
 ## 2025-10-31T07:49:48+00:00
 - Added HUD date display container and wired `updateDisplay` to surface scenario timestamps via `getGameTimestamp`.
+## 2025-10-31T08:42:50+00:00
+- Randomized music playback offsets by updating `AudioSys.playTrack` to start sources at a random position within each buffer.

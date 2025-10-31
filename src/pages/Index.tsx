@@ -1770,6 +1770,7 @@ const AudioSys = {
 
       const source = this.audioContext.createBufferSource();
       source.buffer = buffer;
+      const offset = Math.random() * Math.max(buffer.duration - 0.5, 0);
       source.loop = this.preferredTrackId !== null;
       source.connect(gainNode);
       source.onended = () => {
@@ -1780,7 +1781,7 @@ const AudioSys = {
           }
         }
       };
-      source.start(0);
+      source.start(0, offset);
       this.musicSource = source;
       this.currentTrackId = trackId;
       this.notifyTrackListeners(trackId);
