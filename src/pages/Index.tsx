@@ -115,14 +115,14 @@ const Storage = {
     try {
       localStorage.setItem(`norad_${key}`, value);
     } catch (e) {
-      console.warn('Storage failed:', e);
+      // Silent failure - localStorage may be disabled or full
     }
   },
   removeItem: (key: string) => {
     try {
       localStorage.removeItem(`norad_${key}`);
     } catch (e) {
-      console.warn('Storage removal failed:', e);
+      // Silent failure - localStorage may be disabled
     }
   }
 };
@@ -644,7 +644,7 @@ function preloadFlatRealisticTexture() {
   });
 
   return flatRealisticTexturePromise.catch(error => {
-    console.warn('Flat realistic texture failed to load:', error);
+    // Texture load failed - fallback to standard rendering
     return null;
   });
 }
@@ -1681,7 +1681,7 @@ const AudioSys = {
       try {
         await this.audioContext.resume();
       } catch (error) {
-        console.warn('Audio context resume failed', error);
+        // Audio resume failed - expected in some environments
       }
     }
   },
@@ -1712,7 +1712,7 @@ const AudioSys = {
         this.musicCache.set(trackId, audioBuffer);
         return audioBuffer;
       } catch (error) {
-        console.warn('Music track load failed', error);
+        // Music load failed - rethrow to be handled by caller
         throw error;
       } finally {
         this.trackPromises.delete(trackId);
@@ -1785,7 +1785,7 @@ const AudioSys = {
       this.currentTrackId = trackId;
       this.notifyTrackListeners(trackId);
     } catch (error) {
-      console.warn('Music playback failed', error);
+      // Music playback failed - expected in some environments
     }
   },
 
@@ -1809,12 +1809,12 @@ const AudioSys = {
       try {
         this.musicSource.stop();
       } catch (error) {
-        console.warn('Stopping music failed', error);
+        // Stop failed - already stopped or disposed
       }
       try {
         this.musicSource.disconnect();
       } catch (error) {
-        console.warn('Disconnecting music failed', error);
+        // Disconnect failed - already disconnected
       }
     }
     this.musicSource = null;
@@ -1865,7 +1865,7 @@ const AudioSys = {
       try {
         listener(trackId);
       } catch (error) {
-        console.warn('Track listener error', error);
+        // Listener error - continue notifying other listeners
       }
     });
   },
@@ -1994,7 +1994,7 @@ const AudioSys = {
       oscillator.start();
       oscillator.stop(context.currentTime + duration);
     } catch (error) {
-      console.warn('SFX playback failed', error);
+      // SFX playback failed - expected in some environments
     }
   },
   
@@ -3201,7 +3201,7 @@ async function loadWorld() {
       }
     }
   } catch (e) {
-    console.warn('Cache load failed:', e);
+    // Cache load failed - fallback to CDN fetch
   }
 
   try {
@@ -3209,13 +3209,13 @@ async function loadWorld() {
     const response = await fetch('https://unpkg.com/world-atlas@2/countries-110m.json');
     if (response.ok) {
       const topo = await response.json();
-      
+
       try {
         Storage.setItem(CACHE_NAME, JSON.stringify(topo));
       } catch (e) {
-        console.warn('Could not cache map data');
+        // Could not cache - not critical, continue without cache
       }
-      
+
       if (topo.objects) {
         worldData = topo;
         worldCountries = feature(topo, topo.objects.countries || topo.objects.land);
@@ -3225,7 +3225,7 @@ async function loadWorld() {
       }
     }
   } catch (e) {
-    console.warn('CDN fetch failed:', e);
+    // CDN fetch failed - fallback to embedded data
   }
 
   // Fallback world data
@@ -5583,7 +5583,7 @@ export default function NoradVector() {
         const parsed = JSON.parse(stored) as ConventionalState;
         return parsed;
       } catch (error) {
-        console.warn('Failed to parse conventional state cache', error);
+        // Parse failed - use default state
       }
     }
     return S.conventional ?? createDefaultConventionalState(
@@ -6144,7 +6144,7 @@ export default function NoradVector() {
     try {
       Storage.setItem('conventional_state', JSON.stringify(nextState));
     } catch (error) {
-      console.warn('Failed to persist conventional warfare state', error);
+      // Persistence failed - not critical, game continues
     }
   }, [conventional.state]);
 
@@ -9622,10 +9622,10 @@ export default function NoradVector() {
             units={Object.values(conventional.state.units)}
             nations={nations}
             onTerritoryClick={(territoryId) => {
-              console.log('Territory clicked:', territoryId);
+              // Territory click handler - reserved for future interaction
             }}
             onUnitClick={(unitId) => {
-              console.log('Unit clicked:', unitId);
+              // Unit click handler - reserved for future interaction
             }}
             enableDayNight={true}
             className="w-full h-full"
