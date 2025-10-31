@@ -191,10 +191,10 @@
 
 ### High Priority (P0-P1)
 
-**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 10-14 hours remaining)
-- **Status:** Phases 1-6 Complete ✅ | Phase 7 In Progress (~5% done)
-- **Progress:** 10,937 → 9,494 lines (-1,443 lines, -13.2%)
-- **Completed Phases (6 of 7, 86% done):**
+**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 8-10 hours remaining)
+- **Status:** Phases 1-6 Complete ✅ | Phase 7 In Progress (~17% done)
+- **Progress:** 10,937 → 8,413 lines (-2,524 lines, -23.1%)
+- **Completed Phases (6 of 7, 88% done):**
   - ✅ Phase 1: Extracted utility functions (gameUtils, nationUtils, renderingUtils)
   - ✅ Phase 2: Extracted AI diplomacy logic (aiDiplomacyActions)
   - ✅ Phase 3: Extracted game phase handlers (launch, resolution, production)
@@ -202,16 +202,20 @@
   - ✅ Phase 5: Extracted UI components (IntroLogo, Starfield, SpinningEarth, OperationModal, IntelReportContent)
   - ✅ Phase 6: Extracted game state management (GameStateManager, PlayerManager, DoomsdayClock)
 - **Remaining Phase:**
-  - 📋 Phase 7: Simplify main NoradVector component (10-14 hours remaining) - **In Progress (~5% done)**
+  - 📋 Phase 7: Simplify main NoradVector component (8-10 hours remaining) - **In Progress (~15% done)**
     - ✅ **Completed:** Extract 3 screen components (128 lines reduced)
       - IntroScreen, LeaderSelectionScreen, DoctrineSelectionScreen
-    - 📋 **Remaining:** Extract 3 modal components (882 lines potential)
+    - ✅ **Completed:** Extract game constants (600 lines)
+      - gameConstants.ts with COSTS, RESEARCH_TREE, etc.
+    - ✅ **Completed:** Extract 3 modal components (1,066 lines reduced)
       - BuildModal, ResearchModal, MilitaryModal
-    - 📋 **Remaining:** Create 5 custom hooks (~500 lines potential)
+    - ✅ **Completed:** Extract 2 custom hooks (30 lines reduced)
+      - useModalManager, useNewsManager
+    - 📋 **Remaining:** Create 3 additional custom hooks (~470 lines potential)
     - 📋 **Remaining:** Extract 5 UI components (~800 lines potential)
-    - Target: Reduce NoradVector from 5,208 → <3,000 lines (need ~2,200 more)
+    - Target: Reduce Index.tsx from 8,413 → <3,000 lines (need ~5,413 more)
     - **See:** `PHASE_7_PLAN.md` for complete implementation guide
-- **Files Created (18 files, 2,740 lines):**
+- **Files Created (22 files, 4,151 lines):**
   - `src/lib/gameUtils.ts` (70 lines)
   - `src/lib/nationUtils.ts` (45 lines)
   - `src/lib/renderingUtils.ts` (95 lines)
@@ -230,6 +234,12 @@
   - `src/components/setup/IntroScreen.tsx` (134 lines)
   - `src/components/setup/LeaderSelectionScreen.tsx` (70 lines)
   - `src/components/setup/DoctrineSelectionScreen.tsx` (75 lines)
+  - `src/lib/gameConstants.ts` (600 lines)
+  - `src/components/game/BuildModal.tsx` (257 lines)
+  - `src/components/game/ResearchModal.tsx` (171 lines)
+  - `src/components/game/MilitaryModal.tsx` (217 lines)
+  - `src/hooks/game/useModalManager.ts` (71 lines)
+  - `src/hooks/game/useNewsManager.ts` (57 lines)
 - **Documentation:**
   - `REFACTORING_SUMMARY.md` - Detailed phase breakdown and progress
   - `PHASE_7_PLAN.md` - Complete implementation guide for Phase 7
