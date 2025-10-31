@@ -691,3 +691,6 @@ Looking for:
 ## 2025-10-31T09:19:01+00:00
 - Extended the shared `GameState` typing with structured `falloutMarks`, added the radiation icon asset, and wired lingering fal
 lout visuals, decay, and multiplayer syncing into `Index.tsx`.
+
+## 2025-10-31T10:33:00+00:00
+- Shifted the Cold War scenario to yearly turns by updating the time and election cadence configuration and confirming HUD timestamp formatting stays consistent across the codebase.

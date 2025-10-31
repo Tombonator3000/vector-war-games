@@ -84,16 +84,15 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
   coldWar: {
     id: 'coldWar',
     name: 'Cold War Era',
-    description: 'Classic Cold War scenario - 1 turn = 1 month',
+    description: 'Classic Cold War scenario with annual turns (1 turn = 1 year)',
     timeConfig: {
-      unit: 'month',
+      unit: 'year',
       unitsPerTurn: 1,
       startYear: 1960,
-      startMonth: 1,
-      displayFormat: 'MMM YYYY',
+      displayFormat: 'YYYY',
     },
     electionConfig: {
-      interval: 12, // Elections every 12 turns (1 year)
+      interval: 4, // Elections every 4 turns (4-year cycle)
       enabled: true,
       minMoraleThreshold: 30,
       minPublicOpinionThreshold: 25,
