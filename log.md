@@ -735,3 +735,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
  
 ## 2025-10-31T12:23:02+00:00
 - Implemented per-nation casualty tracking for bio-warfare turns, updated AI integration and game loop population adjustments, refreshed UI hooks, and added regression coverage before running `npm run test -- useBioWarfare`.
+
+## 2025-10-31T16:52:50+00:00
+- Updated Cuban Crisis nation setup to reference dynamic nation IDs for threats, alliances, and relationships per Codex review request.
