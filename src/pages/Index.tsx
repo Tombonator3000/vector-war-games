@@ -111,6 +111,13 @@ import { canAfford, pay, getCityCost, canPerformAction, hasActivePeaceTreaty, is
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
 import { project, toLonLat, getPoliticalFill, resolvePublicAssetPath, POLITICAL_COLOR_PALETTE, type ProjectionContext } from '@/lib/renderingUtils';
 import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, type LocalNation, createDefaultDiplomacyState } from '@/state';
+import type { GreatOldOnesState } from '@/types/greatOldOnes';
+import { initializeGreatOldOnesState } from '@/lib/greatOldOnesHelpers';
+import { initializeWeek3State, updateWeek3Systems, type Week3ExtendedState } from '@/lib/greatOldOnesWeek3Integration';
+import { initializePhase2State, updatePhase2Systems, checkPhase2UnlockConditions, type Phase2State } from '@/lib/phase2Integration';
+import { initializePhase3State, updatePhase3Systems, checkPhase3UnlockConditions } from '@/lib/phase3Integration';
+import type { Phase3State } from '@/types/phase3Types';
+import { DoctrineSelectionPanel, OrderCommandPanel, SanityHeatMapPanel, RitualSitePanel, MissionBoardPanel, UnitRosterPanel } from '@/components/greatOldOnes';
 import {
   aiSignMutualTruce,
   aiSignNonAggressionPact,
@@ -3868,6 +3875,59 @@ function endTurn() {
         });
       }
 
+      // Update Great Old Ones campaign systems (if active)
+      if (S.scenario?.id === 'greatOldOnes' && S.greatOldOnes) {
+        const gooState = S.greatOldOnes;
+
+        // Update Week 3 systems (ritual sites, units, missions)
+        if (week3State) {
+          const updatedWeek3 = updateWeek3Systems(gooState, week3State);
+          setWeek3State(updatedWeek3);
+        }
+
+        // Update Phase 2 systems (if unlocked)
+        if (phase2State) {
+          // Check if phase 2 should unlock
+          if (!phase2State.unlocked) {
+            const unlockCheck = checkPhase2UnlockConditions(gooState);
+            if (unlockCheck.shouldUnlock) {
+              phase2State.unlocked = true;
+              if (window.__gameAddNewsItem) {
+                window.__gameAddNewsItem('occult', 'Phase 2 Doctrine Paths Unlocked', 'info');
+              }
+            }
+          }
+
+          if (phase2State.unlocked) {
+            const updatedPhase2 = updatePhase2Systems(gooState, phase2State);
+            setPhase2State(updatedPhase2);
+          }
+        }
+
+        // Update Phase 3 systems (if unlocked)
+        if (phase3State && phase2State) {
+          // Check if phase 3 should unlock
+          if (!phase3State.unlocked) {
+            const unlockCheck = checkPhase3UnlockConditions(gooState, phase2State);
+            if (unlockCheck.shouldUnlock) {
+              phase3State.unlocked = true;
+              if (window.__gameAddNewsItem) {
+                window.__gameAddNewsItem('occult', 'Phase 3 Endgame Systems Unlocked', 'critical');
+              }
+            }
+          }
+
+          if (phase3State.unlocked) {
+            const updatedPhase3 = updatePhase3Systems(gooState, phase2State, phase3State);
+            setPhase3State(updatedPhase3);
+          }
+        }
+
+        // Persist updated state
+        setGreatOldOnesState({ ...gooState });
+        GameStateManager.setGreatOldOnes(gooState);
+      }
+
       updateDisplay();
       checkVictory();
     }, 1500);
@@ -4091,6 +4151,26 @@ export default function NoradVector() {
     S.paused = false;
     S.defcon = scenario.startingDefcon;
     S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+
+    // Initialize Great Old Ones campaign if selected
+    if (scenario.id === 'greatOldOnes') {
+      const gooState = initializeGreatOldOnesState();
+      S.greatOldOnes = gooState;
+      GameStateManager.setGreatOldOnes(gooState);
+      setGreatOldOnesState(gooState);
+      setWeek3State(initializeWeek3State());
+      setPhase2State(initializePhase2State());
+      setPhase3State(initializePhase3State());
+    } else {
+      // Clear Great Old Ones state for other scenarios
+      S.greatOldOnes = undefined;
+      GameStateManager.setGreatOldOnes(undefined);
+      setGreatOldOnesState(null);
+      setWeek3State(null);
+      setPhase2State(null);
+      setPhase3State(null);
+    }
+
     updateDisplay();
     setGamePhase('leader');
   }, [selectedScenarioId, setGamePhase]);
@@ -4216,6 +4296,12 @@ export default function NoradVector() {
     return false;
   });
   const [activeTrackId, setActiveTrackId] = useState<MusicTrackId | null>(AudioSys.getCurrentTrack());
+
+  // Great Old Ones state
+  const [greatOldOnesState, setGreatOldOnesState] = useState<GreatOldOnesState | null>(null);
+  const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
+  const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
+  const [phase3State, setPhase3State] = useState<Phase3State | null>(null);
   useEffect(() => {
     AudioSys.setMusicEnabled(initialMusicEnabled);
     AudioSys.sfxEnabled = initialSfxEnabled;
@@ -8269,6 +8355,67 @@ export default function NoradVector() {
           biowarfareEnabled={bioWarfareEnabled}
           playerPopulation={PlayerManager.get()?.population}
         />
+      )}
+
+      {/* Great Old Ones Campaign UI */}
+      {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && (
+        <>
+          <div className="fixed top-20 left-4 z-40 space-y-4 max-w-md">
+            {!greatOldOnesState.doctrine && (
+              <DoctrineSelectionPanel
+                state={greatOldOnesState}
+                onSelectDoctrine={(doctrine) => {
+                  greatOldOnesState.doctrine = doctrine;
+                  setGreatOldOnesState({ ...greatOldOnesState });
+                  GameStateManager.setGreatOldOnes(greatOldOnesState);
+                  toast({ title: 'Doctrine Selected', description: `Path of ${doctrine} chosen` });
+                }}
+              />
+            )}
+
+            {greatOldOnesState.doctrine && (
+              <>
+                <SanityHeatMapPanel
+                  regions={greatOldOnesState.regions}
+                  veilState={greatOldOnesState.veil}
+                />
+                <OrderCommandPanel
+                  state={greatOldOnesState}
+                  onIssueOrder={(order) => {
+                    // Handle order execution
+                    toast({ title: 'Order Issued', description: order });
+                  }}
+                />
+              </>
+            )}
+          </div>
+
+          <div className="fixed top-20 right-4 z-40 space-y-4 max-w-md">
+            {greatOldOnesState.doctrine && week3State && (
+              <>
+                <RitualSitePanel
+                  regions={greatOldOnesState.regions}
+                  resources={greatOldOnesState.resources}
+                  alignment={greatOldOnesState.alignment}
+                />
+                <MissionBoardPanel
+                  availableMissions={week3State.availableMissions}
+                  activeMissions={week3State.activeMissions}
+                  infiltrators={week3State.infiltrators}
+                  onAssignMission={(missionId, infiltratorIds) => {
+                    // Handle mission assignment
+                    toast({ title: 'Mission Assigned', description: `Mission ${missionId} assigned` });
+                  }}
+                />
+                <UnitRosterPanel
+                  cultistCells={greatOldOnesState.cultistCells}
+                  summonedEntities={greatOldOnesState.summonedEntities}
+                  infiltrators={week3State.infiltrators}
+                />
+              </>
+            )}
+          </div>
+        </>
       )}
 
       {activeFlashpoint && (

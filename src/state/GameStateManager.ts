@@ -12,6 +12,7 @@ import type { ConventionalState, NationConventionalProfile } from '@/hooks/useCo
 import type { ScenarioConfig } from '@/types/scenario';
 import { getDefaultScenario } from '@/types/scenario';
 import { createDefaultConventionalState } from '@/hooks/useConventionalWarfare';
+import type { GreatOldOnesState } from '@/types/greatOldOnes';
 
 /**
  * Diplomacy state tracking
@@ -68,6 +69,7 @@ export interface GameState {
   showEndGameScreen?: boolean;
   endGameStatistics?: any;
   scenario?: ScenarioConfig;
+  greatOldOnes?: GreatOldOnesState;
 }
 
 /**
@@ -575,6 +577,24 @@ class GameStateManager {
    */
   static setScenario(scenario: ScenarioConfig): void {
     this._state.scenario = scenario;
+  }
+
+  // ============================================
+  // GREAT OLD ONES
+  // ============================================
+
+  /**
+   * Gets the Great Old Ones state
+   */
+  static getGreatOldOnes(): GreatOldOnesState | undefined {
+    return this._state.greatOldOnes;
+  }
+
+  /**
+   * Sets the Great Old Ones state
+   */
+  static setGreatOldOnes(greatOldOnes: GreatOldOnesState | undefined): void {
+    this._state.greatOldOnes = greatOldOnes;
   }
 
   // ============================================
