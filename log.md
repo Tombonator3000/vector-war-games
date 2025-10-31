@@ -706,3 +706,5 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-10-31T10:33:58Z
 - Added Cuban Crisis-specific flashpoint chains, scenario-aware flashpoint selection, and aligned tests with the updated probability model.
+## 2025-10-31T10:54:18Z
+- Added scenario-driven era override typing, Cuban Crisis pacing updates, dynamic era unlock handling in `useGameEra`, and refreshed UI feature lock displays to respect scenario-specific unlock data.

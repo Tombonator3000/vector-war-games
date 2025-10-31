@@ -6,13 +6,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { GameFeature, FEATURE_UNLOCK_INFO } from '@/types/era';
+import { GameFeature, FEATURE_UNLOCK_INFO, type FeatureUnlockInfo } from '@/types/era';
 
 interface LockedFeatureBadgeProps {
   feature: GameFeature;
   currentTurn: number;
   compact?: boolean;
   className?: string;
+  featureUnlocks?: Record<GameFeature, FeatureUnlockInfo>;
 }
 
 export function LockedFeatureBadge({
@@ -20,9 +21,14 @@ export function LockedFeatureBadge({
   currentTurn,
   compact = false,
   className = '',
+  featureUnlocks,
 }: LockedFeatureBadgeProps) {
-  const featureInfo = FEATURE_UNLOCK_INFO[feature];
-  const turnsUntilUnlock = featureInfo.unlockTurn - currentTurn;
+  const unlockMap = featureUnlocks ?? FEATURE_UNLOCK_INFO;
+  const featureInfo = unlockMap[feature] ?? FEATURE_UNLOCK_INFO[feature];
+  const isUnavailable = !Number.isFinite(featureInfo.unlockTurn);
+  const turnsUntilUnlock = isUnavailable
+    ? Infinity
+    : Math.max(0, featureInfo.unlockTurn - currentTurn);
 
   if (compact) {
     return (
@@ -34,16 +40,20 @@ export function LockedFeatureBadge({
               className={`border-red-500/50 text-red-400 bg-red-950/30 ${className}`}
             >
               <Lock className="w-3 h-3 mr-1" />
-              Turn {featureInfo.unlockTurn}
+              {isUnavailable ? 'Scenario Locked' : `Turn ${featureInfo.unlockTurn}`}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
             <div className="text-sm">
               <p className="font-semibold">{featureInfo.name}</p>
               <p className="text-xs text-muted-foreground">{featureInfo.description}</p>
-              <p className="text-xs mt-1 text-yellow-400">
-                Unlocks in {turnsUntilUnlock} turn{turnsUntilUnlock !== 1 ? 's' : ''}
-              </p>
+              {isUnavailable ? (
+                <p className="text-xs mt-1 text-red-400">Unavailable in this scenario</p>
+              ) : (
+                <p className="text-xs mt-1 text-yellow-400">
+                  Unlocks in {turnsUntilUnlock} turn{turnsUntilUnlock !== 1 ? 's' : ''}
+                </p>
+              )}
             </div>
           </TooltipContent>
         </Tooltip>
@@ -58,10 +68,14 @@ export function LockedFeatureBadge({
       <Lock className="w-4 h-4 text-red-400 flex-shrink-0" />
       <div className="flex-1">
         <p className="text-sm font-semibold text-red-300">{featureInfo.name}</p>
-        <p className="text-xs text-red-400/80">
-          Unlocks at Turn {featureInfo.unlockTurn} ({turnsUntilUnlock} turn
-          {turnsUntilUnlock !== 1 ? 's' : ''})
-        </p>
+        {isUnavailable ? (
+          <p className="text-xs text-red-400/80">Unavailable in this scenario</p>
+        ) : (
+          <p className="text-xs text-red-400/80">
+            Unlocks at Turn {featureInfo.unlockTurn} ({turnsUntilUnlock} turn
+            {turnsUntilUnlock !== 1 ? 's' : ''})
+          </p>
+        )}
       </div>
     </div>
   );
@@ -74,6 +88,7 @@ interface LockedFeatureWrapperProps {
   currentTurn: number;
   children: React.ReactNode;
   className?: string;
+  featureUnlocks?: Record<GameFeature, FeatureUnlockInfo>;
 }
 
 export function LockedFeatureWrapper({
@@ -82,9 +97,14 @@ export function LockedFeatureWrapper({
   currentTurn,
   children,
   className = '',
+  featureUnlocks,
 }: LockedFeatureWrapperProps) {
-  const featureInfo = FEATURE_UNLOCK_INFO[feature];
-  const turnsUntilUnlock = featureInfo.unlockTurn - currentTurn;
+  const unlockMap = featureUnlocks ?? FEATURE_UNLOCK_INFO;
+  const featureInfo = unlockMap[feature] ?? FEATURE_UNLOCK_INFO[feature];
+  const isUnavailable = !Number.isFinite(featureInfo.unlockTurn);
+  const turnsUntilUnlock = isUnavailable
+    ? Infinity
+    : Math.max(0, featureInfo.unlockTurn - currentTurn);
 
   if (!isLocked) {
     return <>{children}</>;
@@ -100,7 +120,7 @@ export function LockedFeatureWrapper({
               <div className="text-center">
                 <Lock className="w-6 h-6 text-red-400 mx-auto mb-1" />
                 <p className="text-xs text-red-300 font-semibold">
-                  Turn {featureInfo.unlockTurn}
+                  {isUnavailable ? 'Scenario Locked' : `Turn ${featureInfo.unlockTurn}`}
                 </p>
               </div>
             </div>
@@ -113,9 +133,13 @@ export function LockedFeatureWrapper({
               {featureInfo.name} Locked
             </p>
             <p className="text-xs text-muted-foreground mt-1">{featureInfo.description}</p>
-            <p className="text-xs mt-2 text-yellow-400 font-semibold">
-              🔓 Unlocks in {turnsUntilUnlock} turn{turnsUntilUnlock !== 1 ? 's' : ''}
-            </p>
+            {isUnavailable ? (
+              <p className="text-xs mt-2 text-red-400 font-semibold">Unavailable in this scenario</p>
+            ) : (
+              <p className="text-xs mt-2 text-yellow-400 font-semibold">
+                🔓 Unlocks in {turnsUntilUnlock} turn{turnsUntilUnlock !== 1 ? 's' : ''}
+              </p>
+            )}
           </div>
         </TooltipContent>
       </Tooltip>

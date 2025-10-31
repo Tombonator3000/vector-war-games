@@ -50,7 +50,7 @@ import { useVictoryTracking } from '@/hooks/useVictoryTracking';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
 import { LockedFeatureWrapper } from '@/components/LockedFeatureBadge';
-import { ERA_DEFINITIONS } from '@/types/era';
+import { FEATURE_UNLOCK_INFO } from '@/types/era';
 import type { ActionConsequences } from '@/types/consequences';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
@@ -6283,23 +6283,25 @@ export default function NoradVector() {
   // Era system for progressive complexity
   const gameEra = useGameEra({
     currentTurn: S.turn,
-    onEraChange: (newEra, oldEra) => {
-      const eraDef = ERA_DEFINITIONS[newEra];
+    scenario: S.scenario,
+    onEraChange: (newEra, oldEra, definitions) => {
+      const eraDef = definitions[newEra];
+      const previousEraFeatures = definitions[oldEra]?.unlockedFeatures ?? [];
       const newFeatures = eraDef.unlockedFeatures.filter(
-        (feature) => !ERA_DEFINITIONS[oldEra].unlockedFeatures.includes(feature)
+        (feature) => !previousEraFeatures.includes(feature)
       );
 
       setEraTransitionData({
         era: newEra,
         name: eraDef.name,
         description: eraDef.description,
-        features: newFeatures.map((f) => ({
-          feature: f,
-          name: f.replace(/_/g, ' ').toUpperCase(),
-          description: '',
-          unlockTurn: eraDef.startTurn,
-          category: 'military',
-        })),
+        features: newFeatures.map((feature) => {
+          const info = FEATURE_UNLOCK_INFO[feature];
+          return {
+            ...info,
+            unlockTurn: eraDef.startTurn,
+          };
+        }),
       });
       setShowEraTransition(true);
 

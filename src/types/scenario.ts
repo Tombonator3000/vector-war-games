@@ -3,6 +3,8 @@
  * Defines time progression, election mechanics, and scenario-specific settings
  */
 
+import type { GameEra, GameFeature } from './era';
+
 export type TimeUnit = 'year' | 'month' | 'week' | 'day';
 
 export interface TimeConfig {
@@ -45,6 +47,20 @@ export interface ElectionConfig {
   loseElectionConsequence: 'gameOver' | 'leaderChange' | 'instability' | 'none';
 }
 
+export type ScenarioEraOverrides = Partial<
+  Record<
+    GameEra,
+    {
+      /** Custom era start turn */
+      startTurn?: number;
+      /** Custom era end turn */
+      endTurn?: number;
+      /** Replace unlocked features for the era */
+      unlockedFeatures?: GameFeature[];
+    }
+  >
+>;
+
 export interface ScenarioConfig {
   /** Scenario identifier */
   id: string;
@@ -75,6 +91,9 @@ export interface ScenarioConfig {
     /** Starting resources modifier */
     startingResourcesMultiplier?: number;
   };
+
+  /** Era-specific overrides for unlock pacing */
+  eraOverrides?: ScenarioEraOverrides;
 }
 
 /**
@@ -126,6 +145,43 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
     startingDefcon: 3,
     modifiers: {
       timeSpeedMultiplier: 0.5, // Faster paced
+    },
+    eraOverrides: {
+      early: {
+        endTurn: 3,
+      },
+      mid: {
+        startTurn: 4,
+        endTurn: 6,
+        unlockedFeatures: [
+          'nuclear_missiles',
+          'nuclear_bombers',
+          'defense_systems',
+          'basic_diplomacy',
+          'basic_research',
+          'conventional_warfare',
+          'territory_control',
+          'advanced_diplomacy',
+        ],
+      },
+      late: {
+        startTurn: 7,
+        endTurn: 14,
+        unlockedFeatures: [
+          'nuclear_missiles',
+          'nuclear_bombers',
+          'defense_systems',
+          'basic_diplomacy',
+          'basic_research',
+          'conventional_warfare',
+          'territory_control',
+          'cyber_warfare',
+          'advanced_diplomacy',
+          'submarines',
+          'satellites',
+          'propaganda_victory',
+        ],
+      },
     },
   },
 
