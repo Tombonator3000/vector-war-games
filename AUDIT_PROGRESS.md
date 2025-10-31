@@ -191,9 +191,9 @@
 
 ### High Priority (P0-P1)
 
-**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 12-16 hours remaining)
-- **Status:** Phases 1-6 Complete ✅ | Phase 7 Planned (not yet implemented)
-- **Progress:** 10,937 → 9,661 lines (-1,276 lines, -11.7%)
+**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 10-14 hours remaining)
+- **Status:** Phases 1-6 Complete ✅ | Phase 7 In Progress (~5% done)
+- **Progress:** 10,937 → 9,494 lines (-1,443 lines, -13.2%)
 - **Completed Phases (6 of 7, 86% done):**
   - ✅ Phase 1: Extracted utility functions (gameUtils, nationUtils, renderingUtils)
   - ✅ Phase 2: Extracted AI diplomacy logic (aiDiplomacyActions)
@@ -202,14 +202,16 @@
   - ✅ Phase 5: Extracted UI components (IntroLogo, Starfield, SpinningEarth, OperationModal, IntelReportContent)
   - ✅ Phase 6: Extracted game state management (GameStateManager, PlayerManager, DoomsdayClock)
 - **Remaining Phase:**
-  - 📋 Phase 7: Simplify main NoradVector component (12-16 hours) - **Planned but not implemented**
-    - Extract 3 modal components (882 lines)
-    - Extract 3 screen components (176 lines)
-    - Create 5 custom hooks (~500 lines)
-    - Extract 5 UI components (~800 lines)
-    - Target: Reduce NoradVector from 5,336 → <3,000 lines
+  - 📋 Phase 7: Simplify main NoradVector component (10-14 hours remaining) - **In Progress (~5% done)**
+    - ✅ **Completed:** Extract 3 screen components (128 lines reduced)
+      - IntroScreen, LeaderSelectionScreen, DoctrineSelectionScreen
+    - 📋 **Remaining:** Extract 3 modal components (882 lines potential)
+      - BuildModal, ResearchModal, MilitaryModal
+    - 📋 **Remaining:** Create 5 custom hooks (~500 lines potential)
+    - 📋 **Remaining:** Extract 5 UI components (~800 lines potential)
+    - Target: Reduce NoradVector from 5,208 → <3,000 lines (need ~2,200 more)
     - **See:** `PHASE_7_PLAN.md` for complete implementation guide
-- **Files Created (15 files, 2,461 lines):**
+- **Files Created (18 files, 2,740 lines):**
   - `src/lib/gameUtils.ts` (70 lines)
   - `src/lib/nationUtils.ts` (45 lines)
   - `src/lib/renderingUtils.ts` (95 lines)
@@ -225,6 +227,9 @@
   - `src/state/PlayerManager.ts` (75 lines)
   - `src/state/DoomsdayClock.ts` (95 lines)
   - `src/state/index.ts` (19 lines)
+  - `src/components/setup/IntroScreen.tsx` (134 lines)
+  - `src/components/setup/LeaderSelectionScreen.tsx` (70 lines)
+  - `src/components/setup/DoctrineSelectionScreen.tsx` (75 lines)
 - **Documentation:**
   - `REFACTORING_SUMMARY.md` - Detailed phase breakdown and progress
   - `PHASE_7_PLAN.md` - Complete implementation guide for Phase 7
