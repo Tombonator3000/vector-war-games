@@ -1636,13 +1636,159 @@ body.theme-synthwave .options-sheet__description {
   text-shadow: 0 0 12px hsl(188 100% 62% / 0.24);
 }
 
-body.theme-synthwave .options-section {
+/* ============================================================================
+   Options Menu - Base Compact Styles (All Themes)
+   ============================================================================ */
+
+.options-sheet {
+  max-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.options-section {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
-  padding: 1.25rem 1.35rem;
-  margin-top: 1.25rem;
-  border-radius: 16px;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  margin-top: 0.85rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+}
+
+.options-section:first-of-type {
+  margin-top: 0.65rem;
+}
+
+.options-section__heading {
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 0.15rem;
+}
+
+.options-section__subheading {
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  opacity: 0.75;
+  line-height: 1.3;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 0.5rem;
+}
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.55rem;
+}
+
+.theme-chip {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  background: rgba(0, 0, 0, 0.4);
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-chip:hover {
+  border-color: rgba(6, 182, 212, 0.5);
+  background: rgba(6, 182, 212, 0.1);
+  transform: translateY(-1px);
+}
+
+.theme-chip.is-active {
+  border-color: rgba(6, 182, 212, 0.7);
+  background: rgba(6, 182, 212, 0.2);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+}
+
+.layout-chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  background: rgba(0, 0, 0, 0.4);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.layout-chip:hover {
+  border-color: rgba(6, 182, 212, 0.5);
+  background: rgba(6, 182, 212, 0.1);
+  transform: translateY(-1px);
+}
+
+.layout-chip.is-active {
+  border-color: rgba(6, 182, 212, 0.7);
+  background: rgba(6, 182, 212, 0.2);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+}
+
+.layout-chip__label {
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+}
+
+.layout-chip__description {
+  font-size: 0.56rem;
+  letter-spacing: 0.15em;
+  opacity: 0.7;
+  line-height: 1.3;
+  position: relative;
+  z-index: 1;
+}
+
+.options-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+}
+
+.options-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.options-slider__label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+}
+
+/* ============================================================================
+   Options Menu - Synthwave Theme Overrides (Compact Version)
+   ============================================================================ */
+
+body.theme-synthwave .options-section {
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  margin-top: 0.85rem;
+  border-radius: 12px;
   background: linear-gradient(
     135deg,
     hsl(222 84% 18% / 0.65) 0%,
@@ -1654,43 +1800,43 @@ body.theme-synthwave .options-section {
 }
 
 body.theme-synthwave .options-section:first-of-type {
-  margin-top: 1rem;
+  margin-top: 0.65rem;
 }
 
 body.theme-synthwave .options-section__heading {
-  font-size: 0.85rem;
-  letter-spacing: 0.4em;
+  font-size: 0.7rem;
+  letter-spacing: 0.32em;
   color: hsl(188 92% 88%);
-  text-shadow: 0 0 16px hsl(188 100% 62% / 0.28);
+  text-shadow: 0 0 14px hsl(188 100% 62% / 0.26);
 }
 
 body.theme-synthwave .options-section__subheading {
-  font-size: 0.7rem;
-  letter-spacing: 0.3em;
+  font-size: 0.6rem;
+  letter-spacing: 0.24em;
   color: hsl(188 72% 80% / 0.78);
-  text-shadow: 0 0 10px hsl(188 100% 62% / 0.2);
+  text-shadow: 0 0 10px hsl(188 100% 62% / 0.18);
 }
 
 body.theme-synthwave .theme-grid,
 body.theme-synthwave .layout-grid {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
 body.theme-synthwave .theme-grid {
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
 }
 
 body.theme-synthwave .layout-grid {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
 body.theme-synthwave .layout-chip {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.85rem 1rem;
+  gap: 0.25rem;
+  padding: 0.6rem 0.75rem;
   border-radius: 14px;
   background: linear-gradient(
     135deg,
@@ -1721,8 +1867,8 @@ body.theme-synthwave .layout-chip::after {
 }
 
 body.theme-synthwave .layout-chip:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 28px hsl(188 100% 62% / 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px hsl(188 100% 62% / 0.35);
   border-color: hsl(188 100% 62% / 0.45);
 }
 
@@ -1732,15 +1878,15 @@ body.theme-synthwave .layout-chip.is-active {
 }
 
 body.theme-synthwave .layout-chip__label {
-  font-size: 0.75rem;
-  letter-spacing: 0.32em;
+  font-size: 0.65rem;
+  letter-spacing: 0.28em;
   color: hsl(188 92% 88%);
   text-shadow: 0 0 12px hsl(188 100% 62% / 0.28);
 }
 
 body.theme-synthwave .layout-chip__description {
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
   color: hsl(188 72% 80% / 0.75);
 }
 
@@ -1749,8 +1895,8 @@ body.theme-synthwave .options-slider {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.65rem 0.8rem;
-  border-radius: 12px;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
   background: linear-gradient(
     135deg,
     hsl(222 84% 20% / 0.55) 0%,
@@ -1763,7 +1909,8 @@ body.theme-synthwave .options-slider {
 
 body.theme-synthwave .options-toggle span,
 body.theme-synthwave .options-slider__label span:first-child {
-  letter-spacing: 0.28em;
+  font-size: 0.65rem;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   text-shadow: 0 0 10px hsl(188 100% 62% / 0.22);
 }
