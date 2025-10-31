@@ -5152,10 +5152,14 @@ function endTurn() {
       window.__cyberAdvance?.();
 
       const player = PlayerManager.get();
+      // Find plague owner (nation with active bio-lab and plague)
+      const plagueOwner = nations?.find(n => n.bioLab && n.plagueState?.plagueStarted);
       const pandemicResult = window.__pandemicAdvance?.({
         turn: S.turn,
         defcon: S.defcon,
-        playerPopulation: player?.population ?? 0
+        playerPopulation: player?.population ?? 0,
+        difficulty: S.difficulty || 'normal',
+        plagueOwnerId: plagueOwner?.id
       });
 
       if (pandemicResult && player) {

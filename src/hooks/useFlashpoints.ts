@@ -62,6 +62,23 @@ export interface PlayerReputation {
   successRate: number; // 0-100, overall success rate
 }
 
+/**
+ * Maps flashpoint titles to category keys for follow-up lookups
+ * This provides a more reliable mapping than string matching
+ */
+function getFlashpointCategoryKey(title: string): string | null {
+  const titleLower = title.toLowerCase();
+
+  if (titleLower.includes('nuclear materials')) return 'nuclear_materials';
+  if (titleLower.includes('coup')) return 'military_coup';
+  if (titleLower.includes('rogue ai')) return 'rogue_ai';
+  if (titleLower.includes('accidental launch')) return 'accidental_launch';
+  if (titleLower.includes('extraterrestrial')) return 'alien_contact';
+  if (titleLower.includes('bio-terror') || titleLower.includes('bioterror')) return 'bio_terror';
+
+  return null;
+}
+
 // Follow-up flashpoint templates triggered by specific outcomes
 const FOLLOWUP_FLASHPOINTS: Record<string, Record<string, Omit<FlashpointEvent, 'id' | 'triggeredAt' | 'triggeredBy'>>> = {
   'nuclear_materials': {
@@ -1176,9 +1193,15 @@ export function useFlashpoints() {
   });
 
   const triggerRandomFlashpoint = useCallback((turn: number, defcon: number) => {
-    // Check for pending follow-ups first
+    // Check for pending follow-ups first (priority over random flashpoints)
+    if (pendingFollowUps.length > 0) {
+      console.log(`Checking ${pendingFollowUps.length} pending follow-ups for turn ${turn}`);
+    }
+
     const followUp = pendingFollowUps.find(f => f.triggerAtTurn <= turn);
     if (followUp) {
+      console.log(`Triggering follow-up: ${followUp.category}/${followUp.outcome} (scheduled for turn ${followUp.triggerAtTurn}, current turn ${turn})`);
+
       const followUpTemplate = FOLLOWUP_FLASHPOINTS[followUp.category]?.[followUp.outcome];
       if (followUpTemplate) {
         const baseFlashpoint: FlashpointEvent = {
@@ -1191,9 +1214,15 @@ export function useFlashpoints() {
         // Inject historical context
         const flashpoint = injectHistoricalContext(baseFlashpoint, flashpointHistory, playerReputation);
 
+        // Remove the triggered follow-up from the queue
         setPendingFollowUps(prev => prev.filter(f => f !== followUp));
         setActiveFlashpoint(flashpoint);
+        console.log(`Follow-up flashpoint triggered successfully: ${flashpoint.title}`);
         return flashpoint;
+      } else {
+        // Template not found - log warning but still remove from queue to prevent infinite retries
+        console.warn(`Follow-up template not found for category: ${followUp.category}, outcome: ${followUp.outcome}. Removing from queue.`);
+        setPendingFollowUps(prev => prev.filter(f => f !== followUp));
       }
     }
 
@@ -1214,7 +1243,7 @@ export function useFlashpoints() {
       return flashpoint;
     }
     return null;
-  }, [pendingFollowUps, flashpointHistory, playerReputation]);
+  }, [pendingFollowUps, flashpointHistory, playerReputation, rng]);
 
   const resolveFlashpoint = useCallback((optionId: string, flashpoint: FlashpointEvent, currentTurn: number): {
     success: boolean;
@@ -1278,25 +1307,28 @@ export function useFlashpoints() {
       return reputationUpdate;
     });
 
-    // Determine follow-up hint
+    // Determine follow-up hint using helper function for more reliable mapping
     const followUpKey = `${optionId}_${success ? 'success' : 'failure'}`;
-    const categoryKey = flashpoint.title.includes('Nuclear Materials') ? 'nuclear_materials' :
-                        flashpoint.title.includes('COUP') ? 'military_coup' :
-                        flashpoint.title.includes('ROGUE AI') ? 'rogue_ai' :
-                        flashpoint.title.includes('ACCIDENTAL LAUNCH') ? 'accidental_launch' :
-                        flashpoint.title.includes('EXTRATERRESTRIAL') ? 'alien_contact' :
-                        flashpoint.title.includes('BIO-TERROR') ? 'bio_terror' : null;
+    const categoryKey = getFlashpointCategoryKey(flashpoint.title);
 
     let followUpHint: string | undefined;
     if (categoryKey && FOLLOWUP_FLASHPOINTS[categoryKey]?.[followUpKey]) {
       followUpHint = 'Intelligence suggests this situation may have further developments. Remain vigilant.';
 
+      // Schedule follow-up for 2-4 turns later
+      const triggerDelay = rng.nextInt(2, 4);
       setPendingFollowUps(prev => [...prev, {
         parentId: flashpoint.id,
         category: categoryKey,
         outcome: followUpKey,
-        triggerAtTurn: currentTurn + rng.nextInt(2, 4) // 2-4 turns later
+        triggerAtTurn: currentTurn + triggerDelay
       }]);
+
+      // Debug logging for follow-up scheduling
+      console.log(`Follow-up scheduled: ${categoryKey}/${followUpKey} for turn ${currentTurn + triggerDelay}`);
+    } else if (categoryKey) {
+      // Category key found but no matching follow-up template
+      console.log(`No follow-up template found for ${categoryKey}/${followUpKey}`);
     }
 
     // Store detailed history
