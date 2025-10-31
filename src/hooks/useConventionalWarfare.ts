@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { calculateMoraleRecruitmentModifier } from './useGovernance';
+import { useRNG } from '@/contexts/RNGContext';
 
 export type ForceType = 'army' | 'navy' | 'air';
 
@@ -327,10 +328,11 @@ export function createDefaultConventionalState(nations: Array<{ id: string; isPl
 const createEngagementLog = (
   state: ConventionalState,
   entry: Omit<EngagementLogEntry, 'id'>,
+  rng: { next: () => number },
 ): ConventionalState => {
   const logEntry: EngagementLogEntry = {
     ...entry,
-    id: `engagement_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `engagement_${Date.now()}_${rng.next().toString(36).slice(2, 8)}`,
   };
 
   return {
@@ -356,6 +358,7 @@ export function useConventionalWarfare({
   onConsumeAction,
   onUpdateDisplay,
 }: UseConventionalWarfareOptions) {
+  const { rng } = useRNG();
   const [state, setState] = useState<ConventionalState>(() => initialState ?? createDefaultConventionalState());
   const initialisedRef = useRef(false);
 
@@ -620,7 +623,7 @@ export function useConventionalWarfare({
       const tensionModifier = territory.conflictRisk / 200;
       const odds = clamp(baseOdds + readinessModifier + tensionModifier - 0.1, 0.15, 0.85);
 
-      const roll = Math.random();
+      const roll = rng.next();
       const attackerVictory = roll < odds;
       const outcome: EngagementLogEntry['outcome'] = attackerVictory ? 'attacker' : 'defender';
 
@@ -688,7 +691,7 @@ export function useConventionalWarfare({
           casualties,
           instabilityDelta,
           productionDelta,
-        });
+        }, rng);
       });
 
       onUpdateDisplay?.();
@@ -718,7 +721,7 @@ export function useConventionalWarfare({
       const opposingReadiness = getNation(opposingId)?.conventional?.readiness ?? 60;
 
       const proxyOdds = clamp(0.45 + (sponsorReadiness - opposingReadiness) / 200, 0.2, 0.8);
-      const roll = Math.random();
+      const roll = rng.next();
       const sponsorSuccess = roll < proxyOdds;
 
       const instabilitySwing = sponsorSuccess ? -territory.instabilityModifier / 2 : territory.instabilityModifier / 3;
@@ -767,7 +770,7 @@ export function useConventionalWarfare({
             [sponsorId]: productionChange,
             [opposingId]: -productionChange,
           },
-        }),
+        }, rng),
       );
 
       onUpdateDisplay?.();
