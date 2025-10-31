@@ -497,15 +497,36 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
   }, [addNewsItem]);
 
   // Advance country infections each turn (spread mechanics)
-  const advanceCountryInfections = useCallback((currentTurn: number, nations: any[]) => {
+  const advanceCountryInfections = useCallback((currentTurn: number, nations: any[]): Record<string, number> => {
+    const casualtyTotals: Record<string, number> = {};
+    const nationLookup = new Map<string, any>();
+    nations.forEach((nation: any) => {
+      nationLookup.set(nation.id, nation);
+    });
+
     setPlagueState((prev) => {
       const newCountryInfections = new Map(prev.countryInfections);
       let dnaGained = 0;
       let newDetections = 0;
+      let totalDeathsThisTurn = 0;
 
       // Process each infected country
       newCountryInfections.forEach((infection, nationId) => {
         if (!infection.infected) return;
+
+        const nationData = nationLookup.get(nationId);
+        const populationMillions = typeof nationData?.population === 'number' ? Math.max(0, nationData.population) : 0;
+
+        if (!nationData || populationMillions <= 0) {
+          // Nation eliminated or unknown - halt infection progression
+          newCountryInfections.set(nationId, {
+            ...infection,
+            infected: false,
+            infectionLevel: 0,
+            deathRate: 0,
+          });
+          return;
+        }
 
         // Calculate infection spread
         const spreadRate = 0.5 + (prev.calculatedStats.totalInfectivity / 100);
@@ -514,37 +535,35 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
 
         const newInfectionLevel = Math.min(100, infection.infectionLevel + effectiveSpread);
 
-        // Calculate deaths based on lethality
+        // Calculate deaths based on lethality (convert population to individual count)
         const lethalityFactor = prev.calculatedStats.totalLethality / 100;
-        const population = 100000; // Simplified, could pull from nation data
+        const population = Math.max(0, populationMillions * 1_000_000);
         const newDeaths = Math.floor(
           infection.infectionLevel * population * lethalityFactor * 0.001
         );
 
-        // Update infection state
-        newCountryInfections.set(nationId, {
+        const updatedInfection = {
           ...infection,
           infectionLevel: newInfectionLevel,
           deaths: infection.deaths + newDeaths,
           deathRate: newDeaths,
-        });
+        };
 
-        // Award DNA from deaths
         if (newDeaths > 0) {
+          const existing = casualtyTotals[nationId] ?? 0;
+          casualtyTotals[nationId] = existing + newDeaths;
+          totalDeathsThisTurn += newDeaths;
+
           const deathDNA = Math.floor(newDeaths / 10000); // 1 DNA per 10k deaths
           dnaGained += deathDNA;
         }
 
-        // Check for detection
-        if (!infection.detectedBioWeapon && infection.infectionLevel > 10) {
-          const detectionChance = Math.min(80, infection.infectionLevel * 2);
+        if (!infection.detectedBioWeapon && newInfectionLevel > 10) {
+          const detectionChance = Math.min(80, newInfectionLevel * 2);
           if (Math.random() * 100 < detectionChance) {
-            newCountryInfections.set(nationId, {
-              ...infection,
-              detectedBioWeapon: true,
-              detectionTurn: currentTurn,
-              suspicionLevel: 50,
-            });
+            updatedInfection.detectedBioWeapon = true;
+            updatedInfection.detectionTurn = currentTurn;
+            updatedInfection.suspicionLevel = 50;
             newDetections++;
             addNewsItem(
               'intel',
@@ -553,6 +572,8 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
             );
           }
         }
+
+        newCountryInfections.set(nationId, updatedInfection);
       });
 
       // Spread to neighboring countries (simplified)
@@ -585,13 +606,29 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
         }
       }
 
+      let highestInfectionLevel = prev.plagueCompletionStats.peakInfection;
+      let activeInfections = 0;
+      newCountryInfections.forEach((infection) => {
+        if (infection.infected) {
+          activeInfections++;
+          highestInfectionLevel = Math.max(highestInfectionLevel, infection.infectionLevel);
+        }
+      });
+
       return {
         ...prev,
         countryInfections: newCountryInfections,
         dnaPoints: prev.dnaPoints + dnaGained,
         globalSuspicionLevel: Math.min(100, prev.globalSuspicionLevel + newDetections * 5),
+        plagueCompletionStats: {
+          totalKills: prev.plagueCompletionStats.totalKills + totalDeathsThisTurn,
+          peakInfection: Math.max(prev.plagueCompletionStats.peakInfection, highestInfectionLevel),
+          nationsInfected: Math.max(prev.plagueCompletionStats.nationsInfected, activeInfections),
+        },
       };
     });
+
+    return casualtyTotals;
   }, [addNewsItem]);
 
   // Activate cure deployment

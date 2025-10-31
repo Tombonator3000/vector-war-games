@@ -5347,6 +5347,26 @@ function endTurn() {
         }
       }
 
+      let populationAdjusted = false;
+      if (pandemicResult?.casualtyTotals) {
+        for (const [nationId, deaths] of Object.entries(pandemicResult.casualtyTotals)) {
+          if (deaths <= 0) continue;
+          const nation = nations.find(n => n.id === nationId);
+          if (!nation) continue;
+          const populationLoss = deaths / 1_000_000;
+          if (populationLoss <= 0) continue;
+          nation.population = Math.max(0, nation.population - populationLoss);
+          if (nation.isPlayer && player) {
+            player.population = Math.max(0, player.population - populationLoss);
+          }
+          populationAdjusted = true;
+        }
+      }
+
+      if (populationAdjusted) {
+        updateDisplay();
+      }
+
       // Trigger flashpoint check at start of new turn
       if (window.__gameTriggerFlashpoint) {
         const flashpoint = window.__gameTriggerFlashpoint(S.turn, S.defcon);

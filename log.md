@@ -729,3 +729,9 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-10-31T11:46:50+00:00
 - Ran legacy pandemic hook tests to ensure countermeasure updates remain stable.
+
+## 2025-10-31T12:22:47+00:00
+- Reviewed targeted infection handling to plan casualty propagation across player and AI bio-warfare flows.
+ 
+## 2025-10-31T12:23:02+00:00
+- Implemented per-nation casualty tracking for bio-warfare turns, updated AI integration and game loop population adjustments, refreshed UI hooks, and added regression coverage before running `npm run test -- useBioWarfare`.
