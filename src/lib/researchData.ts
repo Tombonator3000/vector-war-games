@@ -134,7 +134,7 @@ export const CYBER_RESEARCH: ResearchNode[] = [
     turns: 3,
     cost: { production: 28, intel: 22 },
     onComplete: nation => {
-      (window as any).__applyCyberResearchUnlock?.(nation, 'firewalls');
+      window.__applyCyberResearchUnlock?.(nation, 'firewalls');
     }
   },
   {
@@ -146,7 +146,7 @@ export const CYBER_RESEARCH: ResearchNode[] = [
     cost: { production: 32, intel: 30 },
     prerequisites: ['cyber_firewalls'],
     onComplete: nation => {
-      (window as any).__applyCyberResearchUnlock?.(nation, 'intrusion_detection');
+      window.__applyCyberResearchUnlock?.(nation, 'intrusion_detection');
     }
   },
   {
@@ -158,7 +158,7 @@ export const CYBER_RESEARCH: ResearchNode[] = [
     cost: { production: 35, intel: 30 },
     prerequisites: ['cyber_ids'],
     onComplete: nation => {
-      (window as any).__applyCyberResearchUnlock?.(nation, 'advanced_offense');
+      window.__applyCyberResearchUnlock?.(nation, 'advanced_offense');
     }
   },
   {
@@ -170,7 +170,7 @@ export const CYBER_RESEARCH: ResearchNode[] = [
     cost: { production: 30, intel: 35 },
     prerequisites: ['cyber_ids'],
     onComplete: nation => {
-      (window as any).__applyCyberResearchUnlock?.(nation, 'stealth_protocols');
+      window.__applyCyberResearchUnlock?.(nation, 'stealth_protocols');
     }
   },
   {
@@ -182,7 +182,7 @@ export const CYBER_RESEARCH: ResearchNode[] = [
     cost: { production: 40, intel: 40 },
     prerequisites: ['cyber_ids'],
     onComplete: nation => {
-      (window as any).__applyCyberResearchUnlock?.(nation, 'attribution_obfuscation');
+      window.__applyCyberResearchUnlock?.(nation, 'attribution_obfuscation');
     }
   },
   {
@@ -194,7 +194,7 @@ export const CYBER_RESEARCH: ResearchNode[] = [
     cost: { production: 50, intel: 45 },
     prerequisites: ['cyber_firewalls'],
     onComplete: nation => {
-      (window as any).__applyCyberResearchUnlock?.(nation, 'ai_defense');
+      window.__applyCyberResearchUnlock?.(nation, 'ai_defense');
     }
   },
   {
@@ -206,7 +206,7 @@ export const CYBER_RESEARCH: ResearchNode[] = [
     cost: { production: 80, intel: 60, uranium: 20 },
     prerequisites: ['cyber_advanced_offense', 'cyber_attribution_obfuscation'],
     onComplete: nation => {
-      (window as any).__applyCyberResearchUnlock?.(nation, 'cyber_superweapon');
+      window.__applyCyberResearchUnlock?.(nation, 'cyber_superweapon');
     }
   },
 ];

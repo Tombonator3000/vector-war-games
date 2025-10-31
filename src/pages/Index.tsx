@@ -25,6 +25,8 @@ import {
 import { useBioWarfare } from '@/hooks/useBioWarfare';
 import { initializeAllAINations, processAllAINationsBioWarfare } from '@/lib/aiBioWarfareIntegration';
 import { DEPLOYMENT_METHODS } from '@/types/bioDeployment';
+import type { BioLabTier } from '@/types/bioLab';
+import type { EvolutionNodeId } from '@/types/biowarfare';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import { FlashpointOutcomeModal } from '@/components/FlashpointOutcomeModal';
 import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
@@ -708,8 +710,8 @@ function applyDoctrineEffects(nation: Nation, doctrineKey?: DoctrineKey) {
       nation.warheads[100] = (nation.warheads[100] || 0) + 1;
       nation.researched = nation.researched || {};
       nation.researched.warhead_100 = true;
-      if ((window as any).__gameAddNewsItem) {
-        (window as any).__gameAddNewsItem('military', `${nation.name} adopts First Strike Doctrine`, 'critical');
+      if (window.__gameAddNewsItem) {
+        window.__gameAddNewsItem('military', `${nation.name} adopts First Strike Doctrine`, 'critical');
       }
       break;
     }
@@ -1650,7 +1652,7 @@ const AudioSys = {
     if (!this.audioSupported) return;
     if (!this.audioContext) {
       try {
-        const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextCtor) {
           throw new Error('Web Audio API is not available in this browser');
         }
@@ -2020,8 +2022,8 @@ const AudioSys = {
 
 // Atmosphere effects
 const Atmosphere = {
-  clouds: [] as any[],
-  stars: [] as any[],
+  clouds: [] as Array<{ x: number; y: number; sizeX: number; sizeY: number; speed: number }>,
+  stars: [] as Array<{ x: number; y: number; brightness: number }>,
   initialized: false,
 
   init() {
@@ -2095,7 +2097,7 @@ const Atmosphere = {
 
 // Ocean effects
 const Ocean = {
-  waves: [] as any[],
+  waves: [] as never[],
   
   init() {
     this.waves = [];
@@ -2114,7 +2116,7 @@ const Ocean = {
 
 // City Lights system
 const CityLights = {
-  cities: [] as any[],
+  cities: [] as Array<{ lat: number; lon: number; brightness: number }>,
   
   generate() {
     this.cities = [];
@@ -2189,16 +2191,18 @@ const CityLights = {
 };
 
 // Helper functions
-function canAfford(nation: Nation, cost: any): boolean {
+function canAfford(nation: Nation, cost: Record<string, number>): boolean {
   return Object.entries(cost).every(([resource, amount]) => {
-    const current = (nation as any)[resource] || 0;
-    return current >= (amount as number);
+    const current = nation[resource as keyof Nation] as number || 0;
+    return current >= amount;
   });
 }
 
-function pay(nation: Nation, cost: any) {
+function pay(nation: Nation, cost: Record<string, number>) {
   Object.entries(cost).forEach(([resource, amount]) => {
-    (nation as any)[resource] -= amount as number;
+    const key = resource as keyof Nation;
+    const currentValue = nation[key] as number;
+    (nation[key] as number) = currentValue - amount;
   });
 }
 
@@ -2719,13 +2723,13 @@ function maybeBanter(nation: Nation, chance: number, pool?: string) {
   if (Math.random() > chance) return;
   
   // Use the expanded banter system if available
-  if (typeof window !== 'undefined' && (window as any).banterSay) {
+  if (typeof window !== 'undefined' && window.banterSay) {
     try {
       // Determine pool based on context if not specified
       if (!pool && nation.ai) {
         pool = nation.ai; // Use AI personality as default pool
       }
-      (window as any).banterSay(pool || 'default', nation, 1);
+      window.banterSay(pool || 'default', nation, 1);
       return;
     } catch (e) {
       // Fallback to basic banter if expanded system fails
@@ -2911,9 +2915,9 @@ function launch(from: Nation, to: Nation, yieldMT: number) {
   }
   
   // Generate news for launch
-  if ((window as any).__gameAddNewsItem) {
+  if (window.__gameAddNewsItem) {
     const priority = yieldMT > 50 ? 'critical' : 'urgent';
-    (window as any).__gameAddNewsItem(
+    window.__gameAddNewsItem(
       'military',
       `${from.name} launches ${yieldMT}MT warhead at ${to.name}`,
       priority
@@ -4513,7 +4517,7 @@ function evaluateDiplomaticProgress(player: Nation) {
       title: 'Diplomatic Momentum',
       description: 'World leaders are rallying behind you. Maintain the peace to secure a diplomatic victory.'
     });
-    (window as any).__gameAddNewsItem?.('diplomatic', 'Global coalition forming around your leadership', 'important');
+    window.__gameAddNewsItem?.('diplomatic', 'Global coalition forming around your leadership', 'important');
   }
 
   const victoryAchieved =
@@ -4527,7 +4531,7 @@ function evaluateDiplomaticProgress(player: Nation) {
       title: 'Diplomatic Victory Achieved',
       description: 'A worldwide alliance recognizes your leadership.'
     });
-    (window as any).__gameAddNewsItem?.('diplomatic', 'Diplomatic triumph! A global coalition is declared.', 'critical');
+    window.__gameAddNewsItem?.('diplomatic', 'Diplomatic triumph! A global coalition is declared.', 'critical');
   }
 
   return {
@@ -5065,14 +5069,14 @@ function aiTurn(n: Nation) {
     S.turn,
     COSTS,
     {
-      templates: (window as any).__conventionalWarfare?.templates,
-      trainUnit: (window as any).__conventionalWarfare?.trainUnit,
-      deployUnit: (window as any).__conventionalWarfare?.deployUnit,
-      resolveBorderConflict: (window as any).__conventionalWarfare?.resolveBorderConflict,
-      getUnitsForNation: (window as any).__conventionalWarfare?.getUnitsForNation,
+      templates: window.__conventionalWarfare?.templates,
+      trainUnit: window.__conventionalWarfare?.trainUnit,
+      deployUnit: window.__conventionalWarfare?.deployUnit,
+      resolveBorderConflict: window.__conventionalWarfare?.resolveBorderConflict,
+      getUnitsForNation: window.__conventionalWarfare?.getUnitsForNation,
     },
     {
-      launchCyberAttack: (window as any).__cyberWarfare?.launchCyberAttack,
+      launchCyberAttack: window.__cyberWarfare?.launchCyberAttack,
     },
     log
   );
@@ -5082,7 +5086,7 @@ function aiTurn(n: Nation) {
     return;
   }
 
-  const cyberOutcome = (window as any).__cyberAiPlan?.(n.id);
+  const cyberOutcome = window.__cyberAiPlan?.(n.id);
   if (cyberOutcome?.executed) {
     updateDisplay();
   }
@@ -5124,14 +5128,14 @@ function endTurn() {
       processAllAINationsBioWarfare(nations, S.turn, difficulty, {
         onLabConstructionStart: (nationId, tier) => {
           const nation = nations.find(n => n.id === nationId);
-          if (nation && (window as any).__gameAddNewsItem) {
-            (window as any).__gameAddNewsItem('military', `${nation.name} has begun constructing bio-laboratory (Tier ${tier})`, 'alert');
+          if (nation && window.__gameAddNewsItem) {
+            window.__gameAddNewsItem('military', `${nation.name} has begun constructing bio-laboratory (Tier ${tier})`, 'alert');
           }
         },
         onPlagueSelected: (nationId, plagueType) => {
           const nation = nations.find(n => n.id === nationId);
-          if (nation && (window as any).__gameAddNewsItem) {
-            (window as any).__gameAddNewsItem('crisis', `INTELLIGENCE: ${nation.name} has initiated bio-weapon program`, 'critical');
+          if (nation && window.__gameAddNewsItem) {
+            window.__gameAddNewsItem('crisis', `INTELLIGENCE: ${nation.name} has initiated bio-weapon program`, 'critical');
           }
         },
         onNodeEvolved: (nationId, nodeId) => {
@@ -5139,16 +5143,16 @@ function endTurn() {
         },
         onDeployment: (nationId, targets) => {
           const nation = nations.find(n => n.id === nationId);
-          if (nation && (window as any).__gameAddNewsItem) {
-            (window as any).__gameAddNewsItem('crisis', `ALERT: Bio-weapon deployment detected from ${nation.name}`, 'critical');
+          if (nation && window.__gameAddNewsItem) {
+            window.__gameAddNewsItem('crisis', `ALERT: Bio-weapon deployment detected from ${nation.name}`, 'critical');
           }
         }
       });
 
-      (window as any).__cyberAdvance?.();
+      window.__cyberAdvance?.();
 
       const player = PlayerManager.get();
-      const pandemicResult = (window as any).__pandemicAdvance?.({
+      const pandemicResult = window.__pandemicAdvance?.({
         turn: S.turn,
         defcon: S.defcon,
         playerPopulation: player?.population ?? 0
@@ -5173,10 +5177,10 @@ function endTurn() {
       }
 
       // Trigger flashpoint check at start of new turn
-      if ((window as any).__gameTriggerFlashpoint) {
-        const flashpoint = (window as any).__gameTriggerFlashpoint(S.turn, S.defcon);
+      if (window.__gameTriggerFlashpoint) {
+        const flashpoint = window.__gameTriggerFlashpoint(S.turn, S.defcon);
         if (flashpoint) {
-          (window as any).__gameAddNewsItem?.('crisis', `CRITICAL: ${flashpoint.title}`, 'critical');
+          window.__gameAddNewsItem?.('crisis', `CRITICAL: ${flashpoint.title}`, 'critical');
         }
       }
 
@@ -5229,8 +5233,8 @@ function endTurn() {
 
             // Generate breaking news
             const newsItem = generateRegimeChangeNews(nation.name, result);
-            if ((window as any).__gameAddNewsItem) {
-              (window as any).__gameAddNewsItem('crisis', newsItem.text, newsItem.priority);
+            if (window.__gameAddNewsItem) {
+              window.__gameAddNewsItem('crisis', newsItem.text, newsItem.priority);
             }
           }
         }
@@ -5248,15 +5252,15 @@ function endTurn() {
           );
 
           warnings.forEach(warning => {
-            if ((window as any).__gameAddNewsItem) {
-              (window as any).__gameAddNewsItem('crisis', warning.text, warning.priority);
+            if (window.__gameAddNewsItem) {
+              window.__gameAddNewsItem('crisis', warning.text, warning.priority);
             }
           });
         }
       }
 
       // Generate enhanced political news (every 2-3 turns)
-      if ((window as any).__gameAddNewsItem && S.turn % 2 === 0) {
+      if (window.__gameAddNewsItem && S.turn % 2 === 0) {
         const newsNations = nations
           .filter(n => n.population > 0)
           .map(n => {
@@ -5274,7 +5278,7 @@ function endTurn() {
 
         const turnNews = generateTurnNews(newsNations, S.turn);
         turnNews.forEach(item => {
-          (window as any).__gameAddNewsItem(item.category, item.text, item.priority);
+          window.__gameAddNewsItem(item.category, item.text, item.priority);
         });
       }
 
@@ -6358,11 +6362,11 @@ export default function NoradVector() {
   );
 
   useEffect(() => {
-    (window as any).__cyberAdvance = advanceCyberTurn;
-    (window as any).__cyberAiPlan = runCyberAiPlan;
+    window.__cyberAdvance = advanceCyberTurn;
+    window.__cyberAiPlan = runCyberAiPlan;
     return () => {
-      delete (window as any).__cyberAdvance;
-      delete (window as any).__cyberAiPlan;
+      delete window.__cyberAdvance;
+      delete window.__cyberAiPlan;
     };
   }, [advanceCyberTurn, runCyberAiPlan]);
 
@@ -6458,11 +6462,11 @@ export default function NoradVector() {
     advancePandemicTurnRef.current = handlePandemicAdvance;
 
     // Make available globally
-    (window as any).__gameAddNewsItem = addNewsItem;
-    (window as any).__gameTriggerFlashpoint = triggerRandomFlashpoint;
-    (window as any).__pandemicTrigger = (payload: unknown) => triggerPandemicRef.current(payload as any);
-    (window as any).__pandemicCountermeasure = (payload: unknown) => applyPandemicCountermeasureRef.current(payload as any);
-    (window as any).__pandemicAdvance = (context: unknown) => advancePandemicTurnRef.current(context as any);
+    window.__gameAddNewsItem = addNewsItem;
+    window.__gameTriggerFlashpoint = triggerRandomFlashpoint;
+    window.__pandemicTrigger = (payload: unknown) => triggerPandemicRef.current(payload as any);
+    window.__pandemicCountermeasure = (payload: unknown) => applyPandemicCountermeasureRef.current(payload as any);
+    window.__pandemicAdvance = (context: unknown) => advancePandemicTurnRef.current(context as any);
   }, [addNewsItem, triggerRandomFlashpoint, handlePandemicTrigger, handlePandemicCountermeasure, handlePandemicAdvance]);
 
   useEffect(() => {
@@ -8023,7 +8027,7 @@ export default function NoradVector() {
             return false;
           }
           {
-            const warheadTypes = Object.keys(target.warheads || {}).filter(key => (target.warheads?.[Number(key)] || target.warheads?.[key as any]) > 0);
+            const warheadTypes = Object.keys(target.warheads || {}).filter(key => (target.warheads?.[Number(key)] || 0) > 0);
             if (warheadTypes.length === 0) {
               toast({ title: 'No targets', description: `${target.name} has no active warheads to sabotage.` });
               return false;
@@ -8193,7 +8197,7 @@ export default function NoradVector() {
     const player = getNationById(playerNationId);
     if (!player) return;
 
-    const result = startLabConstruction(tier as any, player.production, player.uranium);
+    const result = startLabConstruction(tier as BioLabTier, player.production, player.uranium);
 
     if (result.success) {
       toast({
@@ -8705,8 +8709,8 @@ export default function NoradVector() {
             title: '🕊️ DEFCON Improved', 
             description: `UN Security Council approves de-escalation. DEFCON now at ${S.defcon}.`,
           });
-          if ((window as any).__gameAddNewsItem) {
-            (window as any).__gameAddNewsItem('diplomatic', `UN Security Council approves de-escalation - DEFCON ${S.defcon}`, 'important');
+          if (window.__gameAddNewsItem) {
+            window.__gameAddNewsItem('diplomatic', `UN Security Council approves de-escalation - DEFCON ${S.defcon}`, 'important');
           }
           updateDisplay();
           consumeAction();
@@ -10410,8 +10414,8 @@ export default function NoradVector() {
         playerActions={S.actionsRemaining}
         playerIntel={PlayerManager.get()?.intel || 0}
         onSelectPlagueType={selectPlagueType}
-        onEvolveNode={(nodeId: string) => evolveNode({ nodeId: nodeId as any })}
-        onDevolveNode={(nodeId: string) => devolveNode({ nodeId: nodeId as any })}
+        onEvolveNode={(nodeId: string) => evolveNode({ nodeId: nodeId as EvolutionNodeId })}
+        onDevolveNode={(nodeId: string) => devolveNode({ nodeId: nodeId as EvolutionNodeId })}
         onDeployBioWeapon={handleDeployBioWeapon}
       />
 

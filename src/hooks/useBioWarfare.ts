@@ -10,7 +10,7 @@ import { useBioLab } from './useBioLab';
 import { useRNG } from '@/contexts/RNGContext';
 import type { PandemicTurnContext, PandemicTurnEffect } from './usePandemic';
 import type { NewsItem } from '@/components/NewsTicker';
-import type { PlagueState } from '@/types/biowarfare';
+import type { PlagueState, SymptomId } from '@/types/biowarfare';
 import { getPlagueTypeById } from '@/lib/evolutionData';
 
 type AddNewsItem = (category: NewsItem['category'], text: string, priority: NewsItem['priority']) => void;
@@ -129,13 +129,13 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
       // Bio-weapon: Auto-increasing lethality (evolve random lethal symptom every 5 turns)
       if (plagueType?.autoIncreasingLethality && context.turn % 5 === 0) {
         // Force-evolve a random lethal symptom if available
-        const lethalSymptoms = ['total-organ-failure', 'hemorrhagic-shock', 'necrosis', 'cytokine-storm', 'systemic-infection', 'liquefaction'];
+        const lethalSymptoms: SymptomId[] = ['total-organ-failure', 'hemorrhagic-shock', 'necrosis', 'cytokine-storm', 'systemic-infection', 'liquefaction'];
         const availableLethal = lethalSymptoms.filter(
-          (id) => !evolution.plagueState.unlockedNodes.has(id as any)
+          (id) => !evolution.plagueState.unlockedNodes.has(id)
         );
         if (availableLethal.length > 0) {
           const randomSymptom = rng.choice(availableLethal);
-          evolution.evolveNode({ nodeId: randomSymptom as any, forced: true });
+          evolution.evolveNode({ nodeId: randomSymptom, forced: true });
           addNewsItem('crisis', `Bio-weapon unstable mutation: ${randomSymptom} evolved automatically`, 'urgent');
         }
       }
@@ -147,13 +147,13 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
 
     // Prion: Random late-game lethal symptom mutation
     if (plagueType?.id === 'prion' && pandemic.pandemicState.globalInfection > 40 && rng.nextBool(0.15)) {
-      const lethalSymptoms = ['necrosis', 'paralysis', 'coma', 'total-organ-failure'];
+      const lethalSymptoms: SymptomId[] = ['necrosis', 'paralysis', 'coma', 'total-organ-failure'];
       const availableSymptoms = lethalSymptoms.filter(
-        (id) => !evolution.plagueState.unlockedNodes.has(id as any)
+        (id) => !evolution.plagueState.unlockedNodes.has(id)
       );
       if (availableSymptoms.length > 0) {
         const randomSymptom = rng.choice(availableSymptoms);
-        evolution.evolveNode({ nodeId: randomSymptom as any, forced: true });
+        evolution.evolveNode({ nodeId: randomSymptom, forced: true });
         addNewsItem('science', `Prion cascade: ${randomSymptom} manifested`, 'important');
       }
     }

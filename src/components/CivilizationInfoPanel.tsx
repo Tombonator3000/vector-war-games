@@ -61,7 +61,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   const enemiesEliminated = nations.filter(n => n && !n.isPlayer && n.population <= 0).length;
   const militaryProgress = totalNations > 1 ? (enemiesEliminated / (totalNations - 1)) * 100 : 0;
   const economicProgress = Math.min(100, (player.cities / 12) * 100);
-  const culturalProgress = Math.min(100, ((player as any).culture || 0));
+  const culturalProgress = Math.min(100, (player.intel / 50) * 100);
 
   // Calculate total military power
   const calculateMilitaryPower = (nation: Nation): number => {
@@ -377,7 +377,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
                 />
               </div>
               <div className="text-xs text-gray-400 mt-1">
-                Cultural influence: {(player as any).culture || 0} / 100
+                Cultural influence: {Math.min(100, Math.round((player.intel / 50) * 100))} / 100
               </div>
             </div>
           </div>
@@ -559,7 +559,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
           ? (enemyEliminatedCount / (totalNations - 1)) * 100
           : 0;
         const enemyEconomicProgress = Math.min(100, (enemy.cities / 12) * 100);
-        const enemyCulturalProgress = Math.min(100, ((enemy as any).culture || 0));
+        const enemyCulturalProgress = Math.min(100, (enemy.intel / 50) * 100);
 
         const maxProgress = Math.max(
           enemyMilitaryProgress,
