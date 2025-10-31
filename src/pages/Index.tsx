@@ -104,6 +104,9 @@ import {
 } from '@/lib/electionSystem';
 import { enhancedAIActions } from '@/lib/aiActionEnhancements';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
+import { IntroScreen } from '@/components/setup/IntroScreen';
+import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen';
+import { DoctrineSelectionScreen } from '@/components/setup/DoctrineSelectionScreen';
 import { canAfford, pay, getCityCost, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
 import { project, toLonLat, getPoliticalFill, resolvePublicAssetPath, POLITICAL_COLOR_PALETTE, type ProjectionContext } from '@/lib/renderingUtils';
@@ -8353,179 +8356,48 @@ export default function NoradVector() {
 
 
   // Render functions for different phases
+  // Screen render functions - now using extracted components (Phase 7 refactoring)
   const renderIntroScreen = () => {
-    const highscores = JSON.parse(Storage.getItem('highscores') || '[]').slice(0, 5); // Top 5
-
+    const highscores = JSON.parse(Storage.getItem('highscores') || '[]').slice(0, 5);
     return (
-      <>
-        <ScenarioSelectionPanel
-          open={isScenarioPanelOpen}
-          onOpenChange={setIsScenarioPanelOpen}
-          scenarios={scenarioOptions}
-          selectedScenarioId={selectedScenarioId}
-          onSelect={handleScenarioSelect}
-        />
-        <div className="intro-screen">
-          <Starfield />
-          <div className="intro-screen__scanlines" aria-hidden="true" />
-
-          <div className="intro-screen__left">
-            <SpinningEarth />
-
-            {/* Highscore Section */}
-            {highscores.length > 0 && (
-              <div className="absolute bottom-8 left-8 bg-black/80 border border-cyan-500/50 rounded-lg p-4 w-80 backdrop-blur-sm">
-                <h3 className="text-lg font-mono text-cyan-400 mb-3 tracking-wider uppercase flex items-center gap-2">
-                  <span className="text-yellow-400">★</span>
-                  Hall of Fame
-                  <span className="text-yellow-400">★</span>
-                </h3>
-                <div className="space-y-2">
-                  {highscores.map((hs: any, index: number) => (
-                    <div
-                      key={index}
-                      className={`flex items-center justify-between text-xs font-mono p-2 rounded ${
-                        index === 0 ? 'bg-yellow-500/20 border border-yellow-500/30' :
-                        index === 1 ? 'bg-gray-500/20 border border-gray-500/30' :
-                        index === 2 ? 'bg-orange-500/20 border border-orange-500/30' :
-                        'bg-cyan-500/10'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`font-bold ${
-                          index === 0 ? 'text-yellow-400' :
-                          index === 1 ? 'text-gray-300' :
-                          index === 2 ? 'text-orange-400' :
-                          'text-cyan-400'
-                        }`}>
-                          #{index + 1}
-                        </span>
-                        <span className="text-cyan-200 truncate max-w-[120px]">{hs.name}</span>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-yellow-400 font-bold">{hs.score.toLocaleString()}</span>
-                        <span className="text-cyan-300/70 text-[10px]">{hs.turns} turns</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="intro-screen__right">
-            <IntroLogo />
-
-            <p className="intro-screen__tagline">Want to play a game?</p>
-
-            <div className="intro-screen__menu">
-              <button onClick={handleIntroStart} className="intro-screen__menu-btn intro-screen__menu-btn--primary">
-                <span className="intro-screen__menu-btn-icon">▶</span>
-                Start Game
-                <span className="mt-1 block text-[10px] uppercase tracking-[0.35em] text-cyan-300">
-                  {selectedScenario.name}
-                </span>
-              </button>
-              <button className="intro-screen__menu-btn" onClick={() => setIsScenarioPanelOpen(true)}>
-                <span className="intro-screen__menu-btn-icon">⚔</span>
-                Campaigns
-              </button>
-              <button className="intro-screen__menu-btn" onClick={() => alert('Options coming soon!')}>
-                <span className="intro-screen__menu-btn-icon">⚙</span>
-                Options
-              </button>
-              <button className="intro-screen__menu-btn" onClick={() => alert('Credits coming soon!')}>
-                <span className="intro-screen__menu-btn-icon">★</span>
-                Credits
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
+      <IntroScreen
+        scenarioOptions={scenarioOptions}
+        selectedScenarioId={selectedScenarioId}
+        selectedScenario={selectedScenario}
+        isScenarioPanelOpen={isScenarioPanelOpen}
+        highscores={highscores}
+        onStart={handleIntroStart}
+        onScenarioSelect={handleScenarioSelect}
+        onOpenScenarioPanel={() => setIsScenarioPanelOpen(true)}
+        onCloseScenarioPanel={setIsScenarioPanelOpen}
+      />
     );
   };
 
   const renderLeaderSelection = () => (
-    <div ref={interfaceRef} className="command-interface">
-      <div className="command-interface__glow" aria-hidden="true" />
-      <div className="command-interface__scanlines" aria-hidden="true" />
-      
-      <div className="fixed inset-0 bg-gradient-to-br from-background via-deep-space to-background flex items-center justify-center p-8">
-        <div className="max-w-4xl w-full">
-          <h2 className="text-3xl font-mono text-cyan text-center mb-8 tracking-widest uppercase glow-text">
-            Select Commander
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {leaders.map((leader) => (
-              <div
-                key={leader.name}
-                onClick={() => {
-                  setSelectedLeader(leader.name);
-                  setGamePhase('doctrine');
-                }}
-                className="bg-card border border-cyan/30 p-6 rounded-lg cursor-pointer hover:border-cyan hover:bg-cyan/10 transition-all duration-300 hover:shadow-lg hover:shadow-cyan/20"
-              >
-                <h3 className="text-xl font-mono text-neon-green mb-2">{leader.name}</h3>
-                <p className="text-sm text-muted-foreground uppercase tracking-wide">{leader.ai}</p>
-              </div>
-            ))}
-          </div>
-          
-          <div className="text-center">
-            <Button
-              onClick={() => setGamePhase('intro')}
-              className="px-6 py-2 bg-transparent border border-muted-foreground text-muted-foreground hover:border-cyan hover:text-cyan transition-all duration-300 font-mono uppercase tracking-wide"
-            >
-              Back
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <LeaderSelectionScreen
+      interfaceRef={interfaceRef}
+      leaders={leaders}
+      onSelectLeader={(leaderName) => {
+        setSelectedLeader(leaderName);
+        setGamePhase('doctrine');
+      }}
+      onBack={() => setGamePhase('intro')}
+    />
   );
 
   const renderDoctrineSelection = () => (
-    <div ref={interfaceRef} className="command-interface">
-      <div className="command-interface__glow" aria-hidden="true" />
-      <div className="command-interface__scanlines" aria-hidden="true" />
-      
-      <div className="fixed inset-0 bg-gradient-to-br from-background via-deep-space to-background flex items-center justify-center p-8">
-        <div className="max-w-6xl w-full">
-          <h2 className="text-3xl font-mono text-neon-magenta text-center mb-2 tracking-widest uppercase glow-text">
-            Select Doctrine
-          </h2>
-          <p className="text-center text-cyan font-mono mb-8">Commander: {selectedLeader}</p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {Object.entries(doctrines).map(([key, doctrine]) => (
-              <div
-                key={key}
-                onClick={() => {
-                  setSelectedDoctrine(key);
-                  startGame(selectedLeader ?? undefined, key);
-                  setGamePhase('game');
-                }}
-                className="bg-card border border-neon-magenta/30 p-6 rounded-lg cursor-pointer hover:border-neon-magenta hover:bg-neon-magenta/10 transition-all duration-300 hover:shadow-lg hover:shadow-neon-magenta/20 synthwave-card"
-              >
-                <h3 className="text-xl font-mono text-neon-yellow mb-2">{doctrine.name}</h3>
-                <p className="text-sm text-cyan mb-3">{doctrine.desc}</p>
-                <p className="text-xs text-neon-green font-mono">{doctrine.effects}</p>
-              </div>
-            ))}
-          </div>
-          
-          <div className="text-center">
-            <Button
-              onClick={() => setGamePhase('leader')}
-              className="px-6 py-2 bg-transparent border border-muted-foreground text-muted-foreground hover:border-neon-magenta hover:text-neon-magenta transition-all duration-300 font-mono uppercase tracking-wide"
-            >
-              Back
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <DoctrineSelectionScreen
+      interfaceRef={interfaceRef}
+      doctrines={doctrines}
+      selectedLeader={selectedLeader}
+      onSelectDoctrine={(doctrineKey) => {
+        setSelectedDoctrine(doctrineKey);
+        startGame(selectedLeader ?? undefined, doctrineKey);
+        setGamePhase('game');
+      }}
+      onBack={() => setGamePhase('leader')}
+    />
   );
 
   // Early returns for different phases
