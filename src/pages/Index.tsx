@@ -5045,7 +5045,20 @@ function aiTurn(n: Nation) {
     }
   }
 
-  // 10. ENHANCED AI ACTIONS - Cyber, Immigration, Conventional Warfare
+  // 10. CULTURAL VICTORY ATTEMPT - Check if AI has achieved cultural dominance
+  const totalIntel = nations.reduce((sum, nation) => sum + (nation.intel || 0), 0);
+  if (n.intel >= 50 && totalIntel > 0) {
+    const influenceShare = n.intel / totalIntel;
+    // AI attempts cultural victory if they have >50% influence
+    if (influenceShare > 0.5 && Math.random() < 0.8) {
+      n.intel -= 50;
+      log(`${n.name} achieves CULTURAL VICTORY through propaganda dominance!`);
+      endGame(false, `${n.name} wins through cultural hegemony - their propaganda has conquered the world's minds!`);
+      return;
+    }
+  }
+
+  // 11. ENHANCED AI ACTIONS - Cyber, Immigration, Conventional Warfare
   const enhancedActionExecuted = enhancedAIActions(
     n,
     nations,
