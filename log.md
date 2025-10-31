@@ -703,3 +703,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-10-31T11:32:48+00:00
 - Built the ScenarioSelectionPanel modal, integrated scenario persistence, DEFCON initialization, and save metadata updates to ensure the chosen scenario propagates into the campaign start sequence.
+
+## 2025-10-31T10:33:58Z
+- Added Cuban Crisis-specific flashpoint chains, scenario-aware flashpoint selection, and aligned tests with the updated probability model.
