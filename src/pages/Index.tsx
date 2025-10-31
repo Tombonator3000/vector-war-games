@@ -898,6 +898,43 @@ const AudioSys = {
 
   playSFX(type: string) {
     if (!this.sfxEnabled) return;
+    
+    // Try playing real sound effect first
+    try {
+      // Map AudioSys types to audioManager keys
+      const soundMap: Record<string, string> = {
+        'explosion': 'nuclear-explosion',
+        'launch': 'missile-launch',
+        'click': 'ui-click',
+        'success': 'research-complete',
+        'error': 'alert-warning',
+        'build': 'build-complete',
+        'research': 'research-complete',
+        'intel': 'ui-success',
+        'defcon': 'defcon-change',
+        'endturn': 'turn-start',
+      };
+      
+      const soundKey = soundMap[type];
+      if (soundKey) {
+        import('@/utils/audioManager').then(({ audioManager }) => {
+          if (type === 'explosion' || type === 'launch' || type === 'defcon') {
+            audioManager.playSFX(soundKey);
+          } else if (type === 'error') {
+            audioManager.playCritical(soundKey);
+          } else {
+            audioManager.playUI(soundKey);
+          }
+        }).catch(() => {
+          // Fall through to oscillator backup
+        });
+        return; // Don't use oscillator if we're trying real sound
+      }
+    } catch (error) {
+      // Fall through to oscillator backup
+    }
+    
+    // Fallback: Use oscillator-based sounds
     if (!this.audioSupported) return;
     if (!this.audioContext) this.init();
     const context = this.audioContext;
