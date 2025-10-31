@@ -1407,18 +1407,36 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   nations.push(cubaNation);
 
   // Initialize threat levels (historically accurate tensions)
-  usaNation.threats = { ussr: 75, cuba: 90 }; // Very high threat from Cuba
-  ussrNation.threats = { usa: 70, cuba: 0 }; // Cuba is allied
-  cubaNation.threats = { usa: 95, ussr: 0 }; // Extreme threat from USA
+  usaNation.threats = {
+    [ussrNation.id]: 75,
+    [cubaNation.id]: 90,
+  }; // Very high threat from Cuba
+  ussrNation.threats = {
+    [usaNation.id]: 70,
+    [cubaNation.id]: 0,
+  }; // Cuba is allied
+  cubaNation.threats = {
+    [usaNation.id]: 95,
+    [ussrNation.id]: 0,
+  }; // Extreme threat from USA
 
   // Set up alliances
-  ussrNation.alliances = ['cuba'];
-  cubaNation.alliances = ['ussr'];
+  ussrNation.alliances = [cubaNation.id];
+  cubaNation.alliances = [ussrNation.id];
 
   // Initialize relationships
-  usaNation.relationships = { ussr: -80, cuba: -95 };
-  ussrNation.relationships = { usa: -80, cuba: 85 };
-  cubaNation.relationships = { usa: -95, ussr: 85 };
+  usaNation.relationships = {
+    [ussrNation.id]: -80,
+    [cubaNation.id]: -95,
+  };
+  ussrNation.relationships = {
+    [usaNation.id]: -80,
+    [cubaNation.id]: 85,
+  };
+  cubaNation.relationships = {
+    [usaNation.id]: -95,
+    [ussrNation.id]: 85,
+  };
 
   // Initialize conventional warfare state
   const conventionalState = createDefaultConventionalState(
