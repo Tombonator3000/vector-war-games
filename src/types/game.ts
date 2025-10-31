@@ -2,6 +2,14 @@ import type { BioLabFacility } from './bioLab';
 import type { PlagueState } from './biowarfare';
 import type { ScenarioConfig } from './scenario';
 
+export interface RelationshipEvent {
+  turn: number;
+  withNation: string;
+  delta: number;
+  reason: string;
+  newValue: number;
+}
+
 export interface NationCyberProfile {
   readiness: number;
   maxReadiness: number;
@@ -82,8 +90,10 @@ export interface Nation {
   satelliteIntelBonus?: number;
   treatyLockDuration?: number;
 
-  // Additional properties from research/doctrines
+  // Diplomacy and relationships
   alliances?: string[];
+  relationships?: Record<string, number>; // Nation ID -> Relationship score (-100 to +100)
+  relationshipHistory?: RelationshipEvent[]; // History of relationship changes
   readinessRegen?: number;
   detectionReduction?: number;
   buildCostReduction?: number;

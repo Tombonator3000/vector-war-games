@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useRNG } from '@/contexts/RNGContext';
 
 export interface FlashpointEvent {
   id: string;
@@ -1162,6 +1163,7 @@ function formatConsequences(outcome: Record<string, any>): Array<{ label: string
 }
 
 export function useFlashpoints() {
+  const { rng } = useRNG();
   const [activeFlashpoint, setActiveFlashpoint] = useState<FlashpointEvent | null>(null);
   const [flashpointHistory, setFlashpointHistory] = useState<FlashpointHistoryEntry[]>([]);
   const [pendingFollowUps, setPendingFollowUps] = useState<Array<{ parentId: string; category: string; outcome: string; triggerAtTurn: number }>>([]);
@@ -1197,8 +1199,8 @@ export function useFlashpoints() {
 
     const probability = calculateFlashpointProbability(turn, defcon);
 
-    if (Math.random() < probability) {
-      const template = FLASHPOINT_TEMPLATES[Math.floor(Math.random() * FLASHPOINT_TEMPLATES.length)];
+    if (rng.next() < probability) {
+      const template = rng.choice(FLASHPOINT_TEMPLATES);
       const baseFlashpoint: FlashpointEvent = {
         ...template,
         id: `flashpoint_${Date.now()}`,
@@ -1234,7 +1236,7 @@ export function useFlashpoints() {
       }
     };
 
-    const success = Math.random() < option.outcome.probability;
+    const success = rng.next() < option.outcome.probability;
     const outcome = success ? option.outcome.success : option.outcome.failure;
 
     // Generate narrative outcome
@@ -1293,7 +1295,7 @@ export function useFlashpoints() {
         parentId: flashpoint.id,
         category: categoryKey,
         outcome: followUpKey,
-        triggerAtTurn: currentTurn + Math.floor(Math.random() * 3) + 2 // 2-4 turns later
+        triggerAtTurn: currentTurn + rng.nextInt(2, 4) // 2-4 turns later
       }]);
     }
 

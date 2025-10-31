@@ -6,6 +6,7 @@ import {
   type PoliticalEventOption,
   type PoliticalEventThresholdKey,
 } from '@/lib/events/politicalEvents';
+import { useRNG } from '@/contexts/RNGContext';
 
 const politicalEventIndex = new Map<string, PoliticalEventDefinition>(
   politicalEvents.map((event) => [event.id, event]),
@@ -128,11 +129,11 @@ function seedMetrics(nation: GovernanceNationRef | undefined): GovernanceMetrics
   };
 }
 
-function pickOutcome(option: PoliticalEventOption) {
+function pickOutcome(option: PoliticalEventOption, rng: { next: () => number }) {
   if (option.outcomes.length === 1) {
     return option.outcomes[0];
   }
-  const roll = Math.random();
+  const roll = rng.next();
   let accumulator = 0;
   for (const outcome of option.outcomes) {
     const chance = typeof outcome.chance === 'number' ? outcome.chance : 1 / option.outcomes.length;
@@ -187,6 +188,7 @@ export function useGovernance({
   onApplyDelta,
   onAddNewsItem,
 }: UseGovernanceOptions): UseGovernanceReturn {
+  const { rng } = useRNG();
   const [metrics, setMetrics] = useState<Record<string, GovernanceMetrics>>(() => {
     const initial: Record<string, GovernanceMetrics> = {};
     getNations().forEach((nation) => {
@@ -302,12 +304,12 @@ export function useGovernance({
       const bestOption = [...definition.options].sort(
         (a, b) => evaluateOptionExpectation(b) - evaluateOptionExpectation(a),
       )[0];
-      const outcome = pickOutcome(bestOption);
+      const outcome = pickOutcome(bestOption, rng);
       applyGovernanceDelta(nation.id, outcome.effects);
       recordEventTurn(nation.id, definition.id, currentTurn);
       return outcome;
     },
-    [applyGovernanceDelta, currentTurn, recordEventTurn],
+    [applyGovernanceDelta, currentTurn, recordEventTurn, rng],
   );
 
   const ensureElectionTimer = useCallback(() => {
@@ -401,8 +403,8 @@ export function useGovernance({
       return;
     }
 
-    const target = eligibleTargets[Math.floor(Math.random() * eligibleTargets.length)];
-    const selected = target.events[Math.floor(Math.random() * target.events.length)];
+    const target = rng.choice(eligibleTargets);
+    const selected = rng.choice(target.events);
 
     if (target.nation.isPlayer) {
       recordEventTurn(target.nation.id, selected.id, currentTurn);
@@ -423,12 +425,12 @@ export function useGovernance({
       if (!activeEvent) return null;
       const option = activeEvent.definition.options.find((opt) => opt.id === optionId);
       if (!option) return null;
-      const outcome = pickOutcome(option);
+      const outcome = pickOutcome(option, rng);
       applyGovernanceDelta(activeEvent.nationId, outcome.effects, outcome.description);
       setActiveEvent(null);
       return { description: outcome.description, effects: outcome.effects };
     },
-    [activeEvent, applyGovernanceDelta],
+    [activeEvent, applyGovernanceDelta, rng],
   );
 
   const dismissEvent = useCallback(() => {

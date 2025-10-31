@@ -4,6 +4,8 @@ import type {
   Consequence,
 } from '@/types/consequences';
 import type { Nation } from '@/types/game';
+import { safePercentage } from '@/lib/safeMath';
+import { getRelationship } from '@/lib/relationshipUtils';
 
 /**
  * Calculate consequences for launching a nuclear missile
@@ -156,7 +158,7 @@ export function calculateAllianceConsequences(
   const { playerNation, allNations } = context;
 
   // Calculate success probability based on relations
-  const currentRelation = 50; // TODO: Get actual relation score
+  const currentRelation = getRelationship(playerNation, targetNation.id);
   const successProbability = Math.min(90, Math.max(10, currentRelation + 20));
 
   const immediate: Consequence[] = [
@@ -214,11 +216,11 @@ export function calculateAllianceConsequences(
   const currentAlliances = playerNation.alliances?.length || 0;
   const totalNations = allNations.filter((n) => n.population > 0).length - 1;
   const requiredAlliances = Math.ceil(totalNations * 0.6);
-  const newProgress = Math.min(100, ((currentAlliances + 1) / requiredAlliances) * 100);
+  const newProgress = Math.min(100, safePercentage(currentAlliances + 1, requiredAlliances, 0));
 
   const victoryImpact = {
     victoryType: 'Diplomatic Victory',
-    impact: `${Math.round(newProgress)}% progress (+${Math.round((1 / requiredAlliances) * 100)}%)`,
+    impact: `${Math.round(newProgress)}% progress (+${Math.round(safePercentage(1, requiredAlliances, 0))}%)`,
   };
 
   return {
@@ -357,6 +359,10 @@ export function calculateBuildCityConsequences(
     },
   ];
 
+  const currentCities = playerNation.cities || 0;
+  const requiredCities = 10;
+  const newProgress = Math.min(100, safePercentage(currentCities + 1, requiredCities, 0));
+
   return {
     actionType: 'build_city',
     actionTitle: 'Build City',
@@ -366,7 +372,7 @@ export function calculateBuildCityConsequences(
     risks: [],
     victoryImpact: {
       victoryType: 'Economic Victory',
-      impact: `${Math.round(newProgress)}% progress (+${Math.round((1 / requiredCities) * 100)}%)`,
+      impact: `${Math.round(newProgress)}% progress (+${Math.round(safePercentage(1, requiredCities, 0))}%)`,
     },
     costs: {
       production: 150,

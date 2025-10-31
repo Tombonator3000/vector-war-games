@@ -7,6 +7,7 @@ import type {
   VictoryMilestone,
   VictoryType,
 } from '@/types/victory';
+import { safePercentage, safeDivide } from '@/lib/safeMath';
 
 interface UseVictoryTrackingProps {
   nations: Nation[];
@@ -44,7 +45,7 @@ export function useVictoryTracking({
       defcon,
       diplomacyState
     );
-    const dominationPath = calculateDominationVictory(playerNation, aliveEnemies);
+    const dominationPath = calculateDominationVictory(playerNation, aliveEnemies, nations);
     const economicPath = calculateEconomicVictory(playerNation);
     const demographicPath = calculateDemographicVictory(playerNation, nations);
     const survivalPath = calculateSurvivalVictory(playerNation, currentTurn);
@@ -180,22 +181,27 @@ function calculateDiplomaticVictory(
   };
 }
 
-function calculateDominationVictory(player: Nation, aliveEnemies: Nation[]): VictoryPath {
-  const totalEnemies = aliveEnemies.length;
-  const enemiesDestroyed = Math.max(0, 10 - totalEnemies); // Assume started with ~10
+function calculateDominationVictory(
+  player: Nation,
+  aliveEnemies: Nation[],
+  allNations: Nation[]
+): VictoryPath {
+  // Calculate total initial enemies (all nations except player, including eliminated)
+  const totalInitialEnemies = allNations.filter((n) => n.name !== player.name).length;
+  const enemiesDestroyed = totalInitialEnemies - aliveEnemies.length;
 
   const conditions: VictoryCondition[] = [
     {
       id: 'eliminate_all',
       description: 'Eliminate all rival nations',
       current: enemiesDestroyed,
-      required: 10,
+      required: totalInitialEnemies,
       isMet: aliveEnemies.length === 0,
       unit: 'nations',
     },
   ];
 
-  const progress = aliveEnemies.length === 0 ? 100 : (enemiesDestroyed / 10) * 100;
+  const progress = aliveEnemies.length === 0 ? 100 : safePercentage(enemiesDestroyed, totalInitialEnemies, 0);
 
   const milestones: VictoryMilestone[] = [];
   if (aliveEnemies.length > 0) {
@@ -244,7 +250,7 @@ function calculateEconomicVictory(player: Nation): VictoryPath {
     },
   ];
 
-  const progress = Math.min(100, (currentCities / requiredCities) * 100);
+  const progress = Math.min(100, safePercentage(currentCities, requiredCities, 0));
 
   const milestones: VictoryMilestone[] = [];
   if (!conditions[0].isMet) {
@@ -278,7 +284,7 @@ function calculateEconomicVictory(player: Nation): VictoryPath {
 function calculateDemographicVictory(player: Nation, allNations: Nation[]): VictoryPath {
   const totalPopulation = allNations.reduce((sum, n) => sum + n.population, 0);
   const playerPopulation = player.population;
-  const populationPercent = totalPopulation > 0 ? (playerPopulation / totalPopulation) * 100 : 0;
+  const populationPercent = safePercentage(playerPopulation, totalPopulation, 0);
   const requiredPercent = 60;
   const currentInstability = player.instability || 0;
   const maxInstability = 30;
@@ -393,55 +399,85 @@ function calculateSurvivalVictory(player: Nation, currentTurn: number): VictoryP
 }
 
 function calculateCulturalVictory(player: Nation, allNations: Nation[]): VictoryPath {
-  // Cultural victory requires special research/tech
-  const hasPropagandaTech = false; // TODO: Check actual tech
-  const currentInfluence = 0; // TODO: Add propaganda influence tracking
+  // Cultural victory requires controlling >50% of global intel (cultural influence)
+  const playerIntel = player.intel || 0;
+  const totalIntel = allNations.reduce((sum, nation) => sum + (nation.intel || 0), 0);
+
+  // Calculate cultural influence as percentage of total intel
+  const influencePercentage = totalIntel > 0 ? (playerIntel / totalIntel) * 100 : 0;
+
+  // Check for propaganda mastery research (boosts effectiveness)
+  const hasPropagandaMastery = player.researched?.intelligence_propaganda || false;
+
+  // Victory requires: 50 intel + >50% influence
+  const hasMinimumIntel = playerIntel >= 50;
+  const hasMajorityInfluence = influencePercentage > 50;
 
   const conditions: VictoryCondition[] = [
     {
-      id: 'propaganda',
-      description: 'Research Propaganda Victory technology',
-      current: hasPropagandaTech ? 1 : 0,
-      required: 1,
-      isMet: hasPropagandaTech,
-      unit: 'tech',
+      id: 'intel_resources',
+      description: 'Accumulate 50 INTEL for victory attempt',
+      current: playerIntel,
+      required: 50,
+      isMet: hasMinimumIntel,
+      unit: 'intel',
     },
     {
-      id: 'influence',
-      description: 'Convert enemy leadership through propaganda',
-      current: currentInfluence,
-      required: 80,
-      isMet: currentInfluence >= 80,
-      unit: 'influence',
+      id: 'cultural_influence',
+      description: 'Control majority of global cultural influence',
+      current: Math.round(influencePercentage),
+      required: 50,
+      isMet: hasMajorityInfluence,
+      unit: '%',
     },
   ];
 
   const progress = calculateOverallProgress(conditions);
 
-  const milestones: VictoryMilestone[] = [
-    {
-      description: 'Research Propaganda Victory technology',
-      actionHint: 'Research → Advanced Technologies',
-      priority: 'critical',
-    },
-    {
-      description: 'Build cultural influence through diplomacy',
-      actionHint: 'Available in Late Game Era (Turn 26+)',
+  const milestones: VictoryMilestone[] = [];
+
+  if (!hasPropagandaMastery) {
+    milestones.push({
+      description: 'Research Propaganda Mastery (+50% meme wave effectiveness)',
+      actionHint: 'Research → Intelligence → Propaganda Mastery',
       priority: 'important',
-    },
-  ];
+    });
+  }
+
+  if (!hasMinimumIntel) {
+    milestones.push({
+      description: `Accumulate ${50 - playerIntel} more INTEL`,
+      actionHint: 'Build → Intelligence Satellites, or Espionage actions',
+      priority: 'critical',
+    });
+  } else if (!hasMajorityInfluence) {
+    const neededIntel = Math.ceil((totalIntel * 0.51) - playerIntel);
+    milestones.push({
+      description: `Increase cultural influence by ${Math.round(50 - influencePercentage)}%`,
+      actionHint: `Need ${neededIntel} more INTEL to reach majority (${Math.round(influencePercentage)}% → 51%)`,
+      priority: 'critical',
+    });
+  } else {
+    milestones.push({
+      description: 'Declare Cultural Victory!',
+      actionHint: 'Culture → Propaganda Victory (costs 50 INTEL)',
+      priority: 'critical',
+    });
+  }
+
+  const canWinNow = hasMinimumIntel && hasMajorityInfluence;
+  const estimatedTurns = canWinNow ? 0 : null;
 
   return {
     type: 'cultural',
     name: 'Cultural Victory',
     icon: '📻',
-    description: 'Win hearts and minds through propaganda',
+    description: 'Dominate global culture through propaganda and intel',
     progress,
     conditions,
     nextMilestones: milestones,
-    estimatedTurnsToVictory: null,
-    isBlocked: !hasPropagandaTech,
-    blockReason: 'Requires Late Game Era technology',
+    estimatedTurnsToVictory: estimatedTurns,
+    isBlocked: false,
     color: 'yellow',
   };
 }
@@ -450,10 +486,10 @@ function calculateCulturalVictory(player: Nation, allNations: Nation[]): Victory
 function calculateOverallProgress(conditions: VictoryCondition[]): number {
   if (conditions.length === 0) return 0;
   const totalProgress = conditions.reduce((sum, condition) => {
-    const conditionProgress = Math.min(100, (condition.current / condition.required) * 100);
+    const conditionProgress = Math.min(100, safePercentage(condition.current, condition.required, 0));
     return sum + conditionProgress;
   }, 0);
-  return Math.round(totalProgress / conditions.length);
+  return Math.round(safeDivide(totalProgress, conditions.length, 0));
 }
 
 function estimateTurnsToVictory(conditions: VictoryCondition[], avgTurnsPerCondition: number): number | null {
