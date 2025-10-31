@@ -697,3 +697,9 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-10-31T10:33:00+00:00
 - Shifted the Cold War scenario to yearly turns by updating the time and election cadence configuration and confirming HUD timestamp formatting stays consistent across the codebase.
+
+## 2025-10-31T11:06:15+00:00
+- Reviewed the intro screen flow and scenario state handling to plan a selectable campaign experience leveraging the existing SCENARIOS definitions.
+
+## 2025-10-31T11:32:48+00:00
+- Built the ScenarioSelectionPanel modal, integrated scenario persistence, DEFCON initialization, and save metadata updates to ensure the chosen scenario propagates into the campaign start sequence.
