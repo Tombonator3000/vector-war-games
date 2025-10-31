@@ -45,7 +45,7 @@ export function useVictoryTracking({
       defcon,
       diplomacyState
     );
-    const dominationPath = calculateDominationVictory(playerNation, aliveEnemies);
+    const dominationPath = calculateDominationVictory(playerNation, aliveEnemies, nations);
     const economicPath = calculateEconomicVictory(playerNation);
     const demographicPath = calculateDemographicVictory(playerNation, nations);
     const survivalPath = calculateSurvivalVictory(playerNation, currentTurn);
@@ -181,22 +181,27 @@ function calculateDiplomaticVictory(
   };
 }
 
-function calculateDominationVictory(player: Nation, aliveEnemies: Nation[]): VictoryPath {
-  const totalEnemies = aliveEnemies.length;
-  const enemiesDestroyed = Math.max(0, 10 - totalEnemies); // Assume started with ~10
+function calculateDominationVictory(
+  player: Nation,
+  aliveEnemies: Nation[],
+  allNations: Nation[]
+): VictoryPath {
+  // Calculate total initial enemies (all nations except player, including eliminated)
+  const totalInitialEnemies = allNations.filter((n) => n.name !== player.name).length;
+  const enemiesDestroyed = totalInitialEnemies - aliveEnemies.length;
 
   const conditions: VictoryCondition[] = [
     {
       id: 'eliminate_all',
       description: 'Eliminate all rival nations',
       current: enemiesDestroyed,
-      required: 10,
+      required: totalInitialEnemies,
       isMet: aliveEnemies.length === 0,
       unit: 'nations',
     },
   ];
 
-  const progress = aliveEnemies.length === 0 ? 100 : safePercentage(enemiesDestroyed, 10, 0);
+  const progress = aliveEnemies.length === 0 ? 100 : safePercentage(enemiesDestroyed, totalInitialEnemies, 0);
 
   const milestones: VictoryMilestone[] = [];
   if (aliveEnemies.length > 0) {
