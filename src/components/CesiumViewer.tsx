@@ -732,6 +732,17 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       const viewer = viewerRef.current;
       const position = Cartesian3.fromDegrees(lon, lat, 0);
 
+      // Play nuclear explosion sound effect
+      import('@/utils/audioManager').then(({ audioManager }) => {
+        // Play main explosion sound
+        audioManager.play('nuclear-explosion', 0.7);
+        
+        // Play shockwave sound with slight delay
+        setTimeout(() => {
+          audioManager.play('explosion-shockwave', 0.5);
+        }, 300);
+      }).catch(err => console.warn('Failed to load audio manager:', err));
+
       if (useParticles) {
         // Phase 2: Advanced particle effect explosion
         const particles: Entity[] = [];
