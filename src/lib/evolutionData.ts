@@ -831,6 +831,78 @@ export const ABILITY_NODES: EvolutionNode[] = [
 ];
 
 // ============================================================================
+// DEFENSE NODES - Player countermeasure research
+// ============================================================================
+
+export const DEFENSE_NODES: EvolutionNode[] = [
+  {
+    id: 'vaccine-prototyping',
+    category: 'defense',
+    name: 'Vaccine Prototyping',
+    description: 'Allied research teams rapidly assemble prototype vaccine candidates.',
+    flavor: 'Coalition biolabs exchange encrypted genomes to spin up neutralizing cultures.',
+    dnaCost: 9,
+    requires: ['drug-resistance-1'],
+    effects: {},
+    defenseEffects: {
+      vaccineProgress: 12,
+    },
+  },
+  {
+    id: 'vaccine-field-trials',
+    category: 'defense',
+    name: 'Vaccine Field Trials',
+    description: 'Expedited human trials unlock emergency approval pathways.',
+    flavor: 'Forward bases host clandestine trials under DEFCON quarantine protocols.',
+    dnaCost: 12,
+    requires: ['vaccine-prototyping'],
+    effects: {},
+    defenseEffects: {
+      vaccineProgress: 18,
+    },
+  },
+  {
+    id: 'vaccine-mass-production',
+    category: 'defense',
+    name: 'Vaccine Mass Production',
+    description: 'Rapid manufacturing lines flood the globe with protective doses.',
+    flavor: 'Stratcom reroutes supply chains—cargo jets disperse antigen arrays worldwide.',
+    dnaCost: 16,
+    requires: ['vaccine-field-trials'],
+    effects: {},
+    defenseEffects: {
+      vaccineProgress: 24,
+    },
+  },
+  {
+    id: 'radiation-shielding-1',
+    category: 'defense',
+    name: 'Radiation Shielding Mesh',
+    description: 'Deployable shielding reduces fallout lethality around strategic hubs.',
+    flavor: 'Nanofiber domes bloom over urban centers, scattering ionizing fallout.',
+    dnaCost: 10,
+    requires: ['genetic-hardening-1'],
+    effects: {},
+    defenseEffects: {
+      radiationMitigation: 0.2,
+    },
+  },
+  {
+    id: 'radiation-shielding-2',
+    category: 'defense',
+    name: 'Global Radiation Umbrella',
+    description: 'Coordinated shield grid dramatically cuts fallout casualties worldwide.',
+    flavor: 'High-altitude aerosols and orbital reflectors diffuse lingering radiation plumes.',
+    dnaCost: 14,
+    requires: ['radiation-shielding-1'],
+    effects: {},
+    defenseEffects: {
+      radiationMitigation: 0.35,
+    },
+  },
+];
+
+// ============================================================================
 // ALL NODES COMBINED
 // ============================================================================
 
@@ -838,6 +910,7 @@ export const ALL_EVOLUTION_NODES: EvolutionNode[] = [
   ...TRANSMISSION_NODES,
   ...SYMPTOM_NODES,
   ...ABILITY_NODES,
+  ...DEFENSE_NODES,
 ];
 
 // ============================================================================

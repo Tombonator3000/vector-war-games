@@ -2987,6 +2987,10 @@ function resolutionPhase() {
   // Clear completed missiles
   S.missiles = S.missiles.filter(m => m.t < 1);
   
+  const radiationMitigation = typeof window !== 'undefined'
+    ? window.__bioDefenseStats?.radiationMitigation ?? 0
+    : 0;
+
   // Process radiation zones
   S.radiationZones.forEach(zone => {
     zone.intensity *= 0.95;
@@ -2996,7 +3000,8 @@ function resolutionPhase() {
       const dist = Math.hypot(x - zone.x, y - zone.y);
       if (dist < zone.radius) {
         const damage = zone.intensity * 3;
-        n.population = Math.max(0, n.population - damage);
+        const mitigatedDamage = damage * (1 - radiationMitigation);
+        n.population = Math.max(0, n.population - mitigatedDamage);
       }
     });
   });

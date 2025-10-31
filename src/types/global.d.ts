@@ -88,6 +88,14 @@ declare global {
     __pandemicCountermeasure?: (payload: unknown) => void;
 
     /**
+     * Current defensive research status from the player's bio warfare program
+     */
+    __bioDefenseStats?: {
+      vaccineAcceleration: number;
+      radiationMitigation: number;
+    };
+
+    /**
      * WebKit prefixed AudioContext for legacy browser support
      */
     webkitAudioContext?: typeof AudioContext;

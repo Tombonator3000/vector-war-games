@@ -3,15 +3,15 @@
  * Combines pandemic mechanics with evolution tree and lab construction
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { usePandemic } from './usePandemic';
 import { useEvolutionTree } from './useEvolutionTree';
 import { useBioLab } from './useBioLab';
 import { useRNG } from '@/contexts/RNGContext';
 import type { PandemicTurnContext, PandemicTurnEffect } from './usePandemic';
 import type { NewsItem } from '@/components/NewsTicker';
-import type { PlagueState, SymptomId } from '@/types/biowarfare';
-import { getPlagueTypeById } from '@/lib/evolutionData';
+import type { PlagueState, SymptomId, EvolveNodePayload } from '@/types/biowarfare';
+import { getPlagueTypeById, getNodeById } from '@/lib/evolutionData';
 
 type AddNewsItem = (category: NewsItem['category'], text: string, priority: NewsItem['priority']) => void;
 
@@ -23,6 +23,36 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
   const pandemic = usePandemic(addNewsItem);
   const evolution = useEvolutionTree(addNewsItem);
   const bioLab = useBioLab(addNewsItem);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__bioDefenseStats = {
+        vaccineAcceleration: evolution.plagueState.calculatedStats.vaccineAcceleration,
+        radiationMitigation: evolution.plagueState.calculatedStats.radiationMitigation,
+      };
+    }
+  }, [
+    evolution.plagueState.calculatedStats.vaccineAcceleration,
+    evolution.plagueState.calculatedStats.radiationMitigation,
+  ]);
+
+  const evolveNodeWithDefense = useCallback((payload: EvolveNodePayload) => {
+    const success = evolution.evolveNode(payload);
+    if (!success) {
+      return success;
+    }
+
+    const node = getNodeById(payload.nodeId);
+    if (node?.defenseEffects?.vaccineProgress) {
+      pandemic.applyCountermeasure({
+        type: 'vaccine',
+        value: node.defenseEffects.vaccineProgress,
+        label: `${node.name} accelerates allied vaccine programs`,
+      });
+    }
+
+    return success;
+  }, [evolution, pandemic]);
 
   /**
    * Calculate spread modifiers based on evolution stats
@@ -400,7 +430,7 @@ export function useBioWarfare(addNewsItem: AddNewsItem) {
 
     // Evolution actions
     selectPlagueType: evolution.selectPlagueType,
-    evolveNode: evolution.evolveNode,
+    evolveNode: evolveNodeWithDefense,
     devolveNode: evolution.devolveNode,
     addDNAPoints: evolution.addDNAPoints,
     activateCure: evolution.activateCure,

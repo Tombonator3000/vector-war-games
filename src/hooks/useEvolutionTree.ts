@@ -41,6 +41,8 @@ const INITIAL_PLAGUE_STATE: PlagueState = {
     heatResistance: 0,
     drugResistance: 0,
     geneticHardening: 0,
+    vaccineAcceleration: 0,
+    radiationMitigation: 0,
   },
   countriesInfected: [],
   deploymentHistory: [],
@@ -114,6 +116,8 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
       heatResistance: 0,
       drugResistance: 0,
       geneticHardening: 0,
+      vaccineAcceleration: 0,
+      radiationMitigation: 0,
     };
 
     const plagueType = selectedPlagueTypeId ? getPlagueTypeById(selectedPlagueTypeId) : null;
@@ -145,6 +149,16 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
       }
       if (node.effects.cureResistance) {
         stats.cureResistance += node.effects.cureResistance * effectMultiplier;
+      }
+
+      if (node.defenseEffects?.vaccineProgress) {
+        stats.vaccineAcceleration += node.defenseEffects.vaccineProgress * effectMultiplier;
+      }
+      if (node.defenseEffects?.radiationMitigation) {
+        stats.radiationMitigation = Math.min(
+          1,
+          stats.radiationMitigation + node.defenseEffects.radiationMitigation * effectMultiplier
+        );
       }
 
       // Track specific resistances
@@ -213,7 +227,7 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
           actualCost = Math.ceil(actualCost * plagueType.transmissionCostMultiplier);
         } else if (node.category === 'symptom') {
           actualCost = Math.ceil(actualCost * plagueType.symptomCostMultiplier);
-        } else if (node.category === 'ability') {
+        } else if (node.category === 'ability' || node.category === 'defense') {
           actualCost = Math.ceil(actualCost * plagueType.abilityCostMultiplier);
         }
       }
@@ -303,7 +317,7 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
           actualCost = Math.ceil(actualCost * plagueType.transmissionCostMultiplier);
         } else if (node.category === 'symptom') {
           actualCost = Math.ceil(actualCost * plagueType.symptomCostMultiplier);
-        } else if (node.category === 'ability') {
+        } else if (node.category === 'ability' || node.category === 'defense') {
           actualCost = Math.ceil(actualCost * plagueType.abilityCostMultiplier);
         }
       }
