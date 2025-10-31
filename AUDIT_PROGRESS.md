@@ -1,8 +1,8 @@
 # Vector War Games - Audit Progress Report
 
 **Session Date:** 2025-10-31
-**Branch:** `claude/audit-error-fixes-011CUen9ScBdAyRR9FJ5hNtd`
-**Status:** 6 of 18 issues completed (33% complete)
+**Branch:** `claude/audit-progress-refactor-011CUfG5REjHqmjwrYYH3cPF`
+**Status:** 6 of 18 issues completed (33% complete), Issue #4 in progress (4/7 phases done, 57%)
 
 ---
 
@@ -187,19 +187,35 @@
 
 ---
 
-## 🔜 Remaining Issues (12 issues, ~138-203 hours)
+## 🔜 Remaining Issues (11 issues, ~106-163 hours)
 
 ### High Priority (P0-P1)
 
-**Issue #4: Refactor Monolithic Index.tsx** (32-40 hours)
-- **Problem:** 10,669 line file with all game logic
-- **Plan:** Extract into modules:
-  - Game state management
-  - Event handlers
-  - AI logic
-  - UI components
-  - Utility functions
-- **Effort:** Large refactor, foundational improvement
+**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 18-24 hours remaining)
+- **Status:** IN PROGRESS (Phases 1-5 of 7 complete, 71% done)
+- **Progress:** 10,937 → 9,739 lines (-1,198 lines, -11.0%)
+- **Completed:**
+  - ✅ Phase 1: Extracted utility functions (gameUtils, nationUtils, renderingUtils)
+  - ✅ Phase 2: Extracted AI diplomacy logic (aiDiplomacyActions)
+  - ✅ Phase 3: Extracted game phase handlers (launch, resolution, production)
+  - ✅ Phase 4: Extracted world rendering system (drawWorld, drawNations)
+  - ✅ Phase 5: Extracted UI components (IntroLogo, Starfield, SpinningEarth, OperationModal, IntelReportContent)
+- **Remaining Phases:**
+  - Phase 6: Extract game state management
+  - Phase 7: Simplify main NoradVector component
+- **Files Created:**
+  - `src/lib/gameUtils.ts` (70 lines)
+  - `src/lib/nationUtils.ts` (45 lines)
+  - `src/lib/renderingUtils.ts` (95 lines)
+  - `src/lib/aiDiplomacyActions.ts` (305 lines)
+  - `src/lib/gamePhaseHandlers.ts` (423 lines)
+  - `src/rendering/worldRenderer.ts` (328 lines)
+  - `src/components/intro/IntroLogo.tsx` (86 lines)
+  - `src/components/intro/Starfield.tsx` (40 lines)
+  - `src/components/intro/SpinningEarth.tsx` (14 lines)
+  - `src/components/modals/OperationModal.tsx` (212 lines)
+  - `src/components/modals/IntelReportContent.tsx` (94 lines)
+- **See:** `REFACTORING_SUMMARY.md` for detailed breakdown
 
 **Issue #7: Fix Type Safety Issues** (12-15 hours)
 - **Problem:** 89 instances of `as any` bypassing TypeScript

@@ -104,6 +104,41 @@ import {
 } from '@/lib/electionSystem';
 import { enhancedAIActions } from '@/lib/aiActionEnhancements';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
+import { canAfford, pay, getCityCost, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
+import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
+import { project, toLonLat, getPoliticalFill, resolvePublicAssetPath, POLITICAL_COLOR_PALETTE, type ProjectionContext } from '@/lib/renderingUtils';
+import {
+  aiSignMutualTruce,
+  aiSignNonAggressionPact,
+  aiFormAlliance,
+  aiSendAid,
+  aiImposeSanctions,
+  aiBreakTreaties,
+  aiRespondToSanctions,
+  aiHandleTreatyStrain,
+  aiHandleDiplomaticUrgencies,
+  aiAttemptDiplomacy,
+} from '@/lib/aiDiplomacyActions';
+import {
+  launch as launchMissile,
+  resolutionPhase as runResolutionPhase,
+  productionPhase as runProductionPhase,
+  type LaunchDependencies,
+  type ResolutionPhaseDependencies,
+  type ProductionPhaseDependencies,
+} from '@/lib/gamePhaseHandlers';
+import {
+  drawWorld as renderWorld,
+  drawNations as renderNations,
+  drawWorldPath as renderWorldPath,
+  type WorldRenderContext,
+  type NationRenderContext,
+} from '@/rendering/worldRenderer';
+import { IntroLogo } from '@/components/intro/IntroLogo';
+import { Starfield } from '@/components/intro/Starfield';
+import { SpinningEarth } from '@/components/intro/SpinningEarth';
+import { OperationModal, type OperationAction, type OperationModalProps } from '@/components/modals/OperationModal';
+import { IntelReportContent } from '@/components/modals/IntelReportContent';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -325,126 +360,6 @@ const FALLOUT_GROWTH_RATE = 1.1; // units per second
 const FALLOUT_DECAY_DELAY_MS = 12000;
 const FALLOUT_DECAY_RATE = 0.04; // intensity per second once decay begins
 
-const IntroLogo = () => (
-  <svg
-    className="intro-screen__logo"
-    viewBox="0 0 1200 420"
-    role="img"
-    aria-labelledby="intro-logo-title intro-logo-desc"
-  >
-    <title id="intro-logo-title">Vector War Games</title>
-    <desc id="intro-logo-desc">
-      Neon synthwave wordmark for the Vector War Games simulation.
-    </desc>
-    <defs>
-      <linearGradient id="logo-fill" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#39ff14" />
-        <stop offset="35%" stopColor="#00d9ff" />
-        <stop offset="70%" stopColor="#ff00ff" />
-        <stop offset="100%" stopColor="#39ff14" />
-      </linearGradient>
-      <linearGradient id="logo-stroke" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="rgba(0, 217, 255, 0.8)" />
-        <stop offset="100%" stopColor="rgba(255, 0, 255, 0.8)" />
-      </linearGradient>
-      <filter id="logo-glow" x="-20%" y="-40%" width="140%" height="200%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="18" result="blur" />
-        <feColorMatrix
-          in="blur"
-          type="matrix"
-          values="0 0 0 0 0  0 0 0 0.75 0  0 0 0 0.9 0  0 0 0 0.35 0"
-          result="coloredBlur"
-        />
-        <feMerge>
-          <feMergeNode in="coloredBlur" />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
-      </filter>
-    </defs>
-    <g filter="url(#logo-glow)" fontFamily="'Share Tech Mono', 'Orbitron', 'Rajdhani', sans-serif" fontWeight="600">
-      <text
-        x="50%"
-        y="35%"
-        textAnchor="middle"
-        fontSize={128}
-        letterSpacing="0.45em"
-        fill="url(#logo-fill)"
-        stroke="url(#logo-stroke)"
-        strokeWidth={6}
-        paintOrder="stroke fill"
-      >
-        VECTOR
-      </text>
-      <text
-        x="50%"
-        y="62%"
-        textAnchor="middle"
-        fontSize={144}
-        letterSpacing="0.75em"
-        fill="url(#logo-fill)"
-        stroke="url(#logo-stroke)"
-        strokeWidth={7}
-        paintOrder="stroke fill"
-      >
-        WAR
-      </text>
-      <text
-        x="50%"
-        y="88%"
-        textAnchor="middle"
-        fontSize={128}
-        letterSpacing="0.55em"
-        fill="url(#logo-fill)"
-        stroke="url(#logo-stroke)"
-        strokeWidth={6}
-        paintOrder="stroke fill"
-      >
-        GAMES
-      </text>
-    </g>
-  </svg>
-);
-
-// Animated starfield background component
-const Starfield = () => {
-  const stars = useMemo(() => {
-    return Array.from({ length: 200 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 2 + 0.5,
-      duration: Math.random() * 3 + 2,
-      delay: Math.random() * 2
-    }));
-  }, []);
-
-  return (
-    <div className="starfield">
-      {stars.map(star => (
-        <div
-          key={star.id}
-          className="star"
-          style={{
-            left: `${star.x}%`,
-            top: `${star.y}%`,
-            width: `${star.size}px`,
-            height: `${star.size}px`,
-            animationDuration: `${star.duration}s`,
-            animationDelay: `${star.delay}s`
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
-// Realistic 3D Earth globe component with real textures and cloud layers
-const SpinningEarth = () => (
-  <div className="earth-container" style={{ position: 'relative' }}>
-    <CesiumHeroGlobe />
-  </div>
-);
-
 const DIPLOMATIC_VICTORY_CRITERIA = {
   allianceRatio: 0.6,
   requiredDefcon: 4,
@@ -609,17 +524,7 @@ const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
 let worldData: any = null;
 let worldCountries: any = null;
 
-const resolvePublicAssetPath = (assetPath: string) => {
-  const base = import.meta.env.BASE_URL ?? '/';
-  const trimmedBase = base.endsWith('/') ? base.slice(0, -1) : base;
-  const trimmedAsset = assetPath.startsWith('/') ? assetPath.slice(1) : assetPath;
-
-  if (!trimmedBase) {
-    return `/${trimmedAsset}`;
-  }
-
-  return `${trimmedBase}/${trimmedAsset}`;
-};
+// resolvePublicAssetPath moved to @/lib/renderingUtils
 
 const FLAT_REALISTIC_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day.jpg');
 let flatRealisticTexture: HTMLImageElement | null = null;
@@ -1315,277 +1220,6 @@ const WARHEAD_YIELD_TO_ID = new Map<number, string>(
 
 type ModalContentValue = string | ReactNode | (() => ReactNode);
 
-type OperationTargetFilter = (nation: Nation, player: Nation) => boolean;
-
-interface OperationAction {
-  id: string;
-  title: string;
-  subtitle: string;
-  description?: string;
-  costText?: string;
-  requiresTarget?: boolean;
-  disabled?: boolean;
-  disabledReason?: string;
-  targetFilter?: OperationTargetFilter;
-}
-
-interface OperationModalProps {
-  actions: OperationAction[];
-  player: LocalNation;
-  targetableNations: LocalNation[];
-  onExecute: (action: OperationAction, target?: LocalNation) => boolean;
-  onClose: () => void;
-  accent?: 'fuchsia' | 'cyan' | 'violet' | 'emerald' | 'amber';
-}
-
-const ACCENT_STYLES: Record<NonNullable<OperationModalProps['accent']>, {
-  border: string;
-  hover: string;
-  heading: string;
-  text: string;
-  muted: string;
-  button: string;
-}> = {
-  fuchsia: {
-    border: 'border-fuchsia-500/60',
-    hover: 'hover:border-fuchsia-300 hover:bg-fuchsia-500/10',
-    heading: 'text-fuchsia-300',
-    text: 'text-fuchsia-200',
-    muted: 'text-fuchsia-200/70',
-    button: 'bg-fuchsia-500 text-black hover:bg-fuchsia-400'
-  },
-  cyan: {
-    border: 'border-cyan-500/60',
-    hover: 'hover:border-cyan-300 hover:bg-cyan-500/10',
-    heading: 'text-cyan-300',
-    text: 'text-cyan-200',
-    muted: 'text-cyan-200/70',
-    button: 'bg-cyan-500 text-black hover:bg-cyan-400'
-  },
-  violet: {
-    border: 'border-violet-500/60',
-    hover: 'hover:border-violet-300 hover:bg-violet-500/10',
-    heading: 'text-violet-300',
-    text: 'text-violet-200',
-    muted: 'text-violet-200/70',
-    button: 'bg-violet-500 text-black hover:bg-violet-400'
-  },
-  emerald: {
-    border: 'border-emerald-500/60',
-    hover: 'hover:border-emerald-300 hover:bg-emerald-500/10',
-    heading: 'text-emerald-300',
-    text: 'text-emerald-200',
-    muted: 'text-emerald-200/70',
-    button: 'bg-emerald-500 text-black hover:bg-emerald-400'
-  },
-  amber: {
-    border: 'border-amber-500/60',
-    hover: 'hover:border-amber-300 hover:bg-amber-500/10',
-    heading: 'text-amber-300',
-    text: 'text-amber-200',
-    muted: 'text-amber-200/70',
-    button: 'bg-amber-500 text-black hover:bg-amber-400'
-  }
-};
-
-function OperationModal({ actions, player, targetableNations, onExecute, onClose, accent = 'fuchsia' }: OperationModalProps) {
-  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
-  const accentStyles = ACCENT_STYLES[accent];
-
-  const pendingAction = useMemo(() => actions.find(action => action.id === pendingActionId) || null, [actions, pendingActionId]);
-
-  const availableTargets = useMemo(() => {
-    if (!pendingAction || !pendingAction.requiresTarget) return [] as LocalNation[];
-    const filter = pendingAction.targetFilter;
-    return targetableNations.filter(nation => (filter ? filter(nation, player) : true));
-  }, [pendingAction, targetableNations, player]);
-
-  const handleActionClick = (action: OperationAction) => {
-    if (action.disabled) {
-      if (action.disabledReason) {
-        toast({ title: 'Unavailable', description: action.disabledReason });
-      }
-      return;
-    }
-
-    if (action.requiresTarget) {
-      setPendingActionId(action.id);
-      return;
-    }
-
-    const success = onExecute(action);
-    if (success) {
-      onClose();
-    }
-  };
-
-  const handleTargetClick = (target: Nation) => {
-    if (!pendingAction) return;
-    const success = onExecute(pendingAction, target);
-    if (success) {
-      setPendingActionId(null);
-      onClose();
-    }
-  };
-
-  if (pendingAction && pendingAction.requiresTarget) {
-    return (
-      <div className="space-y-4">
-        <div className={`text-xs uppercase tracking-widest ${accentStyles.heading}`}>
-          Select target for {pendingAction.title}
-        </div>
-        <div className="grid gap-3">
-          {availableTargets.length === 0 ? (
-            <div className={`rounded border ${accentStyles.border} bg-black/50 px-4 py-3 text-sm ${accentStyles.muted}`}>
-              No valid targets available.
-            </div>
-          ) : (
-            availableTargets.map(target => (
-              <button
-                key={target.id}
-                type="button"
-                onClick={() => handleTargetClick(target)}
-                className={`rounded border ${accentStyles.border} bg-black/60 px-4 py-3 text-left transition ${accentStyles.hover}`}
-              >
-                <div className={`flex items-center justify-between text-sm font-semibold ${accentStyles.text}`}>
-                  <span>{target.name}</span>
-                  <span>{Math.floor(target.population)}M</span>
-                </div>
-                <div className={`mt-1 text-xs ${accentStyles.muted}`}>
-                  DEF {target.defense} • MISS {target.missiles} • INSTAB {Math.floor(target.instability || 0)}
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-        <div className="flex flex-wrap justify-between gap-2 pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setPendingActionId(null)}
-            className="border border-cyan-500/60 bg-transparent text-cyan-200 hover:bg-cyan-500/10"
-          >
-            Back
-          </Button>
-          <Button type="button" onClick={onClose} className={accentStyles.button}>
-            Close [ESC]
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className={`text-xs uppercase tracking-widest ${accentStyles.heading}`}>Operations</div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {actions.map(action => (
-          <button
-            key={action.id}
-            type="button"
-            onClick={() => handleActionClick(action)}
-            className={`rounded border ${accentStyles.border} bg-black/60 px-4 py-3 text-left transition ${accentStyles.hover} ${action.disabled ? 'cursor-not-allowed opacity-40' : ''}`}
-            aria-disabled={action.disabled}
-          >
-            <div className={`text-sm font-semibold ${accentStyles.text}`}>{action.title}</div>
-            <div className={`text-xs uppercase tracking-wide ${accentStyles.heading}`}>{action.subtitle}</div>
-            {action.costText ? (
-              <div className={`mt-2 text-xs ${accentStyles.muted}`}>{action.costText}</div>
-            ) : null}
-            {action.description ? (
-              <p className={`mt-2 text-xs leading-relaxed ${accentStyles.muted}`}>{action.description}</p>
-            ) : null}
-            {action.disabled && action.disabledReason ? (
-              <p className="mt-2 text-xs text-yellow-300/80">{action.disabledReason}</p>
-            ) : null}
-          </button>
-        ))}
-      </div>
-      <div className="flex justify-end">
-        <Button type="button" onClick={onClose} className={accentStyles.button}>
-          Close [ESC]
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-interface IntelReportContentProps {
-  player: LocalNation;
-  onClose: () => void;
-}
-
-function IntelReportContent({ player, onClose }: IntelReportContentProps) {
-  const visibleTargets = useMemo(() => {
-    if (!player.satellites) return [] as LocalNation[];
-    return nations.filter(nation => {
-      if (nation.isPlayer) return false;
-      if (!player.satellites?.[nation.id]) return false;
-      if (nation.coverOpsTurns && nation.coverOpsTurns > 0) return false;
-      return true;
-    });
-  }, [player]);
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-3">
-        {visibleTargets.length === 0 ? (
-          <div className="rounded border border-cyan-500/60 bg-black/50 px-4 py-3 text-sm text-cyan-200/70">
-            No active surveillance targets available. Deploy satellites to gather intelligence.
-          </div>
-        ) : (
-          visibleTargets.map(nation => {
-            const warheads = Object.entries(nation.warheads || {})
-              .map(([yieldMT, count]) => `${yieldMT}MT×${count}`)
-              .join(' ');
-            const deepReconActive = !!player.deepRecon?.[nation.id];
-            const cyberProfile = nation.cyber ?? createDefaultNationCyberProfile();
-
-            return (
-              <div
-                key={nation.id}
-                className="rounded border border-cyan-500/60 bg-black/60 px-4 py-3 text-sm text-cyan-100"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-cyan-200">{nation.name}</span>
-                  <span className="text-xs text-cyan-300">POP {Math.floor(nation.population)}M</span>
-                </div>
-                <div className="mt-2 grid gap-1 text-xs text-cyan-200/80">
-                  <div>Missiles: {nation.missiles} • Defense: {nation.defense}</div>
-                  <div>Warheads: {warheads || '—'}</div>
-                  <div>
-                    Production: {Math.floor(nation.production || 0)} • Uranium: {Math.floor(nation.uranium || 0)} • Intel: {Math.floor(nation.intel || 0)}
-                  </div>
-                  <div>
-                    Instability: {Math.floor(nation.instability || 0)} • Cities: {nation.cities || 1}
-                  </div>
-                  <div>
-                    Migrants (turn / total): {(nation.migrantsThisTurn || 0)} / {(nation.migrantsTotal || 0)}
-                  </div>
-                  <div>
-                    Cyber readiness: {Math.round(cyberProfile.readiness)}/{cyberProfile.maxReadiness} • Detection: {Math.round(cyberProfile.detection)}%
-                  </div>
-                  {deepReconActive ? (
-                    <>
-                      <div>Doctrine: {nation.doctrine || 'Unknown'} • Personality: {nation.ai || 'Unknown'}</div>
-                      <div>Tech: {Object.keys(nation.researched || {}).join(', ') || 'None'}</div>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-      <div className="flex justify-end">
-        <Button type="button" onClick={onClose} className="bg-cyan-500 text-black hover:bg-cyan-400">
-          Close [ESC]
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 // PlayerManager class
 class PlayerManager {
   private static _cached: Nation | null = null;
@@ -2155,7 +1789,7 @@ const CityLights = {
   destroyNear(x: number, y: number, radius: number): number {
     let destroyed = 0;
     this.cities = this.cities.filter(city => {
-      const [cx, cy] = project(city.lon, city.lat);
+      const [cx, cy] = projectLocal(city.lon, city.lat);
       const dist = Math.hypot(cx - x, cy - y);
       if (dist < radius) {
         destroyed++;
@@ -2173,7 +1807,7 @@ const CityLights = {
 
     const time = Date.now();
     this.cities.forEach(city => {
-      const [x, y] = project(city.lon, city.lat);
+      const [x, y] = projectLocal(city.lon, city.lat);
 
       // Flickering light effect (satellite view)
       const flicker = 0.8 + Math.sin(time * 0.003 + city.lon + city.lat) * 0.2;
@@ -2202,273 +1836,8 @@ const CityLights = {
 };
 
 // Helper functions
-function canAfford(nation: Nation, cost: Record<string, number>): boolean {
-  return Object.entries(cost).every(([resource, amount]) => {
-    const current = nation[resource as keyof Nation] as number || 0;
-    return current >= amount;
-  });
-}
-
-function pay(nation: Nation, cost: Record<string, number>) {
-  Object.entries(cost).forEach(([resource, amount]) => {
-    const key = resource as keyof Nation;
-    const currentValue = nation[key] as number;
-    (nation[key] as number) = currentValue - amount;
-  });
-}
-
-function getCityCost(nation: Nation) {
-  const cityCount = nation.cities || 1;
-  return { production: 20 + (cityCount - 1) * 5 };
-}
-
-function canPerformAction(action: string, defcon: number): boolean {
-  if (action === 'attack') return defcon <= 2;
-  if (action === 'escalate') return defcon > 1;
-  return true;
-}
-
-function hasActivePeaceTreaty(player: Nation | null, target: Nation): boolean {
-  if (!player) return false;
-  const treaty = player.treaties?.[target.id];
-  if (!treaty) return false;
-  if (treaty.alliance) return true;
-  if (typeof treaty.truceTurns === 'number' && treaty.truceTurns > 0) return true;
-  return false;
-}
-
-function isEligibleEnemyTarget(player: Nation | null, target: Nation): boolean {
-  if (target.isPlayer) return false;
-  if (target.population <= 0) return false;
-  if (hasActivePeaceTreaty(player, target)) return false;
-  return true;
-}
-
-function getNationById(id: string): Nation | undefined {
-  return nations.find(n => n.id === id);
-}
-
-function ensureTreatyRecord(self: Nation, other: Nation) {
-  self.treaties = self.treaties || {};
-  self.treaties[other.id] = self.treaties[other.id] || {};
-  return self.treaties[other.id];
-}
-
-function adjustThreat(nation: Nation, otherId: string, delta: number) {
-  nation.threats = nation.threats || {};
-  const next = Math.max(0, Math.min(100, (nation.threats[otherId] || 0) + delta));
-  if (next <= 0) {
-    delete nation.threats[otherId];
-  } else {
-    nation.threats[otherId] = next;
-  }
-}
-
-function aiLogDiplomacy(actor: Nation, message: string) {
-  log(`${actor.name} ${message}`);
-}
-
-function aiSignMutualTruce(actor: Nation, target: Nation, turns: number, reason?: string) {
-  const treaty = ensureTreatyRecord(actor, target);
-  const reciprocal = ensureTreatyRecord(target, actor);
-  treaty.truceTurns = Math.max(treaty.truceTurns || 0, turns);
-  reciprocal.truceTurns = Math.max(reciprocal.truceTurns || 0, turns);
-  aiLogDiplomacy(actor, `agrees to a ${turns}-turn truce with ${target.name}${reason ? ` (${reason})` : ''}.`);
-  adjustThreat(actor, target.id, -3);
-  adjustThreat(target, actor.id, -2);
-}
-
-function aiSignNonAggressionPact(actor: Nation, target: Nation): boolean {
-  const cost = { intel: 15 };
-  if (!canAfford(actor, cost)) return false;
-  pay(actor, cost);
-  aiSignMutualTruce(actor, target, 5, 'non-aggression pact');
-  return true;
-}
-
-function aiFormAlliance(actor: Nation, target: Nation): boolean {
-  const cost = { production: 10, intel: 40 };
-  if (!canAfford(actor, cost)) return false;
-  pay(actor, cost);
-  const treaty = ensureTreatyRecord(actor, target);
-  const reciprocal = ensureTreatyRecord(target, actor);
-  treaty.truceTurns = 999;
-  reciprocal.truceTurns = 999;
-  treaty.alliance = true;
-  reciprocal.alliance = true;
-  aiLogDiplomacy(actor, `enters an alliance with ${target.name}.`);
-  adjustThreat(actor, target.id, -5);
-  adjustThreat(target, actor.id, -5);
-  return true;
-}
-
-function aiSendAid(actor: Nation, target: Nation): boolean {
-  const cost = { production: 20 };
-  if (!canAfford(actor, cost)) return false;
-  pay(actor, cost);
-  target.instability = Math.max(0, (target.instability || 0) - 10);
-  aiLogDiplomacy(actor, `sends economic aid to ${target.name}, reducing their instability.`);
-  adjustThreat(target, actor.id, -2);
-  return true;
-}
-
-function aiImposeSanctions(actor: Nation, target: Nation): boolean {
-  if (target.sanctioned && target.sanctionedBy?.[actor.id]) return false;
-  const cost = { intel: 15 };
-  if (!canAfford(actor, cost)) return false;
-  pay(actor, cost);
-  target.sanctioned = true;
-  target.sanctionTurns = Math.max(5, (target.sanctionTurns || 0) + 5);
-  target.sanctionedBy = target.sanctionedBy || {};
-  target.sanctionedBy[actor.id] = (target.sanctionedBy[actor.id] || 0) + 5;
-  aiLogDiplomacy(actor, `imposes sanctions on ${target.name}.`);
-  adjustThreat(target, actor.id, 3);
-  return true;
-}
-
-function aiBreakTreaties(actor: Nation, target: Nation, reason?: string): boolean {
-  const treaty = ensureTreatyRecord(actor, target);
-  const reciprocal = ensureTreatyRecord(target, actor);
-  const hadAgreements = !!(treaty.truceTurns || treaty.alliance);
-  if (!hadAgreements) return false;
-  delete treaty.truceTurns;
-  delete reciprocal.truceTurns;
-  delete treaty.alliance;
-  delete reciprocal.alliance;
-  aiLogDiplomacy(actor, `terminates agreements with ${target.name}${reason ? ` (${reason})` : ''}.`);
-  adjustThreat(actor, target.id, 6);
-  adjustThreat(target, actor.id, 8);
-  return true;
-}
-
-function aiRespondToSanctions(actor: Nation): boolean {
-  if (!actor.sanctioned || !actor.sanctionedBy) return false;
-  const sanctioners = Object.keys(actor.sanctionedBy)
-    .map(id => getNationById(id))
-    .filter((nation): nation is Nation => !!nation && nation.population > 0);
-
-  if (sanctioners.length === 0) return false;
-
-  const prioritized = sanctioners.sort((a, b) => {
-    const aThreat = actor.threats?.[a.id] || 0;
-    const bThreat = actor.threats?.[b.id] || 0;
-    return bThreat - aThreat;
-  });
-
-  const topSanctioner = prioritized[0];
-  if (!topSanctioner) return false;
-
-  // Try counter-sanctions if affordable and no alliance
-  const treaty = actor.treaties?.[topSanctioner.id];
-  if ((!treaty || !treaty.alliance) && aiImposeSanctions(actor, topSanctioner)) {
-    aiLogDiplomacy(actor, `retaliates against ${topSanctioner.name} for sanctions.`);
-    return true;
-  }
-
-  // Attempt to de-escalate via truce if counter-sanctions failed
-  if (!treaty?.truceTurns) {
-    aiSignMutualTruce(actor, topSanctioner, 2, 'attempting to ease sanctions');
-    return true;
-  }
-
-  return false;
-}
-
-function aiHandleTreatyStrain(actor: Nation): boolean {
-  if (!actor.treaties) return false;
-  const strained = Object.entries(actor.treaties)
-    .map(([id, treaty]) => ({ id, treaty, partner: getNationById(id) }))
-    .filter(({ treaty, partner }) => partner && (treaty?.truceTurns || treaty?.alliance));
-
-  for (const { id, treaty, partner } of strained) {
-    if (!partner) continue;
-    const threat = actor.threats?.[id] || 0;
-    if (threat > 12) {
-      return aiBreakTreaties(actor, partner, 'due to rising hostilities');
-    }
-    if (treaty?.alliance && partner.sanctionedBy?.[actor.id]) {
-      // Alliance member sanctioning us is a breach
-      return aiBreakTreaties(actor, partner, 'after alliance breach');
-    }
-  }
-
-  return false;
-}
-
-function aiHandleDiplomaticUrgencies(actor: Nation): boolean {
-  if (aiRespondToSanctions(actor)) {
-    return true;
-  }
-
-  if (aiHandleTreatyStrain(actor)) {
-    return true;
-  }
-
-  return false;
-}
-
-function aiAttemptDiplomacy(actor: Nation): boolean {
-  const others = nations.filter(n => n !== actor && n.population > 0);
-  if (others.length === 0) return false;
-
-  const sortedByThreat = others
-    .map(target => ({ target, threat: actor.threats?.[target.id] || 0 }))
-    .sort((a, b) => b.threat - a.threat);
-
-  const highest = sortedByThreat[0];
-  if (highest && highest.threat >= 8) {
-    const treaty = actor.treaties?.[highest.target.id];
-    if (!treaty?.truceTurns) {
-      if (highest.threat >= 12 && aiSignNonAggressionPact(actor, highest.target)) {
-        return true;
-      }
-      aiSignMutualTruce(actor, highest.target, 2, 'to diffuse tensions');
-      return true;
-    }
-    if (!treaty?.alliance && highest.threat >= 15 && aiBreakTreaties(actor, highest.target, 'after repeated provocations')) {
-      return true;
-    }
-  }
-
-  // Sanction persistently hostile nations
-  const sanctionTarget = sortedByThreat.find(entry => entry.threat >= 10 && !actor.treaties?.[entry.target.id]?.alliance);
-  if (sanctionTarget && Math.random() < 0.6 && aiImposeSanctions(actor, sanctionTarget.target)) {
-    return true;
-  }
-
-  // Support unstable allies or low-threat partners
-  const aidCandidate = others
-    .filter(target => (actor.treaties?.[target.id]?.alliance || actor.treaties?.[target.id]?.truceTurns) && (target.instability || 0) >= 10)
-    .sort((a, b) => (b.instability || 0) - (a.instability || 0))[0];
-
-  if (aidCandidate && aiSendAid(actor, aidCandidate)) {
-    return true;
-  }
-
-  // Form alliances with trusted nations occasionally
-  if (Math.random() < 0.15) {
-    const allianceCandidate = others
-      .filter(target => {
-        const threat = actor.threats?.[target.id] || 0;
-        const treaty = actor.treaties?.[target.id];
-        return threat <= 2 && !(treaty?.alliance);
-      })
-      .sort((a, b) => (actor.threats?.[a.id] || 0) - (actor.threats?.[b.id] || 0))[0];
-
-    if (allianceCandidate && aiFormAlliance(actor, allianceCandidate)) {
-      return true;
-    }
-  }
-
-  // Offer truces when moderately threatened
-  const moderateThreat = sortedByThreat.find(entry => entry.threat >= 5 && !(actor.treaties?.[entry.target.id]?.truceTurns));
-  if (moderateThreat && Math.random() < 0.6) {
-    aiSignMutualTruce(actor, moderateThreat.target, 2);
-    return true;
-  }
-
-  return false;
-}
+// Game utility functions moved to @/lib/gameUtils and @/lib/nationUtils
+// AI diplomacy functions moved to @/lib/aiDiplomacyActions
 
 function startResearch(tier: number | string): boolean {
   const player = PlayerManager.get();
@@ -2761,7 +2130,7 @@ function maybeBanter(nation: Nation, chance: number, pool?: string) {
 }
 
 // Immigration functions
-const hasOpenBorders = (nation?: Nation | null) => (nation?.bordersClosedTurns ?? 0) <= 0;
+// hasOpenBorders moved to @/lib/nationUtils
 
 function performImmigration(type: string, target: Nation) {
   const player = PlayerManager.get();
@@ -2845,358 +2214,47 @@ function performImmigration(type: string, target: Nation) {
 }
 
 // Launch function
+// Wrapper function for launch - delegates to extracted module
 function launch(from: Nation, to: Nation, yieldMT: number) {
-  if (from.treaties?.[to.id]?.truceTurns > 0) {
-    log(`Cannot attack ${to.name} - truce active!`, 'warning');
-    return false;
-  }
-  
-  if (yieldMT > 50 && S.defcon > 1) {
-    log(`Strategic weapons require DEFCON 1`, 'warning');
-    return false;
-  }
-  
-  if (yieldMT <= 50 && S.defcon > 2) {
-    log(`Tactical nukes require DEFCON 2 or lower`, 'warning');
-    return false;
-  }
-  
-  if (!from.warheads?.[yieldMT] || from.warheads[yieldMT] <= 0) {
-    log('No warheads of that yield!', 'warning');
-    return false;
-  }
-
-  const requiredResearchId = WARHEAD_YIELD_TO_ID.get(yieldMT);
-  if (requiredResearchId && !from.researched?.[requiredResearchId]) {
-    const projectName = RESEARCH_LOOKUP[requiredResearchId]?.name || `${yieldMT}MT program`;
-    if (from.isPlayer) {
-      toast({ title: 'Technology unavailable', description: `Research ${projectName} before deploying this warhead.` });
-    } else {
-      log(`${from.name} lacks the ${projectName} technology and aborts the launch.`, 'warning');
-    }
-    return false;
-  }
-
-  if (from.missiles <= 0) {
-    log('No missiles available!', 'warning');
-    return false;
-  }
-  
-  from.warheads[yieldMT]--;
-  if (from.warheads[yieldMT] <= 0) {
-    delete from.warheads[yieldMT];
-  }
-  from.missiles--;
-
-  S.missiles.push({
-    from,
-    to,
-    t: 0,
-    fromLon: from.lon,
-    fromLat: from.lat,
-    toLon: to.lon,
-    toLat: to.lat,
-    yield: yieldMT,
-    target: to,
-    color: from.color
-  });
-
-  log(`${from.name} → ${to.name}: LAUNCH ${yieldMT}MT`);
-  AudioSys.playSFX('launch');
-  DoomsdayClock.tick(0.3);
-
-  // Track statistics
-  if (from.isPlayer) {
-    if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
-    S.statistics.nukesLaunched++;
-
-    // Update public opinion (nuclear launches are unpopular)
-    if (S.scenario?.electionConfig) {
-      modifyOpinionFromAction(from, 'LAUNCH_MISSILE', true, S.scenario.electionConfig);
-    }
-  }
-
-  // Toast feedback for player launches
-  if (from.isPlayer) {
-    toast({
-      title: '🚀 Missile Launched',
-      description: `${yieldMT}MT warhead inbound to ${to.name}. -1 missile, -1 warhead.`,
-      variant: 'destructive',
-    });
-  }
-  
-  // Generate news for launch
-  if (window.__gameAddNewsItem) {
-    const priority = yieldMT > 50 ? 'critical' : 'urgent';
-    window.__gameAddNewsItem(
-      'military',
-      `${from.name} launches ${yieldMT}MT warhead at ${to.name}`,
-      priority
-    );
-  }
-  
-  return true;
+  const deps: LaunchDependencies = {
+    S,
+    nations,
+    log,
+    toast,
+    AudioSys,
+    DoomsdayClock,
+    WARHEAD_YIELD_TO_ID,
+    RESEARCH_LOOKUP,
+    PlayerManager,
+    projectLocal,
+  };
+  return launchMissile(from, to, yieldMT, deps);
 }
 
-// Resolution Phase
+// Resolution Phase - wrapper function that delegates to extracted module
 function resolutionPhase() {
-  log('=== RESOLUTION PHASE ===', 'success');
-  
-  // Update threat levels based on actions
-  nations.forEach(attacker => {
-    if (attacker.population <= 0) return;
-    
-    nations.forEach(target => {
-      if (target.id === attacker.id || target.population <= 0) return;
-      
-      // Initialize threats object if needed
-      attacker.threats = attacker.threats || {};
-      
-      // Increase threat if target has attacked us or has large arsenal
-      const targetMissiles = target.missiles || 0;
-      const targetWarheads = Object.values(target.warheads || {}).reduce((sum, count) => sum + (count || 0), 0);
-      
-      if (targetMissiles > 10 || targetWarheads > 15) {
-        attacker.threats[target.id] = Math.min(100, (attacker.threats[target.id] || 0) + 1);
-      }
-      
-      // Player is always considered a threat
-      if (target.isPlayer) {
-        attacker.threats[target.id] = Math.min(100, (attacker.threats[target.id] || 0) + 2);
-      }
-      
-      // Decay old threats
-      if (attacker.threats[target.id]) {
-        attacker.threats[target.id] = Math.max(0, attacker.threats[target.id] - 0.5);
-      }
-    });
-  });
-  
-  // Missile impacts and effects
-  S.missiles.forEach(missile => {
-    if (missile.t >= 1) {
-      explode(
-        project(missile.toLon, missile.toLat)[0],
-        project(missile.toLon, missile.toLat)[1],
-        missile.target,
-        missile.yield
-      );
-    }
-  });
-  
-  // Clear completed missiles
-  S.missiles = S.missiles.filter(m => m.t < 1);
-  
-  const radiationMitigation = typeof window !== 'undefined'
-    ? window.__bioDefenseStats?.radiationMitigation ?? 0
-    : 0;
-
-  // Process radiation zones
-  S.radiationZones.forEach(zone => {
-    zone.intensity *= 0.95;
-
-    nations.forEach(n => {
-      const [x, y] = project(n.lon, n.lat);
-      const dist = Math.hypot(x - zone.x, y - zone.y);
-      if (dist < zone.radius) {
-        const damage = zone.intensity * 3;
-        const mitigatedDamage = damage * (1 - radiationMitigation);
-        n.population = Math.max(0, n.population - mitigatedDamage);
-      }
-    });
-  });
-
-  nations.forEach(n => advanceResearch(n, 'RESOLUTION'));
-
-  log('=== RESOLUTION PHASE COMPLETE ===', 'success');
-  
-  // Nuclear winter effects
-  if (S.nuclearWinterLevel && S.nuclearWinterLevel > 0) {
-    const winterSeverity = Math.min(S.nuclearWinterLevel / 10, 0.5);
-    nations.forEach(n => {
-      const popLoss = Math.floor((n.population || 0) * winterSeverity * 0.05);
-      if (popLoss > 0) n.population = Math.max(0, (n.population || 0) - popLoss);
-      if (typeof n.production === 'number') {
-        n.production = Math.max(0, Math.floor(n.production * (1 - winterSeverity)));
-      }
-    });
-    
-    if (S.nuclearWinterLevel > 5) {
-      log(`☢️ NUCLEAR WINTER! Global population declining!`, 'alert');
-      S.overlay = { text: 'NUCLEAR WINTER', ttl: 2000 };
-    }
-    S.nuclearWinterLevel *= 0.95;
-  }
+  const deps: ResolutionPhaseDependencies = {
+    S,
+    nations,
+    log,
+    projectLocal,
+    explode,
+    advanceResearch,
+  };
+  runResolutionPhase(deps);
 }
 
-// Production Phase
+// Production Phase - wrapper function that delegates to extracted module
 function productionPhase() {
-  log('=== PRODUCTION PHASE ===', 'success');
-  
-  nations.forEach(n => {
-    if (n.population <= 0) return;
-    
-    // Base production - balanced for all nations
-    const baseProduction = Math.floor(n.population * 0.12); // Slightly increased
-    const baseProd = baseProduction + (n.cities || 1) * 12;
-    const baseUranium = Math.floor(n.population * 0.025) + (n.cities || 1) * 4;
-    const baseIntel = Math.floor(n.population * 0.04) + (n.cities || 1) * 3;
-    
-    // Apply green shift debuff if active
-    let prodMult = 1;
-    let uranMult = 1;
-    if (n.greenShiftTurns && n.greenShiftTurns > 0) {
-      prodMult = 0.7;
-      uranMult = 0.5;
-      n.greenShiftTurns--;
-      if (n === PlayerManager.get()) {
-        log('Eco movement reduces nuclear production', 'warning');
-      }
-    }
-
-    if (n.environmentPenaltyTurns && n.environmentPenaltyTurns > 0) {
-      prodMult *= 0.7;
-      uranMult *= 0.7;
-      n.environmentPenaltyTurns--;
-      if (n.environmentPenaltyTurns === 0 && n.isPlayer) {
-        log('Environmental treaty penalties have expired.', 'success');
-      }
-    }
-
-    // Apply economy tech bonuses
-    const economyProdMult = n.productionMultiplier || 1.0;
-    const economyUraniumBonus = n.uraniumPerTurn || 0;
-
-    const moraleMultiplier = calculateMoraleProductionMultiplier(n.morale ?? 0);
-    n.production += Math.floor(baseProd * prodMult * economyProdMult * moraleMultiplier);
-    n.uranium += Math.floor(baseUranium * uranMult * moraleMultiplier) + economyUraniumBonus;
-    n.intel += Math.floor(baseIntel * moraleMultiplier);
-    
-    // Instability effects
-    if (n.instability && n.instability > 50) {
-      const unrest = Math.floor(n.instability / 10);
-      n.population = Math.max(0, n.population - unrest);
-      n.production = Math.max(0, n.production - unrest);
-      if (n.instability > 100) {
-        log(`${n.name} suffers civil war! Major losses!`, 'alert');
-        n.population *= 0.8;
-        n.instability = 50;
-      }
-    }
-    
-    // Decay instability slowly
-    if (n.instability) {
-      n.instability = Math.max(0, n.instability - 2);
-    }
-    
-    // Border closure effects
-    if (n.bordersClosedTurns && n.bordersClosedTurns > 0) {
-      n.bordersClosedTurns--;
-    }
-
-    if (n.researched?.counterintel) {
-      const intelBonus = Math.ceil(baseIntel * 0.2);
-      n.intel += intelBonus;
-    }
-  });
-
-  nations.forEach(n => {
-    if (n.coverOpsTurns && n.coverOpsTurns > 0) {
-      n.coverOpsTurns = Math.max(0, n.coverOpsTurns - 1);
-    }
-
-    if (n.deepRecon) {
-      Object.keys(n.deepRecon).forEach(targetId => {
-        const remaining = Math.max(0, (n.deepRecon[targetId] || 0) - 1);
-        if (remaining <= 0) {
-          delete n.deepRecon[targetId];
-        } else {
-          n.deepRecon[targetId] = remaining;
-        }
-      });
-    }
-
-    if (n.sanctionedBy) {
-      Object.keys(n.sanctionedBy).forEach(id => {
-        const remaining = Math.max(0, (n.sanctionedBy?.[id] || 0) - 1);
-        if (remaining <= 0) {
-          if (n.sanctionedBy) {
-            delete n.sanctionedBy[id];
-          }
-        } else if (n.sanctionedBy) {
-          n.sanctionedBy[id] = remaining;
-        }
-      });
-
-      if (n.sanctionedBy && Object.keys(n.sanctionedBy).length === 0) {
-        delete n.sanctionedBy;
-        n.sanctioned = false;
-        delete n.sanctionTurns;
-        log(`Sanctions on ${n.name} expired.`, 'success');
-      } else if (n.sanctionedBy) {
-        n.sanctioned = true;
-        n.sanctionTurns = Object.values(n.sanctionedBy).reduce((total, turns) => total + turns, 0);
-      }
-    } else if (n.sanctionTurns && n.sanctionTurns > 0) {
-      n.sanctionTurns--;
-      if (n.sanctionTurns <= 0) {
-        n.sanctioned = false;
-        delete n.sanctionTurns;
-        log(`Sanctions on ${n.name} expired.`, 'success');
-      }
-    }
-
-    if (n.treaties) {
-      Object.values(n.treaties).forEach(treaty => {
-        if (treaty && typeof treaty.truceTurns === 'number' && treaty.truceTurns > 0) {
-          treaty.truceTurns = Math.max(0, treaty.truceTurns - 1);
-          if (treaty.truceTurns === 0) {
-            delete treaty.truceTurns;
-          }
-        }
-      });
-    }
-
-    n.migrantsLastTurn = n.migrantsThisTurn || 0;
-    n.migrantsThisTurn = 0;
-  });
-
-  // Handle Elections
-  if (S.scenario?.electionConfig.enabled) {
-    nations.forEach(n => {
-      // Update public opinion based on current state
-      n.publicOpinion = calculatePublicOpinion(n, nations, S.scenario!.electionConfig);
-
-      // Decrease election timer
-      if (n.electionTimer > 0) {
-        n.electionTimer--;
-      }
-
-      // Check if it's election time
-      if (n.electionTimer === 0 && S.scenario?.electionConfig.interval > 0) {
-        const result = runElection(n, nations, S.scenario.electionConfig);
-
-        const electionLog = applyElectionConsequences(
-          n,
-          result,
-          S.scenario.electionConfig,
-          leaders
-        );
-
-        log(`${n.name}: ${electionLog.message}`, result.winner === 'incumbent' ? 'success' : 'alert');
-
-        if (electionLog.gameOver && n.isPlayer) {
-          S.gameOver = true;
-          S.overlay = { text: 'VOTED OUT - GAME OVER', ttl: 5000 };
-        }
-
-        // Reset election timer
-        n.electionTimer = S.scenario.electionConfig.interval;
-      }
-    });
-  }
-
-  nations.forEach(n => advanceResearch(n, 'PRODUCTION'));
+  const deps: ProductionPhaseDependencies = {
+    S,
+    nations,
+    log,
+    advanceResearch,
+    leaders,
+    PlayerManager,
+  };
+  runProductionPhase(deps);
 }
 
 // World map loading
@@ -3284,316 +2342,60 @@ async function loadWorld() {
 }
 
 // Drawing functions
-function project(lon: number, lat: number): [number, number] {
-  if (globeProjector) {
-    const { x, y } = globeProjector(lon, lat);
-    return [x, y];
-  }
-
-  const x = ((lon + 180) / 360) * W * cam.zoom + cam.x;
-  const y = ((90 - lat) / 180) * H * cam.zoom + cam.y;
-  return [x, y];
+// Rendering utility functions - using extracted utilities from @/lib/renderingUtils
+// Wrapper functions that use the global rendering context
+function projectLocal(lon: number, lat: number): [number, number] {
+  return project(lon, lat, { W, H, cam, globeProjector, globePicker });
 }
 
-// Convert screen coordinates to longitude/latitude
-function toLonLat(x: number, y: number): [number, number] {
-  if (globePicker) {
-    const hit = globePicker(x, y);
-    if (hit) {
-      return [hit.lon, hit.lat];
-    }
-  }
-
-  // Account for camera transformation
-  const adjustedX = (x - cam.x) / cam.zoom;
-  const adjustedY = (y - cam.y) / cam.zoom;
-  const lon = (adjustedX / W) * 360 - 180;
-  const lat = 90 - (adjustedY / H) * 180;
-  return [lon, lat];
+function toLonLatLocal(x: number, y: number): [number, number] {
+  return toLonLat(x, y, { W, H, cam, globeProjector, globePicker });
 }
 
-const POLITICAL_COLOR_PALETTE = [
-  '#f94144',
-  '#f3722c',
-  '#f9c74f',
-  '#90be6d',
-  '#43aa8b',
-  '#577590',
-  '#f9844a',
-  '#ffafcc'
-];
-
-function getPoliticalFill(index: number) {
-  return POLITICAL_COLOR_PALETTE[index % POLITICAL_COLOR_PALETTE.length];
-}
-
+// World rendering - wrapper function that delegates to extracted module
 function drawWorld(style: MapStyle) {
-  if (!ctx) return;
-
-  const palette = THEME_SETTINGS[currentTheme];
-
-  const isPolitical = style === 'political';
-  const isNight = style === 'night';
-  const isWireframe = style === 'wireframe';
-  const isFlatRealistic = style === 'flat-realistic';
-
-  if (isFlatRealistic) {
-    if (!flatRealisticTexture && !flatRealisticTexturePromise) {
-      void preloadFlatRealisticTexture();
-    }
-    if (flatRealisticTexture) {
-      ctx.save();
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(flatRealisticTexture, cam.x, cam.y, W * cam.zoom, H * cam.zoom);
-      ctx.restore();
-    }
-  }
-
-  if (worldCountries) {
-    ctx.save();
-    ctx.lineWidth = isWireframe ? 1.5 : 1;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-
-    worldCountries.features.forEach((feature: any, index: number) => {
-      ctx.beginPath();
-      const coords = feature.geometry.coordinates;
-
-      if (feature.geometry.type === 'Polygon') {
-        drawWorldPath(coords[0]);
-      } else if (feature.geometry.type === 'MultiPolygon') {
-        coords.forEach((poly: any) => drawWorldPath(poly[0]));
-      }
-
-      if (isPolitical) {
-        ctx.save();
-        ctx.globalAlpha = 0.35;
-        ctx.fillStyle = getPoliticalFill(index);
-        ctx.fill();
-        ctx.restore();
-      }
-
-      if (isNight) {
-        ctx.strokeStyle = 'rgba(170,210,255,0.35)';
-      } else if (isWireframe) {
-        ctx.strokeStyle = 'rgba(80,240,255,0.75)';
-      } else if (isPolitical) {
-        ctx.strokeStyle = 'rgba(40,40,40,0.5)';
-      } else if (isFlatRealistic) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-      } else {
-        ctx.strokeStyle = palette.mapOutline;
-      }
-
-      ctx.stroke();
-    });
-
-    ctx.restore();
-  }
-
-  const shouldDrawGrid = style !== 'realistic' && style !== 'night';
-  if (shouldDrawGrid) {
-    ctx.save();
-    if (isWireframe) {
-      ctx.strokeStyle = 'rgba(80,240,255,0.35)';
-      ctx.lineWidth = 0.7;
-    } else if (isPolitical) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-      ctx.lineWidth = 0.5;
-    } else {
-      ctx.strokeStyle = palette.grid;
-      ctx.lineWidth = 0.5;
-    }
-
-    for (let lon = -180; lon <= 180; lon += 30) {
-      ctx.beginPath();
-      for (let lat = -90; lat <= 90; lat += 5) {
-        const [x, y] = project(lon, lat);
-        if (lat === -90) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-
-    for (let lat = -90; lat <= 90; lat += 30) {
-      ctx.beginPath();
-      for (let lon = -180; lon <= 180; lon += 5) {
-        const [x, y] = project(lon, lat);
-        if (lon === -180) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-
-    ctx.restore();
-  }
-
-  if (style !== 'wireframe') {
-    const scanY = (Date.now() / 30) % H;
-    if (isNight) {
-      ctx.fillStyle = 'rgba(80,160,255,0.08)';
-    } else if (isPolitical) {
-      ctx.fillStyle = 'rgba(255,200,120,0.12)';
-    } else {
-      ctx.fillStyle = palette.radar;
-    }
-    ctx.fillRect(0, scanY, W, 2);
-  }
+  const context: WorldRenderContext = {
+    ctx,
+    worldCountries,
+    W,
+    H,
+    cam,
+    currentTheme,
+    flatRealisticTexture,
+    flatRealisticTexturePromise,
+    THEME_SETTINGS,
+    projectLocal,
+    preloadFlatRealisticTexture,
+    getPoliticalFill,
+  };
+  renderWorld(style, context);
 }
 
 function drawWorldPath(coords: number[][]) {
   if (!ctx) return;
-  coords.forEach((coord, i) => {
-    const [x, y] = project(coord[0], coord[1]);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
+  renderWorldPath(coords, ctx, projectLocal);
 }
 
+// Nation rendering - wrapper function that delegates to extracted module
 function drawNations(style: MapStyle) {
-  if (!ctx || nations.length === 0) return;
-
-  const isWireframeStyle = style === 'wireframe';
-  const isNightStyle = style === 'night';
-  const isPoliticalStyle = style === 'political';
-
-  nations.forEach(n => {
-    if (n.population <= 0) return;
-
-    const [x, y] = project(n.lon, n.lat);
-    if (isNaN(x) || isNaN(y)) return;
-
-    const isSelectedTarget = selectedTargetRefId === n.id;
-    if (isSelectedTarget) {
-      const pulse = (Math.sin(Date.now() / 200) + 1) / 2;
-      const baseRadius = 42;
-      const radius = baseRadius + pulse * 10;
-
-      ctx.save();
-      const targetColor = isWireframeStyle ? '#4ef6ff' : (n.color || '#ff6666');
-      ctx.strokeStyle = targetColor;
-      ctx.globalAlpha = isWireframeStyle ? 0.9 : 0.85;
-      ctx.lineWidth = isWireframeStyle ? 1.5 : 2;
-      ctx.setLineDash(isWireframeStyle ? [4, 6] : [6, 6]);
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = isWireframeStyle ? 0.35 : 0.4;
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.arc(x, y, radius + 6, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // Nation marker (triangle)
-    ctx.save();
-    ctx.strokeStyle = n.color;
-    ctx.lineWidth = isWireframeStyle ? 1.5 : 2;
-    if (isWireframeStyle) {
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.moveTo(x, y - 18);
-      ctx.lineTo(x - 14, y + 14);
-      ctx.lineTo(x + 14, y + 14);
-      ctx.closePath();
-      ctx.stroke();
-    } else {
-      ctx.fillStyle = n.color;
-      ctx.shadowColor = isNightStyle ? '#ffe066' : n.color;
-      ctx.shadowBlur = isNightStyle ? 25 : 20;
-      ctx.beginPath();
-      ctx.moveTo(x, y - 20);
-      ctx.lineTo(x - 15, y + 12);
-      ctx.lineTo(x + 15, y + 12);
-      ctx.closePath();
-      ctx.stroke();
-      ctx.globalAlpha = isPoliticalStyle ? 0.4 : 0.3;
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-
-    // Draw city squares around nation
-    const cityCount = n.cities || 1;
-    if (cityCount > 1) {
-      ctx.save();
-      for (let i = 1; i < cityCount; i++) {
-        const angle = (i / (cityCount - 1)) * Math.PI * 2;
-        const radius = 35 + (i % 3) * 8;
-        const cx = x + Math.cos(angle) * radius;
-        const cy = y + Math.sin(angle) * radius;
-
-        if (isWireframeStyle) {
-          ctx.strokeStyle = n.color;
-          ctx.globalAlpha = 0.6;
-          ctx.strokeRect(cx - 5, cy - 5, 10, 10);
-        } else {
-          ctx.fillStyle = n.color;
-          ctx.globalAlpha = isNightStyle ? 0.5 : 0.3;
-          ctx.fillRect(cx - 6, cy - 6, 12, 12);
-        }
-      }
-      ctx.restore();
-    }
-
-    // Nation labels
-    const displayName = n.isPlayer
-      ? (S.playerName || S.selectedLeader || 'PLAYER')
-      : (n.leader || n.name);
-    const nationName = n.name;
-
-    const z = Math.max(0.9, Math.min(1.6, cam.zoom));
-    const pad = 4 * z;
-
-    ctx.save();
-    ctx.textAlign = 'center';
-
-    ctx.font = `bold ${Math.round(12 * z)}px monospace`;
-    const w1 = ctx.measureText(displayName).width;
-
-    ctx.font = `${Math.round(11 * z)}px monospace`;
-    const w2 = ctx.measureText(nationName).width;
-
-    const bw = Math.max(w1, w2) + pad * 2;
-    const bh = (12 * z + 12 * z) + pad * 2;
-    const lx = x;
-    const lyTop = (y - 36 * z) - (bh - (12 * z));
-
-    const frameFill = isWireframeStyle
-      ? 'rgba(0,0,0,0.7)'
-      : isNightStyle
-        ? 'rgba(0,0,0,0.6)'
-        : 'rgba(0,0,0,0.45)';
-    ctx.fillStyle = frameFill;
-    ctx.fillRect(lx - bw / 2, lyTop, bw, bh);
-
-    ctx.globalAlpha = isWireframeStyle ? 0.65 : 0.4;
-    ctx.strokeStyle = isWireframeStyle ? '#4ef6ff' : n.color;
-    ctx.strokeRect(lx - bw / 2, lyTop, bw, bh);
-    ctx.globalAlpha = 1;
-
-    ctx.font = `bold ${Math.round(12 * z)}px monospace`;
-    ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : n.color;
-    ctx.shadowColor = isNightStyle ? '#ffe066' : n.color;
-    ctx.shadowBlur = isNightStyle ? 10 : 6;
-    ctx.fillText(displayName, lx, lyTop + pad + 12 * z);
-    ctx.shadowBlur = 0;
-
-    ctx.font = `${Math.round(11 * z)}px monospace`;
-    ctx.fillStyle = isPoliticalStyle ? '#ffecd1' : '#ffffff';
-    ctx.fillText(nationName, lx, lyTop + pad + 12 * z + 12 * z);
-
-    ctx.restore();
-
-    // Population display
-    ctx.save();
-    ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : isPoliticalStyle ? '#ffd166' : '#00ff00';
-    ctx.font = `${Math.round(10 * z)}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.fillText(`${Math.floor(n.population)}M`, x, y + 30 * z);
-    ctx.restore();
-  });
+  const context: NationRenderContext = {
+    ctx,
+    worldCountries,
+    W,
+    H,
+    cam,
+    currentTheme,
+    flatRealisticTexture,
+    flatRealisticTexturePromise,
+    THEME_SETTINGS,
+    projectLocal,
+    preloadFlatRealisticTexture,
+    getPoliticalFill,
+    nations,
+    S,
+    selectedTargetRefId,
+  };
+  renderNations(style, context);
 }
 
 type DrawIconOptions = {
@@ -3689,7 +2491,7 @@ function drawSatellites(nowMs: number) {
 
     activeOrbits.push(orbit);
 
-    const [targetX, targetY] = project(targetNation.lon, targetNation.lat);
+    const [targetX, targetY] = projectLocal(targetNation.lon, targetNation.lat);
     if (!Number.isFinite(targetX) || !Number.isFinite(targetY)) {
       return;
     }
@@ -3753,8 +2555,8 @@ function drawMissiles() {
   S.missiles.forEach((m: any, i: number) => {
     m.t = Math.min(1, m.t + 0.016);
     
-    const [sx, sy] = project(m.fromLon, m.fromLat);
-    const [tx, ty] = project(m.toLon, m.toLat);
+    const [sx, sy] = projectLocal(m.fromLon, m.fromLat);
+    const [tx, ty] = projectLocal(m.toLon, m.toLat);
     
     const u = 1 - m.t;
     const cx = (sx + tx) / 2;
@@ -3960,12 +2762,12 @@ function drawConventionalForces() {
   const nextMovements: ConventionalMovementMarker[] = [];
 
   movements.forEach((movement) => {
-    const [sx, sy] = project(movement.startLon, movement.startLat);
-    const [ex, ey] = project(movement.endLon, movement.endLat);
+    const [sx, sy] = projectLocal(movement.startLon, movement.startLat);
+    const [ex, ey] = projectLocal(movement.endLon, movement.endLat);
     const dx = ex - sx;
     const dy = ey - sy;
     const distance = Math.hypot(dx, dy);
-    const nation = getNationById(movement.ownerId);
+    const nation = getNationById(nations, movement.ownerId);
     const color = nation?.color ?? '#38bdf8';
 
     if (distance > 4) {
@@ -4013,8 +2815,8 @@ function drawConventionalForces() {
 
   const unitMarkers = S.conventionalUnits ?? [];
   unitMarkers.forEach((marker) => {
-    const [x, y] = project(marker.lon, marker.lat);
-    const nation = getNationById(marker.ownerId);
+    const [x, y] = projectLocal(marker.lon, marker.lat);
+    const nation = getNationById(nations, marker.ownerId);
     const color = nation?.color ?? '#22d3ee';
 
     ctx.save();
@@ -4141,7 +2943,7 @@ function drawFalloutMarks(deltaMs: number) {
     }
 
     next.updatedAt = now;
-    const [px, py] = project(next.lon, next.lat);
+    const [px, py] = projectLocal(next.lon, next.lat);
     next.canvasX = px;
     next.canvasY = py;
 
@@ -4281,7 +3083,7 @@ function drawFX() {
     let rx = typeof b.x === 'number' ? b.x : 0;
     let ry = typeof b.y === 'number' ? b.y : 0;
     if (b.lon !== undefined && b.lat !== undefined) {
-      const projected = project(b.lon, b.lat);
+      const projected = projectLocal(b.lon, b.lat);
       rx = projected[0];
       ry = projected[1];
     }
@@ -4411,7 +3213,7 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
     maybeBanter(target, 0.7);
   }
 
-  const [elon, elat] = toLonLat(x, y);
+  const [elon, elat] = toLonLatLocal(x, y);
   if (Number.isFinite(elon) && Number.isFinite(elat)) {
     upsertFalloutMark(x, y, elon, elat, yieldMT);
   }
@@ -4518,7 +3320,7 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
     });
     
     nations.forEach(n => {
-      const [nx, ny] = project(n.lon, n.lat);
+      const [nx, ny] = projectLocal(n.lon, n.lat);
       const dist = Math.hypot(nx - x, ny - y);
       if (dist < Math.sqrt(yieldMT) * 15) {
         n.defense = Math.max(0, n.defense - 3);
@@ -4563,8 +3365,8 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
 
 // Launch submarine
 function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
-  const [fx, fy] = project(from.lon, from.lat);
-  const [tx, ty] = project(to.lon, to.lat);
+  const [fx, fy] = projectLocal(from.lon, from.lat);
+  const [tx, ty] = projectLocal(to.lon, to.lat);
   S.submarines = S.submarines || [];
   S.submarines.push({
     x: fx + (Math.random() - 0.5) * 50,
@@ -4595,8 +3397,8 @@ function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
 
 // Launch bomber
 function launchBomber(from: Nation, to: Nation, payload: any) {
-  const [sx, sy] = project(from.lon, from.lat);
-  const [tx, ty] = project(to.lon, to.lat);
+  const [sx, sy] = projectLocal(from.lon, from.lat);
+  const [tx, ty] = projectLocal(to.lon, to.lat);
 
   S.bombers.push({
     from, to,
@@ -4941,7 +3743,7 @@ function aiTurn(n: Nation) {
   // Strategic decision tree
   const r = Math.random();
 
-  if (aiHandleDiplomaticUrgencies(n)) {
+  if (aiHandleDiplomaticUrgencies(n, nations, log)) {
     return;
   }
 
@@ -4962,7 +3764,7 @@ function aiTurn(n: Nation) {
 
   const diplomacyBias = 0.18 + Math.max(0, defenseMod * 0.5) + (n.ai === 'defensive' ? 0.1 : 0) + (n.ai === 'balanced' ? 0.05 : 0);
   if (Math.random() < diplomacyBias) {
-    if (aiAttemptDiplomacy(n)) {
+    if (aiAttemptDiplomacy(n, nations, log)) {
       return;
     }
   }
@@ -6275,7 +5077,7 @@ export default function NoradVector() {
 
   const handleGovernanceMetricsSync = useCallback(
     (nationId: string, metrics: GovernanceMetrics) => {
-      const nation = getNationById(nationId);
+      const nation = getNationById(nations, nationId);
       if (!nation) return;
       nation.morale = metrics.morale;
       nation.publicOpinion = metrics.publicOpinion;
@@ -6287,7 +5089,7 @@ export default function NoradVector() {
 
   const handleGovernanceDelta = useCallback(
     (nationId: string, delta: GovernanceDelta) => {
-      const nation = getNationById(nationId);
+      const nation = getNationById(nations, nationId);
       if (!nation) return;
       if (typeof delta.instability === 'number') {
         nation.instability = Math.max(0, (nation.instability || 0) + delta.instability);
@@ -6432,7 +5234,7 @@ export default function NoradVector() {
   } = conventional;
 
   const getNationAnchor = useCallback((ownerId: string) => {
-    let nation = getNationById(ownerId);
+    let nation = getNationById(nations, ownerId);
     if (!nation && ownerId === 'player') {
       nation = nations.find((entry) => entry.isPlayer) ?? null;
     }
@@ -8174,7 +6976,7 @@ export default function NoradVector() {
         }
 
         case 'view':
-          openModal('INTELLIGENCE REPORT', <IntelReportContent player={commander} onClose={closeModal} />);
+          openModal('INTELLIGENCE REPORT', <IntelReportContent player={commander} nations={nations} onClose={closeModal} />);
           return false;
 
         case 'satellite':
@@ -8449,7 +7251,7 @@ export default function NoradVector() {
   }, []);
 
   const handleStartLabConstruction = useCallback((tier: number) => {
-    const player = getNationById(playerNationId);
+    const player = getNationById(nations, playerNationId);
     if (!player) return;
 
     const result = startLabConstruction(tier as BioLabTier, player.production, player.uranium);
@@ -9180,8 +7982,8 @@ export default function NoradVector() {
   const handleAcceptProposal = useCallback(() => {
     if (!activeDiplomacyProposal) return;
 
-    const proposer = getNationById(activeDiplomacyProposal.proposerId);
-    const target = getNationById(activeDiplomacyProposal.targetId);
+    const proposer = getNationById(nations, activeDiplomacyProposal.proposerId);
+    const target = getNationById(nations, activeDiplomacyProposal.targetId);
 
     if (!proposer || !target) {
       setActiveDiplomacyProposal(null);
@@ -9244,8 +8046,8 @@ export default function NoradVector() {
   const handleRejectProposal = useCallback(() => {
     if (!activeDiplomacyProposal) return;
 
-    const proposer = getNationById(activeDiplomacyProposal.proposerId);
-    const target = getNationById(activeDiplomacyProposal.targetId);
+    const proposer = getNationById(nations, activeDiplomacyProposal.proposerId);
+    const target = getNationById(nations, activeDiplomacyProposal.targetId);
 
     if (!proposer || !target) {
       setActiveDiplomacyProposal(null);
@@ -9378,9 +8180,9 @@ export default function NoradVector() {
         const rect = canvas.getBoundingClientRect();
         const focalX = e.clientX - rect.left;
         const focalY = e.clientY - rect.top;
-        const [focalLon, focalLat] = toLonLat(focalX, focalY);
+        const [focalLon, focalLat] = toLonLatLocal(focalX, focalY);
         const prevZoom = cam.zoom;
-        const [projectedX, projectedY] = project(focalLon, focalLat);
+        const [projectedX, projectedY] = projectLocal(focalLon, focalLat);
 
         const zoomIntensity = 0.0015;
         const delta = Math.exp(-e.deltaY * zoomIntensity);
@@ -9433,9 +8235,9 @@ export default function NoradVector() {
             const rect = canvas.getBoundingClientRect();
             const midpointX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
             const midpointY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
-            const [focalLon, focalLat] = toLonLat(midpointX, midpointY);
+            const [focalLon, focalLat] = toLonLatLocal(midpointX, midpointY);
             const prevZoom = cam.zoom;
-            const [projectedX, projectedY] = project(focalLon, focalLat);
+            const [projectedX, projectedY] = projectLocal(focalLon, focalLat);
             const newZoom = Math.max(0.5, Math.min(3, initialPinchZoom * scaleFactor));
             const zoomScale = prevZoom > 0 ? newZoom / prevZoom : 1;
 
@@ -9484,7 +8286,7 @@ export default function NoradVector() {
                 if (n.isPlayer) continue;
                 if (!player.satellites[n.id]) continue;
                 if (n.population <= 0) continue;
-                const [nx, ny] = project(n.lon, n.lat);
+                const [nx, ny] = projectLocal(n.lon, n.lat);
                 const dist = Math.hypot(mx - nx, my - ny);
                 
                 if (dist < 30) { // Larger hit area for touch
@@ -9525,7 +8327,7 @@ export default function NoradVector() {
           if (n.isPlayer) continue;
           if (!player.satellites[n.id]) continue;
           if (n.population <= 0) continue;
-          const [nx, ny] = project(n.lon, n.lat);
+          const [nx, ny] = projectLocal(n.lon, n.lat);
           const dist = Math.hypot(mx - nx, my - ny);
           
           if (dist < 20) {
@@ -9560,7 +8362,7 @@ export default function NoradVector() {
           return;
         }
         
-        const [lon, lat] = toLonLat(mx, my);
+        const [lon, lat] = toLonLatLocal(mx, my);
         const newZoom = Math.min(3, cam.targetZoom * 1.5);
         cam.targetZoom = newZoom;
         cam.zoom = newZoom;
@@ -10922,8 +9724,8 @@ export default function NoradVector() {
 
       {/* Diplomacy Proposal Overlay */}
       {activeDiplomacyProposal && (() => {
-        const proposer = getNationById(activeDiplomacyProposal.proposerId);
-        const target = getNationById(activeDiplomacyProposal.targetId);
+        const proposer = getNationById(nations, activeDiplomacyProposal.proposerId);
+        const target = getNationById(nations, activeDiplomacyProposal.targetId);
 
         if (!proposer || !target) return null;
 
