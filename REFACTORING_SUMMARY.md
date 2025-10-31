@@ -7,9 +7,9 @@
 ## Progress Overview
 
 **Original Size:** 10,937 lines
-**Current Size:** 10,644 lines
-**Reduction:** 293 lines (-2.7%)
-**Status:** Phases 1-2 Complete (2 of 7 phases)
+**Current Size:** 10,341 lines
+**Reduction:** 596 lines (-5.5%)
+**Status:** Phases 1-3 Complete (3 of 7 phases)
 
 ---
 
@@ -93,25 +93,59 @@
 
 ---
 
-## Remaining Phases (5 of 7)
+### Phase 3: Extract Game Phase Handlers ✅
 
-### Phase 3: Extract Game Phase Handlers (Pending)
-**Target Functions:**
-- `launch()` - Nuclear launch logic (~120 lines)
-- `resolutionPhase()` - Resolution phase processing (~90 lines)
-- `productionPhase()` - Production calculations (~100 lines)
+**Created Files:**
+- `src/lib/gamePhaseHandlers.ts` (423 lines)
 
-**Challenges:**
-- Heavy dependencies on global state (S, nations)
-- Tightly coupled to UI updates (toast, log)
-- Require significant refactoring for proper extraction
+**Functions Extracted:**
+- `launch()` - Nuclear missile launch logic (~90 lines)
+  - Validates DEFCON levels, treaties, resources
+  - Handles warhead technology requirements
+  - Tracks statistics and updates public opinion
+  - Generates news and UI feedback
 
-**Recommendation:**
-- Consider creating a game state context/provider first
-- Extract smaller sub-functions from these large functions
-- Gradual refactoring with intermediate commits
+- `resolutionPhase()` - Resolution phase processing (~88 lines)
+  - Updates threat levels between nations
+  - Processes missile impacts and explosions
+  - Handles radiation zones and mitigation
+  - Applies nuclear winter effects
+
+- `productionPhase()` - Production calculations (~167 lines)
+  - Generates resources (production, uranium, intel)
+  - Applies modifiers (morale, green shift, sanctions)
+  - Handles instability and civil war effects
+  - Manages timers (borders, treaties, covert ops)
+  - Processes elections and government changes
+
+**Technical Approach:**
+- Used dependency injection pattern
+- Created TypeScript interfaces for dependencies:
+  - `LaunchDependencies` (11 dependencies)
+  - `ResolutionPhaseDependencies` (6 dependencies)
+  - `ProductionPhaseDependencies` (6 dependencies)
+- Wrapper functions in Index.tsx delegate to extracted module
+- Maintains all global state modifications
+- Zero breaking changes
+
+**Improvements:**
+- Better code organization (game logic separated from UI)
+- Easier to test (dependencies can be mocked)
+- Clearer function signatures
+- Improved maintainability
+- Self-documenting code structure
+
+**Challenges Overcome:**
+- Heavy coupling to global state (S, nations)
+- UI dependencies (toast, log, AudioSys)
+- Cross-function dependencies (explode, advanceResearch)
+- Maintained backward compatibility
 
 ---
+
+## Remaining Phases (4 of 7)
+
+
 
 ### Phase 4: Extract Rendering System (Pending)
 **Target Functions:**
@@ -193,11 +227,11 @@
 - **Utility Modules:** 0
 - **TypeScript Errors:** 1 (fixed)
 
-### After Phase 1-2
-- **Total Lines:** 10,644 (-293)
-- **Main Component:** ~5,200 lines
-- **Helper Functions:** ~5,400 lines
-- **Utility Modules:** 4 files, 515 lines
+### After Phase 1-3
+- **Total Lines:** 10,341 (-596)
+- **Main Component:** ~5,100 lines
+- **Helper Functions:** ~5,200 lines
+- **Extracted Modules:** 5 files, 938 lines
 - **TypeScript Errors:** 0
 
 ### Target (All Phases Complete)
@@ -321,6 +355,16 @@ aiAttemptDiplomacy(nation, nations, log);
 ## Commit History
 
 ```
+7f03737 refactor: Extract game phase handlers (Phase 3)
+  - Created gamePhaseHandlers.ts (423 lines)
+  - Extracted launch(), resolutionPhase(), productionPhase()
+  - Used dependency injection pattern
+  - Reduced Index.tsx by 303 lines (-2.8%)
+
+5d123ae docs: Add comprehensive refactoring documentation
+  - Created REFACTORING_SUMMARY.md
+  - Updated AUDIT_PROGRESS.md
+
 d458b07 refactor: Extract utility functions and AI diplomacy logic (Phases 1-2)
   - Created gameUtils.ts, nationUtils.ts, renderingUtils.ts
   - Created aiDiplomacyActions.ts
@@ -340,7 +384,7 @@ d458b07 refactor: Extract utility functions and AI diplomacy logic (Phases 1-2)
 
 **Total Remaining:** 36-50 hours
 
-**Completed:** 4-6 hours (Phases 1-2)
+**Completed:** 6-9 hours (Phases 1-3)
 
 ---
 
