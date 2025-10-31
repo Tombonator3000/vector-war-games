@@ -4,6 +4,7 @@
  */
 
 import { GreatOldOnesState, RegionalState } from '../types/greatOldOnes';
+import { createCultistCell } from './greatOldOnesHelpers';
 
 // Import Phase 2 systems
 import {
@@ -336,6 +337,7 @@ function processDominationTurn(
         type: 'cultist_recruitment',
         value: terrorResult.conversions,
         reason: 'Terror-induced conversions',
+        regionId: campaign.targetRegionId,
       });
     }
 
@@ -575,6 +577,7 @@ function processConvergenceTurn(
         type: 'cultist_recruitment',
         value: spreadResult.conversions,
         reason: `Cultural movement: ${movement.name}`,
+        regionId: movement.regionId,
       });
     }
 
@@ -767,6 +770,7 @@ export interface Phase2StateChange {
 
   value: number;
   reason: string;
+  regionId?: string;
 }
 
 /**
@@ -792,8 +796,47 @@ export function applyPhase2StateChanges(
         break;
 
       case 'cultist_recruitment':
-        // Add to cultist cells (simplified)
-        // Would need region targeting in real implementation
+        {
+          const recruits = Math.max(0, Math.floor(change.value));
+          if (recruits <= 0) {
+            break;
+          }
+
+          const fallbackRegions = () => {
+            const sorted = [...state.regions].sort((a, b) => b.corruption - a.corruption);
+            const prioritized = sorted.filter(
+              region => region.corruption > 0 || region.cultistCells > 0
+            );
+            const selection = prioritized.length > 0 ? prioritized : sorted;
+            return selection.slice(0, Math.min(3, selection.length));
+          };
+
+          const candidateRegions = change.regionId
+            ? (() => {
+                const targeted = state.regions.filter(
+                  region => region.regionId === change.regionId
+                );
+                return targeted.length > 0 ? targeted : fallbackRegions();
+              })()
+            : fallbackRegions();
+
+          if (candidateRegions.length === 0) {
+            break;
+          }
+
+          let remaining = recruits;
+
+          for (let index = 0; index < candidateRegions.length && remaining > 0; index++) {
+            const region = candidateRegions[index];
+            const allocation =
+              index === candidateRegions.length - 1
+                ? remaining
+                : Math.max(1, Math.floor(remaining / (candidateRegions.length - index)));
+
+            distributeCultistRecruits(state, region, allocation);
+            remaining -= allocation;
+          }
+        }
         break;
 
       case 'corruption_gain':
@@ -811,4 +854,43 @@ export function applyPhase2StateChanges(
         break;
     }
   }
+}
+
+function distributeCultistRecruits(
+  state: GreatOldOnesState,
+  region: RegionalState,
+  recruits: number
+): void {
+  if (recruits <= 0) {
+    return;
+  }
+
+  const regionCells = state.cultistCells.filter(cell => cell.regionId === region.regionId);
+  let remaining = recruits;
+
+  if (regionCells.length > 0) {
+    for (let index = 0; index < regionCells.length && remaining > 0; index++) {
+      const cell = regionCells[index];
+      const share = Math.ceil(remaining / (regionCells.length - index));
+      cell.count += share;
+      remaining -= share;
+    }
+  }
+
+  const defaultCellSize = 12;
+
+  while (remaining > 0) {
+    const newCellSize = Math.min(remaining, defaultCellSize);
+    createCultistCell(state, region.regionId, 'initiate', newCellSize);
+    remaining -= newCellSize;
+  }
+
+  if (!Array.isArray(region.recentEvents)) {
+    region.recentEvents = [];
+  }
+
+  region.recentEvents.unshift(
+    `Cultist recruitment surge: +${recruits} initiates join the order.`
+  );
+  region.recentEvents = region.recentEvents.slice(0, 5);
 }
