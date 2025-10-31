@@ -7,9 +7,9 @@
 ## Progress Overview
 
 **Original Size:** 10,937 lines
-**Current Size:** 10,125 lines
-**Reduction:** 812 lines (-7.4%)
-**Status:** Phases 1-4 Complete (4 of 7 phases, 57% done)
+**Current Size:** 9,739 lines
+**Reduction:** 1,198 lines (-11.0%)
+**Status:** Phases 1-5 Complete (5 of 7 phases, 71% done)
 
 ---
 
@@ -191,24 +191,68 @@
 
 ---
 
-## Remaining Phases (3 of 7)
+### Phase 5: Extract UI Components ✅
 
+**Created Files:**
+- `src/components/intro/IntroLogo.tsx` (86 lines)
+- `src/components/intro/Starfield.tsx` (40 lines)
+- `src/components/intro/SpinningEarth.tsx` (14 lines)
+- `src/components/modals/OperationModal.tsx` (212 lines)
+- `src/components/modals/IntelReportContent.tsx` (94 lines)
 
+**Components Extracted:**
+- **IntroLogo** - SVG logo component with neon synthwave styling (~79 lines)
+  - Gradient-filled text with glow effects
+  - Accessible with ARIA labels
+  - Pure presentational component
 
-### Phase 4: Extract Rendering System (Pending)
-**Target Components:**
-- `IntroLogo` - SVG logo component
-- `Starfield` - Animated starfield background
-- `SpinningEarth` - Earth animation component
-- `OperationModal` - Operations modal UI
-- `IntelReportContent` - Intelligence reports
+- **Starfield** - Animated starfield background (~32 lines)
+  - 200 randomly positioned stars
+  - Individual animation durations and delays
+  - Uses React.useMemo for performance
 
-**Estimated Reduction:** ~200 lines
+- **SpinningEarth** - Earth globe wrapper (~6 lines)
+  - Wraps CesiumHeroGlobe component
+  - Simple container component
 
-**Approach:**
-- Create `src/components/intro/` directory
-- Create `src/components/modals/` directory
-- Move self-contained React components
+- **OperationModal** - Operations modal UI (~120 lines)
+  - Displays covert operation actions
+  - Handles target selection flow
+  - Configurable accent colors (5 themes)
+  - Includes all operation types and costs
+  - Exports types: OperationAction, OperationModalProps
+
+- **IntelReportContent** - Intelligence reports (~70 lines)
+  - Shows satellite surveillance data
+  - Nation statistics and capabilities
+  - Deep reconnaissance details
+  - Cyber warfare metrics
+
+**Technical Approach:**
+- Created organized component directory structure
+- Extracted self-contained React components
+- Moved types and styling constants with components
+- Updated IntelReportContent to accept nations as prop (removed global dependency)
+- All components properly typed with TypeScript
+
+**Improvements:**
+- Better component organization by feature area
+- Reusable components across the application
+- Cleaner separation of concerns
+- Easier to test components in isolation
+- Improved code discoverability
+
+**Challenges Overcome:**
+- IntelReportContent had global nations dependency (fixed by passing as prop)
+- OperationModal had complex accent styling system (moved with component)
+- Multiple type definitions needed to be exported
+- Maintained backward compatibility with existing usage
+
+**Line Reduction:** 386 lines (-3.8% from Phase 4 baseline)
+
+---
+
+## Remaining Phases (2 of 7)
 
 ---
 
@@ -257,11 +301,11 @@
 - **Utility Modules:** 0
 - **TypeScript Errors:** 1 (fixed)
 
-### After Phase 1-4
-- **Total Lines:** 10,125 (-812)
-- **Main Component:** ~5,000 lines
-- **Helper Functions:** ~5,100 lines
-- **Extracted Modules:** 6 files, 1,266 lines
+### After Phase 1-5
+- **Total Lines:** 9,739 (-1,198)
+- **Main Component:** ~4,700 lines
+- **Helper Functions:** ~5,000 lines
+- **Extracted Modules:** 11 files, 1,712 lines
 - **TypeScript Errors:** 0
 
 ### Target (All Phases Complete)
@@ -415,16 +459,14 @@ d458b07 refactor: Extract utility functions and AI diplomacy logic (Phases 1-2)
 
 ## Time Estimate for Remaining Work
 
-**Phase 3:** 6-8 hours (Game phase handlers)
-**Phase 5:** 4-6 hours (UI components)
 **Phase 6:** 6-8 hours (State management)
 **Phase 7:** 12-16 hours (Main component simplification)
 
-**Total Remaining:** 22-30 hours
+**Total Remaining:** 18-24 hours
 
-**Completed:** 8-12 hours (Phases 1-4)
+**Completed:** 16-20 hours (Phases 1-5)
 
 ---
 
 **Report Generated:** 2025-10-31
-**Next Session:** Continue with Phase 3 or Phase 5 (UI components are lower risk)
+**Next Session:** Continue with Phase 6 (State management) or Phase 7 (Main component simplification)

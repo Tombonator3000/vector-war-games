@@ -191,16 +191,16 @@
 
 ### High Priority (P0-P1)
 
-**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 20-28 hours remaining)
-- **Status:** IN PROGRESS (Phases 1-4 of 7 complete, 57% done)
-- **Progress:** 10,937 → 10,125 lines (-812 lines, -7.4%)
+**Issue #4: Refactor Monolithic Index.tsx** ⏳ (32-40 hours → 18-24 hours remaining)
+- **Status:** IN PROGRESS (Phases 1-5 of 7 complete, 71% done)
+- **Progress:** 10,937 → 9,739 lines (-1,198 lines, -11.0%)
 - **Completed:**
   - ✅ Phase 1: Extracted utility functions (gameUtils, nationUtils, renderingUtils)
   - ✅ Phase 2: Extracted AI diplomacy logic (aiDiplomacyActions)
   - ✅ Phase 3: Extracted game phase handlers (launch, resolution, production)
   - ✅ Phase 4: Extracted world rendering system (drawWorld, drawNations)
+  - ✅ Phase 5: Extracted UI components (IntroLogo, Starfield, SpinningEarth, OperationModal, IntelReportContent)
 - **Remaining Phases:**
-  - Phase 5: Extract UI components (IntroLogo, Starfield, modals)
   - Phase 6: Extract game state management
   - Phase 7: Simplify main NoradVector component
 - **Files Created:**
@@ -210,6 +210,11 @@
   - `src/lib/aiDiplomacyActions.ts` (305 lines)
   - `src/lib/gamePhaseHandlers.ts` (423 lines)
   - `src/rendering/worldRenderer.ts` (328 lines)
+  - `src/components/intro/IntroLogo.tsx` (86 lines)
+  - `src/components/intro/Starfield.tsx` (40 lines)
+  - `src/components/intro/SpinningEarth.tsx` (14 lines)
+  - `src/components/modals/OperationModal.tsx` (212 lines)
+  - `src/components/modals/IntelReportContent.tsx` (94 lines)
 - **See:** `REFACTORING_SUMMARY.md` for detailed breakdown
 
 **Issue #7: Fix Type Safety Issues** (12-15 hours)
