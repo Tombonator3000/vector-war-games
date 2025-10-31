@@ -106,6 +106,7 @@ export interface UseGovernanceOptions {
   onMetricsSync?: (nationId: string, metrics: GovernanceMetrics) => void;
   onApplyDelta?: (nationId: string, delta: GovernanceDelta) => void;
   onAddNewsItem?: (category: 'governance' | 'crisis' | 'diplomatic', text: string, priority: 'routine' | 'important' | 'critical') => void;
+  defaultElectionInterval?: number;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -117,14 +118,23 @@ const DEFAULT_METRICS: GovernanceMetrics = {
   cabinetApproval: 58,
 };
 
-function seedMetrics(nation: GovernanceNationRef | undefined): GovernanceMetrics {
+function resolveElectionInterval(interval: number | undefined) {
+  return typeof interval === 'number' && interval > 0 ? interval : DEFAULT_METRICS.electionTimer;
+}
+
+function seedMetrics(
+  nation: GovernanceNationRef | undefined,
+  defaultElectionInterval: number,
+): GovernanceMetrics {
+  const fallbackElectionTimer = resolveElectionInterval(defaultElectionInterval);
   if (!nation) {
-    return { ...DEFAULT_METRICS };
+    return { ...DEFAULT_METRICS, electionTimer: fallbackElectionTimer };
   }
   return {
     morale: typeof nation.morale === 'number' ? nation.morale : DEFAULT_METRICS.morale,
     publicOpinion: typeof nation.publicOpinion === 'number' ? nation.publicOpinion : DEFAULT_METRICS.publicOpinion,
-    electionTimer: typeof nation.electionTimer === 'number' ? nation.electionTimer : DEFAULT_METRICS.electionTimer,
+    electionTimer:
+      typeof nation.electionTimer === 'number' ? nation.electionTimer : fallbackElectionTimer,
     cabinetApproval: typeof nation.cabinetApproval === 'number' ? nation.cabinetApproval : DEFAULT_METRICS.cabinetApproval,
   };
 }
@@ -169,8 +179,9 @@ function evaluateOptionExpectation(option: PoliticalEventOption): number {
   }, 0);
 }
 
-function getNextElectionTimer(metrics: GovernanceMetrics) {
-  return metrics.electionTimer > 0 ? metrics.electionTimer : 12;
+function getNextElectionTimer(metrics: GovernanceMetrics, defaultElectionInterval: number) {
+  const fallbackElectionTimer = resolveElectionInterval(defaultElectionInterval);
+  return metrics.electionTimer > 0 ? metrics.electionTimer : fallbackElectionTimer;
 }
 
 export interface UseGovernanceReturn {
@@ -187,12 +198,17 @@ export function useGovernance({
   onMetricsSync,
   onApplyDelta,
   onAddNewsItem,
+  defaultElectionInterval,
 }: UseGovernanceOptions): UseGovernanceReturn {
   const { rng } = useRNG();
+  const resolvedElectionInterval = useMemo(
+    () => resolveElectionInterval(defaultElectionInterval),
+    [defaultElectionInterval],
+  );
   const [metrics, setMetrics] = useState<Record<string, GovernanceMetrics>>(() => {
     const initial: Record<string, GovernanceMetrics> = {};
     getNations().forEach((nation) => {
-      initial[nation.id] = seedMetrics(nation);
+      initial[nation.id] = seedMetrics(nation, resolvedElectionInterval);
     });
     return initial;
   });
@@ -232,13 +248,13 @@ export function useGovernance({
     ) => {
       setMetrics((prev) => {
         const nation = getNations().find((n) => n.id === nationId);
-        const current = prev[nationId] ?? seedMetrics(nation);
+        const current = prev[nationId] ?? seedMetrics(nation, resolvedElectionInterval);
         const next = updater(current, nation);
         onMetricsSync?.(nationId, next);
         return { ...prev, [nationId]: next };
       });
     },
-    [getNations, onMetricsSync],
+    [getNations, onMetricsSync, resolvedElectionInterval],
   );
 
   const applyGovernanceDelta = useCallback(
@@ -270,7 +286,7 @@ export function useGovernance({
     setMetrics((prev) => {
       const next = { ...prev };
       getNations().forEach((nation) => {
-        const current = prev[nation.id] ?? seedMetrics(nation);
+        const current = prev[nation.id] ?? seedMetrics(nation, resolvedElectionInterval);
         const moraleDecay = 1 + Math.max(0, (nation.instability ?? 0) - 40) * 0.02;
         const cabinetSupport = (current.cabinetApproval - 50) * 0.02;
         const publicOpinionEffect = (current.publicOpinion - 50) * 0.01;
@@ -297,7 +313,7 @@ export function useGovernance({
     updates.forEach(({ id, metrics: snapshot }) => {
       onMetricsSync?.(id, snapshot);
     });
-  }, [currentTurn, getNations, onMetricsSync]);
+  }, [currentTurn, getNations, onMetricsSync, resolvedElectionInterval]);
 
   const autoResolve = useCallback(
     (nation: GovernanceNationRef, definition: PoliticalEventDefinition) => {
@@ -317,17 +333,17 @@ export function useGovernance({
       if (data.electionTimer <= 0) {
         syncNationMetrics(nationId, (current) => ({
           ...current,
-          electionTimer: getNextElectionTimer(current),
+          electionTimer: getNextElectionTimer(current, resolvedElectionInterval),
         }));
       }
     });
-  }, [metrics, syncNationMetrics]);
+  }, [metrics, resolvedElectionInterval, syncNationMetrics]);
 
   useEffect(() => {
     if (activeEvent) return;
     const nations = getNations();
     for (const nation of nations) {
-      const nationMetrics = metrics[nation.id] ?? seedMetrics(nation);
+      const nationMetrics = metrics[nation.id] ?? seedMetrics(nation, resolvedElectionInterval);
       if (nationMetrics.electionTimer <= 0) {
         const electionEvent = politicalEvents.find((event) => event.conditions?.electionImminent);
         if (!electionEvent) {
@@ -346,7 +362,7 @@ export function useGovernance({
         if (!meetsPoliticalEventConditions(electionEvent, nationMetrics, currentTurn)) {
           syncNationMetrics(nation.id, (current) => ({
             ...current,
-            electionTimer: getNextElectionTimer(current),
+            electionTimer: getNextElectionTimer(current, resolvedElectionInterval),
           }));
           continue;
         }
@@ -368,7 +384,7 @@ export function useGovernance({
         }
         syncNationMetrics(nation.id, (current) => ({
           ...current,
-          electionTimer: getNextElectionTimer(current),
+          electionTimer: getNextElectionTimer(current, resolvedElectionInterval),
         }));
         return;
       }
@@ -378,7 +394,7 @@ export function useGovernance({
     const eligibleTargets: Array<{ nation: GovernanceNationRef; events: PoliticalEventDefinition[] }> = [];
 
     for (const nation of nations) {
-      const snapshot = metrics[nation.id] ?? seedMetrics(nation);
+      const snapshot = metrics[nation.id] ?? seedMetrics(nation, resolvedElectionInterval);
       const applicableEvents = candidates.filter((event) =>
         meetsPoliticalEventConditions(event, snapshot, currentTurn),
       );
@@ -418,7 +434,17 @@ export function useGovernance({
         'routine',
       );
     }
-  }, [activeEvent, autoResolve, currentTurn, ensureElectionTimer, getNations, metrics, onAddNewsItem, syncNationMetrics]);
+  }, [
+    activeEvent,
+    autoResolve,
+    currentTurn,
+    ensureElectionTimer,
+    getNations,
+    metrics,
+    onAddNewsItem,
+    resolvedElectionInterval,
+    syncNationMetrics,
+  ]);
 
   const selectOption = useCallback(
     (optionId: string) => {

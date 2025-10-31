@@ -694,3 +694,8 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-10-31T10:33:00+00:00
 - Shifted the Cold War scenario to yearly turns by updating the time and election cadence configuration and confirming HUD timestamp formatting stays consistent across the codebase.
+## 2025-10-31T11:05:47+00:00
+- Investigated Codex review report about Cold War election timers and inspected `useGovernance` to trace how timers were seeded and reset independent of scenario settings.
+- Implemented scenario-aware election interval handling in `useGovernance` and propagated the interval from `Index.tsx` so Cold War elections now recur on the configured four-turn cadence.
+## 2025-10-31T11:06:09+00:00
+- Attempted to run `npm run test -- src/hooks/__tests__/useGovernance.test.ts`; Vitest exited because the suite mounts `useGovernance` without wrapping it in `RNGProvider`, causing the expected `useRNG` context error after recent hook changes.
