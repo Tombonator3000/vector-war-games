@@ -228,6 +228,51 @@ const VIEWER_OPTIONS: { value: 'threejs' | 'cesium'; label: string; description:
   },
 ];
 
+type ScreenResolution = 'auto' | '1280x720' | '1600x900' | '1920x1080' | '2560x1440' | '3840x2160';
+
+const RESOLUTION_OPTIONS: { value: ScreenResolution; label: string; description: string; width?: number; height?: number }[] = [
+  {
+    value: 'auto',
+    label: 'Auto',
+    description: 'Responsive - fits available screen space.',
+  },
+  {
+    value: '1280x720',
+    label: '1280x720',
+    description: 'HD - Lower performance demand, higher framerate.',
+    width: 1280,
+    height: 720,
+  },
+  {
+    value: '1600x900',
+    label: '1600x900',
+    description: 'HD+ - Balanced clarity and performance.',
+    width: 1600,
+    height: 900,
+  },
+  {
+    value: '1920x1080',
+    label: '1920x1080',
+    description: 'Full HD - Standard modern desktop display.',
+    width: 1920,
+    height: 1080,
+  },
+  {
+    value: '2560x1440',
+    label: '2560x1440',
+    description: 'QHD - High clarity, requires more GPU resources.',
+    width: 2560,
+    height: 1440,
+  },
+  {
+    value: '3840x2160',
+    label: '3840x2160',
+    description: '4K Ultra HD - Maximum detail, high performance cost.',
+    width: 3840,
+    height: 2160,
+  },
+];
+
 type CanvasIcon = HTMLImageElement | null;
 
 type ConventionalUnitMarker = {
@@ -3820,6 +3865,25 @@ export default function NoradVector() {
     });
   }, []);
 
+  // Screen resolution preference
+  const [screenResolution, setScreenResolution] = useState<ScreenResolution>(() => {
+    const stored = Storage.getItem('screen_resolution');
+    if (stored === 'auto' || stored === '1280x720' || stored === '1600x900' || stored === '1920x1080' || stored === '2560x1440' || stored === '3840x2160') {
+      return stored;
+    }
+    return 'auto';
+  });
+
+  const handleResolutionSelect = useCallback((resolution: ScreenResolution) => {
+    setScreenResolution(resolution);
+    Storage.setItem('screen_resolution', resolution);
+    const selectedOption = RESOLUTION_OPTIONS.find(opt => opt.value === resolution);
+    toast({
+      title: `Resolution: ${selectedOption?.label ?? resolution}`,
+      description: selectedOption?.description ?? 'Resolution updated',
+    });
+  }, []);
+
   // Tutorial and phase transition system
   const tutorialContext = useTutorialContext();
   const [isPhaseTransitioning, setIsPhaseTransitioning] = useState(false);
@@ -4889,8 +4953,29 @@ export default function NoradVector() {
     const rect = parent?.getBoundingClientRect();
     const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : element.width;
     const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : element.height;
-    const width = Math.floor(rect?.width ?? fallbackWidth);
-    const height = Math.floor(rect?.height ?? fallbackHeight);
+    let width = Math.floor(rect?.width ?? fallbackWidth);
+    let height = Math.floor(rect?.height ?? fallbackHeight);
+
+    // Apply resolution override if not set to 'auto'
+    if (screenResolution !== 'auto') {
+      const resolutionOption = RESOLUTION_OPTIONS.find(opt => opt.value === screenResolution);
+      if (resolutionOption?.width && resolutionOption?.height) {
+        width = Math.min(resolutionOption.width, width);
+        height = Math.min(resolutionOption.height, height);
+
+        // Maintain aspect ratio of the selected resolution
+        const targetAspect = resolutionOption.width / resolutionOption.height;
+        const containerAspect = (rect?.width ?? fallbackWidth) / (rect?.height ?? fallbackHeight);
+
+        if (containerAspect > targetAspect) {
+          // Container is wider - fit to height
+          width = Math.floor(height * targetAspect);
+        } else {
+          // Container is taller - fit to width
+          height = Math.floor(width / targetAspect);
+        }
+      }
+    }
 
     if (width <= 0 || height <= 0) {
       return;
@@ -4911,7 +4996,7 @@ export default function NoradVector() {
       W = element.width;
       H = element.height;
     }
-  }, []);
+  }, [screenResolution]);
 
   const toggleFullscreen = useCallback(() => {
     AudioSys.playSFX('click');
@@ -7792,6 +7877,28 @@ export default function NoradVector() {
                       key={option.value}
                       type="button"
                       onClick={() => handleViewerSelect(option.value)}
+                      className={`layout-chip${isActive ? ' is-active' : ''}`}
+                      aria-pressed={isActive}
+                    >
+                      <span className="layout-chip__label">{option.label}</span>
+                      <span className="layout-chip__description">{option.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="options-section">
+              <h3 className="options-section__heading">SCREEN RESOLUTION</h3>
+              <p className="options-section__subheading">Set canvas resolution to optimize performance for your PC monitor.</p>
+              <div className="layout-grid">
+                {RESOLUTION_OPTIONS.map((option) => {
+                  const isActive = screenResolution === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => handleResolutionSelect(option.value)}
                       className={`layout-chip${isActive ? ' is-active' : ''}`}
                       aria-pressed={isActive}
                     >
