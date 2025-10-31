@@ -124,8 +124,8 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
 
   cubanCrisis: {
     id: 'cubanCrisis',
-    name: 'Cuban Missile Crisis',
-    description: 'High tension scenario - 1 turn = 1 day',
+    name: 'Cuban Missile Crisis (1962)',
+    description: 'October 16-28, 1962: Thirteen Days that brought the world to the brink of nuclear war',
     timeConfig: {
       unit: 'day',
       unitsPerTurn: 1,
@@ -142,17 +142,26 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
       foreignInfluenceEnabled: true,
       loseElectionConsequence: 'none',
     },
-    startingDefcon: 3,
+    startingDefcon: 3, // Crisis started at DEFCON 3
     modifiers: {
       timeSpeedMultiplier: 0.5, // Faster paced
     },
     eraOverrides: {
+      // 1962 technology only - no modern features
       early: {
-        endTurn: 3,
+        endTurn: 5,
+        unlockedFeatures: [
+          'nuclear_missiles',
+          'nuclear_bombers',
+          'defense_systems',
+          'basic_diplomacy',
+          'basic_research',
+          'conventional_warfare',
+        ],
       },
       mid: {
-        startTurn: 4,
-        endTurn: 6,
+        startTurn: 6,
+        endTurn: 10,
         unlockedFeatures: [
           'nuclear_missiles',
           'nuclear_bombers',
@@ -162,10 +171,11 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
           'conventional_warfare',
           'territory_control',
           'advanced_diplomacy',
+          'submarines', // Nuclear subs existed in 1962
         ],
       },
       late: {
-        startTurn: 7,
+        startTurn: 11,
         endTurn: 14,
         unlockedFeatures: [
           'nuclear_missiles',
@@ -175,10 +185,8 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
           'basic_research',
           'conventional_warfare',
           'territory_control',
-          'cyber_warfare',
           'advanced_diplomacy',
           'submarines',
-          'satellites',
           'propaganda_victory',
         ],
       },

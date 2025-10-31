@@ -363,45 +363,45 @@ const FOLLOWUP_FLASHPOINTS: Record<string, Record<string, Omit<FlashpointEvent, 
   },
   cuban_crisis: {
     hold_quarantine_success: {
-      title: 'FOLLOW-ON: Soviet Submarine B-59 Detected',
+      title: 'CRISIS: Soviet Submarine B-59 Cornered',
       description:
-        'Signals intelligence reports a Foxtrot-class submarine attempting to slip beneath the quarantine line. Admiral Anderson recommends dropping practice depth charges to force it to surface.',
+        'October 27, 1962 - "Black Saturday": USS Beale has detected Soviet submarine B-59 trying to breach the quarantine. The sub has been submerged for days, running low on air and battery power. Crew is suffering from heat exhaustion and CO2 poisoning. Captain Savitsky is considering using his nuclear torpedo. The sub\'s political officer and the flotilla commander Arkhipov must both agree to launch. You don\'t know the sub carries nuclear weapons. Admiral Anderson orders practice depth charges to force surfacing.',
       category: 'rogue',
-      severity: 'critical',
-      timeLimit: 60,
+      severity: 'catastrophic',
+      timeLimit: 45,
       followUpId: 'cuban_crisis',
       options: [
         {
           id: 'signal_surface',
-          text: 'Signal to Surface with Practice Charges',
-          description: 'Deploy low-yield depth charges to compel compliance without provoking escalation.',
+          text: 'Drop Practice Depth Charges',
+          description: 'Use signaling depth charges according to procedure. The standard international signal to surface. You have no idea they have a nuclear torpedo.',
           advisorSupport: ['military', 'intel'],
           advisorOppose: ['diplomatic'],
           outcome: {
-            probability: 0.55,
-            success: { submarineSurfaces: true, defcon: 2, morale: +8 },
-            failure: { nuclearTorpedoArmed: true, defcon: 1, casualties: 120 }
+            probability: 0.6,
+            success: { submarineSurfaces: true, nuclearWarAverted: true, morale: +12 },
+            failure: { nuclearTorpedoArmed: true, arkhipovSavesWorld: true, defcon: 1 }
           },
           successNarrative:
-            'The Soviet captain surfaces, furious but compliant. Photographers capture the confrontation, proving the quarantine holds.',
+            'Depth charges explode around B-59. Inside, Captain Savitsky screams "We\'re going to blast them now! We will die, but we will sink them all!" He orders the nuclear torpedo prepared. But Commodore Arkhipov, the flotilla commander, refuses to authorize launch. After heated argument, B-59 surfaces. The crew stumbles onto deck, half-dead from heat and CO2. You never learn how close you came to nuclear war. Vasili Arkhipov just saved the world.',
           failureNarrative:
-            'Crew aboard B-59 believe war has begun. A nuclear torpedo launch nearly occurs before frantic back-channel messages halt the attack.'
+            'The depth charges convince Captain Savitsky that war has begun. He arms the nuclear torpedo. Political officer agrees. But Commodore Arkhipov refuses. After 30 agonizing minutes, the sub surfaces. You were seconds from nuclear war and never knew it.'
         },
         {
           id: 'shadow_sub',
-          text: 'Shadow the Submarine Quietly',
-          description: 'Maintain sonar contact and wait for Moscow to order a withdrawal.',
-          advisorSupport: ['intel'],
+          text: 'Track Without Engaging',
+          description: 'Maintain passive sonar contact. Let the submarine crew make the first move. Risk losing track, but avoid provocation.',
+          advisorSupport: ['diplomatic'],
           advisorOppose: ['military'],
           outcome: {
-            probability: 0.7,
-            success: { submarineWithdraws: true, diplomacy: +10, morale: +4 },
-            failure: { contactLost: true, unknownWarheadStatus: true }
+            probability: 0.45,
+            success: { submarineWithdraws: true, tensionsEase: true, diplomacy: +10 },
+            failure: { contactLost: true, submarineInfiltrates: true, cubanWatersReached: true }
           },
           successNarrative:
-            'Hours of tense stalking end with the Foxtrot-class reversing course. Khrushchev signals a willingness to negotiate a settlement.',
+            'B-59 turns east after several hours. The submarine limps back to Soviet waters. Khrushchev privately thanks you for restraint via back-channel.',
           failureNarrative:
-            'Contact is lost in the thermal layer. Fleet Command fears the submarine may surface near a carrier group with nuclear armament.'
+            'B-59 disappears into a thermal layer. Hours later, Soviet submarines are detected in Cuban territorial waters. The Joint Chiefs demand immediate action. DEFCON 1.'
         }
       ],
       consequences: {}
@@ -495,45 +495,45 @@ const FOLLOWUP_FLASHPOINTS: Record<string, Record<string, Omit<FlashpointEvent, 
       consequences: {}
     },
     board_ships_failure: {
-      title: 'CRISIS: U-2 Recon Jet Shot Down over Cuba',
+      title: 'BLACK SATURDAY: Major Anderson Shot Down',
       description:
-        'Major Rudolf Anderson’s U-2 was downed by a Soviet SAM battery. Hawks demand retaliation. Moscow claims defensive action and warns against further violations.',
+        'October 27, 1962, 12:00 PM: Major Rudolf Anderson\'s U-2 reconnaissance aircraft has been shot down over Cuba by a Soviet SA-2 surface-to-air missile. Anderson is dead - the only direct combat casualty of the Cuban Missile Crisis. The Joint Chiefs are livid. General LeMay demands immediate retaliation strikes on all Cuban SAM sites. The pre-approved retaliation plan calls for destroying the responsible SAM battery within hours. But you know this could trigger a wider war. Castro may have ordered the shoot-down without Soviet approval. This is the moment of maximum danger.',
       category: 'rogue',
-      severity: 'critical',
-      timeLimit: 45,
+      severity: 'catastrophic',
+      timeLimit: 60,
       followUpId: 'cuban_crisis',
       options: [
         {
           id: 'strike_site',
-          text: 'Strike the SAM Battery',
-          description: 'Launch a limited air raid to punish the responsible site.',
+          text: 'Execute Retaliation Plan',
+          description: 'Follow the pre-approved contingency: destroy the SAM site that killed Anderson. Show the Soviets there are consequences for killing Americans.',
           advisorSupport: ['military'],
-          advisorOppose: ['diplomatic', 'pr'],
+          advisorOppose: ['diplomatic'],
           outcome: {
-            probability: 0.45,
-            success: { siteDestroyed: true, morale: +5, defcon: 1 },
-            failure: { sovietCasualties: true, invasionCountdown: true }
+            probability: 0.35,
+            success: { siteDestroyed: true, escalationContained: true, morale: +8 },
+            failure: { fullScaleWar: true, invasionTriggered: true, nuclearExchange: true }
           },
           successNarrative:
-            'F-105s obliterate the SAM site. The Kremlin goes silent, but submarine patrols surge around the quarantine line.',
+            'F-100 Super Sabres destroy the SAM site near Banes. Khrushchev is shocked but restrains his military. He sends an urgent message: "We must end this before the generals take over." Within 24 hours, a deal is struck.',
           failureNarrative:
-            'A dogfight with MiG escorts erupts. Soviet casualties mount, and invasion forces in Cuba ready their missiles.'
+            'The strike kills 60 Soviet personnel. MiG-21s engage US fighters. Castro orders all SAM batteries to fire at will. Khrushchev feels he has no choice but to respond. Soviet tanks roll into West Berlin. DEFCON 1. Nuclear war begins within hours.'
         },
         {
           id: 'pause_overflights',
-          text: 'Suspend Overflights and Demand Apology',
-          description: 'Halt recon missions temporarily while pressing for diplomatic redress.',
+          text: 'Show Restraint, Resume Diplomacy',
+          description: 'Swallow the rage. Honor Major Anderson by choosing peace over vengeance. Send Khrushchev a message: you want a deal, not war.',
           advisorSupport: ['diplomatic'],
-          advisorOppose: ['military', 'intel'],
+          advisorOppose: ['military'],
           outcome: {
-            probability: 0.6,
-            success: { tensionsEase: true, diplomacy: +12, defcon: 3 },
-            failure: { sovietsEntrench: true, missileDeploymentAccelerates: true }
+            probability: 0.7,
+            success: { dealReached: true, missilesWithdrawn: true, peaceAchieved: true, diplomacy: +20 },
+            failure: { perceivedWeakness: true, hardlinersEmboldened: true, morale: -15 }
           },
           successNarrative:
-            'The Kremlin issues a regretful statement and proposes talks in New York, hinting at reciprocal concessions.',
+            'You draft a letter to Khrushchev: "We both have the power to destroy each other. We both have the power to save each other." Robert Kennedy meets Soviet Ambassador Dobrynin secretly. A deal is struck: Soviet missiles out of Cuba publicly, US Jupiter missiles out of Turkey secretly in 6 months. By October 28, the crisis ends. Major Anderson\'s sacrifice bought peace.',
           failureNarrative:
-            'Soviet commanders rush more anti-air units into Cuba. Reconnaissance gap widens just as missile fueling accelerates.'
+            'Khrushchev interprets your restraint as weakness. Hardliners in Moscow demand he stand firm. Castro shoots down two more reconnaissance planes. The crisis spirals out of control as both sides mobilize for invasion.'
         }
       ],
       consequences: {}
@@ -752,61 +752,61 @@ const FOLLOWUP_FLASHPOINTS: Record<string, Record<string, Omit<FlashpointEvent, 
 const SCENARIO_FLASHPOINTS: Record<string, Omit<FlashpointEvent, 'id' | 'triggeredAt'>[]> = {
   cubanCrisis: [
     {
-      title: 'CUBAN CRISIS: Soviet Convoy Tests Quarantine',
+      title: 'EXCOMM BRIEFING: Soviet Missiles in Cuba',
       description:
-        'Reconnaissance confirms a Soviet convoy and submarine screen will cross the quarantine line within the hour. The ExComm is split between holding position, boarding vessels, or letting them pass to buy time for diplomacy.',
+        'October 16, 1962: CIA photo interpreters have identified medium-range ballistic missile sites under construction in Cuba. These SS-4 Sandal missiles can strike Washington, New York, and most of the Eastern Seaboard with nuclear warheads. The Joint Chiefs recommend immediate air strikes. Secretary McNamara suggests a naval blockade. Ambassador Stevenson urges diplomatic channels. The world must not know how close we are to war.',
       category: 'rogue',
       severity: 'critical',
-      timeLimit: 75,
+      timeLimit: 90,
       followUpId: 'cuban_crisis',
       options: [
         {
           id: 'hold_quarantine',
-          text: 'Hold the Naval Quarantine',
-          description: 'Maintain the line with destroyers at the ready and demand Soviet ships stop.',
-          advisorSupport: ['military'],
-          advisorOppose: ['diplomatic'],
+          text: 'Naval Quarantine (McNamara Plan)',
+          description: 'Establish a "quarantine" zone around Cuba. Ring the island with destroyers and demand all Soviet ships stop for inspection. Buy time for diplomacy while showing resolve.',
+          advisorSupport: ['military', 'diplomatic'],
+          advisorOppose: [],
           outcome: {
-            probability: 0.6,
-            success: { convoyTurnsBack: true, defcon: 2, morale: +6 },
-            failure: { freighterBreakthrough: true, casualties: 40, defcon: 1 }
+            probability: 0.7,
+            success: { quarantineEstablished: true, defcon: 2, morale: +8, diplomacy: +5 },
+            failure: { sovietConfrontation: true, casualties: 40, defcon: 1 }
           },
           successNarrative:
-            'Soviet ships reduce speed and eventually reverse course after tense hails. The world watches live footage of your destroyers holding the line.',
+            'October 24: Soviet ships approach the quarantine line at 10:25 AM. The world holds its breath. At 10:32 AM, Soviet ships stop dead in the water, then turn back. Secretary Rusk whispers: "We\'re eyeball to eyeball, and I think the other fellow just blinked."',
           failureNarrative:
-            'A Soviet freighter ignores orders and collides with a destroyer, tearing open its hull as gunfire erupts across the blockade.'
+            'Soviet freighters plow through the quarantine line. A destroyer is rammed. Gunfire erupts. DEFCON 1 is declared as both sides prepare for nuclear exchange.'
         },
         {
           id: 'board_ships',
-          text: 'Board and Inspect Lead Freighter',
-          description: 'Send Marines to seize cargo and gather proof of nuclear warheads en route to Cuba.',
-          advisorSupport: ['intel', 'military'],
+          text: 'Surgical Air Strikes (Joint Chiefs Plan)',
+          description: 'Launch immediate air strikes to destroy all missile sites in Cuba before they become operational. Risk war, but eliminate the threat decisively.',
+          advisorSupport: ['military'],
           advisorOppose: ['diplomatic', 'pr'],
           outcome: {
-            probability: 0.5,
-            success: { missilesFound: true, diplomacy: +10, morale: +4 },
-            failure: { boardingRepulsed: true, u2ShotDown: true, defcon: 1 }
+            probability: 0.45,
+            success: { sitesDestroyed: true, morale: +10, defcon: 1, warRisk: true },
+            failure: { sovietRetaliation: true, berlinSeized: true, nuclearExchange: true }
           },
           successNarrative:
-            'Marines discover missile components stacked in the hold. Cameras document the contraband before a storm forces withdrawal.',
+            'Air Force strike packages obliterate the missile sites. Castro is furious. Khrushchev issues ultimatums but backs down when faced with overwhelming force. Berlin remains tense for months.',
           failureNarrative:
-            'A firefight on the deck forces a retreat. Minutes later, SAM batteries in Cuba shoot down a high-flying U-2 recon jet.'
+            'Soviet casualties mount as MiGs intercept the strike. Khrushchev retaliates by seizing West Berlin. Tactical nuclear weapons are deployed. The world descends into nuclear holocaust.'
         },
         {
           id: 'allow_passage',
-          text: 'Allow Temporary Passage',
-          description: 'Open a narrow lane to avoid clashes while pursuing a back-channel settlement.',
+          text: 'Diplomatic Resolution (Stevenson Plan)',
+          description: 'Announce the discovery publicly at the UN. Demand Soviet withdrawal and propose a grand bargain: Soviet missiles out of Cuba, US missiles out of Turkey.',
           advisorSupport: ['diplomatic'],
           advisorOppose: ['military', 'intel'],
           outcome: {
-            probability: 0.4,
-            success: { talksScheduled: true, defcon: 3, diplomacy: +8 },
-            failure: { missilesAssembled: true, defcon: 1, morale: -12 }
+            probability: 0.55,
+            success: { negotiatedSettlement: true, defcon: 3, diplomacy: +15, morale: -5 },
+            failure: { publicHumiliation: true, missilesOperational: true, morale: -20 }
           },
           successNarrative:
-            'Khrushchev agrees to exploratory talks in exchange for a narrow, time-limited corridor. Tension eases as the world debates your restraint.',
+            'Your public proposal gives Khrushchev an honorable exit. The Soviets withdraw missiles from Cuba. In secret, you agree to remove Jupiter missiles from Turkey in 6 months. Critics call it appeasement, but you averted Armageddon.',
           failureNarrative:
-            'Satellite imagery later confirms IRBM launchers now operational in Cuba. Allies question whether leniency invited disaster.'
+            'Khrushchev rejects the proposal as unequal. The Soviets accelerate missile deployment. Intelligence confirms IRBMs are now fully operational and fueled. The American public demands action.'
         }
       ],
       consequences: {}
