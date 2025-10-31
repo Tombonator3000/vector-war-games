@@ -738,3 +738,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-10-31T16:52:50+00:00
 - Updated Cuban Crisis nation setup to reference dynamic nation IDs for threats, alliances, and relationships per Codex review request.
+
+## 2025-10-31T23:49:06+00:00
+- Updated Phase 3 counter-occult processing to toggle the global unity `victoryPossible` flag and emit events when humans cross the unity danger threshold per Codex follow-up review.
