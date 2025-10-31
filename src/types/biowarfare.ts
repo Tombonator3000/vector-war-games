@@ -49,7 +49,7 @@ export interface PlagueType {
 // EVOLUTION TREE CATEGORIES
 // ============================================================================
 
-export type EvolutionCategory = 'transmission' | 'symptom' | 'ability';
+export type EvolutionCategory = 'transmission' | 'symptom' | 'ability' | 'defense';
 
 export type TransmissionId =
   | 'air-1' | 'air-2'
@@ -85,7 +85,14 @@ export type AbilityId =
   | 'neural-atrophy' | 'bacterial-resilience' | 'viral-instability'
   | 'spore-burst' | 'symbiosis';
 
-export type EvolutionNodeId = TransmissionId | SymptomId | AbilityId;
+export type DefenseId =
+  | 'vaccine-prototyping'
+  | 'vaccine-field-trials'
+  | 'vaccine-mass-production'
+  | 'radiation-shielding-1'
+  | 'radiation-shielding-2';
+
+export type EvolutionNodeId = TransmissionId | SymptomId | AbilityId | DefenseId;
 
 // ============================================================================
 // EVOLUTION NODE DEFINITION
@@ -113,6 +120,11 @@ export interface EvolutionNode {
     severity?: number; // -5 to +10
     lethality?: number; // -5 to +15
     cureResistance?: number; // slows cure research, 0-10
+  };
+
+  defenseEffects?: {
+    vaccineProgress?: number; // Boost to allied vaccine progress
+    radiationMitigation?: number; // % mitigation applied to radiation fallout (0-1)
   };
 
   // Special flags
@@ -161,6 +173,10 @@ export interface PlagueState {
     // Special resistances
     drugResistance: number; // 0-3
     geneticHardening: number; // 0-3
+
+    // Defensive research bonuses
+    vaccineAcceleration: number; // Additional vaccine progress applied on unlock
+    radiationMitigation: number; // 0-1 mitigation scalar
   };
 
   // Countries infected (legacy, for backward compatibility)

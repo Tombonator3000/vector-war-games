@@ -12,7 +12,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Wind, Skull, Shield } from 'lucide-react';
+import { Wind, Skull, Shield, Syringe } from 'lucide-react';
 import type {
   EvolutionNode,
   EvolutionCategory,
@@ -23,6 +23,7 @@ import {
   TRANSMISSION_NODES,
   SYMPTOM_NODES,
   ABILITY_NODES,
+  DEFENSE_NODES,
   getPlagueTypeById,
   canUnlockNode,
 } from '@/lib/evolutionData';
@@ -43,18 +44,21 @@ const CATEGORY_ICONS: Record<EvolutionCategory, any> = {
   transmission: Wind,
   symptom: Skull,
   ability: Shield,
+  defense: Syringe,
 };
 
 const CATEGORY_LABELS: Record<EvolutionCategory, string> = {
   transmission: 'TRANSMISSION',
   symptom: 'SYMPTOMS',
   ability: 'ABILITIES',
+  defense: 'DEFENSE',
 };
 
 const CATEGORY_COLORS = {
   transmission: '#06b6d4',
   symptom: '#ef4444',
   ability: '#a855f7',
+  defense: '#22c55e',
 };
 
 /**
@@ -94,7 +98,7 @@ function createFlowNodes(
         );
       } else if (node.category === 'symptom') {
         actualCost = Math.ceil(actualCost * plagueType.symptomCostMultiplier);
-      } else if (node.category === 'ability') {
+      } else if (node.category === 'ability' || node.category === 'defense') {
         actualCost = Math.ceil(actualCost * plagueType.abilityCostMultiplier);
       }
     }
@@ -296,8 +300,8 @@ export function EvolutionTreeFlow({
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as EvolutionCategory)}
       >
-        <TabsList className="grid w-full grid-cols-3 bg-black/60 border border-cyan-500/30">
-          {(['transmission', 'symptom', 'ability'] as EvolutionCategory[]).map(
+        <TabsList className="grid w-full grid-cols-4 bg-black/60 border border-cyan-500/30">
+          {(['transmission', 'symptom', 'ability', 'defense'] as EvolutionCategory[]).map(
             (category) => {
               const Icon = CATEGORY_ICONS[category];
               const activeCount = Array.from(plagueState.unlockedNodes).filter(
@@ -306,6 +310,7 @@ export function EvolutionTreeFlow({
                     ...TRANSMISSION_NODES,
                     ...SYMPTOM_NODES,
                     ...ABILITY_NODES,
+                    ...DEFENSE_NODES,
                   ];
                   const node = allNodes.find((n) => n.id === id);
                   return node?.category === category;
@@ -365,6 +370,16 @@ export function EvolutionTreeFlow({
           <CategoryFlowPanel
             category="ability"
             nodes={ABILITY_NODES}
+            plagueState={plagueState}
+            onEvolve={onEvolve}
+            onDevolve={onDevolve}
+          />
+        </TabsContent>
+
+        <TabsContent value="defense" className="mt-4">
+          <CategoryFlowPanel
+            category="defense"
+            nodes={DEFENSE_NODES}
             plagueState={plagueState}
             onEvolve={onEvolve}
             onDevolve={onDevolve}

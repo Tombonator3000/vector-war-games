@@ -288,14 +288,15 @@ export function usePandemic(addNewsItem: AddNewsItem) {
   }, [addNewsItem]);
 
   const applyCountermeasure = useCallback((payload: PandemicCountermeasurePayload) => {
-    if (!pandemicState.active) return;
+    const allowWhenDormant = payload.type === 'vaccine';
+    if (!pandemicState.active && !allowWhenDormant) return;
 
     let newsCategory: NewsItem['category'] = 'science';
     let newsPriority: NewsItem['priority'] = 'important';
     let newsMessage: string | null = null;
 
     setPandemicState(prev => {
-      if (!prev.active) return prev;
+      if (!prev.active && !allowWhenDormant) return prev;
 
       switch (payload.type) {
         case 'containment': {
@@ -321,7 +322,9 @@ export function usePandemic(addNewsItem: AddNewsItem) {
           return {
             ...prev,
             vaccineProgress: clamp(prev.vaccineProgress + value, 0, 120),
-            globalInfection: clamp(prev.globalInfection - value * 0.2, 0, 100),
+            globalInfection: prev.active
+              ? clamp(prev.globalInfection - value * 0.2, 0, 100)
+              : prev.globalInfection,
             lastMutation: prev.lastMutation
           };
         }

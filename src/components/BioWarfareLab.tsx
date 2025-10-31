@@ -13,6 +13,17 @@ import type { BioLabTier } from '@/types/bioLab';
 import { getPlagueTypeById } from '@/lib/evolutionData';
 import { getBioLabTierDefinition } from '@/types/bioLab';
 
+const VACCINE_NODE_IDS = [
+  'vaccine-prototyping',
+  'vaccine-field-trials',
+  'vaccine-mass-production',
+] as const;
+
+const RADIATION_NODE_IDS = [
+  'radiation-shielding-1',
+  'radiation-shielding-2',
+] as const;
+
 interface BioWarfareLabProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -85,6 +96,13 @@ export function BioWarfareLab({
 
   const currentLabDef = getBioLabTierDefinition(labTier);
   const canUseBioForge = labTier >= 3;
+
+  const vaccineUnlocks = VACCINE_NODE_IDS.filter((id) => plagueState.unlockedNodes.has(id)).length;
+  const radiationUnlocks = RADIATION_NODE_IDS.filter((id) => plagueState.unlockedNodes.has(id)).length;
+  const vaccineProgressPercent = Math.round((vaccineUnlocks / VACCINE_NODE_IDS.length) * 100);
+  const radiationProgressPercent = Math.round((radiationUnlocks / RADIATION_NODE_IDS.length) * 100);
+  const vaccineBoost = plagueState.calculatedStats.vaccineAcceleration;
+  const radiationMitigation = Math.round(plagueState.calculatedStats.radiationMitigation * 100);
 
   // Create nation name map for overview
   const nationNames = new Map(
@@ -280,6 +298,45 @@ export function BioWarfareLab({
                     <strong className="uppercase tracking-wide">Special Mechanic:</strong> {plagueType.specialMechanic}
                   </div>
                 )}
+
+                {/* Defense Research Progress */}
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-400/40 rounded-lg">
+                    <div className="flex items-center justify-between text-xs uppercase tracking-wide text-emerald-200">
+                      <span>Vaccine Initiative</span>
+                      <span>
+                        {vaccineUnlocks}/{VACCINE_NODE_IDS.length}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-2 w-full bg-emerald-500/20 rounded">
+                      <div
+                        className="h-2 bg-emerald-400 rounded"
+                        style={{ width: `${vaccineProgressPercent}%` }}
+                      />
+                    </div>
+                    <p className="mt-3 text-[11px] text-emerald-100/80">
+                      Cumulative surge capacity: <span className="font-semibold">+{vaccineBoost}%</span> vaccine progress when activated.
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-lime-500/10 border border-lime-400/40 rounded-lg">
+                    <div className="flex items-center justify-between text-xs uppercase tracking-wide text-lime-200">
+                      <span>Radiation Shielding</span>
+                      <span>
+                        {radiationUnlocks}/{RADIATION_NODE_IDS.length}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-2 w-full bg-lime-500/20 rounded">
+                      <div
+                        className="h-2 bg-lime-300 rounded"
+                        style={{ width: `${radiationProgressPercent}%` }}
+                      />
+                    </div>
+                    <p className="mt-3 text-[11px] text-lime-100/80">
+                      Current fallout mitigation: <span className="font-semibold">{radiationMitigation}%</span> damage reduction in resolution phase.
+                    </p>
+                  </div>
+                </div>
 
                 {/* Evolution Tree Flow */}
                 <EvolutionTreeFlow

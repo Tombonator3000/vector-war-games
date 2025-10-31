@@ -36,6 +36,12 @@ const CATEGORY_COLORS = {
     glow: 'rgba(168, 85, 247, 0.3)',
     text: '#d8b4fe', // purple-300
   },
+  defense: {
+    border: '#22c55e', // emerald-500
+    bg: 'rgba(34, 197, 94, 0.1)',
+    glow: 'rgba(34, 197, 94, 0.3)',
+    text: '#86efac', // emerald-300
+  },
 };
 
 export const EvolutionFlowNode = memo(({ data }: NodeProps<EvolutionNodeData>) => {
@@ -142,7 +148,8 @@ export const EvolutionFlowNode = memo(({ data }: NodeProps<EvolutionNodeData>) =
           {(data.effects.infectivity ||
             data.effects.severity ||
             data.effects.lethality ||
-            data.effects.cureResistance) && (
+            data.effects.cureResistance ||
+            data.defenseEffects) && (
             <div className="flex flex-wrap gap-1">
               {data.effects.infectivity && (
                 <div
@@ -193,6 +200,30 @@ export const EvolutionFlowNode = memo(({ data }: NodeProps<EvolutionNodeData>) =
                   }}
                 >
                   CURE +{data.effects.cureResistance}
+                </div>
+              )}
+              {data.defenseEffects?.vaccineProgress && (
+                <div
+                  className="text-[9px] px-1.5 py-0.5 rounded border"
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    borderColor: 'rgba(34, 197, 94, 0.4)',
+                    color: '#bbf7d0',
+                  }}
+                >
+                  VAX +{data.defenseEffects.vaccineProgress}
+                </div>
+              )}
+              {data.defenseEffects?.radiationMitigation && (
+                <div
+                  className="text-[9px] px-1.5 py-0.5 rounded border"
+                  style={{
+                    background: 'rgba(190, 242, 100, 0.15)',
+                    borderColor: 'rgba(163, 230, 53, 0.4)',
+                    color: '#bef264',
+                  }}
+                >
+                  RAD -{Math.round(data.defenseEffects.radiationMitigation * 100)}%
                 </div>
               )}
             </div>
