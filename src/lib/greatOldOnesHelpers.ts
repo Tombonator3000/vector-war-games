@@ -6,7 +6,6 @@
 import type {
   GreatOldOnesState,
   Doctrine,
-  DOCTRINES,
   RegionalState,
   CosmicAlignment,
   CelestialEvent,
