@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useRNG } from '@/contexts/RNGContext';
+import { getEnhancedFlashpointsForTurn } from './useCubaCrisisFlashpointsEnhanced';
 
 export interface FlashpointEvent {
   id: string;
@@ -1014,7 +1015,14 @@ const FOLLOWUP_FLASHPOINTS: Record<string, Record<string, Omit<FlashpointEvent, 
 };
 
 const SCENARIO_FLASHPOINTS: Record<string, Omit<FlashpointEvent, 'id' | 'triggeredAt'>[]> = {
-  cubanCrisis: [
+  // Cuba Crisis flashpoints are now handled by Enhanced system (turn-based, not random)
+  // See useCubaCrisisFlashpointsEnhanced.ts
+  cubanCrisis: [],
+
+  // OLD Cuba Crisis flashpoints removed - they lacked diplomacy integration
+  // Enhanced flashpoints trigger at specific turns: 1, 6, 10
+
+  _deprecated_cubanCrisis_old: [
     {
       title: 'EXCOMM BRIEFING: Soviet Missiles in Cuba',
       description:
@@ -2364,11 +2372,31 @@ export function useFlashpoints() {
       }
     }
 
+    // Check for scenario-specific turn-based flashpoints (Cuba Crisis Enhanced)
+    const scenarioId = getActiveScenarioId();
+    if (scenarioId === 'cubanCrisis') {
+      const enhancedFlashpoints = getEnhancedFlashpointsForTurn(turn);
+      if (enhancedFlashpoints && enhancedFlashpoints.length > 0) {
+        // Cuba Crisis has turn-specific flashpoints - trigger them
+        const enhancedFlashpoint = enhancedFlashpoints[0]; // Take first one (usually only one per turn)
+        console.log(`Triggering Cuba Crisis enhanced flashpoint for turn ${turn}: ${enhancedFlashpoint.title}`);
+        setActiveFlashpoint(enhancedFlashpoint);
+        return enhancedFlashpoint;
+      }
+    }
+
     const probability = calculateFlashpointProbability(turn, defcon);
 
     if (rng.next() < probability) {
-      const scenarioId = getActiveScenarioId();
+      // scenarioId already retrieved above for Cuba Crisis check
       const scenarioTemplates = scenarioId ? SCENARIO_FLASHPOINTS[scenarioId] : undefined;
+
+      // IMPORTANT: Cuba Crisis uses ONLY enhanced turn-based flashpoints (no random base game flashpoints)
+      if (scenarioId === 'cubanCrisis') {
+        // No random flashpoints for Cuba Crisis - only scheduled enhanced ones
+        return null;
+      }
+
       const templatePool = scenarioTemplates && scenarioTemplates.length > 0 ? scenarioTemplates : FLASHPOINT_TEMPLATES;
       const template = rng.choice(templatePool);
       const baseFlashpoint: FlashpointEvent = {
