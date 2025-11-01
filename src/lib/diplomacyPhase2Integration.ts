@@ -7,7 +7,7 @@
 
 import type { Nation } from '@/types/game';
 import type { GrievanceType, ClaimType, ClaimStrength } from '@/types/grievancesAndClaims';
-import type { SpecializedAllianceType } from '@/types/specializedAlliances';
+import type { AllianceType } from '@/types/specializedAlliances';
 import { createGrievance, createClaim, ageClaims } from '@/lib/grievancesAndClaimsUtils';
 import {
   createSpecializedAlliance,
@@ -216,16 +216,20 @@ export function updateAllClaims(nation: Nation, currentTurn: number): void {
 export function formSpecializedAlliance(
   nation1: Nation,
   nation2: Nation,
-  allianceType: SpecializedAllianceType,
+  allianceType: AllianceType,
   currentTurn: number
 ): void {
   // Initialize arrays if needed
   if (!nation1.specializedAlliances) nation1.specializedAlliances = [];
   if (!nation2.specializedAlliances) nation2.specializedAlliances = [];
 
-  // Create alliance for both nations
-  const updated1 = createSpecializedAlliance(nation1, nation2.id, allianceType, currentTurn);
-  const updated2 = createSpecializedAlliance(nation2, nation1.id, allianceType, currentTurn);
+  // Create alliance (returns both nations with updated alliances)
+  const { nation1: updated1, nation2: updated2 } = createSpecializedAlliance(
+    nation1,
+    nation2,
+    allianceType,
+    currentTurn
+  );
 
   nation1.specializedAlliances = updated1.specializedAlliances || [];
   nation2.specializedAlliances = updated2.specializedAlliances || [];
@@ -277,7 +281,9 @@ export function updateAllianceLevels(nation: Nation, currentTurn: number): void 
   for (const alliance of nation.specializedAlliances) {
     // Level up if cooperation is high and enough time has passed
     if (alliance.cooperation >= 80 && currentTurn - alliance.createdTurn >= alliance.level * 5) {
-      updated = updateAllianceLevel(updated, alliance.withNationId);
+      // Determine partner ID based on which nation this is
+      const partnerId = alliance.nation1Id === nation.id ? alliance.nation2Id : alliance.nation1Id;
+      updated = updateAllianceLevel(updated, partnerId, currentTurn);
     }
   }
   nation.specializedAlliances = updated.specializedAlliances || [];
@@ -315,14 +321,14 @@ export function breakSpecializedAlliance(
 ): void {
   if (!nation.specializedAlliances) return;
 
-  // Remove alliance
+  // Remove alliance - filter out alliances involving the ally
   nation.specializedAlliances = nation.specializedAlliances.filter(
-    a => a.withNationId !== allyId
+    a => !(a.nation1Id === allyId || a.nation2Id === allyId)
   );
 
   if (ally.specializedAlliances) {
     ally.specializedAlliances = ally.specializedAlliances.filter(
-      a => a.withNationId !== nation.id
+      a => !(a.nation1Id === nation.id || a.nation2Id === nation.id)
     );
   }
 
