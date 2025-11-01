@@ -6,23 +6,28 @@
 import React, { useState } from 'react';
 import type { Mission, MissionOutcome } from '../../lib/missionGenerator';
 import type { GreatOldOnesState } from '../../types/greatOldOnes';
+import type { Infiltrator } from '../../lib/unitRoster';
 
 interface MissionBoardPanelProps {
   state: GreatOldOnesState;
   availableMissions: Mission[];
   activeMissions: Mission[];
+  infiltrators?: Infiltrator[];
   onAcceptMission?: (missionId: string) => void;
   onAbandonMission?: (missionId: string) => void;
   onViewMissionDetails?: (missionId: string) => void;
+  onAssignMission?: (missionId: string, infiltratorIds: string[]) => void;
 }
 
 export const MissionBoardPanel: React.FC<MissionBoardPanelProps> = ({
   state,
   availableMissions,
   activeMissions,
+  infiltrators = [],
   onAcceptMission,
   onAbandonMission,
   onViewMissionDetails,
+  onAssignMission,
 }) => {
   const [activeTab, setActiveTab] = useState<'available' | 'active' | 'completed'>('available');
 
@@ -63,7 +68,9 @@ export const MissionBoardPanel: React.FC<MissionBoardPanelProps> = ({
                   key={mission.id}
                   mission={mission}
                   state={state}
+                  infiltrators={infiltrators}
                   onAccept={onAcceptMission}
+                  onAssign={onAssignMission}
                   onViewDetails={onViewMissionDetails}
                 />
               ))
@@ -81,6 +88,7 @@ export const MissionBoardPanel: React.FC<MissionBoardPanelProps> = ({
                   key={mission.id}
                   mission={mission}
                   state={state}
+                  infiltrators={infiltrators}
                   onAbandon={onAbandonMission}
                   onViewDetails={onViewMissionDetails}
                 />
@@ -102,17 +110,31 @@ export const MissionBoardPanel: React.FC<MissionBoardPanelProps> = ({
 interface MissionCardProps {
   mission: Mission;
   state: GreatOldOnesState;
+  infiltrators: Infiltrator[];
   onAccept?: (missionId: string) => void;
+  onAssign?: (missionId: string, infiltratorIds: string[]) => void;
   onViewDetails?: (missionId: string) => void;
 }
 
 const MissionCard: React.FC<MissionCardProps> = ({
   mission,
   state,
+  infiltrators,
   onAccept,
+  onAssign,
   onViewDetails,
 }) => {
   const region = state.regions.find(r => r.regionId === mission.regionId);
+  const regionalInfiltrators = infiltrators.filter(
+    infiltrator => infiltrator.regionId === mission.regionId && !infiltrator.exposed
+  );
+
+  const handleAccept = () => {
+    onAccept?.(mission.id);
+    if (regionalInfiltrators.length > 0) {
+      onAssign?.(mission.id, regionalInfiltrators.map(infiltrator => infiltrator.id));
+    }
+  };
 
   const difficultyColor = mission.difficulty <= 3 ? 'easy' : mission.difficulty <= 6 ? 'medium' : 'hard';
   const categoryIcons: Record<typeof mission.category, string> = {
@@ -147,6 +169,23 @@ const MissionCard: React.FC<MissionCardProps> = ({
       <div className="mission-location">
         <span className="location-icon">📍</span>
         <span className="location-name">{region?.regionName || 'Unknown'}</span>
+      </div>
+
+      <div className="mission-infiltrators">
+        <h5>Regional Infiltrators</h5>
+        {regionalInfiltrators.length > 0 ? (
+          <ul>
+            {regionalInfiltrators.map(infiltrator => (
+              <li key={infiltrator.id} className="infiltrator-row">
+                <span className="infiltrator-name">{infiltrator.name}</span>
+                <span className="infiltrator-depth">Depth {Math.floor(infiltrator.depth)}%</span>
+                <span className="infiltrator-influence">Influence {Math.floor(infiltrator.influence)}%</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="empty-state">No covert assets available in this region.</p>
+        )}
       </div>
 
       <div className="mission-objectives">
@@ -212,7 +251,7 @@ const MissionCard: React.FC<MissionCardProps> = ({
           </button>
           <button
             className="accept-button"
-            onClick={() => onAccept?.(mission.id)}
+            onClick={handleAccept}
           >
             Accept Mission
           </button>
@@ -225,6 +264,7 @@ const MissionCard: React.FC<MissionCardProps> = ({
 interface ActiveMissionCardProps {
   mission: Mission;
   state: GreatOldOnesState;
+  infiltrators: Infiltrator[];
   onAbandon?: (missionId: string) => void;
   onViewDetails?: (missionId: string) => void;
 }
@@ -232,6 +272,7 @@ interface ActiveMissionCardProps {
 const ActiveMissionCard: React.FC<ActiveMissionCardProps> = ({
   mission,
   state,
+  infiltrators,
   onAbandon,
   onViewDetails,
 }) => {
@@ -242,6 +283,9 @@ const ActiveMissionCard: React.FC<ActiveMissionCardProps> = ({
 
   const completedObjectives = mission.objectives.filter(o => o.completed).length;
   const progressPercent = (completedObjectives / mission.objectives.length) * 100;
+  const regionalInfiltrators = infiltrators.filter(
+    infiltrator => infiltrator.regionId === mission.regionId && !infiltrator.exposed
+  );
 
   return (
     <div className={`active-mission-card ${isOverdue ? 'overdue' : ''}`}>
@@ -279,6 +323,23 @@ const ActiveMissionCard: React.FC<ActiveMissionCardProps> = ({
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="mission-support">
+        <h5>Covert Support</h5>
+        {regionalInfiltrators.length > 0 ? (
+          <ul>
+            {regionalInfiltrators.map(infiltrator => (
+              <li key={infiltrator.id} className="infiltrator-row">
+                <span className="infiltrator-name">{infiltrator.name}</span>
+                <span className="infiltrator-depth">Depth {Math.floor(infiltrator.depth)}%</span>
+                <span className="infiltrator-influence">Influence {Math.floor(infiltrator.influence)}%</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="empty-state">No infiltrators assigned.</p>
+        )}
       </div>
 
       <div className="mission-actions">
