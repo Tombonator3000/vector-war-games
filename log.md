@@ -798,3 +798,12 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Ran `npm run build` and `npm run preview` to confirm the production bundle succeeds and the preview server starts without `Audio` API errors.
 ## 2025-11-01T13:16:16+00:00
 - Updated `getActiveScenarioId` in `src/hooks/useFlashpoints.ts` to read the prefixed NORAD scenario key with a legacy fallback, and extended the hook tests to verify the Cuban Crisis scenario is recognized when stored under the new key.
+### Session 4: 2025-11-01 - Co-op scenario re-exposure fix
+
+#### Time: 13:31 UTC
+
+- Reviewed co-op synchronization instructions focusing on remote state propagation to `window.S`.
+- Created `applyRemoteGameStateSync` helper to sanitize remote payloads, sync the `GameStateManager`, and log the scenario id when exposing `S` globally.
+- Updated the co-op listener in `src/pages/Index.tsx` to use the helper so window state mirrors imported sessions.
+- Added `coopSync.test.ts` covering the flashpoint scenario check after a simulated co-op import and exercised the existing `useFlashpoints` suite.
+- Ran `npm run test -- --run src/lib/__tests__/coopSync.test.ts` and `npm run test -- --run src/hooks/__tests__/useFlashpoints.test.ts` to confirm cooperative synchronization continues to surface the correct scenario metadata.

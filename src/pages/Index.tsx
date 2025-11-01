@@ -55,6 +55,7 @@ import { LockedFeatureWrapper } from '@/components/LockedFeatureBadge';
 import { FEATURE_UNLOCK_INFO } from '@/types/era';
 import type { ActionConsequences } from '@/types/consequences';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
+import { applyRemoteGameStateSync } from '@/lib/coopSync';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
@@ -4662,12 +4663,7 @@ export default function NoradVector() {
       try {
         if (state.gameState) {
           const remoteState = state.gameState as Partial<LocalGameState>;
-          S = {
-            ...remoteState,
-            falloutMarks: Array.isArray(remoteState.falloutMarks)
-              ? remoteState.falloutMarks.map(mark => ({ ...mark }))
-              : [],
-          } as LocalGameState;
+          S = applyRemoteGameStateSync(remoteState);
           if (!Array.isArray(S.satelliteOrbits)) {
             S.satelliteOrbits = [];
           }
