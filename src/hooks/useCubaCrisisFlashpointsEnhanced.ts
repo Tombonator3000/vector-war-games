@@ -12,9 +12,41 @@
  */
 
 import type { FlashpointEvent, FlashpointOption } from './useFlashpoints';
-import type { DiplomaticPromise } from '@/types/trustAndFavors';
-import type { Grievance, Claim } from '@/types/grievancesAndClaims';
+import type { DiplomaticPromise, PromiseTerms, PromiseType } from '@/types/trustAndFavors';
+import type { Grievance, Claim, GrievanceType, GrievanceSeverity } from '@/types/grievancesAndClaims';
 import type { DIPCosts } from '@/types/diplomacyPhase3';
+import type { Nation } from '@/types/game';
+import {
+  modifyTrust,
+  modifyFavors,
+  createPromise as createDiplomaticPromise,
+} from '@/lib/trustAndFavorsUtils';
+import { modifyRelationship } from '@/lib/relationshipUtils';
+import {
+  createGrievance as registerGrievance,
+  resolveGrievance as resolveNationGrievance,
+} from '@/lib/grievancesAndClaimsUtils';
+import { earnDIP, spendDIP, getDIP } from '@/lib/diplomaticCurrencyUtils';
+
+type EnhancedGameState = {
+  nations?: Nation[];
+  playerNationId?: string;
+  playerId?: string;
+  playerNation?: Nation;
+  player?: Nation;
+  getPlayerNationId?: () => string | undefined;
+  turn?: number;
+  currentTurn?: number;
+  state?: { turn?: number };
+  timeline?: { turn?: number };
+  nationsById?: Record<string, Nation>;
+  [key: string]: unknown;
+};
+
+type ExtendedPromiseTerms = PromiseTerms & {
+  description?: string;
+  isPublic?: boolean;
+};
 
 // ============================================================================
 // ENHANCED FLASHPOINT OPTIONS WITH DIPLOMACY INTEGRATION
@@ -943,56 +975,312 @@ export function canAffordOption(
 export function applyDiplomaticEffects(
   option: EnhancedFlashpointOption,
   success: boolean,
-  gameState: any
-): any {
+  gameState: EnhancedGameState
+): EnhancedGameState {
   const effects = success ? option.diplomaticEffects : option.diplomaticFailureEffects;
 
   if (!effects) return gameState;
+  const nations: Nation[] = Array.isArray(gameState?.nations) ? gameState.nations : [];
+  if (!nations.length) {
+    return gameState;
+  }
 
-  // Apply trust changes
-  if (effects.trustChange) {
+  const nationMap = new Map<string, Nation>();
+  nations.forEach((nation) => {
+    nationMap.set(nation.id, nation);
+  });
+
+  const getNation = (nationId?: string): Nation | undefined => {
+    if (!nationId) return undefined;
+    return nationMap.get(nationId);
+  };
+
+  const updateNation = (
+    nationId: string,
+    updater: (nation: Nation) => Nation
+  ): Nation | undefined => {
+    const existing = nationMap.get(nationId);
+    if (!existing) return undefined;
+    const updated = updater(existing);
+    if (!updated) return existing;
+
+    if (updated !== existing) {
+      nationMap.set(nationId, updated);
+      const index = nations.findIndex((nation) => nation.id === nationId);
+      if (index !== -1) {
+        nations[index] = updated;
+      }
+    }
+
+    return updated;
+  };
+
+  const determinePlayerNationId = (): string | undefined => {
+    if (typeof gameState?.playerNationId === 'string') return gameState.playerNationId;
+    if (typeof gameState?.playerId === 'string') return gameState.playerId;
+    if (typeof gameState?.playerNation?.id === 'string') return gameState.playerNation.id;
+    if (typeof gameState?.player?.id === 'string') return gameState.player.id;
+    if (typeof gameState?.getPlayerNationId === 'function') {
+      const derived = gameState.getPlayerNationId();
+      if (typeof derived === 'string') return derived;
+    }
+
+    const playerFromArray = nations.find((nation) => nation.isPlayer);
+    return playerFromArray?.id;
+  };
+
+  const extractCurrentTurn = (): number => {
+    if (typeof gameState?.turn === 'number') return gameState.turn;
+    if (typeof gameState?.currentTurn === 'number') return gameState.currentTurn;
+    if (typeof gameState?.state?.turn === 'number') return gameState.state.turn;
+    if (typeof gameState?.timeline?.turn === 'number') return gameState.timeline.turn;
+    return 0;
+  };
+
+  const currentTurn = extractCurrentTurn();
+  const playerNationId = determinePlayerNationId();
+  const reasonBase = `${option.text} (${success ? 'success' : 'failure'})`;
+
+  // Apply trust adjustments (other nations toward the player)
+  if (effects.trustChange && playerNationId) {
     for (const [nationId, delta] of Object.entries(effects.trustChange)) {
-      // Update trust in game state
-      // Implementation depends on game state structure
+      if (!delta) continue;
+      updateNation(nationId, (nation) =>
+        modifyTrust(nation, playerNationId, delta, reasonBase, currentTurn)
+      );
     }
   }
 
-  // Apply favor changes
-  if (effects.favorChange) {
+  // Apply favor adjustments (keep bilateral balances in sync)
+  if (effects.favorChange && playerNationId) {
     for (const [nationId, delta] of Object.entries(effects.favorChange)) {
-      // Update favors in game state
+      if (!delta) continue;
+      updateNation(playerNationId, (nation) =>
+        modifyFavors(nation, nationId, delta, reasonBase, currentTurn)
+      );
+      updateNation(nationId, (nation) =>
+        modifyFavors(nation, playerNationId, -delta, reasonBase, currentTurn)
+      );
     }
   }
 
-  // Apply relationship changes
-  if (effects.relationshipChange) {
+  // Apply relationship changes symmetrically
+  if (effects.relationshipChange && playerNationId) {
     for (const [nationId, delta] of Object.entries(effects.relationshipChange)) {
-      // Update relationships in game state
+      if (!delta) continue;
+      updateNation(playerNationId, (nation) =>
+        modifyRelationship(nation, nationId, delta, reasonBase, currentTurn)
+      );
+      updateNation(nationId, (nation) =>
+        modifyRelationship(nation, playerNationId, delta, reasonBase, currentTurn)
+      );
     }
   }
 
-  // Create promises
-  if (effects.createPromise) {
-    // Add promise to diplomatic promises array
+  // Create diplomatic promises from the player toward a target nation
+  if (effects.createPromise && playerNationId) {
+    const promiseEffect = effects.createPromise as Partial<DiplomaticPromise> & {
+      turnsToFulfill?: number;
+      trustValueIfKept?: number;
+      trustPenaltyIfBroken?: number;
+      relationshipPenaltyIfBroken?: number;
+      description?: string;
+      isPublic?: boolean;
+    };
+
+    const toNationId = promiseEffect.toNationId ?? Object.keys(effects.relationshipChange ?? {})[0];
+    if (toNationId) {
+      const promiseTypeMap: Record<string, PromiseType> = {
+        military: 'no-attack',
+        nuclear: 'no-nuclear-weapons',
+        diplomatic: 'neutral-mediator',
+      };
+
+      const resolvePromiseType = (value?: string): PromiseType => {
+        if (!value) return 'no-attack';
+        return promiseTypeMap[value] ?? (value as PromiseType);
+      };
+
+      const durationTurns = promiseEffect.turnsToFulfill
+        ? Math.max(1, Math.round(promiseEffect.turnsToFulfill))
+        : promiseEffect.terms?.duration;
+
+      const terms: PromiseTerms = {
+        ...promiseEffect.terms,
+        duration: durationTurns,
+        trustReward: promiseEffect.trustValueIfKept ?? promiseEffect.terms?.trustReward,
+        trustPenalty: promiseEffect.trustPenaltyIfBroken ?? promiseEffect.terms?.trustPenalty,
+        relationshipPenalty:
+          promiseEffect.relationshipPenaltyIfBroken ?? promiseEffect.terms?.relationshipPenalty,
+      };
+
+      const targetNationExists = Boolean(getNation(toNationId));
+      if (targetNationExists) {
+        const promiseType = resolvePromiseType(promiseEffect.type);
+        const updatedPlayer = updateNation(playerNationId, (nation) =>
+          createDiplomaticPromise(
+            nation,
+            toNationId,
+            promiseType,
+            terms,
+            currentTurn
+          )
+        );
+
+        if (updatedPlayer && (promiseEffect.description || promiseEffect.isPublic !== undefined)) {
+          const promises = updatedPlayer.diplomaticPromises ?? [];
+          const createdId = `${playerNationId}-${toNationId}-${promiseType}-${currentTurn}`;
+          const createdIndex = promises.findIndex((promise) => promise.id === createdId);
+          if (createdIndex !== -1) {
+            const createdPromise = promises[createdIndex];
+            const existingTerms = createdPromise.terms as ExtendedPromiseTerms;
+            const enhancedTerms: ExtendedPromiseTerms = {
+              ...existingTerms,
+              description: promiseEffect.description ?? existingTerms?.description,
+              isPublic: promiseEffect.isPublic ?? existingTerms?.isPublic,
+              trustReward: terms.trustReward,
+              trustPenalty: terms.trustPenalty,
+              relationshipPenalty: terms.relationshipPenalty,
+            };
+
+            const updatedPromises = [...promises];
+            updatedPromises[createdIndex] = {
+              ...createdPromise,
+              terms: enhancedTerms,
+            };
+
+            nationMap.set(playerNationId, {
+              ...updatedPlayer,
+              diplomaticPromises: updatedPromises,
+            });
+            const playerIndex = nations.findIndex((nation) => nation.id === playerNationId);
+            if (playerIndex !== -1) {
+              nations[playerIndex] = nationMap.get(playerNationId)!;
+            }
+          }
+        }
+      }
+    }
   }
 
-  // Resolve grievances
-  if (effects.resolveGrievance) {
-    // Mark grievances as resolved
+  // Resolve grievances by ID
+  if (effects.resolveGrievance?.length) {
+    for (const grievanceId of effects.resolveGrievance) {
+      if (!grievanceId) continue;
+      nationMap.forEach((nation, nationId) => {
+        if (nation.grievances?.some((grievance) => grievance.id === grievanceId && !grievance.resolved)) {
+          updateNation(nationId, (current) =>
+            resolveNationGrievance(current, grievanceId, currentTurn)
+          );
+        }
+      });
+    }
   }
 
-  // Create new grievances
+  // Create new grievances when specified
   if (effects.createGrievance) {
-    // Add new grievance
+    const grievanceEffect = effects.createGrievance as Partial<Grievance> & {
+      turnsToFulfill?: number;
+      trustValueIfKept?: number;
+      trustPenaltyIfBroken?: number;
+      relationshipPenaltyIfBroken?: number;
+    };
+
+    const wrongdoingNationId = grievanceEffect.againstNationId;
+    const gatherAffectedNationIds = (): string[] => {
+      const impacted = new Set<string>();
+      const relationshipEntries = Object.entries(effects.relationshipChange ?? {});
+      relationshipEntries
+        .filter(([, delta]) => delta < 0)
+        .forEach(([nationId]) => impacted.add(nationId));
+      const trustEntries = Object.entries(effects.trustChange ?? {});
+      trustEntries
+        .filter(([, delta]) => delta < 0)
+        .forEach(([nationId]) => impacted.add(nationId));
+      (option.thirdPartyReactions ?? [])
+        .filter((reaction) => reaction.impact < 0)
+        .forEach((reaction) => impacted.add(reaction.nationId));
+      return Array.from(impacted);
+    };
+
+    const complainingNationIds = new Set<string>();
+
+    if (wrongdoingNationId === 'all' && playerNationId) {
+      nations
+        .filter((nation) => nation.id !== playerNationId)
+        .forEach((nation) => complainingNationIds.add(nation.id));
+    } else if (wrongdoingNationId === playerNationId) {
+      const impacted = gatherAffectedNationIds();
+      if (impacted.length) {
+        impacted.forEach((nationId) => complainingNationIds.add(nationId));
+      } else {
+        nationMap.forEach((_, nationId) => {
+          if (nationId !== playerNationId) {
+            complainingNationIds.add(nationId);
+          }
+        });
+      }
+    } else if (wrongdoingNationId && wrongdoingNationId !== 'all') {
+      if (playerNationId) {
+        complainingNationIds.add(playerNationId);
+      }
+    }
+
+    const grievanceType = (grievanceEffect.type ?? 'betrayed-ally') as GrievanceType;
+    const grievanceSeverity = grievanceEffect.severity as GrievanceSeverity | undefined;
+    const targetNationId = wrongdoingNationId === 'all' ? playerNationId : wrongdoingNationId;
+
+    if (targetNationId) {
+      complainingNationIds.forEach((nationId) => {
+        if (!getNation(nationId)) return;
+        updateNation(nationId, (nation) =>
+          registerGrievance(
+            nation,
+            targetNationId,
+            grievanceType,
+            currentTurn,
+            grievanceEffect.description,
+            grievanceSeverity
+          )
+        );
+      });
+    }
   }
 
-  // Apply DIP rewards/losses
-  if (effects.dipReward) {
-    // Add DIP
+  // Apply DIP rewards or penalties
+  if (effects.dipReward && playerNationId) {
+    updateNation(playerNationId, (nation) =>
+      earnDIP(nation, effects.dipReward!, reasonBase, currentTurn)
+    );
   }
 
-  if ('dipLoss' in effects && effects.dipLoss) {
-    // Subtract DIP
+  if ('dipLoss' in effects && effects.dipLoss && playerNationId) {
+    updateNation(playerNationId, (nation) => {
+      const spent = spendDIP(nation, effects.dipLoss!, reasonBase, currentTurn);
+      if (spent) return spent;
+      const available = getDIP(nation);
+      if (!available) return nation;
+      return earnDIP(nation, -available, `${reasonBase} (insufficient DIP)`, currentTurn);
+    });
+  }
+
+  // Keep any cached player references in sync
+  if (playerNationId) {
+    const updatedPlayer = nationMap.get(playerNationId);
+    if (updatedPlayer) {
+      if (gameState.playerNation && gameState.playerNation.id === playerNationId) {
+        gameState.playerNation = updatedPlayer;
+      }
+      if (gameState.player && gameState.player.id === playerNationId) {
+        gameState.player = updatedPlayer;
+      }
+    }
+  }
+
+  if (gameState.nationsById && typeof gameState.nationsById === 'object') {
+    nationMap.forEach((nation, nationId) => {
+      gameState.nationsById[nationId] = nation;
+    });
   }
 
   return gameState;
