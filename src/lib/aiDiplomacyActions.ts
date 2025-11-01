@@ -3,11 +3,15 @@
  *
  * Functions for AI diplomatic actions including treaties, sanctions, alliances, and aid.
  * Extracted from Index.tsx as part of refactoring effort.
+ *
+ * PHASE 2 INTEGRATION: Now creates grievances and specialized alliances
  */
 
 import type { Nation } from '@/types/game';
+import type { SpecializedAllianceType } from '@/types/specializedAlliances';
 import { canAfford, pay } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat } from '@/lib/nationUtils';
+import { onTreatyBroken, onSanctionHarm, formSpecializedAlliance, breakSpecializedAlliance } from '@/lib/diplomacyPhase2Integration';
 
 /**
  * Log diplomacy message
@@ -55,22 +59,36 @@ export function aiSignNonAggressionPact(
 
 /**
  * Form an alliance between two nations
+ * PHASE 2: Now creates specialized alliances
  */
 export function aiFormAlliance(
   actor: Nation,
   target: Nation,
-  logFn: (msg: string, type?: string) => void
+  logFn: (msg: string, type?: string) => void,
+  currentTurn?: number,
+  allianceType?: SpecializedAllianceType
 ): boolean {
   const cost = { production: 10, intel: 40 };
   if (!canAfford(actor, cost)) return false;
   pay(actor, cost);
-  const treaty = ensureTreatyRecord(actor, target);
-  const reciprocal = ensureTreatyRecord(target, actor);
-  treaty.truceTurns = 999;
-  reciprocal.truceTurns = 999;
-  treaty.alliance = true;
-  reciprocal.alliance = true;
-  aiLogDiplomacy(actor, `enters an alliance with ${target.name}.`, logFn);
+
+  // PHASE 2: Create specialized alliance if turn number provided
+  if (currentTurn !== undefined) {
+    // Default to military alliance if not specified
+    const type = allianceType || 'military';
+    formSpecializedAlliance(actor, target, type, currentTurn);
+    aiLogDiplomacy(actor, `enters a ${type} alliance with ${target.name}.`, logFn);
+  } else {
+    // Fallback to old system
+    const treaty = ensureTreatyRecord(actor, target);
+    const reciprocal = ensureTreatyRecord(target, actor);
+    treaty.truceTurns = 999;
+    reciprocal.truceTurns = 999;
+    treaty.alliance = true;
+    reciprocal.alliance = true;
+    aiLogDiplomacy(actor, `enters an alliance with ${target.name}.`, logFn);
+  }
+
   adjustThreat(actor, target.id, -5);
   adjustThreat(target, actor.id, -5);
   return true;
@@ -95,11 +113,13 @@ export function aiSendAid(
 
 /**
  * Impose sanctions on another nation
+ * PHASE 2: Creates grievance if sanctions cause significant harm
  */
 export function aiImposeSanctions(
   actor: Nation,
   target: Nation,
-  logFn: (msg: string, type?: string) => void
+  logFn: (msg: string, type?: string) => void,
+  currentTurn?: number
 ): boolean {
   if (target.sanctioned && target.sanctionedBy?.[actor.id]) return false;
   const cost = { intel: 15 };
@@ -108,7 +128,14 @@ export function aiImposeSanctions(
   target.sanctioned = true;
   target.sanctionTurns = Math.max(5, (target.sanctionTurns || 0) + 5);
   target.sanctionedBy = target.sanctionedBy || {};
-  target.sanctionedBy[actor.id] = (target.sanctionedBy[actor.id] || 0) + 5;
+  const existingSanctions = target.sanctionedBy[actor.id] || 0;
+  target.sanctionedBy[actor.id] = existingSanctions + 5;
+
+  // PHASE 2: Create grievance if this is adding to existing sanctions (showing harm)
+  if (currentTurn !== undefined && existingSanctions > 0) {
+    onSanctionHarm(target, actor, currentTurn);
+  }
+
   aiLogDiplomacy(actor, `imposes sanctions on ${target.name}.`, logFn);
   adjustThreat(target, actor.id, 3);
   return true;
@@ -116,17 +143,32 @@ export function aiImposeSanctions(
 
 /**
  * Break treaties with another nation
+ * PHASE 2: Now creates grievances
  */
 export function aiBreakTreaties(
   actor: Nation,
   target: Nation,
   logFn: (msg: string, type?: string) => void,
-  reason?: string
+  reason?: string,
+  currentTurn?: number
 ): boolean {
   const treaty = ensureTreatyRecord(actor, target);
   const reciprocal = ensureTreatyRecord(target, actor);
   const hadAgreements = !!(treaty.truceTurns || treaty.alliance);
   if (!hadAgreements) return false;
+
+  const wasAlliance = !!(treaty.alliance);
+
+  // PHASE 2: Create grievance for breaking treaty
+  if (currentTurn !== undefined) {
+    onTreatyBroken(target, actor, wasAlliance, currentTurn);
+  }
+
+  // Break specialized alliance if exists
+  if (wasAlliance && currentTurn !== undefined) {
+    breakSpecializedAlliance(actor, target.id, target, currentTurn);
+  }
+
   delete treaty.truceTurns;
   delete reciprocal.truceTurns;
   delete treaty.alliance;
