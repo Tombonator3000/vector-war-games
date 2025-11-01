@@ -7289,19 +7289,19 @@ export default function NoradVector() {
     // Execute the diplomatic action based on proposal type
     switch (activeDiplomacyProposal.type) {
       case 'alliance':
-        aiFormAlliance(proposer, target);
+        aiFormAlliance(proposer, target, log);
         log(`${target.name} accepts alliance with ${proposer.name}!`);
         break;
 
       case 'truce': {
         const duration = activeDiplomacyProposal.terms.duration || 3;
-        aiSignMutualTruce(proposer, target, duration, 'Diplomatic agreement');
+        aiSignMutualTruce(proposer, target, duration, log, 'Diplomatic agreement');
         log(`${target.name} accepts ${duration}-turn truce with ${proposer.name}.`);
         break;
       }
 
       case 'non-aggression':
-        aiSignNonAggressionPact(proposer, target);
+        aiSignNonAggressionPact(proposer, target, log);
         log(`${target.name} signs non-aggression pact with ${proposer.name}.`);
         break;
 

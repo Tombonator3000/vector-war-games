@@ -807,3 +807,8 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Updated the co-op listener in `src/pages/Index.tsx` to use the helper so window state mirrors imported sessions.
 - Added `coopSync.test.ts` covering the flashpoint scenario check after a simulated co-op import and exercised the existing `useFlashpoints` suite.
 - Ran `npm run test -- --run src/lib/__tests__/coopSync.test.ts` and `npm run test -- --run src/hooks/__tests__/useFlashpoints.test.ts` to confirm cooperative synchronization continues to surface the correct scenario metadata.
+## 2025-11-01T13:51:42+00:00
+- Routed Index diplomacy acceptance handlers through the shared `log` callback and moved reason strings into helper arguments to stop runtime errors when accepting AI proposals.
+
+## 2025-11-01T13:51:48+00:00
+- Added `aiDiplomacyActions.acceptance.test.ts` to verify alliances, truces, and non-aggression pacts log via callbacks and executed `npm run test -- --run src/lib/__tests__/aiDiplomacyActions.acceptance.test.ts`.
