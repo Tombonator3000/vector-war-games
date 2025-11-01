@@ -738,3 +738,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-10-31T16:52:50+00:00
 - Updated Cuban Crisis nation setup to reference dynamic nation IDs for threats, alliances, and relationships per Codex review request.
+## 2025-11-01T06:35:01+00:00
+- Replaced CommonJS require in favorActions with ES module import and updated promise handling to apply trust penalties to the aggrieved nation per Codex review feedback.
+- Ran `npm run test`; suite failed due to existing RNGProvider setup gaps in governance and conventional warfare hook tests.
