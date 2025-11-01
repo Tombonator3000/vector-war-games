@@ -183,71 +183,70 @@ export function BuildModal({
     const disabledReason = reasons.join(' • ');
 
     return (
-      <div
+      <button
         key={option.key}
-        className="rounded border border-cyan-700/70 bg-black/60 p-4 shadow-[0_0_12px_rgba(0,255,255,0.08)]"
+        onClick={option.onClick}
+        disabled={disabled}
+        className={`w-full text-left p-4 rounded-lg border transition-all ${
+          disabled
+            ? 'bg-slate-900/30 border-gray-700/30 opacity-50 cursor-not-allowed'
+            : 'bg-slate-800/50 border-cyan-500/30 hover:bg-slate-700/50 hover:border-cyan-500/50 cursor-pointer'
+        }`}
       >
         <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <div className="font-semibold text-cyan-100">{option.label}</div>
-            <div className="text-xs text-cyan-200/70 uppercase">Cost: {formatCost(option.cost)}</div>
-            <div className="text-xs text-cyan-200/80">{option.description}</div>
+          <div className="flex-1">
+            <h4 className="text-lg font-semibold text-cyan-300 font-mono">{option.label}</h4>
+            <p className="text-sm text-gray-400 mt-1">{option.description}</p>
+            <div className="text-xs text-cyan-400 mt-2 uppercase tracking-wide">Cost: {formatCost(option.cost)}</div>
             {option.statusLine ? (
-              <div className="text-xs text-cyan-200/60">{option.statusLine}</div>
+              <div className="text-xs text-gray-500 mt-1">{option.statusLine}</div>
             ) : null}
           </div>
-          <Button
-            onClick={option.onClick}
-            disabled={disabled}
-            title={disabledReason || 'Issue production order'}
-            className={`px-3 py-2 text-sm font-semibold transition-colors ${
-              disabled
-                ? 'bg-cyan-900/40 text-cyan-200/40 cursor-not-allowed'
-                : 'bg-cyan-600 text-black hover:bg-cyan-500'
-            }`}
-          >
-            {disabled ? 'Unavailable' : 'Order' }
-          </Button>
+          <div className="flex flex-col items-end gap-2">
+            {!disabled && (
+              <span className="text-sm font-semibold text-cyan-400">Available</span>
+            )}
+          </div>
         </div>
         {disabledReason ? (
-          <div className="mt-3 text-xs text-yellow-300/80">{disabledReason}</div>
+          <div className="mt-3 text-xs text-yellow-400">{disabledReason}</div>
         ) : null}
-      </div>
+      </button>
     );
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {actionMessage ? (
         <div
-          className={`rounded border p-3 text-xs ${
+          className={`rounded-lg border p-4 text-sm ${
             actionMessage.tone === 'warning'
-              ? 'border-yellow-400/60 bg-yellow-900/10 text-yellow-200'
-              : 'border-cyan-400/60 bg-cyan-900/10 text-cyan-200'
+              ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-200'
+              : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-200'
           }`}
         >
           {actionMessage.text}
         </div>
       ) : null}
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div>
-          <h3 className="mb-2 text-sm font-semibold tracking-wide text-cyan-300">DELIVERY & DEFENSE</h3>
-          <div className="grid gap-3 md:grid-cols-2">
+          <h3 className="mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Delivery & Defense</h3>
+          <div className="space-y-4">
             {deliveryOptions.map(renderOption)}
           </div>
         </div>
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold tracking-wide text-cyan-300">INFRASTRUCTURE</h3>
-          <div className="grid gap-3 md:grid-cols-2">
+          <h3 className="mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Infrastructure</h3>
+          <div className="space-y-4">
             {infrastructureOptions.map(renderOption)}
           </div>
         </div>
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold tracking-wide text-cyan-300">WARHEAD PRODUCTION</h3>
-          <div className="grid gap-3 md:grid-cols-2">
+          <h3 className="mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Warhead Production</h3>
+          <div className="space-y-4">
             {warheadOptions.map(renderOption)}
           </div>
         </div>
