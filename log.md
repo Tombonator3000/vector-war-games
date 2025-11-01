@@ -812,3 +812,7 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-11-01T13:51:48+00:00
 - Added `aiDiplomacyActions.acceptance.test.ts` to verify alliances, truces, and non-aggression pacts log via callbacks and executed `npm run test -- --run src/lib/__tests__/aiDiplomacyActions.acceptance.test.ts`.
+
+## 2025-11-01T14:14:12+00:00
+- Integrated enhanced diplomacy mechanics using spendDIP, trust/favor updates, promises, and grievance utilities in `src/pages/Index.tsx` with new helper support.
+- Added apology and reparations grievance resolution helpers to `src/lib/diplomacyPhase2Integration.ts` to persist trust, relationship, and favor changes.

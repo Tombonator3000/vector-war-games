@@ -6,9 +6,20 @@
  */
 
 import type { Nation } from '@/types/game';
-import type { GrievanceType, ClaimType, ClaimStrength } from '@/types/grievancesAndClaims';
+import type {
+  GrievanceType,
+  ClaimType,
+  ClaimStrength,
+  GrievanceSeverity,
+} from '@/types/grievancesAndClaims';
 import type { AllianceType } from '@/types/specializedAlliances';
-import { createGrievance, createClaim, ageClaims } from '@/lib/grievancesAndClaimsUtils';
+import {
+  createGrievance,
+  createClaim,
+  ageClaims,
+  getActiveGrievances,
+  resolveGrievance,
+} from '@/lib/grievancesAndClaimsUtils';
 import {
   createSpecializedAlliance,
   modifyCooperation,
@@ -18,6 +29,8 @@ import {
   getResearchSpeedBonus
 } from '@/lib/specializedAlliancesUtils';
 import { ensureTreatyRecord } from '@/lib/nationUtils';
+import { modifyTrust, modifyFavors } from '@/lib/trustAndFavorsUtils';
+import { modifyRelationship } from '@/lib/relationshipUtils';
 
 // ============================================================================
 // GRIEVANCE TRIGGERS
@@ -144,6 +157,156 @@ export function onSanctionHarm(
     'minor' // Sanctions are typically minor grievances
   );
   victim.grievances = updated.grievances || [];
+}
+
+// ============================================================================
+// DIPLOMATIC GESTURES & GRIEVANCE RESOLUTION
+// ============================================================================
+
+/**
+ * Resolve outstanding grievances through a formal apology.
+ * Applies trust/relationship recovery for both parties.
+ */
+export function resolveGrievancesWithApology(
+  apologizer: Nation,
+  victim: Nation,
+  currentTurn: number
+): { apologizer: Nation; victim: Nation; resolvedGrievanceCount: number } {
+  const activeGrievances = getActiveGrievancesSafe(victim, apologizer.id);
+
+  let updatedVictim = victim;
+  let resolvedCount = 0;
+
+  for (const grievance of activeGrievances) {
+    updatedVictim = resolveGrievance(updatedVictim, grievance.id, currentTurn);
+    resolvedCount += 1;
+  }
+
+  let updatedApologizer = apologizer;
+
+  if (resolvedCount > 0) {
+    updatedApologizer = modifyTrust(
+      updatedApologizer,
+      victim.id,
+      4,
+      'Issued formal apology',
+      currentTurn
+    );
+    updatedApologizer = modifyRelationship(
+      updatedApologizer,
+      victim.id,
+      6,
+      'Issued formal apology',
+      currentTurn
+    );
+    updatedVictim = modifyRelationship(
+      updatedVictim,
+      apologizer.id,
+      6,
+      'Accepted formal apology',
+      currentTurn
+    );
+  } else {
+    // Even without active grievances, an apology builds a bit of goodwill.
+    updatedApologizer = modifyRelationship(
+      updatedApologizer,
+      victim.id,
+      2,
+      'Extended goodwill apology',
+      currentTurn
+    );
+    updatedVictim = modifyRelationship(
+      updatedVictim,
+      apologizer.id,
+      2,
+      'Received goodwill apology',
+      currentTurn
+    );
+  }
+
+  return {
+    apologizer: updatedApologizer,
+    victim: updatedVictim,
+    resolvedGrievanceCount: resolvedCount,
+  };
+}
+
+/**
+ * Resolve grievances via reparations. Increases favors owed by the recipient
+ * and produces stronger relationship recovery proportional to severity.
+ */
+export function resolveGrievancesWithReparations(
+  payer: Nation,
+  recipient: Nation,
+  currentTurn: number,
+  severity: GrievanceSeverity = 'moderate'
+): {
+  payer: Nation;
+  recipient: Nation;
+  resolvedGrievanceCount: number;
+} {
+  const activeGrievances = getActiveGrievancesSafe(recipient, payer.id);
+
+  let updatedRecipient = recipient;
+  let resolvedCount = 0;
+
+  for (const grievance of activeGrievances) {
+    updatedRecipient = resolveGrievance(updatedRecipient, grievance.id, currentTurn);
+    resolvedCount += 1;
+  }
+
+  const severityTrustBonus = severity === 'severe' ? 10 : severity === 'major' ? 8 : severity === 'minor' ? 4 : 6;
+  const severityRelationshipBonus = severity === 'severe' ? 14 : severity === 'major' ? 10 : severity === 'minor' ? 5 : 8;
+
+  let updatedPayer = modifyTrust(
+    payer,
+    recipient.id,
+    severityTrustBonus,
+    'Provided reparations',
+    currentTurn
+  );
+
+  updatedPayer = modifyRelationship(
+    updatedPayer,
+    recipient.id,
+    Math.round(severityRelationshipBonus / 2),
+    'Provided reparations',
+    currentTurn
+  );
+
+  updatedRecipient = modifyRelationship(
+    updatedRecipient,
+    payer.id,
+    severityRelationshipBonus,
+    'Accepted reparations',
+    currentTurn
+  );
+
+  // Reparations create a modest favor the recipient owes back over time.
+  updatedPayer = modifyFavors(
+    updatedPayer,
+    recipient.id,
+    3,
+    'Extended reparations package',
+    currentTurn
+  );
+  updatedRecipient = modifyFavors(
+    updatedRecipient,
+    payer.id,
+    -3,
+    'Accepted reparations package',
+    currentTurn
+  );
+
+  return {
+    payer: updatedPayer,
+    recipient: updatedRecipient,
+    resolvedGrievanceCount: resolvedCount,
+  };
+}
+
+function getActiveGrievancesSafe(nation: Nation, againstNationId: string) {
+  return getActiveGrievances(nation, againstNationId);
 }
 
 // ============================================================================

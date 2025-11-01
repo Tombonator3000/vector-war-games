@@ -111,6 +111,7 @@ import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen'
 import { DoctrineSelectionScreen } from '@/components/setup/DoctrineSelectionScreen';
 import { canAfford, pay, getCityCost, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
+import { modifyRelationship } from '@/lib/relationshipUtils';
 import { project, toLonLat, getPoliticalFill, resolvePublicAssetPath, POLITICAL_COLOR_PALETTE, type ProjectionContext } from '@/lib/renderingUtils';
 import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, type LocalNation, createDefaultDiplomacyState } from '@/state';
 import type { GreatOldOnesState } from '@/types/greatOldOnes';
@@ -132,12 +133,24 @@ import {
   aiHandleDiplomaticUrgencies,
   aiAttemptDiplomacy,
 } from '@/lib/aiDiplomacyActions';
-import { initializeGameTrustAndFavors, applyTrustDecay } from '@/lib/trustAndFavorsUtils';
+import {
+  initializeGameTrustAndFavors,
+  applyTrustDecay,
+  modifyTrust,
+  modifyFavors,
+  createPromise,
+  fulfillPromise,
+  breakPromise,
+} from '@/lib/trustAndFavorsUtils';
 import { initializeGrievancesAndClaims, updateGrievancesAndClaimsPerTurn } from '@/lib/grievancesAndClaimsUtils';
 import { initializeSpecializedAlliances, updateAlliancesPerTurn } from '@/lib/specializedAlliancesUtils';
-import { updatePhase2PerTurn } from '@/lib/diplomacyPhase2Integration';
+import {
+  updatePhase2PerTurn,
+  resolveGrievancesWithApology,
+  resolveGrievancesWithReparations,
+} from '@/lib/diplomacyPhase2Integration';
 import { initializeDiplomacyPhase3State } from '@/types/diplomacyPhase3';
-import { calculateDIPIncome, applyDIPIncome, initializeDIP } from '@/lib/diplomaticCurrencyUtils';
+import { calculateDIPIncome, applyDIPIncome, initializeDIP, spendDIP } from '@/lib/diplomaticCurrencyUtils';
 import {
   launch as launchMissile,
   resolutionPhase as runResolutionPhase,
@@ -165,6 +178,7 @@ import { OptionsMenu } from '@/components/OptionsMenu';
 import { COSTS, RESEARCH_TREE, RESEARCH_LOOKUP, WARHEAD_RESEARCH_IDS, WARHEAD_YIELD_TO_ID, type ResourceCost, type ResearchProject } from '@/lib/gameConstants';
 import { useModalManager, type ModalContentValue } from '@/hooks/game/useModalManager';
 import { useNewsManager } from '@/hooks/game/useNewsManager';
+import { getTrust, getFavors, FavorCosts } from '@/types/trustAndFavors';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -7369,116 +7383,355 @@ export default function NoradVector() {
     const player = PlayerManager.get();
     if (!player) return;
 
-    // Deduct DIP cost
-    if (action.dipCost && player.diplomaticInfluence) {
-      if (player.diplomaticInfluence.points < action.dipCost) {
+    const currentTurn = S.turn;
+    const targetNation = target
+      ? nations.find((nation) => nation.id === target.id) ?? target
+      : undefined;
+
+    if (action.requiresTarget && !targetNation) {
+      toast({
+        title: 'Select a target nation',
+        description: 'Choose a nation before executing this diplomatic action.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (action.id === 'call-in-favor' && targetNation) {
+      const availableFavors = getFavors(player, targetNation.id);
+      if (availableFavors <= 0) {
         toast({
-          title: 'Insufficient DIP',
-          description: `This action requires ${action.dipCost} DIP.`,
-          variant: 'destructive'
+          title: 'No favors available',
+          description: `${targetNation.name} does not owe you any favors to call in.`,
+          variant: 'destructive',
         });
         return;
       }
-      player.diplomaticInfluence.points -= action.dipCost;
     }
 
-    // Handle the action
+    if (action.id === 'verify-promise' && targetNation) {
+      const playerHasPromise = player.diplomaticPromises?.some(
+        (p) => p.toNationId === targetNation.id && !p.fulfilled && !p.broken
+      );
+      const targetHasPromise = targetNation.diplomaticPromises?.some(
+        (p) => p.toNationId === player.id && !p.fulfilled && !p.broken
+      );
+      if (!playerHasPromise && !targetHasPromise) {
+        toast({
+          title: 'No promises to verify',
+          description: `${targetNation.name} has no active promises with you right now.`,
+        });
+        return;
+      }
+    }
+
+    let updatedPlayer: Nation = player;
+    let updatedTarget: Nation | undefined = targetNation;
+    let newsItem: { text: string; priority: 'info' | 'important' | 'critical' } | null = null;
+    let toastPayload: { title: string; description: string; variant?: 'default' | 'destructive' | 'success' } | null = null;
+
+    if (action.dipCost) {
+      const spent = spendDIP(updatedPlayer, action.dipCost, action.id, currentTurn, updatedTarget?.id);
+      if (!spent) {
+        toast({
+          title: 'Insufficient DIP',
+          description: `This action requires ${action.dipCost} DIP.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      updatedPlayer = spent;
+    }
+
     switch (action.id) {
-      case 'build-trust':
-        if (target) {
-          log(`${player.name} engages in trust-building diplomacy with ${target.name}.`);
-          toast({
-            title: 'Trust Building',
-            description: `Diplomatic engagement with ${target.name} initiated.`
-          });
-        }
-        break;
+      case 'build-trust': {
+        if (!updatedTarget) break;
+        const reason = `Trust-building summit with ${updatedTarget.name}`;
+        updatedPlayer = modifyTrust(updatedPlayer, updatedTarget.id, 3, reason, currentTurn);
+        updatedTarget = modifyTrust(updatedTarget, updatedPlayer.id, 6, reason, currentTurn);
+        updatedPlayer = modifyRelationship(updatedPlayer, updatedTarget.id, 4, reason, currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, updatedPlayer.id, 5, reason, currentTurn);
 
-      case 'grant-favor':
-        if (target) {
-          log(`${player.name} grants a favor to ${target.name}.`);
-          toast({
-            title: 'Favor Granted',
-            description: `You have provided assistance to ${target.name}.`
-          });
-        }
-        break;
+        const playerTrust = getTrust(updatedPlayer, updatedTarget.id);
+        const targetTrust = getTrust(updatedTarget, updatedPlayer.id);
 
-      case 'call-in-favor':
-        if (target) {
-          log(`${player.name} calls in a favor from ${target.name}.`);
-          toast({
-            title: 'Favor Called In',
-            description: `Requesting assistance from ${target.name}.`
-          });
-        }
+        toastPayload = {
+          title: 'Trust Building Successful',
+          description: `Your trust in ${updatedTarget.name} is now ${playerTrust}, and their trust in you is ${targetTrust}.`,
+        };
+        newsItem = {
+          text: `${player.name} orchestrates a trust-building summit with ${updatedTarget.name}, raising mutual confidence.`,
+          priority: 'important',
+        };
+        log(`${player.name} increases mutual trust with ${updatedTarget.name} through diplomatic outreach.`);
         break;
+      }
+      case 'grant-favor': {
+        if (!updatedTarget) break;
+        const favorAmount = 4;
+        const reason = `Granted strategic favor to ${updatedTarget.name}`;
+        updatedPlayer = modifyFavors(updatedPlayer, updatedTarget.id, favorAmount, reason, currentTurn);
+        updatedTarget = modifyFavors(updatedTarget, updatedPlayer.id, -favorAmount, reason, currentTurn);
+        updatedTarget = modifyTrust(updatedTarget, updatedPlayer.id, 5, reason, currentTurn);
+        updatedPlayer = modifyRelationship(updatedPlayer, updatedTarget.id, 3, reason, currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, updatedPlayer.id, 4, reason, currentTurn);
 
-      case 'make-promise':
-        if (target) {
-          log(`${player.name} makes a diplomatic promise to ${target.name}.`);
-          toast({
-            title: 'Promise Made',
-            description: `Diplomatic commitment to ${target.name} recorded.`
-          });
-        }
+        const favorBalance = getFavors(updatedPlayer, updatedTarget.id);
+        toastPayload = {
+          title: 'Favor Granted',
+          description: `${updatedTarget.name} now owes you ${favorBalance} favor(s). Their trust in you improved.`,
+        };
+        newsItem = {
+          text: `${player.name} extends crucial support to ${updatedTarget.name}, earning diplomatic leverage.`,
+          priority: 'important',
+        };
+        log(`${player.name} granted a diplomatic favor to ${updatedTarget.name}, strengthening leverage.`);
         break;
+      }
+      case 'call-in-favor': {
+        if (!updatedTarget) break;
+        const availableFavors = Math.max(0, getFavors(updatedPlayer, updatedTarget.id));
+        const spendAmount = Math.min(availableFavors, FavorCosts.REQUEST_AID);
+        const reason = `Called in favor from ${updatedTarget.name}`;
+        updatedPlayer = modifyFavors(updatedPlayer, updatedTarget.id, -spendAmount, reason, currentTurn);
+        updatedTarget = modifyFavors(updatedTarget, updatedPlayer.id, spendAmount, reason, currentTurn);
+        updatedPlayer = modifyTrust(updatedPlayer, updatedTarget.id, 2, reason, currentTurn);
+        updatedTarget = modifyTrust(updatedTarget, updatedPlayer.id, -2, reason, currentTurn);
+        updatedPlayer = modifyRelationship(updatedPlayer, updatedTarget.id, 2, reason, currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, updatedPlayer.id, -1, reason, currentTurn);
 
-      case 'verify-promise':
-        if (target) {
-          log(`${player.name} requests verification of ${target.name}'s promises.`);
-          toast({
-            title: 'Verification Requested',
-            description: `Asking ${target.name} to prove their commitment.`
-          });
-        }
+        toastPayload = {
+          title: 'Favor Called In',
+          description: `${updatedTarget.name} honored your request. Remaining favors owed: ${Math.max(0, getFavors(updatedPlayer, updatedTarget.id))}.`,
+        };
+        newsItem = {
+          text: `${player.name} calls in a diplomatic favor from ${updatedTarget.name}, pressing for tangible support.`,
+          priority: 'important',
+        };
+        log(`${player.name} called in a favor from ${updatedTarget.name}, adjusting diplomatic balances.`);
         break;
+      }
+      case 'make-promise': {
+        if (!updatedTarget) break;
+        const promiseTerms = {
+          duration: 8,
+          targetNationId: updatedTarget.id,
+          trustReward: 8,
+          trustPenalty: 12,
+          relationshipPenalty: -10,
+        } as const;
+        updatedPlayer = createPromise(updatedPlayer, updatedTarget.id, 'no-attack', promiseTerms, currentTurn);
+        const reason = `Pledged non-aggression toward ${updatedTarget.name}`;
+        updatedTarget = modifyTrust(updatedTarget, updatedPlayer.id, 4, reason, currentTurn);
+        updatedPlayer = modifyRelationship(updatedPlayer, updatedTarget.id, 2, reason, currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, updatedPlayer.id, 5, reason, currentTurn);
 
-      case 'apologize':
-        if (target) {
-          log(`${player.name} issues formal apology to ${target.name}.`);
-          toast({
-            title: 'Apology Issued',
-            description: `Formal reconciliation attempt with ${target.name}.`
-          });
-        }
+        toastPayload = {
+          title: 'Promise Recorded',
+          description: `Your non-aggression pledge to ${updatedTarget.name} will last ${promiseTerms.duration} turns.`,
+        };
+        newsItem = {
+          text: `${player.name} publicly pledges restraint toward ${updatedTarget.name}, easing regional tensions.`,
+          priority: 'info',
+        };
+        log(`${player.name} made a non-aggression promise to ${updatedTarget.name}.`);
         break;
+      }
+      case 'verify-promise': {
+        if (!updatedTarget) break;
+        const reason = `Promise verification with ${updatedTarget.name}`;
+        const activeTargetPromise = updatedTarget.diplomaticPromises?.find(
+          (p) => p.toNationId === updatedPlayer.id && !p.fulfilled && !p.broken
+        );
+        const activePlayerPromise = updatedPlayer.diplomaticPromises?.find(
+          (p) => p.toNationId === updatedTarget.id && !p.fulfilled && !p.broken
+        );
 
-      case 'reparations':
-        if (target) {
-          log(`${player.name} offers reparations to ${target.name}.`);
-          toast({
-            title: 'Reparations Offered',
-            description: `Compensation package proposed to ${target.name}.`
-          });
+        let description = '';
+        let priority: 'info' | 'important' | 'critical' = 'info';
+
+        if (activeTargetPromise && currentTurn > activeTargetPromise.expiresTurn) {
+          updatedTarget = breakPromise(updatedTarget, activeTargetPromise.id, currentTurn);
+          updatedPlayer = modifyTrust(
+            updatedPlayer,
+            updatedTarget.id,
+            -8,
+            `Verified broken promise by ${updatedTarget.name}`,
+            currentTurn
+          );
+          updatedPlayer = modifyRelationship(
+            updatedPlayer,
+            updatedTarget.id,
+            -6,
+            `Verified broken promise by ${updatedTarget.name}`,
+            currentTurn
+          );
+          description = `${updatedTarget.name} failed to uphold their promise. Trust erodes sharply.`;
+          priority = 'critical';
+          log(`${player.name} confirmed ${updatedTarget.name} broke a promise.`);
+        } else {
+          if (activeTargetPromise && currentTurn >= activeTargetPromise.expiresTurn) {
+            updatedTarget = fulfillPromise(updatedTarget, activeTargetPromise.id, currentTurn);
+            updatedPlayer = modifyTrust(updatedPlayer, updatedTarget.id, 6, reason, currentTurn);
+            updatedPlayer = modifyRelationship(updatedPlayer, updatedTarget.id, 4, reason, currentTurn);
+            description = `${updatedTarget.name} fulfilled their promise.`;
+            priority = 'important';
+            log(`${player.name} verified that ${updatedTarget.name} kept their promise.`);
+          } else if (activeTargetPromise) {
+            updatedPlayer = modifyTrust(updatedPlayer, updatedTarget.id, 2, reason, currentTurn);
+            updatedTarget = modifyRelationship(updatedTarget, updatedPlayer.id, 2, reason, currentTurn);
+            description = `${updatedTarget.name} reaffirmed their ongoing promise.`;
+            priority = 'info';
+            log(`${player.name} checked on an active promise with ${updatedTarget.name}.`);
+          }
+
+          if (activePlayerPromise && currentTurn >= activePlayerPromise.expiresTurn) {
+            updatedPlayer = fulfillPromise(updatedPlayer, activePlayerPromise.id, currentTurn);
+            updatedTarget = modifyTrust(updatedTarget, updatedPlayer.id, 5, reason, currentTurn);
+            updatedTarget = modifyRelationship(updatedTarget, updatedPlayer.id, 3, reason, currentTurn);
+            description = description
+              ? `${description} Your commitment is now logged as fulfilled.`
+              : 'Your commitment is now logged as fulfilled.';
+            priority = priority === 'critical' ? 'critical' : 'important';
+            log(`${player.name} finalized a promise made to ${updatedTarget.name}.`);
+          }
         }
-        break;
 
-      case 'propose-resolution':
-        log(`${player.name} proposes a resolution to the International Council.`);
-        toast({
+        if (!description) {
+          description = 'No new promise updates were recorded.';
+          log(`${player.name} found no change while verifying promises with ${updatedTarget.name}.`);
+        }
+
+        toastPayload = {
+          title: 'Promise Verification',
+          description,
+        };
+        newsItem = {
+          text: `${player.name} audits diplomatic promises with ${updatedTarget.name}. ${description}`,
+          priority,
+        };
+        break;
+      }
+      case 'apologize': {
+        if (!updatedTarget) break;
+        const { apologizer, victim, resolvedGrievanceCount } = resolveGrievancesWithApology(
+          updatedPlayer,
+          updatedTarget,
+          currentTurn
+        );
+        updatedPlayer = apologizer;
+        updatedTarget = victim;
+
+        const targetTrust = getTrust(updatedTarget, updatedPlayer.id);
+        const resolutionText =
+          resolvedGrievanceCount > 0
+            ? `Resolved ${resolvedGrievanceCount} grievance(s).`
+            : 'No outstanding grievances remained, but goodwill improved.';
+        toastPayload = {
+          title: 'Formal Apology Issued',
+          description: `${resolutionText} ${updatedTarget.name}'s trust in you is now ${targetTrust}.`,
+        };
+        newsItem = {
+          text: `${player.name} issued a formal apology to ${updatedTarget.name}. ${resolutionText}`,
+          priority: resolvedGrievanceCount > 0 ? 'important' : 'info',
+        };
+        log(`${player.name} apologized to ${updatedTarget.name}, ${resolutionText}`);
+        break;
+      }
+      case 'reparations': {
+        if (!updatedTarget) break;
+        const { payer, recipient, resolvedGrievanceCount } = resolveGrievancesWithReparations(
+          updatedPlayer,
+          updatedTarget,
+          currentTurn,
+          'major'
+        );
+        updatedPlayer = payer;
+        updatedTarget = recipient;
+
+        const favorBalance = getFavors(updatedPlayer, updatedTarget.id);
+        const resolutionText =
+          resolvedGrievanceCount > 0
+            ? `Resolved ${resolvedGrievanceCount} grievance(s) through compensation.`
+            : 'Strengthened relations through proactive compensation.';
+        toastPayload = {
+          title: 'Reparations Delivered',
+          description: `${resolutionText} ${updatedTarget.name} now owes you ${favorBalance} favor(s).`,
+        };
+        newsItem = {
+          text: `${player.name} offers reparations to ${updatedTarget.name}. ${resolutionText}`,
+          priority: 'important',
+        };
+        log(`${player.name} provided reparations to ${updatedTarget.name}. ${resolutionText}`);
+        break;
+      }
+      case 'propose-resolution': {
+        toastPayload = {
           title: 'Resolution Proposed',
-          description: 'Your proposal has been submitted to the Council.'
-        });
+          description: 'Your proposal has been submitted to the Council and awaits deliberation.',
+        };
+        newsItem = {
+          text: `${player.name} tables a resolution before the International Council.`,
+          priority: 'info',
+        };
+        log(`${player.name} proposed a resolution to the International Council.`);
         break;
+      }
+      case 'call-session': {
+        toastPayload = {
+          title: 'Emergency Session Convened',
+          description: 'The International Council is gathering in emergency session.',
+        };
+        newsItem = {
+          text: `${player.name} calls an emergency session of the International Council.`,
+          priority: 'important',
+        };
+        log(`${player.name} called an emergency session of the International Council.`);
+        break;
+      }
+      case 'back-channel': {
+        if (!updatedTarget) break;
+        const reason = `Back-channel talks with ${updatedTarget.name}`;
+        updatedPlayer = modifyTrust(updatedPlayer, updatedTarget.id, 2, reason, currentTurn);
+        updatedTarget = modifyTrust(updatedTarget, updatedPlayer.id, 3, reason, currentTurn);
+        updatedPlayer = modifyRelationship(updatedPlayer, updatedTarget.id, 2, reason, currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, updatedPlayer.id, 3, reason, currentTurn);
 
-      case 'call-session':
-        log(`${player.name} calls an emergency session of the International Council.`);
-        toast({
-          title: 'Emergency Session',
-          description: 'The International Council has been convened.'
-        });
+        toastPayload = {
+          title: 'Back-Channel Opened',
+          description: `Confidential line with ${updatedTarget.name} established. Trust improved on both sides.`,
+        };
+        newsItem = {
+          text: `${player.name} establishes discreet communications with ${updatedTarget.name}.`,
+          priority: 'info',
+        };
+        log(`${player.name} initiated back-channel communications with ${updatedTarget.name}.`);
         break;
+      }
+      default:
+        break;
+    }
 
-      case 'back-channel':
-        if (target) {
-          log(`${player.name} sends back-channel communication to ${target.name}.`);
-          toast({
-            title: 'Back-Channel Communication',
-            description: `Private diplomatic message sent to ${target.name}.`
-          });
-        }
-        break;
+    const updatedNations = nations.map((nation) => {
+      if (nation.id === updatedPlayer.id) {
+        return updatedPlayer;
+      }
+      if (updatedTarget && nation.id === updatedTarget.id) {
+        return updatedTarget;
+      }
+      return nation;
+    });
+
+    nations = updatedNations;
+    GameStateManager.setNations(updatedNations);
+    PlayerManager.setNations(updatedNations);
+
+    if (newsItem) {
+      window.__gameAddNewsItem?.('diplomatic', newsItem.text, newsItem.priority);
+    }
+
+    if (toastPayload) {
+      toast(toastPayload);
     }
 
     updateDisplay();
