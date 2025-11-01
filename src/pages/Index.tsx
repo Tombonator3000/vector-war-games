@@ -8439,9 +8439,9 @@ export default function NoradVector() {
               <DoctrineSelectionPanel
                 canSelect={true}
                 onSelectDoctrine={(doctrine) => {
-                  greatOldOnesState.doctrine = doctrine;
-                  setGreatOldOnesState({ ...greatOldOnesState });
-                  GameStateManager.setGreatOldOnes(greatOldOnesState);
+                  const updatedState = { ...greatOldOnesState, doctrine };
+                  setGreatOldOnesState(updatedState);
+                  GameStateManager.setGreatOldOnes(updatedState);
                   toast({ title: 'Doctrine Selected', description: `Path of ${doctrine} chosen` });
                 }}
               />
