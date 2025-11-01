@@ -2,6 +2,7 @@ import type { BioLabFacility } from './bioLab';
 import type { PlagueState } from './biowarfare';
 import type { ScenarioConfig } from './scenario';
 import type { GreatOldOnesState } from './greatOldOnes';
+import type { TrustRecord, FavorBalance, DiplomaticPromise } from './trustAndFavors';
 
 export interface FalloutMark {
   id: string;
@@ -113,6 +114,11 @@ export interface Nation {
   alliances?: string[];
   relationships?: Record<string, number>; // Nation ID -> Relationship score (-100 to +100)
   relationshipHistory?: RelationshipEvent[]; // History of relationship changes
+
+  // Trust and Favors (Phase 1 Diplomacy Enhancement)
+  trustRecords?: Record<string, TrustRecord>; // Nation ID -> Trust record (0-100)
+  favorBalances?: Record<string, FavorBalance>; // Nation ID -> Favor balance
+  diplomaticPromises?: DiplomaticPromise[]; // Active promises made by this nation
   readinessRegen?: number;
   detectionReduction?: number;
   buildCostReduction?: number;

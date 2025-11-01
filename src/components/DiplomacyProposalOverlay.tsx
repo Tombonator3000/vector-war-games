@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Handshake, Shield, Gift, Scale, Sword, Flag } from 'lucide-react';
 import { DiplomacyProposal, ProposalType } from '@/types/diplomacy';
 import { Nation } from '@/types/game';
+import { TrustAndFavorsDisplay } from './TrustAndFavorsDisplay';
 
 interface DiplomacyProposalOverlayProps {
   proposal: DiplomacyProposal;
@@ -216,7 +217,7 @@ export function DiplomacyProposalOverlay({
 
           {/* Current Relations */}
           <div className="bg-black/40 border border-gray-700 rounded-lg p-4">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center mb-4">
               <div>
                 <p className="text-sm text-gray-400">Current Relations:</p>
                 <p className={`text-lg font-semibold ${threatLevel.color}`}>{threatLevel.text}</p>
@@ -235,6 +236,9 @@ export function DiplomacyProposalOverlay({
                 </div>
               </div>
             </div>
+
+            {/* Trust and Favors Display */}
+            <TrustAndFavorsDisplay nation={target} targetNation={proposer} />
           </div>
 
           {/* Terms Reminder */}
