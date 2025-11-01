@@ -746,3 +746,5 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Updated `src/lib/phase3Integration.ts` to re-export `initializePhase3State` so the Index page can load Phase 3 state initialization without runtime module errors.
 ## 2025-11-01T07:52:35+00:00
 - Investigated Vite dev server failure complaining about duplicate `initializePhase3State` exports and verified after removing redundant wrapper export in `src/lib/phase3Integration.ts` that the preview boots without build errors.
+## 2025-11-01T08:44:07+00:00
+- Adjusted flat map projector and picker logic in `src/components/GlobeScene.tsx` to derive dimensions from the overlay canvas for consistent borders during zoom and resolution changes.

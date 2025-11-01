@@ -546,8 +546,14 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     if (!onProjectorReady) return;
     const projector: ProjectorFn = (lon, lat) => {
       const size = sizeRef.current;
-      const width = size?.width ?? 1;
-      const height = size?.height ?? 1;
+      const overlay = overlayRef.current;
+      const useOverlayDimensions = mapStyle === 'flat' || mapStyle === 'flat-realistic';
+      const width = useOverlayDimensions
+        ? overlay?.width ?? size?.width ?? 1
+        : size?.width ?? 1;
+      const height = useOverlayDimensions
+        ? overlay?.height ?? size?.height ?? 1
+        : size?.height ?? 1;
       const baseX = ((lon + 180) / 360) * width;
       const baseY = ((90 - lat) / 180) * height;
 
@@ -583,10 +589,11 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     if (!onPickerReady) return;
     const picker: PickerFn = (pointerX, pointerY) => {
       const container = containerRef.current;
+      const overlay = overlayRef.current;
       if (!container) return null;
 
       if (mapStyle === 'flat' || mapStyle === 'flat-realistic') {
-        const rect = container.getBoundingClientRect();
+        const rect = overlay?.getBoundingClientRect() ?? container.getBoundingClientRect();
         const width = rect.width || 1;
         const height = rect.height || 1;
         const adjustedX = (pointerX - cam.x) / cam.zoom;
