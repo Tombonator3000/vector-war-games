@@ -5,36 +5,32 @@ import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 import { RESEARCH_LOOKUP } from '@/lib/gameConstants';
 import type {
-  ConventionalUnit,
-  ConventionalTerritory,
+  ConventionalUnitState,
+  TerritoryState,
   ConventionalUnitTemplate,
-  ConventionalTrainResult,
-  ConventionalDeployResult,
-  ConventionalBorderConflictResult,
-  ConventionalProxyEngagementResult,
-  ConventionalLogEntry,
+  EngagementLogEntry,
   NationConventionalProfile,
 } from '@/hooks/useConventionalWarfare';
 import { createDefaultNationConventionalProfile } from '@/hooks/useConventionalWarfare';
 
 export interface MilitaryModalProps {
-  conventionalUnits: Record<string, ConventionalUnit>;
-  conventionalTerritories: Record<string, ConventionalTerritory>;
+  conventionalUnits: Record<string, ConventionalUnitState>;
+  conventionalTerritories: Record<string, TerritoryState>;
   conventionalTemplatesMap: Record<string, ConventionalUnitTemplate>;
-  conventionalLogs: ConventionalLogEntry[];
-  trainConventionalUnit: (nationId: string, templateId: string) => ConventionalTrainResult;
-  deployConventionalUnit: (unitId: string, territoryId: string) => ConventionalDeployResult;
-  getConventionalUnitsForNation: (nationId: string) => ConventionalUnit[];
+  conventionalLogs: EngagementLogEntry[];
+  trainConventionalUnit: (nationId: string, templateId: string) => any;
+  deployConventionalUnit: (unitId: string, territoryId: string) => any;
+  getConventionalUnitsForNation: (nationId: string) => ConventionalUnitState[];
   resolveConventionalBorderConflict: (
     territoryId: string,
     attackerId: string,
     defenderId: string
-  ) => ConventionalBorderConflictResult;
+  ) => any;
   resolveConventionalProxyEngagement: (
     territoryId: string,
     sponsorId: string,
     opposingId: string
-  ) => ConventionalProxyEngagementResult;
+  ) => any;
   toast: (options: { title: string; description: string }) => void;
   addNewsItem: (category: string, text: string, importance: string) => void;
 }

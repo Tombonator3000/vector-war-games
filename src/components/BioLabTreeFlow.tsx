@@ -9,6 +9,7 @@ import ReactFlow, {
   useEdgesState,
   ConnectionLineType,
   Panel,
+  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Handle, Position, NodeProps } from 'reactflow';
@@ -339,7 +340,7 @@ export function BioLabTreeFlow({
           strokeWidth: targetActive || targetIsBuilding ? 3 : sourceActive ? 2 : 1,
         },
         markerEnd: {
-          type: 'arrowclosed',
+          type: MarkerType.ArrowClosed,
           color: targetActive || targetIsBuilding ? color : sourceActive ? color + 'AA' : color + '40',
         },
       });
@@ -394,16 +395,7 @@ export function BioLabTreeFlow({
           proOptions={{ hideAttribution: true }}
         >
           <Background color={color + '20'} gap={20} size={1} className="bg-gray-950" />
-          <Controls
-            className="bg-gray-900 border-purple-500/50"
-            style={{
-              button: {
-                backgroundColor: '#1f2937',
-                color: '#a855f7',
-                borderColor: '#a855f7',
-              },
-            }}
-          />
+          <Controls className="bg-gray-900 border-purple-500/50" />
           <MiniMap
             nodeColor={(node) => {
               if (node.data.isActive) return color;

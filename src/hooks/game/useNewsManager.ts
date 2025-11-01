@@ -39,6 +39,7 @@ export function useNewsManager(): UseNewsManagerReturn {
         text,
         priority,
         category,
+        timestamp: Date.now(),
       };
       setNewsItems((prev) => [...prev, item]);
     },

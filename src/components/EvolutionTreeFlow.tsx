@@ -9,6 +9,7 @@ import ReactFlow, {
   useEdgesState,
   ConnectionLineType,
   Panel,
+  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -161,7 +162,7 @@ function createFlowEdges(
             strokeWidth: targetUnlocked ? 3 : targetCanUnlock ? 2 : 1,
           },
           markerEnd: {
-            type: 'arrowclosed',
+            type: MarkerType.ArrowClosed,
             color: targetUnlocked
               ? color
               : targetCanUnlock
@@ -246,16 +247,7 @@ function CategoryFlowPanel({
           size={1}
           className="bg-gray-950"
         />
-        <Controls
-          className="bg-gray-900 border-cyan-500/50"
-          style={{
-            button: {
-              backgroundColor: '#1f2937',
-              color: '#06b6d4',
-              borderColor: '#06b6d4',
-            },
-          }}
-        />
+        <Controls className="bg-gray-900 border-cyan-500/50" />
         <MiniMap
           nodeColor={(node) => {
             if (node.data.unlocked) return categoryColor;

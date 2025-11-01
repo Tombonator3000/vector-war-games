@@ -81,11 +81,16 @@ export interface ConventionalNationRef {
   id: string;
   name: string;
   production: number;
+  intel?: number;
+  uranium?: number;
   instability?: number;
   conventional?: NationConventionalProfile;
   controlledTerritories?: string[];
   morale?: number;
   researched?: Record<string, boolean>;
+  unitAttackBonus?: number;
+  unitDefenseBonus?: number;
+  combinedArmsBonus?: number;
 }
 
 interface UseConventionalWarfareOptions {
