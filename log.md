@@ -7,6 +7,21 @@
 
 ---
 
+### Session Z: 2025-11-01 - Cuba Crisis Diplomacy Integration
+
+#### Time: 14:44 UTC
+
+- Reviewed repository `AGENTS.md` guidance and scoped impacted files for diplomacy hook update.
+
+#### Time: 14:50 UTC
+
+- Implemented `applyDiplomaticEffects` to use trust, favor, promise, grievance, relationship, and DIP helpers so flashpoint outcomes mutate the correct nation records.
+- Updated enhanced flashpoint hook imports to include diplomacy utility helpers needed for effect resolution.
+
+#### Time: 14:53 UTC
+
+- Executed `npm run lint`; run failed due to pre-existing lint violations unrelated to new changes (multiple project-wide `any` usages and hook dependency warnings).
+
 ### Session Y: 2025-11-01 - Map Style Harmonization
 
 #### Time: 10:29 UTC
