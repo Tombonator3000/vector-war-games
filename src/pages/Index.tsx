@@ -9008,10 +9008,7 @@ export default function NoradVector() {
 
             {greatOldOnesState.doctrine && (
               <>
-                <SanityHeatMapPanel
-                  regions={greatOldOnesState.regions}
-                  veilState={greatOldOnesState.veil}
-                />
+                <SanityHeatMapPanel state={greatOldOnesState} />
                 <OrderCommandPanel
                   state={greatOldOnesState}
                   onIssueOrder={(order) => {
@@ -9026,12 +9023,9 @@ export default function NoradVector() {
           <div className="fixed top-20 right-4 z-40 space-y-4 max-w-md">
             {greatOldOnesState.doctrine && week3State && (
               <>
-                <RitualSitePanel
-                  regions={greatOldOnesState.regions}
-                  resources={greatOldOnesState.resources}
-                  alignment={greatOldOnesState.alignment}
-                />
+                <RitualSitePanel state={greatOldOnesState} />
                 <MissionBoardPanel
+                  state={greatOldOnesState}
                   availableMissions={week3State.availableMissions}
                   activeMissions={week3State.activeMissions}
                   infiltrators={week3State.infiltrators}
@@ -9041,8 +9035,7 @@ export default function NoradVector() {
                   }}
                 />
                 <UnitRosterPanel
-                  cultistCells={greatOldOnesState.cultistCells}
-                  summonedEntities={greatOldOnesState.summonedEntities}
+                  state={greatOldOnesState}
                   infiltrators={week3State.infiltrators}
                 />
               </>

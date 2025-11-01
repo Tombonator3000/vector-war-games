@@ -834,3 +834,7 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 ## 2025-11-01T14:30:57+00:00
 - Wired enhanced diplomacy council actions in `src/pages/Index.tsx`, lazily instantiating the international council, persisting `S.diplomacyPhase3`, and routing emergency sessions/resolution proposals through the new helpers.
 - Passed the updated Phase 3 state into `EnhancedDiplomacyModal` and embedded `DiplomacyPhase3Display` so the UI reflects council status and DIP spending.
+## 2025-11-01T16:19:13Z
+- Updated Great Old Ones UI wiring so the main campaign panels receive the shared state object from `src/pages/Index.tsx` and added infiltrator summaries/assignment plumbing to `MissionBoardPanel` to match the new props.
+## 2025-11-01T16:19:46Z
+- Ran `npm run build` to confirm the updated Great Old Ones panels compile cleanly with the shared state props.
