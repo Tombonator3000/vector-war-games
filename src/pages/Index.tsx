@@ -4156,7 +4156,32 @@ export default function NoradVector() {
       enqueueAIProposalRef = null;
     };
   }, [setPendingAIProposals]);
-  const [mapStyle, setMapStyle] = useState<MapStyle>('flat-realistic');
+  const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
+    const stored = Storage.getItem('map_style');
+    if (
+      stored === 'realistic' ||
+      stored === 'wireframe' ||
+      stored === 'night' ||
+      stored === 'political' ||
+      stored === 'flat' ||
+      stored === 'flat-realistic'
+    ) {
+      return stored as MapStyle;
+    }
+
+    return 'flat-realistic';
+  });
+
+  const handleMapStyleChange = useCallback((style: MapStyle) => {
+    setMapStyle(prev => {
+      if (prev === style) {
+        return prev;
+      }
+
+      Storage.setItem('map_style', style);
+      return style;
+    });
+  }, []);
 
   useEffect(() => {
     const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
@@ -4218,14 +4243,6 @@ export default function NoradVector() {
       }
 
       Storage.setItem('viewer_type', nextType);
-      toast({
-        title: nextType === 'cesium' ? 'Switched to Cesium' : 'Switched to Three.js',
-        description:
-          nextType === 'cesium'
-            ? 'Enhanced geospatial visualization with territories and units'
-            : 'Classic globe view',
-      });
-
       return nextType;
     });
   }, []);
@@ -7749,6 +7766,10 @@ export default function NoradVector() {
         onScenarioSelect={handleScenarioSelect}
         onOpenScenarioPanel={() => setIsScenarioPanelOpen(true)}
         onCloseScenarioPanel={setIsScenarioPanelOpen}
+        mapStyle={mapStyle}
+        onMapStyleChange={handleMapStyleChange}
+        viewerType={viewerType}
+        onViewerTypeChange={handleViewerSelect}
       />
     );
   };
@@ -8215,7 +8236,16 @@ export default function NoradVector() {
               Tune the command interface to match your control room preferences.
             </SheetDescription>
           </SheetHeader>
-          <OptionsMenu theme={theme} onThemeChange={setTheme} showInGameFeatures={true} onChange={updateDisplay} />
+          <OptionsMenu
+            theme={theme}
+            onThemeChange={setTheme}
+            mapStyle={mapStyle}
+            onMapStyleChange={handleMapStyleChange}
+            viewerType={viewerType}
+            onViewerTypeChange={handleViewerSelect}
+            showInGameFeatures={true}
+            onChange={updateDisplay}
+          />
         </SheetContent>
       </Sheet>
 

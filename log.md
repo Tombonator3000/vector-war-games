@@ -767,3 +767,7 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Adjusted flat map projector and picker logic in `src/components/GlobeScene.tsx` to derive dimensions from the overlay canvas for consistent borders during zoom and resolution changes.
 ## 2025-11-01T09:16:08+00:00
 - Adjusted the credits soundtrack source to respect Vite's base URL so the "Run Run.mp3" track loads on GitHub Pages deployments.
+## 2025-11-01T09:31:47+00:00
+- Reviewed requirements for wiring OptionsMenu to external map style and viewer state, scoped updates for Index.tsx and IntroScreen.tsx, and planned persistence handling to keep localStorage synchronized.
+## 2025-11-01T09:33:08+00:00
+- Wired OptionsMenu to controlled map style and viewer props, propagated handlers through Index.tsx and IntroScreen.tsx, and refreshed localStorage syncing so renderer switches react immediately without reloads.

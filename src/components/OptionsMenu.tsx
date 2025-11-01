@@ -153,6 +153,14 @@ export interface OptionsMenuProps {
   theme?: ThemeId;
   onThemeChange?: (theme: ThemeId) => void;
 
+  /** Controlled map style selection */
+  mapStyle: MapStyle;
+  onMapStyleChange: (style: MapStyle) => void;
+
+  /** Controlled globe viewer selection */
+  viewerType: 'threejs' | 'cesium';
+  onViewerTypeChange: (type: 'threejs' | 'cesium') => void;
+
   /** Whether to show in-game only features (like co-op, HUD layout) */
   showInGameFeatures?: boolean;
 
@@ -163,6 +171,10 @@ export interface OptionsMenuProps {
 export function OptionsMenu({
   theme: externalTheme,
   onThemeChange,
+  mapStyle,
+  onMapStyleChange,
+  viewerType,
+  onViewerTypeChange,
   showInGameFeatures = true,
   onChange,
 }: OptionsMenuProps) {
@@ -187,49 +199,49 @@ export function OptionsMenu({
     }
   }, [onThemeChange, onChange]);
 
-  // Map style state
-  const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
-    const stored = Storage.getItem('map_style');
-    if (stored && MAP_STYLE_OPTIONS.find(opt => opt.value === stored)) {
-      return stored as MapStyle;
-    }
-    return 'flat-realistic';
-  });
+  useEffect(() => {
+    Storage.setItem('map_style', mapStyle);
+  }, [mapStyle]);
+
+  useEffect(() => {
+    Storage.setItem('viewer_type', viewerType);
+  }, [viewerType]);
 
   const handleMapStyleChange = useCallback((style: MapStyle) => {
-    setMapStyle(style);
-    Storage.setItem('map_style', style);
+    if (mapStyle === style) {
+      return;
+    }
+
+    const selectedOption = MAP_STYLE_OPTIONS.find(opt => opt.value === style);
     toast({
       title: 'Map style updated',
-      description: `Display mode changed to ${style}`,
+      description: selectedOption
+        ? `${selectedOption.label}: ${selectedOption.description}`
+        : `Display mode changed to ${style}`,
     });
+
+    onMapStyleChange(style);
     if (onChange) {
       onChange();
     }
-  }, [onChange]);
-
-  // Viewer type state
-  const [viewerType, setViewerType] = useState<'threejs' | 'cesium'>(() => {
-    const stored = Storage.getItem('viewer_type');
-    return stored === 'cesium' ? 'cesium' : 'threejs';
-  });
+  }, [mapStyle, onMapStyleChange, onChange]);
 
   const handleViewerSelect = useCallback((nextType: 'threejs' | 'cesium') => {
-    if (viewerType === nextType) return;
+    if (viewerType === nextType) {
+      return;
+    }
 
-    setViewerType(nextType);
-    Storage.setItem('viewer_type', nextType);
+    const selectedOption = VIEWER_OPTIONS.find(opt => opt.value === nextType);
     toast({
       title: nextType === 'cesium' ? 'Switched to Cesium' : 'Switched to Three.js',
-      description:
-        nextType === 'cesium'
-          ? 'Enhanced geospatial visualization with territories and units'
-          : 'Classic globe view',
+      description: selectedOption?.description ?? undefined,
     });
+
+    onViewerTypeChange(nextType);
     if (onChange) {
       onChange();
     }
-  }, [viewerType, onChange]);
+  }, [viewerType, onViewerTypeChange, onChange]);
 
   // Screen resolution state
   const [screenResolution, setScreenResolution] = useState<ScreenResolution>(() => {
