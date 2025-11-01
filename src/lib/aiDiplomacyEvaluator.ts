@@ -159,6 +159,23 @@ function calculateRelationshipScore(nation1: Nation, nation2: Nation): number {
     score += allianceBonus; // Up to 10 + 25 (level 5) + 20 (100 cooperation) = +55 bonus
   }
 
+  // *** PHASE 3 ENHANCEMENT: Diplomatic Influence bonus ***
+  // High DIP indicates diplomatic sophistication and influence
+  if (nation2.diplomaticInfluence) {
+    const dipBonus = Math.min(15, nation2.diplomaticInfluence.points / 10);
+    score += dipBonus; // Up to +15 bonus for high DIP
+  }
+
+  // *** PHASE 3 ENHANCEMENT: Council membership respect ***
+  // Council members have more diplomatic clout
+  if (nation2.councilMembership === 'permanent') {
+    score += 20; // Permanent members get significant respect
+  } else if (nation2.councilMembership === 'elected') {
+    score += 10; // Elected members get moderate respect
+  } else if (nation2.councilMembership === 'observer') {
+    score += 5; // Observers get slight respect
+  }
+
   return score;
 }
 
