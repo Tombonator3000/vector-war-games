@@ -41,6 +41,11 @@ export function FlashpointModal({ flashpoint, onResolve, onTimeout }: Flashpoint
   const [timeRemaining, setTimeRemaining] = useState(flashpoint.timeLimit);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
+  // Debug logging
+  console.log('[FlashpointModal] Displaying flashpoint:', flashpoint.title);
+  console.log('[FlashpointModal] Number of options:', flashpoint.options?.length || 0);
+  console.log('[FlashpointModal] Options:', flashpoint.options?.map(o => ({ id: o.id, text: o.text })));
+
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeRemaining(prev => {
