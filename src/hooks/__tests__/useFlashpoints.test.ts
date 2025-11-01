@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { calculateFlashpointProbability, useFlashpoints } from '../useFlashpoints';
+import { getEnhancedFlashpointsForTurn } from '../useCubaCrisisFlashpointsEnhanced';
 
 vi.mock('@/contexts/RNGContext', () => {
   const rng = {
@@ -108,17 +109,26 @@ describe('useFlashpoints', () => {
     expect(result.current.activeFlashpoint).toBeNull();
   });
 
-  it('uses the prefixed scenario selection key from localStorage', () => {
+  it('maps the start-of-turn counter so the EXCOMM briefing fires on the first Cuba turn', () => {
     localStorage.setItem('norad_selected_scenario', 'cubanCrisis');
     const { result } = renderHook(() => useFlashpoints());
 
     let triggeredFlashpoint = null;
     act(() => {
-      triggeredFlashpoint = result.current.triggerRandomFlashpoint(1, 2);
+      triggeredFlashpoint = result.current.triggerRandomFlashpoint(2, 2);
     });
 
     expect(triggeredFlashpoint?.id).toBe('excomm-enhanced-1');
     expect(result.current.activeFlashpoint?.id).toBe('excomm-enhanced-1');
+  });
+});
+
+describe('getEnhancedFlashpointsForTurn', () => {
+  it('returns the EXCOMM briefing on schedule turn 1', () => {
+    const flashpoints = getEnhancedFlashpointsForTurn(1);
+    expect(flashpoints).not.toBeNull();
+    expect(flashpoints.length).toBeGreaterThan(0);
+    expect(flashpoints.some(fp => fp.id === 'excomm-enhanced-1')).toBe(true);
   });
 });
 
