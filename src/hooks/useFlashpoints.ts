@@ -2374,14 +2374,19 @@ export function useFlashpoints() {
 
     // Check for scenario-specific turn-based flashpoints (Cuba Crisis Enhanced)
     const scenarioId = getActiveScenarioId();
+    console.log(`[Flashpoint Debug] Current scenario ID: ${scenarioId}, Turn: ${turn}`);
     if (scenarioId === 'cubanCrisis') {
       const enhancedFlashpoints = getEnhancedFlashpointsForTurn(turn);
+      console.log(`[Flashpoint Debug] Enhanced flashpoints for turn ${turn}:`, enhancedFlashpoints?.length || 0);
       if (enhancedFlashpoints && enhancedFlashpoints.length > 0) {
         // Cuba Crisis has turn-specific flashpoints - trigger them
         const enhancedFlashpoint = enhancedFlashpoints[0]; // Take first one (usually only one per turn)
-        console.log(`Triggering Cuba Crisis enhanced flashpoint for turn ${turn}: ${enhancedFlashpoint.title}`);
+        console.log(`[Flashpoint Debug] Triggering Cuba Crisis enhanced flashpoint for turn ${turn}: ${enhancedFlashpoint.title}`);
+        console.log(`[Flashpoint Debug] Flashpoint has ${enhancedFlashpoint.options?.length || 0} options:`, enhancedFlashpoint.options?.map(o => o.text));
         setActiveFlashpoint(enhancedFlashpoint);
         return enhancedFlashpoint;
+      } else {
+        console.log(`[Flashpoint Debug] No enhanced flashpoints for turn ${turn} in Cuba Crisis`);
       }
     }
 
