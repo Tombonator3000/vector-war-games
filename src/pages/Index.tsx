@@ -130,6 +130,12 @@ import {
   aiHandleDiplomaticUrgencies,
   aiAttemptDiplomacy,
 } from '@/lib/aiDiplomacyActions';
+import { initializeGameTrustAndFavors, applyTrustDecay } from '@/lib/trustAndFavorsUtils';
+import { initializeGrievancesAndClaims, updateGrievancesAndClaimsPerTurn } from '@/lib/grievancesAndClaimsUtils';
+import { initializeSpecializedAlliances, updateAlliancesPerTurn } from '@/lib/specializedAlliancesUtils';
+import { updatePhase2PerTurn } from '@/lib/diplomacyPhase2Integration';
+import { initializeDiplomacyPhase3State } from '@/types/diplomacyPhase3';
+import { calculateDIPIncome, applyDIPIncome } from '@/lib/diplomaticCurrencyUtils';
 import {
   launch as launchMissile,
   resolutionPhase as runResolutionPhase,
@@ -1503,6 +1509,11 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   const difficulty = S.difficulty || 'medium';
   initializeAllAINations(nations, difficulty);
 
+  // Initialize Diplomacy Phase 1-3 systems
+  initializeGameTrustAndFavors(nations);
+  initializeGrievancesAndClaims(nations);
+  initializeSpecializedAlliances(nations);
+
   log('=== CUBAN MISSILE CRISIS - OCTOBER 1962 ===', 'critical');
   log(`Leader: ${playerLeaderName}`, 'success');
   log(`Doctrine: ${S.selectedDoctrine}`, 'success');
@@ -1514,6 +1525,11 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   S.gameOver = false;
   S.diplomacy = createDefaultDiplomacyState();
   S.actionsRemaining = 2; // Crisis demands quick decisions
+
+  // Initialize Phase 3 state
+  if (!S.diplomacyPhase3) {
+    S.diplomacyPhase3 = initializeDiplomacyPhase3State(S.turn);
+  }
 
   updateDisplay();
 }
@@ -1690,6 +1706,11 @@ function initNations() {
   const difficulty = S.difficulty || 'medium';
   initializeAllAINations(nations, difficulty);
 
+  // Initialize Diplomacy Phase 1-3 systems
+  initializeGameTrustAndFavors(nations);
+  initializeGrievancesAndClaims(nations);
+  initializeSpecializedAlliances(nations);
+
   log('=== GAME START ===', 'success');
   log(`Leader: ${playerLeaderName}`, 'success');
   log(`Doctrine: ${S.selectedDoctrine}`, 'success');
@@ -1700,6 +1721,11 @@ function initNations() {
   S.gameOver = false;
   S.diplomacy = createDefaultDiplomacyState();
   S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+
+  // Initialize Phase 3 state
+  if (!S.diplomacyPhase3) {
+    S.diplomacyPhase3 = initializeDiplomacyPhase3State(S.turn);
+  }
 
   updateDisplay();
 }

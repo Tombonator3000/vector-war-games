@@ -17,6 +17,11 @@ import {
   modifyOpinionFromAction,
   type ElectionResult,
 } from '@/lib/electionSystem';
+import { applyTrustDecay } from '@/lib/trustAndFavorsUtils';
+import { updateGrievancesAndClaimsPerTurn } from '@/lib/grievancesAndClaimsUtils';
+import { updateAlliancesPerTurn } from '@/lib/specializedAlliancesUtils';
+import { updatePhase2PerTurn } from '@/lib/diplomacyPhase2Integration';
+import { calculateDIPIncome } from '@/lib/diplomaticCurrencyUtils';
 
 // Types for dependencies that will be injected
 export interface LaunchDependencies {
@@ -418,6 +423,31 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       }
     });
   }
+
+  // Update Diplomacy Phase 1-3 systems per turn
+  nations.forEach(n => {
+    if (n.population <= 0) return;
+
+    // Phase 1: Apply trust decay and update favors
+    applyTrustDecay(n, S.turn);
+
+    // Phase 2: Update grievances, claims, and specialized alliances
+    updateGrievancesAndClaimsPerTurn(n, S.turn);
+    updatePhase2PerTurn(n, S.turn);
+
+    // Update specialized alliances for all nations
+    updateAlliancesPerTurn(n, S.turn, nations);
+
+    // Phase 3: Update DIP income
+    if (n.diplomaticInfluence) {
+      const income = calculateDIPIncome(n, nations, S.turn);
+      n.diplomaticInfluence.points = Math.min(
+        n.diplomaticInfluence.capacity,
+        n.diplomaticInfluence.points + income
+      );
+      n.diplomaticInfluence.perTurnIncome.total = income;
+    }
+  });
 
   nations.forEach(n => advanceResearch(n, 'PRODUCTION'));
 }
