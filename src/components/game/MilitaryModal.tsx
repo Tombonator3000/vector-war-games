@@ -169,10 +169,10 @@ export function MilitaryModal({
         playerPopulation={player.population}
       />
 
-      <section className="rounded border border-cyan-500/40 bg-black/60 p-4">
-        <header className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold tracking-[0.3em] text-cyan-300">Theatre Overview</h3>
-          <span className="text-[11px] font-mono text-cyan-300/80">{territoryList.length} theatres monitored</span>
+      <section className="rounded-lg border border-cyan-500/30 bg-slate-800/50 p-6">
+        <header className="mb-6 flex items-center justify-between border-b border-cyan-500/20 pb-4">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Theatre Overview</h3>
+          <span className="text-sm text-cyan-400">{territoryList.length} theatres monitored</span>
         </header>
         <TerritoryMapPanel
           territories={territoryList}
@@ -184,22 +184,22 @@ export function MilitaryModal({
         />
       </section>
 
-      <section className="rounded border border-cyan-500/30 bg-black/60 p-4">
-        <header className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold tracking-[0.3em] text-cyan-300">Recent Engagements</h3>
-          <span className="text-[11px] font-mono text-cyan-300/80">{recentLogs.length} events</span>
+      <section className="rounded-lg border border-cyan-500/30 bg-slate-800/50 p-6">
+        <header className="mb-4 flex items-center justify-between border-b border-cyan-500/20 pb-4">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Engagements</h3>
+          <span className="text-sm text-cyan-400">{recentLogs.length} events</span>
         </header>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {recentLogs.length === 0 && (
-            <p className="text-[11px] text-cyan-300/70">No conventional engagements recorded this campaign.</p>
+            <p className="text-sm text-gray-500">No conventional engagements recorded this campaign.</p>
           )}
           {recentLogs.map(logEntry => (
-            <div key={logEntry.id} className="rounded border border-cyan-500/20 bg-black/40 p-3">
-              <div className="flex items-center justify-between text-[11px] font-mono text-cyan-300/90">
+            <div key={logEntry.id} className="rounded-lg border border-cyan-500/30 bg-slate-900/50 p-4">
+              <div className="flex items-center justify-between text-sm text-cyan-300">
                 <span>{logEntry.summary}</span>
-                <span>Turn {logEntry.turn}</span>
+                <span className="text-gray-400">Turn {logEntry.turn}</span>
               </div>
-              <div className="mt-1 text-[10px] text-cyan-300/70">
+              <div className="mt-2 text-xs text-gray-500">
                 Casualties: {Object.entries(logEntry.casualties)
                   .map(([key, value]) => `${key}: ${value}`)
                   .join(' • ')}

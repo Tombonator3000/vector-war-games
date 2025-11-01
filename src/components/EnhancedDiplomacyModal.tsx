@@ -1,7 +1,7 @@
 /**
- * Enhanced Diplomacy Modal for Cuban Missile Crisis Scenario
+ * Diplomatic Operations Modal
  *
- * Provides access to advanced diplomatic mechanics:
+ * Provides access to diplomatic mechanics:
  * - Trust building and favors
  * - Diplomatic promises and agreements
  * - Grievance resolution
@@ -172,11 +172,8 @@ export function EnhancedDiplomacyModal({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">
-                Enhanced Diplomacy
+                Diplomatic Operations
               </h2>
-              <p className="text-sm text-gray-400 mt-1">
-                Cuban Missile Crisis - Advanced Diplomatic Operations
-              </p>
             </div>
 
             <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded border border-cyan-500/30">

@@ -8087,9 +8087,9 @@ export default function NoradVector() {
 
           {isStrikePlannerOpen ? (
             <div className="pointer-events-auto fixed bottom-24 right-6 z-40 w-80 max-h-[60vh]">
-              <div className="rounded border border-red-500/60 bg-black/85 backdrop-blur-sm shadow-lg shadow-red-500/20">
-                <div className="flex items-center justify-between border-b border-red-500/30 px-3 py-2">
-                  <span className="text-[10px] font-mono uppercase tracking-[0.35em] text-red-200">Strike Planner</span>
+              <div className="rounded-lg border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-sm shadow-2xl">
+                <div className="flex items-center justify-between border-b border-cyan-500/30 bg-black/40 px-4 py-3">
+                  <span className="text-sm font-mono font-semibold uppercase tracking-wider text-cyan-300">Strike Planner</span>
                   <div className="flex items-center gap-2">
                     <span
                       className={`text-[10px] font-mono ${selectedTarget ? 'text-red-300' : 'text-cyan-300/70'}`}
@@ -8099,16 +8099,16 @@ export default function NoradVector() {
                     <button
                       type="button"
                       onClick={() => setIsStrikePlannerOpen(false)}
-                      className="inline-flex h-5 w-5 items-center justify-center rounded border border-red-500/40 text-red-200/80 transition hover:border-red-400 hover:text-red-200"
+                      className="text-gray-400 hover:text-white transition-colors"
                       aria-label="Close strike planner"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-5 w-5" />
                     </button>
                   </div>
                 </div>
-                <div className="max-h-48 overflow-y-auto divide-y divide-red-500/10">
+                <div className="max-h-48 overflow-y-auto divide-y divide-cyan-500/10">
                   {attackableNations.length === 0 ? (
-                    <div className="px-3 py-4 text-[11px] text-cyan-200/70">
+                    <div className="px-4 py-4 text-sm text-gray-400">
                       No hostile launch solutions available.
                     </div>
                   ) : (
@@ -8124,10 +8124,10 @@ export default function NoradVector() {
                           key={nation.id}
                           type="button"
                           onClick={() => handleTargetSelect(nation.id)}
-                          className={`flex w-full items-center justify-between gap-3 border-l-2 px-3 py-2 text-left text-[11px] font-mono transition ${
+                          className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm transition-colors ${
                             isSelected
-                              ? 'border-red-300/90 bg-red-500/20 text-red-100 shadow-inner'
-                              : 'border-transparent text-cyan-200 hover:border-red-400/70 hover:bg-red-500/10'
+                              ? 'bg-cyan-500/20 border-l-2 border-cyan-500/50 text-cyan-300'
+                              : 'bg-slate-800/50 hover:bg-slate-700/50 text-gray-300'
                           }`}
                         >
                           <span className="flex-1">
@@ -8144,16 +8144,16 @@ export default function NoradVector() {
                     })
                   )}
                 </div>
-                <div className="border-t border-red-500/30 px-3 py-2 text-[11px] text-cyan-200/80">
+                <div className="border-t border-cyan-500/30 px-4 py-3 text-sm text-gray-400">
                   {selectedTarget ? (
                     <div className="space-y-1">
                       <p>
-                        Locked on <span className="text-red-200">{selectedTarget.name}</span>. Population&nbsp;
+                        Locked on <span className="text-cyan-300 font-semibold">{selectedTarget.name}</span>. Population&nbsp;
                         {Math.max(0, Math.round(selectedTarget.population ?? 0))}M, defense{' '}
                         {Math.max(0, Math.round(selectedTarget.defense ?? 0))}, missile capacity{' '}
                         {Math.max(0, Math.round(Number(selectedTarget.missiles ?? 0)))}.
                       </p>
-                      <p className="text-cyan-300/70">Confirm launch with ATTACK once satisfied with this solution.</p>
+                      <p className="text-gray-500 text-xs">Confirm launch with ATTACK once satisfied with this solution.</p>
                     </div>
                   ) : (
                     <p>Select a hostile nation to arm the ATTACK command.</p>
@@ -8407,10 +8407,10 @@ export default function NoradVector() {
       />
 
       <Dialog open={Boolean(pendingLaunch)} onOpenChange={(open) => { if (!open) resetLaunchControl(); }}>
-        <DialogContent className="max-w-2xl border border-cyan-500 bg-black text-cyan-100">
-          <DialogHeader>
-            <DialogTitle className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300">Launch Control</DialogTitle>
-            <DialogDescription className="text-cyan-200/70">
+        <DialogContent className="max-w-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm">
+          <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
+            <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">Launch Control</DialogTitle>
+            <DialogDescription className="text-sm text-gray-400 mt-1">
               Confirm strategic strike parameters before authorizing launch.
             </DialogDescription>
           </DialogHeader>
@@ -8524,9 +8524,9 @@ export default function NoradVector() {
       </Dialog>
 
       <Dialog open={showModal} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="bg-black border border-cyan-500 text-cyan-500 max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-cyan-400">{modalContent.title}</DialogTitle>
+        <DialogContent className="bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-cyan-500/40 text-cyan-100 max-w-6xl max-h-[85vh] overflow-y-auto backdrop-blur-sm">
+          <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
+            <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">{modalContent.title}</DialogTitle>
           </DialogHeader>
           {(() => {
             const content = typeof modalContent.content === 'function' ? modalContent.content() : modalContent.content;
