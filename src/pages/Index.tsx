@@ -4181,9 +4181,19 @@ export default function NoradVector() {
       }
 
       Storage.setItem('map_style', style);
+      currentMapStyle = style;
+      AudioSys.playSFX('click');
+      if (style === 'flat-realistic') {
+        void preloadFlatRealisticTexture();
+      }
+      toast({
+        title: 'Map style updated',
+        description: `Display mode changed to ${style}`,
+      });
+
       return style;
     });
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
@@ -4570,18 +4580,6 @@ export default function NoradVector() {
     }
   }, [pandemicIntegrationEnabled, bioWarfareEnabled]);
   const bioWarfareAvailable = pandemicIntegrationEnabled && bioWarfareEnabled;
-  const handleMapStyleChange = (style: MapStyle) => {
-    currentMapStyle = style;
-    setMapStyle(style);
-    AudioSys.playSFX('click');
-    if (style === 'flat-realistic') {
-      void preloadFlatRealisticTexture();
-    }
-    toast({
-      title: 'Map style updated',
-      description: `Display mode changed to ${style}`,
-    });
-  };
   const handleAttackRef = useRef<() => void>(() => {});
   const handleProjectorReady = useCallback((projector: ProjectorFn) => {
     globeProjector = projector;
