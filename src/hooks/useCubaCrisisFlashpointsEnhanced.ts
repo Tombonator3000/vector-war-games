@@ -1041,10 +1041,13 @@ export function applyDiplomaticEffects(
   const playerNationId = determinePlayerNationId();
   const reasonBase = `${option.text} (${success ? 'success' : 'failure'})`;
 
-  // Apply trust adjustments (other nations toward the player)
+  // Apply trust adjustments (sync both perspectives so player gating reflects changes)
   if (effects.trustChange && playerNationId) {
     for (const [nationId, delta] of Object.entries(effects.trustChange)) {
       if (!delta) continue;
+      updateNation(playerNationId, (nation) =>
+        modifyTrust(nation, nationId, delta, reasonBase, currentTurn)
+      );
       updateNation(nationId, (nation) =>
         modifyTrust(nation, playerNationId, delta, reasonBase, currentTurn)
       );
