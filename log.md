@@ -52,6 +52,15 @@ Implementing comprehensive tech tree expansions and fixes based on the COMPREHEN
 
 ## 📝 Session Log
 
+### Session 2: 2025-11-01 - Credits soundtrack path fix
+
+#### Time: 09:08 UTC
+
+- Investigated credits dialog audio error after confirming asset existed in `public/Muzak/`.
+- Updated `src/components/setup/CreditsDialog.tsx` to match the capitalisation of the "Run Run.mp3" asset so the soundtrack loads correctly.
+- Recorded change and prepared to run regression checks.
+- Executed `npm run test`; suite reports known provider setup failures unrelated to soundtrack change.
+
 ### Session 1: 2025-10-30 - Initial Setup & Analysis
 
 #### Time: 00:00 - File Analysis Complete
