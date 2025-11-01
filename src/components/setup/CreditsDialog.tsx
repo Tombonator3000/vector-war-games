@@ -37,6 +37,14 @@ export function CreditsDialog({ open, onOpenChange }: CreditsDialogProps) {
     []
   );
 
+  const soundtrackSrc = useMemo(() => {
+    const base = import.meta.env.BASE_URL.endsWith("/")
+      ? import.meta.env.BASE_URL
+      : `${import.meta.env.BASE_URL}/`;
+
+    return `${base}${encodeURI("Muzak/Run Run.mp3")}`;
+  }, []);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) {
@@ -103,7 +111,7 @@ export function CreditsDialog({ open, onOpenChange }: CreditsDialogProps) {
         )}
         <audio
           ref={audioRef}
-          src="/Muzak/Run Run.mp3"
+          src={soundtrackSrc}
           preload="auto"
           onError={() =>
             setAudioError("Soundtrack file missing. Place 'Run Run.mp3' inside the Muzak directory.")

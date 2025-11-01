@@ -765,3 +765,5 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Investigated Vite dev server failure complaining about duplicate `initializePhase3State` exports and verified after removing redundant wrapper export in `src/lib/phase3Integration.ts` that the preview boots without build errors.
 ## 2025-11-01T08:44:07+00:00
 - Adjusted flat map projector and picker logic in `src/components/GlobeScene.tsx` to derive dimensions from the overlay canvas for consistent borders during zoom and resolution changes.
+## 2025-11-01T09:16:08+00:00
+- Adjusted the credits soundtrack source to respect Vite's base URL so the "Run Run.mp3" track loads on GitHub Pages deployments.
