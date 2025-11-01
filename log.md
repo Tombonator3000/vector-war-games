@@ -771,3 +771,7 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Reviewed requirements for wiring OptionsMenu to external map style and viewer state, scoped updates for Index.tsx and IntroScreen.tsx, and planned persistence handling to keep localStorage synchronized.
 ## 2025-11-01T09:33:08+00:00
 - Wired OptionsMenu to controlled map style and viewer props, propagated handlers through Index.tsx and IntroScreen.tsx, and refreshed localStorage syncing so renderer switches react immediately without reloads.
+## 2025-11-01T10:08:02+00:00
+- Reviewed audio initialization requirements and added environment guards around `audioManager.preload` calls to avoid SSR `Audio` reference errors.
+- Consolidated `handleMapStyleChange` definitions in `src/pages/Index.tsx` so map style updates trigger side effects from a single callback and resolved the duplicate symbol build failure.
+- Ran `npm run build` and `npm run preview` to confirm the production bundle succeeds and the preview server starts without `Audio` API errors.
