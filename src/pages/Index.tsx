@@ -467,6 +467,11 @@ let gameLoopRunning = false; // Prevent multiple game loops
 // S now references the state from GameStateManager for backward compatibility
 let S: LocalGameState = GameStateManager.getState();
 
+// Expose S to window for scenario detection in hooks (e.g., useFlashpoints)
+if (typeof window !== 'undefined') {
+  (window as any).S = S;
+}
+
 // Nations and deltas are now managed by GameStateManager
 // Keep references for backward compatibility
 let nations: LocalNation[] = GameStateManager.getNations();
@@ -4209,6 +4214,10 @@ export default function NoradVector() {
     const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
     S.scenario = scenario;
     Storage.setItem('selected_scenario', scenario.id);
+    // Update window.S to ensure hooks can detect scenario changes
+    if (typeof window !== 'undefined') {
+      (window as any).S = S;
+    }
   }, [selectedScenarioId]);
 
   const handleScenarioSelect = useCallback((scenarioId: string) => {
@@ -4246,6 +4255,11 @@ export default function NoradVector() {
       setWeek3State(null);
       setPhase2State(null);
       setPhase3State(null);
+    }
+
+    // Update window.S to ensure hooks can detect scenario
+    if (typeof window !== 'undefined') {
+      (window as any).S = S;
     }
 
     updateDisplay();
