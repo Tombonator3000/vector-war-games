@@ -7993,6 +7993,7 @@ export default function NoradVector() {
               // Unit click handler - reserved for future interaction
             }}
             enableDayNight={true}
+            mapStyle={mapStyle}
             className="w-full h-full"
           />
         )}

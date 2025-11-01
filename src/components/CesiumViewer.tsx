@@ -25,6 +25,7 @@ import {
   ModelGraphics,
   PointGraphics,
   ImageryProvider,
+  ImageryLayer,
   TerrainProvider,
   Ellipsoid,
   Transforms,
@@ -38,8 +39,11 @@ import {
   TimeInterval,
   SingleTileImageryProvider,
   Rectangle,
+  GridImageryProvider,
+  ArcGisMapServerImageryProvider,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
+import type { MapStyle } from '@/components/GlobeScene';
 import type { TerritoryState, ConventionalUnitState } from '@/hooks/useConventionalWarfare';
 import type { Nation } from '@/types/game';
 import {
@@ -78,6 +82,7 @@ export interface CesiumViewerProps {
   showInfections?: boolean;
   infectionData?: Record<string, number>; // countryId -> infection percentage
   className?: string;
+  mapStyle?: MapStyle;
   // Phase 2 & 3 features
   enableTerrain?: boolean; // 3D terrain elevation
   enable3DModels?: boolean; // Use 3D models for units instead of points
@@ -107,6 +112,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   showInfections = false,
   infectionData = {},
   className = '',
+  mapStyle = 'realistic',
   enableTerrain = true,
   enable3DModels = true,
   enableWeather = true,
@@ -122,6 +128,11 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   const enableDayNightRef = useRef(enableDayNight);
   const territoryClickRef = useRef(onTerritoryClick);
   const unitClickRef = useRef(onUnitClick);
+  const baseLayerRef = useRef<ImageryLayer | null>(null);
+  const nightLayerRef = useRef<ImageryLayer | null>(null);
+  const gridLayerRef = useRef<ImageryLayer | null>(null);
+  const politicalLayerRef = useRef<ImageryLayer | null>(null);
+  const flatRealisticLayerRef = useRef<ImageryLayer | null>(null);
 
   const applyDayNightSettings = useCallback((viewer: Viewer, enabled: boolean) => {
     viewer.scene.globe.enableLighting = enabled;
@@ -131,6 +142,190 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       viewer.clock.currentTime = JulianDate.now();
     }
   }, []);
+
+  const applyMapStyle = useCallback((style: MapStyle) => {
+    const viewer = viewerRef.current;
+    if (!viewer) {
+      return;
+    }
+
+    const imageryLayers = viewer.imageryLayers;
+
+    let baseLayer = baseLayerRef.current;
+    if (!baseLayer && imageryLayers.length > 0) {
+      baseLayer = imageryLayers.get(0) ?? null;
+      baseLayerRef.current = baseLayer;
+    }
+
+    const nightLayer = nightLayerRef.current ?? null;
+
+    const removeLayer = (layerRef: { current: ImageryLayer | null }) => {
+      if (layerRef.current) {
+        imageryLayers.remove(layerRef.current, false);
+        layerRef.current = null;
+      }
+    };
+
+    removeLayer(gridLayerRef);
+    removeLayer(politicalLayerRef);
+    if (style !== 'flat-realistic') {
+      removeLayer(flatRealisticLayerRef);
+    }
+
+    if (baseLayer) {
+      baseLayer.show = true;
+      baseLayer.alpha = 1;
+      baseLayer.brightness = 1;
+      baseLayer.contrast = 1;
+      baseLayer.saturation = 1;
+      baseLayer.gamma = 1;
+    }
+
+    if (nightLayer) {
+      nightLayer.show = true;
+      nightLayer.alpha = 0.25;
+      nightLayer.brightness = 1.2;
+    }
+
+    const isFlatProjection = style === 'flat' || style === 'flat-realistic';
+    if (isFlatProjection) {
+      viewer.scene.morphTo2D(0);
+      viewer.camera.setView({ destination: Rectangle.fromDegrees(-180, -90, 180, 90) });
+      applyDayNightSettings(viewer, false);
+    } else {
+      viewer.scene.morphTo3D(0);
+      const shouldEnableLighting = style === 'night' ? true : enableDayNightRef.current;
+      applyDayNightSettings(viewer, shouldEnableLighting);
+    }
+
+    switch (style) {
+      case 'wireframe': {
+        if (baseLayer) {
+          baseLayer.alpha = 0.65;
+          baseLayer.brightness = 0.55;
+          baseLayer.contrast = 1.4;
+          baseLayer.saturation = 0;
+        }
+
+        const gridLayer = imageryLayers.addImageryProvider(
+          new GridImageryProvider({
+            color: Color.fromAlpha(Color.CYAN, 0.35),
+            glowColor: Color.fromAlpha(Color.CYAN, 0.15),
+            cells: 32,
+          })
+        );
+        gridLayer.alpha = 0.7;
+        gridLayerRef.current = gridLayer;
+
+        if (nightLayer) {
+          nightLayer.alpha = 0.1;
+        }
+        break;
+      }
+      case 'night': {
+        if (baseLayer) {
+          baseLayer.brightness = 0.35;
+          baseLayer.contrast = 1.05;
+          baseLayer.saturation = 0.85;
+        }
+
+        if (nightLayer) {
+          nightLayer.alpha = 0.7;
+          nightLayer.brightness = 1.8;
+        }
+        break;
+      }
+      case 'political': {
+        if (baseLayer) {
+          baseLayer.brightness = 1.05;
+          baseLayer.contrast = 1.2;
+          baseLayer.saturation = 1.25;
+        }
+
+        const politicalLayer = imageryLayers.addImageryProvider(
+          new ArcGisMapServerImageryProvider({
+            url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer',
+          })
+        );
+        politicalLayer.alpha = 0.6;
+        politicalLayer.brightness = 1.1;
+        politicalLayerRef.current = politicalLayer;
+
+        if (nightLayer) {
+          nightLayer.alpha = 0.15;
+        }
+        break;
+      }
+      case 'flat': {
+        if (baseLayer) {
+          baseLayer.brightness = 1.1;
+          baseLayer.contrast = 1.1;
+          baseLayer.saturation = 0.9;
+        }
+
+        if (nightLayer) {
+          nightLayer.show = false;
+        }
+
+        const gridLayer = imageryLayers.addImageryProvider(
+          new GridImageryProvider({
+            color: Color.fromAlpha(Color.CYAN, 0.25),
+            glowColor: Color.fromAlpha(Color.CYAN, 0.1),
+            cells: 36,
+          })
+        );
+        gridLayer.alpha = 0.5;
+        gridLayerRef.current = gridLayer;
+        break;
+      }
+      case 'flat-realistic': {
+        if (nightLayer) {
+          nightLayer.show = false;
+        }
+
+        if (baseLayer) {
+          baseLayer.show = false;
+        }
+
+        let flatLayer = flatRealisticLayerRef.current;
+        if (!flatLayer) {
+          flatLayer = imageryLayers.addImageryProvider(
+            new SingleTileImageryProvider({
+              url: resolvePublicAssetPath('textures/earth_day.jpg'),
+              rectangle: Rectangle.fromDegrees(-180, -90, 180, 90),
+            }),
+            0
+          );
+          flatRealisticLayerRef.current = flatLayer;
+        }
+
+        flatLayer.show = true;
+        flatLayer.alpha = 1;
+        flatLayer.brightness = 1.08;
+        flatLayer.contrast = 1.1;
+
+        const gridLayer = imageryLayers.addImageryProvider(
+          new GridImageryProvider({
+            color: Color.fromAlpha(Color.CYAN, 0.22),
+            glowColor: Color.fromAlpha(Color.CYAN, 0.12),
+            cells: 36,
+          })
+        );
+        gridLayer.alpha = 0.55;
+        gridLayerRef.current = gridLayer;
+        break;
+      }
+      default: {
+        if (nightLayer) {
+          nightLayer.alpha = 0.25;
+          nightLayer.brightness = 1.2;
+        }
+        break;
+      }
+    }
+
+    viewer.scene.requestRender();
+  }, [applyDayNightSettings]);
 
   // Initialize Cesium Viewer
   useEffect(() => {
@@ -194,6 +389,11 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         );
         nightLayer.alpha = 0.25;
         nightLayer.brightness = 1.2;
+        nightLayerRef.current = nightLayer;
+
+        if (viewer.imageryLayers.length > 0) {
+          baseLayerRef.current = viewer.imageryLayers.get(0) ?? null;
+        }
 
         // Set camera to orbital view
         viewer.camera.setView({
@@ -241,6 +441,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           }
         }, ScreenSpaceEventType.LEFT_CLICK);
 
+        applyMapStyle(mapStyle);
+
       } catch (error) {
         console.error('Failed to initialize Cesium viewer:', error);
       }
@@ -260,7 +462,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         viewerRef.current = null;
       }
     };
-  }, []);
+  }, [applyDayNightSettings, applyMapStyle, enableDayNight, enableTerrain, mapStyle]);
 
   useEffect(() => {
     enableDayNightRef.current = enableDayNight;
@@ -277,6 +479,11 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   useEffect(() => {
     unitClickRef.current = onUnitClick;
   }, [onUnitClick]);
+
+  useEffect(() => {
+    applyMapStyle(mapStyle);
+  }, [mapStyle, applyMapStyle]);
+
 
   // Render territories with GeoJSON boundaries (Phase 2 improvement)
   useEffect(() => {
