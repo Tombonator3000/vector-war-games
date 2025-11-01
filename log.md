@@ -741,3 +741,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-10-31T23:49:06+00:00
 - Updated Phase 3 counter-occult processing to toggle the global unity `victoryPossible` flag and emit events when humans cross the unity danger threshold per Codex follow-up review.
+
+## 2025-10-31T23:55:00+00:00
+- Extended the `Phase3TurnEvent` union with `victory_warning` entries so newly emitted unity alerts compile cleanly for Codex follow-up.

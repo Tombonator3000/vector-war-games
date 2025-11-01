@@ -625,6 +625,8 @@ export interface Phase3TurnEvent {
     | 'task_force_created'
     | 'victory_achieved'
     | 'victory_approaching'
+    | 'victory_warning'
+    | 'victory_warning_retracted'
     | 'campaign_complete';
 
   message: string;
