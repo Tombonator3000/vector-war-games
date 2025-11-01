@@ -5,11 +5,7 @@
 
 import { GreatOldOnesState } from '../types/greatOldOnes';
 import { Phase2State } from './phase2Integration';
-import {
-  Phase3State,
-  PlayerChoice,
-  initializePhase3State as baseInitializePhase3State,
-} from '../types/phase3Types';
+import { Phase3State, PlayerChoice } from '../types/phase3Types';
 
 // Re-export for backward compatibility
 export { initializePhase3State } from '../types/phase3Types';
@@ -693,9 +689,3 @@ export function applyPhase3StateChanges(
   }
 }
 
-/**
- * Initialize Phase 3 state wrapper
- */
-export function initializePhase3State(seed?: string): Phase3State {
-  return baseInitializePhase3State(seed);
-}
