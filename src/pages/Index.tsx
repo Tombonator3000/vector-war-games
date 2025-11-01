@@ -57,6 +57,7 @@ import type { ActionConsequences } from '@/types/consequences';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
+import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
 import { EndGameScreen } from '@/components/EndGameScreen';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
 import type { DiplomacyProposal } from '@/types/diplomacy';
@@ -4147,6 +4148,7 @@ export default function NoradVector() {
   const [civInfoDefaultTab, setCivInfoDefaultTab] = useState<'own-status' | 'enemy-status' | 'diplomacy' | 'research'>('own-status');
   const [activeDiplomacyProposal, setActiveDiplomacyProposal] = useState<DiplomacyProposal | null>(null);
   const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
+  const [showEnhancedDiplomacy, setShowEnhancedDiplomacy] = useState(false);
 
   useEffect(() => {
     enqueueAIProposalRef = (proposal) => {
@@ -6828,6 +6830,12 @@ export default function NoradVector() {
     const player = getBuildContext('Diplomacy');
     if (!player) return;
 
+    // Check if we're in the enhanced Cuba Crisis scenario
+    if (S.scenario?.id === 'cubanCrisisEnhanced') {
+      setShowEnhancedDiplomacy(true);
+      return;
+    }
+
     const treatyWith = (nation: Nation) => player.treaties?.[nation.id];
 
     const diplomacyActions: OperationAction[] = [
@@ -7329,6 +7337,127 @@ export default function NoradVector() {
 
     setActiveDiplomacyProposal(null);
   }, [activeDiplomacyProposal, getNationById, toast]);
+
+  const handleEnhancedDiplomacyAction = useCallback((action: DiplomaticAction, target?: Nation) => {
+    const player = PlayerManager.get();
+    if (!player) return;
+
+    // Deduct DIP cost
+    if (action.dipCost && player.diplomaticInfluence) {
+      if (player.diplomaticInfluence.points < action.dipCost) {
+        toast({
+          title: 'Insufficient DIP',
+          description: `This action requires ${action.dipCost} DIP.`,
+          variant: 'destructive'
+        });
+        return;
+      }
+      player.diplomaticInfluence.points -= action.dipCost;
+    }
+
+    // Handle the action
+    switch (action.id) {
+      case 'build-trust':
+        if (target) {
+          log(`${player.name} engages in trust-building diplomacy with ${target.name}.`);
+          toast({
+            title: 'Trust Building',
+            description: `Diplomatic engagement with ${target.name} initiated.`
+          });
+        }
+        break;
+
+      case 'grant-favor':
+        if (target) {
+          log(`${player.name} grants a favor to ${target.name}.`);
+          toast({
+            title: 'Favor Granted',
+            description: `You have provided assistance to ${target.name}.`
+          });
+        }
+        break;
+
+      case 'call-in-favor':
+        if (target) {
+          log(`${player.name} calls in a favor from ${target.name}.`);
+          toast({
+            title: 'Favor Called In',
+            description: `Requesting assistance from ${target.name}.`
+          });
+        }
+        break;
+
+      case 'make-promise':
+        if (target) {
+          log(`${player.name} makes a diplomatic promise to ${target.name}.`);
+          toast({
+            title: 'Promise Made',
+            description: `Diplomatic commitment to ${target.name} recorded.`
+          });
+        }
+        break;
+
+      case 'verify-promise':
+        if (target) {
+          log(`${player.name} requests verification of ${target.name}'s promises.`);
+          toast({
+            title: 'Verification Requested',
+            description: `Asking ${target.name} to prove their commitment.`
+          });
+        }
+        break;
+
+      case 'apologize':
+        if (target) {
+          log(`${player.name} issues formal apology to ${target.name}.`);
+          toast({
+            title: 'Apology Issued',
+            description: `Formal reconciliation attempt with ${target.name}.`
+          });
+        }
+        break;
+
+      case 'reparations':
+        if (target) {
+          log(`${player.name} offers reparations to ${target.name}.`);
+          toast({
+            title: 'Reparations Offered',
+            description: `Compensation package proposed to ${target.name}.`
+          });
+        }
+        break;
+
+      case 'propose-resolution':
+        log(`${player.name} proposes a resolution to the International Council.`);
+        toast({
+          title: 'Resolution Proposed',
+          description: 'Your proposal has been submitted to the Council.'
+        });
+        break;
+
+      case 'call-session':
+        log(`${player.name} calls an emergency session of the International Council.`);
+        toast({
+          title: 'Emergency Session',
+          description: 'The International Council has been convened.'
+        });
+        break;
+
+      case 'back-channel':
+        if (target) {
+          log(`${player.name} sends back-channel communication to ${target.name}.`);
+          toast({
+            title: 'Back-Channel Communication',
+            description: `Private diplomatic message sent to ${target.name}.`
+          });
+        }
+        break;
+    }
+
+    updateDisplay();
+    consumeAction();
+    setShowEnhancedDiplomacy(false);
+  }, [toast, updateDisplay, consumeAction]);
 
   // Show pending AI proposals when phase transitions to player
   useEffect(() => {
@@ -8728,6 +8857,21 @@ export default function NoradVector() {
             onAccept={handleAcceptProposal}
             onReject={handleRejectProposal}
             onClose={() => setActiveDiplomacyProposal(null)}
+          />
+        );
+      })()}
+
+      {/* Enhanced Diplomacy Modal */}
+      {showEnhancedDiplomacy && (() => {
+        const player = PlayerManager.get();
+        if (!player) return null;
+
+        return (
+          <EnhancedDiplomacyModal
+            player={player}
+            nations={nations}
+            onClose={() => setShowEnhancedDiplomacy(false)}
+            onAction={handleEnhancedDiplomacyAction}
           />
         );
       })()}

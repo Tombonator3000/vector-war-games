@@ -1,0 +1,320 @@
+/**
+ * Enhanced Diplomacy Modal for Cuban Missile Crisis Scenario
+ *
+ * Provides access to advanced diplomatic mechanics:
+ * - Trust building and favors
+ * - Diplomatic promises and agreements
+ * - Grievance resolution
+ * - DIP currency actions
+ */
+
+import React, { useState } from 'react';
+import { X, Handshake, Gift, Scale, Shield, MessageCircle, AlertTriangle, Star } from 'lucide-react';
+import type { Nation } from '@/types/game';
+
+interface EnhancedDiplomacyModalProps {
+  player: Nation;
+  nations: Nation[];
+  onClose: () => void;
+  onAction: (action: DiplomaticAction, target?: Nation) => void;
+}
+
+export interface DiplomaticAction {
+  id: string;
+  title: string;
+  subtitle: string;
+  category: 'trust' | 'promises' | 'grievances' | 'council';
+  dipCost?: number;
+  requiresTarget: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
+}
+
+export function EnhancedDiplomacyModal({
+  player,
+  nations,
+  onClose,
+  onAction,
+}: EnhancedDiplomacyModalProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string>('trust');
+  const [selectedTarget, setSelectedTarget] = useState<Nation | null>(null);
+
+  const categories = [
+    { id: 'trust', name: 'Trust & Favors', icon: Handshake, color: 'text-green-400' },
+    { id: 'promises', name: 'Promises', icon: MessageCircle, color: 'text-blue-400' },
+    { id: 'grievances', name: 'Grievances', icon: AlertTriangle, color: 'text-yellow-400' },
+    { id: 'council', name: 'Council Actions', icon: Shield, color: 'text-purple-400' },
+  ];
+
+  const diplomaticActions: DiplomaticAction[] = [
+    // Trust & Favors
+    {
+      id: 'build-trust',
+      title: 'BUILD TRUST',
+      subtitle: 'Demonstrate goodwill and reliability',
+      category: 'trust',
+      dipCost: 15,
+      requiresTarget: true,
+    },
+    {
+      id: 'grant-favor',
+      title: 'GRANT FAVOR',
+      subtitle: 'Provide assistance to gain future leverage',
+      category: 'trust',
+      dipCost: 20,
+      requiresTarget: true,
+    },
+    {
+      id: 'call-in-favor',
+      title: 'CALL IN FAVOR',
+      subtitle: 'Request assistance based on past help',
+      category: 'trust',
+      dipCost: 5,
+      requiresTarget: true,
+    },
+
+    // Promises
+    {
+      id: 'make-promise',
+      title: 'MAKE PROMISE',
+      subtitle: 'Pledge future action or restraint',
+      category: 'promises',
+      dipCost: 10,
+      requiresTarget: true,
+    },
+    {
+      id: 'verify-promise',
+      title: 'VERIFY PROMISE',
+      subtitle: 'Request proof of commitment',
+      category: 'promises',
+      dipCost: 15,
+      requiresTarget: true,
+    },
+
+    // Grievances
+    {
+      id: 'apologize',
+      title: 'FORMAL APOLOGY',
+      subtitle: 'Acknowledge wrongdoing and seek reconciliation',
+      category: 'grievances',
+      dipCost: 25,
+      requiresTarget: true,
+    },
+    {
+      id: 'reparations',
+      title: 'OFFER REPARATIONS',
+      subtitle: 'Provide compensation for past harm',
+      category: 'grievances',
+      dipCost: 30,
+      requiresTarget: true,
+    },
+
+    // Council Actions
+    {
+      id: 'propose-resolution',
+      title: 'PROPOSE RESOLUTION',
+      subtitle: 'Submit proposal to International Council',
+      category: 'council',
+      dipCost: 40,
+      requiresTarget: false,
+    },
+    {
+      id: 'call-session',
+      title: 'CALL EMERGENCY SESSION',
+      subtitle: 'Convene urgent council meeting',
+      category: 'council',
+      dipCost: 50,
+      requiresTarget: false,
+    },
+    {
+      id: 'back-channel',
+      title: 'BACK-CHANNEL COMMUNICATION',
+      subtitle: 'Private diplomatic letter',
+      category: 'council',
+      dipCost: 20,
+      requiresTarget: true,
+    },
+  ];
+
+  const availableActions = diplomaticActions.filter(
+    (action) => action.category === selectedCategory
+  );
+
+  const otherNations = nations.filter((n) => n.id !== player.id);
+
+  const playerDIP = player.diplomaticInfluence?.points || 0;
+
+  const handleAction = (action: DiplomaticAction) => {
+    if (action.requiresTarget && !selectedTarget) {
+      return; // Need to select a target first
+    }
+
+    if (action.dipCost && playerDIP < action.dipCost) {
+      return; // Not enough DIP
+    }
+
+    onAction(action, selectedTarget || undefined);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="relative w-full max-w-6xl mx-4 h-[85vh] bg-gradient-to-br from-slate-900/95 to-slate-800/95 border border-cyan-500/40 rounded-lg shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="relative border-b border-cyan-500/30 bg-black/40 p-6">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">
+                Enhanced Diplomacy
+              </h2>
+              <p className="text-sm text-gray-400 mt-1">
+                Cuban Missile Crisis - Advanced Diplomatic Operations
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded border border-cyan-500/30">
+              <Star className="w-4 h-4 text-yellow-400" />
+              <span className="text-sm text-gray-400">DIP:</span>
+              <span className="text-lg font-bold text-cyan-300">{playerDIP}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex h-[calc(100%-5rem)]">
+          {/* Left Sidebar - Categories */}
+          <div className="w-64 border-r border-cyan-500/30 bg-black/20 p-4 overflow-y-auto">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              Action Categories
+            </h3>
+            <div className="space-y-2">
+              {categories.map((cat) => {
+                const Icon = cat.icon;
+                const isSelected = selectedCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded transition-colors ${
+                      isSelected
+                        ? 'bg-cyan-500/20 border border-cyan-500/50 text-cyan-300'
+                        : 'bg-slate-800/50 border border-gray-700 text-gray-300 hover:bg-slate-700/50'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isSelected ? 'text-cyan-300' : cat.color}`} />
+                    <span className="text-sm font-medium">{cat.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Target Selection */}
+            <div className="mt-6">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                Target Nation
+              </h3>
+              <div className="space-y-2">
+                {otherNations.map((nation) => (
+                  <button
+                    key={nation.id}
+                    onClick={() => setSelectedTarget(nation)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded transition-colors ${
+                      selectedTarget?.id === nation.id
+                        ? 'bg-green-500/20 border border-green-500/50'
+                        : 'bg-slate-800/50 border border-gray-700 hover:bg-slate-700/50'
+                    }`}
+                  >
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: nation.color }}
+                    />
+                    <span className="text-sm text-gray-300 truncate">{nation.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Content - Actions */}
+          <div className="flex-1 p-6 overflow-y-auto">
+            <div className="space-y-4">
+              {availableActions.map((action) => {
+                const canAfford = !action.dipCost || playerDIP >= action.dipCost;
+                const hasTarget = !action.requiresTarget || selectedTarget;
+                const isEnabled = canAfford && hasTarget;
+
+                return (
+                  <button
+                    key={action.id}
+                    onClick={() => handleAction(action)}
+                    disabled={!isEnabled}
+                    className={`w-full text-left p-4 rounded-lg border transition-all ${
+                      isEnabled
+                        ? 'bg-slate-800/50 border-cyan-500/30 hover:bg-slate-700/50 hover:border-cyan-500/50 cursor-pointer'
+                        : 'bg-slate-900/30 border-gray-700/30 opacity-50 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="text-lg font-semibold text-cyan-300 font-mono">
+                          {action.title}
+                        </h4>
+                        <p className="text-sm text-gray-400 mt-1">{action.subtitle}</p>
+
+                        {action.requiresTarget && selectedTarget && (
+                          <p className="text-xs text-green-400 mt-2">
+                            → Target: {selectedTarget.name}
+                          </p>
+                        )}
+
+                        {action.requiresTarget && !selectedTarget && (
+                          <p className="text-xs text-yellow-400 mt-2">
+                            ⚠ Select a target nation
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col items-end gap-2">
+                        {action.dipCost && (
+                          <div
+                            className={`flex items-center gap-1 px-3 py-1 rounded ${
+                              canAfford
+                                ? 'bg-yellow-500/10 border border-yellow-500/30'
+                                : 'bg-red-500/10 border border-red-500/30'
+                            }`}
+                          >
+                            <Star
+                              className={`w-3 h-3 ${
+                                canAfford ? 'text-yellow-400' : 'text-red-400'
+                              }`}
+                            />
+                            <span
+                              className={`text-sm font-semibold ${
+                                canAfford ? 'text-yellow-400' : 'text-red-400'
+                              }`}
+                            >
+                              {action.dipCost} DIP
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default EnhancedDiplomacyModal;
