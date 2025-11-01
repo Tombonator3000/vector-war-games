@@ -816,3 +816,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 ## 2025-11-01T14:14:12+00:00
 - Integrated enhanced diplomacy mechanics using spendDIP, trust/favor updates, promises, and grievance utilities in `src/pages/Index.tsx` with new helper support.
 - Added apology and reparations grievance resolution helpers to `src/lib/diplomacyPhase2Integration.ts` to persist trust, relationship, and favor changes.
+## 2025-11-01T14:30:57+00:00
+- Wired enhanced diplomacy council actions in `src/pages/Index.tsx`, lazily instantiating the international council, persisting `S.diplomacyPhase3`, and routing emergency sessions/resolution proposals through the new helpers.
+- Passed the updated Phase 3 state into `EnhancedDiplomacyModal` and embedded `DiplomacyPhase3Display` so the UI reflects council status and DIP spending.
