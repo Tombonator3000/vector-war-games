@@ -12,6 +12,7 @@ import {
   breakPromise,
   getActivePromises,
   hasPromise,
+  modifyTrust,
 } from './trustAndFavorsUtils';
 import { modifyRelationship } from './relationshipUtils';
 
@@ -288,15 +289,32 @@ export function handleBrokenPromises(
 
     // Apply relationship penalty to target nation
     const targetNation = allNations.find((n) => n.id === toNationId);
-    if (targetNation && promise.terms.relationshipPenalty) {
-      const updatedTarget = modifyRelationship(
-        targetNation,
-        nation.id,
-        promise.terms.relationshipPenalty,
-        `Broke promise: ${promise.type}`,
-        currentTurn
-      );
-      affectedNations.push(updatedTarget);
+    if (targetNation) {
+      let updatedTarget = targetNation;
+
+      if (promise.terms.trustPenalty) {
+        updatedTarget = modifyTrust(
+          updatedTarget,
+          nation.id,
+          -promise.terms.trustPenalty,
+          `Broke promise: ${promise.type}`,
+          currentTurn
+        );
+      }
+
+      if (promise.terms.relationshipPenalty) {
+        updatedTarget = modifyRelationship(
+          updatedTarget,
+          nation.id,
+          promise.terms.relationshipPenalty,
+          `Broke promise: ${promise.type}`,
+          currentTurn
+        );
+      }
+
+      if (updatedTarget !== targetNation) {
+        affectedNations.push(updatedTarget);
+      }
     }
 
     // If global promise, apply penalty to all nations
