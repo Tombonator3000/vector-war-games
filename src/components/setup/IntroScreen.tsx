@@ -12,6 +12,7 @@ import { SpinningEarth } from '@/components/intro/SpinningEarth';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OptionsMenu } from '@/components/OptionsMenu';
+import { CreditsDialog } from '@/components/setup/CreditsDialog';
 import type { ScenarioConfig } from '@/types/scenario';
 import { useState } from 'react';
 
@@ -54,6 +55,7 @@ export function IntroScreen({
   onCloseScenarioPanel,
 }: IntroScreenProps) {
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+  const [isCreditsOpen, setIsCreditsOpen] = useState(false);
 
   return (
     <>
@@ -75,6 +77,7 @@ export function IntroScreen({
           <OptionsMenu showInGameFeatures={false} />
         </DialogContent>
       </Dialog>
+      <CreditsDialog open={isCreditsOpen} onOpenChange={setIsCreditsOpen} />
       <div className="intro-screen">
         <Starfield />
         <div className="intro-screen__scanlines" aria-hidden="true" />
@@ -144,7 +147,7 @@ export function IntroScreen({
               <span className="intro-screen__menu-btn-icon">⚙</span>
               Options
             </button>
-            <button className="intro-screen__menu-btn" onClick={() => alert('Credits coming soon!')}>
+            <button className="intro-screen__menu-btn" onClick={() => setIsCreditsOpen(true)}>
               <span className="intro-screen__menu-btn-icon">★</span>
               Credits
             </button>

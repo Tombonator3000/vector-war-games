@@ -535,6 +535,139 @@ body {
     linear-gradient(135deg, rgba(0, 50, 40, 0.9), rgba(0, 40, 30, 0.7));
 }
 
+.credits-dialog {
+  max-width: 56rem;
+  width: min(90vw, 56rem);
+  background: radial-gradient(circle at top, rgba(24, 33, 59, 0.95), rgba(7, 12, 24, 0.98));
+  border: 1px solid rgba(72, 211, 255, 0.35);
+  color: #e6fbff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+}
+
+.credits-dialog__title {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: #7ee7ff;
+}
+
+.credits-dialog__description {
+  color: rgba(214, 245, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+}
+
+.credits-dialog__body {
+  position: relative;
+  height: clamp(20rem, 55vh, 32rem);
+  overflow: hidden;
+  margin-top: 1rem;
+  border: 1px solid rgba(80, 220, 255, 0.25);
+  background: linear-gradient(180deg, rgba(0, 10, 30, 0.95), rgba(0, 0, 0, 0.92));
+}
+
+.credits-dialog__gradient {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 5rem;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.credits-dialog__gradient--top {
+  top: 0;
+  background: linear-gradient(180deg, rgba(7, 12, 24, 0.95) 0%, rgba(7, 12, 24, 0) 100%);
+}
+
+.credits-dialog__gradient--bottom {
+  bottom: 0;
+  background: linear-gradient(0deg, rgba(7, 12, 24, 0.95) 0%, rgba(7, 12, 24, 0) 100%);
+}
+
+.credits-roll {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  padding: 0 1.5rem;
+}
+
+.credits-roll__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  padding: 4rem 0 6rem;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  animation: credits-roll 48s linear infinite;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+
+.credits-roll__intro {
+  font-size: 1.1rem;
+  letter-spacing: 0.4em;
+  color: #98f5ff;
+}
+
+.credits-roll__tagline {
+  font-size: 0.85rem;
+  letter-spacing: 0.28em;
+  color: rgba(214, 245, 255, 0.75);
+}
+
+.credits-roll__section {
+  text-align: center;
+}
+
+.credits-roll__heading {
+  font-size: 0.75rem;
+  letter-spacing: 0.35em;
+  color: rgba(126, 231, 255, 0.85);
+  margin-bottom: 0.6rem;
+}
+
+.credits-roll__name {
+  font-size: 1.1rem;
+  letter-spacing: 0.2em;
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(73, 213, 255, 0.5);
+}
+
+.credits-roll__footer {
+  font-size: 0.8rem;
+  letter-spacing: 0.4em;
+  color: rgba(126, 231, 255, 0.8);
+  margin-top: 2rem;
+}
+
+.credits-dialog__hint,
+.credits-dialog__audio-error {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(214, 245, 255, 0.7);
+  text-align: center;
+}
+
+.credits-dialog__audio-error {
+  color: #ffb4b4;
+  text-shadow: none;
+}
+
+@keyframes credits-roll {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(-110%);
+  }
+}
+
 @keyframes pulse-primary {
   0%, 100% {
     box-shadow:

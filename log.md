@@ -118,6 +118,14 @@ if (evolution.plagueState.cureActive) {
 
 **Features Implemented:**
 - ✅ Cure effectiveness calculation (based on lab tier, progress, resistance)
+
+### Session 2: 2025-11-01 - Intro Credits Roll Prototype
+
+#### Time: 08:53 UTC
+
+- Added a cinematic credits dialog to the intro screen that replaces the placeholder alert.
+- Wired the credits modal to autoplay the "run run.mp3" soundtrack from the Muzak bundle with graceful error handling.
+- Styled the credits roll with neon command center theming and an infinite marquee-style scroll.
 - ✅ Infection reduction (0.25-2.5% per turn)
 - ✅ Lethality reduction (applies to population loss)
 - ✅ News updates every 5 turns
