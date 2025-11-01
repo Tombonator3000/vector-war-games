@@ -8364,7 +8364,7 @@ export default function NoradVector() {
           <div className="fixed top-20 left-4 z-40 space-y-4 max-w-md">
             {!greatOldOnesState.doctrine && (
               <DoctrineSelectionPanel
-                state={greatOldOnesState}
+                canSelect={true}
                 onSelectDoctrine={(doctrine) => {
                   greatOldOnesState.doctrine = doctrine;
                   setGreatOldOnesState({ ...greatOldOnesState });
