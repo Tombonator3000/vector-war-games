@@ -7,7 +7,21 @@
  * Phase 6 Refactoring: Extracted from Index.tsx
  */
 
-import type { Nation, ConventionalWarfareDelta, SatelliteOrbit, FalloutMark } from '@/types/game';
+import type {
+  Nation,
+  ConventionalWarfareDelta,
+  SatelliteOrbit,
+  FalloutMark,
+  Missile,
+  Bomber,
+  Submarine,
+  Explosion,
+  Particle,
+  RadiationZone,
+  EMPEffect,
+  Ring,
+  RefugeeCamp
+} from '@/types/game';
 import type { ConventionalState, NationConventionalProfile } from '@/hooks/useConventionalWarfare';
 import type { ScenarioConfig } from '@/types/scenario';
 import { getDefaultScenario } from '@/types/scenario';
@@ -40,15 +54,15 @@ export interface GameState {
   selectedDoctrine: string | null;
   playerName?: string;
   difficulty?: string;
-  missiles: any[];
-  bombers: any[];
-  submarines?: any[];
-  explosions: any[];
-  particles: any[];
-  radiationZones: any[];
-  empEffects: any[];
-  rings: any[];
-  refugeeCamps?: any[];
+  missiles: Missile[];
+  bombers: Bomber[];
+  submarines?: Submarine[];
+  explosions: Explosion[];
+  particles: Particle[];
+  radiationZones: RadiationZone[];
+  empEffects: EMPEffect[];
+  rings: Ring[];
+  refugeeCamps?: RefugeeCamp[];
   screenShake: number;
   overlay?: { text: string; ttl: number } | null;
   fx?: number;
@@ -57,8 +71,8 @@ export interface GameState {
   events?: boolean;
   diplomacy?: DiplomacyState;
   conventional?: ConventionalState;
-  conventionalMovements?: any[];
-  conventionalUnits?: any[];
+  conventionalMovements?: unknown[];
+  conventionalUnits?: unknown[];
   satelliteOrbits: SatelliteOrbit[];
   falloutMarks: FalloutMark[];
   statistics?: {
@@ -67,7 +81,7 @@ export interface GameState {
     enemiesDestroyed: number;
   };
   showEndGameScreen?: boolean;
-  endGameStatistics?: any;
+  endGameStatistics?: unknown;
   scenario?: ScenarioConfig;
   greatOldOnes?: GreatOldOnesState;
 }
@@ -346,42 +360,42 @@ class GameStateManager {
   /**
    * Gets all missiles
    */
-  static getMissiles(): any[] {
+  static getMissiles(): Missile[] {
     return this._state.missiles;
   }
 
   /**
    * Adds a missile
    */
-  static addMissile(missile: any): void {
+  static addMissile(missile: Missile): void {
     this._state.missiles.push(missile);
   }
 
   /**
    * Gets all bombers
    */
-  static getBombers(): any[] {
+  static getBombers(): Bomber[] {
     return this._state.bombers;
   }
 
   /**
    * Adds a bomber
    */
-  static addBomber(bomber: any): void {
+  static addBomber(bomber: Bomber): void {
     this._state.bombers.push(bomber);
   }
 
   /**
    * Gets all submarines
    */
-  static getSubmarines(): any[] {
+  static getSubmarines(): Submarine[] {
     return this._state.submarines || [];
   }
 
   /**
    * Adds a submarine
    */
-  static addSubmarine(submarine: any): void {
+  static addSubmarine(submarine: Submarine): void {
     if (!this._state.submarines) {
       this._state.submarines = [];
     }
@@ -395,21 +409,21 @@ class GameStateManager {
   /**
    * Gets all explosions
    */
-  static getExplosions(): any[] {
+  static getExplosions(): Explosion[] {
     return this._state.explosions;
   }
 
   /**
    * Adds an explosion
    */
-  static addExplosion(explosion: any): void {
+  static addExplosion(explosion: Explosion): void {
     this._state.explosions.push(explosion);
   }
 
   /**
    * Gets all particles
    */
-  static getParticles(): any[] {
+  static getParticles(): Particle[] {
     return this._state.particles;
   }
 

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import type { GreatOldOnesState, Doctrine } from '@/types/greatOldOnes';
 import type { Phase2State } from '@/lib/phase2Integration';
+import { checkPhase2UnlockConditions } from '@/lib/phase2Integration';
 
 interface Phase2DoctrinePanelProps {
   state: GreatOldOnesState;
@@ -143,7 +144,7 @@ const Phase2LockedView: React.FC<{ state: GreatOldOnesState; phase2State: Phase2
   state,
   phase2State,
 }) => {
-  const unlockCheck = require('@/lib/phase2Integration').checkPhase2UnlockConditions(state);
+  const unlockCheck = checkPhase2UnlockConditions(state);
 
   return (
     <Card className="bg-slate-900 border-slate-700 max-w-3xl mx-auto">

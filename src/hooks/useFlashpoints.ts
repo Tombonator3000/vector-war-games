@@ -2420,7 +2420,7 @@ export function useFlashpoints() {
       const totalChoices = flashpointHistory.length + 1;
       const successCount = flashpointHistory.filter(h => h.result === 'success').length + (success ? 1 : 0);
 
-      let reputationUpdate = { ...prev };
+      const reputationUpdate = { ...prev };
 
       // Update aggressive score (military options)
       if (option.advisorSupport.includes('military')) {

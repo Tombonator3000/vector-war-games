@@ -301,7 +301,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       const polygonCoords = getTerritoryPolygonHierarchy(territory.id);
       const labelPosition = getTerritoryCenter(territory.id);
 
-      let entityConfig: any = {
+      const entityConfig: any = {
         name: `territory-${territory.id}`,
         description: `
           <div style="padding: 10px;">
@@ -420,7 +420,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         heightOffset
       );
 
-      let entityConfig: any = {
+      const entityConfig: any = {
         name: `unit-${unit.id}`,
         position: position,
         label: {

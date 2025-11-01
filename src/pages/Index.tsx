@@ -715,9 +715,6 @@ const AudioSys = {
         const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer.slice(0));
         this.musicCache.set(trackId, audioBuffer);
         return audioBuffer;
-      } catch (error) {
-        // Music load failed - rethrow to be handled by caller
-        throw error;
       } finally {
         this.trackPromises.delete(trackId);
       }
@@ -6904,7 +6901,7 @@ export default function NoradVector() {
       };
 
       switch (action.id) {
-        case 'truce':
+        case 'truce': {
           if (!target) return false;
           // Create proposal for AI to evaluate
           const truceProposal: DiplomacyProposal = {
@@ -6941,6 +6938,7 @@ export default function NoradVector() {
           updateDisplay();
           consumeAction();
           return true;
+        }
 
         case 'trade':
           if (!target) return false;
@@ -6984,7 +6982,7 @@ export default function NoradVector() {
           consumeAction();
           return true;
 
-        case 'alliance':
+        case 'alliance': {
           if (!target) return false;
           if ((commander.production || 0) < 10 || (commander.intel || 0) < 40) {
             toast({ title: 'Insufficient resources', description: 'You need 10 PRODUCTION and 40 INTEL to form an alliance.' });
@@ -7030,6 +7028,7 @@ export default function NoradVector() {
           updateDisplay();
           consumeAction();
           return true;
+        }
 
         case 'backstab':
           if (!target) return false;
@@ -7081,7 +7080,7 @@ export default function NoradVector() {
           consumeAction();
           return true;
 
-        case 'pact':
+        case 'pact': {
           if (!target) return false;
           if ((commander.intel || 0) < 15) {
             toast({ title: 'Insufficient intel', description: 'You need 15 INTEL for a non-aggression pact.' });
@@ -7124,6 +7123,7 @@ export default function NoradVector() {
           updateDisplay();
           consumeAction();
           return true;
+        }
 
         case 'aid':
           if (!target) return false;
@@ -7208,11 +7208,12 @@ export default function NoradVector() {
         log(`${target.name} accepts alliance with ${proposer.name}!`);
         break;
 
-      case 'truce':
+      case 'truce': {
         const duration = activeDiplomacyProposal.terms.duration || 3;
         aiSignMutualTruce(proposer, target, duration, 'Diplomatic agreement');
         log(`${target.name} accepts ${duration}-turn truce with ${proposer.name}.`);
         break;
+      }
 
       case 'non-aggression':
         aiSignNonAggressionPact(proposer, target);

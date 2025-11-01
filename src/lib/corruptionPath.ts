@@ -920,7 +920,7 @@ export function suppressInvestigation(
   const stats = methodStats[method];
   const official = intOfficials[0];
 
-  let successChance = 60 + official.loyalty / 2 - stats.difficulty;
+  const successChance = 60 + official.loyalty / 2 - stats.difficulty;
 
   const roll = Math.random() * 100;
 
