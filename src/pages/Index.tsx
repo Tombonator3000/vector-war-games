@@ -149,7 +149,10 @@ import {
   resolveGrievancesWithApology,
   resolveGrievancesWithReparations,
 } from '@/lib/diplomacyPhase2Integration';
-import { initializeDiplomacyPhase3State } from '@/types/diplomacyPhase3';
+import {
+  initializeDiplomacyPhase3State,
+  type DiplomacyPhase3State as DiplomacyPhase3SystemState,
+} from '@/types/diplomacyPhase3';
 import { calculateDIPIncome, applyDIPIncome, initializeDIP, spendDIP } from '@/lib/diplomaticCurrencyUtils';
 import {
   launch as launchMissile,
@@ -166,6 +169,14 @@ import {
   type WorldRenderContext,
   type NationRenderContext,
 } from '@/rendering/worldRenderer';
+import {
+  initializeInternationalCouncil,
+  createResolution,
+  addObserver,
+  electCouncilMember,
+  removeExpiredMembers,
+  processExpiredVotes,
+} from '@/lib/internationalCouncilUtils';
 import { IntroLogo } from '@/components/intro/IntroLogo';
 import { Starfield } from '@/components/intro/Starfield';
 import { SpinningEarth } from '@/components/intro/SpinningEarth';
@@ -4403,6 +4414,9 @@ export default function NoradVector() {
   const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
   const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
   const [phase3State, setPhase3State] = useState<Phase3State | null>(null);
+  const [diplomacyPhase3State, setDiplomacyPhase3State] = useState<DiplomacyPhase3SystemState | null>(
+    () => S.diplomacyPhase3 ?? null
+  );
   useEffect(() => {
     AudioSys.setMusicEnabled(initialMusicEnabled);
     AudioSys.sfxEnabled = initialSfxEnabled;
@@ -7425,22 +7439,92 @@ export default function NoradVector() {
       }
     }
 
+    const ensurePhase3State = (): DiplomacyPhase3SystemState => {
+      if (!S.diplomacyPhase3) {
+        S.diplomacyPhase3 = initializeDiplomacyPhase3State(S.turn);
+      }
+
+      if (!S.diplomacyPhase3.phase3Enabled) {
+        S.diplomacyPhase3 = {
+          ...S.diplomacyPhase3,
+          phase3Enabled: true,
+          activatedTurn: Math.min(S.diplomacyPhase3.activatedTurn ?? currentTurn, currentTurn),
+        };
+      }
+
+      return S.diplomacyPhase3;
+    };
+
+    const persistPhase3State = (nextPhase3: DiplomacyPhase3SystemState) => {
+      S.diplomacyPhase3 = nextPhase3;
+      const nextState = { ...S, diplomacyPhase3: nextPhase3 } as LocalGameState;
+      GameStateManager.setState(nextState);
+      S = nextState;
+      (window as any).S = S;
+      setDiplomacyPhase3State(nextPhase3);
+    };
+
+    const ensureCouncil = () => {
+      let phase3 = ensurePhase3State();
+      if (phase3.internationalCouncil) {
+        return phase3.internationalCouncil;
+      }
+
+      const permanentMembers = nations
+        .filter((nation) => nation.councilMembership === 'permanent')
+        .map((nation) => nation.id);
+
+      let council = initializeInternationalCouncil(currentTurn, permanentMembers);
+
+      const electedMembers = nations.filter((nation) => nation.councilMembership === 'elected');
+      for (const member of electedMembers) {
+        council = electCouncilMember(council, member.id, currentTurn);
+      }
+
+      const observerMembers = nations.filter((nation) => nation.councilMembership === 'observer');
+      for (const observer of observerMembers) {
+        council = addObserver(council, observer.id);
+      }
+
+      phase3 = {
+        ...phase3,
+        phase3Enabled: true,
+        internationalCouncil: council,
+      };
+
+      persistPhase3State(phase3);
+      return council;
+    };
+
     let updatedPlayer: Nation = player;
     let updatedTarget: Nation | undefined = targetNation;
     let newsItem: { text: string; priority: 'info' | 'important' | 'critical' } | null = null;
     let toastPayload: { title: string; description: string; variant?: 'default' | 'destructive' | 'success' } | null = null;
 
-    if (action.dipCost) {
-      const spent = spendDIP(updatedPlayer, action.dipCost, action.id, currentTurn, updatedTarget?.id);
+    const trySpendDip = (cost: number, reason: string, withNationId?: string): boolean => {
+      const spent = spendDIP(updatedPlayer, cost, reason, currentTurn, withNationId ?? updatedTarget?.id);
       if (!spent) {
         toast({
           title: 'Insufficient DIP',
-          description: `This action requires ${action.dipCost} DIP.`,
+          description: `This action requires ${cost} DIP.`,
           variant: 'destructive',
         });
+        return false;
+      }
+
+      updatedPlayer = spent;
+      return true;
+    };
+
+    if (
+      action.dipCost &&
+      action.id !== 'propose-resolution' &&
+      action.id !== 'call-session'
+    ) {
+      const success = trySpendDip(action.dipCost, action.id, targetNation?.id);
+      if (!success) {
         return;
       }
-      updatedPlayer = spent;
     }
 
     switch (action.id) {
@@ -7666,25 +7750,90 @@ export default function NoradVector() {
         break;
       }
       case 'propose-resolution': {
+        if (action.dipCost && !trySpendDip(action.dipCost, 'propose-resolution')) {
+          return;
+        }
+
+        const council = ensureCouncil();
+        const resolutionType = targetNation ? 'sanction' : 'humanitarian-aid';
+        const resolutionTitle = targetNation
+          ? `Emergency Action on ${targetNation.name}`
+          : 'Global Stability Resolution';
+        const resolutionDescription = targetNation
+          ? `${player.name} urges the council to impose sanctions on ${targetNation.name} for destabilizing actions.`
+          : `${player.name} calls upon the council to coordinate humanitarian relief and monitoring to ease global tensions.`;
+
+        const resolutionParameters = targetNation
+          ? {
+              severity: 60,
+              duration: 5,
+              penalties: ['Coordinated economic sanctions enforced by council members.'],
+            }
+          : {
+              duration: 4,
+              rewards: ['Shared humanitarian aid resources to stabilize the crisis.'],
+              conditions: ['Report progress back to the council at the next session.'],
+            };
+
+        const resolutionResult = createResolution(
+          council,
+          resolutionType,
+          resolutionTitle,
+          resolutionDescription,
+          updatedPlayer.id,
+          currentTurn,
+          resolutionParameters,
+          targetNation?.id
+        );
+
+        const phase3 = ensurePhase3State();
+        const updatedPhase3 = {
+          ...phase3,
+          internationalCouncil: resolutionResult.council,
+          phase3Enabled: true,
+        };
+        persistPhase3State(updatedPhase3);
+
         toastPayload = {
           title: 'Resolution Proposed',
-          description: 'Your proposal has been submitted to the Council and awaits deliberation.',
+          description: `Your resolution "${resolutionResult.resolution.title}" is now before the council.`,
         };
         newsItem = {
-          text: `${player.name} tables a resolution before the International Council.`,
-          priority: 'info',
+          text: `${player.name} tables "${resolutionResult.resolution.title}" for immediate council deliberation.`,
+          priority: 'important',
         };
-        log(`${player.name} proposed a resolution to the International Council.`);
+        log(`${player.name} proposed the resolution "${resolutionResult.resolution.title}" to the International Council.`);
         break;
       }
       case 'call-session': {
+        if (action.dipCost && !trySpendDip(action.dipCost, 'call-session')) {
+          return;
+        }
+
+        let council = ensureCouncil();
+        council = removeExpiredMembers(council, currentTurn);
+        council = processExpiredVotes(council, currentTurn);
+        council = addObserver(council, updatedPlayer.id);
+        const acceleratedCouncil = {
+          ...council,
+          nextMeetingTurn: Math.min(council.nextMeetingTurn, currentTurn),
+        };
+
+        const phase3 = ensurePhase3State();
+        const updatedPhase3 = {
+          ...phase3,
+          internationalCouncil: acceleratedCouncil,
+          phase3Enabled: true,
+        };
+        persistPhase3State(updatedPhase3);
+
         toastPayload = {
           title: 'Emergency Session Convened',
-          description: 'The International Council is gathering in emergency session.',
+          description: 'The council is assembling immediately to address your emergency motion.',
         };
         newsItem = {
-          text: `${player.name} calls an emergency session of the International Council.`,
-          priority: 'important',
+          text: `${player.name} forces an emergency sitting of the International Council, accelerating the next meeting.`,
+          priority: 'critical',
         };
         log(`${player.name} called an emergency session of the International Council.`);
         break;
@@ -7737,7 +7886,7 @@ export default function NoradVector() {
     updateDisplay();
     consumeAction();
     setShowEnhancedDiplomacy(false);
-  }, [toast, updateDisplay, consumeAction]);
+  }, [toast, updateDisplay, consumeAction, setDiplomacyPhase3State]);
 
   // Show pending AI proposals when phase transitions to player
   useEffect(() => {
@@ -9151,6 +9300,7 @@ export default function NoradVector() {
           <EnhancedDiplomacyModal
             player={player}
             nations={nations}
+            phase3State={diplomacyPhase3State ?? undefined}
             onClose={() => setShowEnhancedDiplomacy(false)}
             onAction={handleEnhancedDiplomacyAction}
           />

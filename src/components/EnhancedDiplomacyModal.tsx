@@ -11,10 +11,13 @@
 import React, { useState } from 'react';
 import { X, Handshake, Gift, Scale, Shield, MessageCircle, AlertTriangle, Star } from 'lucide-react';
 import type { Nation } from '@/types/game';
+import type { DiplomacyPhase3State } from '@/types/diplomacyPhase3';
+import { DiplomacyPhase3Display } from './DiplomacyPhase3Display';
 
 interface EnhancedDiplomacyModalProps {
   player: Nation;
   nations: Nation[];
+  phase3State?: DiplomacyPhase3State;
   onClose: () => void;
   onAction: (action: DiplomaticAction, target?: Nation) => void;
 }
@@ -33,6 +36,7 @@ export interface DiplomaticAction {
 export function EnhancedDiplomacyModal({
   player,
   nations,
+  phase3State,
   onClose,
   onAction,
 }: EnhancedDiplomacyModalProps) {
@@ -242,6 +246,17 @@ export function EnhancedDiplomacyModal({
           {/* Right Content - Actions */}
           <div className="flex-1 p-6 overflow-y-auto">
             <div className="space-y-4">
+              {phase3State && (
+                <div className="rounded-lg border border-cyan-500/30 bg-slate-900/40 p-3">
+                  <DiplomacyPhase3Display
+                    nation={player}
+                    targetNation={selectedTarget ?? undefined}
+                    phase3State={phase3State}
+                    compact
+                  />
+                </div>
+              )}
+
               {availableActions.map((action) => {
                 const canAfford = !action.dipCost || playerDIP >= action.dipCost;
                 const hasTarget = !action.requiresTarget || selectedTarget;
