@@ -1671,7 +1671,12 @@ const getActiveScenarioId = (): string | undefined => {
   }
 
   try {
-    const stored = globalWindow.localStorage?.getItem('selected_scenario');
+    const storage = globalWindow.localStorage;
+    const prefixedKey = 'norad_selected_scenario';
+    const legacyKey = 'selected_scenario';
+
+    const stored = storage?.getItem(prefixedKey) ?? storage?.getItem(legacyKey) ?? undefined;
+
     if (stored) {
       console.log('[Flashpoint Debug] getActiveScenarioId: Found scenario ID from localStorage:', stored);
       return stored;

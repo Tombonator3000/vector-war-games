@@ -23,6 +23,7 @@ vi.mock('@/contexts/RNGContext', () => {
 
 describe('useFlashpoints', () => {
   afterEach(() => {
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -105,6 +106,19 @@ describe('useFlashpoints', () => {
       result: 'failure'
     });
     expect(result.current.activeFlashpoint).toBeNull();
+  });
+
+  it('uses the prefixed scenario selection key from localStorage', () => {
+    localStorage.setItem('norad_selected_scenario', 'cubanCrisis');
+    const { result } = renderHook(() => useFlashpoints());
+
+    let triggeredFlashpoint = null;
+    act(() => {
+      triggeredFlashpoint = result.current.triggerRandomFlashpoint(1, 2);
+    });
+
+    expect(triggeredFlashpoint?.id).toBe('excomm-enhanced-1');
+    expect(result.current.activeFlashpoint?.id).toBe('excomm-enhanced-1');
   });
 });
 
