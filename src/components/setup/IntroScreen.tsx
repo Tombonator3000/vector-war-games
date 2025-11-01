@@ -12,6 +12,7 @@ import { SpinningEarth } from '@/components/intro/SpinningEarth';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OptionsMenu } from '@/components/OptionsMenu';
+import type { MapStyle } from '@/components/GlobeScene';
 import { CreditsDialog } from '@/components/setup/CreditsDialog';
 import type { ScenarioConfig } from '@/types/scenario';
 import { useState } from 'react';
@@ -41,6 +42,14 @@ export interface IntroScreenProps {
   onOpenScenarioPanel: () => void;
   /** Handler for closing scenario panel */
   onCloseScenarioPanel: (open: boolean) => void;
+  /** Current map style */
+  mapStyle: MapStyle;
+  /** Change handler for map style */
+  onMapStyleChange: (style: MapStyle) => void;
+  /** Current viewer type */
+  viewerType: 'threejs' | 'cesium';
+  /** Change handler for viewer type */
+  onViewerTypeChange: (type: 'threejs' | 'cesium') => void;
 }
 
 export function IntroScreen({
@@ -53,6 +62,10 @@ export function IntroScreen({
   onScenarioSelect,
   onOpenScenarioPanel,
   onCloseScenarioPanel,
+  mapStyle,
+  onMapStyleChange,
+  viewerType,
+  onViewerTypeChange,
 }: IntroScreenProps) {
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [isCreditsOpen, setIsCreditsOpen] = useState(false);
@@ -74,7 +87,13 @@ export function IntroScreen({
               Tune the command interface to match your control room preferences.
             </DialogDescription>
           </DialogHeader>
-          <OptionsMenu showInGameFeatures={false} />
+          <OptionsMenu
+            showInGameFeatures={false}
+            mapStyle={mapStyle}
+            onMapStyleChange={onMapStyleChange}
+            viewerType={viewerType}
+            onViewerTypeChange={onViewerTypeChange}
+          />
         </DialogContent>
       </Dialog>
       <CreditsDialog open={isCreditsOpen} onOpenChange={setIsCreditsOpen} />
