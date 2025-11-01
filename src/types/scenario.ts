@@ -325,6 +325,50 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
       },
     },
   },
+
+  cubanCrisisEnhanced: {
+    id: 'cubanCrisisEnhanced',
+    name: 'Cuban Missile Crisis - Enhanced Diplomacy',
+    description:
+      'October 16-28, 1962: Experience the thirteen days that brought the world to the brink of nuclear war with advanced diplomatic mechanics, multi-party negotiations, and historical incidents.',
+    timeConfig: {
+      unit: 'day',
+      unitsPerTurn: 1,
+      startYear: 1962,
+      startMonth: 10,
+      displayFormat: 'DD MMM YYYY',
+    },
+    electionConfig: {
+      interval: 0,
+      enabled: false,
+      minMoraleThreshold: 0,
+      minPublicOpinionThreshold: 0,
+      actionInfluenceMultiplier: 2.0,
+      foreignInfluenceEnabled: true,
+      loseElectionConsequence: 'none',
+    },
+    startingDefcon: 3,
+    modifiers: {
+      timeSpeedMultiplier: 0.5,
+    },
+    eraOverrides: {
+      early: {
+        endTurn: 13,
+        unlockedFeatures: [
+          'nuclear_missiles',
+          'nuclear_bombers',
+          'defense_systems',
+          'basic_diplomacy',
+          'advanced_diplomacy',
+          'basic_research',
+          'conventional_warfare',
+          'territory_control',
+          'submarines',
+          'propaganda_victory',
+        ],
+      },
+    },
+  },
 };
 
 /**
