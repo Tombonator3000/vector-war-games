@@ -1652,24 +1652,38 @@ type WindowWithScenario = Window & {
 
 const getActiveScenarioId = (): string | undefined => {
   if (typeof window === 'undefined') {
+    console.log('[Flashpoint Debug] getActiveScenarioId: window is undefined (server-side)');
     return undefined;
   }
 
   const globalWindow = window as WindowWithScenario;
+
+  // Debug: Check if window.S exists
+  console.log('[Flashpoint Debug] getActiveScenarioId: window.S exists?', !!globalWindow.S);
+  console.log('[Flashpoint Debug] getActiveScenarioId: window.S?.scenario exists?', !!globalWindow.S?.scenario);
+
   const scenarioId = globalWindow.S?.scenario?.id;
   if (scenarioId) {
+    console.log('[Flashpoint Debug] getActiveScenarioId: Found scenario ID from window.S:', scenarioId);
     return scenarioId;
+  } else {
+    console.log('[Flashpoint Debug] getActiveScenarioId: window.S.scenario.id is undefined');
   }
 
   try {
     const stored = globalWindow.localStorage?.getItem('selected_scenario');
     if (stored) {
+      console.log('[Flashpoint Debug] getActiveScenarioId: Found scenario ID from localStorage:', stored);
       return stored;
+    } else {
+      console.log('[Flashpoint Debug] getActiveScenarioId: No scenario ID in localStorage');
     }
-  } catch {
+  } catch (e) {
+    console.log('[Flashpoint Debug] getActiveScenarioId: Error accessing localStorage:', e);
     // Ignore storage access errors (e.g., privacy mode or server rendering)
   }
 
+  console.log('[Flashpoint Debug] getActiveScenarioId: Returning undefined (no scenario found)');
   return undefined;
 };
 
