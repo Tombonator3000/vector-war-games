@@ -467,6 +467,12 @@ let gameLoopRunning = false; // Prevent multiple game loops
 // S now references the state from GameStateManager for backward compatibility
 let S: LocalGameState = GameStateManager.getState();
 
+// Expose S to window for hooks (needed by useFlashpoints to detect scenario)
+if (typeof window !== 'undefined') {
+  (window as any).S = S;
+  console.log('[Game State] Exposed S to window at initialization. Scenario ID:', S.scenario?.id);
+}
+
 // Nations and deltas are now managed by GameStateManager
 // Keep references for backward compatibility
 let nations: LocalNation[] = GameStateManager.getNations();
@@ -4217,6 +4223,11 @@ export default function NoradVector() {
     }
     setSelectedScenarioId(scenarioId);
     setIsScenarioPanelOpen(false);
+
+    // Update window.S when scenario is selected to ensure hooks can detect it
+    if (typeof window !== 'undefined' && (window as any).S) {
+      console.log('[Game State] Scenario selected:', scenarioId);
+    }
   }, []);
 
   const handleIntroStart = useCallback(() => {
@@ -4246,6 +4257,12 @@ export default function NoradVector() {
       setWeek3State(null);
       setPhase2State(null);
       setPhase3State(null);
+    }
+
+    // Expose updated S to window after scenario is set
+    if (typeof window !== 'undefined') {
+      (window as any).S = S;
+      console.log('[Game State] Exposed S to window after intro start. Scenario ID:', S.scenario?.id);
     }
 
     updateDisplay();
@@ -5812,6 +5829,13 @@ export default function NoradVector() {
     S.selectedLeader = leaderToUse;
     S.selectedDoctrine = doctrineToUse;
     S.playerName = leaderToUse;
+
+    // Expose updated S to window when game starts
+    if (typeof window !== 'undefined') {
+      (window as any).S = S;
+      console.log('[Game State] Exposed S to window at game start. Scenario ID:', S.scenario?.id, 'Leader:', leaderToUse, 'Doctrine:', doctrineToUse);
+    }
+
     setIsGameStarted(true);
   }, [selectedLeader, selectedDoctrine]);
 
