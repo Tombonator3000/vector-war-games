@@ -787,3 +787,5 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Reviewed audio initialization requirements and added environment guards around `audioManager.preload` calls to avoid SSR `Audio` reference errors.
 - Consolidated `handleMapStyleChange` definitions in `src/pages/Index.tsx` so map style updates trigger side effects from a single callback and resolved the duplicate symbol build failure.
 - Ran `npm run build` and `npm run preview` to confirm the production bundle succeeds and the preview server starts without `Audio` API errors.
+## 2025-11-01T13:16:16+00:00
+- Updated `getActiveScenarioId` in `src/hooks/useFlashpoints.ts` to read the prefixed NORAD scenario key with a legacy fallback, and extended the hook tests to verify the Cuban Crisis scenario is recognized when stored under the new key.
