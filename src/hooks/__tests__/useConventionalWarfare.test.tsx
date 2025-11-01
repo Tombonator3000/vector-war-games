@@ -1,4 +1,5 @@
 import React from 'react';
+import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,6 +12,7 @@ import {
 } from '../useConventionalWarfare';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
+import { RNGProvider } from '@/contexts/RNGContext';
 
 interface MockNation {
   id: string;
@@ -72,6 +74,10 @@ describe('useConventionalWarfare', () => {
     return undefined;
   };
 
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <RNGProvider initialSeed={42}>{children}</RNGProvider>
+  );
+
   it('resolves border conflicts and updates territorial ownership', () => {
     const { result } = renderHook(() =>
       useConventionalWarfare({
@@ -84,6 +90,7 @@ describe('useConventionalWarfare', () => {
         onConsumeAction: consumeSpy,
         onUpdateDisplay: updateSpy,
       }),
+      { wrapper },
     );
 
     const playerUnit = Object.values(result.current.state.units).find(unit => unit.ownerId === player.id);
@@ -126,6 +133,7 @@ describe('useConventionalWarfare', () => {
         onConsumeAction: consumeSpy,
         onUpdateDisplay: updateSpy,
       }),
+      { wrapper },
     );
 
     const initialPlayerInstability = player.instability;
@@ -155,6 +163,7 @@ describe('useConventionalWarfare', () => {
         onConsumeAction: consumeSpy,
         onUpdateDisplay: updateSpy,
       }),
+      { wrapper },
     );
 
     let response;
