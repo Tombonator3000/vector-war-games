@@ -3,6 +3,8 @@ import type { PlagueState } from './biowarfare';
 import type { ScenarioConfig } from './scenario';
 import type { GreatOldOnesState } from './greatOldOnes';
 import type { TrustRecord, FavorBalance, DiplomaticPromise } from './trustAndFavors';
+import type { Grievance, Claim } from './grievancesAndClaims';
+import type { SpecializedAlliance } from './specializedAlliances';
 
 export interface FalloutMark {
   id: string;
@@ -119,6 +121,14 @@ export interface Nation {
   trustRecords?: Record<string, TrustRecord>; // Nation ID -> Trust record (0-100)
   favorBalances?: Record<string, FavorBalance>; // Nation ID -> Favor balance
   diplomaticPromises?: DiplomaticPromise[]; // Active promises made by this nation
+
+  // Grievances and Claims (Phase 2 Diplomacy Enhancement)
+  grievances?: Grievance[]; // Historical grievances against other nations
+  claims?: Claim[]; // Territorial and resource claims
+
+  // Specialized Alliances (Phase 2 Diplomacy Enhancement)
+  specializedAlliances?: SpecializedAlliance[]; // Specialized alliance types
+
   readinessRegen?: number;
   detectionReduction?: number;
   buildCostReduction?: number;

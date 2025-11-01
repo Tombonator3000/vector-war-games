@@ -17,6 +17,8 @@ import { safeRatio } from '@/lib/safeMath';
 import { getRelationship } from '@/lib/relationshipUtils';
 import { getTrust, getFavors, getTrustModifier } from '@/types/trustAndFavors';
 import { getPromiseTrustworthiness } from '@/lib/promiseActions';
+import { getGrievanceDiplomacyPenalty, getClaimWarJustification } from '@/lib/grievancesAndClaimsUtils';
+import { getAllianceBetween } from '@/types/specializedAlliances';
 
 /**
  * Evaluate whether AI should accept a player's diplomatic proposal
@@ -143,6 +145,19 @@ function calculateRelationshipScore(nation1: Nation, nation2: Nation): number {
   const promiseScore = getPromiseTrustworthiness(nation2);
   const promiseBonus = (promiseScore - 50) / 5; // -10 to +10 based on promise history
   score += promiseBonus;
+
+  // *** PHASE 2 ENHANCEMENT: Grievances penalty ***
+  // Active grievances reduce willingness to cooperate
+  const grievancePenalty = getGrievanceDiplomacyPenalty(nation1, nation2.id);
+  score += grievancePenalty; // This is negative, reducing score
+
+  // *** PHASE 2 ENHANCEMENT: Specialized alliance bonus ***
+  // Having a specialized alliance increases cooperation
+  const specializedAlliance = getAllianceBetween(nation1, nation2.id);
+  if (specializedAlliance && specializedAlliance.active) {
+    const allianceBonus = 10 + (specializedAlliance.level * 5) + (specializedAlliance.cooperation / 5);
+    score += allianceBonus; // Up to 10 + 25 (level 5) + 20 (100 cooperation) = +55 bonus
+  }
 
   return score;
 }
