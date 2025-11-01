@@ -148,6 +148,21 @@ export function initializePhase2State(): Phase2State {
 /**
  * Check if Phase 2 should unlock
  */
+/**
+ * Update Phase 2 systems (wrapper for processPhase2Turn for backward compatibility)
+ */
+export function updatePhase2Systems(
+  state: GreatOldOnesState,
+  phase2State: Phase2State
+): Phase2State {
+  const { events, stateChanges } = processPhase2Turn(state, phase2State);
+  // Apply state changes to phase2State
+  stateChanges.forEach(change => {
+    applyPhase2StateChanges(phase2State, change);
+  });
+  return phase2State;
+}
+
 export function checkPhase2UnlockConditions(state: GreatOldOnesState): {
   shouldUnlock: boolean;
   reason: string;

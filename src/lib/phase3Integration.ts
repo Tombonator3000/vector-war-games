@@ -11,6 +11,9 @@ import {
   initializePhase3State as baseInitializePhase3State,
 } from '../types/phase3Types';
 
+// Re-export for backward compatibility
+export { initializePhase3State } from '../types/phase3Types';
+
 // Import Phase 3 systems
 import {
   determineMotivationBranch,
@@ -50,6 +53,22 @@ import {
 /**
  * Check if Phase 3 should unlock
  */
+/**
+ * Update Phase 3 systems (wrapper for processPhase3Turn for backward compatibility)
+ */
+export function updatePhase3Systems(
+  gooState: GreatOldOnesState,
+  phase2State: any,
+  phase3State: Phase3State
+): Phase3State {
+  const { events, stateChanges } = processPhase3Turn(gooState, phase2State, phase3State);
+  // Apply state changes to phase3State
+  stateChanges.forEach(change => {
+    applyPhase3StateChanges(phase3State, change);
+  });
+  return phase3State;
+}
+
 export function checkPhase3UnlockConditions(
   state: GreatOldOnesState,
   phase2: Phase2State

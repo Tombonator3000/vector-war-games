@@ -2,6 +2,8 @@
 
 This document describes the Phase 2 diplomacy improvements implemented in the game, building on Phase 1's Trust, Favors, and Promises systems to add Grievances & Claims and Specialized Alliances.
 
+> **⚠️ INTEGRATION REQUIRED:** The code for Phase 2 features is fully implemented, but requires integration into game events. See **[DIPLOMACY_PHASE2_INTEGRATION.md](./DIPLOMACY_PHASE2_INTEGRATION.md)** for a complete integration guide.
+
 ## Overview
 
 Phase 2 adds depth to diplomatic relationships through:
