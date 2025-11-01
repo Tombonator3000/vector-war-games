@@ -15,6 +15,8 @@ import {
 } from '@/types/diplomacy';
 import { safeRatio } from '@/lib/safeMath';
 import { getRelationship } from '@/lib/relationshipUtils';
+import { getTrust, getFavors, getTrustModifier } from '@/types/trustAndFavors';
+import { getPromiseTrustworthiness } from '@/lib/promiseActions';
 
 /**
  * Evaluate whether AI should accept a player's diplomatic proposal
@@ -101,6 +103,7 @@ function calculateMilitaryPower(nation: Nation): number {
 /**
  * Calculate relationship score based on actual relationships and treaties
  * Primary component is the relationship value (-100 to +100), with treaty modifiers
+ * Enhanced with Trust and Favors systems
  */
 function calculateRelationshipScore(nation1: Nation, nation2: Nation): number {
   // Start with actual relationship value (-100 to +100), scaled to reasonable range
@@ -122,6 +125,24 @@ function calculateRelationshipScore(nation1: Nation, nation2: Nation): number {
   if (nation1.sanctionedBy?.[nation2.id]) {
     score -= 20;
   }
+
+  // *** PHASE 1 ENHANCEMENT: Trust modifier ***
+  // Trust affects how reliable they seem (0-100 scale)
+  const trust = getTrust(nation1, nation2.id);
+  const trustBonus = (trust - 50) / 2; // -25 to +25 based on trust
+  score += trustBonus;
+
+  // *** PHASE 1 ENHANCEMENT: Favors modifier ***
+  // Favors owed make proposals more likely to be accepted
+  const favors = getFavors(nation1, nation2.id);
+  const favorBonus = Math.min(20, favors / 2); // Max +20 bonus from favors
+  score += favorBonus;
+
+  // *** PHASE 1 ENHANCEMENT: Promise trustworthiness ***
+  // Nations that keep promises are more trusted
+  const promiseScore = getPromiseTrustworthiness(nation2);
+  const promiseBonus = (promiseScore - 50) / 5; // -10 to +10 based on promise history
+  score += promiseBonus;
 
   return score;
 }
