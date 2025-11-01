@@ -5,6 +5,7 @@ import type { GreatOldOnesState } from './greatOldOnes';
 import type { TrustRecord, FavorBalance, DiplomaticPromise } from './trustAndFavors';
 import type { Grievance, Claim } from './grievancesAndClaims';
 import type { SpecializedAlliance } from './specializedAlliances';
+import type { DiplomaticInfluence, CouncilMembershipType } from './diplomacyPhase3';
 
 export interface FalloutMark {
   id: string;
@@ -129,6 +130,10 @@ export interface Nation {
   // Specialized Alliances (Phase 2 Diplomacy Enhancement)
   specializedAlliances?: SpecializedAlliance[]; // Specialized alliance types
 
+  // Diplomacy Phase 3
+  diplomaticInfluence?: DiplomaticInfluence; // Diplomatic currency system
+  councilMembership?: CouncilMembershipType; // International council membership
+
   readinessRegen?: number;
   detectionReduction?: number;
   buildCostReduction?: number;
@@ -203,6 +208,9 @@ export interface GameState {
 
   /** Great Old Ones campaign mode state */
   greatOldOnes?: GreatOldOnesState;
+
+  /** Diplomacy Phase 3 state */
+  diplomacyPhase3?: import('./diplomacyPhase3').DiplomacyPhase3State;
 }
 
 export interface ConventionalWarfareDelta {
