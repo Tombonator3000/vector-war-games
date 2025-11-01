@@ -692,10 +692,3 @@ export function applyPhase3StateChanges(
     }
   }
 }
-
-/**
- * Initialize Phase 3 state wrapper
- */
-export function initializePhase3State(seed?: string): Phase3State {
-  return baseInitializePhase3State(seed);
-}
