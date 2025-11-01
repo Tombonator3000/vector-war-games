@@ -103,9 +103,11 @@ export function CreditsDialog({ open, onOpenChange }: CreditsDialogProps) {
         )}
         <audio
           ref={audioRef}
-          src="/Muzak/run run.mp3"
+          src="/Muzak/Run Run.mp3"
           preload="auto"
-          onError={() => setAudioError("Soundtrack file missing. Place 'run run.mp3' inside the Muzak directory.")}
+          onError={() =>
+            setAudioError("Soundtrack file missing. Place 'Run Run.mp3' inside the Muzak directory.")
+          }
         />
       </DialogContent>
     </Dialog>
