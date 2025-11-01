@@ -125,7 +125,8 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
   cubanCrisis: {
     id: 'cubanCrisis',
     name: 'Cuban Missile Crisis (1962)',
-    description: 'October 16-28, 1962: Thirteen Days that brought the world to the brink of nuclear war',
+    description:
+      'October 16-28, 1962: Experience the thirteen days that brought the world to the brink of nuclear war. Features historically accurate leaders (JFK, Khrushchev, Castro), real diplomatic flashpoints, multi-party negotiations (Cuba, Turkey, NATO, UN), and authentic Cold War mechanics.',
     timeConfig: {
       unit: 'day',
       unitsPerTurn: 1,
@@ -134,58 +135,30 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
       displayFormat: 'DD MMM YYYY',
     },
     electionConfig: {
-      interval: 0, // No elections during crisis
+      interval: 0,
       enabled: false,
       minMoraleThreshold: 0,
       minPublicOpinionThreshold: 0,
-      actionInfluenceMultiplier: 2.0, // Actions have double impact on opinion
+      actionInfluenceMultiplier: 2.0,
       foreignInfluenceEnabled: true,
       loseElectionConsequence: 'none',
     },
-    startingDefcon: 3, // Crisis started at DEFCON 3
+    startingDefcon: 3,
     modifiers: {
-      timeSpeedMultiplier: 0.5, // Faster paced
+      timeSpeedMultiplier: 0.5,
     },
     eraOverrides: {
-      // 1962 technology only - no modern features
       early: {
-        endTurn: 5,
+        endTurn: 13,
         unlockedFeatures: [
           'nuclear_missiles',
           'nuclear_bombers',
           'defense_systems',
           'basic_diplomacy',
-          'basic_research',
-          'conventional_warfare',
-        ],
-      },
-      mid: {
-        startTurn: 6,
-        endTurn: 10,
-        unlockedFeatures: [
-          'nuclear_missiles',
-          'nuclear_bombers',
-          'defense_systems',
-          'basic_diplomacy',
+          'advanced_diplomacy',
           'basic_research',
           'conventional_warfare',
           'territory_control',
-          'advanced_diplomacy',
-          'submarines', // Nuclear subs existed in 1962
-        ],
-      },
-      late: {
-        startTurn: 11,
-        endTurn: 14,
-        unlockedFeatures: [
-          'nuclear_missiles',
-          'nuclear_bombers',
-          'defense_systems',
-          'basic_diplomacy',
-          'basic_research',
-          'conventional_warfare',
-          'territory_control',
-          'advanced_diplomacy',
           'submarines',
           'propaganda_victory',
         ],
@@ -321,50 +294,6 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
           'propaganda_victory',
           'economic_warfare',
           'quantum_computing',
-        ],
-      },
-    },
-  },
-
-  cubanCrisisEnhanced: {
-    id: 'cubanCrisisEnhanced',
-    name: 'Cuban Missile Crisis - Enhanced Diplomacy',
-    description:
-      'October 16-28, 1962: Experience the thirteen days that brought the world to the brink of nuclear war with advanced diplomatic mechanics, multi-party negotiations, and historical incidents.',
-    timeConfig: {
-      unit: 'day',
-      unitsPerTurn: 1,
-      startYear: 1962,
-      startMonth: 10,
-      displayFormat: 'DD MMM YYYY',
-    },
-    electionConfig: {
-      interval: 0,
-      enabled: false,
-      minMoraleThreshold: 0,
-      minPublicOpinionThreshold: 0,
-      actionInfluenceMultiplier: 2.0,
-      foreignInfluenceEnabled: true,
-      loseElectionConsequence: 'none',
-    },
-    startingDefcon: 3,
-    modifiers: {
-      timeSpeedMultiplier: 0.5,
-    },
-    eraOverrides: {
-      early: {
-        endTurn: 13,
-        unlockedFeatures: [
-          'nuclear_missiles',
-          'nuclear_bombers',
-          'defense_systems',
-          'basic_diplomacy',
-          'advanced_diplomacy',
-          'basic_research',
-          'conventional_warfare',
-          'territory_control',
-          'submarines',
-          'propaganda_victory',
         ],
       },
     },

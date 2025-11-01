@@ -180,10 +180,10 @@ export const CubaCrisisActors = {
  */
 export const ENHANCED_CUBAN_CRISIS: EnhancedScenarioConfig = {
   // Base scenario config (from existing scenario.ts)
-  id: 'cubanCrisisEnhanced',
-  name: 'Cuban Missile Crisis - Enhanced Diplomacy',
+  id: 'cubanCrisis',
+  name: 'Cuban Missile Crisis (1962)',
   description:
-    'October 16-28, 1962: Experience the thirteen days that brought the world to the brink of nuclear war with advanced diplomatic mechanics, multi-party negotiations, and historical incidents.',
+    'October 16-28, 1962: Experience the thirteen days that brought the world to the brink of nuclear war. Features historically accurate leaders (JFK, Khrushchev, Castro), real diplomatic flashpoints, multi-party negotiations (Cuba, Turkey, NATO, UN), and authentic Cold War mechanics.',
   timeConfig: {
     unit: 'day',
     unitsPerTurn: 1,
