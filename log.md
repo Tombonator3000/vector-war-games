@@ -741,3 +741,7 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 ## 2025-11-01T06:35:01+00:00
 - Replaced CommonJS require in favorActions with ES module import and updated promise handling to apply trust penalties to the aggrieved nation per Codex review feedback.
 - Ran `npm run test`; suite failed due to existing RNGProvider setup gaps in governance and conventional warfare hook tests.
+
+## 2025-11-01T07:05:00+00:00
+- Extended global promise break handling to distribute trust penalties alongside relationship reductions for every non-breaking nation.
+- Deferred rerunning `npm run test` because baseline suites remain red pending RNGProvider harness fixes noted previously.

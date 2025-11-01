@@ -320,17 +320,34 @@ export function handleBrokenPromises(
     // If global promise, apply penalty to all nations
     if (promise.terms.global) {
       for (const other of allNations) {
-        if (other.id !== nation.id && other.id !== toNationId) {
-          const penaltyMagnitude = Math.abs(promise.terms.relationshipPenalty ?? 0);
-          const globalPenalty = -Math.floor(penaltyMagnitude / 2); // Half penalty for others
+        if (other.id === nation.id) continue;
+        if (targetNation && other.id === targetNation.id) continue;
 
-          const updatedOther = modifyRelationship(
-            other,
+        let updatedOther = other;
+
+        if (promise.terms.trustPenalty) {
+          updatedOther = modifyTrust(
+            updatedOther,
+            nation.id,
+            -promise.terms.trustPenalty,
+            `Broke global promise: ${promise.type}`,
+            currentTurn
+          );
+        }
+
+        const penaltyMagnitude = Math.abs(promise.terms.relationshipPenalty ?? 0);
+        if (penaltyMagnitude > 0) {
+          const globalPenalty = -Math.floor(penaltyMagnitude / 2); // Half penalty for others
+          updatedOther = modifyRelationship(
+            updatedOther,
             nation.id,
             globalPenalty,
             `Broke global promise: ${promise.type}`,
             currentTurn
           );
+        }
+
+        if (updatedOther !== other) {
           affectedNations.push(updatedOther);
         }
       }
