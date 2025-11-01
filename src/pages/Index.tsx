@@ -136,7 +136,7 @@ import { initializeGrievancesAndClaims, updateGrievancesAndClaimsPerTurn } from 
 import { initializeSpecializedAlliances, updateAlliancesPerTurn } from '@/lib/specializedAlliancesUtils';
 import { updatePhase2PerTurn } from '@/lib/diplomacyPhase2Integration';
 import { initializeDiplomacyPhase3State } from '@/types/diplomacyPhase3';
-import { calculateDIPIncome, applyDIPIncome } from '@/lib/diplomaticCurrencyUtils';
+import { calculateDIPIncome, applyDIPIncome, initializeDIP } from '@/lib/diplomaticCurrencyUtils';
 import {
   launch as launchMissile,
   resolutionPhase as runResolutionPhase,
@@ -1522,6 +1522,11 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   initializeGrievancesAndClaims(nations);
   initializeSpecializedAlliances(nations);
 
+  // Initialize DIP (Diplomatic Influence Points) for all nations
+  nations.forEach((nation, index) => {
+    nations[index] = initializeDIP(nation);
+  });
+
   log('=== CUBAN MISSILE CRISIS - OCTOBER 1962 ===', 'critical');
   log(`Leader: ${playerLeaderName}`, 'success');
   log(`Doctrine: ${S.selectedDoctrine}`, 'success');
@@ -1718,6 +1723,11 @@ function initNations() {
   initializeGameTrustAndFavors(nations);
   initializeGrievancesAndClaims(nations);
   initializeSpecializedAlliances(nations);
+
+  // Initialize DIP (Diplomatic Influence Points) for all nations
+  nations.forEach((nation, index) => {
+    nations[index] = initializeDIP(nation);
+  });
 
   log('=== GAME START ===', 'success');
   log(`Leader: ${playerLeaderName}`, 'success');
