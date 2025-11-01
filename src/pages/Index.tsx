@@ -6830,12 +6830,11 @@ export default function NoradVector() {
     const player = getBuildContext('Diplomacy');
     if (!player) return;
 
-    // Check if we're in the enhanced Cuba Crisis scenario
-    if (S.scenario?.id === 'cubanCrisisEnhanced') {
-      setShowEnhancedDiplomacy(true);
-      return;
-    }
+    // Show enhanced diplomacy modal with Phase 3 features
+    setShowEnhancedDiplomacy(true);
+    return;
 
+    // Legacy diplomacy actions (kept for reference, unreachable)
     const treatyWith = (nation: Nation) => player.treaties?.[nation.id];
 
     const diplomacyActions: OperationAction[] = [
