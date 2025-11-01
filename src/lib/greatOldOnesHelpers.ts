@@ -6,7 +6,6 @@
 import type {
   GreatOldOnesState,
   Doctrine,
-  DOCTRINES,
   RegionalState,
   CosmicAlignment,
   CelestialEvent,
@@ -16,7 +15,7 @@ import type {
   CultistCell,
   RitualSite,
 } from '../types/greatOldOnes';
-import { calculateVeilStatus } from '../types/greatOldOnes';
+import { calculateVeilStatus, DOCTRINES } from '../types/greatOldOnes';
 
 // ============================================================================
 // INITIALIZATION
@@ -97,7 +96,7 @@ function initializeRegions(): RegionalState[] {
     cultistCells: 0,
     investigationHeat: 10,
     ritualSites: [],
-    culturalTraits: config.traits,
+    culturalTraits: [...config.traits],
     recentEvents: [],
   }));
 }

@@ -11,6 +11,7 @@ import type {
   GreatOldOnesState,
   Doctrine,
   RitualSite,
+  RitualSiteBiome,
 } from '../types/greatOldOnes';
 
 // ============================================================================

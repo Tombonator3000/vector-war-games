@@ -156,6 +156,8 @@ export function initializeAINationBioWarfare(nation: Nation, difficulty: string)
         heatResistance: 0,
         drugResistance: 0,
         geneticHardening: 0,
+        vaccineAcceleration: 0,
+        radiationMitigation: 0,
       },
       countriesInfected: [],
       deploymentHistory: [],

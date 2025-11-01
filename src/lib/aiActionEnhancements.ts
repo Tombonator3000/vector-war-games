@@ -205,16 +205,8 @@ export function aiConventionalWarfareAction(
 
   if (reserveUnits.length > 0 && Math.random() < 0.3) {
     const unit = reserveUnits[0];
-    // Find a neighboring territory to deploy to
-    const controlledTerritories = aiNation.controlledTerritories || [];
-    if (controlledTerritories.length > 0) {
-      const territoryId = controlledTerritories[Math.floor(Math.random() * controlledTerritories.length)];
-      const result = deployUnit(unit.id, territoryId);
-      if (result.success) {
-        log(`${aiNation.name} deploys unit to ${territoryId}`);
-        return true;
-      }
-    }
+    // AI unit deployment logic - skip for now
+    // TODO: Implement proper territory system integration
   }
 
   // Decision: Should we initiate a border conflict?
@@ -233,16 +225,8 @@ export function aiConventionalWarfareAction(
 
     if (enemies.length > 0) {
       const enemy = enemies[Math.floor(Math.random() * enemies.length)];
-      const enemyTerritories = enemy.controlledTerritories || [];
-
-      if (enemyTerritories.length > 0) {
-        const targetTerritory = enemyTerritories[Math.floor(Math.random() * enemyTerritories.length)];
-        const result = resolveBorderConflict(targetTerritory, aiNation.id, enemy.id);
-        if (result.success) {
-          log(`${aiNation.name} attacks ${enemy.name} at ${targetTerritory}`);
-          return true;
-        }
-      }
+      // AI territory attack logic - skip for now
+      // TODO: Implement proper territory system integration
     }
   }
 

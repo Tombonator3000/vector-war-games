@@ -382,3 +382,62 @@ export function updateGrievancesAndClaimsPerTurn(
   updated = ageClaims(updated, currentTurn);
   return updated;
 }
+
+/**
+ * Get color class for grievance severity
+ */
+export function getGrievanceSeverityColor(severity: GrievanceSeverity): string {
+  switch (severity) {
+    case 'minor':
+      return 'text-yellow-400';
+    case 'moderate':
+      return 'text-orange-400';
+    case 'major':
+      return 'text-red-400';
+    case 'severe':
+      return 'text-red-600';
+    default:
+      return 'text-gray-400';
+  }
+}
+
+/**
+ * Get color class for claim strength
+ */
+export function getClaimStrengthColor(strength: ClaimStrength): string {
+  switch (strength) {
+    case 'weak':
+      return 'text-yellow-400';
+    case 'moderate':
+      return 'text-orange-400';
+    case 'strong':
+      return 'text-red-400';
+    case 'absolute':
+      return 'text-red-600';
+    default:
+      return 'text-gray-400';
+  }
+}
+
+/**
+ * Get total grievance weight against a nation
+ */
+export function getTotalGrievanceWeight(nation: Nation, targetNationId: string): number {
+  const activeGrievances = getActiveGrievances(nation, targetNationId);
+  return activeGrievances.reduce((sum, g) => {
+    switch (g.severity) {
+      case 'minor': return sum + 1;
+      case 'moderate': return sum + 2;
+      case 'major': return sum + 3;
+      case 'severe': return sum + 4;
+      default: return sum;
+    }
+  }, 0);
+}
+
+/**
+ * Get total claim justification against a nation
+ */
+export function getTotalClaimJustification(nation: Nation, targetNationId: string): number {
+  return getClaimWarJustification(nation, targetNationId);
+}

@@ -312,7 +312,10 @@ export function breakPromise(
     p.id === promiseId ? { ...p, broken: true } : p
   );
 
-  let updatedNation = { ...nation, diplomaticPromises: promises };
+  let updatedNation = { 
+    ...nation, 
+    diplomaticPromises: promises 
+  };
 
   // Apply trust penalty if specified
   if (promise.terms.trustPenalty) {

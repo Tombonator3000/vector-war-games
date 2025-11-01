@@ -326,7 +326,7 @@ export function calculateBuildCityConsequences(
 
   const currentCities = playerNation.cities || 0;
   const requiredCities = 10;
-  const newProgress = Math.min(100, ((currentCities + 1) / requiredCities) * 100);
+  const newProgress = Math.min(100, safePercentage(currentCities + 1, requiredCities, 0));
 
   const immediate: Consequence[] = [
     {
@@ -358,10 +358,6 @@ export function calculateBuildCityConsequences(
       icon: '⚠️',
     },
   ];
-
-  const currentCities = playerNation.cities || 0;
-  const requiredCities = 10;
-  const newProgress = Math.min(100, safePercentage(currentCities + 1, requiredCities, 0));
 
   return {
     actionType: 'build_city',

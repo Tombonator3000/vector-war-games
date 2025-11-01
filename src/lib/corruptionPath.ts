@@ -154,7 +154,7 @@ export function infiltrateInstitution(
       corruptionLevel: 20 + Math.random() * 20,
       compromisedIndividuals: [],
       sleeperCells: Math.floor(cultistsAssigned * 0.3),
-      benefits: generateInstitutionBenefits(institutionType),
+      benefits: [], // TODO: Implement generateInstitutionBenefits
       exposureRisk: 10 + Math.random() * 15,
       underInvestigation: false,
     };

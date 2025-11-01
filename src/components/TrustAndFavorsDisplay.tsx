@@ -13,7 +13,8 @@ import {
   getTrustCategory,
   getTrustColor
 } from '@/types/trustAndFavors';
-import { getActivePromises, getAllPromisesSummary } from '@/lib/promiseActions';
+import { getActivePromises } from '@/lib/trustAndFavorsUtils';
+import { getAllPromisesSummary } from '@/lib/promiseActions';
 
 interface TrustAndFavorsDisplayProps {
   nation: Nation;
