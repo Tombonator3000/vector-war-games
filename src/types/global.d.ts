@@ -48,11 +48,11 @@ declare global {
      * Conventional warfare system
      */
     __conventionalWarfare?: {
-      templates?: any;
+      templates?: unknown;
       trainUnit?: (nationId: string, templateId: string) => void;
       deployUnit?: (unitId: string, territoryId: string) => void;
       resolveBorderConflict?: (attackerId: string, defenderId: string, territoryId: string) => void;
-      getUnitsForNation?: (nationId: string) => any[];
+      getUnitsForNation?: (nationId: string) => unknown[];
     };
 
     /**
@@ -65,7 +65,7 @@ declare global {
     /**
      * Cyber AI planning
      */
-    __cyberAiPlan?: (nationId: string) => any;
+    __cyberAiPlan?: (nationId: string) => unknown;
 
     /**
      * Advance cyber warfare turn
@@ -75,7 +75,7 @@ declare global {
     /**
      * Advance pandemic turn
      */
-    __pandemicAdvance?: (context: any) => any;
+    __pandemicAdvance?: (context: unknown) => unknown;
 
     /**
      * Trigger pandemic event

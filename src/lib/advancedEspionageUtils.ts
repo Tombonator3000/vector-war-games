@@ -542,10 +542,10 @@ export function calculateBlowback(
   reputationDamage: number;
   dipCost: number;
 } {
-  let relationshipDamage = -40;
-  let trustDamage = -30;
-  let reputationDamage = -25;
-  let dipCost = 50;
+  const relationshipDamage = -40;
+  const trustDamage = -30;
+  const reputationDamage = -25;
+  const dipCost = 50;
 
   // More severe operations cause worse blowback
   const severityMultiplier = {

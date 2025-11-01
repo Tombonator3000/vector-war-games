@@ -33,8 +33,8 @@ type PresenceListener = (presence: Record<string, MultiplayerPresenceState>) => 
 
 const listeners: Set<(event: TransportEvent) => void> = new Set();
 const presenceListeners: Set<PresenceListener> = new Set();
-let presence: Record<string, MultiplayerPresenceState> = {};
-let version = 0;
+const presence: Record<string, MultiplayerPresenceState> = {};
+const version = 0;
 type MockControls = {
   setPresence: (next: Record<string, MultiplayerPresenceState>) => void;
   emitEvent: (event: TransportEvent) => void;

@@ -6,18 +6,18 @@
  */
 
 import type { MapStyle } from '@/components/GlobeScene';
-import type { Nation } from '@/types/game';
+import type { Nation, GameState } from '@/types/game';
 
 export interface WorldRenderContext {
   ctx: CanvasRenderingContext2D | null;
-  worldCountries: any;
+  worldCountries: unknown;
   W: number;
   H: number;
   cam: { x: number; y: number; zoom: number; targetZoom: number };
   currentTheme: string;
   flatRealisticTexture: HTMLImageElement | null;
   flatRealisticTexturePromise: Promise<HTMLImageElement> | null;
-  THEME_SETTINGS: Record<string, any>;
+  THEME_SETTINGS: Record<string, unknown>;
   projectLocal: (lon: number, lat: number) => [number, number];
   preloadFlatRealisticTexture: () => void;
   getPoliticalFill: (index: number) => string;
@@ -25,7 +25,7 @@ export interface WorldRenderContext {
 
 export interface NationRenderContext extends WorldRenderContext {
   nations: Nation[];
-  S: any; // GameState
+  S: GameState;
   selectedTargetRefId: string | null;
 }
 
@@ -90,14 +90,14 @@ export function drawWorld(style: MapStyle, context: WorldRenderContext): void {
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
-    worldCountries.features.forEach((feature: any, index: number) => {
+    (worldCountries as { features: { geometry: { type: string; coordinates: number[][][] } }[] }).features.forEach((feature, index: number) => {
       ctx.beginPath();
       const coords = feature.geometry.coordinates;
 
       if (feature.geometry.type === 'Polygon') {
         drawWorldPath(coords[0], ctx, projectLocal);
       } else if (feature.geometry.type === 'MultiPolygon') {
-        coords.forEach((poly: any) => drawWorldPath(poly[0], ctx, projectLocal));
+        coords.forEach((poly: number[][]) => drawWorldPath(poly[0], ctx, projectLocal));
       }
 
       if (isPolitical) {

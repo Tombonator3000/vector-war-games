@@ -5,6 +5,8 @@
  * Inspired by XCOM's hit chances and Civ's "What if" tooltips
  */
 
+import type { Nation, GameState } from './game';
+
 export type ActionType =
   | 'launch_missile'
   | 'launch_bomber'
@@ -60,10 +62,10 @@ export interface ActionConsequences {
 }
 
 export interface ConsequenceCalculationContext {
-  playerNation: any;
-  targetNation?: any;
-  allNations: any[];
+  playerNation: Nation;
+  targetNation?: Nation;
+  allNations: Nation[];
   currentDefcon: number;
   currentTurn: number;
-  gameState: any;
+  gameState: GameState;
 }

@@ -1,5 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createElement, type ReactNode } from 'react';
+import { RNGProvider } from '@/contexts/RNGContext';
 
 import { useGovernance, type GovernanceNationRef } from '../useGovernance';
 
@@ -49,6 +51,9 @@ describe('useGovernance', () => {
     vi.restoreAllMocks();
   });
 
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(RNGProvider, { initialSeed: 42 }, children);
+
   const getNations = () => nations;
 
   const syncMetrics = (nationId: string, metrics: { morale: number; publicOpinion: number; electionTimer: number; cabinetApproval: number; }) => {
@@ -86,7 +91,7 @@ describe('useGovernance', () => {
         onMetricsSync: syncMetrics,
         onApplyDelta: applyDelta,
       }),
-    { initialProps: { currentTurn: turn } });
+    { initialProps: { currentTurn: turn }, wrapper });
 
     turn += 1;
     rerender({ currentTurn: turn });
@@ -105,7 +110,7 @@ describe('useGovernance', () => {
         onMetricsSync: syncMetrics,
         onApplyDelta: applyDelta,
       }),
-    { initialProps: { currentTurn: turn } });
+    { initialProps: { currentTurn: turn }, wrapper });
 
     await waitFor(() => {
       expect(nations[0].morale).toBeLessThan(70);
@@ -143,7 +148,7 @@ describe('useGovernance', () => {
         onApplyDelta: applyDelta,
         onAddNewsItem: newsSpy,
       }),
-    { initialProps: { currentTurn: turn } });
+    { initialProps: { currentTurn: turn }, wrapper });
 
     await waitFor(() => {
       expect(result.current.activeEvent).not.toBeNull();
@@ -178,7 +183,7 @@ describe('useGovernance', () => {
         onApplyDelta: applyDelta,
         onAddNewsItem: newsSpy,
       }),
-    { initialProps: { currentTurn: turn } });
+    { initialProps: { currentTurn: turn }, wrapper });
 
     await waitFor(() => {
       expect(result.current.activeEvent?.definition.id).toBe('election_cycle');
@@ -217,7 +222,7 @@ describe('useGovernance', () => {
         onApplyDelta: applyDelta,
         onAddNewsItem: newsSpy,
       }),
-    { initialProps: { currentTurn: turn } });
+    { initialProps: { currentTurn: turn }, wrapper });
 
     await waitFor(() => {
       expect(newsSpy).not.toHaveBeenCalled();
@@ -241,7 +246,7 @@ describe('useGovernance', () => {
         onApplyDelta: applyDelta,
         onAddNewsItem: newsSpy,
       }),
-    { initialProps: { currentTurn: turn } });
+    { initialProps: { currentTurn: turn }, wrapper });
 
     await waitFor(() => {
       expect(result.current.activeEvent?.definition.id).toBe('morale_crisis');

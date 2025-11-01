@@ -126,7 +126,7 @@ export class MultiplayerTransport {
         });
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
+       
       console.warn('[multiplayer] Failed to join Supabase channel, falling back to BroadcastChannel', error);
       this.setupBroadcastFallback(options.metadata);
     }

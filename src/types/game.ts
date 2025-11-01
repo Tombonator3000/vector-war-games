@@ -58,6 +58,48 @@ export interface NationCyberProfile {
   };
 }
 
+export interface Treaty {
+  truceTurns?: number;
+  alliance?: boolean;
+  [key: string]: unknown;
+}
+
+export interface Missile {
+  [key: string]: unknown;
+}
+
+export interface Bomber {
+  [key: string]: unknown;
+}
+
+export interface Submarine {
+  [key: string]: unknown;
+}
+
+export interface Explosion {
+  [key: string]: unknown;
+}
+
+export interface Particle {
+  [key: string]: unknown;
+}
+
+export interface RadiationZone {
+  [key: string]: unknown;
+}
+
+export interface EMPEffect {
+  [key: string]: unknown;
+}
+
+export interface Ring {
+  [key: string]: unknown;
+}
+
+export interface RefugeeCamp {
+  [key: string]: unknown;
+}
+
 export interface Nation {
   id: string;
   isPlayer: boolean;
@@ -81,7 +123,7 @@ export interface Nation {
   warheads: Record<number, number>;
   researched?: Record<string, boolean>;
   researchQueue?: { projectId: string; turnsRemaining: number; totalTurns: number } | null;
-  treaties?: Record<string, any>;
+  treaties?: Record<string, Treaty>;
   satellites?: Record<string, boolean>;
   bordersClosedTurns?: number;
   greenShiftTurns?: number;
@@ -187,15 +229,15 @@ export interface GameState {
   playerName?: string;
   difficulty?: string;
   scenario?: ScenarioConfig;
-  missiles: any[];
-  bombers: any[];
-  submarines?: any[];
-  explosions: any[];
-  particles: any[];
-  radiationZones: any[];
-  empEffects: any[];
-  rings: any[];
-  refugeeCamps?: any[];
+  missiles: Missile[];
+  bombers: Bomber[];
+  submarines?: Submarine[];
+  explosions: Explosion[];
+  particles: Particle[];
+  radiationZones: RadiationZone[];
+  empEffects: EMPEffect[];
+  rings: Ring[];
+  refugeeCamps?: RefugeeCamp[];
   screenShake: number;
   overlay?: { text: string; ttl: number } | null;
   fx?: number;

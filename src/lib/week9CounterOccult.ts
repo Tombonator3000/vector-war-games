@@ -35,7 +35,7 @@ export function progressResistanceResearch(
   const avgInvestigationHeat =
     state.regions.reduce((sum, r) => sum + r.investigationHeat, 0) / state.regions.length;
 
-  let baseProgress = avgInvestigationHeat / 10; // 0-10 progress per turn
+  const baseProgress = avgInvestigationHeat / 10; // 0-10 progress per turn
 
   // Bonuses
   const veilBonus = state.veil.integrity < 50 ? (50 - state.veil.integrity) / 5 : 0; // Lower veil = more research
