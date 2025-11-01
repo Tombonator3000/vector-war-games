@@ -7749,6 +7749,7 @@ export default function NoradVector() {
   const renderLeaderSelection = () => {
     // Filter leaders based on scenario - only historical leaders for Cuban Crisis
     const isCubanCrisisScenario = S.scenario?.id === 'cubanCrisis';
+    const isGreatOldOnesScenario = S.scenario?.id === 'greatOldOnes';
     const availableLeaders = isCubanCrisisScenario
       ? leaders.filter(l => l.isHistoricalCubanCrisis === true)
       : leaders;
@@ -7759,7 +7760,14 @@ export default function NoradVector() {
         leaders={availableLeaders}
         onSelectLeader={(leaderName) => {
           setSelectedLeader(leaderName);
-          setGamePhase('doctrine');
+          // For Great Old Ones, skip doctrine selection during setup
+          // The doctrine will be selected in-game via DoctrineSelectionPanel
+          if (isGreatOldOnesScenario) {
+            startGame(leaderName, undefined);
+            setGamePhase('game');
+          } else {
+            setGamePhase('doctrine');
+          }
         }}
         onBack={() => setGamePhase('intro')}
       />
