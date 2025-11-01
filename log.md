@@ -7,6 +7,18 @@
 
 ---
 
+### Session Y: 2025-11-01 - Map Style Harmonization
+
+#### Time: 10:29 UTC
+
+- Reviewed repository instructions and current map style implementation across Three.js and Cesium viewers.
+- Planned updates to ensure Cesium respects the full set of display mode options.
+
+#### Time: 10:33 UTC
+
+- Implemented Cesium imagery styling hooks for all map modes and wired mapStyle state into the Cesium viewer instance.
+- Updated the main game screen to pass the selected map style to Cesium so both renderers stay in sync.
+
 ### Session X: 2025-10-30 - Cesium Bootstrapping Fix
 
 #### Time: 17:05 UTC
