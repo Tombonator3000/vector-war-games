@@ -64,6 +64,15 @@ Implementing comprehensive tech tree expansions and fixes based on the COMPREHEN
 
 ## 📝 Session Log
 
+### Session 3: 2025-11-01 - Cuba flashpoint turn alignment
+
+#### Time: 13:21 UTC
+
+- Reviewed flashpoint scheduling instructions and repository guidelines.
+- Adjusted `useFlashpoints.ts` to offset player-visible turns before requesting enhanced Cuba events and documented the turn semantics inline.
+- Expanded `useFlashpoints.test.ts` to cover the EXCOMM briefing trigger and added a direct unit test for `getEnhancedFlashpointsForTurn`.
+- Ran `npm run test -- src/hooks/__tests__/useFlashpoints.test.ts` to verify the updated suite passes.
+
 ### Session 2: 2025-11-01 - Credits soundtrack path fix
 
 #### Time: 09:08 UTC
