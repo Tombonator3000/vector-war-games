@@ -9,7 +9,7 @@
  */
 
 import type { Nation } from '@/types/game';
-import type { SpecializedAllianceType } from '@/types/specializedAlliances';
+import type { AllianceType } from '@/types/specializedAlliances';
 import type { AIInitiatedNegotiation } from '@/types/negotiation';
 import { canAfford, pay } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat } from '@/lib/nationUtils';
@@ -70,7 +70,7 @@ export function aiFormAlliance(
   target: Nation,
   logFn: (msg: string, type?: string) => void,
   currentTurn?: number,
-  allianceType?: SpecializedAllianceType
+  allianceType?: AllianceType
 ): boolean {
   const cost = { production: 10, intel: 40 };
   if (!canAfford(actor, cost)) return false;

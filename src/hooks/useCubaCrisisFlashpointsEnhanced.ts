@@ -354,7 +354,7 @@ export const ENHANCED_EXCOMM_BRIEFING: FlashpointEvent = {
           turkey: -15,
         },
         createPromise: {
-          type: 'military',
+          type: 'no-attack',
           toNationId: 'soviet',
           description: 'Remove Jupiter missiles from Turkey within 6 months',
           isPublic: true, // Public promise
@@ -674,7 +674,7 @@ export const ENHANCED_TWO_TELEGRAMS: FlashpointEvent = {
           cuba: 15, // Castro relieved invasion is off
         },
         createPromise: {
-          type: 'military',
+          type: 'no-attack',
           toNationId: 'soviet',
           description: 'Publicly promise not to invade Cuba',
           isPublic: true,
@@ -773,7 +773,7 @@ export const ENHANCED_TWO_TELEGRAMS: FlashpointEvent = {
           nato: -25,
         },
         createPromise: {
-          type: 'military',
+          type: 'no-attack',
           toNationId: 'soviet',
           description: 'Remove missiles from both Cuba and Turkey',
           isPublic: true,

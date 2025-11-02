@@ -1794,7 +1794,7 @@ function initNations() {
   });
 
   // Initialize Agenda System (Phase 4): Assign unique leader agendas to AI nations
-  const playerNation = nations.find(n => n.isPlayer);
+  playerNation = nations.find(n => n.isPlayer) as LocalNation;
   if (playerNation) {
     const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
     nations.length = 0;

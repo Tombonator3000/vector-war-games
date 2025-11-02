@@ -16,8 +16,8 @@ import type {
   CounterIntelligence,
   Investigation,
   InvestigationFindings,
-  EspionageCosts,
 } from '@/types/diplomacyPhase3';
+import { EspionageCosts } from '@/types/diplomacyPhase3';
 import { generateId } from './idGenerator';
 
 /**
@@ -403,7 +403,7 @@ export function progressInvestigation(
       return {
         ...inv,
         progress: 100,
-        evidenceGathered: discoveries.evidence,
+        evidenceGathered: discoveries.evidence.length * 10, // Convert array length to score
         findings: discoveries,
       };
     }
