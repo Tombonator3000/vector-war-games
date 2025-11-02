@@ -133,6 +133,38 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   const gridLayerRef = useRef<ImageryLayer | null>(null);
   const politicalLayerRef = useRef<ImageryLayer | null>(null);
   const flatRealisticLayerRef = useRef<ImageryLayer | null>(null);
+  const cameraChangeCallbackRef = useRef<(() => void) | null>(null);
+  const cameraHeightHelperRef = useRef<(() => number) | null>(null);
+
+  const getCameraHeight = useCallback(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    const camera = viewer.camera;
+    const ellipsoid = viewer.scene.globe?.ellipsoid ?? Ellipsoid.WGS84;
+    const cartographic = Cartographic.fromCartesian(camera.position, ellipsoid);
+
+    if (cartographic) {
+      return cartographic.height;
+    }
+
+    return camera.position.magnitude();
+  }, []);
+
+  cameraHeightHelperRef.current = getCameraHeight;
+
+  const detachCameraChangeListener = useCallback(() => {
+    const viewer = viewerRef.current;
+    const callback = cameraChangeCallbackRef.current;
+
+    if (viewer && callback) {
+      viewer.camera.changed.removeEventListener(callback);
+    }
+
+    cameraChangeCallbackRef.current = null;
+  }, []);
 
   const applyDayNightSettings = useCallback((viewer: Viewer, enabled: boolean) => {
     viewer.scene.globe.enableLighting = enabled;
@@ -150,6 +182,12 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
     }
 
     const imageryLayers = viewer.imageryLayers;
+    const controller = viewer.scene.screenSpaceCameraController;
+    const isFlatRealisticStyle = style === 'flat-realistic';
+    const FLAT_REALISTIC_TRANSLATE_THRESHOLD = 4_500_000;
+
+    detachCameraChangeListener();
+    controller.enableTranslate = true;
 
     let baseLayer = baseLayerRef.current;
     if (!baseLayer && imageryLayers.length > 0) {
@@ -313,6 +351,21 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         );
         gridLayer.alpha = 0.55;
         gridLayerRef.current = gridLayer;
+
+        const updateTranslateState = () => {
+          const helper = cameraHeightHelperRef.current;
+          const height = helper ? helper() : Number.POSITIVE_INFINITY;
+          const shouldEnableTranslate = height <= FLAT_REALISTIC_TRANSLATE_THRESHOLD;
+
+          if (controller.enableTranslate !== shouldEnableTranslate) {
+            controller.enableTranslate = shouldEnableTranslate;
+            viewer.scene.requestRender();
+          }
+        };
+
+        cameraChangeCallbackRef.current = updateTranslateState;
+        viewer.camera.changed.addEventListener(updateTranslateState);
+        updateTranslateState();
         break;
       }
       default: {
@@ -324,8 +377,12 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       }
     }
 
+    if (!isFlatRealisticStyle) {
+      controller.enableTranslate = true;
+    }
+
     viewer.scene.requestRender();
-  }, [applyDayNightSettings]);
+  }, [applyDayNightSettings, detachCameraChangeListener]);
 
   // Initialize Cesium Viewer
   useEffect(() => {
@@ -457,12 +514,13 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       if (handlerRef.current) {
         handlerRef.current.destroy();
       }
+      detachCameraChangeListener();
       if (viewerRef.current) {
         viewerRef.current.destroy();
         viewerRef.current = null;
       }
     };
-  }, [applyDayNightSettings, applyMapStyle, enableDayNight, enableTerrain, mapStyle]);
+  }, [applyDayNightSettings, applyMapStyle, detachCameraChangeListener, enableDayNight, enableTerrain, mapStyle]);
 
   useEffect(() => {
     enableDayNightRef.current = enableDayNight;

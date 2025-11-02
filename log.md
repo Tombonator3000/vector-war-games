@@ -872,3 +872,5 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 ## 2025-11-02T12:15:17+00:00
 - Cleared cyan border accents from the bottom command bar in `src/pages/Index.tsx` while keeping its flex layout utilities intact.
 - Removed the cyan border styling from `src/components/NewsTicker.tsx` to keep the ticker fully transparent.
+## 2025-11-02T12:26:24+00:00
+- Added camera translate gating for the `flat-realistic` map style in `src/components/CesiumViewer.tsx`, wiring a height-sensitive camera change listener and ensuring cleanup when styles change or the viewer unmounts.
