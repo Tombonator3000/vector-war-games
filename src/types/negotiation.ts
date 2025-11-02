@@ -7,7 +7,7 @@
  * Vector War Games' existing trust/favor/grievance mechanics.
  */
 
-import type { Nation } from './game';
+import type { Nation, GameState } from './game';
 import type { Grievance } from './grievancesAndClaims';
 import type { SpecializedAlliance } from './specializedAlliances';
 
@@ -207,7 +207,7 @@ export interface Agenda {
   description: string;                  // Description of the agenda
   isRevealed: boolean;                  // Whether player knows about it
   modifiers: AgendaModifier[];          // Relationship modifiers
-  checkCondition?: (player: Nation, ai: Nation, gameState: any) => boolean;
+  checkCondition?: (player: Nation, ai: Nation, gameState: GameState) => boolean;
 }
 
 /**
@@ -361,7 +361,7 @@ export interface ItemValueContext {
   relationship: number;                 // Relationship between parties
   trust: number;                        // Trust level
   threats: Record<string, number>;      // Threat levels
-  gameState: any;                       // Full game state
+  gameState: GameState;                 // Full game state
 }
 
 /**

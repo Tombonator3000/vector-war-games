@@ -5,7 +5,7 @@
  * Agendas are personality traits that affect AI diplomatic decisions.
  */
 
-import type { Nation } from '@/types/game';
+import type { Nation, GameState } from '@/types/game';
 import type { Agenda } from '@/types/negotiation';
 import {
   getPrimaryAgendas,
@@ -233,9 +233,9 @@ export function initializeNationAgendas(
 export function checkAgendaViolations(
   playerNation: Nation,
   aiNation: Nation,
-  gameState: any
+  gameState: GameState
 ): Agenda[] {
-  const agendas: Agenda[] = (aiNation as any).agendas || [];
+  const agendas: Agenda[] = aiNation.agendas || [];
   const violations: Agenda[] = [];
 
   for (const agenda of agendas) {
@@ -260,9 +260,9 @@ export function checkAgendaViolations(
 export function calculateAgendaModifier(
   playerNation: Nation,
   aiNation: Nation,
-  gameState: any
+  gameState: GameState
 ): number {
-  const agendas: Agenda[] = (aiNation as any).agendas || [];
+  const agendas: Agenda[] = aiNation.agendas || [];
   let totalModifier = 0;
 
   for (const agenda of agendas) {
@@ -283,9 +283,9 @@ export function calculateAgendaModifier(
 export function calculateAgendaNegotiationBonus(
   playerNation: Nation,
   aiNation: Nation,
-  gameState: any
+  gameState: GameState
 ): number {
-  const agendas: Agenda[] = (aiNation as any).agendas || [];
+  const agendas: Agenda[] = aiNation.agendas || [];
   let totalBonus = 0;
 
   for (const agenda of agendas) {
@@ -306,9 +306,9 @@ export function calculateAgendaNegotiationBonus(
 export function getAgendaFeedback(
   playerNation: Nation,
   aiNation: Nation,
-  gameState: any
+  gameState: GameState
 ): string[] {
-  const agendas: Agenda[] = (aiNation as any).agendas || [];
+  const agendas: Agenda[] = aiNation.agendas || [];
   const feedback: string[] = [];
 
   for (const agenda of agendas) {
@@ -342,7 +342,7 @@ export function shouldRevealHiddenAgenda(
   const trust = getTrust(aiNation, playerNation.id);
 
   // Get first contact turn (if tracked)
-  const firstContactTurn = (aiNation as any).firstContactTurn?.[playerNation.id] || currentTurn;
+  const firstContactTurn = aiNation.firstContactTurn?.[playerNation.id] || currentTurn;
   const turnsKnown = currentTurn - firstContactTurn;
 
   // Revelation conditions:
@@ -358,7 +358,7 @@ export function shouldRevealHiddenAgenda(
   }
 
   // 3. Embassy established (future feature)
-  if ((aiNation as any).hasEmbassyWith?.[playerNation.id]) {
+  if (aiNation.hasEmbassyWith?.[playerNation.id]) {
     return true;
   }
 
@@ -382,7 +382,7 @@ export function revealHiddenAgenda(
     return { nation: aiNation, revealed: null };
   }
 
-  const agendas: Agenda[] = (aiNation as any).agendas || [];
+  const agendas: Agenda[] = aiNation.agendas || [];
   const hiddenAgenda = agendas.find(a => !a.isRevealed);
 
   if (!hiddenAgenda) {
@@ -446,14 +446,14 @@ export function processAgendaRevelations(
  * Get all agendas for a nation
  */
 export function getNationAgendas(nation: Nation): Agenda[] {
-  return (nation as any).agendas || [];
+  return nation.agendas || [];
 }
 
 /**
  * Get only revealed agendas for a nation
  */
 export function getRevealedAgendas(nation: Nation): Agenda[] {
-  const agendas: Agenda[] = (nation as any).agendas || [];
+  const agendas: Agenda[] = nation.agendas || [];
   return agendas.filter(a => a.isRevealed);
 }
 
@@ -461,7 +461,7 @@ export function getRevealedAgendas(nation: Nation): Agenda[] {
  * Get primary agenda for a nation
  */
 export function getPrimaryAgenda(nation: Nation): Agenda | null {
-  const agendas: Agenda[] = (nation as any).agendas || [];
+  const agendas: Agenda[] = nation.agendas || [];
   return agendas.find(a => a.type === 'primary') || null;
 }
 
@@ -469,7 +469,7 @@ export function getPrimaryAgenda(nation: Nation): Agenda | null {
  * Get hidden agenda for a nation (may not be revealed to player)
  */
 export function getHiddenAgenda(nation: Nation): Agenda | null {
-  const agendas: Agenda[] = (nation as any).agendas || [];
+  const agendas: Agenda[] = nation.agendas || [];
   return agendas.find(a => a.type === 'hidden') || null;
 }
 
@@ -477,7 +477,7 @@ export function getHiddenAgenda(nation: Nation): Agenda | null {
  * Check if a nation has a specific agenda
  */
 export function hasAgenda(nation: Nation, agendaId: string): boolean {
-  const agendas: Agenda[] = (nation as any).agendas || [];
+  const agendas: Agenda[] = nation.agendas || [];
   return agendas.some(a => a.id === agendaId);
 }
 
@@ -485,7 +485,7 @@ export function hasAgenda(nation: Nation, agendaId: string): boolean {
  * Check if a specific agenda is revealed to the player
  */
 export function isAgendaRevealed(nation: Nation, agendaId: string): boolean {
-  const agendas: Agenda[] = (nation as any).agendas || [];
+  const agendas: Agenda[] = nation.agendas || [];
   const agenda = agendas.find(a => a.id === agendaId);
   return agenda?.isRevealed || false;
 }
@@ -516,9 +516,9 @@ export function getAgendaDescription(nation: Nation, revealedOnly: boolean = tru
 export function calculateAgendaCompatibility(
   playerNation: Nation,
   aiNation: Nation,
-  gameState: any
+  gameState: GameState
 ): number {
-  const agendas: Agenda[] = (aiNation as any).agendas || [];
+  const agendas: Agenda[] = aiNation.agendas || [];
   let compatibility = 0;
   let count = 0;
 
