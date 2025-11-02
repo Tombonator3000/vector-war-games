@@ -13,6 +13,7 @@ import { X, Handshake, Gift, Scale, Shield, MessageCircle, AlertTriangle, Star }
 import type { Nation } from '@/types/game';
 import type { DiplomacyPhase3State } from '@/types/diplomacyPhase3';
 import { DiplomacyPhase3Display } from './DiplomacyPhase3Display';
+import { TrustAndFavorsDisplay } from '@/components/TrustAndFavorsDisplay';
 
 interface EnhancedDiplomacyModalProps {
   player: Nation;
@@ -246,6 +247,12 @@ export function EnhancedDiplomacyModal({
           {/* Right Content - Actions */}
           <div className="flex-1 p-6 overflow-y-auto">
             <div className="space-y-4">
+              {selectedTarget && (
+                <div className="rounded-lg border border-cyan-500/30 bg-slate-900/40 p-3">
+                  <TrustAndFavorsDisplay nation={player} targetNation={selectedTarget} />
+                </div>
+              )}
+
               {phase3State && (
                 <div className="rounded-lg border border-cyan-500/30 bg-slate-900/40 p-3">
                   <DiplomacyPhase3Display
