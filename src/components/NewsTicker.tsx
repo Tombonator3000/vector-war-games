@@ -72,7 +72,7 @@ export function NewsTicker({ items, speed = 50, className }: NewsTickerProps) {
   });
 
   const containerClasses = [
-    'w-full bg-transparent border-t border-cyan-500/40 overflow-hidden'
+    'w-full bg-transparent overflow-hidden'
   ];
 
   if (className) {
