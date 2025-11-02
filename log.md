@@ -847,3 +847,13 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-11-02T09:06:02+00:00
 - Added an advanced diplomacy lock notice in `src/components/EnhancedDiplomacyModal.tsx` that replaces the phase three dashboard when the state or enable flag is missing so players understand they must progress eras or objectives to reveal those metrics.
+## 2025-11-02T09:47:43+00:00
+- Reviewed task requirements to extend era features, guard metadata lookups, and add regression coverage for the Great Old Ones scenario.
+## 2025-11-02T09:47:54+00:00
+- Extended `GameFeature` types and metadata with orbital, AI, economic, and quantum late-era unlocks in `src/types/era.ts`.
+## 2025-11-02T09:48:07+00:00
+- Hardened `useGameEra` feature lookups to skip undefined metadata before sorting or returning unlock info.
+## 2025-11-02T09:48:23+00:00
+- Added a Vitest regression to confirm Great Old Ones era overrides keep `getLockedFeatures` and `getNewlyUnlockedFeatures` safe.
+## 2025-11-02T09:48:31+00:00
+- Ran `npm run test -- --run src/hooks/__tests__/useGameEra.test.ts` to verify the new regression passes.
