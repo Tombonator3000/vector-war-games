@@ -9,6 +9,43 @@
 
 export type Doctrine = 'domination' | 'corruption' | 'convergence';
 
+/**
+ * Hybrid Doctrine - Combines two doctrines with 60/40 split
+ * Primary doctrine provides 60% of bonuses, Secondary provides 40%
+ */
+export interface HybridDoctrine {
+  primary: Doctrine;
+  secondary: Doctrine;
+  primaryWeight: number;   // Default: 0.6
+  secondaryWeight: number; // Default: 0.4
+  hybridName: string;      // Display name for this combination
+}
+
+/**
+ * Doctrine Drift - Tracks how player actions shift doctrine over time
+ */
+export interface DoctrineDrift {
+  /** Current drift values for each doctrine (0-100) */
+  driftValues: Record<Doctrine, number>;
+
+  /** Threshold at which drift forces doctrine change (default: 75) */
+  driftThreshold: number;
+
+  /** Is drift system active? */
+  active: boolean;
+
+  /** Recent actions affecting drift */
+  recentActions: DriftAction[];
+}
+
+export interface DriftAction {
+  turn: number;
+  actionType: 'summoning' | 'infiltration' | 'cultural' | 'terror' | 'diplomacy';
+  doctrineAffinity: Doctrine;
+  driftAmount: number;
+  description: string;
+}
+
 export interface DoctrineConfig {
   id: Doctrine;
   name: string;
@@ -106,6 +143,27 @@ export const DOCTRINES: Record<Doctrine, DoctrineConfig> = {
     ],
   },
 };
+
+/**
+ * Hybrid Doctrine Name Combinations
+ * Each hybrid has a unique name reflecting the combination
+ */
+export const HYBRID_DOCTRINE_NAMES: Record<string, string> = {
+  'domination-corruption': 'Path of Dark Dominion',
+  'domination-convergence': 'Path of Guided Ascension',
+  'corruption-domination': 'Path of Insidious Terror',
+  'corruption-convergence': 'Path of Velvet Glove',
+  'convergence-domination': 'Path of Enlightened Power',
+  'convergence-corruption': 'Path of Gentle Subversion',
+};
+
+/**
+ * Get name for a hybrid doctrine combination
+ */
+export function getHybridDoctrineName(primary: Doctrine, secondary: Doctrine): string {
+  const key = `${primary}-${secondary}`;
+  return HYBRID_DOCTRINE_NAMES[key] || `Hybrid: ${primary}/${secondary}`;
+}
 
 // ============================================================================
 // RESOURCE SYSTEM
@@ -551,8 +609,14 @@ export interface GreatOldOnesState {
   /** Is this campaign mode active? */
   active: boolean;
 
-  /** Selected doctrine */
+  /** Selected doctrine (single doctrine) */
   doctrine: Doctrine | null;
+
+  /** Hybrid doctrine configuration (if hybrid is chosen) */
+  hybridDoctrine?: HybridDoctrine;
+
+  /** Doctrine drift tracking */
+  doctrineDrift?: DoctrineDrift;
 
   /** Has Council Schism been used to change doctrine? (can only be done once) */
   councilSchismUsed?: boolean;
