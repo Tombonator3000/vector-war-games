@@ -37,13 +37,7 @@ export function CreditsDialog({ open, onOpenChange }: CreditsDialogProps) {
     []
   );
 
-  const soundtrackSrc = useMemo(() => {
-    const base = import.meta.env.BASE_URL.endsWith("/")
-      ? import.meta.env.BASE_URL
-      : `${import.meta.env.BASE_URL}/`;
-
-    return `${base}${encodeURI("Muzak/Run Run.mp3")}`;
-  }, []);
+  const soundtrackSrc = "/Muzak/Run Run.mp3";
 
   useEffect(() => {
     const audio = audioRef.current;
