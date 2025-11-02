@@ -8644,7 +8644,7 @@ export default function NoradVector() {
                     })
                   )}
                 </div>
-                <div className="border-t border-cyan-500/30 px-4 py-3 text-sm text-gray-400">
+                <div className="px-4 py-3 text-sm text-gray-400">
                   {selectedTarget ? (
                     <div className="space-y-1">
                       <p>
@@ -8673,7 +8673,7 @@ export default function NoradVector() {
                 items={newsItems}
                 className="pointer-events-auto touch-auto"
               />
-              <div className="h-16 sm:h-20 border-t border-cyan-500/30 pointer-events-auto touch-auto bg-transparent">
+              <div className="h-16 sm:h-20 pointer-events-auto touch-auto bg-transparent">
                 <div className="h-full flex items-center justify-center gap-1 px-4">
                   <Button
                     onClick={handleBuild}
