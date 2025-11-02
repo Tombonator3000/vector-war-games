@@ -1190,3 +1190,71 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Creates satisfying feedback loop (watching bars fill up)
 - Adds replay value (different victory paths)
 - Replaces placeholder "coming soon" text with full implementation
+
+---
+
+## 📝 FASE 3 - Avanserte Features
+
+### 2025-11-02T15:45:00Z - FASE 3.3: Reduce DIP Costs and Increase Generation ✅
+**Problem:** Early-game diplomacy was expensive and slow, limiting player options
+**Files Modified:**
+- `/home/user/vector-war-games/src/types/diplomacyPhase3.ts:55,628` (DIP generation and starting amount)
+- `/home/user/vector-war-games/src/components/EnhancedDiplomacyModal.tsx:64,72` (action costs)
+
+**Solution Implemented:**
+
+**1. Increased Starting DIP:**
+- Changed from 50 → 75 DIP at game start
+- Players can now afford 1-2 diplomatic actions immediately
+- Enables early relationship building
+
+**2. Increased DIP Generation:**
+- BASE_PER_TURN: 5 → 7 DIP per turn
+- 40% increase in base income
+- Faster accumulation for sustained diplomatic activity
+- Compounds with alliance bonuses and peace dividends
+
+**3. Reduced Action Costs:**
+- **Build Trust:** 15 → 10 DIP (-33%)
+- **Grant Favor:** 20 → 12 DIP (-40%)
+- **Call In Favor:** 5 DIP (unchanged, already affordable)
+
+**Before vs After Comparison:**
+
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| Starting DIP | 50 | 75 | +50% |
+| DIP per turn | 5 | 7 | +40% |
+| Build Trust cost | 15 | 10 | -33% |
+| Grant Favor cost | 20 | 12 | -40% |
+| Actions at start | 2-3 | 5-7 | +100% |
+| Turn 10 total | 100 DIP | 145 DIP | +45% |
+
+**Impact on Gameplay:**
+
+**Early Game (Turns 1-10):**
+- Players can afford 5-7 actions instead of 2-3
+- Enables meaningful relationship building from start
+- No longer "waiting" for diplomacy to be affordable
+
+**Mid Game (Turns 11-30):**
+- Steady income supports active diplomatic strategy
+- Can maintain multiple relationships simultaneously
+- Trust and favor systems become viable
+
+**Late Game (Turns 31+):**
+- With capacity of 200 DIP and 7/turn income
+- Can save up for expensive council actions (30-50 DIP)
+- Diplomatic gameplay remains relevant throughout
+
+**Player Experience:**
+- Removes frustrating early-game scarcity
+- Diplomacy feels rewarding, not punishing
+- Encourages experimentation with diplomatic actions
+- Better pacing for trust-building mechanics
+
+**Balance Considerations:**
+- Council actions (30-50 DIP) still require saving
+- Not so cheap that diplomacy becomes trivial
+- Maintains strategic resource management
+- Late-game actions remain expensive relative to income

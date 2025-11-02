@@ -52,7 +52,7 @@ export interface DIPTransaction {
 
 /** Ways to earn DIP */
 export const DIPEarning = {
-  BASE_PER_TURN: 5,
+  BASE_PER_TURN: 7,  // Increased from 5 to make early-game diplomacy more accessible (FASE 3.3)
   HIGH_LEVEL_ALLIANCE: 2,       // Per alliance at level 3+
   COUNCIL_MEMBER: 10,
   SUCCESSFUL_MEDIATION: 15,
@@ -625,7 +625,7 @@ export function initializeDiplomacyPhase3State(currentTurn: number = 0): Diploma
  */
 export function initializeNationDiplomaticInfluence(): DiplomaticInfluence {
   return {
-    points: 50,  // Starting DIP
+    points: 75,  // Starting DIP (increased from 50 to enable early-game diplomacy - FASE 3.3)
     capacity: 200,
     perTurnIncome: {
       baseIncome: DIPEarning.BASE_PER_TURN,
