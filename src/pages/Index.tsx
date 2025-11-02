@@ -8586,7 +8586,10 @@ export default function NoradVector() {
           ) : null}
 
           {/* Minimal bottom utility stack */}
-          <div className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50">
+          <div
+            className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          >
             <div className="flex flex-col gap-1">
               <NewsTicker
                 items={newsItems}
