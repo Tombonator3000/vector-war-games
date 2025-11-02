@@ -822,8 +822,6 @@ body {
   min-height: 100vh;
   width: 100%;
   padding: 0;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
   background:
     radial-gradient(circle at 50% 0%, rgba(0, 176, 255, 0.12), transparent 55%),
     radial-gradient(circle at 50% 100%, rgba(0, 255, 213, 0.08), transparent 60%),
@@ -931,17 +929,14 @@ body.theme-synthwave .command-interface__scanlines {
 }
 
 .map-shell {
-  position: relative;
+  position: fixed;
+  inset: 0;
   z-index: 1;
   display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
   align-items: stretch;
   justify-content: center;
   width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
+  height: 100vh;
   margin: 0;
 }
 
@@ -2289,7 +2284,7 @@ body.theme-synthwave .command-button--neutral:hover {
   }
 
   .map-shell {
-    max-height: calc(100vh - clamp(2rem, 6vh, 4rem));
+    height: 100vh;
   }
 
   .hud {
@@ -2299,7 +2294,7 @@ body.theme-synthwave .command-button--neutral:hover {
 
 @media (max-aspect-ratio: 16/9) {
   .map-shell {
-    height: calc(100vh - clamp(3rem, 10vh, 6rem));
+    height: 100vh;
   }
 }
 

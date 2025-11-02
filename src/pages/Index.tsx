@@ -9420,7 +9420,7 @@ export default function NoradVector() {
             </div>
           ) : null}
 
-          {/* Minimal bottom utility stack */}
+          {/* Minimal bottom utility stack - floating buttons */}
           <div
             className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50"
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
@@ -9430,7 +9430,7 @@ export default function NoradVector() {
                 items={newsItems}
                 className="pointer-events-auto touch-auto"
               />
-              <div className="h-16 sm:h-20 pointer-events-auto touch-auto bg-transparent">
+              <div className="h-16 sm:h-20 pointer-events-auto touch-auto">
                 <div className="h-full flex items-center justify-center gap-1 px-4">
                   <Button
                     onClick={handleBuild}
