@@ -68,6 +68,7 @@ import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
 import { LeaderContactModal } from '@/components/LeaderContactModal';
+import { LeadersScreen } from '@/components/LeadersScreen';
 import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { EndGameScreen } from '@/components/EndGameScreen';
@@ -4720,6 +4721,9 @@ export default function NoradVector() {
   const [leaderContactTargetNationId, setLeaderContactTargetNationId] = useState<string | null>(null);
   const [activeNegotiations, setActiveNegotiations] = useState<NegotiationState[]>([]);
 
+  // Leaders Screen state (Civilization-style leader overview)
+  const [leadersScreenOpen, setLeadersScreenOpen] = useState(false);
+
   // Agenda Revelation Notification state (Phase 4)
   const [agendaRevelationOpen, setAgendaRevelationOpen] = useState(false);
   const [agendaRevelationData, setAgendaRevelationData] = useState<{
@@ -8911,27 +8915,46 @@ export default function NoradVector() {
         if (isDragging) return;
         if (S.gameOver) return;
         const player = PlayerManager.get();
-        if (!player || !player.satellites) return;
-        
+        if (!player) return;
+
         const rect = canvas.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
-        
+
         for (const n of nations) {
           if (n.isPlayer) continue;
-          if (!player.satellites[n.id]) continue;
           if (n.population <= 0) continue;
           const [nx, ny] = projectLocal(n.lon, n.lat);
           const dist = Math.hypot(mx - nx, my - ny);
-          
+
           if (dist < 20) {
+            // Shift+Click or Ctrl+Click to contact leader directly (Civilization-style)
+            if (e.shiftKey || e.ctrlKey) {
+              AudioSys.playSFX('click');
+              handleContactLeader(n.id);
+              break;
+            }
+
+            // Regular click shows intel if satellite coverage exists
+            if (!player.satellites || !player.satellites[n.id]) {
+              // No satellite coverage - offer to contact leader instead
+              const lines = [];
+              lines.push(`<strong>${n.name}</strong>`);
+              lines.push(`<span style="color: #ffa500;">No satellite coverage</span>`);
+              lines.push(`<br><em>Tip: Hold Shift and click to contact their leader</em>`);
+              const info = `<div style="margin:8px 0;padding:6px;border:1px solid rgba(124,255,107,.3);">${lines.join('<br>')}</div>`;
+              openModal(`${n.name}`, info);
+              break;
+            }
+
             let intelHtml = `<div style="margin:8px 0;padding:6px;border:1px solid rgba(124,255,107,.3);">`;
             intelHtml += `<strong>${n.name}</strong><br>`;
             intelHtml += `Missiles: ${n.missiles} | Defense: ${n.defense}<br>`;
             intelHtml += `Warheads: ${Object.entries(n.warheads || {}).map(([k, v]) => `${k}MT×${v}`).join(', ')}<br>`;
             intelHtml += `Production: ${Math.floor(n.production || 0)} | Uranium: ${Math.floor(n.uranium || 0)} | Intel: ${Math.floor(n.intel || 0)}<br>`;
             intelHtml += `Migrants (This Turn / Total): ${(n.migrantsThisTurn || 0)} / ${(n.migrantsTotal || 0)}<br>`;
-            intelHtml += `Population: ${Math.floor(n.population)}M | Instability: ${Math.floor(n.instability || 0)}`;
+            intelHtml += `Population: ${Math.floor(n.population)}M | Instability: ${Math.floor(n.instability || 0)}<br>`;
+            intelHtml += `<br><em style="color: #7cff6b;">💡 Shift+Click to contact leader</em>`;
             intelHtml += `</div>`;
             openModal(`${n.name} INTEL`, intelHtml);
             break;
@@ -9015,13 +9038,12 @@ export default function NoradVector() {
           case '4': handleCulture(); break;
           case '5': handleImmigration(); break;
           case '6': handleDiplomacy(); break;
-          case 'l': // 'L' for Leader - open leader contact modal with first AI nation
+          case 'l': // 'L' for Leaders - open leaders screen (Civilization-style)
           case 'L':
             if (S.phase === 'PLAYER') {
-              const firstAI = nations.find(n => !n.isPlayer && n.population > 0);
-              if (firstAI) {
-                handleContactLeader(firstAI.id);
-              }
+              e.preventDefault();
+              AudioSys.playSFX('click');
+              setLeadersScreenOpen(true);
             }
             break;
           case '7':
@@ -10249,6 +10271,7 @@ export default function NoradVector() {
             phase3State={diplomacyPhase3State ?? undefined}
             onClose={() => setShowEnhancedDiplomacy(false)}
             onAction={handleEnhancedDiplomacyAction}
+            onOpenLeadersScreen={() => setLeadersScreenOpen(true)}
           />
         );
       })()}
@@ -10284,6 +10307,22 @@ export default function NoradVector() {
                 description: `You discussed relations with ${targetNation.name}`,
               });
             }}
+          />
+        );
+      })()}
+
+      {/* Leaders Screen (Civilization-style leader overview) */}
+      {leadersScreenOpen && (() => {
+        const player = PlayerManager.get();
+        if (!player) return null;
+
+        return (
+          <LeadersScreen
+            open={leadersScreenOpen}
+            onClose={() => setLeadersScreenOpen(false)}
+            playerNation={player}
+            allNations={nations}
+            onContactLeader={handleContactLeader}
           />
         );
       })()}
