@@ -25,7 +25,8 @@ import {
   Lock,
   Unlock,
 } from 'lucide-react';
-import type { GreatOldOnesState, Doctrine } from '@/types/greatOldOnes';
+import type { GreatOldOnesState, Doctrine, OccultVictoryType } from '@/types/greatOldOnes';
+import { OCCULT_VICTORY_CONDITIONS } from '@/types/greatOldOnes';
 import type { Phase2State } from '@/lib/phase2Integration';
 import { checkPhase2UnlockConditions } from '@/lib/phase2Integration';
 
@@ -744,16 +745,184 @@ const ProgressView: React.FC<{ state: GreatOldOnesState; phase2State: Phase2Stat
 
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
-          <CardTitle className="text-lg text-slate-200">Victory Progress</CardTitle>
+          <CardTitle className="text-lg text-slate-200 flex items-center gap-2">
+            <Target className="w-5 h-5" />
+            Victory Progress
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-slate-400 text-sm mb-4">
             Track your progress toward doctrine-specific victory conditions
           </p>
-          {/* Victory conditions would be displayed here */}
-          <div className="text-xs text-slate-500">
-            Victory conditions tracking coming soon...
-          </div>
+
+          {(() => {
+            // Get victory conditions for current doctrine
+            const availableVictories = Object.values(OCCULT_VICTORY_CONDITIONS).filter(
+              vc => vc.doctrinesAllowed.includes(doctrine!)
+            );
+
+            if (availableVictories.length === 0) {
+              return (
+                <div className="text-xs text-slate-500">
+                  No victory conditions available for this doctrine
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                {availableVictories.map(victory => {
+                  const conditions = victory.conditions;
+                  let totalProgress = 0;
+                  let totalConditions = 0;
+                  const conditionDetails: Array<{ label: string; current: number; required: number; progress: number }> = [];
+
+                  // Corruption Threshold
+                  if (conditions.corruptionThreshold !== undefined) {
+                    totalConditions++;
+                    const regions = state.regions || [];
+                    const avgCorruption = regions.length > 0
+                      ? regions.reduce((sum, r) => sum + (r.corruptionLevel || 0), 0) / regions.length
+                      : 0;
+                    const progress = Math.min(100, (avgCorruption / conditions.corruptionThreshold) * 100);
+                    totalProgress += progress;
+                    conditionDetails.push({
+                      label: 'Corruption Level',
+                      current: Math.round(avgCorruption),
+                      required: conditions.corruptionThreshold,
+                      progress,
+                    });
+                  }
+
+                  // Entities Awakened
+                  if (conditions.entitiesAwakened !== undefined) {
+                    totalConditions++;
+                    const awakened = (state.summonedEntities || []).filter(e => e.tier === 'great_old_one').length;
+                    const progress = Math.min(100, (awakened / conditions.entitiesAwakened) * 100);
+                    totalProgress += progress;
+                    conditionDetails.push({
+                      label: 'Great Old Ones Awakened',
+                      current: awakened,
+                      required: conditions.entitiesAwakened,
+                      progress,
+                    });
+                  }
+
+                  // Regions Controlled
+                  if (conditions.regionsControlled !== undefined) {
+                    totalConditions++;
+                    const controlled = (state.regions || []).filter(r => r.infiltrationLevel >= 80).length;
+                    const progress = Math.min(100, (controlled / conditions.regionsControlled) * 100);
+                    totalProgress += progress;
+                    conditionDetails.push({
+                      label: 'Regions Controlled',
+                      current: controlled,
+                      required: conditions.regionsControlled,
+                      progress,
+                    });
+                  }
+
+                  // Voluntary Conversion Rate
+                  if (conditions.voluntaryConversionRate !== undefined) {
+                    totalConditions++;
+                    const regions = state.regions || [];
+                    const totalPop = regions.reduce((sum, r) => sum + (r.population || 0), 0);
+                    const convertedPop = regions.reduce((sum, r) => sum + (r.voluntaryConverts || 0), 0);
+                    const conversionRate = totalPop > 0 ? (convertedPop / totalPop) * 100 : 0;
+                    const progress = Math.min(100, (conversionRate / conditions.voluntaryConversionRate) * 100);
+                    totalProgress += progress;
+                    conditionDetails.push({
+                      label: 'Voluntary Conversion Rate',
+                      current: Math.round(conversionRate),
+                      required: conditions.voluntaryConversionRate,
+                      progress,
+                    });
+                  }
+
+                  // Sanity Threshold
+                  if (conditions.sanityThreshold !== undefined) {
+                    totalConditions++;
+                    const regions = state.regions || [];
+                    const avgSanity = regions.length > 0
+                      ? regions.reduce((sum, r) => sum + (r.populationSanity || 100), 0) / regions.length
+                      : 100;
+                    // Lower sanity is better for some victories
+                    const progress = avgSanity <= conditions.sanityThreshold
+                      ? 100
+                      : Math.max(0, 100 - ((avgSanity - conditions.sanityThreshold) * 2));
+                    totalProgress += progress;
+                    conditionDetails.push({
+                      label: 'Population Sanity',
+                      current: Math.round(avgSanity),
+                      required: conditions.sanityThreshold,
+                      progress,
+                    });
+                  }
+
+                  const overallProgress = totalConditions > 0 ? totalProgress / totalConditions : 0;
+                  const isAchievable = overallProgress >= 100;
+
+                  return (
+                    <div
+                      key={victory.type}
+                      className={`p-4 rounded-lg border-2 transition-colors ${
+                        isAchievable
+                          ? 'bg-green-900/20 border-green-500/50'
+                          : 'bg-slate-900 border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold text-slate-100 flex items-center gap-2">
+                            {isAchievable && <Zap className="w-4 h-4 text-green-400" />}
+                            {victory.name}
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-1">{victory.description}</p>
+                        </div>
+                        <Badge
+                          variant={isAchievable ? 'default' : 'secondary'}
+                          className={isAchievable ? 'bg-green-600' : ''}
+                        >
+                          {Math.round(overallProgress)}%
+                        </Badge>
+                      </div>
+
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                          <span>Overall Progress</span>
+                          <span>{Math.round(overallProgress)}%</span>
+                        </div>
+                        <Progress value={overallProgress} className="h-2" />
+                      </div>
+
+                      <div className="space-y-2">
+                        {conditionDetails.map((detail, idx) => (
+                          <div key={idx} className="text-xs">
+                            <div className="flex items-center justify-between text-slate-300 mb-1">
+                              <span>{detail.label}</span>
+                              <span className="font-medium">
+                                {detail.current} / {detail.required}
+                              </span>
+                            </div>
+                            <Progress value={detail.progress} className="h-1.5" />
+                          </div>
+                        ))}
+                      </div>
+
+                      {isAchievable && (
+                        <div className="mt-3 p-2 bg-green-900/30 rounded border border-green-500/30">
+                          <p className="text-xs text-green-300 flex items-center gap-2">
+                            <Zap className="w-3 h-3" />
+                            Victory conditions met! This ending is now achievable.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
     </div>

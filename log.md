@@ -1127,3 +1127,66 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Meaningful consequences create dramatic moments
 - "Point of no return" mechanic (once per campaign)
 - Completes the "Council Schism event" mentioned in original warning message
+
+### 2025-11-02T15:30:00Z - FASE 2.4: Victory Progress Tracking UI ✅
+**Problem:** No way to see progress toward victory conditions in Great Old Ones scenario
+**File:** `/home/user/vector-war-games/src/components/greatOldOnes/Phase2DoctrinePanel.tsx:28-29,746-927`
+
+**Solution Implemented:**
+
+**1. Import Victory Condition Data:**
+- Added import for `OccultVictoryType` and `OCCULT_VICTORY_CONDITIONS`
+- Provides access to all defined victory conditions and their requirements
+
+**2. Dynamic Victory Tracking (lines 746-927):**
+- **Filters available victories** based on current doctrine
+- **Calculates real-time progress** for each victory condition:
+  - Corruption Threshold (average across regions)
+  - Entities Awakened (count of Great Old Ones summoned)
+  - Regions Controlled (infiltration level >= 80)
+  - Voluntary Conversion Rate (converted population %)
+  - Sanity Threshold (average population sanity)
+
+**3. Progress Display Components:**
+- **Overall Progress Badge:** Shows total completion % with color coding
+- **Individual Condition Bars:** Each condition shows:
+  - Current value / Required value
+  - Progress bar with percentage
+  - Detailed label (e.g., "Great Old Ones Awakened: 2 / 3")
+- **Victory Achievement Notification:** Green banner when 100% complete
+
+**4. Victory Condition Mapping:**
+- **Path of Domination → Total Domination:**
+  - 3 Great Old Ones awakened
+  - 80% corruption threshold
+  - 20% sanity threshold
+- **Path of Corruption → Shadow Empire:**
+  - 90% corruption threshold
+  - 12 regions controlled
+  - 40% sanity threshold
+- **Path of Convergence → Transcendence & Convergence:**
+  - Transcendence: 80% voluntary conversion, 70% corruption
+  - Convergence: 60% voluntary conversion, 50% sanity, 8 regions controlled
+
+**5. Visual Polish:**
+- **Color Coding:**
+  - Normal state: slate-900 background with slate-700 border
+  - Achievable state: green-900/20 background with green-500/50 border
+- **Icons:** Target icon in header, Zap icon for achieved victories
+- **Progress Bars:** Two-tier system (overall + individual conditions)
+- **Responsive Layout:** Cards stack vertically with spacing
+
+**Technical Details:**
+- Uses IIFE pattern for clean JSX expression
+- Calculates progress dynamically from game state
+- Handles missing data gracefully (defaults to 0 or 100)
+- Progress clamped to 0-100% range
+- Sanity threshold logic inverted (lower is better for some victories)
+
+**Impact:**
+- Gives players clear goals and milestones
+- Shows progress in real-time as game progresses
+- Helps strategic planning (which actions advance victory)
+- Creates satisfying feedback loop (watching bars fill up)
+- Adds replay value (different victory paths)
+- Replaces placeholder "coming soon" text with full implementation
