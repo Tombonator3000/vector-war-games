@@ -9074,7 +9074,7 @@ export default function NoradVector() {
       {/* Great Old Ones Campaign UI */}
       {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && (
         <>
-          <div className="fixed top-20 left-4 z-40 space-y-4 max-w-md">
+          <div className="fixed top-20 left-4 z-40 space-y-4 max-w-md max-h-[calc(100vh-6rem)] overflow-y-auto">
             {!greatOldOnesState.doctrine && (
               <DoctrineSelectionPanel
                 canSelect={true}
@@ -9101,7 +9101,7 @@ export default function NoradVector() {
             )}
           </div>
 
-          <div className="fixed top-20 right-4 z-40 space-y-4 max-w-md">
+          <div className="fixed top-20 right-4 z-40 space-y-4 max-w-md max-h-[calc(100vh-6rem)] overflow-y-auto">
             {greatOldOnesState.doctrine && week3State && (
               <>
                 <RitualSitePanel state={greatOldOnesState} />
