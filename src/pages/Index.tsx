@@ -4424,6 +4424,10 @@ export default function NoradVector() {
       setWeek3State(initializeWeek3State());
       setPhase2State(initializePhase2State());
       setPhase3State(initializePhase3State());
+
+      // Switch to Church of Cthulhu soundtrack
+      AudioSys.setPreferredTrack('cthulhu-1');
+      Storage.setItem('audio_music_track', 'cthulhu-1');
     } else {
       // Clear Great Old Ones state for other scenarios
       S.greatOldOnes = undefined;
@@ -4432,6 +4436,13 @@ export default function NoradVector() {
       setWeek3State(null);
       setPhase2State(null);
       setPhase3State(null);
+
+      // Reset to random soundtrack for non-Cthulhu scenarios
+      const storedTrack = Storage.getItem('audio_music_track');
+      if (storedTrack === 'cthulhu-1' || storedTrack === 'cthulhu-2') {
+        AudioSys.setPreferredTrack(null);
+        Storage.setItem('audio_music_track', 'random');
+      }
     }
 
     // Expose updated S to window after scenario is set
