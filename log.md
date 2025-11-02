@@ -1060,3 +1060,70 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Balances include trade-offs (no pure upgrades)
 - Thematic bonuses match leader personalities and histories
 - Creates meta-game strategies (counter-picking leaders based on opponent)
+
+### 2025-11-02T15:00:00Z - FASE 2.2: Council Schism Mechanic ✅
+**Problem:** No way to change doctrine after initial selection in Great Old Ones scenario
+**Files Modified:**
+- `/home/user/vector-war-games/src/types/greatOldOnes.ts:558` (councilSchismUsed flag)
+- `/home/user/vector-war-games/src/components/greatOldOnes/CouncilSchismModal.tsx` (new component, 238 lines)
+- `/home/user/vector-war-games/src/components/greatOldOnes/index.ts:7` (export)
+- `/home/user/vector-war-games/src/pages/Index.tsx:5,20,137,4961,9724-9825` (integration)
+
+**Solution Implemented:**
+
+**1. New State Tracking:**
+- Added `councilSchismUsed?: boolean` to GreatOldOnesState interface
+- Ensures schism can only be performed once per campaign
+
+**2. CouncilSchismModal Component (238 lines):**
+- **Two-step confirmation process:**
+  - Step 1: Select new doctrine from available paths
+  - Step 2: Final confirmation with cost breakdown
+- **Cost & Requirements Display:**
+  - 100 Eldritch Power (shows current vs required)
+  - -30 Council Unity (shows current vs minimum 50 required)
+  - -10 Veil Integrity
+  - 30% chance High Priests leave council
+- **Doctrine Cards:** Shows Path of Domination, Corruption, or Convergence with full details
+- **Warning System:** Clear messaging about irreversibility and consequences
+
+**3. UI Integration:**
+- **Council Schism Button Card:** Added to left sidebar (9724-9746)
+  - Only shown if doctrine is selected and schism not yet used
+  - "Initiate Council Schism" button with warning description
+  - Styled with amber AlertTriangle icon
+
+**4. Schism Handler Logic (9784-9823):**
+- Deducts 100 Eldritch Power
+- Reduces Council Unity by 30
+- Reduces Veil Integrity by 10
+- Changes doctrine to new selection
+- Marks councilSchismUsed as true
+- 30% chance High Priests leave (if loyalty < 50)
+- Shows warning toast and log message
+
+**5. Consequences System:**
+- **Immediate Costs:**
+  - -100 Eldritch Power
+  - -30 Council Unity (minimum 50 required)
+  - -10 Veil Integrity
+- **Potential Effects:**
+  - Disloyal High Priests may abandon council
+  - Investigators become alerted
+  - Message logged to game history
+  - Destructive toast notification
+
+**Technical Details:**
+- Modal uses Dialog from shadcn/ui
+- Two-step confirmation prevents accidental clicks
+- Disabled when requirements not met (insufficient power or unity)
+- Dynamic doctrine availability (excludes current doctrine)
+- Full color coding (red=Domination, purple=Corruption, blue=Convergence)
+
+**Impact:**
+- Adds strategic flexibility to Great Old Ones campaigns
+- High risk/high reward decision point
+- Allows players to pivot strategy mid-game
+- Meaningful consequences create dramatic moments
+- "Point of no return" mechanic (once per campaign)
+- Completes the "Council Schism event" mentioned in original warning message

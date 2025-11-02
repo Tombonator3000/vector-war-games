@@ -4,6 +4,7 @@
  */
 
 export { DoctrineSelectionPanel } from './DoctrineSelectionPanel';
+export { CouncilSchismModal } from './CouncilSchismModal';
 export { OrderCommandPanel } from './OrderCommandPanel';
 export { SanityHeatMapPanel } from './SanityHeatMapPanel';
 export { RitualSitePanel } from './RitualSitePanel';

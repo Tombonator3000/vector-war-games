@@ -554,6 +554,9 @@ export interface GreatOldOnesState {
   /** Selected doctrine */
   doctrine: Doctrine | null;
 
+  /** Has Council Schism been used to change doctrine? (can only be done once) */
+  councilSchismUsed?: boolean;
+
   /** Resources */
   resources: OccultResources;
 

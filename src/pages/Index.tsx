@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, ReactNode, ChangeEve
 import { useNavigate } from 'react-router-dom';
 import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -16,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings } from 'lucide-react';
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
@@ -133,7 +134,7 @@ import { initializeWeek3State, updateWeek3Systems, type Week3ExtendedState } fro
 import { initializePhase2State, updatePhase2Systems, checkPhase2UnlockConditions, type Phase2State } from '@/lib/phase2Integration';
 import { initializePhase3State, updatePhase3Systems, checkPhase3UnlockConditions } from '@/lib/phase3Integration';
 import type { Phase3State } from '@/types/phase3Types';
-import { DoctrineSelectionPanel, OrderCommandPanel, SanityHeatMapPanel, RitualSitePanel, MissionBoardPanel, UnitRosterPanel } from '@/components/greatOldOnes';
+import { DoctrineSelectionPanel, CouncilSchismModal, OrderCommandPanel, SanityHeatMapPanel, RitualSitePanel, MissionBoardPanel, UnitRosterPanel } from '@/components/greatOldOnes';
 import {
   aiSignMutualTruce,
   aiSignNonAggressionPact,
@@ -4958,6 +4959,7 @@ export default function NoradVector() {
 
   // Great Old Ones state
   const [greatOldOnesState, setGreatOldOnesState] = useState<GreatOldOnesState | null>(null);
+  const [councilSchismModalOpen, setCouncilSchismModalOpen] = useState(false);
   const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
   const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
   const [phase3State, setPhase3State] = useState<Phase3State | null>(null);
@@ -9719,6 +9721,30 @@ export default function NoradVector() {
                     toast({ title: 'Order Issued', description: order });
                   }}
                 />
+
+                {/* Council Schism Button - Only shown if not already used */}
+                {!greatOldOnesState.councilSchismUsed && (
+                  <Card className="bg-slate-800 border-slate-700">
+                    <CardHeader>
+                      <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-500" />
+                        Council Schism
+                      </CardTitle>
+                      <CardDescription>
+                        Force a change in doctrine through council upheaval (once per campaign)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button
+                        variant="destructive"
+                        onClick={() => setCouncilSchismModalOpen(true)}
+                        className="w-full"
+                      >
+                        Initiate Council Schism
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
           </div>
@@ -9745,6 +9771,57 @@ export default function NoradVector() {
             )}
           </div>
         </>
+      )}
+
+      {/* Council Schism Modal - Great Old Ones doctrine change */}
+      {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && (
+        <CouncilSchismModal
+          open={councilSchismModalOpen}
+          onClose={() => setCouncilSchismModalOpen(false)}
+          currentDoctrine={greatOldOnesState.doctrine}
+          councilUnity={greatOldOnesState.council?.unity || 0}
+          eldritchPower={greatOldOnesState.resources?.eldritchPower || 0}
+          onConfirmSchism={(newDoctrine) => {
+            // Apply costs
+            const updatedState = {
+              ...greatOldOnesState,
+              doctrine: newDoctrine,
+              councilSchismUsed: true,
+              resources: {
+                ...greatOldOnesState.resources,
+                eldritchPower: Math.max(0, (greatOldOnesState.resources?.eldritchPower || 0) - 100),
+              },
+              council: {
+                ...greatOldOnesState.council,
+                unity: Math.max(0, (greatOldOnesState.council?.unity || 0) - 30),
+              } as any,
+              veil: {
+                ...greatOldOnesState.veil,
+                integrity: Math.max(0, (greatOldOnesState.veil?.integrity || 100) - 10),
+              },
+            };
+
+            setGreatOldOnesState(updatedState);
+            GameStateManager.setGreatOldOnes(updatedState);
+
+            // Spawn investigators as consequence
+            log(`Council Schism! Doctrine changed to ${newDoctrine}. Council Unity -30, Eldritch Power -100, Veil -10`, 'warning');
+            toast({
+              title: '⚡ Council Schism!',
+              description: `The Esoteric Order has shifted to the Path of ${newDoctrine}. The council is fractured.`,
+              variant: 'destructive',
+            });
+
+            // Add some High Priests may leave
+            if (Math.random() < 0.3 && updatedState.council?.members) {
+              const loyalMembers = updatedState.council.members.filter(m => m.loyalty > 50);
+              if (loyalMembers.length < updatedState.council.members.length) {
+                const leftCount = updatedState.council.members.length - loyalMembers.length;
+                log(`${leftCount} High Priest${leftCount > 1 ? 's' : ''} left the council due to the schism!`, 'warning');
+              }
+            }
+          }}
+        />
       )}
 
       {activeFlashpoint && (
