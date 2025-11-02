@@ -863,3 +863,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Extended `src/hooks/__tests__/useFlashpoints.test.ts` to assert the MAD success outcome no longer reports `nuclearWar` or `worldEnds` and instead tracks the new counterstrike flag.
 ## 2025-11-02T10:00:28Z
 - Ran `npm run test -- --run src/hooks/__tests__/useFlashpoints.test.ts` to validate the updated MAD counterstrike behavior.
+## 2025-11-02T11:27:06Z
+- Removed the opaque background from the bottom command tray in `src/pages/Index.tsx` to eliminate the solid black bar while preserving button layout.
+- Updated `src/components/NewsTicker.tsx` to default to a transparent background so the ticker no longer contributes to the dark footer band.

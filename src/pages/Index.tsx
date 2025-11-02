@@ -8673,7 +8673,7 @@ export default function NoradVector() {
                 items={newsItems}
                 className="pointer-events-auto touch-auto"
               />
-              <div className="h-16 sm:h-20 bg-black/90 border-t border-cyan-500/30 backdrop-blur-sm pointer-events-auto touch-auto">
+              <div className="h-16 sm:h-20 border-t border-cyan-500/30 pointer-events-auto touch-auto bg-transparent">
                 <div className="h-full flex items-center justify-center gap-1 px-4">
                   <Button
                     onClick={handleBuild}
