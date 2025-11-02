@@ -61,6 +61,7 @@ import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay'
 import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
 import { LeaderContactModal } from '@/components/LeaderContactModal';
 import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
+import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { EndGameScreen } from '@/components/EndGameScreen';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
 import type { DiplomacyProposal } from '@/types/diplomacy';
@@ -155,6 +156,8 @@ import {
   resolveGrievancesWithReparations,
 } from '@/lib/diplomacyPhase2Integration';
 import { initializeNationAgendas, processAgendaRevelations } from '@/lib/agendaSystem';
+import { checkAllTriggers, resetTriggerTracking } from '@/lib/aiNegotiationTriggers';
+import { generateNegotiationContent } from '@/lib/aiNegotiationContentGenerator';
 import {
   initializeDiplomacyPhase3State,
   type DiplomacyPhase3State as DiplomacyPhase3SystemState,
@@ -3854,6 +3857,48 @@ function endTurn() {
         }
       }
 
+      // Process AI-Initiated Negotiations (Phase 4): Check if AI wants to start negotiations
+      if (player) {
+        const aiNations = nations.filter(n => !n.isPlayer);
+        const newNegotiations: any[] = [];
+        let globalNegotiationCount = 0;
+
+        // Check each AI nation to see if they want to initiate negotiations
+        for (const aiNation of aiNations) {
+          const triggerResult = checkAllTriggers(
+            aiNation,
+            player,
+            nations,
+            S.turn,
+            globalNegotiationCount
+          );
+
+          if (triggerResult) {
+            // Generate negotiation content based on trigger
+            const negotiation = generateNegotiationContent(
+              aiNation,
+              player,
+              nations,
+              triggerResult,
+              S.turn
+            );
+
+            if (negotiation) {
+              newNegotiations.push(negotiation);
+              globalNegotiationCount++;
+
+              console.log(`🤝 AI NEGOTIATION INITIATED: ${aiNation.name} - ${triggerResult.purpose}`);
+              log(`📨 ${aiNation.name} has initiated diplomatic contact: ${triggerResult.purpose}`, 'diplomacy');
+            }
+          }
+        }
+
+        // Add new negotiations to state
+        if (newNegotiations.length > 0) {
+          setAiInitiatedNegotiations(prev => [...prev, ...newNegotiations]);
+        }
+      }
+
       // Process AI bio-warfare for all AI nations
       const difficulty = S.difficulty || 'medium';
       processAllAINationsBioWarfare(nations, S.turn, difficulty, {
@@ -4292,6 +4337,9 @@ export default function NoradVector() {
     nationName: string;
     agenda: any;
   } | null>(null);
+
+  // AI-Initiated Negotiations state (Phase 4)
+  const [aiInitiatedNegotiations, setAiInitiatedNegotiations] = useState<any[]>([]);
 
   useEffect(() => {
     enqueueAIProposalRef = (proposal) => {
@@ -5954,6 +6002,9 @@ export default function NoradVector() {
     S.selectedLeader = leaderToUse;
     S.selectedDoctrine = doctrineToUse;
     S.playerName = leaderToUse;
+
+    // Reset AI negotiation trigger tracking for new game
+    resetTriggerTracking();
 
     // Expose updated S to window when game starts
     if (typeof window !== 'undefined') {
@@ -9521,6 +9572,34 @@ export default function NoradVector() {
           }}
           nationName={agendaRevelationData.nationName}
           agenda={agendaRevelationData.agenda}
+        />
+      )}
+
+      {/* AI-Initiated Negotiations Notification Queue (Phase 4) */}
+      {aiInitiatedNegotiations.length > 0 && (
+        <AINegotiationNotificationQueue
+          negotiations={aiInitiatedNegotiations}
+          allNations={nations}
+          onView={(negotiation) => {
+            // Open negotiation interface
+            const aiNation = nations.find(n => n.id === negotiation.aiNationId);
+            if (aiNation) {
+              setLeaderContactTargetNationId(aiNation.id);
+              setLeaderContactModalOpen(true);
+              // Add negotiation to active negotiations
+              setActiveNegotiations(prev => [...prev, negotiation.proposedDeal]);
+            }
+            // Remove from queue
+            setAiInitiatedNegotiations(prev =>
+              prev.filter(n => n.proposedDeal.id !== negotiation.proposedDeal.id)
+            );
+          }}
+          onDismiss={(negotiationId) => {
+            // Remove from queue
+            setAiInitiatedNegotiations(prev =>
+              prev.filter(n => n.proposedDeal.id !== negotiationId)
+            );
+          }}
         />
       )}
 
