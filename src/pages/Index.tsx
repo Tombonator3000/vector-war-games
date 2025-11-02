@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, ReactNode, ChangeEve
 import { useNavigate } from 'react-router-dom';
 import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -16,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings } from 'lucide-react';
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
@@ -133,7 +134,8 @@ import { initializeWeek3State, updateWeek3Systems, type Week3ExtendedState } fro
 import { initializePhase2State, updatePhase2Systems, checkPhase2UnlockConditions, type Phase2State } from '@/lib/phase2Integration';
 import { initializePhase3State, updatePhase3Systems, checkPhase3UnlockConditions } from '@/lib/phase3Integration';
 import type { Phase3State } from '@/types/phase3Types';
-import { DoctrineSelectionPanel, OrderCommandPanel, SanityHeatMapPanel, RitualSitePanel, MissionBoardPanel, UnitRosterPanel } from '@/components/greatOldOnes';
+import { DoctrineSelectionPanel, CouncilSchismModal, OrderCommandPanel, SanityHeatMapPanel, RitualSitePanel, MissionBoardPanel, UnitRosterPanel, Phase2DoctrinePanel } from '@/components/greatOldOnes';
+import type { Phase2Operation } from '@/components/greatOldOnes/Phase2DoctrinePanel';
 import {
   aiSignMutualTruce,
   aiSignNonAggressionPact,
@@ -615,6 +617,357 @@ const leaders: { name: string; ai: string; color: string; isHistoricalCubanCrisi
   { name: 'Oil-Stain Lint-Off', ai: 'balanced', color: '#88ff88' },
   { name: 'Ruin Annihilator', ai: 'aggressive', color: '#ff6600' }
 ];
+
+// Leader-Specific Passive Bonuses (FASE 2.1)
+// Each leader gets 2 unique passive bonuses for strategic diversity
+interface LeaderBonus {
+  name: string;
+  description: string;
+  effect: (nation: Nation) => void;
+}
+
+const leaderBonuses: Record<string, LeaderBonus[]> = {
+  // Historical Cuban Crisis Leaders
+  'John F. Kennedy': [
+    {
+      name: '📜 Diplomatic Finesse',
+      description: '+15% to peace treaty acceptance, +1 DIP per turn',
+      effect: (nation) => {
+        // DIP bonus applied during production phase
+        nation.diplomaticInfluence = nation.diplomaticInfluence || { current: 50, capacity: 200, generation: 3 };
+        nation.diplomaticInfluence.generation = (nation.diplomaticInfluence.generation || 3) + 1;
+      }
+    },
+    {
+      name: '🎯 Precision Warfare',
+      description: '+10% missile accuracy, -15% collateral damage',
+      effect: (nation) => {
+        nation.enemyMissileAccuracyReduction = (nation.enemyMissileAccuracyReduction || 0) - 0.10; // Enemies have 10% less accuracy against JFK
+      }
+    }
+  ],
+  'Nikita Khrushchev': [
+    {
+      name: '⚔️ Iron Fist',
+      description: '-10% missile costs, +15% military intimidation',
+      effect: (nation) => {
+        nation.buildCostReduction = (nation.buildCostReduction || 0) + 0.10;
+      }
+    },
+    {
+      name: '🏭 Soviet Industry',
+      description: '+15% production per turn',
+      effect: (nation) => {
+        nation.productionMultiplier = (nation.productionMultiplier || 1.0) + 0.15;
+      }
+    }
+  ],
+  'Fidel Castro': [
+    {
+      name: '🔥 Revolutionary Fervor',
+      description: '+20% population morale, immunity to culture bombs',
+      effect: (nation) => {
+        nation.morale = Math.min(100, nation.morale + 20);
+      }
+    },
+    {
+      name: '🛡️ Guerrilla Defense',
+      description: '+25% defense effectiveness',
+      effect: (nation) => {
+        nation.defense = Math.floor(nation.defense * 1.25);
+      }
+    }
+  ],
+
+  // Lovecraftian Great Old Ones Leaders
+  'Cthulhu': [
+    {
+      name: '🌊 Deep Sea Dominion',
+      description: '+20% summoning power, -15% summoning backlash',
+      effect: (nation) => {
+        // Applied to Great Old Ones state in specialized handler
+        nation.morale = Math.min(100, nation.morale + 10); // Cultists more devoted
+      }
+    },
+    {
+      name: '😱 Madness Aura',
+      description: '+30% sanity harvest from terror',
+      effect: (nation) => {
+        nation.intel = Math.floor(nation.intel * 1.1); // Bonus intel from insanity
+      }
+    }
+  ],
+  'Azathoth': [
+    {
+      name: '🌀 Chaotic Flux',
+      description: 'Random bonus each turn (10-30% to any stat)',
+      effect: (nation) => {
+        // Applied dynamically each turn - placeholder marker
+        nation.morale = Math.min(100, nation.morale + 5);
+      }
+    },
+    {
+      name: '🎲 Unpredictable',
+      description: '-20% enemy prediction accuracy',
+      effect: (nation) => {
+        nation.sabotageDetectionReduction = (nation.sabotageDetectionReduction || 0) + 0.20;
+      }
+    }
+  ],
+  'Nyarlathotep': [
+    {
+      name: '🎭 Master of Masks',
+      description: '+40% infiltration speed, -25% detection',
+      effect: (nation) => {
+        nation.sabotageDetectionReduction = (nation.sabotageDetectionReduction || 0) + 0.25;
+      }
+    },
+    {
+      name: '🗣️ Whispering Shadows',
+      description: '+50% memetic warfare effectiveness',
+      effect: (nation) => {
+        nation.memeWaveEffectiveness = (nation.memeWaveEffectiveness || 1.0) + 0.50;
+      }
+    }
+  ],
+  'Hastur': [
+    {
+      name: '🌫️ Yellow Sign',
+      description: '+25% corruption spread, +15% willing conversions',
+      effect: (nation) => {
+        nation.stolenPopConversionRate = (nation.stolenPopConversionRate || 1.0) + 0.15;
+      }
+    },
+    {
+      name: '🤐 Unspeakable Presence',
+      description: '-30% veil damage from operations',
+      effect: (nation) => {
+        nation.morale = Math.min(100, nation.morale + 5);
+      }
+    }
+  ],
+  'Shub-Niggurath': [
+    {
+      name: '🐐 Spawn of the Black Goat',
+      description: '+30% entity spawning rate, +20% entity strength',
+      effect: (nation) => {
+        nation.unitAttackBonus = (nation.unitAttackBonus || 0) + 0.20;
+      }
+    },
+    {
+      name: '🌿 Primal Growth',
+      description: '+20% population growth in corrupted areas',
+      effect: (nation) => {
+        nation.immigrationBonus = (nation.immigrationBonus || 0) + 0.20;
+      }
+    }
+  ],
+  'Yog-Sothoth': [
+    {
+      name: '🔮 The Gate and the Key',
+      description: '+30% research speed, auto-reveal enemy research',
+      effect: (nation) => {
+        nation.autoRevealEnemyResearch = true;
+      }
+    },
+    {
+      name: '⏳ Temporal Manipulation',
+      description: '+1 action per turn',
+      effect: (nation) => {
+        // Applied during turn start
+      }
+    }
+  ],
+
+  // Parody Leaders
+  'Ronnie Raygun': [
+    {
+      name: '🎬 Star Wars Program',
+      description: '+30% ABM defense effectiveness',
+      effect: (nation) => {
+        nation.defense = Math.floor(nation.defense * 1.30);
+      }
+    },
+    {
+      name: '💰 Trickle Down Economics',
+      description: '+20% production from high morale',
+      effect: (nation) => {
+        if (nation.morale > 70) {
+          nation.productionMultiplier = (nation.productionMultiplier || 1.0) + 0.20;
+        }
+      }
+    }
+  ],
+  'Tricky Dick': [
+    {
+      name: '🕵️ Watergate Skills',
+      description: '+35% intelligence gathering, +20% cover ops duration',
+      effect: (nation) => {
+        nation.intel = Math.floor(nation.intel * 1.15);
+      }
+    },
+    {
+      name: '🤝 Détente Master',
+      description: '+20% to non-aggression pact acceptance',
+      effect: (nation) => {
+        nation.morale = Math.min(100, nation.morale + 10);
+      }
+    }
+  ],
+  'Jimi Farmer': [
+    {
+      name: '🌾 Agricultural Surplus',
+      description: '+25% population capacity, faster recovery',
+      effect: (nation) => {
+        nation.immigrationBonus = (nation.immigrationBonus || 0) + 0.25;
+      }
+    },
+    {
+      name: '☮️ Peace Dividend',
+      description: '+15% production during peacetime',
+      effect: (nation) => {
+        nation.productionMultiplier = (nation.productionMultiplier || 1.0) + 0.10;
+      }
+    }
+  ],
+  'E. Musk Rat': [
+    {
+      name: '🚀 SpaceX Advantage',
+      description: '+50% satellite deployment speed, +2 orbital slots',
+      effect: (nation) => {
+        nation.maxSatellites = (nation.maxSatellites || 3) + 2;
+      }
+    },
+    {
+      name: '🤖 AI Warfare',
+      description: '+40% cyber offense, +25% cyber defense',
+      effect: (nation) => {
+        if (nation.cyber) {
+          nation.cyber.offense = Math.floor(nation.cyber.offense * 1.40);
+          nation.cyber.defense = Math.floor(nation.cyber.defense * 1.25);
+        }
+      }
+    }
+  ],
+  'Donnie Trumpf': [
+    {
+      name: '🏗️ The Wall',
+      description: 'Borders always closed, +30% immigration control',
+      effect: (nation) => {
+        nation.bordersClosedTurns = 999; // Permanently closed
+      }
+    },
+    {
+      name: '💬 Twitter Diplomacy',
+      description: '+25% culture bomb effectiveness, -10% diplomatic costs',
+      effect: (nation) => {
+        nation.cultureBombCostReduction = (nation.cultureBombCostReduction || 0) + 0.25;
+      }
+    }
+  ],
+  'Atom Hus-Bomb': [
+    {
+      name: '☢️ Nuclear Zealot',
+      description: '+20% warhead yield, -20% nuclear winter impact on self',
+      effect: (nation) => {
+        // Warhead bonus applied during launch calculations
+        nation.morale = Math.min(100, nation.morale + 10);
+      }
+    },
+    {
+      name: '⚡ First Strike Doctrine',
+      description: 'Missiles launch 25% faster',
+      effect: (nation) => {
+        nation.production = Math.floor(nation.production * 1.10);
+      }
+    }
+  ],
+  'Krazy Re-Entry': [
+    {
+      name: '🎪 Chaos Theory',
+      description: 'Random events 30% more likely, +20% to all randomness',
+      effect: (nation) => {
+        nation.morale = Math.min(100, nation.morale + 15);
+      }
+    },
+    {
+      name: '🌪️ Unpredictable Madness',
+      description: 'AI cannot accurately predict actions',
+      effect: (nation) => {
+        nation.sabotageDetectionReduction = (nation.sabotageDetectionReduction || 0) + 0.30;
+      }
+    }
+  ],
+  'Odd\'n Wild Card': [
+    {
+      name: '🃏 Trickster\'s Gambit',
+      description: '+30% false intel generation, +25% deception success',
+      effect: (nation) => {
+        nation.memeWaveEffectiveness = (nation.memeWaveEffectiveness || 1.0) + 0.30;
+      }
+    },
+    {
+      name: '🎰 High Stakes',
+      description: 'Double or nothing: +50% gains OR -25% losses randomly',
+      effect: (nation) => {
+        if (Math.random() > 0.5) {
+          nation.productionMultiplier = (nation.productionMultiplier || 1.0) + 0.25;
+        }
+      }
+    }
+  ],
+  'Oil-Stain Lint-Off': [
+    {
+      name: '🛢️ Petro-State',
+      description: '+40% uranium generation, +20% production',
+      effect: (nation) => {
+        nation.uraniumPerTurn = (nation.uraniumPerTurn || 2) + 1;
+        nation.productionMultiplier = (nation.productionMultiplier || 1.0) + 0.20;
+      }
+    },
+    {
+      name: '💼 Oligarch Network',
+      description: '+25% intel from economic espionage',
+      effect: (nation) => {
+        nation.intel = Math.floor(nation.intel * 1.15);
+      }
+    }
+  ],
+  'Ruin Annihilator': [
+    {
+      name: '💀 Scorched Earth',
+      description: '+35% damage to all targets, +20% to radiation zones',
+      effect: (nation) => {
+        nation.unitAttackBonus = (nation.unitAttackBonus || 0) + 0.35;
+      }
+    },
+    {
+      name: '🔥 Apocalypse Doctrine',
+      description: 'Immune to morale penalties, thrives in chaos',
+      effect: (nation) => {
+        nation.morale = 100; // Always maximum morale
+      }
+    }
+  ]
+};
+
+/**
+ * Apply leader-specific bonuses to a nation
+ * Called during game initialization
+ */
+function applyLeaderBonuses(nation: Nation, leaderName: string): void {
+  const bonuses = leaderBonuses[leaderName];
+  if (!bonuses) {
+    console.warn(`No bonuses defined for leader: ${leaderName}`);
+    return;
+  }
+
+  console.log(`Applying leader bonuses for ${leaderName}:`);
+  bonuses.forEach(bonus => {
+    console.log(`  - ${bonus.name}: ${bonus.description}`);
+    bonus.effect(nation);
+  });
+}
 
 // Doctrines configuration
 const doctrines = {
@@ -1425,6 +1778,8 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   if (isKennedy) {
     applyDoctrineEffects(usaNation, selectedDoctrine);
   }
+  // Apply leader bonuses to USA (FASE 2.1)
+  applyLeaderBonuses(usaNation, 'John F. Kennedy');
   nations.push(usaNation);
 
   // USSR (Khrushchev) - historically had fewer missiles but was building up
@@ -1466,6 +1821,8 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   if (isKhrushchev) {
     applyDoctrineEffects(ussrNation, selectedDoctrine);
   }
+  // Apply leader bonuses to USSR (FASE 2.1)
+  applyLeaderBonuses(ussrNation, 'Nikita Khrushchev');
   nations.push(ussrNation);
 
   // Cuba (Castro) - revolutionary state with Soviet support
@@ -1507,6 +1864,8 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   if (isCastro) {
     applyDoctrineEffects(cubaNation, selectedDoctrine);
   }
+  // Apply leader bonuses to Cuba (FASE 2.1)
+  applyLeaderBonuses(cubaNation, 'Fidel Castro');
   nations.push(cubaNation);
 
   // Initialize threat levels (historically accurate tensions)
@@ -1581,6 +1940,15 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
     nations.length = 0;
     nations.push(...updatedNations);
+
+    // Initialize firstContactTurn for all AI nations (needed for hidden agenda revelation)
+    nations.forEach(nation => {
+      if (!nation.isPlayer) {
+        nation.firstContactTurn = nation.firstContactTurn || {};
+        nation.firstContactTurn[playerNation.id] = S.turn || 1;
+      }
+    });
+
     GameStateManager.setNations(nations);
     PlayerManager.setNations(nations);
 
@@ -1685,6 +2053,9 @@ function initNations() {
   // Apply doctrine bonuses
   applyDoctrineEffects(playerNation, selectedDoctrine);
 
+  // Apply leader-specific bonuses (FASE 2.1)
+  applyLeaderBonuses(playerNation, playerLeaderName);
+
   nations.push(playerNation);
 
   const aiPositions = [
@@ -1755,7 +2126,10 @@ function initNations() {
     };
 
     applyDoctrineEffects(nation, aiDoctrine);
-    
+
+    // Apply leader-specific bonuses to AI nations (FASE 2.1)
+    applyLeaderBonuses(nation, leaderConfig?.name || `AI_${i}`);
+
     // Initialize threat tracking for all nations
     nations.forEach(existingNation => {
       if (existingNation.id !== nation.id) {
@@ -1806,6 +2180,15 @@ function initNations() {
     const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
     nations.length = 0;
     nations.push(...updatedNations);
+
+    // Initialize firstContactTurn for all AI nations (needed for hidden agenda revelation)
+    nations.forEach(nation => {
+      if (!nation.isPlayer) {
+        nation.firstContactTurn = nation.firstContactTurn || {};
+        nation.firstContactTurn[playerNation.id] = S.turn || 1;
+      }
+    });
+
     GameStateManager.setNations(nations);
     PlayerManager.setNations(nations);
 
@@ -4577,6 +4960,8 @@ export default function NoradVector() {
 
   // Great Old Ones state
   const [greatOldOnesState, setGreatOldOnesState] = useState<GreatOldOnesState | null>(null);
+  const [councilSchismModalOpen, setCouncilSchismModalOpen] = useState(false);
+  const [phase2PanelOpen, setPhase2PanelOpen] = useState(false);
   const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
   const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
   const [phase3State, setPhase3State] = useState<Phase3State | null>(null);
@@ -8118,6 +8503,138 @@ export default function NoradVector() {
     setShowEnhancedDiplomacy(false);
   }, [toast, updateDisplay, consumeAction, setDiplomacyPhase3State]);
 
+  const handlePhase2Operation = useCallback((operation: Phase2Operation) => {
+    if (!greatOldOnesState || !phase2State) return;
+
+    const { type, cost } = operation;
+
+    // Check if resources are available
+    for (const [resource, amount] of Object.entries(cost)) {
+      if (resource === 'sanityFragments' && greatOldOnesState.resources.sanityFragments < amount) {
+        toast({
+          title: 'Insufficient Resources',
+          description: `Need ${amount} Sanity Fragments`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (resource === 'eldritchPower' && greatOldOnesState.resources.eldritchPower < amount) {
+        toast({
+          title: 'Insufficient Resources',
+          description: `Need ${amount} Eldritch Power`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    // Deduct resources
+    const updatedState = { ...greatOldOnesState };
+    if (cost.sanityFragments) {
+      updatedState.resources.sanityFragments -= cost.sanityFragments;
+    }
+    if (cost.eldritchPower) {
+      updatedState.resources.eldritchPower -= cost.eldritchPower;
+    }
+
+    // Apply operation effects
+    let title = '';
+    let description = '';
+    let logMessage = '';
+
+    switch (type) {
+      case 'summon-entity':
+        title = 'Entity Summoned';
+        description = 'A bound entity now serves the Order';
+        logMessage = 'Summoned an eldritch entity through profane rituals';
+        // Note: Full entity summoning would require adding to summonedEntities array
+        break;
+      case 'terror-campaign':
+        title = 'Terror Campaign Launched';
+        description = 'Fear spreads through public manifestations';
+        logMessage = 'Initiated terror campaign using bound entities';
+        if (phase2State.domination) {
+          phase2State.domination.fearLevel = Math.min(100, phase2State.domination.fearLevel + 10);
+        }
+        break;
+      case 'military-assault':
+        title = 'Military Assault';
+        description = 'Entities engage conventional forces in direct combat';
+        logMessage = 'Commanded entities to assault military targets';
+        break;
+      case 'awakening-ritual':
+        title = 'Awakening Ritual';
+        description = 'Progress made toward awakening a Great Old One';
+        logMessage = 'Performed awakening ritual at aligned sites';
+        break;
+      case 'infiltrate-institution':
+        title = 'Institution Infiltrated';
+        description = 'Influence node established';
+        logMessage = 'Infiltrated a key institution with cultist agents';
+        break;
+      case 'launch-memetic-agent':
+        title = 'Memetic Agent Deployed';
+        description = 'Idea virus spreading through population';
+        logMessage = 'Launched memetic campaign to spread eldritch concepts';
+        break;
+      case 'dream-invasion':
+        title = 'Dream Invasion';
+        description = 'Mass nightmares afflict target region';
+        logMessage = 'Conducted dream invasion ritual, spreading madness';
+        updatedState.veil.integrity = Math.max(0, updatedState.veil.integrity - 2);
+        break;
+      case 'activate-sleeper-cells':
+        title = 'Sleeper Cells Activated';
+        description = 'Coordinated network-wide operation executed';
+        logMessage = 'Activated sleeper cells across influence network';
+        break;
+      case 'establish-program':
+        title = 'Enlightenment Program Established';
+        description = 'New program recruiting voluntary converts';
+        logMessage = 'Established enlightenment program for willing initiates';
+        break;
+      case 'cultural-movement':
+        title = 'Cultural Movement Started';
+        description = 'Philosophical/artistic movement spreading ideology';
+        logMessage = 'Launched cultural movement to normalize eldritch philosophy';
+        break;
+      case 'celebrity-endorsement':
+        title = 'Celebrity Endorsement Secured';
+        description = 'High-profile figure now promotes the Order';
+        logMessage = 'Recruited celebrity endorser for mainstream appeal';
+        if (phase2State.convergence) {
+          phase2State.convergence.voluntaryConversionRate += 5;
+        }
+        break;
+      case 'redemption-act':
+        title = 'Redemption Act';
+        description = 'Attempting to redeem past betrayals';
+        logMessage = 'Performed act of redemption to restore trust';
+        if (phase2State.convergence) {
+          phase2State.convergence.trueIntentionsMeter.moralityScore += 10;
+        }
+        break;
+      default:
+        title = 'Operation Complete';
+        description = `Executed ${type}`;
+        logMessage = `Completed Phase 2 operation: ${type}`;
+    }
+
+    // Update states
+    setGreatOldOnesState(updatedState);
+    setPhase2State({ ...phase2State });
+    GameStateManager.setGreatOldOnes(updatedState);
+
+    // Show feedback
+    toast({ title, description });
+    log(logMessage, 'occult');
+    if (window.__gameAddNewsItem) {
+      window.__gameAddNewsItem('occult', logMessage, 'important');
+    }
+
+    updateDisplay();
+  }, [greatOldOnesState, phase2State, toast, updateDisplay]);
+
   // Show pending AI proposals when phase transitions to player
   useEffect(() => {
     if (S.phase === 'PLAYER' && pendingAIProposals.length > 0 && !activeDiplomacyProposal) {
@@ -8614,14 +9131,9 @@ export default function NoradVector() {
         leaders={availableLeaders}
         onSelectLeader={(leaderName) => {
           setSelectedLeader(leaderName);
-          // For Great Old Ones, skip doctrine selection during setup
-          // The doctrine will be selected in-game via DoctrineSelectionPanel
-          if (isGreatOldOnesScenario) {
-            startGame(leaderName, undefined);
-            setGamePhase('game');
-          } else {
-            setGamePhase('doctrine');
-          }
+          // All scenarios now require doctrine selection for strategic depth
+          // Great Old Ones can also select doctrine during setup for proper initialization
+          setGamePhase('doctrine');
         }}
         onBack={() => setGamePhase('intro')}
       />
@@ -9343,6 +9855,54 @@ export default function NoradVector() {
                     toast({ title: 'Order Issued', description: order });
                   }}
                 />
+
+                {/* Council Schism Button - Only shown if not already used */}
+                {!greatOldOnesState.councilSchismUsed && (
+                  <Card className="bg-slate-800 border-slate-700">
+                    <CardHeader>
+                      <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-500" />
+                        Council Schism
+                      </CardTitle>
+                      <CardDescription>
+                        Force a change in doctrine through council upheaval (once per campaign)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button
+                        variant="destructive"
+                        onClick={() => setCouncilSchismModalOpen(true)}
+                        className="w-full"
+                      >
+                        Initiate Council Schism
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Phase 2 Operations Button - Only shown if Phase 2 is unlocked */}
+                {phase2State && phase2State.unlocked && (
+                  <Card className="bg-slate-800 border-slate-700">
+                    <CardHeader>
+                      <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-purple-500" />
+                        Phase 2 Operations
+                      </CardTitle>
+                      <CardDescription>
+                        Execute doctrine-specific operations and track victory progress
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button
+                        variant="default"
+                        onClick={() => setPhase2PanelOpen(true)}
+                        className="w-full bg-purple-600 hover:bg-purple-700"
+                      >
+                        Open Phase 2 Panel
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
           </div>
@@ -9369,6 +9929,69 @@ export default function NoradVector() {
             )}
           </div>
         </>
+      )}
+
+      {/* Council Schism Modal - Great Old Ones doctrine change */}
+      {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && (
+        <CouncilSchismModal
+          open={councilSchismModalOpen}
+          onClose={() => setCouncilSchismModalOpen(false)}
+          currentDoctrine={greatOldOnesState.doctrine}
+          councilUnity={greatOldOnesState.council?.unity || 0}
+          eldritchPower={greatOldOnesState.resources?.eldritchPower || 0}
+          onConfirmSchism={(newDoctrine) => {
+            // Apply costs
+            const updatedState = {
+              ...greatOldOnesState,
+              doctrine: newDoctrine,
+              councilSchismUsed: true,
+              resources: {
+                ...greatOldOnesState.resources,
+                eldritchPower: Math.max(0, (greatOldOnesState.resources?.eldritchPower || 0) - 100),
+              },
+              council: {
+                ...greatOldOnesState.council,
+                unity: Math.max(0, (greatOldOnesState.council?.unity || 0) - 30),
+              } as any,
+              veil: {
+                ...greatOldOnesState.veil,
+                integrity: Math.max(0, (greatOldOnesState.veil?.integrity || 100) - 10),
+              },
+            };
+
+            setGreatOldOnesState(updatedState);
+            GameStateManager.setGreatOldOnes(updatedState);
+
+            // Spawn investigators as consequence
+            log(`Council Schism! Doctrine changed to ${newDoctrine}. Council Unity -30, Eldritch Power -100, Veil -10`, 'warning');
+            toast({
+              title: '⚡ Council Schism!',
+              description: `The Esoteric Order has shifted to the Path of ${newDoctrine}. The council is fractured.`,
+              variant: 'destructive',
+            });
+
+            // Add some High Priests may leave
+            if (Math.random() < 0.3 && updatedState.council?.members) {
+              const loyalMembers = updatedState.council.members.filter(m => m.loyalty > 50);
+              if (loyalMembers.length < updatedState.council.members.length) {
+                const leftCount = updatedState.council.members.length - loyalMembers.length;
+                log(`${leftCount} High Priest${leftCount > 1 ? 's' : ''} left the council due to the schism!`, 'warning');
+              }
+            }
+          }}
+        />
+      )}
+
+      {/* Phase 2 Doctrine Operations Panel */}
+      {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && phase2State && phase2PanelOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <Phase2DoctrinePanel
+            state={greatOldOnesState}
+            phase2State={phase2State}
+            onClose={() => setPhase2PanelOpen(false)}
+            onOperation={handlePhase2Operation}
+          />
+        </div>
       )}
 
       {activeFlashpoint && (

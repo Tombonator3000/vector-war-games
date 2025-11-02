@@ -61,7 +61,7 @@ export function EnhancedDiplomacyModal({
       title: 'BUILD TRUST',
       subtitle: 'Demonstrate goodwill and reliability',
       category: 'trust',
-      dipCost: 15,
+      dipCost: 10,  // Reduced from 15 to make early-game diplomacy more accessible (FASE 3.3)
       requiresTarget: true,
     },
     {
@@ -69,7 +69,7 @@ export function EnhancedDiplomacyModal({
       title: 'GRANT FAVOR',
       subtitle: 'Provide assistance to gain future leverage',
       category: 'trust',
-      dipCost: 20,
+      dipCost: 12,  // Reduced from 20 to make early-game diplomacy more accessible (FASE 3.3)
       requiresTarget: true,
     },
     {

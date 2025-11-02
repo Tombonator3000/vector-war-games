@@ -376,13 +376,44 @@ export function LeaderContactModal({
                     const hasBonus = !isViolated && agenda.isRevealed;
 
                     if (!agenda.isRevealed) {
-                      // Hidden agenda - show placeholder
+                      // Hidden agenda - show placeholder with reveal progress
+                      // Calculate progress towards revelation
+                      const firstContact = targetNation.firstContactTurn?.[playerNation.id] || currentTurn;
+                      const turnsKnown = currentTurn - firstContact;
+                      const relationship = getRelationship(targetNation, playerNation.id);
+                      const trust = getTrust(targetNation, playerNation.id);
+                      const hasAlliance = targetNation.alliances?.includes(playerNation.id) || false;
+
+                      // Calculate progress based on multiple conditions (max 100%)
+                      let progress = 0;
+                      let progressLabel = 'Unknown';
+                      let progressHint = '';
+
+                      // Condition 1: High relationship + good trust + time (relationship > 25 && trust > 60 && turnsKnown > 10)
+                      if (relationship > 25 && trust > 60) {
+                        progress = Math.min(100, (turnsKnown / 10) * 100);
+                        progressLabel = `${Math.round(progress)}% - ${turnsKnown}/10 turns`;
+                        progressHint = 'Keep building trust and relationship!';
+                      }
+                      // Condition 2: Alliance exists for sufficient time (turnsKnown > 15)
+                      else if (hasAlliance) {
+                        progress = Math.min(100, (turnsKnown / 15) * 100);
+                        progressLabel = `${Math.round(progress)}% - ${turnsKnown}/15 turns with alliance`;
+                        progressHint = 'Alliance will reveal traits over time';
+                      }
+                      // Condition 3: Very long contact (turnsKnown > 30)
+                      else {
+                        progress = Math.min(100, (turnsKnown / 30) * 100);
+                        progressLabel = `${Math.round(progress)}% - ${turnsKnown}/30 turns known`;
+                        progressHint = 'Build relationship (+25) or trust (+60) to speed up';
+                      }
+
                       return (
                         <div
                           key={agenda.id}
-                          className="p-3 rounded-lg border-2 border-dashed bg-accent/20 opacity-60"
+                          className="p-3 rounded-lg border-2 border-dashed bg-accent/20 opacity-80"
                         >
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-2">
                             <EyeOff className="h-4 w-4 text-muted-foreground" />
                             <span className="font-medium text-muted-foreground">
                               Unknown Trait
@@ -391,11 +422,24 @@ export function LeaderContactModal({
                               Hidden
                             </Badge>
                           </div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground mb-2">
                             Build a stronger relationship to discover this trait
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            💡 Hint: High relationship, trust, or long-term alliance
+
+                          {/* Progress towards revelation */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Discovery Progress</span>
+                              <span className="font-medium text-foreground">{progressLabel}</span>
+                            </div>
+                            <Progress value={progress} className="h-2" />
+                            <p className="text-xs text-muted-foreground italic">
+                              {progressHint}
+                            </p>
+                          </div>
+
+                          <p className="text-xs text-muted-foreground mt-2">
+                            💡 Tips: High relationship (25+), trust (60+), or alliance (15 turns)
                           </p>
                         </div>
                       );

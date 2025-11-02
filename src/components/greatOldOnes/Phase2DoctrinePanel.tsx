@@ -25,20 +25,28 @@ import {
   Lock,
   Unlock,
 } from 'lucide-react';
-import type { GreatOldOnesState, Doctrine } from '@/types/greatOldOnes';
+import type { GreatOldOnesState, Doctrine, OccultVictoryType } from '@/types/greatOldOnes';
+import { OCCULT_VICTORY_CONDITIONS } from '@/types/greatOldOnes';
 import type { Phase2State } from '@/lib/phase2Integration';
 import { checkPhase2UnlockConditions } from '@/lib/phase2Integration';
+
+export interface Phase2Operation {
+  type: string;
+  cost: Record<string, number>;
+}
 
 interface Phase2DoctrinePanelProps {
   state: GreatOldOnesState;
   phase2State: Phase2State;
   onClose?: () => void;
+  onOperation?: (operation: Phase2Operation) => void;
 }
 
 export const Phase2DoctrinePanel: React.FC<Phase2DoctrinePanelProps> = ({
   state,
   phase2State,
   onClose,
+  onOperation,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'operations' | 'progress'>('overview');
 
@@ -116,13 +124,13 @@ export const Phase2DoctrinePanel: React.FC<Phase2DoctrinePanelProps> = ({
           {activeTab === 'operations' && (
             <>
               {doctrine === 'domination' && (
-                <DominationOperations state={state} phase2State={phase2State} />
+                <DominationOperations state={state} phase2State={phase2State} onOperation={onOperation} />
               )}
               {doctrine === 'corruption' && (
-                <CorruptionOperations state={state} phase2State={phase2State} />
+                <CorruptionOperations state={state} phase2State={phase2State} onOperation={onOperation} />
               )}
               {doctrine === 'convergence' && (
-                <ConvergenceOperations state={state} phase2State={phase2State} />
+                <ConvergenceOperations state={state} phase2State={phase2State} onOperation={onOperation} />
               )}
             </>
           )}
@@ -339,10 +347,11 @@ const DominationOverview: React.FC<{ state: GreatOldOnesState; phase2State: Phas
   );
 };
 
-const DominationOperations: React.FC<{ state: GreatOldOnesState; phase2State: Phase2State }> = ({
-  state,
-  phase2State,
-}) => {
+const DominationOperations: React.FC<{
+  state: GreatOldOnesState;
+  phase2State: Phase2State;
+  onOperation?: (operation: Phase2Operation) => void;
+}> = ({ state, phase2State, onOperation }) => {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -352,6 +361,7 @@ const DominationOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Skull className="w-6 h-6" />}
           cost={{ sanityFragments: 50, eldritchPower: 30, cultists: 8 }}
           available={state.resources.sanityFragments >= 50 && state.resources.eldritchPower >= 30}
+          onExecute={() => onOperation?.({ type: 'summon-entity', cost: { sanityFragments: 50, eldritchPower: 30, cultists: 8 } })}
         />
         <OperationCard
           title="Terror Campaign"
@@ -359,6 +369,7 @@ const DominationOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Flame className="w-6 h-6" />}
           cost={{ eldritchPower: 20, entities: 2 }}
           available={state.summonedEntities.filter(e => e.bound).length >= 2}
+          onExecute={() => onOperation?.({ type: 'terror-campaign', cost: { eldritchPower: 20, entities: 2 } })}
         />
         <OperationCard
           title="Military Assault"
@@ -366,6 +377,7 @@ const DominationOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Target className="w-6 h-6" />}
           cost={{ entities: 3 }}
           available={state.summonedEntities.filter(e => e.bound).length >= 3}
+          onExecute={() => onOperation?.({ type: 'military-assault', cost: { entities: 3 } })}
         />
         <OperationCard
           title="Awakening Ritual"
@@ -373,6 +385,7 @@ const DominationOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Eye className="w-6 h-6" />}
           cost={{ sanityFragments: 300, eldritchPower: 200, cultists: 50 }}
           available={false}
+          onExecute={() => onOperation?.({ type: 'awakening-ritual', cost: { sanityFragments: 300, eldritchPower: 200, cultists: 50 } })}
         />
       </div>
     </div>
@@ -492,10 +505,11 @@ const CorruptionOverview: React.FC<{ state: GreatOldOnesState; phase2State: Phas
   );
 };
 
-const CorruptionOperations: React.FC<{ state: GreatOldOnesState; phase2State: Phase2State }> = ({
-  state,
-  phase2State,
-}) => {
+const CorruptionOperations: React.FC<{
+  state: GreatOldOnesState;
+  phase2State: Phase2State;
+  onOperation?: (operation: Phase2Operation) => void;
+}> = ({ state, phase2State, onOperation }) => {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -505,6 +519,7 @@ const CorruptionOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Network className="w-6 h-6" />}
           cost={{ cultists: 5, eldritchPower: 20 }}
           available={true}
+          onExecute={() => onOperation?.({ type: 'infiltrate-institution', cost: { cultists: 5, eldritchPower: 20 } })}
         />
         <OperationCard
           title="Launch Memetic Agent"
@@ -512,6 +527,7 @@ const CorruptionOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Brain className="w-6 h-6" />}
           cost={{ eldritchPower: 30 }}
           available={state.resources.eldritchPower >= 30}
+          onExecute={() => onOperation?.({ type: 'launch-memetic-agent', cost: { eldritchPower: 30 } })}
         />
         <OperationCard
           title="Dream Invasion"
@@ -519,6 +535,7 @@ const CorruptionOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Moon className="w-6 h-6" />}
           cost={{ eldritchPower: 50, ritualSite: 1 }}
           available={state.resources.eldritchPower >= 50}
+          onExecute={() => onOperation?.({ type: 'dream-invasion', cost: { eldritchPower: 50, ritualSite: 1 } })}
         />
         <OperationCard
           title="Activate Sleeper Cells"
@@ -526,6 +543,7 @@ const CorruptionOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Target className="w-6 h-6" />}
           cost={{ networkNodes: 3 }}
           available={phase2State.corruption.influenceNetwork.nodes.length >= 3}
+          onExecute={() => onOperation?.({ type: 'activate-sleeper-cells', cost: { networkNodes: 3 } })}
         />
       </div>
     </div>
@@ -673,10 +691,11 @@ const ConvergenceOverview: React.FC<{ state: GreatOldOnesState; phase2State: Pha
   );
 };
 
-const ConvergenceOperations: React.FC<{ state: GreatOldOnesState; phase2State: Phase2State }> = ({
-  state,
-  phase2State,
-}) => {
+const ConvergenceOperations: React.FC<{
+  state: GreatOldOnesState;
+  phase2State: Phase2State;
+  onOperation?: (operation: Phase2Operation) => void;
+}> = ({ state, phase2State, onOperation }) => {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -686,6 +705,7 @@ const ConvergenceOperations: React.FC<{ state: GreatOldOnesState; phase2State: P
           icon={<Sparkles className="w-6 h-6" />}
           cost={{ eldritchPower: 30, sanityFragments: 20 }}
           available={state.resources.eldritchPower >= 30}
+          onExecute={() => onOperation?.({ type: 'establish-program', cost: { eldritchPower: 30, sanityFragments: 20 } })}
         />
         <OperationCard
           title="Cultural Movement"
@@ -693,6 +713,7 @@ const ConvergenceOperations: React.FC<{ state: GreatOldOnesState; phase2State: P
           icon={<Users className="w-6 h-6" />}
           cost={{ eldritchPower: 25 }}
           available={state.resources.eldritchPower >= 25}
+          onExecute={() => onOperation?.({ type: 'cultural-movement', cost: { eldritchPower: 25 } })}
         />
         <OperationCard
           title="Celebrity Endorsement"
@@ -700,6 +721,7 @@ const ConvergenceOperations: React.FC<{ state: GreatOldOnesState; phase2State: P
           icon={<Star className="w-6 h-6" />}
           cost={{ sanityFragments: 50, eldritchPower: 40 }}
           available={state.resources.sanityFragments >= 50}
+          onExecute={() => onOperation?.({ type: 'celebrity-endorsement', cost: { sanityFragments: 50, eldritchPower: 40 } })}
         />
         <OperationCard
           title="Redemption Act"
@@ -707,6 +729,7 @@ const ConvergenceOperations: React.FC<{ state: GreatOldOnesState; phase2State: P
           icon={<Heart className="w-6 h-6" />}
           cost={{ doctrinePoints: 50 }}
           available={phase2State.convergence.trueIntentionsMeter.redemptionAvailable}
+          onExecute={() => onOperation?.({ type: 'redemption-act', cost: { doctrinePoints: 50 } })}
         />
       </div>
     </div>
@@ -744,16 +767,184 @@ const ProgressView: React.FC<{ state: GreatOldOnesState; phase2State: Phase2Stat
 
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
-          <CardTitle className="text-lg text-slate-200">Victory Progress</CardTitle>
+          <CardTitle className="text-lg text-slate-200 flex items-center gap-2">
+            <Target className="w-5 h-5" />
+            Victory Progress
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-slate-400 text-sm mb-4">
             Track your progress toward doctrine-specific victory conditions
           </p>
-          {/* Victory conditions would be displayed here */}
-          <div className="text-xs text-slate-500">
-            Victory conditions tracking coming soon...
-          </div>
+
+          {(() => {
+            // Get victory conditions for current doctrine
+            const availableVictories = Object.values(OCCULT_VICTORY_CONDITIONS).filter(
+              vc => vc.doctrinesAllowed.includes(doctrine!)
+            );
+
+            if (availableVictories.length === 0) {
+              return (
+                <div className="text-xs text-slate-500">
+                  No victory conditions available for this doctrine
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                {availableVictories.map(victory => {
+                  const conditions = victory.conditions;
+                  let totalProgress = 0;
+                  let totalConditions = 0;
+                  const conditionDetails: Array<{ label: string; current: number; required: number; progress: number }> = [];
+
+                  // Corruption Threshold
+                  if (conditions.corruptionThreshold !== undefined) {
+                    totalConditions++;
+                    const regions = state.regions || [];
+                    const avgCorruption = regions.length > 0
+                      ? regions.reduce((sum, r) => sum + (r.corruptionLevel || 0), 0) / regions.length
+                      : 0;
+                    const progress = Math.min(100, (avgCorruption / conditions.corruptionThreshold) * 100);
+                    totalProgress += progress;
+                    conditionDetails.push({
+                      label: 'Corruption Level',
+                      current: Math.round(avgCorruption),
+                      required: conditions.corruptionThreshold,
+                      progress,
+                    });
+                  }
+
+                  // Entities Awakened
+                  if (conditions.entitiesAwakened !== undefined) {
+                    totalConditions++;
+                    const awakened = (state.summonedEntities || []).filter(e => e.tier === 'great_old_one').length;
+                    const progress = Math.min(100, (awakened / conditions.entitiesAwakened) * 100);
+                    totalProgress += progress;
+                    conditionDetails.push({
+                      label: 'Great Old Ones Awakened',
+                      current: awakened,
+                      required: conditions.entitiesAwakened,
+                      progress,
+                    });
+                  }
+
+                  // Regions Controlled
+                  if (conditions.regionsControlled !== undefined) {
+                    totalConditions++;
+                    const controlled = (state.regions || []).filter(r => r.infiltrationLevel >= 80).length;
+                    const progress = Math.min(100, (controlled / conditions.regionsControlled) * 100);
+                    totalProgress += progress;
+                    conditionDetails.push({
+                      label: 'Regions Controlled',
+                      current: controlled,
+                      required: conditions.regionsControlled,
+                      progress,
+                    });
+                  }
+
+                  // Voluntary Conversion Rate
+                  if (conditions.voluntaryConversionRate !== undefined) {
+                    totalConditions++;
+                    const regions = state.regions || [];
+                    const totalPop = regions.reduce((sum, r) => sum + (r.population || 0), 0);
+                    const convertedPop = regions.reduce((sum, r) => sum + (r.voluntaryConverts || 0), 0);
+                    const conversionRate = totalPop > 0 ? (convertedPop / totalPop) * 100 : 0;
+                    const progress = Math.min(100, (conversionRate / conditions.voluntaryConversionRate) * 100);
+                    totalProgress += progress;
+                    conditionDetails.push({
+                      label: 'Voluntary Conversion Rate',
+                      current: Math.round(conversionRate),
+                      required: conditions.voluntaryConversionRate,
+                      progress,
+                    });
+                  }
+
+                  // Sanity Threshold
+                  if (conditions.sanityThreshold !== undefined) {
+                    totalConditions++;
+                    const regions = state.regions || [];
+                    const avgSanity = regions.length > 0
+                      ? regions.reduce((sum, r) => sum + (r.populationSanity || 100), 0) / regions.length
+                      : 100;
+                    // Lower sanity is better for some victories
+                    const progress = avgSanity <= conditions.sanityThreshold
+                      ? 100
+                      : Math.max(0, 100 - ((avgSanity - conditions.sanityThreshold) * 2));
+                    totalProgress += progress;
+                    conditionDetails.push({
+                      label: 'Population Sanity',
+                      current: Math.round(avgSanity),
+                      required: conditions.sanityThreshold,
+                      progress,
+                    });
+                  }
+
+                  const overallProgress = totalConditions > 0 ? totalProgress / totalConditions : 0;
+                  const isAchievable = overallProgress >= 100;
+
+                  return (
+                    <div
+                      key={victory.type}
+                      className={`p-4 rounded-lg border-2 transition-colors ${
+                        isAchievable
+                          ? 'bg-green-900/20 border-green-500/50'
+                          : 'bg-slate-900 border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold text-slate-100 flex items-center gap-2">
+                            {isAchievable && <Zap className="w-4 h-4 text-green-400" />}
+                            {victory.name}
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-1">{victory.description}</p>
+                        </div>
+                        <Badge
+                          variant={isAchievable ? 'default' : 'secondary'}
+                          className={isAchievable ? 'bg-green-600' : ''}
+                        >
+                          {Math.round(overallProgress)}%
+                        </Badge>
+                      </div>
+
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                          <span>Overall Progress</span>
+                          <span>{Math.round(overallProgress)}%</span>
+                        </div>
+                        <Progress value={overallProgress} className="h-2" />
+                      </div>
+
+                      <div className="space-y-2">
+                        {conditionDetails.map((detail, idx) => (
+                          <div key={idx} className="text-xs">
+                            <div className="flex items-center justify-between text-slate-300 mb-1">
+                              <span>{detail.label}</span>
+                              <span className="font-medium">
+                                {detail.current} / {detail.required}
+                              </span>
+                            </div>
+                            <Progress value={detail.progress} className="h-1.5" />
+                          </div>
+                        ))}
+                      </div>
+
+                      {isAchievable && (
+                        <div className="mt-3 p-2 bg-green-900/30 rounded border border-green-500/30">
+                          <p className="text-xs text-green-300 flex items-center gap-2">
+                            <Zap className="w-3 h-3" />
+                            Victory conditions met! This ending is now achievable.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
     </div>
@@ -849,7 +1040,8 @@ const OperationCard: React.FC<{
   icon: React.ReactNode;
   cost: Record<string, number>;
   available: boolean;
-}> = ({ title, description, icon, cost, available }) => (
+  onExecute?: () => void;
+}> = ({ title, description, icon, cost, available, onExecute }) => (
   <Card className={`bg-slate-800 border-slate-700 ${!available ? 'opacity-50' : ''}`}>
     <CardHeader className="pb-3">
       <div className="flex items-start gap-3">
@@ -873,6 +1065,7 @@ const OperationCard: React.FC<{
       <Button
         size="sm"
         disabled={!available}
+        onClick={onExecute}
         className="w-full"
       >
         {available ? 'Launch Operation' : 'Requirements Not Met'}
