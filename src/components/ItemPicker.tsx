@@ -5,7 +5,7 @@
  * Supports all item types with appropriate input fields for amounts, durations, subtypes, etc.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -272,21 +272,46 @@ export function ItemPicker({
   // Get item info for selected type
   const selectedInfo = selectedType ? ITEM_INFO[selectedType] : null;
 
+  const getResourceStockpile = useCallback(
+    (type: 'gold' | 'intel' | 'production') => {
+      switch (type) {
+        case 'gold':
+        case 'production':
+          return nation.production ?? 0;
+        case 'intel':
+          return nation.intel ?? 0;
+        default:
+          return 0;
+      }
+    },
+    [nation]
+  );
+
+  const availableResourceAmount = useMemo(() => {
+    if (!selectedType) return 0;
+    if (selectedType === 'intel') {
+      return getResourceStockpile('intel');
+    }
+    if (selectedType === 'gold' || selectedType === 'production') {
+      return getResourceStockpile('production');
+    }
+    return 0;
+  }, [selectedType, getResourceStockpile]);
+
   // Can the nation afford/provide this item?
   const canAfford = useMemo(() => {
     if (!selectedType || side !== 'offer') return true;
 
     switch (selectedType) {
       case 'gold':
-        return (nation.gold || 0) >= amount;
-      case 'intel':
-        return (nation.intel || 0) >= amount;
       case 'production':
-        return (nation.production || 0) >= amount;
+        return getResourceStockpile('production') >= amount;
+      case 'intel':
+        return getResourceStockpile('intel') >= amount;
       default:
         return true; // Other items don't have resource costs
     }
-  }, [selectedType, side, nation, amount]);
+  }, [selectedType, side, amount, getResourceStockpile]);
 
   // Validation
   const isValid = useMemo(() => {
@@ -404,11 +429,7 @@ export function ItemPicker({
                 />
                 {!canAfford && side === 'offer' && (
                   <p className="text-sm text-red-500">
-                    Insufficient resources. You have {
-                      selectedType === 'gold' ? nation.gold :
-                      selectedType === 'intel' ? nation.intel :
-                      selectedType === 'production' ? nation.production : 0
-                    }.
+                    Insufficient resources. You have {availableResourceAmount}.
                   </p>
                 )}
               </div>
