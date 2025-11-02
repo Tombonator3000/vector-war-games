@@ -30,6 +30,10 @@ export type GameFeature =
   | 'bio_lab'
   | 'submarines'
   | 'satellites'
+  | 'space_weapons'
+  | 'ai_systems'
+  | 'economic_warfare'
+  | 'quantum_computing'
   | 'propaganda_victory'
   | 'advanced_research';
 
@@ -206,6 +210,38 @@ export const FEATURE_UNLOCK_INFO: Record<GameFeature, FeatureUnlockInfo> = {
     unlockTurn: 11,
     category: 'technology',
     icon: '🛰️',
+  },
+  space_weapons: {
+    feature: 'space_weapons',
+    name: 'Orbital Weapons',
+    description: 'Deploy kinetic rods and laser platforms from orbit',
+    unlockTurn: 28,
+    category: 'military',
+    icon: '🌌',
+  },
+  ai_systems: {
+    feature: 'ai_systems',
+    name: 'Autonomous Command AIs',
+    description: 'Coordinate global defenses with advanced machine intelligence',
+    unlockTurn: 30,
+    category: 'technology',
+    icon: '🤖',
+  },
+  economic_warfare: {
+    feature: 'economic_warfare',
+    name: 'Economic Warfare',
+    description: 'Unleash sanctions, market disruption, and resource embargoes',
+    unlockTurn: 24,
+    category: 'diplomacy',
+    icon: '💹',
+  },
+  quantum_computing: {
+    feature: 'quantum_computing',
+    name: 'Quantum Computing',
+    description: 'Crack encryption and accelerate research with quantum cores',
+    unlockTurn: 32,
+    category: 'technology',
+    icon: '⚛️',
   },
   propaganda_victory: {
     feature: 'propaganda_victory',

@@ -70,7 +70,7 @@ export const CesiumHeroGlobe = () => {
         return;
       }
 
-      const viewer = new Viewer(containerRef.current, {
+      const viewerOptions: any = {
         baseLayerPicker: false,
         geocoder: false,
         homeButton: false,
@@ -82,9 +82,18 @@ export const CesiumHeroGlobe = () => {
         vrButton: false,
         infoBox: false,
         selectionIndicator: false,
-        imageryProvider,
-        terrain: terrainProvider,
-      });
+      };
+
+      if (terrainProvider) {
+        viewerOptions.terrain = { provider: terrainProvider };
+      }
+
+      const viewer = new Viewer(containerRef.current, viewerOptions);
+      
+      if (imageryProvider) {
+        viewer.imageryLayers.removeAll();
+        viewer.imageryLayers.addImageryProvider(imageryProvider);
+      }
 
       viewerRef.current = viewer;
 
@@ -97,7 +106,7 @@ export const CesiumHeroGlobe = () => {
       viewer.scene.screenSpaceCameraController.enableZoom = false;
       viewer.scene.screenSpaceCameraController.enableLook = false;
       viewer.scene.screenSpaceCameraController.enableRotate = false;
-      viewer.scene.screenSpaceCameraController.enablePan = false;
+      viewer.scene.screenSpaceCameraController.enableTranslate = false;
       viewer.scene.screenSpaceCameraController.enableTilt = false;
 
       const nightTextureUrl = resolvePublicAssetPath('textures/earth_specular.jpg');

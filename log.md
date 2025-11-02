@@ -850,3 +850,30 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-11-02T12:08:12Z
 - Passed the live `S.turn` value into `OptionsMenu` so `GameDatabase` respects the player's progression when evaluating feature unlock turns.
+## 2025-11-02T09:47:43+00:00
+- Reviewed task requirements to extend era features, guard metadata lookups, and add regression coverage for the Great Old Ones scenario.
+## 2025-11-02T09:47:54+00:00
+- Extended `GameFeature` types and metadata with orbital, AI, economic, and quantum late-era unlocks in `src/types/era.ts`.
+## 2025-11-02T09:48:07+00:00
+- Hardened `useGameEra` feature lookups to skip undefined metadata before sorting or returning unlock info.
+## 2025-11-02T09:48:23+00:00
+- Added a Vitest regression to confirm Great Old Ones era overrides keep `getLockedFeatures` and `getNewlyUnlockedFeatures` safe.
+## 2025-11-02T09:48:31+00:00
+- Ran `npm run test -- --run src/hooks/__tests__/useGameEra.test.ts` to verify the new regression passes.
+## 2025-11-02T10:00:13Z
+- Revised the MAD counterstrike flashpoint success path in `src/hooks/useFlashpoints.ts` to flag a counterstrike state, apply morale/DEFCON penalties, and surface new consequence copy.
+- Updated `src/pages/Index.tsx` outcome handling to recognize the MAD counterstrike state and emit appropriate crisis news without forcing the nuclear war branch.
+- Extended `src/hooks/__tests__/useFlashpoints.test.ts` to assert the MAD success outcome no longer reports `nuclearWar` or `worldEnds` and instead tracks the new counterstrike flag.
+## 2025-11-02T10:00:28Z
+- Ran `npm run test -- --run src/hooks/__tests__/useFlashpoints.test.ts` to validate the updated MAD counterstrike behavior.
+## 2025-11-02T11:27:06Z
+- Removed the opaque background from the bottom command tray in `src/pages/Index.tsx` to eliminate the solid black bar while preserving button layout.
+- Updated `src/components/NewsTicker.tsx` to default to a transparent background so the ticker no longer contributes to the dark footer band.
+
+## 2025-11-02T12:21:22+00:00
+- Reviewed the fullscreen portal requirement for the options sheet and updated `src/components/ui/sheet.tsx` to track the fullscreen element for the sheet portal, including lifecycle cleanup.
+## 2025-11-02T12:15:17+00:00
+- Cleared cyan border accents from the bottom command bar in `src/pages/Index.tsx` while keeping its flex layout utilities intact.
+- Removed the cyan border styling from `src/components/NewsTicker.tsx` to keep the ticker fully transparent.
+## 2025-11-02T12:26:24+00:00
+- Added camera translate gating for the `flat-realistic` map style in `src/components/CesiumViewer.tsx`, wiring a height-sensitive camera change listener and ensuring cleanup when styles change or the viewer unmounts.

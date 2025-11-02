@@ -105,11 +105,14 @@ export interface Nation {
   isPlayer: boolean;
   name: string;
   leader: string;
+  leaderName?: string;
+  aiPersonality?: string;
   doctrine?: string;
   ai?: string;
   lon: number;
   lat: number;
   color: string;
+  gold?: number;
   population: number;
   missiles: number;
   bombers?: number;

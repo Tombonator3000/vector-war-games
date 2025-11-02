@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { calculateFlashpointProbability, useFlashpoints } from '../useFlashpoints';
+import { calculateFlashpointProbability, useFlashpoints, type FlashpointEvent } from '../useFlashpoints';
 import { getEnhancedFlashpointsForTurn } from '../useCubaCrisisFlashpointsEnhanced';
 
 vi.mock('@/contexts/RNGContext', () => {
@@ -66,7 +66,7 @@ describe('useFlashpoints', () => {
 
     let successResolution;
     act(() => {
-      successResolution = result.current.resolveFlashpoint(successOption.id, triggeredFlashpoint!);
+      successResolution = result.current.resolveFlashpoint(successOption.id, triggeredFlashpoint!, 1);
     });
 
     expect(successResolution.success).toBe(true);
@@ -97,7 +97,7 @@ describe('useFlashpoints', () => {
 
     let failureResolution;
     act(() => {
-      failureResolution = result.current.resolveFlashpoint(failureOption.id, secondFlashpoint!);
+      failureResolution = result.current.resolveFlashpoint(failureOption.id, secondFlashpoint!, 2);
     });
 
     expect(failureResolution.success).toBe(false);
@@ -120,6 +120,45 @@ describe('useFlashpoints', () => {
 
     expect(triggeredFlashpoint?.id).toBe('excomm-enhanced-1');
     expect(result.current.activeFlashpoint?.id).toBe('excomm-enhanced-1');
+  });
+
+  it('marks MAD counterstrike without ending the world on launch success', () => {
+    const { result } = renderHook(() => useFlashpoints());
+
+    const accidentalLaunchFlashpoint: FlashpointEvent = {
+      id: 'test-accidental-launch',
+      title: 'ACCIDENTAL LAUNCH DETECTED',
+      description: 'NORAD reports an accidental missile launch.',
+      category: 'accident',
+      severity: 'catastrophic',
+      timeLimit: 45,
+      options: [
+        {
+          id: 'launch',
+          text: 'Launch Full Counterstrike',
+          description: 'MAD doctrine activation',
+          advisorSupport: [],
+          advisorOppose: ['diplomatic', 'science', 'pr'],
+          outcome: {
+            probability: 1,
+            success: { madCounterstrikeInitiated: true, morale: -30, defcon: 1 },
+            failure: { nuclearWar: true, worldEnds: true }
+          }
+        }
+      ],
+      consequences: {},
+      triggeredAt: Date.now()
+    };
+
+    let resolution;
+    act(() => {
+      resolution = result.current.resolveFlashpoint('launch', accidentalLaunchFlashpoint, 10);
+    });
+
+    expect(resolution.success).toBe(true);
+    expect(resolution.outcome.madCounterstrikeInitiated).toBe(true);
+    expect(resolution.outcome.nuclearWar).toBeUndefined();
+    expect(resolution.outcome.worldEnds).toBeUndefined();
   });
 });
 

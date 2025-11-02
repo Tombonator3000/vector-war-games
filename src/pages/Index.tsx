@@ -59,9 +59,15 @@ import { applyRemoteGameStateSync } from '@/lib/coopSync';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
+import { LeaderContactModal } from '@/components/LeaderContactModal';
+import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
+import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { EndGameScreen } from '@/components/EndGameScreen';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
 import type { DiplomacyProposal } from '@/types/diplomacy';
+import type { NegotiationState } from '@/types/negotiation';
+import { evaluateNegotiation } from '@/lib/aiNegotiationEvaluator';
+import { applyNegotiationDeal } from '@/lib/negotiationUtils';
 import { evaluateProposal, shouldAIInitiateProposal } from '@/lib/aiDiplomacyEvaluator';
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
 import {
@@ -149,6 +155,9 @@ import {
   resolveGrievancesWithApology,
   resolveGrievancesWithReparations,
 } from '@/lib/diplomacyPhase2Integration';
+import { initializeNationAgendas, processAgendaRevelations } from '@/lib/agendaSystem';
+import { checkAllTriggers, resetTriggerTracking } from '@/lib/aiNegotiationTriggers';
+import { generateNegotiationContent } from '@/lib/aiNegotiationContentGenerator';
 import {
   initializeDiplomacyPhase3State,
   type DiplomacyPhase3State as DiplomacyPhase3SystemState,
@@ -1559,6 +1568,29 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     nations[index] = initializeDIP(nation);
   });
 
+  // Initialize Agenda System (Phase 4): Assign unique leader agendas to AI nations
+  const playerNation = nations.find(n => n.isPlayer);
+  if (playerNation) {
+    const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
+    nations.length = 0;
+    nations.push(...updatedNations);
+    GameStateManager.setNations(nations);
+    PlayerManager.setNations(nations);
+
+    // Log agendas for debugging
+    console.log('=== LEADER AGENDAS ASSIGNED (Cuban Crisis) ===');
+    nations.forEach(nation => {
+      if (!nation.isPlayer && (nation as any).agendas) {
+        const agendas = (nation as any).agendas;
+        const primary = agendas.find((a: any) => a.type === 'primary');
+        const hidden = agendas.find((a: any) => a.type === 'hidden');
+        console.log(`${nation.name} (${nation.leader}):`);
+        console.log(`  Primary: ${primary?.name} (visible)`);
+        console.log(`  Hidden: ${hidden?.name} (concealed)`);
+      }
+    });
+  }
+
   log('=== CUBAN MISSILE CRISIS - OCTOBER 1962 ===', 'critical');
   log(`Leader: ${playerLeaderName}`, 'success');
   log(`Doctrine: ${S.selectedDoctrine}`, 'success');
@@ -1604,7 +1636,7 @@ function initNations() {
     initCubanCrisisNations(playerLeaderName, playerLeaderConfig, selectedDoctrine);
     return;
   }
-  const playerNation: LocalNation = {
+  let playerNation: LocalNation = {
     id: 'player',
     isPlayer: true,
     name: 'PLAYER',
@@ -1760,6 +1792,29 @@ function initNations() {
   nations.forEach((nation, index) => {
     nations[index] = initializeDIP(nation);
   });
+
+  // Initialize Agenda System (Phase 4): Assign unique leader agendas to AI nations
+  const playerNation = nations.find(n => n.isPlayer);
+  if (playerNation) {
+    const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
+    nations.length = 0;
+    nations.push(...updatedNations);
+    GameStateManager.setNations(nations);
+    PlayerManager.setNations(nations);
+
+    // Log agendas for debugging
+    console.log('=== LEADER AGENDAS ASSIGNED ===');
+    nations.forEach(nation => {
+      if (!nation.isPlayer && (nation as any).agendas) {
+        const agendas = (nation as any).agendas;
+        const primary = agendas.find((a: any) => a.type === 'primary');
+        const hidden = agendas.find((a: any) => a.type === 'hidden');
+        console.log(`${nation.name}:`);
+        console.log(`  Primary: ${primary?.name} (visible)`);
+        console.log(`  Hidden: ${hidden?.name} (concealed)`);
+      }
+    });
+  }
 
   log('=== GAME START ===', 'success');
   log(`Leader: ${playerLeaderName}`, 'success');
@@ -3765,6 +3820,85 @@ function endTurn() {
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
 
+      // Process Agenda Revelations (Phase 4): Check if hidden agendas should be revealed
+      const player = PlayerManager.get();
+      if (player) {
+        const { nations: nationsAfterRevelations, revelations } = processAgendaRevelations(
+          nations,
+          player,
+          S.turn
+        );
+
+        // Update nations array with revealed agendas
+        if (revelations.length > 0) {
+          nations.length = 0;
+          nations.push(...nationsAfterRevelations);
+          GameStateManager.setNations(nations);
+          PlayerManager.setNations(nations);
+
+          // Show revelation notifications
+          revelations.forEach((revelation, index) => {
+            const nation = nations.find(n => n.id === revelation.nationId);
+            if (nation) {
+              console.log(`💡 AGENDA REVEALED: ${nation.name} - ${revelation.agenda.name}`);
+              log(`💡 You've learned more about ${nation.name}'s motivations: ${revelation.agenda.name}`, 'success');
+
+              // Show notification modal for the first revelation
+              // (If multiple revelations occur, only show one at a time)
+              if (index === 0) {
+                setAgendaRevelationData({
+                  nationName: nation.name,
+                  agenda: revelation.agenda,
+                });
+                setAgendaRevelationOpen(true);
+              }
+            }
+          });
+        }
+      }
+
+      // Process AI-Initiated Negotiations (Phase 4): Check if AI wants to start negotiations
+      if (player) {
+        const aiNations = nations.filter(n => !n.isPlayer);
+        const newNegotiations: any[] = [];
+        let globalNegotiationCount = 0;
+
+        // Check each AI nation to see if they want to initiate negotiations
+        for (const aiNation of aiNations) {
+          const triggerResult = checkAllTriggers(
+            aiNation,
+            player,
+            nations,
+            S.turn,
+            globalNegotiationCount
+          );
+
+          if (triggerResult) {
+            // Generate negotiation content based on trigger
+            const negotiation = generateNegotiationContent(
+              aiNation,
+              player,
+              nations,
+              triggerResult,
+              S.turn
+            );
+
+            if (negotiation) {
+              newNegotiations.push(negotiation);
+              globalNegotiationCount++;
+
+              console.log(`🤝 AI NEGOTIATION INITIATED: ${aiNation.name} - ${triggerResult.purpose}`);
+              log(`📨 ${aiNation.name} has initiated diplomatic contact: ${triggerResult.purpose}`, 'diplomacy');
+            }
+          }
+        }
+
+        // Add new negotiations to state
+        if (newNegotiations.length > 0) {
+          setAiInitiatedNegotiations(prev => [...prev, ...newNegotiations]);
+        }
+      }
+
       // Process AI bio-warfare for all AI nations
       const difficulty = S.difficulty || 'medium';
       processAllAINationsBioWarfare(nations, S.turn, difficulty, {
@@ -4191,6 +4325,21 @@ export default function NoradVector() {
   const [activeDiplomacyProposal, setActiveDiplomacyProposal] = useState<DiplomacyProposal | null>(null);
   const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
   const [showEnhancedDiplomacy, setShowEnhancedDiplomacy] = useState(false);
+
+  // Leader Contact Modal state
+  const [leaderContactModalOpen, setLeaderContactModalOpen] = useState(false);
+  const [leaderContactTargetNationId, setLeaderContactTargetNationId] = useState<string | null>(null);
+  const [activeNegotiations, setActiveNegotiations] = useState<NegotiationState[]>([]);
+
+  // Agenda Revelation Notification state (Phase 4)
+  const [agendaRevelationOpen, setAgendaRevelationOpen] = useState(false);
+  const [agendaRevelationData, setAgendaRevelationData] = useState<{
+    nationName: string;
+    agenda: any;
+  } | null>(null);
+
+  // AI-Initiated Negotiations state (Phase 4)
+  const [aiInitiatedNegotiations, setAiInitiatedNegotiations] = useState<any[]>([]);
 
   useEffect(() => {
     enqueueAIProposalRef = (proposal) => {
@@ -5854,6 +6003,9 @@ export default function NoradVector() {
     S.selectedDoctrine = doctrineToUse;
     S.playerName = leaderToUse;
 
+    // Reset AI negotiation trigger tracking for new game
+    resetTriggerTracking();
+
     // Expose updated S to window when game starts
     if (typeof window !== 'undefined') {
       (window as any).S = S;
@@ -7393,6 +7545,66 @@ export default function NoradVector() {
     setActiveDiplomacyProposal(null);
   }, [activeDiplomacyProposal, getNationById, toast]);
 
+  // Handler for opening leader contact modal
+  const handleContactLeader = useCallback((nationId: string) => {
+    setLeaderContactTargetNationId(nationId);
+    setLeaderContactModalOpen(true);
+  }, []);
+
+  // Handler for proposing a deal from negotiation interface
+  const handleProposeDeal = useCallback((negotiation: NegotiationState) => {
+    const player = PlayerManager.get();
+    if (!player) return;
+
+    const targetNation = getNationById(nations, negotiation.respondentId);
+    if (!targetNation) return;
+
+    // Evaluate the negotiation with AI
+    const evaluation = evaluateNegotiation(
+      negotiation,
+      targetNation,
+      player,
+      nations,
+      S.turn
+    );
+
+    // Check if AI accepts
+    const roll = Math.random() * 100;
+    const accepted = roll <= evaluation.acceptanceProbability;
+
+    if (accepted) {
+      // Apply the deal
+      applyNegotiationDeal(negotiation, player, targetNation);
+
+      toast({
+        title: 'Deal Accepted!',
+        description: `${targetNation.name} has accepted your proposal.`,
+      });
+
+      // Update game state with changes
+      GameStateManager.set({
+        ...S,
+        nations: nations.map(n =>
+          n.id === player.id ? player :
+          n.id === targetNation.id ? targetNation :
+          n
+        ),
+      });
+    } else {
+      toast({
+        title: 'Deal Rejected',
+        description: evaluation.feedback || `${targetNation.name} has rejected your proposal.`,
+        variant: 'destructive',
+      });
+
+      // If there's a counter-offer, the NegotiationInterface will handle it
+    }
+
+    // Close the modal
+    setLeaderContactModalOpen(false);
+    setLeaderContactTargetNationId(null);
+  }, [nations, S, toast]);
+
   const handleEnhancedDiplomacyAction = useCallback((action: DiplomaticAction, target?: Nation) => {
     const player = PlayerManager.get();
     if (!player) return;
@@ -8241,6 +8453,15 @@ export default function NoradVector() {
           case '4': handleCulture(); break;
           case '5': handleImmigration(); break;
           case '6': handleDiplomacy(); break;
+          case 'l': // 'L' for Leader - open leader contact modal with first AI nation
+          case 'L':
+            if (S.phase === 'PLAYER') {
+              const firstAI = nations.find(n => !n.isPlayer && n.population > 0);
+              if (firstAI) {
+                handleContactLeader(firstAI.id);
+              }
+            }
+            break;
           case '7':
             e.preventDefault();
             handleAttackRef.current?.();
@@ -8432,8 +8653,8 @@ export default function NoradVector() {
 
         <div className="hud-layers pointer-events-none touch-none">
           {/* Minimal top status bar */}
-          <header className="fixed top-0 left-0 right-0 h-12 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
-            <div className="flex items-center gap-6 text-xs font-mono">
+          <header className="game-top-bar fixed top-0 left-0 right-0 h-12 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
+            <div className="game-top-bar__metrics flex items-center gap-6 text-xs font-mono">
               {/* DEFCON - Enlarged for prominence */}
               <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded">
                 <span className="text-cyan-400 text-sm">DEFCON</span>
@@ -8457,7 +8678,7 @@ export default function NoradVector() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="game-top-bar__actions flex items-center gap-3">
               <SyncStatusBadge />
               <div className="text-xs font-mono text-neon-magenta mr-4">
                 <span className="text-cyan-400">DOOMSDAY</span>{' '}
@@ -8498,7 +8719,7 @@ export default function NoradVector() {
           </header>
 
           {coopEnabled ? (
-            <div className="fixed top-14 right-4 pointer-events-auto touch-auto z-40 w-72">
+            <div className="fixed top-14 right-3 pointer-events-auto touch-auto z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))]">
               <ApprovalQueue />
             </div>
           ) : null}
@@ -8508,7 +8729,7 @@ export default function NoradVector() {
           </div>
 
           {isStrikePlannerOpen ? (
-            <div className="pointer-events-auto fixed bottom-24 right-6 z-40 w-80 max-h-[60vh]">
+            <div className="pointer-events-auto fixed bottom-24 right-3 z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))] max-h-[60vh]">
               <div className="rounded-lg border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-sm shadow-2xl">
                 <div className="flex items-center justify-between border-b border-cyan-500/30 bg-black/40 px-4 py-3">
                   <span className="text-sm font-mono font-semibold uppercase tracking-wider text-cyan-300">Strike Planner</span>
@@ -8566,7 +8787,7 @@ export default function NoradVector() {
                     })
                   )}
                 </div>
-                <div className="border-t border-cyan-500/30 px-4 py-3 text-sm text-gray-400">
+                <div className="px-4 py-3 text-sm text-gray-400">
                   {selectedTarget ? (
                     <div className="space-y-1">
                       <p>
@@ -8586,13 +8807,16 @@ export default function NoradVector() {
           ) : null}
 
           {/* Minimal bottom utility stack */}
-          <div className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50">
+          <div
+            className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          >
             <div className="flex flex-col gap-1">
               <NewsTicker
                 items={newsItems}
                 className="pointer-events-auto touch-auto"
               />
-              <div className="h-16 sm:h-20 bg-black/90 border-t border-cyan-500/30 backdrop-blur-sm pointer-events-auto touch-auto">
+              <div className="h-16 sm:h-20 pointer-events-auto touch-auto bg-transparent">
                 <div className="h-full flex items-center justify-center gap-1 px-4">
                   <Button
                     onClick={handleBuild}
@@ -8994,7 +9218,7 @@ export default function NoradVector() {
       {/* Great Old Ones Campaign UI */}
       {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && (
         <>
-          <div className="fixed top-20 left-4 z-40 space-y-4 max-w-md">
+          <div className="fixed top-20 left-4 z-40 space-y-4 max-w-md max-h-[calc(100vh-6rem)] overflow-y-auto">
             {!greatOldOnesState.doctrine && (
               <DoctrineSelectionPanel
                 canSelect={true}
@@ -9021,7 +9245,7 @@ export default function NoradVector() {
             )}
           </div>
 
-          <div className="fixed top-20 right-4 z-40 space-y-4 max-w-md">
+          <div className="fixed top-20 right-4 z-40 space-y-4 max-w-md max-h-[calc(100vh-6rem)] overflow-y-auto">
             {greatOldOnesState.doctrine && week3State && (
               <>
                 <RitualSitePanel state={greatOldOnesState} />
@@ -9180,7 +9404,10 @@ export default function NoradVector() {
               });
             }
 
-            if (outcome.nuclearWar || outcome.worldEnds) {
+            if (outcome.madCounterstrikeInitiated) {
+              addNewsItem('crisis', 'MAD COUNTERSTRIKE AUTHORIZED - RETALIATORY LAUNCHES UNDERWAY', 'critical');
+              S.defcon = 1;
+            } else if (outcome.nuclearWar || outcome.worldEnds) {
               addNewsItem('crisis', 'NUCLEAR WAR INITIATED', 'critical');
               S.defcon = 1;
             } else if (result.success) {
@@ -9300,6 +9527,82 @@ export default function NoradVector() {
           />
         );
       })()}
+
+      {/* Leader Contact Modal (Phase 2 Negotiation System) */}
+      {leaderContactModalOpen && leaderContactTargetNationId && (() => {
+        const player = PlayerManager.get();
+        const targetNation = getNationById(nations, leaderContactTargetNationId);
+
+        if (!player || !targetNation) return null;
+
+        return (
+          <LeaderContactModal
+            open={leaderContactModalOpen}
+            onClose={() => {
+              setLeaderContactModalOpen(false);
+              setLeaderContactTargetNationId(null);
+            }}
+            playerNation={player}
+            targetNation={targetNation}
+            allNations={nations}
+            currentTurn={S.turn}
+            onProposeDeal={handleProposeDeal}
+            onMakeRequest={(action) => {
+              toast({
+                title: 'Request Made',
+                description: `Request sent to ${targetNation.name}`,
+              });
+            }}
+            onDiscuss={() => {
+              toast({
+                title: 'Discussion',
+                description: `You discussed relations with ${targetNation.name}`,
+              });
+            }}
+          />
+        );
+      })()}
+
+      {/* Agenda Revelation Notification (Phase 4) */}
+      {agendaRevelationOpen && agendaRevelationData && (
+        <AgendaRevelationNotification
+          open={agendaRevelationOpen}
+          onClose={() => {
+            setAgendaRevelationOpen(false);
+            setAgendaRevelationData(null);
+          }}
+          nationName={agendaRevelationData.nationName}
+          agenda={agendaRevelationData.agenda}
+        />
+      )}
+
+      {/* AI-Initiated Negotiations Notification Queue (Phase 4) */}
+      {aiInitiatedNegotiations.length > 0 && (
+        <AINegotiationNotificationQueue
+          negotiations={aiInitiatedNegotiations}
+          allNations={nations}
+          onView={(negotiation) => {
+            // Open negotiation interface
+            const aiNation = nations.find(n => n.id === negotiation.aiNationId);
+            if (aiNation) {
+              setLeaderContactTargetNationId(aiNation.id);
+              setLeaderContactModalOpen(true);
+              // Add negotiation to active negotiations
+              setActiveNegotiations(prev => [...prev, negotiation.proposedDeal]);
+            }
+            // Remove from queue
+            setAiInitiatedNegotiations(prev =>
+              prev.filter(n => n.proposedDeal.id !== negotiation.proposedDeal.id)
+            );
+          }}
+          onDismiss={(negotiationId) => {
+            // Remove from queue
+            setAiInitiatedNegotiations(prev =>
+              prev.filter(n => n.proposedDeal.id !== negotiationId)
+            );
+          }}
+        />
+      )}
 
       {/* End Game Screen */}
       {S.showEndGameScreen && S.endGameStatistics && (
