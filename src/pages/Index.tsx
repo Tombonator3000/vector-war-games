@@ -9028,6 +9028,7 @@ export default function NoradVector() {
             onViewerTypeChange={handleViewerSelect}
             showInGameFeatures={true}
             onChange={updateDisplay}
+            currentTurn={S.turn}
           />
         </SheetContent>
       </Sheet>

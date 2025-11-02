@@ -847,6 +847,9 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-11-02T09:06:02+00:00
 - Added an advanced diplomacy lock notice in `src/components/EnhancedDiplomacyModal.tsx` that replaces the phase three dashboard when the state or enable flag is missing so players understand they must progress eras or objectives to reveal those metrics.
+
+## 2025-11-02T12:08:12Z
+- Passed the live `S.turn` value into `OptionsMenu` so `GameDatabase` respects the player's progression when evaluating feature unlock turns.
 ## 2025-11-02T09:47:43+00:00
 - Reviewed task requirements to extend era features, guard metadata lookups, and add regression coverage for the Great Old Ones scenario.
 ## 2025-11-02T09:47:54+00:00
