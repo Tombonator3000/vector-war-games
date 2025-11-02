@@ -134,7 +134,8 @@ import { initializeWeek3State, updateWeek3Systems, type Week3ExtendedState } fro
 import { initializePhase2State, updatePhase2Systems, checkPhase2UnlockConditions, type Phase2State } from '@/lib/phase2Integration';
 import { initializePhase3State, updatePhase3Systems, checkPhase3UnlockConditions } from '@/lib/phase3Integration';
 import type { Phase3State } from '@/types/phase3Types';
-import { DoctrineSelectionPanel, CouncilSchismModal, OrderCommandPanel, SanityHeatMapPanel, RitualSitePanel, MissionBoardPanel, UnitRosterPanel } from '@/components/greatOldOnes';
+import { DoctrineSelectionPanel, CouncilSchismModal, OrderCommandPanel, SanityHeatMapPanel, RitualSitePanel, MissionBoardPanel, UnitRosterPanel, Phase2DoctrinePanel } from '@/components/greatOldOnes';
+import type { Phase2Operation } from '@/components/greatOldOnes/Phase2DoctrinePanel';
 import {
   aiSignMutualTruce,
   aiSignNonAggressionPact,
@@ -4960,6 +4961,7 @@ export default function NoradVector() {
   // Great Old Ones state
   const [greatOldOnesState, setGreatOldOnesState] = useState<GreatOldOnesState | null>(null);
   const [councilSchismModalOpen, setCouncilSchismModalOpen] = useState(false);
+  const [phase2PanelOpen, setPhase2PanelOpen] = useState(false);
   const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
   const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
   const [phase3State, setPhase3State] = useState<Phase3State | null>(null);
@@ -8501,6 +8503,138 @@ export default function NoradVector() {
     setShowEnhancedDiplomacy(false);
   }, [toast, updateDisplay, consumeAction, setDiplomacyPhase3State]);
 
+  const handlePhase2Operation = useCallback((operation: Phase2Operation) => {
+    if (!greatOldOnesState || !phase2State) return;
+
+    const { type, cost } = operation;
+
+    // Check if resources are available
+    for (const [resource, amount] of Object.entries(cost)) {
+      if (resource === 'sanityFragments' && greatOldOnesState.resources.sanityFragments < amount) {
+        toast({
+          title: 'Insufficient Resources',
+          description: `Need ${amount} Sanity Fragments`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (resource === 'eldritchPower' && greatOldOnesState.resources.eldritchPower < amount) {
+        toast({
+          title: 'Insufficient Resources',
+          description: `Need ${amount} Eldritch Power`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    // Deduct resources
+    const updatedState = { ...greatOldOnesState };
+    if (cost.sanityFragments) {
+      updatedState.resources.sanityFragments -= cost.sanityFragments;
+    }
+    if (cost.eldritchPower) {
+      updatedState.resources.eldritchPower -= cost.eldritchPower;
+    }
+
+    // Apply operation effects
+    let title = '';
+    let description = '';
+    let logMessage = '';
+
+    switch (type) {
+      case 'summon-entity':
+        title = 'Entity Summoned';
+        description = 'A bound entity now serves the Order';
+        logMessage = 'Summoned an eldritch entity through profane rituals';
+        // Note: Full entity summoning would require adding to summonedEntities array
+        break;
+      case 'terror-campaign':
+        title = 'Terror Campaign Launched';
+        description = 'Fear spreads through public manifestations';
+        logMessage = 'Initiated terror campaign using bound entities';
+        if (phase2State.domination) {
+          phase2State.domination.fearLevel = Math.min(100, phase2State.domination.fearLevel + 10);
+        }
+        break;
+      case 'military-assault':
+        title = 'Military Assault';
+        description = 'Entities engage conventional forces in direct combat';
+        logMessage = 'Commanded entities to assault military targets';
+        break;
+      case 'awakening-ritual':
+        title = 'Awakening Ritual';
+        description = 'Progress made toward awakening a Great Old One';
+        logMessage = 'Performed awakening ritual at aligned sites';
+        break;
+      case 'infiltrate-institution':
+        title = 'Institution Infiltrated';
+        description = 'Influence node established';
+        logMessage = 'Infiltrated a key institution with cultist agents';
+        break;
+      case 'launch-memetic-agent':
+        title = 'Memetic Agent Deployed';
+        description = 'Idea virus spreading through population';
+        logMessage = 'Launched memetic campaign to spread eldritch concepts';
+        break;
+      case 'dream-invasion':
+        title = 'Dream Invasion';
+        description = 'Mass nightmares afflict target region';
+        logMessage = 'Conducted dream invasion ritual, spreading madness';
+        updatedState.veil.integrity = Math.max(0, updatedState.veil.integrity - 2);
+        break;
+      case 'activate-sleeper-cells':
+        title = 'Sleeper Cells Activated';
+        description = 'Coordinated network-wide operation executed';
+        logMessage = 'Activated sleeper cells across influence network';
+        break;
+      case 'establish-program':
+        title = 'Enlightenment Program Established';
+        description = 'New program recruiting voluntary converts';
+        logMessage = 'Established enlightenment program for willing initiates';
+        break;
+      case 'cultural-movement':
+        title = 'Cultural Movement Started';
+        description = 'Philosophical/artistic movement spreading ideology';
+        logMessage = 'Launched cultural movement to normalize eldritch philosophy';
+        break;
+      case 'celebrity-endorsement':
+        title = 'Celebrity Endorsement Secured';
+        description = 'High-profile figure now promotes the Order';
+        logMessage = 'Recruited celebrity endorser for mainstream appeal';
+        if (phase2State.convergence) {
+          phase2State.convergence.voluntaryConversionRate += 5;
+        }
+        break;
+      case 'redemption-act':
+        title = 'Redemption Act';
+        description = 'Attempting to redeem past betrayals';
+        logMessage = 'Performed act of redemption to restore trust';
+        if (phase2State.convergence) {
+          phase2State.convergence.trueIntentionsMeter.moralityScore += 10;
+        }
+        break;
+      default:
+        title = 'Operation Complete';
+        description = `Executed ${type}`;
+        logMessage = `Completed Phase 2 operation: ${type}`;
+    }
+
+    // Update states
+    setGreatOldOnesState(updatedState);
+    setPhase2State({ ...phase2State });
+    GameStateManager.setGreatOldOnes(updatedState);
+
+    // Show feedback
+    toast({ title, description });
+    log(logMessage, 'occult');
+    if (window.__gameAddNewsItem) {
+      window.__gameAddNewsItem('occult', logMessage, 'important');
+    }
+
+    updateDisplay();
+  }, [greatOldOnesState, phase2State, toast, updateDisplay]);
+
   // Show pending AI proposals when phase transitions to player
   useEffect(() => {
     if (S.phase === 'PLAYER' && pendingAIProposals.length > 0 && !activeDiplomacyProposal) {
@@ -9745,6 +9879,30 @@ export default function NoradVector() {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Phase 2 Operations Button - Only shown if Phase 2 is unlocked */}
+                {phase2State && phase2State.unlocked && (
+                  <Card className="bg-slate-800 border-slate-700">
+                    <CardHeader>
+                      <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-purple-500" />
+                        Phase 2 Operations
+                      </CardTitle>
+                      <CardDescription>
+                        Execute doctrine-specific operations and track victory progress
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button
+                        variant="default"
+                        onClick={() => setPhase2PanelOpen(true)}
+                        className="w-full bg-purple-600 hover:bg-purple-700"
+                      >
+                        Open Phase 2 Panel
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
           </div>
@@ -9822,6 +9980,18 @@ export default function NoradVector() {
             }
           }}
         />
+      )}
+
+      {/* Phase 2 Doctrine Operations Panel */}
+      {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && phase2State && phase2PanelOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <Phase2DoctrinePanel
+            state={greatOldOnesState}
+            phase2State={phase2State}
+            onClose={() => setPhase2PanelOpen(false)}
+            onOperation={handlePhase2Operation}
+          />
+        </div>
       )}
 
       {activeFlashpoint && (

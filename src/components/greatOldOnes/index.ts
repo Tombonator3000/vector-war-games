@@ -10,3 +10,4 @@ export { SanityHeatMapPanel } from './SanityHeatMapPanel';
 export { RitualSitePanel } from './RitualSitePanel';
 export { MissionBoardPanel, MissionOutcomeDisplay } from './MissionBoardPanel';
 export { UnitRosterPanel } from './UnitRosterPanel';
+export { Phase2DoctrinePanel } from './Phase2DoctrinePanel';

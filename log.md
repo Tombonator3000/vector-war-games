@@ -1128,6 +1128,121 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - "Point of no return" mechanic (once per campaign)
 - Completes the "Council Schism event" mentioned in original warning message
 
+### 2025-11-02T16:00:00Z - FASE 2.3: Make Phase 2 Operations Executable ✅
+**Problem:** Phase 2 operations were display-only with non-functional buttons
+**Files Modified:**
+- `/home/user/vector-war-games/src/components/greatOldOnes/Phase2DoctrinePanel.tsx` (operations interface)
+- `/home/user/vector-war-games/src/pages/Index.tsx` (integration and handlers)
+- `/home/user/vector-war-games/src/components/greatOldOnes/index.ts` (exports)
+
+**Solution Implemented:**
+
+**1. Added Operation Callback System (Phase2DoctrinePanel.tsx:33-43):**
+- Created `Phase2Operation` interface with type and cost properties
+- Added `onOperation` prop to Phase2DoctrinePanelProps
+- Passed callback through to all operation components (Domination, Corruption, Convergence)
+
+**2. Updated OperationCard Component (lines 1037-1075):**
+- Added `onExecute` callback prop
+- Connected button onClick to execute handler
+- Maintains disabled state and availability checks
+
+**3. Connected All 12 Operations with Type IDs:**
+**Domination Path:**
+- `summon-entity`: Summon eldritch entities (50 sanity + 30 power)
+- `terror-campaign`: Spread fear through manifestations (20 power + 2 entities)
+- `military-assault`: Direct combat (3 entities required)
+- `awakening-ritual`: Progress Great Old One awakening (300 sanity + 200 power)
+
+**Corruption Path:**
+- `infiltrate-institution`: Establish influence node (5 cultists + 20 power)
+- `launch-memetic-agent`: Create idea virus (30 power)
+- `dream-invasion`: Mass nightmare ritual (50 power + ritual site)
+- `activate-sleeper-cells`: Network-wide operation (3 nodes required)
+
+**Convergence Path:**
+- `establish-program`: Create enlightenment program (30 power + 20 sanity)
+- `cultural-movement`: Start philosophical movement (25 power)
+- `celebrity-endorsement`: Recruit high-profile endorser (50 sanity + 40 power)
+- `redemption-act`: Redeem past betrayals (50 doctrine points)
+
+**4. Created Operation Handler (Index.tsx:8506-8636):**
+- Resource validation before execution
+- Resource deduction (sanity fragments, eldritch power)
+- Operation-specific effects:
+  - Terror campaigns increase fear level (+10%)
+  - Dream invasions reduce veil integrity (-2%)
+  - Celebrity endorsements boost conversion rate (+5%)
+  - Redemption acts improve morality score (+10)
+- Toast notifications for feedback
+- News items for all operations
+- Game log entries with context
+
+**5. Added UI Integration (Index.tsx:9883-9905, 9985-9995):**
+- Phase 2 Operations button card (appears when Phase 2 unlocked)
+- Opens Phase2DoctrinePanel as full-screen modal
+- Purple theme to distinguish from Council Schism
+- Positioned in left sidebar with other Great Old Ones controls
+
+**6. Updated Exports (index.ts:13):**
+- Added Phase2DoctrinePanel to component exports
+- Enables import in main Index component
+
+**Operational Flow:**
+1. Player clicks "Open Phase 2 Panel" button
+2. Full-screen Phase2DoctrinePanel modal appears
+3. Player navigates to "Operations" tab
+4. Selects doctrine-specific operations
+5. Clicks "Launch Operation" button
+6. Handler validates resources
+7. Deducts costs and applies effects
+8. Shows toast notification + news item + log entry
+9. Updates game state and UI
+
+**Resource Validation:**
+- Checks sanity fragments availability
+- Checks eldritch power availability
+- Shows specific error message for insufficient resources
+- Prevents execution if requirements not met
+
+**Effects Implemented:**
+- **Terror Campaign:** +10% fear level (domination.fearLevel)
+- **Dream Invasion:** -2% veil integrity
+- **Celebrity Endorsement:** +5% voluntary conversion rate
+- **Redemption Act:** +10 morality score
+- **Other operations:** Placeholder effects with feedback
+
+**User Feedback:**
+- Immediate toast notification with operation title
+- News ticker entry (occult category, important priority)
+- Game log entry with context
+- Visual resource deduction in UI
+- State updates reflected in Phase 2 panel
+
+**Technical Implementation:**
+- Uses useCallback for handler memoization
+- Immutable state updates with spread operators
+- GameStateManager persistence for save/load
+- Type-safe operation interface
+- Validates state existence before execution
+
+**Future Enhancements (Not Implemented):**
+- Full entity summoning with summonedEntities array manipulation
+- Influence network node creation for infiltration
+- Memetic campaign tracking
+- Enlightenment program creation
+- Great Old One awakening progress tracking
+
+**Impact:**
+- Phase 2 operations now fully functional
+- Players can execute doctrine-specific strategies
+- Resource management becomes meaningful
+- Victory conditions can be progressed through operations
+- Completes the Phase 2 gameplay loop
+- Transforms display panel into interactive command center
+
+---
+
 ### 2025-11-02T15:30:00Z - FASE 2.4: Victory Progress Tracking UI ✅
 **Problem:** No way to see progress toward victory conditions in Great Old Ones scenario
 **File:** `/home/user/vector-war-games/src/components/greatOldOnes/Phase2DoctrinePanel.tsx:28-29,746-927`

@@ -30,16 +30,23 @@ import { OCCULT_VICTORY_CONDITIONS } from '@/types/greatOldOnes';
 import type { Phase2State } from '@/lib/phase2Integration';
 import { checkPhase2UnlockConditions } from '@/lib/phase2Integration';
 
+export interface Phase2Operation {
+  type: string;
+  cost: Record<string, number>;
+}
+
 interface Phase2DoctrinePanelProps {
   state: GreatOldOnesState;
   phase2State: Phase2State;
   onClose?: () => void;
+  onOperation?: (operation: Phase2Operation) => void;
 }
 
 export const Phase2DoctrinePanel: React.FC<Phase2DoctrinePanelProps> = ({
   state,
   phase2State,
   onClose,
+  onOperation,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'operations' | 'progress'>('overview');
 
@@ -117,13 +124,13 @@ export const Phase2DoctrinePanel: React.FC<Phase2DoctrinePanelProps> = ({
           {activeTab === 'operations' && (
             <>
               {doctrine === 'domination' && (
-                <DominationOperations state={state} phase2State={phase2State} />
+                <DominationOperations state={state} phase2State={phase2State} onOperation={onOperation} />
               )}
               {doctrine === 'corruption' && (
-                <CorruptionOperations state={state} phase2State={phase2State} />
+                <CorruptionOperations state={state} phase2State={phase2State} onOperation={onOperation} />
               )}
               {doctrine === 'convergence' && (
-                <ConvergenceOperations state={state} phase2State={phase2State} />
+                <ConvergenceOperations state={state} phase2State={phase2State} onOperation={onOperation} />
               )}
             </>
           )}
@@ -340,10 +347,11 @@ const DominationOverview: React.FC<{ state: GreatOldOnesState; phase2State: Phas
   );
 };
 
-const DominationOperations: React.FC<{ state: GreatOldOnesState; phase2State: Phase2State }> = ({
-  state,
-  phase2State,
-}) => {
+const DominationOperations: React.FC<{
+  state: GreatOldOnesState;
+  phase2State: Phase2State;
+  onOperation?: (operation: Phase2Operation) => void;
+}> = ({ state, phase2State, onOperation }) => {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -353,6 +361,7 @@ const DominationOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Skull className="w-6 h-6" />}
           cost={{ sanityFragments: 50, eldritchPower: 30, cultists: 8 }}
           available={state.resources.sanityFragments >= 50 && state.resources.eldritchPower >= 30}
+          onExecute={() => onOperation?.({ type: 'summon-entity', cost: { sanityFragments: 50, eldritchPower: 30, cultists: 8 } })}
         />
         <OperationCard
           title="Terror Campaign"
@@ -360,6 +369,7 @@ const DominationOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Flame className="w-6 h-6" />}
           cost={{ eldritchPower: 20, entities: 2 }}
           available={state.summonedEntities.filter(e => e.bound).length >= 2}
+          onExecute={() => onOperation?.({ type: 'terror-campaign', cost: { eldritchPower: 20, entities: 2 } })}
         />
         <OperationCard
           title="Military Assault"
@@ -367,6 +377,7 @@ const DominationOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Target className="w-6 h-6" />}
           cost={{ entities: 3 }}
           available={state.summonedEntities.filter(e => e.bound).length >= 3}
+          onExecute={() => onOperation?.({ type: 'military-assault', cost: { entities: 3 } })}
         />
         <OperationCard
           title="Awakening Ritual"
@@ -374,6 +385,7 @@ const DominationOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Eye className="w-6 h-6" />}
           cost={{ sanityFragments: 300, eldritchPower: 200, cultists: 50 }}
           available={false}
+          onExecute={() => onOperation?.({ type: 'awakening-ritual', cost: { sanityFragments: 300, eldritchPower: 200, cultists: 50 } })}
         />
       </div>
     </div>
@@ -493,10 +505,11 @@ const CorruptionOverview: React.FC<{ state: GreatOldOnesState; phase2State: Phas
   );
 };
 
-const CorruptionOperations: React.FC<{ state: GreatOldOnesState; phase2State: Phase2State }> = ({
-  state,
-  phase2State,
-}) => {
+const CorruptionOperations: React.FC<{
+  state: GreatOldOnesState;
+  phase2State: Phase2State;
+  onOperation?: (operation: Phase2Operation) => void;
+}> = ({ state, phase2State, onOperation }) => {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -506,6 +519,7 @@ const CorruptionOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Network className="w-6 h-6" />}
           cost={{ cultists: 5, eldritchPower: 20 }}
           available={true}
+          onExecute={() => onOperation?.({ type: 'infiltrate-institution', cost: { cultists: 5, eldritchPower: 20 } })}
         />
         <OperationCard
           title="Launch Memetic Agent"
@@ -513,6 +527,7 @@ const CorruptionOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Brain className="w-6 h-6" />}
           cost={{ eldritchPower: 30 }}
           available={state.resources.eldritchPower >= 30}
+          onExecute={() => onOperation?.({ type: 'launch-memetic-agent', cost: { eldritchPower: 30 } })}
         />
         <OperationCard
           title="Dream Invasion"
@@ -520,6 +535,7 @@ const CorruptionOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Moon className="w-6 h-6" />}
           cost={{ eldritchPower: 50, ritualSite: 1 }}
           available={state.resources.eldritchPower >= 50}
+          onExecute={() => onOperation?.({ type: 'dream-invasion', cost: { eldritchPower: 50, ritualSite: 1 } })}
         />
         <OperationCard
           title="Activate Sleeper Cells"
@@ -527,6 +543,7 @@ const CorruptionOperations: React.FC<{ state: GreatOldOnesState; phase2State: Ph
           icon={<Target className="w-6 h-6" />}
           cost={{ networkNodes: 3 }}
           available={phase2State.corruption.influenceNetwork.nodes.length >= 3}
+          onExecute={() => onOperation?.({ type: 'activate-sleeper-cells', cost: { networkNodes: 3 } })}
         />
       </div>
     </div>
@@ -674,10 +691,11 @@ const ConvergenceOverview: React.FC<{ state: GreatOldOnesState; phase2State: Pha
   );
 };
 
-const ConvergenceOperations: React.FC<{ state: GreatOldOnesState; phase2State: Phase2State }> = ({
-  state,
-  phase2State,
-}) => {
+const ConvergenceOperations: React.FC<{
+  state: GreatOldOnesState;
+  phase2State: Phase2State;
+  onOperation?: (operation: Phase2Operation) => void;
+}> = ({ state, phase2State, onOperation }) => {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -687,6 +705,7 @@ const ConvergenceOperations: React.FC<{ state: GreatOldOnesState; phase2State: P
           icon={<Sparkles className="w-6 h-6" />}
           cost={{ eldritchPower: 30, sanityFragments: 20 }}
           available={state.resources.eldritchPower >= 30}
+          onExecute={() => onOperation?.({ type: 'establish-program', cost: { eldritchPower: 30, sanityFragments: 20 } })}
         />
         <OperationCard
           title="Cultural Movement"
@@ -694,6 +713,7 @@ const ConvergenceOperations: React.FC<{ state: GreatOldOnesState; phase2State: P
           icon={<Users className="w-6 h-6" />}
           cost={{ eldritchPower: 25 }}
           available={state.resources.eldritchPower >= 25}
+          onExecute={() => onOperation?.({ type: 'cultural-movement', cost: { eldritchPower: 25 } })}
         />
         <OperationCard
           title="Celebrity Endorsement"
@@ -701,6 +721,7 @@ const ConvergenceOperations: React.FC<{ state: GreatOldOnesState; phase2State: P
           icon={<Star className="w-6 h-6" />}
           cost={{ sanityFragments: 50, eldritchPower: 40 }}
           available={state.resources.sanityFragments >= 50}
+          onExecute={() => onOperation?.({ type: 'celebrity-endorsement', cost: { sanityFragments: 50, eldritchPower: 40 } })}
         />
         <OperationCard
           title="Redemption Act"
@@ -708,6 +729,7 @@ const ConvergenceOperations: React.FC<{ state: GreatOldOnesState; phase2State: P
           icon={<Heart className="w-6 h-6" />}
           cost={{ doctrinePoints: 50 }}
           available={phase2State.convergence.trueIntentionsMeter.redemptionAvailable}
+          onExecute={() => onOperation?.({ type: 'redemption-act', cost: { doctrinePoints: 50 } })}
         />
       </div>
     </div>
@@ -1018,7 +1040,8 @@ const OperationCard: React.FC<{
   icon: React.ReactNode;
   cost: Record<string, number>;
   available: boolean;
-}> = ({ title, description, icon, cost, available }) => (
+  onExecute?: () => void;
+}> = ({ title, description, icon, cost, available, onExecute }) => (
   <Card className={`bg-slate-800 border-slate-700 ${!available ? 'opacity-50' : ''}`}>
     <CardHeader className="pb-3">
       <div className="flex items-start gap-3">
@@ -1042,6 +1065,7 @@ const OperationCard: React.FC<{
       <Button
         size="sm"
         disabled={!available}
+        onClick={onExecute}
         className="w-full"
       >
         {available ? 'Launch Operation' : 'Requirements Not Met'}
