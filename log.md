@@ -838,3 +838,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Updated Great Old Ones UI wiring so the main campaign panels receive the shared state object from `src/pages/Index.tsx` and added infiltrator summaries/assignment plumbing to `MissionBoardPanel` to match the new props.
 ## 2025-11-01T16:19:46Z
 - Ran `npm run build` to confirm the updated Great Old Ones panels compile cleanly with the shared state props.
+## 2025-11-02T05:52:01Z
+- Imported the trust and favors dashboard into `EnhancedDiplomacyModal`, surfaced it alongside Phase 3 status when a target is
+  selected, and styled the card to match the existing modal panels.
