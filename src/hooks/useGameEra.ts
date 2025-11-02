@@ -136,9 +136,19 @@ export function useGameEra({
   // Get all features that are still locked
   const getLockedFeatures = (): FeatureUnlockInfo[] => {
     return Array.from(allowedFeatures)
-      .filter((feature) => !isFeatureUnlocked(feature))
-      .map((feature) => featureUnlockInfo[feature])
-      .filter((info) => Number.isFinite(info.unlockTurn))
+      .reduce<FeatureUnlockInfo[]>((acc, feature) => {
+        if (isFeatureUnlocked(feature)) {
+          return acc;
+        }
+
+        const info = featureUnlockInfo[feature];
+        if (!info || !Number.isFinite(info.unlockTurn)) {
+          return acc;
+        }
+
+        acc.push(info);
+        return acc;
+      }, [])
       .sort((a, b) => a.unlockTurn - b.unlockTurn);
   };
 
@@ -160,7 +170,9 @@ export function useGameEra({
     // Only show if we just transitioned (within 2 turns of era start)
     const eraStartTurn = eraDefinitions[currentEra].startTurn;
     if (currentTurn - eraStartTurn <= 1) {
-      return newFeatures.map((feature) => featureUnlockInfo[feature]);
+      return newFeatures
+        .map((feature) => featureUnlockInfo[feature])
+        .filter((info): info is FeatureUnlockInfo => Boolean(info));
     }
 
     return [];
