@@ -60,7 +60,7 @@ const SheetContent = React.forwardRef<
       return null
     }
 
-    return document.fullscreenElement ?? document.body
+    return (document.fullscreenElement as HTMLElement) ?? document.body
   })
 
   React.useEffect(() => {
@@ -69,7 +69,7 @@ const SheetContent = React.forwardRef<
     }
 
     const updateContainer = () => {
-      setPortalContainer(document.fullscreenElement ?? document.body)
+      setPortalContainer((document.fullscreenElement as HTMLElement) ?? document.body)
     }
 
     updateContainer()

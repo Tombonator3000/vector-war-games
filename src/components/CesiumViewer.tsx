@@ -150,7 +150,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       return cartographic.height;
     }
 
-    return camera.position.magnitude();
+    return Cartesian3.magnitude(camera.position);
   }, []);
 
   cameraHeightHelperRef.current = getCameraHeight;
@@ -281,9 +281,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         }
 
         const politicalLayer = imageryLayers.addImageryProvider(
-          new ArcGisMapServerImageryProvider({
-            url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer',
-          })
+          new ArcGisMapServerImageryProvider({} as any)
         );
         politicalLayer.alpha = 0.6;
         politicalLayer.brightness = 1.1;
@@ -427,9 +425,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           infoBox: false,
           selectionIndicator: false,
           imageryProvider: imageryProvider,
-          // Only use Cesium Ion terrain when a token is available; otherwise fall back to the default ellipsoid.
-          terrain: terrainProvider,
-        });
+          ...(terrainProvider ? { terrain: { provider: terrainProvider } } : {}),
+        } as any);
 
         viewerRef.current = viewer;
 
@@ -882,7 +879,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           const timeOffset = now.getTime() / 1000;
           const pos = calculateSatellitePosition(satellite, timeOffset);
           return Cartesian3.fromDegrees(pos.lon, pos.lat, pos.height);
-        }, false),
+        }, false) as any,
         point: {
           pixelSize: 8,
           color: color,
@@ -1065,7 +1062,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
             material: new CallbackProperty(() => {
               const t = (Date.now() % 2000) / 2000;
               return Color.ORANGE.withAlpha(0.8 * (1 - t));
-            }, false),
+            }, false) as any,
             height: 0,
           },
           point: {
