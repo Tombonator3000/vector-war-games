@@ -60,6 +60,7 @@ import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
 import { LeaderContactModal } from '@/components/LeaderContactModal';
+import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
 import { EndGameScreen } from '@/components/EndGameScreen';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
 import type { DiplomacyProposal } from '@/types/diplomacy';
@@ -3832,13 +3833,22 @@ function endTurn() {
           GameStateManager.setNations(nations);
           PlayerManager.setNations(nations);
 
-          // Log revelations
-          revelations.forEach(revelation => {
+          // Show revelation notifications
+          revelations.forEach((revelation, index) => {
             const nation = nations.find(n => n.id === revelation.nationId);
             if (nation) {
               console.log(`💡 AGENDA REVEALED: ${nation.name} - ${revelation.agenda.name}`);
               log(`💡 You've learned more about ${nation.name}'s motivations: ${revelation.agenda.name}`, 'success');
-              // TODO: Show notification modal (Task 4.6)
+
+              // Show notification modal for the first revelation
+              // (If multiple revelations occur, only show one at a time)
+              if (index === 0) {
+                setAgendaRevelationData({
+                  nationName: nation.name,
+                  agenda: revelation.agenda,
+                });
+                setAgendaRevelationOpen(true);
+              }
             }
           });
         }
@@ -4275,6 +4285,13 @@ export default function NoradVector() {
   const [leaderContactModalOpen, setLeaderContactModalOpen] = useState(false);
   const [leaderContactTargetNationId, setLeaderContactTargetNationId] = useState<string | null>(null);
   const [activeNegotiations, setActiveNegotiations] = useState<NegotiationState[]>([]);
+
+  // Agenda Revelation Notification state (Phase 4)
+  const [agendaRevelationOpen, setAgendaRevelationOpen] = useState(false);
+  const [agendaRevelationData, setAgendaRevelationData] = useState<{
+    nationName: string;
+    agenda: any;
+  } | null>(null);
 
   useEffect(() => {
     enqueueAIProposalRef = (proposal) => {
@@ -9493,6 +9510,19 @@ export default function NoradVector() {
           />
         );
       })()}
+
+      {/* Agenda Revelation Notification (Phase 4) */}
+      {agendaRevelationOpen && agendaRevelationData && (
+        <AgendaRevelationNotification
+          open={agendaRevelationOpen}
+          onClose={() => {
+            setAgendaRevelationOpen(false);
+            setAgendaRevelationData(null);
+          }}
+          nationName={agendaRevelationData.nationName}
+          agenda={agendaRevelationData.agenda}
+        />
+      )}
 
       {/* End Game Screen */}
       {S.showEndGameScreen && S.endGameStatistics && (
