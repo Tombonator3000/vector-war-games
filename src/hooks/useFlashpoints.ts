@@ -1842,7 +1842,7 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
         advisorOppose: ['diplomatic', 'science', 'pr'],
         outcome: {
           probability: 1.0,
-          success: { nuclearWar: true, worldEnds: true },
+          success: { madCounterstrikeInitiated: true, morale: -30, defcon: 1 },
           failure: { nuclearWar: true, worldEnds: true }
         }
       }
@@ -2258,6 +2258,10 @@ function generateNarrativeOutcome(option: FlashpointOption, success: boolean, ou
   if (outcome.newAlliance) {
     narrative += 'A new alliance has been formed. ';
   }
+  if (outcome.madCounterstrikeInitiated) {
+    narrative += 'Mutually assured destruction protocols have been executed. Retaliatory launches commence as the world braces for irreversible escalation. ';
+  }
+
   if (outcome.war) {
     narrative += 'This action has triggered a state of war. ';
   }
@@ -2306,6 +2310,14 @@ function formatConsequences(outcome: Record<string, any>): Array<{ label: string
       label: 'DEFCON',
       value: outcome.defcon,
       type: outcome.defcon < 3 ? 'negative' : 'neutral'
+    });
+  }
+
+  if (outcome.madCounterstrikeInitiated) {
+    consequences.push({
+      label: 'Strategic Status',
+      value: 'MAD Counterstrike Initiated',
+      type: 'negative'
     });
   }
 

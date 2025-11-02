@@ -9179,7 +9179,10 @@ export default function NoradVector() {
               });
             }
 
-            if (outcome.nuclearWar || outcome.worldEnds) {
+            if (outcome.madCounterstrikeInitiated) {
+              addNewsItem('crisis', 'MAD COUNTERSTRIKE AUTHORIZED - RETALIATORY LAUNCHES UNDERWAY', 'critical');
+              S.defcon = 1;
+            } else if (outcome.nuclearWar || outcome.worldEnds) {
               addNewsItem('crisis', 'NUCLEAR WAR INITIATED', 'critical');
               S.defcon = 1;
             } else if (result.success) {
