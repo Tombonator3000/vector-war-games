@@ -119,12 +119,13 @@ export const CesiumHeroGlobe = () => {
       nightLayer.alpha = 0.35;
       nightLayer.brightness = 1.3;
 
+      // Dramatic angled view from space - matching reference image
       viewer.camera.setView({
-        destination: Cartesian3.fromDegrees(-75, 20, 17000000),
+        destination: Cartesian3.fromDegrees(-20, 30, 12000000),
         orientation: {
-          heading: CesiumMath.toRadians(200),
-          pitch: CesiumMath.toRadians(-25),
-          roll: 0,
+          heading: CesiumMath.toRadians(20),
+          pitch: CesiumMath.toRadians(-35),
+          roll: CesiumMath.toRadians(-15),
         },
       });
 
@@ -133,7 +134,7 @@ export const CesiumHeroGlobe = () => {
 
       const spinCallback = () => {
         if (!viewer || viewer.isDestroyed()) return;
-        viewer.scene.camera.rotate(viewer.scene.camera.up, CesiumMath.toRadians(-0.01));
+        viewer.scene.camera.rotate(viewer.scene.camera.up, CesiumMath.toRadians(-0.008));
       };
 
       spinCallbackRef.current = spinCallback;
