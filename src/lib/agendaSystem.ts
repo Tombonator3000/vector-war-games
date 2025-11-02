@@ -20,8 +20,141 @@ import { getTrust } from '@/types/trustAndFavors';
 // ============================================================================
 
 /**
+ * AI Personality to Agenda Bias Mapping
+ * Higher weight = more likely to be selected for that personality
+ */
+const PERSONALITY_AGENDA_BIAS: Record<string, Record<string, number>> = {
+  aggressive: {
+    // Primary agendas
+    'warmonger-hater': 0.5, // Ironic but possible
+    'military-superiority': 2.5,
+    'ideological-purist': 1.5,
+    'anti-nuclear': 0.3,
+    'peacemonger': 0.2,
+    // Hidden agendas
+    'expansionist': 2.5,
+    'militarist': 2.0,
+    'resource-hungry': 1.5,
+    'opportunist': 1.5,
+  },
+  defensive: {
+    // Primary agendas
+    'loyal-friend': 2.0,
+    'peacemonger': 1.8,
+    'anti-nuclear': 1.5,
+    'warmonger-hater': 1.5,
+    'military-superiority': 0.5,
+    // Hidden agendas
+    'diplomat': 2.0,
+    'trade-partner': 1.5,
+    'cultural-preservationist': 1.5,
+  },
+  balanced: {
+    // All agendas have equal weight (1.0) for balanced
+  },
+  chaotic: {
+    // Chaotic favors extremes - either very high or very low for most agendas
+    'warmonger-hater': 1.5,
+    'ideological-purist': 0.5,
+    'isolationist': 1.5,
+    'peacemonger': 0.3,
+    'opportunist': 2.5,
+    'tech-enthusiast': 1.5,
+  },
+  trickster: {
+    // Trickster personality
+    'opportunist': 3.0,
+    'diplomat': 1.8,
+    'ideological-purist': 0.3,
+    'loyal-friend': 0.5,
+    'expansionist': 1.5,
+  },
+};
+
+/**
+ * Weighted random selection based on AI personality
+ */
+function selectAgendaWithBias(
+  agendas: Agenda[],
+  personality: string,
+  rng: () => number = Math.random
+): Agenda {
+  const bias = PERSONALITY_AGENDA_BIAS[personality] || {};
+
+  // Calculate weights for each agenda
+  const weights = agendas.map(agenda => bias[agenda.id] || 1.0);
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+  // Weighted random selection
+  let random = rng() * totalWeight;
+  for (let i = 0; i < agendas.length; i++) {
+    random -= weights[i];
+    if (random <= 0) {
+      return agendas[i];
+    }
+  }
+
+  // Fallback (should never happen)
+  return agendas[agendas.length - 1];
+}
+
+/**
+ * Predefined agendas for specific leaders (historical/special characters)
+ */
+interface PredefinedAgendas {
+  primary?: string;
+  hidden?: string;
+}
+
+const LEADER_PREDEFINED_AGENDAS: Record<string, PredefinedAgendas> = {
+  // Cuban Crisis Historical Leaders
+  'John F. Kennedy': {
+    primary: 'peacemonger',
+    hidden: 'diplomat',
+  },
+  'Nikita Khrushchev': {
+    primary: 'military-superiority',
+    hidden: 'expansionist',
+  },
+  'Fidel Castro': {
+    primary: 'ideological-purist',
+    hidden: 'militarist',
+  },
+  // Lovecraftian Leaders
+  'Cthulhu': {
+    primary: 'warmonger-hater', // Ironically hates war among lesser beings
+    hidden: 'cultural-preservationist', // Preserves ancient ways
+  },
+  'Azathoth': {
+    primary: 'ideological-purist', // Chaos as ideology
+    hidden: 'opportunist', // Chaotic opportunism
+  },
+  'Nyarlathotep': {
+    primary: 'isolationist', // Manipulates from shadows
+    hidden: 'opportunist', // Master manipulator
+  },
+  'Hastur': {
+    primary: 'peacemonger', // The Unspeakable wants silence
+    hidden: 'cultural-preservationist',
+  },
+  'Shub-Niggurath': {
+    primary: 'resource-guardian', // Mother of life forms
+    hidden: 'expansionist', // The Black Goat spreads
+  },
+  'Yog-Sothoth': {
+    primary: 'anti-nuclear', // Knows the consequences
+    hidden: 'tech-enthusiast', // Gate and the Key
+  },
+};
+
+/**
  * Assign a primary and hidden agenda to an AI nation
  * Should be called during game initialization
+ *
+ * Now supports:
+ * - Predefined agendas for specific leaders
+ * - Personality-based bias for random selection
+ * - Fallback to pure random if no bias exists
  */
 export function assignAgendas(
   nation: Nation,
@@ -29,18 +162,41 @@ export function assignAgendas(
 ): Nation {
   const primaryAgendas = getPrimaryAgendas();
   const hiddenAgendas = getHiddenAgendas();
+  const personality = nation.ai || 'balanced';
+  const leaderName = nation.leader;
 
-  // Pick random primary agenda
-  const primaryIndex = Math.floor(rng() * primaryAgendas.length);
-  const primary = { ...primaryAgendas[primaryIndex], isRevealed: true };
+  let primary: Agenda;
+  let hidden: Agenda;
 
-  // Pick random hidden agenda (different from primary if possible)
+  // Check for predefined agendas
+  const predefined = leaderName ? LEADER_PREDEFINED_AGENDAS[leaderName] : undefined;
+
+  if (predefined?.primary) {
+    // Use predefined primary agenda
+    const predefinedPrimary = getAgendaById(predefined.primary);
+    primary = predefinedPrimary
+      ? { ...predefinedPrimary, isRevealed: true }
+      : { ...selectAgendaWithBias(primaryAgendas, personality, rng), isRevealed: true };
+  } else {
+    // Use personality-biased selection
+    primary = { ...selectAgendaWithBias(primaryAgendas, personality, rng), isRevealed: true };
+  }
+
+  // Pick hidden agenda (different from primary)
   const availableHidden = hiddenAgendas.filter(a => a.id !== primary.id);
-  const hiddenIndex = Math.floor(rng() * availableHidden.length);
-  const hidden = { ...availableHidden[hiddenIndex], isRevealed: false };
+
+  if (predefined?.hidden) {
+    // Use predefined hidden agenda
+    const predefinedHidden = getAgendaById(predefined.hidden);
+    hidden = predefinedHidden && predefinedHidden.id !== primary.id
+      ? { ...predefinedHidden, isRevealed: false }
+      : { ...selectAgendaWithBias(availableHidden, personality, rng), isRevealed: false };
+  } else {
+    // Use personality-biased selection
+    hidden = { ...selectAgendaWithBias(availableHidden, personality, rng), isRevealed: false };
+  }
 
   // Store agendas in nation's data
-  // We'll add agendas to a new field for now
   return {
     ...nation,
     // @ts-ignore - agendas field may not exist in Nation type yet

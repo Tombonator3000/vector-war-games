@@ -66,7 +66,7 @@ describe('useFlashpoints', () => {
 
     let successResolution;
     act(() => {
-      successResolution = result.current.resolveFlashpoint(successOption.id, triggeredFlashpoint!);
+      successResolution = result.current.resolveFlashpoint(successOption.id, triggeredFlashpoint!, 1);
     });
 
     expect(successResolution.success).toBe(true);
@@ -97,7 +97,7 @@ describe('useFlashpoints', () => {
 
     let failureResolution;
     act(() => {
-      failureResolution = result.current.resolveFlashpoint(failureOption.id, secondFlashpoint!);
+      failureResolution = result.current.resolveFlashpoint(failureOption.id, secondFlashpoint!, 2);
     });
 
     expect(failureResolution.success).toBe(false);

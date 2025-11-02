@@ -847,6 +847,9 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-11-02T09:06:02+00:00
 - Added an advanced diplomacy lock notice in `src/components/EnhancedDiplomacyModal.tsx` that replaces the phase three dashboard when the state or enable flag is missing so players understand they must progress eras or objectives to reveal those metrics.
+
+## 2025-11-02T12:08:12Z
+- Passed the live `S.turn` value into `OptionsMenu` so `GameDatabase` respects the player's progression when evaluating feature unlock turns.
 ## 2025-11-02T09:47:43+00:00
 - Reviewed task requirements to extend era features, guard metadata lookups, and add regression coverage for the Great Old Ones scenario.
 ## 2025-11-02T09:47:54+00:00
@@ -869,3 +872,14 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 ## 2025-11-02T11:50:00Z
 - Resolved Codex review blockers by updating `handleProposeDeal` in `src/pages/Index.tsx` to feed `applyNegotiationDeal` the full game context, persist the returned nation set through `GameStateManager`/`PlayerManager`, and refresh the global references.
 - Hardened `src/components/ItemPicker.tsx` validation by reusing existing production/intel stockpiles instead of the non-existent `gold` resource when checking affordability and messaging.
+## 2025-11-02T11:27:06Z
+- Removed the opaque background from the bottom command tray in `src/pages/Index.tsx` to eliminate the solid black bar while preserving button layout.
+- Updated `src/components/NewsTicker.tsx` to default to a transparent background so the ticker no longer contributes to the dark footer band.
+
+## 2025-11-02T12:21:22+00:00
+- Reviewed the fullscreen portal requirement for the options sheet and updated `src/components/ui/sheet.tsx` to track the fullscreen element for the sheet portal, including lifecycle cleanup.
+## 2025-11-02T12:15:17+00:00
+- Cleared cyan border accents from the bottom command bar in `src/pages/Index.tsx` while keeping its flex layout utilities intact.
+- Removed the cyan border styling from `src/components/NewsTicker.tsx` to keep the ticker fully transparent.
+## 2025-11-02T12:26:24+00:00
+- Added camera translate gating for the `flat-realistic` map style in `src/components/CesiumViewer.tsx`, wiring a height-sensitive camera change listener and ensuring cleanup when styles change or the viewer unmounts.

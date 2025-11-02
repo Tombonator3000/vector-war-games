@@ -262,6 +262,8 @@ describe('Conventional warfare panels', () => {
             name: 'Eurasian Frontier',
             region: 'Europe',
             type: 'land',
+            anchorLat: 50.5,
+            anchorLon: 30.5,
             controllingNationId: 'ai_0',
             contestedBy: [],
             strategicValue: 5,
