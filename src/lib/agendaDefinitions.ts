@@ -7,7 +7,7 @@
  * Inspired by Civilization's agenda system.
  */
 
-import type { Nation } from '@/types/game';
+import type { Nation, GameState } from '@/types/game';
 import type { Agenda, AgendaModifier } from '@/types/negotiation';
 
 // ============================================================================
@@ -35,7 +35,7 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         evaluationBonus: +20,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       // Check if player has used nuclear weapons
       // In a real implementation, this would check game history
       return (player.warheads && Object.keys(player.warheads).length > 0);
@@ -62,7 +62,7 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         evaluationBonus: +30,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       // This would check war history - placeholder for now
       return false;
     },
@@ -88,7 +88,7 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         evaluationBonus: -120,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       const hasAlliance = ai.alliances?.includes(player.id);
       return hasAlliance || false;
     },
@@ -114,7 +114,7 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         evaluationBonus: +20,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       const allianceCount = player.alliances?.length || 0;
       return allianceCount > 3;
     },
@@ -140,10 +140,10 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         evaluationBonus: -30,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       // Check if player is currently at war
       const atWar = player.treaties && Object.values(player.treaties).some(
-        (treaty: any) => treaty.alliance === false && treaty.truceTurns === undefined
+        treaty => treaty.alliance === false && treaty.truceTurns === undefined
       );
       return atWar || false;
     },
@@ -169,7 +169,7 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         evaluationBonus: -50,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       // Check environmental penalties
       return (player.environmentPenaltyTurns || 0) > 0;
     },
@@ -195,7 +195,7 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         evaluationBonus: -60,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       const playerMilitary = (player.missiles || 0) + (player.bombers || 0) * 5;
       const aiMilitary = (ai.missiles || 0) + (ai.bombers || 0) * 5;
       return playerMilitary > aiMilitary;
@@ -222,7 +222,7 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         evaluationBonus: -65,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       // Check if doctrines match
       return player.doctrine !== ai.doctrine;
     },
@@ -254,7 +254,7 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         evaluationBonus: -20,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       // Check territory count
       const cities = player.cities || 1;
       return cities > 5;
@@ -281,7 +281,7 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         evaluationBonus: -25,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       // Check if player has sent aid recently
       const favorBalance = ai.favorBalances?.[player.id];
       return favorBalance && favorBalance.value > 20;
@@ -308,7 +308,7 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         evaluationBonus: +55,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       const researchCount = player.researched ? Object.keys(player.researched).length : 0;
       return researchCount > 10;
     },
@@ -334,7 +334,7 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         evaluationBonus: -25,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       const military = (player.missiles || 0) + (player.bombers || 0) * 5;
       return military > 50;
     },
@@ -360,7 +360,7 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         evaluationBonus: +40,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       const trust = ai.trustRecords?.[player.id]?.value || 50;
       return trust > 70;
     },
@@ -386,7 +386,7 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         evaluationBonus: -15,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       // Opportunist is always looking for advantage
       return true;
     },
@@ -412,7 +412,7 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         evaluationBonus: -55,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       const production = player.production || 0;
       return production > 150;
     },
@@ -438,7 +438,7 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         evaluationBonus: -50,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: any) => {
+    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
       // Check for cultural aggression - placeholder
       return false;
     },

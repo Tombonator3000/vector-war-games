@@ -17,6 +17,7 @@ import type {
   NegotiationUrgency,
   ItemValueContext,
 } from '@/types/negotiation';
+import type { Grievance } from '@/types/grievancesAndClaims';
 import {
   calculateItemValue,
   calculateTotalValue,
@@ -792,7 +793,7 @@ function createCompensationDemand(
   aiNation: Nation,
   targetNation: Nation,
   currentTurn: number,
-  grievance: any
+  grievance: Grievance
 ): AIInitiatedNegotiation {
   const negotiation = createNegotiation(aiNation.id, targetNation.id, currentTurn, 'demand-compensation');
 

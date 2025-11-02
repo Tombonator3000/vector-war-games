@@ -8,7 +8,7 @@
  * for better organization. Future refactoring can further decouple them.
  */
 
-import type { Nation } from '@/types/game';
+import type { Nation, GameState } from '@/types/game';
 import { calculateMoraleProductionMultiplier } from '@/hooks/useGovernance';
 import {
   calculatePublicOpinion,
@@ -25,7 +25,7 @@ import { calculateDIPIncome } from '@/lib/diplomaticCurrencyUtils';
 
 // Types for dependencies that will be injected
 export interface LaunchDependencies {
-  S: any; // GameState
+  S: GameState;
   nations: Nation[];
   log: (msg: string, type?: string) => void;
   toast: (options: any) => void;
@@ -38,7 +38,7 @@ export interface LaunchDependencies {
 }
 
 export interface ResolutionPhaseDependencies {
-  S: any; // GameState
+  S: GameState;
   nations: Nation[];
   log: (msg: string, type?: string) => void;
   projectLocal: (lon: number, lat: number) => [number, number];
@@ -47,7 +47,7 @@ export interface ResolutionPhaseDependencies {
 }
 
 export interface ProductionPhaseDependencies {
-  S: any; // GameState
+  S: GameState;
   nations: Nation[];
   log: (msg: string, type?: string) => void;
   advanceResearch: (nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') => void;
