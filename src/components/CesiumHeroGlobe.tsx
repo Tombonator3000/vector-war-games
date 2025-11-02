@@ -42,35 +42,16 @@ export const CesiumHeroGlobe = () => {
     let destroyed = false;
 
     const initViewer = async () => {
-      let imageryProvider: ImageryProvider | undefined;
-      if (hasIonAccess) {
-        try {
-          imageryProvider = await IonImageryProvider.fromAssetId(2);
-        } catch (error) {
-          console.warn('Failed to load Cesium Ion imagery for hero globe. Falling back to OpenStreetMap.', error);
-        }
-      }
-
-      if (!imageryProvider) {
-        imageryProvider = new OpenStreetMapImageryProvider({
-          url: 'https://a.tile.openstreetmap.org/',
-        });
-      }
-
-      let terrainProvider: TerrainProvider | undefined;
-      if (hasIonAccess) {
-        try {
-          terrainProvider = await createWorldTerrainAsync();
-        } catch (error) {
-          console.warn('Failed to load Cesium Ion terrain for hero globe. Continuing without terrain.', error);
-        }
-      }
+      // Always use OpenStreetMap for reliable Earth imagery
+      const imageryProvider = new OpenStreetMapImageryProvider({
+        url: 'https://a.tile.openstreetmap.org/',
+      });
 
       if (destroyed || !containerRef.current) {
         return;
       }
 
-      const viewerOptions: any = {
+      const viewer = new Viewer(containerRef.current, {
         baseLayerPicker: false,
         geocoder: false,
         homeButton: false,
@@ -82,20 +63,13 @@ export const CesiumHeroGlobe = () => {
         vrButton: false,
         infoBox: false,
         selectionIndicator: false,
-      };
-
-      if (terrainProvider) {
-        viewerOptions.terrain = { provider: terrainProvider };
-      }
-
-      const viewer = new Viewer(containerRef.current, viewerOptions);
-      
-      if (imageryProvider) {
-        viewer.imageryLayers.removeAll();
-        viewer.imageryLayers.addImageryProvider(imageryProvider);
-      }
+      });
 
       viewerRef.current = viewer;
+
+      // Set up Earth imagery
+      viewer.imageryLayers.removeAll();
+      viewer.imageryLayers.addImageryProvider(imageryProvider);
 
       viewer.scene.skyAtmosphere.show = true;
       viewer.scene.globe.showGroundAtmosphere = true;
