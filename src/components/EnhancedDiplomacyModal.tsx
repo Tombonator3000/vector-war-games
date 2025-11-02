@@ -323,7 +323,7 @@ export function EnhancedDiplomacyModal({
                 </div>
               )}
 
-              {phase3State && (
+              {phase3State && phase3State.phase3Enabled ? (
                 <div className="rounded-lg border border-cyan-500/30 bg-slate-900/40 p-3">
                   <DiplomacyPhase3Display
                     nation={player}
@@ -331,6 +331,26 @@ export function EnhancedDiplomacyModal({
                     phase3State={phase3State}
                     compact
                   />
+                </div>
+              ) : (
+                <div className="rounded-lg border border-cyan-500/30 bg-slate-900/40 p-6">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-cyan-300" />
+                      <h3 className="text-lg font-semibold text-cyan-200 font-mono">
+                        Advanced Diplomacy Locked
+                      </h3>
+                    </div>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      Complete Era III objectives or progress major treaties to unlock advanced diplomacy metrics. Once
+                      enabled, you&apos;ll gain access to council influence, treaty leverage, and world opinion tracking for
+                      every nation.
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Tip: advancing the global era and resolving high-priority objectives accelerates access to these
+                      insights.
+                    </p>
+                  </div>
                 </div>
               )}
 
