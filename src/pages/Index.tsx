@@ -8207,6 +8207,11 @@ export default function NoradVector() {
           return;
         }
 
+        // Lock panning in flat-realistic mode when not zoomed in
+        if (currentMapStyle === 'flat-realistic' && cam.zoom <= 1.05) {
+          return;
+        }
+
         const dx = e.clientX - dragStart.x;
         const dy = e.clientY - dragStart.y;
         dragStart = { x: e.clientX, y: e.clientY };
@@ -8301,6 +8306,12 @@ export default function NoradVector() {
         } else if(touching && e.touches.length === 1) {
           // Single finger pan
           e.preventDefault();
+          
+          // Lock panning in flat-realistic mode when not zoomed in
+          if (currentMapStyle === 'flat-realistic' && cam.zoom <= 1.05) {
+            return;
+          }
+          
           const nx = e.touches[0].clientX, ny = e.touches[0].clientY; 
           const dx = nx - touchStart.x;
           const dy = ny - touchStart.y;
