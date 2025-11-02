@@ -1636,7 +1636,7 @@ function initNations() {
     initCubanCrisisNations(playerLeaderName, playerLeaderConfig, selectedDoctrine);
     return;
   }
-  const playerNation: LocalNation = {
+  let playerNation: LocalNation = {
     id: 'player',
     isPlayer: true,
     name: 'PLAYER',
