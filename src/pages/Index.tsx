@@ -153,6 +153,7 @@ import {
   resolveGrievancesWithApology,
   resolveGrievancesWithReparations,
 } from '@/lib/diplomacyPhase2Integration';
+import { initializeNationAgendas } from '@/lib/agendaSystem';
 import {
   initializeDiplomacyPhase3State,
   type DiplomacyPhase3State as DiplomacyPhase3SystemState,
@@ -1563,6 +1564,29 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     nations[index] = initializeDIP(nation);
   });
 
+  // Initialize Agenda System (Phase 4): Assign unique leader agendas to AI nations
+  const playerNation = nations.find(n => n.isPlayer);
+  if (playerNation) {
+    const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
+    nations.length = 0;
+    nations.push(...updatedNations);
+    GameStateManager.setNations(nations);
+    PlayerManager.setNations(nations);
+
+    // Log agendas for debugging
+    console.log('=== LEADER AGENDAS ASSIGNED (Cuban Crisis) ===');
+    nations.forEach(nation => {
+      if (!nation.isPlayer && (nation as any).agendas) {
+        const agendas = (nation as any).agendas;
+        const primary = agendas.find((a: any) => a.type === 'primary');
+        const hidden = agendas.find((a: any) => a.type === 'hidden');
+        console.log(`${nation.name} (${nation.leader}):`);
+        console.log(`  Primary: ${primary?.name} (visible)`);
+        console.log(`  Hidden: ${hidden?.name} (concealed)`);
+      }
+    });
+  }
+
   log('=== CUBAN MISSILE CRISIS - OCTOBER 1962 ===', 'critical');
   log(`Leader: ${playerLeaderName}`, 'success');
   log(`Doctrine: ${S.selectedDoctrine}`, 'success');
@@ -1764,6 +1788,29 @@ function initNations() {
   nations.forEach((nation, index) => {
     nations[index] = initializeDIP(nation);
   });
+
+  // Initialize Agenda System (Phase 4): Assign unique leader agendas to AI nations
+  const playerNation = nations.find(n => n.isPlayer);
+  if (playerNation) {
+    const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
+    nations.length = 0;
+    nations.push(...updatedNations);
+    GameStateManager.setNations(nations);
+    PlayerManager.setNations(nations);
+
+    // Log agendas for debugging
+    console.log('=== LEADER AGENDAS ASSIGNED ===');
+    nations.forEach(nation => {
+      if (!nation.isPlayer && (nation as any).agendas) {
+        const agendas = (nation as any).agendas;
+        const primary = agendas.find((a: any) => a.type === 'primary');
+        const hidden = agendas.find((a: any) => a.type === 'hidden');
+        console.log(`${nation.name}:`);
+        console.log(`  Primary: ${primary?.name} (visible)`);
+        console.log(`  Hidden: ${hidden?.name} (concealed)`);
+      }
+    });
+  }
 
   log('=== GAME START ===', 'success');
   log(`Leader: ${playerLeaderName}`, 'success');
