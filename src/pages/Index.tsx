@@ -1581,6 +1581,15 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
     nations.length = 0;
     nations.push(...updatedNations);
+
+    // Initialize firstContactTurn for all AI nations (needed for hidden agenda revelation)
+    nations.forEach(nation => {
+      if (!nation.isPlayer) {
+        nation.firstContactTurn = nation.firstContactTurn || {};
+        nation.firstContactTurn[playerNation.id] = S.turn || 1;
+      }
+    });
+
     GameStateManager.setNations(nations);
     PlayerManager.setNations(nations);
 
@@ -1806,6 +1815,15 @@ function initNations() {
     const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
     nations.length = 0;
     nations.push(...updatedNations);
+
+    // Initialize firstContactTurn for all AI nations (needed for hidden agenda revelation)
+    nations.forEach(nation => {
+      if (!nation.isPlayer) {
+        nation.firstContactTurn = nation.firstContactTurn || {};
+        nation.firstContactTurn[playerNation.id] = S.turn || 1;
+      }
+    });
+
     GameStateManager.setNations(nations);
     PlayerManager.setNations(nations);
 
@@ -8614,14 +8632,9 @@ export default function NoradVector() {
         leaders={availableLeaders}
         onSelectLeader={(leaderName) => {
           setSelectedLeader(leaderName);
-          // For Great Old Ones, skip doctrine selection during setup
-          // The doctrine will be selected in-game via DoctrineSelectionPanel
-          if (isGreatOldOnesScenario) {
-            startGame(leaderName, undefined);
-            setGamePhase('game');
-          } else {
-            setGamePhase('doctrine');
-          }
+          // All scenarios now require doctrine selection for strategic depth
+          // Great Old Ones can also select doctrine during setup for proper initialization
+          setGamePhase('doctrine');
         }}
         onBack={() => setGamePhase('intro')}
       />

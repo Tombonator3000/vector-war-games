@@ -883,3 +883,118 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Removed the cyan border styling from `src/components/NewsTicker.tsx` to keep the ticker fully transparent.
 ## 2025-11-02T12:26:24+00:00
 - Added camera translate gating for the `flat-realistic` map style in `src/components/CesiumViewer.tsx`, wiring a height-sensitive camera change listener and ensuring cleanup when styles change or the viewer unmounts.
+
+---
+
+# LEADER, DOCTRINE & DIPLOMACY SYSTEM IMPROVEMENTS - 2025-11-02
+
+## 📋 Project Overview
+**Session Start:** 2025-11-02
+**Branch:** `claude/improve-leader-doctrine-diplomacy-011CUjPSCdcgwTVE7J9QWv76`
+**Objective:** Comprehensive improvements to leader selection, doctrine system, and diplomacy mechanics
+
+## 🎯 Implementation Plan
+
+### **FASE 1: Kritiske Fixes (1-2 uker)**
+1. Fix Great Old Ones doctrine-hopp bug
+2. Implementer skjult agenda-avsløring
+3. Implementer counter-offer diplomacy system
+4. Øk AI alliance-frekvens dynamisk
+
+### **FASE 2: Kjerne-forbedringer (2-3 uker)**
+5. Leder-spesifikke passive bonuser (18 ledere × 2 bonuser)
+6. Council Schism mekanikk for doctrine-endring
+7. Phase 2 operasjoner kjørbare
+8. Victory progress tracking UI
+
+### **FASE 3: Avanserte features (3-4 uker)**
+9. Aktiv forhandlings-UI med drag-and-drop
+10. Aktiverbare leder-evner
+11. Reduser DIP-kostnader og øk generation
+12. Multi-party diplomacy
+
+### **FASE 4: Polish og nye systemer (4+ uker)**
+13. Hybride doctrines
+14. Diplomatic Reputation system
+15. Leder-biografier og strategi-tips
+16. Espionage i diplomacy
+17. Doctrine Drift-system
+
+---
+
+## 📝 FASE 1 - Kritiske Fixes
+
+### 2025-11-02T14:00:00Z - Session Start
+- Reviewed codebase analysis for leader, doctrine, and diplomacy systems
+- Created comprehensive implementation plan with 4 phases
+- Identified critical bugs and UX issues to fix first
+
+### 2025-11-02T14:05:00Z - FASE 1.1: Fix Great Old Ones Doctrine Skip Bug ✅
+**Problem:** Great Old Ones scenario skipped doctrine selection, causing undefined doctrine at game start
+**File:** `/home/user/vector-war-games/src/pages/Index.tsx:8615-8620`
+**Solution:**
+- Removed special case for Great Old Ones scenario
+- All scenarios now go through doctrine selection phase
+- Ensures proper game initialization with valid doctrine
+- Adds strategic depth by letting players choose doctrine even for Great Old Ones leaders
+**Impact:** Fixes critical bug preventing proper game start in Great Old Ones scenario
+
+### 2025-11-02T14:15:00Z - FASE 1.2: Implement Hidden Agenda Reveal System ✅
+**Problem:** Hidden agendas were never revealed to player, despite complete backend logic existing
+**Files Modified:**
+- `/home/user/vector-war-games/src/pages/Index.tsx:1585-1591, 1819-1825` (firstContactTurn initialization)
+- `/home/user/vector-war-games/src/components/LeaderContactModal.tsx:378-446` (progress bar UI)
+
+**Solution Implemented:**
+1. **Initialize firstContactTurn tracking**:
+   - Added initialization for Cuban Crisis scenario (line 1585-1591)
+   - Added initialization for standard scenario (line 1819-1825)
+   - Tracks when player first makes contact with each AI nation
+
+2. **Progress Bar in LeaderContactModal**:
+   - Calculates revelation progress based on 3 conditions:
+     - Condition 1: High relationship (>25) + good trust (>60) → reveals after 10 turns
+     - Condition 2: Alliance established → reveals after 15 turns
+     - Condition 3: Long contact → reveals after 30 turns
+   - Shows visual progress bar with percentage
+   - Displays contextual hints ("Keep building trust!", "Alliance will reveal traits")
+   - Shows remaining turns needed for revelation
+
+**Backend Already Implemented:**
+- `processAgendaRevelations()` runs every turn (Index.tsx:3833-3865)
+- Shows notification modal when agenda revealed
+- `shouldRevealHiddenAgenda()` logic checks all conditions
+
+**Impact:**
+- Players now see clear progress towards discovering hidden agendas
+- Adds strategic incentive to build relationships and alliances
+- Improves transparency of game mechanics
+- Complete integration of existing agenda reveal system
+
+### 2025-11-02T14:30:00Z - FASE 1.4: Increase AI Alliance Frequency Dynamically ✅
+**Problem:** AI rarely formed alliances (static 15% chance), making diplomacy feel static and unrealistic
+**File:** `/home/user/vector-war-games/src/lib/aiDiplomacyActions.ts:318-368`
+
+**Solution Implemented:**
+- **Dynamic Alliance Probability System**:
+  - Base chance: 15%
+  - Desperation bonus: +35% when nation has ≤3 territories or <30 population (total 50%)
+  - Shared threat bonus: +25% when facing powerful common enemy (threat ≥8, military power >10)
+  - Maximum chance: 75% when desperate AND facing shared threat
+
+- **Improved Alliance Candidate Selection**:
+  - Now considers relationship strength (requires ≥-10 relationship)
+  - Sorts candidates by relationship first, then by low threat
+  - Prefers nations with positive relationships for alliances
+
+- **Contextual Alliance Behavior**:
+  - Weak nations actively seek protection
+  - Nations facing powerful enemies band together
+  - Relationship history matters for alliance formation
+
+**Impact:**
+- AI forms more realistic and strategic alliances
+- Players face dynamic coalition threats
+- Diplomacy feels more alive and responsive
+- Adds emergent gameplay (weak nations banding together against player)
+- Increases strategic challenge and unpredictability

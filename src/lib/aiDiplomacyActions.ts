@@ -315,15 +315,52 @@ export function aiAttemptDiplomacy(
     return true;
   }
 
-  // Form alliances with trusted nations occasionally
-  if (Math.random() < 0.15) {
+  // Form alliances with trusted nations - DYNAMIC probability based on situation
+  // Calculate dynamic alliance probability based on:
+  // 1. Shared threats (common enemy with high military power)
+  // 2. Relationship strength
+  // 3. Desperation (low territories, low population)
+
+  let allianceChance = 0.15; // Base 15% chance
+
+  // Check for desperation (nation is weak)
+  const actorTerritories = (actor as any).controlledTerritories?.length || 5;
+  const actorPopulation = actor.population || 0;
+  if (actorTerritories <= 3 || actorPopulation < 30) {
+    allianceChance += 0.35; // +35% when desperate (total 50%)
+  }
+
+  // Check for shared threats (common powerful enemy)
+  const sharedThreatBonus = others.some(enemy => {
+    const actorThreat = actor.threats?.[enemy.id] || 0;
+    const enemyMilitaryPower = (enemy.missiles || 0) + (enemy.bombers || 0) + ((enemy as any).conventionalUnits?.length || 0);
+    // If enemy is threatening (threat >= 8) and has strong military (>10), increase alliance desire
+    if (actorThreat >= 8 && enemyMilitaryPower > 10) {
+      return true;
+    }
+    return false;
+  });
+
+  if (sharedThreatBonus) {
+    allianceChance += 0.25; // +25% when facing powerful enemy (total 40% or 75% if desperate)
+  }
+
+  if (Math.random() < allianceChance) {
     const allianceCandidate = others
       .filter(target => {
         const threat = actor.threats?.[target.id] || 0;
         const treaty = actor.treaties?.[target.id];
-        return threat <= 2 && !(treaty?.alliance);
+        // Also consider relationship - prefer targets with positive relationship
+        const relationship = actor.relationships?.[target.id] || 0;
+        return threat <= 2 && !(treaty?.alliance) && relationship >= -10;
       })
-      .sort((a, b) => (actor.threats?.[a.id] || 0) - (actor.threats?.[b.id] || 0))[0];
+      .sort((a, b) => {
+        // Sort by relationship first, then by low threat
+        const relA = actor.relationships?.[a.id] || 0;
+        const relB = actor.relationships?.[b.id] || 0;
+        if (relA !== relB) return relB - relA; // Higher relationship first
+        return (actor.threats?.[a.id] || 0) - (actor.threats?.[b.id] || 0);
+      })[0];
 
     if (allianceCandidate && aiFormAlliance(actor, allianceCandidate, logFn)) {
       return true;
