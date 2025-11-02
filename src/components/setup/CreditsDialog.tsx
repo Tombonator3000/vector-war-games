@@ -68,10 +68,6 @@ export function CreditsDialog({ open, onOpenChange }: CreditsDialogProps) {
       audio.pause();
       audio.currentTime = 0;
     }
-
-    return () => {
-      audio.pause();
-    };
   }, [open]);
 
   return (
