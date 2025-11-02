@@ -3927,7 +3927,6 @@ function endTurn() {
 
       window.__cyberAdvance?.();
 
-      const player = PlayerManager.get();
       // Find plague owner (nation with active bio-lab and plague)
       const plagueOwner = nations?.find(n => n.bioLab && n.plagueState?.plagueStarted);
       const pandemicResult = window.__pandemicAdvance?.({
