@@ -8510,8 +8510,8 @@ export default function NoradVector() {
 
         <div className="hud-layers pointer-events-none touch-none">
           {/* Minimal top status bar */}
-          <header className="fixed top-0 left-0 right-0 h-12 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
-            <div className="flex items-center gap-6 text-xs font-mono">
+          <header className="game-top-bar fixed top-0 left-0 right-0 h-12 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
+            <div className="game-top-bar__metrics flex items-center gap-6 text-xs font-mono">
               {/* DEFCON - Enlarged for prominence */}
               <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded">
                 <span className="text-cyan-400 text-sm">DEFCON</span>
@@ -8535,7 +8535,7 @@ export default function NoradVector() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="game-top-bar__actions flex items-center gap-3">
               <SyncStatusBadge />
               <div className="text-xs font-mono text-neon-magenta mr-4">
                 <span className="text-cyan-400">DOOMSDAY</span>{' '}
@@ -8576,7 +8576,7 @@ export default function NoradVector() {
           </header>
 
           {coopEnabled ? (
-            <div className="fixed top-14 right-4 pointer-events-auto touch-auto z-40 w-72">
+            <div className="fixed top-14 right-3 pointer-events-auto touch-auto z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))]">
               <ApprovalQueue />
             </div>
           ) : null}
@@ -8586,7 +8586,7 @@ export default function NoradVector() {
           </div>
 
           {isStrikePlannerOpen ? (
-            <div className="pointer-events-auto fixed bottom-24 right-6 z-40 w-80 max-h-[60vh]">
+            <div className="pointer-events-auto fixed bottom-24 right-3 z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))] max-h-[60vh]">
               <div className="rounded-lg border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-sm shadow-2xl">
                 <div className="flex items-center justify-between border-b border-cyan-500/30 bg-black/40 px-4 py-3">
                   <span className="text-sm font-mono font-semibold uppercase tracking-wider text-cyan-300">Strike Planner</span>

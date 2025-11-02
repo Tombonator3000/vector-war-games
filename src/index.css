@@ -2415,3 +2415,29 @@ body.theme-synthwave .command-button--neutral:hover {
 .react-flow__panel {
   font-family: 'Share Tech Mono', monospace;
 }
+
+@media (max-width: 768px) {
+  .game-top-bar {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .game-top-bar__metrics,
+  .game-top-bar__actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    text-align: center;
+  }
+
+  .game-top-bar__metrics {
+    gap: 0.75rem;
+  }
+
+  .game-top-bar__actions {
+    gap: 0.5rem;
+  }
+}

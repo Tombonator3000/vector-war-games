@@ -5,13 +5,17 @@
  * Extracted from Index.tsx as part of refactoring effort.
  *
  * PHASE 2 INTEGRATION: Now creates grievances and specialized alliances
+ * PHASE 3 INTEGRATION: AI proactive diplomacy - AI-initiated negotiations
  */
 
 import type { Nation } from '@/types/game';
 import type { SpecializedAllianceType } from '@/types/specializedAlliances';
+import type { AIInitiatedNegotiation } from '@/types/negotiation';
 import { canAfford, pay } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat } from '@/lib/nationUtils';
 import { onTreatyBroken, onSanctionHarm, formSpecializedAlliance, breakSpecializedAlliance } from '@/lib/diplomacyPhase2Integration';
+import { checkAllTriggers } from '@/lib/aiNegotiationTriggers';
+import { generateAINegotiationDeal } from '@/lib/aiNegotiationContentGenerator';
 
 /**
  * Log diplomacy message
@@ -334,4 +338,119 @@ export function aiAttemptDiplomacy(
   }
 
   return false;
+}
+
+// ============================================================================
+// PHASE 3: AI Proactive Diplomacy
+// ============================================================================
+
+/**
+ * Check if AI should initiate negotiation with player or other nations
+ * Returns AI-initiated negotiation if triggered, null otherwise
+ *
+ * PHASE 3: AI Proactive Diplomacy
+ */
+export function aiCheckProactiveNegotiation(
+  actor: Nation,
+  targetNation: Nation,
+  allNations: Nation[],
+  currentTurn: number,
+  globalNegotiationCount: number
+): AIInitiatedNegotiation | null {
+  // Only check for player or important nations
+  if (actor.eliminated || targetNation.eliminated) {
+    return null;
+  }
+
+  // Check if any trigger activates
+  const triggerResult = checkAllTriggers(
+    actor,
+    targetNation,
+    allNations,
+    currentTurn,
+    globalNegotiationCount
+  );
+
+  if (!triggerResult) {
+    return null;
+  }
+
+  // Generate the AI-initiated negotiation deal
+  const aiNegotiation = generateAINegotiationDeal(
+    actor,
+    targetNation,
+    allNations,
+    triggerResult,
+    currentTurn
+  );
+
+  return aiNegotiation;
+}
+
+/**
+ * Process AI proactive diplomacy for all AI nations
+ * Returns array of AI-initiated negotiations
+ *
+ * PHASE 3: Called during AI turn processing
+ */
+export function processAIProactiveDiplomacy(
+  aiNations: Nation[],
+  playerNation: Nation,
+  allNations: Nation[],
+  currentTurn: number,
+  logFn?: (msg: string, type?: string) => void
+): AIInitiatedNegotiation[] {
+  const aiNegotiations: AIInitiatedNegotiation[] = [];
+
+  // Shuffle AI nations to randomize who goes first
+  const shuffledAI = [...aiNations].sort(() => Math.random() - 0.5);
+
+  for (const aiNation of shuffledAI) {
+    if (aiNation.eliminated) continue;
+
+    // Check if AI wants to initiate negotiation with player
+    const negotiationWithPlayer = aiCheckProactiveNegotiation(
+      aiNation,
+      playerNation,
+      allNations,
+      currentTurn,
+      aiNegotiations.length
+    );
+
+    if (negotiationWithPlayer) {
+      aiNegotiations.push(negotiationWithPlayer);
+      if (logFn) {
+        logFn(`${aiNation.name} initiates ${negotiationWithPlayer.purpose} with ${playerNation.name}`, 'diplomacy');
+      }
+    }
+
+    // Optionally check with other AI nations (less frequent)
+    if (Math.random() < 0.3 && aiNegotiations.length < 2) {
+      const otherAI = allNations.filter(n =>
+        !n.isPlayer &&
+        !n.eliminated &&
+        n.id !== aiNation.id
+      );
+
+      if (otherAI.length > 0) {
+        const randomTarget = otherAI[Math.floor(Math.random() * otherAI.length)];
+        const negotiationWithAI = aiCheckProactiveNegotiation(
+          aiNation,
+          randomTarget,
+          allNations,
+          currentTurn,
+          aiNegotiations.length
+        );
+
+        if (negotiationWithAI) {
+          aiNegotiations.push(negotiationWithAI);
+          if (logFn) {
+            logFn(`${aiNation.name} initiates ${negotiationWithAI.purpose} with ${randomTarget.name}`, 'diplomacy');
+          }
+        }
+      }
+    }
+  }
+
+  return aiNegotiations;
 }
