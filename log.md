@@ -841,3 +841,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 ## 2025-11-02T05:52:01Z
 - Imported the trust and favors dashboard into `EnhancedDiplomacyModal`, surfaced it alongside Phase 3 status when a target is
   selected, and styled the card to match the existing modal panels.
+
+## 2025-11-02T07:41:30+00:00
+- Derived Enhanced Diplomacy modal action availability from favor, promise, and grievance data so buttons explain why they're disabled instead of relying on toasts.

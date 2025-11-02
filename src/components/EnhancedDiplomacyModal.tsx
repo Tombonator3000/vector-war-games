@@ -8,12 +8,15 @@
  * - DIP currency actions
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { X, Handshake, Gift, Scale, Shield, MessageCircle, AlertTriangle, Star } from 'lucide-react';
 import type { Nation } from '@/types/game';
 import type { DiplomacyPhase3State } from '@/types/diplomacyPhase3';
 import { DiplomacyPhase3Display } from './DiplomacyPhase3Display';
 import { TrustAndFavorsDisplay } from '@/components/TrustAndFavorsDisplay';
+import { getFavors } from '@/types/trustAndFavors';
+import { getActivePromises } from '@/lib/trustAndFavorsUtils';
+import { getActiveGrievances } from '@/lib/grievancesAndClaimsUtils';
 
 interface EnhancedDiplomacyModalProps {
   player: Nation;
@@ -141,15 +144,82 @@ export function EnhancedDiplomacyModal({
     },
   ];
 
-  const availableActions = diplomaticActions.filter(
-    (action) => action.category === selectedCategory
-  );
+  const favorsWithTarget = selectedTarget ? getFavors(player, selectedTarget.id) : 0;
+  const activePromisesFromTarget = selectedTarget
+    ? getActivePromises(selectedTarget, player.id)
+    : [];
+  const grievancesFromTarget = selectedTarget
+    ? getActiveGrievances(selectedTarget, player.id)
+    : [];
+  const playerDIP = player.diplomaticInfluence?.points || 0;
+
+  const availableActions = useMemo(() => {
+    return diplomaticActions
+      .filter((action) => action.category === selectedCategory)
+      .map((action) => {
+        let disabled = false;
+        let disabledReason: string | undefined;
+
+        if (action.requiresTarget && !selectedTarget) {
+          disabled = true;
+          disabledReason = 'Select a target nation.';
+        }
+
+        if (!disabled && action.dipCost && playerDIP < action.dipCost) {
+          disabled = true;
+          disabledReason = 'Insufficient DIP influence.';
+        }
+
+        if (!disabled && selectedTarget) {
+          switch (action.id) {
+            case 'call-in-favor':
+              if (favorsWithTarget <= 0) {
+                disabled = true;
+                disabledReason = `${selectedTarget.name} owes you no favors to call in.`;
+              }
+              break;
+            case 'verify-promise':
+              if (activePromisesFromTarget.length === 0) {
+                disabled = true;
+                disabledReason = `${selectedTarget.name} has no active promises to verify.`;
+              }
+              break;
+            case 'apologize':
+              if (grievancesFromTarget.length === 0) {
+                disabled = true;
+                disabledReason = `${selectedTarget.name} has no grievances against you.`;
+              }
+              break;
+            case 'reparations':
+              if (grievancesFromTarget.length === 0) {
+                disabled = true;
+                disabledReason = `${selectedTarget.name} has no grievances requiring reparations.`;
+              }
+              break;
+            default:
+              break;
+          }
+        }
+
+        return { ...action, disabled, disabledReason };
+      });
+  }, [
+    activePromisesFromTarget.length,
+    diplomaticActions,
+    favorsWithTarget,
+    grievancesFromTarget.length,
+    playerDIP,
+    selectedCategory,
+    selectedTarget,
+  ]);
 
   const otherNations = nations.filter((n) => n.id !== player.id);
 
-  const playerDIP = player.diplomaticInfluence?.points || 0;
-
   const handleAction = (action: DiplomaticAction) => {
+    if (action.disabled) {
+      return;
+    }
+
     if (action.requiresTarget && !selectedTarget) {
       return; // Need to select a target first
     }
@@ -265,9 +335,7 @@ export function EnhancedDiplomacyModal({
               )}
 
               {availableActions.map((action) => {
-                const canAfford = !action.dipCost || playerDIP >= action.dipCost;
-                const hasTarget = !action.requiresTarget || selectedTarget;
-                const isEnabled = canAfford && hasTarget;
+                const isEnabled = !action.disabled;
 
                 return (
                   <button
@@ -293,10 +361,8 @@ export function EnhancedDiplomacyModal({
                           </p>
                         )}
 
-                        {action.requiresTarget && !selectedTarget && (
-                          <p className="text-xs text-yellow-400 mt-2">
-                            ⚠ Select a target nation
-                          </p>
+                        {!isEnabled && action.disabledReason && (
+                          <p className="text-xs text-red-400 mt-2">{action.disabledReason}</p>
                         )}
                       </div>
 
@@ -304,19 +370,23 @@ export function EnhancedDiplomacyModal({
                         {action.dipCost && (
                           <div
                             className={`flex items-center gap-1 px-3 py-1 rounded ${
-                              canAfford
+                              playerDIP >= (action.dipCost ?? 0)
                                 ? 'bg-yellow-500/10 border border-yellow-500/30'
                                 : 'bg-red-500/10 border border-red-500/30'
                             }`}
                           >
                             <Star
                               className={`w-3 h-3 ${
-                                canAfford ? 'text-yellow-400' : 'text-red-400'
+                                playerDIP >= (action.dipCost ?? 0)
+                                  ? 'text-yellow-400'
+                                  : 'text-red-400'
                               }`}
                             />
                             <span
                               className={`text-sm font-semibold ${
-                                canAfford ? 'text-yellow-400' : 'text-red-400'
+                                playerDIP >= (action.dipCost ?? 0)
+                                  ? 'text-yellow-400'
+                                  : 'text-red-400'
                               }`}
                             >
                               {action.dipCost} DIP
