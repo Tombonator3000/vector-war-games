@@ -9,7 +9,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { X, Handshake, Gift, Scale, Shield, MessageCircle, AlertTriangle, Star } from 'lucide-react';
+import { X, Handshake, Gift, Scale, Shield, MessageCircle, AlertTriangle, Star, Users } from 'lucide-react';
 import type { Nation } from '@/types/game';
 import type { DiplomacyPhase3State } from '@/types/diplomacyPhase3';
 import { DiplomacyPhase3Display } from './DiplomacyPhase3Display';
@@ -24,6 +24,7 @@ interface EnhancedDiplomacyModalProps {
   phase3State?: DiplomacyPhase3State;
   onClose: () => void;
   onAction: (action: DiplomaticAction, target?: Nation) => void;
+  onOpenLeadersScreen?: () => void;
 }
 
 export interface DiplomaticAction {
@@ -43,6 +44,7 @@ export function EnhancedDiplomacyModal({
   phase3State,
   onClose,
   onAction,
+  onOpenLeadersScreen,
 }: EnhancedDiplomacyModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('trust');
   const [selectedTarget, setSelectedTarget] = useState<Nation | null>(null);
@@ -251,10 +253,25 @@ export function EnhancedDiplomacyModal({
               </h2>
             </div>
 
-            <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded border border-cyan-500/30">
-              <Star className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm text-gray-400">DIP:</span>
-              <span className="text-lg font-bold text-cyan-300">{playerDIP}</span>
+            <div className="flex items-center gap-3">
+              {onOpenLeadersScreen && (
+                <button
+                  onClick={() => {
+                    onOpenLeadersScreen();
+                    onClose();
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 rounded transition-colors"
+                >
+                  <Users className="w-4 h-4 text-blue-300" />
+                  <span className="text-sm font-medium text-blue-200">Contact Leaders</span>
+                </button>
+              )}
+
+              <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded border border-cyan-500/30">
+                <Star className="w-4 h-4 text-yellow-400" />
+                <span className="text-sm text-gray-400">DIP:</span>
+                <span className="text-lg font-bold text-cyan-300">{playerDIP}</span>
+              </div>
             </div>
           </div>
         </div>
