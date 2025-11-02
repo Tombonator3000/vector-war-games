@@ -146,7 +146,7 @@ export function LeaderContactModal({
     const nationAgendas = getNationAgendas(targetNation);
     const revealedAgendas = nationAgendas.filter(a => a.isRevealed);
 
-    const gameState = { nations: allNations, turn: currentTurn };
+    const gameState = { nations: allNations, turn: currentTurn } as any;
     const agendaViolations = checkAgendaViolations(playerNation, targetNation, gameState);
     const feedback = getAgendaFeedback(playerNation, targetNation, gameState);
 

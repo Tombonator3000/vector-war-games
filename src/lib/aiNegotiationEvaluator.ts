@@ -115,7 +115,7 @@ export function evaluateNegotiation(
     relationship,
     trust,
     threats: aiNation.threats || {},
-    gameState: { nations: allNations, turn: currentTurn },
+    gameState: { nations: allNations, turn: currentTurn } as any,
   };
 
   // Calculate base values
@@ -331,7 +331,7 @@ function calculateStrategicValue(
 
 function calculateGrievancePenalty(aiNation: Nation, playerNation: Nation): number {
   const grievances = aiNation.grievances?.filter(
-    g => g.perpetratorId === playerNation.id && g.active
+    g => g.againstNationId === playerNation.id && !g.resolved
   ) || [];
 
   let penalty = 0;
@@ -591,7 +591,7 @@ export function getAIDesiredItems(
 
   // Desire grievance apology if exists
   const grievances = aiNation.grievances?.filter(
-    g => g.perpetratorId === playerNation.id && g.active
+    g => g.againstNationId === playerNation.id && !g.resolved
   ) || [];
   if (grievances.length > 0 && grievances[0].severity !== 'minor') {
     desired.push({
@@ -696,7 +696,7 @@ export function aiConsiderInitiatingNegotiation(
 
   // Trigger: Grievances exist, demand compensation
   const grievances = aiNation.grievances?.filter(
-    g => g.perpetratorId === targetNation.id && g.active && g.severity !== 'minor'
+    g => g.againstNationId === targetNation.id && !g.resolved && g.severity !== 'minor'
   ) || [];
   if (grievances.length > 0 && trust < 40 && rng() < 0.25) {
     return createCompensationDemand(aiNation, targetNation, currentTurn, grievances[0]);

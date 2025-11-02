@@ -9,9 +9,8 @@ import type { Nation } from '@/types/game';
 import type {
   DiplomaticInfluence,
   DIPTransaction,
-  DIPEarning,
-  DIPCosts,
 } from '@/types/diplomacyPhase3';
+import { DIPEarning, DIPCosts } from '@/types/diplomacyPhase3';
 import { initializeNationDiplomaticInfluence } from '@/types/diplomacyPhase3';
 
 /**

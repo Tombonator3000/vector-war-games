@@ -22,7 +22,7 @@ export function calculateMissileLaunchConsequences(
   }
 
   // Calculate interception probability
-  const defenseStrength = targetNation.defense?.total || 0;
+  const defenseStrength = targetNation.defense || 0;
   const interceptionChance = Math.min(75, defenseStrength * 2); // Max 75% intercept
   const successProbability = 100 - interceptionChance;
 
@@ -81,7 +81,7 @@ export function calculateMissileLaunchConsequences(
     {
       description: `${targetNation.name} will likely retaliate`,
       severity: 'critical',
-      probability: targetNation.missiles?.total > 5 ? 90 : 50,
+      probability: (targetNation.missiles || 0) > 5 ? 90 : 50,
       icon: '☢️',
     },
     {
@@ -122,7 +122,7 @@ export function calculateMissileLaunchConsequences(
   if (newDefcon === 1) {
     warnings.push('DEFCON 1: Total nuclear war imminent - mutual destruction likely!');
   }
-  if (playerNation.defense?.total < 10) {
+  if ((playerNation.defense || 0) < 10) {
     warnings.push('Your defense is weak - expect heavy retaliation casualties!');
   }
 

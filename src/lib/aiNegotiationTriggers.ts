@@ -10,6 +10,7 @@ import type { NegotiationPurpose, NegotiationUrgency } from '@/types/negotiation
 import { getRelationship } from './relationshipUtils';
 import { getTrust } from '@/types/trustAndFavors';
 import { checkAgendaViolations } from './agendaSystem';
+import { GrievanceSeverityWeights } from '@/types/grievancesAndClaims';
 
 // ============================================================================
 // Constants
@@ -263,7 +264,7 @@ export function checkCompensationDemandTrigger(
   // Check for recent grievances (within last 10 turns)
   const recentGrievances = (aiNation.grievances || []).filter(
     g => g.againstNationId === targetNation.id &&
-         currentTurn - g.turn <= 10
+         currentTurn - g.createdTurn <= 10
   );
 
   if (recentGrievances.length === 0) {
@@ -271,7 +272,7 @@ export function checkCompensationDemandTrigger(
   }
 
   // Calculate severity of grievances
-  const totalSeverity = recentGrievances.reduce((sum, g) => sum + (g.severity || 1), 0);
+  const totalSeverity = recentGrievances.reduce((sum, g) => sum + GrievanceSeverityWeights[g.severity], 0);
 
   if (totalSeverity < 3) {
     return result; // Grievances not severe enough
@@ -376,14 +377,14 @@ export function checkWarningTrigger(
   // Check if target is behaving aggressively or violating norms
   const recentGrievances = (aiNation.grievances || []).filter(
     g => g.againstNationId === targetNation.id &&
-         currentTurn - g.turn <= 3 // Very recent
+         currentTurn - g.createdTurn <= 3 // Very recent
   );
 
   // Check for agenda violations (Phase 4)
   const agendaViolations = checkAgendaViolations(
     targetNation,
     aiNation,
-    { nations: allNations, turn: currentTurn }
+    { nations: allNations, turn: currentTurn } as any
   );
 
   // Trigger if either grievances or agenda violations exist
@@ -399,7 +400,7 @@ export function checkWarningTrigger(
   }
 
   // Check severity of recent actions
-  const hasSevereGrievance = recentGrievances.some(g => (g.severity || 1) >= 3);
+  const hasSevereGrievance = recentGrievances.some(g => g.severity === 'major' || g.severity === 'severe');
   const hasSevereAgendaViolation = agendaViolations.length > 0;
 
   if (!hasSevereGrievance && !hasSevereAgendaViolation) {
