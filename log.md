@@ -857,3 +857,9 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Added a Vitest regression to confirm Great Old Ones era overrides keep `getLockedFeatures` and `getNewlyUnlockedFeatures` safe.
 ## 2025-11-02T09:48:31+00:00
 - Ran `npm run test -- --run src/hooks/__tests__/useGameEra.test.ts` to verify the new regression passes.
+## 2025-11-02T10:00:13Z
+- Revised the MAD counterstrike flashpoint success path in `src/hooks/useFlashpoints.ts` to flag a counterstrike state, apply morale/DEFCON penalties, and surface new consequence copy.
+- Updated `src/pages/Index.tsx` outcome handling to recognize the MAD counterstrike state and emit appropriate crisis news without forcing the nuclear war branch.
+- Extended `src/hooks/__tests__/useFlashpoints.test.ts` to assert the MAD success outcome no longer reports `nuclearWar` or `worldEnds` and instead tracks the new counterstrike flag.
+## 2025-11-02T10:00:28Z
+- Ran `npm run test -- --run src/hooks/__tests__/useFlashpoints.test.ts` to validate the updated MAD counterstrike behavior.
