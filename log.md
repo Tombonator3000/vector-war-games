@@ -863,3 +863,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Extended `src/hooks/__tests__/useFlashpoints.test.ts` to assert the MAD success outcome no longer reports `nuclearWar` or `worldEnds` and instead tracks the new counterstrike flag.
 ## 2025-11-02T10:00:28Z
 - Ran `npm run test -- --run src/hooks/__tests__/useFlashpoints.test.ts` to validate the updated MAD counterstrike behavior.
+## 2025-11-02T11:30:43Z
+- Corrected the diplomacy proposal handler in `src/pages/Index.tsx` to pass full game context into `applyNegotiationDeal`, consume the returned nation updates, and refresh cached managers so accepted deals mutate state.
+- Adjusted `src/components/ItemPicker.tsx` resource validation to reference the existing production stockpile for gold offers, ensuring TypeScript compatibility and accurate affordability warnings.

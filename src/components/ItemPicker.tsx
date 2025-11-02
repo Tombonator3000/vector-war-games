@@ -278,7 +278,7 @@ export function ItemPicker({
 
     switch (selectedType) {
       case 'gold':
-        return (nation.gold || 0) >= amount;
+        return (nation.production || 0) >= amount;
       case 'intel':
         return (nation.intel || 0) >= amount;
       case 'production':
@@ -405,7 +405,7 @@ export function ItemPicker({
                 {!canAfford && side === 'offer' && (
                   <p className="text-sm text-red-500">
                     Insufficient resources. You have {
-                      selectedType === 'gold' ? nation.gold :
+                      selectedType === 'gold' ? nation.production :
                       selectedType === 'intel' ? nation.intel :
                       selectedType === 'production' ? nation.production : 0
                     }.

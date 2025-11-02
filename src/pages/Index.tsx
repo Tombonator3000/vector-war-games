@@ -7431,22 +7431,21 @@ export default function NoradVector() {
 
     if (accepted) {
       // Apply the deal
-      applyNegotiationDeal(negotiation, player, targetNation);
+      const { respondent: updatedTarget, allNations: updatedNations } =
+        applyNegotiationDeal(negotiation, player, targetNation, nations, S.turn);
 
       toast({
         title: 'Deal Accepted!',
-        description: `${targetNation.name} has accepted your proposal.`,
+        description: `${updatedTarget.name} has accepted your proposal.`,
       });
 
       // Update game state with changes
       GameStateManager.set({
         ...S,
-        nations: nations.map(n =>
-          n.id === player.id ? player :
-          n.id === targetNation.id ? targetNation :
-          n
-        ),
+        nations: updatedNations,
       });
+      GameStateManager.setNations(updatedNations);
+      PlayerManager.setNations(updatedNations);
     } else {
       toast({
         title: 'Deal Rejected',
