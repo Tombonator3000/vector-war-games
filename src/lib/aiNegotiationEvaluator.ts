@@ -26,6 +26,11 @@ import {
 } from './negotiationUtils';
 import { getRelationship } from './relationshipUtils';
 import { getTrust, getFavors } from '@/types/trustAndFavors';
+import {
+  calculateAgendaNegotiationBonus,
+  getAgendaFeedback,
+  checkAgendaViolations,
+} from './agendaSystem';
 
 // ============================================================================
 // Constants
@@ -122,7 +127,14 @@ export function evaluateNegotiation(
   const trustModifier = calculateTrustModifier(trust);
   const favorModifier = calculateFavorModifier(favors);
   const personalityBonus = calculatePersonalityBonus(negotiation, aiNation);
-  const agendaModifier = 0; // Will be calculated when agenda system is integrated
+
+  // Calculate agenda modifier (Phase 4: Agenda System)
+  const agendaModifier = calculateAgendaNegotiationBonus(
+    playerNation,
+    aiNation,
+    { nations: allNations, turn: currentTurn }
+  );
+
   const strategicValue = calculateStrategicValue(negotiation, aiNation, playerNation, allNations);
   const grievancePenalty = calculateGrievancePenalty(aiNation, playerNation);
   const randomFactor = (rng() - 0.5) * 20; // -10 to +10
@@ -191,6 +203,25 @@ export function evaluateNegotiation(
     if (trust < 30) rejectionReasons.push('I don\'t trust you enough');
     if (relationship < -30) rejectionReasons.push('Our relationship is too poor');
     if (grievancePenalty < -20) rejectionReasons.push('We have unresolved grievances');
+
+    // Check agenda violations (Phase 4)
+    if (agendaModifier < -20) {
+      const violations = checkAgendaViolations(
+        playerNation,
+        aiNation,
+        { nations: allNations, turn: currentTurn }
+      );
+      const feedbackMessages = getAgendaFeedback(
+        playerNation,
+        aiNation,
+        { nations: allNations, turn: currentTurn }
+      );
+
+      // Add feedback for revealed agendas only
+      if (violations.length > 0 && feedbackMessages.length > 0) {
+        rejectionReasons.push(feedbackMessages[0]);
+      }
+    }
   }
 
   return {

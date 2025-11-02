@@ -60,6 +60,7 @@ import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
 import { LeaderContactModal } from '@/components/LeaderContactModal';
+import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
 import { EndGameScreen } from '@/components/EndGameScreen';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
 import type { DiplomacyProposal } from '@/types/diplomacy';
@@ -153,6 +154,7 @@ import {
   resolveGrievancesWithApology,
   resolveGrievancesWithReparations,
 } from '@/lib/diplomacyPhase2Integration';
+import { initializeNationAgendas, processAgendaRevelations } from '@/lib/agendaSystem';
 import {
   initializeDiplomacyPhase3State,
   type DiplomacyPhase3State as DiplomacyPhase3SystemState,
@@ -1563,6 +1565,29 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     nations[index] = initializeDIP(nation);
   });
 
+  // Initialize Agenda System (Phase 4): Assign unique leader agendas to AI nations
+  const playerNation = nations.find(n => n.isPlayer);
+  if (playerNation) {
+    const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
+    nations.length = 0;
+    nations.push(...updatedNations);
+    GameStateManager.setNations(nations);
+    PlayerManager.setNations(nations);
+
+    // Log agendas for debugging
+    console.log('=== LEADER AGENDAS ASSIGNED (Cuban Crisis) ===');
+    nations.forEach(nation => {
+      if (!nation.isPlayer && (nation as any).agendas) {
+        const agendas = (nation as any).agendas;
+        const primary = agendas.find((a: any) => a.type === 'primary');
+        const hidden = agendas.find((a: any) => a.type === 'hidden');
+        console.log(`${nation.name} (${nation.leader}):`);
+        console.log(`  Primary: ${primary?.name} (visible)`);
+        console.log(`  Hidden: ${hidden?.name} (concealed)`);
+      }
+    });
+  }
+
   log('=== CUBAN MISSILE CRISIS - OCTOBER 1962 ===', 'critical');
   log(`Leader: ${playerLeaderName}`, 'success');
   log(`Doctrine: ${S.selectedDoctrine}`, 'success');
@@ -1764,6 +1789,29 @@ function initNations() {
   nations.forEach((nation, index) => {
     nations[index] = initializeDIP(nation);
   });
+
+  // Initialize Agenda System (Phase 4): Assign unique leader agendas to AI nations
+  const playerNation = nations.find(n => n.isPlayer);
+  if (playerNation) {
+    const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
+    nations.length = 0;
+    nations.push(...updatedNations);
+    GameStateManager.setNations(nations);
+    PlayerManager.setNations(nations);
+
+    // Log agendas for debugging
+    console.log('=== LEADER AGENDAS ASSIGNED ===');
+    nations.forEach(nation => {
+      if (!nation.isPlayer && (nation as any).agendas) {
+        const agendas = (nation as any).agendas;
+        const primary = agendas.find((a: any) => a.type === 'primary');
+        const hidden = agendas.find((a: any) => a.type === 'hidden');
+        console.log(`${nation.name}:`);
+        console.log(`  Primary: ${primary?.name} (visible)`);
+        console.log(`  Hidden: ${hidden?.name} (concealed)`);
+      }
+    });
+  }
 
   log('=== GAME START ===', 'success');
   log(`Leader: ${playerLeaderName}`, 'success');
@@ -3769,6 +3817,43 @@ function endTurn() {
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
 
+      // Process Agenda Revelations (Phase 4): Check if hidden agendas should be revealed
+      const player = PlayerManager.get();
+      if (player) {
+        const { nations: nationsAfterRevelations, revelations } = processAgendaRevelations(
+          nations,
+          player,
+          S.turn
+        );
+
+        // Update nations array with revealed agendas
+        if (revelations.length > 0) {
+          nations.length = 0;
+          nations.push(...nationsAfterRevelations);
+          GameStateManager.setNations(nations);
+          PlayerManager.setNations(nations);
+
+          // Show revelation notifications
+          revelations.forEach((revelation, index) => {
+            const nation = nations.find(n => n.id === revelation.nationId);
+            if (nation) {
+              console.log(`💡 AGENDA REVEALED: ${nation.name} - ${revelation.agenda.name}`);
+              log(`💡 You've learned more about ${nation.name}'s motivations: ${revelation.agenda.name}`, 'success');
+
+              // Show notification modal for the first revelation
+              // (If multiple revelations occur, only show one at a time)
+              if (index === 0) {
+                setAgendaRevelationData({
+                  nationName: nation.name,
+                  agenda: revelation.agenda,
+                });
+                setAgendaRevelationOpen(true);
+              }
+            }
+          });
+        }
+      }
+
       // Process AI bio-warfare for all AI nations
       const difficulty = S.difficulty || 'medium';
       processAllAINationsBioWarfare(nations, S.turn, difficulty, {
@@ -4200,6 +4285,13 @@ export default function NoradVector() {
   const [leaderContactModalOpen, setLeaderContactModalOpen] = useState(false);
   const [leaderContactTargetNationId, setLeaderContactTargetNationId] = useState<string | null>(null);
   const [activeNegotiations, setActiveNegotiations] = useState<NegotiationState[]>([]);
+
+  // Agenda Revelation Notification state (Phase 4)
+  const [agendaRevelationOpen, setAgendaRevelationOpen] = useState(false);
+  const [agendaRevelationData, setAgendaRevelationData] = useState<{
+    nationName: string;
+    agenda: any;
+  } | null>(null);
 
   useEffect(() => {
     enqueueAIProposalRef = (proposal) => {
@@ -9418,6 +9510,19 @@ export default function NoradVector() {
           />
         );
       })()}
+
+      {/* Agenda Revelation Notification (Phase 4) */}
+      {agendaRevelationOpen && agendaRevelationData && (
+        <AgendaRevelationNotification
+          open={agendaRevelationOpen}
+          onClose={() => {
+            setAgendaRevelationOpen(false);
+            setAgendaRevelationData(null);
+          }}
+          nationName={agendaRevelationData.nationName}
+          agenda={agendaRevelationData.agenda}
+        />
+      )}
 
       {/* End Game Screen */}
       {S.showEndGameScreen && S.endGameStatistics && (

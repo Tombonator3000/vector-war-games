@@ -9,6 +9,7 @@ import type { Nation } from '@/types/game';
 import type { NegotiationPurpose, NegotiationUrgency } from '@/types/negotiation';
 import { getRelationship } from './relationshipUtils';
 import { getTrust } from '@/types/trustAndFavors';
+import { checkAgendaViolations } from './agendaSystem';
 
 // ============================================================================
 // Constants
@@ -378,7 +379,15 @@ export function checkWarningTrigger(
          currentTurn - g.turn <= 3 // Very recent
   );
 
-  if (recentGrievances.length === 0) {
+  // Check for agenda violations (Phase 4)
+  const agendaViolations = checkAgendaViolations(
+    targetNation,
+    aiNation,
+    { nations: allNations, turn: currentTurn }
+  );
+
+  // Trigger if either grievances or agenda violations exist
+  if (recentGrievances.length === 0 && agendaViolations.length === 0) {
     return result;
   }
 
@@ -391,8 +400,9 @@ export function checkWarningTrigger(
 
   // Check severity of recent actions
   const hasSevereGrievance = recentGrievances.some(g => (g.severity || 1) >= 3);
+  const hasSevereAgendaViolation = agendaViolations.length > 0;
 
-  if (!hasSevereGrievance) {
+  if (!hasSevereGrievance && !hasSevereAgendaViolation) {
     return result;
   }
 
@@ -402,10 +412,19 @@ export function checkWarningTrigger(
   result.shouldTrigger = true;
   result.urgency = 'high';
   result.priority = 70 + personalityBonus;
-  result.context = {
-    reason: `Your recent actions are unacceptable. Change your behavior or face consequences.`,
-    grievanceId: recentGrievances[0].id,
-  };
+
+  // Create context with appropriate reason
+  if (hasSevereAgendaViolation) {
+    result.context = {
+      reason: `Your actions violate my ${agendaViolations[0].name} values. Change your behavior or face consequences.`,
+      agendaId: agendaViolations[0].id,
+    };
+  } else {
+    result.context = {
+      reason: `Your recent actions are unacceptable. Change your behavior or face consequences.`,
+      grievanceId: recentGrievances[0].id,
+    };
+  }
 
   return result;
 }

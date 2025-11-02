@@ -43,6 +43,11 @@ import { createNegotiation } from '@/lib/negotiationUtils';
 import { getRelationship } from '@/lib/relationshipUtils';
 import { getTrust, getFavors } from '@/types/trustAndFavors';
 import {
+  getNationAgendas,
+  checkAgendaViolations,
+  getAgendaFeedback,
+} from '@/lib/agendaSystem';
+import {
   Handshake,
   TrendingUp,
   TrendingDown,
@@ -136,11 +141,21 @@ export function LeaderContactModal({
   const favors = getFavors(playerNation, targetNation.id);
   const mood = calculateMood(relationship);
 
-  // Mock agendas (in real implementation, get from nation.agendas)
-  const knownAgendas: Agenda[] = useMemo(() => {
-    // This would come from the actual agenda system
-    return [];
-  }, [targetNation]);
+  // Get nation's agendas and check for violations (Phase 4: Agenda System)
+  const { agendas, violations, feedbackMessages } = useMemo(() => {
+    const nationAgendas = getNationAgendas(targetNation);
+    const revealedAgendas = nationAgendas.filter(a => a.isRevealed);
+
+    const gameState = { nations: allNations, turn: currentTurn };
+    const agendaViolations = checkAgendaViolations(playerNation, targetNation, gameState);
+    const feedback = getAgendaFeedback(playerNation, targetNation, gameState);
+
+    return {
+      agendas: nationAgendas,
+      violations: agendaViolations,
+      feedbackMessages: feedback,
+    };
+  }, [targetNation, playerNation, allNations, currentTurn]);
 
   // Mock recent events (in real implementation, get from diplomatic history)
   const recentEvents: DiplomaticEvent[] = useMemo(() => {
@@ -343,32 +358,122 @@ export function LeaderContactModal({
               </CardContent>
             </Card>
 
-            {/* Known Agendas */}
-            {knownAgendas.length > 0 && (
+            {/* Leader Traits (Agendas) - Phase 4 */}
+            {agendas.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Star className="h-5 w-5" />
-                    Known Agendas
+                    Leader Traits
                   </CardTitle>
+                  <CardDescription>
+                    Understanding their values helps in diplomacy
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  {knownAgendas.map((agenda) => (
-                    <div
-                      key={agenda.id}
-                      className="p-3 rounded-lg border bg-accent/50"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium">{agenda.name}</span>
-                        <Badge variant={agenda.type === 'primary' ? 'default' : 'secondary'}>
-                          {agenda.type}
-                        </Badge>
+                <CardContent className="space-y-3">
+                  {agendas.map((agenda) => {
+                    const isViolated = violations.some(v => v.id === agenda.id);
+                    const hasBonus = !isViolated && agenda.isRevealed;
+
+                    if (!agenda.isRevealed) {
+                      // Hidden agenda - show placeholder
+                      return (
+                        <div
+                          key={agenda.id}
+                          className="p-3 rounded-lg border-2 border-dashed bg-accent/20 opacity-60"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-muted-foreground">
+                              Unknown Trait
+                            </span>
+                            <Badge variant="secondary" className="ml-auto text-xs">
+                              Hidden
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Build a stronger relationship to discover this trait
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            💡 Hint: High relationship, trust, or long-term alliance
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    // Revealed agenda - show full details
+                    return (
+                      <div
+                        key={agenda.id}
+                        className={cn(
+                          "p-3 rounded-lg border-2",
+                          isViolated
+                            ? "bg-red-900/20 border-red-500/50"
+                            : hasBonus
+                            ? "bg-green-900/20 border-green-500/50"
+                            : "bg-accent/50 border-accent"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Eye className="h-4 w-4" />
+                          <span className="font-medium">{agenda.name}</span>
+                          <Badge
+                            variant={agenda.type === 'primary' ? 'default' : 'secondary'}
+                            className="ml-auto text-xs"
+                          >
+                            {agenda.type === 'primary' ? '⭐ Primary' : '🔍 Revealed'}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {agenda.description}
+                        </p>
+
+                        {/* Show violation warning */}
+                        {isViolated && (
+                          <div className="flex items-start gap-2 mt-2 p-2 rounded bg-red-500/20">
+                            <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-red-400">
+                                Violation Detected
+                              </p>
+                              <p className="text-xs text-red-300 mt-0.5">
+                                Your actions conflict with this leader's values
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show positive status */}
+                        {hasBonus && !isViolated && (
+                          <div className="flex items-start gap-2 mt-2 p-2 rounded bg-green-500/20">
+                            <Star className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                            <p className="text-xs text-green-300">
+                              Your actions align with this leader's values
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {agenda.description}
-                      </p>
+                    );
+                  })}
+
+                  {/* Show feedback messages if any */}
+                  {feedbackMessages.length > 0 && (
+                    <div className="mt-3 p-3 rounded-lg bg-blue-900/20 border border-blue-500/50">
+                      <div className="flex items-start gap-2">
+                        <MessageSquare className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-blue-300 mb-1">
+                            Leader's Perspective:
+                          </p>
+                          {feedbackMessages.map((msg, i) => (
+                            <p key={i} className="text-xs text-blue-200 italic">
+                              "{msg}"
+                            </p>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </CardContent>
               </Card>
             )}
