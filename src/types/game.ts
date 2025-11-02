@@ -205,6 +205,27 @@ export interface Nation {
   bioLab?: BioLabFacility;
   plagueState?: PlagueState;
   bioStrategy?: 'stealth' | 'lethal' | 'balanced'; // AI evolution strategy
+
+  // Leader Abilities (FASE 3.2)
+  leaderAbilityState?: import('./leaderAbilities').LeaderAbilityState;
+
+  // Temporary ability effects
+  firstStrikeBonus?: number;
+  firstStrikeActive?: boolean;
+  firstStrikeTurnsRemaining?: number;
+  rapidMobilizationActive?: boolean;
+  rapidMobilizationCostReduction?: number;
+  rapidMobilizationTurnsRemaining?: number;
+  missileShieldActive?: boolean;
+  missileShieldTurnsRemaining?: number;
+  economicBoomActive?: boolean;
+  economicBoomMultiplier?: number;
+  economicBoomTurnsRemaining?: number;
+  corruptionActive?: boolean;
+  corruptionRate?: number;
+  corruptionTurnsRemaining?: number;
+  corruptionSourceId?: string;
+  extraTurnGranted?: boolean;
 }
 
 export interface SatelliteOrbit {
@@ -261,6 +282,9 @@ export interface GameState {
 
   /** Diplomacy Phase 3 state */
   diplomacyPhase3?: import('./diplomacyPhase3').DiplomacyPhase3State;
+
+  /** Multi-Party Diplomacy state (FASE 3.4) */
+  multiPartyDiplomacy?: import('./multiPartyDiplomacy').MultiPartyDiplomacyState;
 }
 
 export interface ConventionalWarfareDelta {
