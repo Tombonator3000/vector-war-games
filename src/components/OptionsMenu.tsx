@@ -11,7 +11,10 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
+import { GameDatabase } from '@/components/GameDatabase';
+import { ComprehensiveTutorial } from '@/components/ComprehensiveTutorial';
 import type { MapStyle } from '@/components/GlobeScene';
+import { BookOpen, GraduationCap } from 'lucide-react';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -166,6 +169,9 @@ export interface OptionsMenuProps {
 
   /** Optional callback when options change */
   onChange?: () => void;
+
+  /** Current game turn for database feature unlocking */
+  currentTurn?: number;
 }
 
 export function OptionsMenu({
@@ -177,6 +183,7 @@ export function OptionsMenu({
   onViewerTypeChange,
   showInGameFeatures = true,
   onChange,
+  currentTurn = 1,
 }: OptionsMenuProps) {
   // Theme state
   const [theme, setThemeState] = useState<ThemeId>(() => {
@@ -420,6 +427,10 @@ export function OptionsMenu({
       onChange();
     }
   }, [onChange]);
+
+  // Tutorial and Database state
+  const [databaseOpen, setDatabaseOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
 
   const activeTrackMessage = useMemo(() => {
     if (!musicEnabled) {
@@ -682,6 +693,60 @@ export function OptionsMenu({
           />
         </div>
       </div>
+
+      {/* TUTORIALS & REFERENCE */}
+      <div className="options-section">
+        <h3 className="options-section__heading">TUTORIALS & REFERENCE</h3>
+        <p className="options-section__subheading">Access comprehensive game guides, tutorials, and mechanic references.</p>
+
+        <div className="space-y-3 mt-4">
+          <Button
+            type="button"
+            onClick={() => setDatabaseOpen(true)}
+            className="w-full justify-start gap-3 bg-cyan-900/40 border border-cyan-700/60 text-cyan-100 hover:bg-cyan-800/60 h-auto py-4"
+          >
+            <BookOpen className="h-5 w-5" />
+            <div className="flex flex-col text-left">
+              <span className="font-semibold">Spill-database</span>
+              <span className="text-xs text-cyan-300/80 font-normal">
+                Komplett referanse for alle spillmekanikker, våpen, og strategier
+              </span>
+            </div>
+          </Button>
+
+          <Button
+            type="button"
+            onClick={() => setTutorialOpen(true)}
+            className="w-full justify-start gap-3 bg-cyan-900/40 border border-cyan-700/60 text-cyan-100 hover:bg-cyan-800/60 h-auto py-4"
+          >
+            <GraduationCap className="h-5 w-5" />
+            <div className="flex flex-col text-left">
+              <span className="font-semibold">Komplett Tutorial</span>
+              <span className="text-xs text-cyan-300/80 font-normal">
+                Interaktiv trinn-for-trinn guide gjennom alle spillsystemer
+              </span>
+            </div>
+          </Button>
+        </div>
+
+        <div className="mt-4 p-3 rounded border border-cyan-500/40 bg-black/40">
+          <p className="text-xs text-cyan-200">
+            <strong>Tips:</strong> Bruk databasen som oppslagsverk under spilling.
+            Tutorialen dekker alt fra grunnleggende mekanikker til avanserte strategier.
+          </p>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <GameDatabase
+        open={databaseOpen}
+        onClose={() => setDatabaseOpen(false)}
+        currentTurn={currentTurn}
+      />
+      <ComprehensiveTutorial
+        open={tutorialOpen}
+        onClose={() => setTutorialOpen(false)}
+      />
     </div>
   );
 }
