@@ -124,7 +124,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     showResearch: currentTurn >= 6 || currentStage === 'completed',
     showIntel: currentTurn >= 11 || currentStage === 'completed',
     showCulture: currentTurn >= 16 || currentStage === 'completed',
-    showDiplomacy: currentTurn >= 16 || currentStage === 'completed',
+    showDiplomacy: true, // Always show diplomacy - it's a core game mechanic
     showPandemic: currentTurn >= 20 || currentStage === 'completed',
   };
 
