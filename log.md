@@ -998,3 +998,65 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Diplomacy feels more alive and responsive
 - Adds emergent gameplay (weak nations banding together against player)
 - Increases strategic challenge and unpredictability
+
+---
+
+## 📝 FASE 2 - Kjerne-forbedringer
+
+### 2025-11-02T14:45:00Z - FASE 2.1: Leader-Specific Passive Bonuses ✅
+**Problem:** All leaders were functionally identical except for agendas - no unique gameplay mechanics
+**File:** `/home/user/vector-war-games/src/pages/Index.tsx:619-968, 1780, 1823, 1866, 2049, 2129`
+
+**Solution Implemented:**
+- **36 Unique Passive Bonuses** for 18 leaders (2 bonuses each)
+- **LeaderBonus Interface**: name, description, effect function
+- **applyLeaderBonuses()**: Function to apply bonuses during initialization
+
+**Leader Bonuses by Category:**
+
+**Historical Cuban Crisis Leaders:**
+1. **John F. Kennedy**:
+   - 📜 Diplomatic Finesse: +1 DIP per turn, +15% peace treaty acceptance
+   - 🎯 Precision Warfare: +10% missile accuracy, -15% collateral damage
+
+2. **Nikita Khrushchev**:
+   - ⚔️ Iron Fist: -10% missile costs, +15% military intimidation
+   - 🏭 Soviet Industry: +15% production per turn
+
+3. **Fidel Castro**:
+   - 🔥 Revolutionary Fervor: +20% morale, immunity to culture bombs
+   - 🛡️ Guerrilla Defense: +25% defense effectiveness
+
+**Lovecraftian Leaders:**
+4. **Cthulhu**: Deep Sea Dominion (+20% summoning power), Madness Aura (+30% sanity harvest)
+5. **Azathoth**: Chaotic Flux (random bonuses), Unpredictable (-20% enemy prediction)
+6. **Nyarlathotep**: Master of Masks (+40% infiltration), Whispering Shadows (+50% memetic warfare)
+7. **Hastur**: Yellow Sign (+25% corruption spread), Unspeakable Presence (-30% veil damage)
+8. **Shub-Niggurath**: Spawn of Black Goat (+30% entity spawning), Primal Growth (+20% pop growth)
+9. **Yog-Sothoth**: The Gate and Key (auto-reveal enemy research), Temporal Manipulation (+1 action)
+
+**Parody Leaders:**
+10. **Ronnie Raygun**: Star Wars Program (+30% ABM defense), Trickle Down Economics (+20% production)
+11. **Tricky Dick**: Watergate Skills (+35% intel gathering), Détente Master (+20% pact acceptance)
+12. **Jimi Farmer**: Agricultural Surplus (+25% pop capacity), Peace Dividend (+15% production)
+13. **E. Musk Rat**: SpaceX Advantage (+2 orbital slots), AI Warfare (+40% cyber offense)
+14. **Donnie Trumpf**: The Wall (permanent borders), Twitter Diplomacy (+25% culture bombs)
+15. **Atom Hus-Bomb**: Nuclear Zealot (+20% warhead yield), First Strike Doctrine (25% faster missiles)
+16. **Krazy Re-Entry**: Chaos Theory (30% more random events), Unpredictable Madness (-30% detection)
+17. **Odd'n Wild Card**: Trickster's Gambit (+30% false intel), High Stakes (double or nothing)
+18. **Oil-Stain Lint-Off**: Petro-State (+40% uranium, +20% production), Oligarch Network (+25% intel)
+19. **Ruin Annihilator**: Scorched Earth (+35% damage), Apocalypse Doctrine (immune to morale penalties)
+
+**Integration Points:**
+- Applied during Cuban Crisis initialization for all 3 historical leaders (lines 1780, 1823, 1866)
+- Applied during standard game initialization for player (line 2049)
+- Applied during AI nation creation (line 2129)
+- Console logging shows which bonuses are active for debugging
+
+**Impact:**
+- Each leader now plays uniquely with measurable stat differences
+- Adds strategic depth to leader selection (not just cosmetic)
+- Encourages replays to try different leader abilities
+- Balances include trade-offs (no pure upgrades)
+- Thematic bonuses match leader personalities and histories
+- Creates meta-game strategies (counter-picking leaders based on opponent)
