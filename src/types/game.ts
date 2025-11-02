@@ -179,6 +179,9 @@ export interface Nation {
   diplomaticInfluence?: DiplomaticInfluence; // Diplomatic currency system
   councilMembership?: CouncilMembershipType; // International council membership
 
+  // Diplomatic Reputation System (Phase 4)
+  diplomaticReputation?: DiplomaticReputation; // Global reputation score
+
   // Agenda System (Leader personality traits)
   agendas?: import('./negotiation').Agenda[]; // Primary, hidden, and situational agendas
   hasEmbassyWith?: Record<string, boolean>; // Track which nations have established embassies
