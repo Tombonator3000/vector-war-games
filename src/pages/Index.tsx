@@ -59,9 +59,13 @@ import { applyRemoteGameStateSync } from '@/lib/coopSync';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
+import { LeaderContactModal } from '@/components/LeaderContactModal';
 import { EndGameScreen } from '@/components/EndGameScreen';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
 import type { DiplomacyProposal } from '@/types/diplomacy';
+import type { NegotiationState } from '@/types/negotiation';
+import { evaluateNegotiation } from '@/lib/aiNegotiationEvaluator';
+import { applyNegotiationDeal } from '@/lib/negotiationUtils';
 import { evaluateProposal, shouldAIInitiateProposal } from '@/lib/aiDiplomacyEvaluator';
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
 import {
@@ -4192,6 +4196,11 @@ export default function NoradVector() {
   const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
   const [showEnhancedDiplomacy, setShowEnhancedDiplomacy] = useState(false);
 
+  // Leader Contact Modal state
+  const [leaderContactModalOpen, setLeaderContactModalOpen] = useState(false);
+  const [leaderContactTargetNationId, setLeaderContactTargetNationId] = useState<string | null>(null);
+  const [activeNegotiations, setActiveNegotiations] = useState<NegotiationState[]>([]);
+
   useEffect(() => {
     enqueueAIProposalRef = (proposal) => {
       setPendingAIProposals(prev => [...prev, proposal]);
@@ -7393,6 +7402,66 @@ export default function NoradVector() {
     setActiveDiplomacyProposal(null);
   }, [activeDiplomacyProposal, getNationById, toast]);
 
+  // Handler for opening leader contact modal
+  const handleContactLeader = useCallback((nationId: string) => {
+    setLeaderContactTargetNationId(nationId);
+    setLeaderContactModalOpen(true);
+  }, []);
+
+  // Handler for proposing a deal from negotiation interface
+  const handleProposeDeal = useCallback((negotiation: NegotiationState) => {
+    const player = PlayerManager.get();
+    if (!player) return;
+
+    const targetNation = getNationById(nations, negotiation.respondentId);
+    if (!targetNation) return;
+
+    // Evaluate the negotiation with AI
+    const evaluation = evaluateNegotiation(
+      negotiation,
+      targetNation,
+      player,
+      nations,
+      S.turn
+    );
+
+    // Check if AI accepts
+    const roll = Math.random() * 100;
+    const accepted = roll <= evaluation.acceptanceProbability;
+
+    if (accepted) {
+      // Apply the deal
+      applyNegotiationDeal(negotiation, player, targetNation);
+
+      toast({
+        title: 'Deal Accepted!',
+        description: `${targetNation.name} has accepted your proposal.`,
+      });
+
+      // Update game state with changes
+      GameStateManager.set({
+        ...S,
+        nations: nations.map(n =>
+          n.id === player.id ? player :
+          n.id === targetNation.id ? targetNation :
+          n
+        ),
+      });
+    } else {
+      toast({
+        title: 'Deal Rejected',
+        description: evaluation.feedback || `${targetNation.name} has rejected your proposal.`,
+        variant: 'destructive',
+      });
+
+      // If there's a counter-offer, the NegotiationInterface will handle it
+    }
+
+    // Close the modal
+    setLeaderContactModalOpen(false);
+    setLeaderContactTargetNationId(null);
+  }, [nations, S, toast]);
+
   const handleEnhancedDiplomacyAction = useCallback((action: DiplomaticAction, target?: Nation) => {
     const player = PlayerManager.get();
     if (!player) return;
@@ -8241,6 +8310,15 @@ export default function NoradVector() {
           case '4': handleCulture(); break;
           case '5': handleImmigration(); break;
           case '6': handleDiplomacy(); break;
+          case 'l': // 'L' for Leader - open leader contact modal with first AI nation
+          case 'L':
+            if (S.phase === 'PLAYER') {
+              const firstAI = nations.find(n => !n.isPlayer && n.population > 0);
+              if (firstAI) {
+                handleContactLeader(firstAI.id);
+              }
+            }
+            break;
           case '7':
             e.preventDefault();
             handleAttackRef.current?.();
@@ -9302,6 +9380,41 @@ export default function NoradVector() {
             phase3State={diplomacyPhase3State ?? undefined}
             onClose={() => setShowEnhancedDiplomacy(false)}
             onAction={handleEnhancedDiplomacyAction}
+          />
+        );
+      })()}
+
+      {/* Leader Contact Modal (Phase 2 Negotiation System) */}
+      {leaderContactModalOpen && leaderContactTargetNationId && (() => {
+        const player = PlayerManager.get();
+        const targetNation = getNationById(nations, leaderContactTargetNationId);
+
+        if (!player || !targetNation) return null;
+
+        return (
+          <LeaderContactModal
+            open={leaderContactModalOpen}
+            onClose={() => {
+              setLeaderContactModalOpen(false);
+              setLeaderContactTargetNationId(null);
+            }}
+            playerNation={player}
+            targetNation={targetNation}
+            allNations={nations}
+            currentTurn={S.turn}
+            onProposeDeal={handleProposeDeal}
+            onMakeRequest={(action) => {
+              toast({
+                title: 'Request Made',
+                description: `Request sent to ${targetNation.name}`,
+              });
+            }}
+            onDiscuss={() => {
+              toast({
+                title: 'Discussion',
+                description: `You discussed relations with ${targetNation.name}`,
+              });
+            }}
           />
         );
       })()}
