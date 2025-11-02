@@ -153,7 +153,7 @@ import {
   resolveGrievancesWithApology,
   resolveGrievancesWithReparations,
 } from '@/lib/diplomacyPhase2Integration';
-import { initializeNationAgendas } from '@/lib/agendaSystem';
+import { initializeNationAgendas, processAgendaRevelations } from '@/lib/agendaSystem';
 import {
   initializeDiplomacyPhase3State,
   type DiplomacyPhase3State as DiplomacyPhase3SystemState,
@@ -3815,6 +3815,34 @@ function endTurn() {
       S.turn++;
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+
+      // Process Agenda Revelations (Phase 4): Check if hidden agendas should be revealed
+      const player = PlayerManager.get();
+      if (player) {
+        const { nations: nationsAfterRevelations, revelations } = processAgendaRevelations(
+          nations,
+          player,
+          S.turn
+        );
+
+        // Update nations array with revealed agendas
+        if (revelations.length > 0) {
+          nations.length = 0;
+          nations.push(...nationsAfterRevelations);
+          GameStateManager.setNations(nations);
+          PlayerManager.setNations(nations);
+
+          // Log revelations
+          revelations.forEach(revelation => {
+            const nation = nations.find(n => n.id === revelation.nationId);
+            if (nation) {
+              console.log(`💡 AGENDA REVEALED: ${nation.name} - ${revelation.agenda.name}`);
+              log(`💡 You've learned more about ${nation.name}'s motivations: ${revelation.agenda.name}`, 'success');
+              // TODO: Show notification modal (Task 4.6)
+            }
+          });
+        }
+      }
 
       // Process AI bio-warfare for all AI nations
       const difficulty = S.difficulty || 'medium';
