@@ -416,7 +416,7 @@ export function increaseAllianceCooperation(
 ): void {
   if (!nation.specializedAlliances) return;
 
-  const updated = modifyCooperation(nation, allyId, amount);
+  const updated = modifyCooperation(nation, allyId, amount, 0);
   nation.specializedAlliances = updated.specializedAlliances || [];
 }
 
@@ -430,7 +430,7 @@ export function decreaseAllianceCooperation(
 ): void {
   if (!nation.specializedAlliances) return;
 
-  const updated = modifyCooperation(nation, allyId, -amount);
+  const updated = modifyCooperation(nation, allyId, -amount, 0);
   nation.specializedAlliances = updated.specializedAlliances || [];
 }
 

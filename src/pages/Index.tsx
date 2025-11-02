@@ -157,7 +157,7 @@ import {
 } from '@/lib/diplomacyPhase2Integration';
 import { initializeNationAgendas, processAgendaRevelations } from '@/lib/agendaSystem';
 import { checkAllTriggers, resetTriggerTracking } from '@/lib/aiNegotiationTriggers';
-import { generateNegotiationContent } from '@/lib/aiNegotiationContentGenerator';
+import { generateAINegotiationDeal } from '@/lib/aiNegotiationContentGenerator';
 import {
   initializeDiplomacyPhase3State,
   type DiplomacyPhase3State as DiplomacyPhase3SystemState,
@@ -3875,7 +3875,7 @@ function endTurn() {
 
           if (triggerResult) {
             // Generate negotiation content based on trigger
-            const negotiation = generateNegotiationContent(
+            const negotiation = generateAINegotiationDeal(
               aiNation,
               player,
               nations,

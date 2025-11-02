@@ -229,6 +229,7 @@ export const CUBA_ACTOR: ThirdPartyActor = {
         },
       ],
       effects: {
+        trustChanges: {},
         relationshipChanges: {
           ussr: -5,
         },
@@ -544,6 +545,7 @@ export const NATO_ACTOR: ThirdPartyActor = {
         },
       ],
       effects: {
+        trustChanges: {},
         relationshipChanges: {
           us: 5,
         },
@@ -570,6 +572,7 @@ export const NATO_ACTOR: ThirdPartyActor = {
         },
       ],
       effects: {
+        trustChanges: {},
         relationshipChanges: {
           us: -8,
         },
@@ -674,6 +677,7 @@ export const WARSAW_PACT_ACTOR: ThirdPartyActor = {
         },
       ],
       effects: {
+        trustChanges: {},
         relationshipChanges: {
           us: -10,
         },
@@ -696,6 +700,7 @@ export const WARSAW_PACT_ACTOR: ThirdPartyActor = {
         },
       ],
       effects: {
+        trustChanges: {},
         relationshipChanges: {
           ussr: 5,
         },

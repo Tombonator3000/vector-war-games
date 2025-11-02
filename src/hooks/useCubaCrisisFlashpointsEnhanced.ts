@@ -1078,7 +1078,7 @@ export function applyDiplomaticEffects(
   }
 
   // Create diplomatic promises from the player toward a target nation
-  if (effects.createPromise && playerNationId) {
+  if ('createPromise' in effects && effects.createPromise && playerNationId) {
     const promiseEffect = effects.createPromise as Partial<DiplomaticPromise> & {
       turnsToFulfill?: number;
       trustValueIfKept?: number;
@@ -1164,7 +1164,7 @@ export function applyDiplomaticEffects(
   }
 
   // Resolve grievances by ID
-  if (effects.resolveGrievance?.length) {
+  if ('resolveGrievance' in effects && effects.resolveGrievance?.length) {
     for (const grievanceId of effects.resolveGrievance) {
       if (!grievanceId) continue;
       nationMap.forEach((nation, nationId) => {
@@ -1248,7 +1248,7 @@ export function applyDiplomaticEffects(
   }
 
   // Apply DIP rewards or penalties
-  if (effects.dipReward && playerNationId) {
+  if ('dipReward' in effects && effects.dipReward && playerNationId) {
     updateNation(playerNationId, (nation) =>
       earnDIP(nation, effects.dipReward!, reasonBase, currentTurn)
     );

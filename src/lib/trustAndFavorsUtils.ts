@@ -324,7 +324,7 @@ export function breakPromise(
       promise.toNationId,
       -promise.terms.trustPenalty,
       `Broke promise: ${promise.type}`,
-      currentTurn
+      0
     );
   }
 
