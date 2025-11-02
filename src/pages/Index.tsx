@@ -8246,8 +8246,16 @@ export default function NoradVector() {
 
         cam.targetZoom = newZoom;
         cam.zoom = newZoom;
-        cam.x = focalX - (projectedX - cam.x) * zoomScale;
-        cam.y = focalY - (projectedY - cam.y) * zoomScale;
+        
+        // Auto-center in flat-realistic mode when at default zoom
+        if (currentMapStyle === 'flat-realistic' && newZoom <= 1.05) {
+          cam.x = (W - W * cam.zoom) / 2;
+          cam.y = (H - H * cam.zoom) / 2;
+        } else {
+          cam.x = focalX - (projectedX - cam.x) * zoomScale;
+          cam.y = focalY - (projectedY - cam.y) * zoomScale;
+        }
+        
         clampLatitude();
       };
 
@@ -8298,8 +8306,16 @@ export default function NoradVector() {
 
             cam.targetZoom = newZoom;
             cam.zoom = newZoom;
-            cam.x = midpointX - (projectedX - cam.x) * zoomScale;
-            cam.y = midpointY - (projectedY - cam.y) * zoomScale;
+            
+            // Auto-center in flat-realistic mode when at default zoom
+            if (currentMapStyle === 'flat-realistic' && newZoom <= 1.05) {
+              cam.x = (W - W * cam.zoom) / 2;
+              cam.y = (H - H * cam.zoom) / 2;
+            } else {
+              cam.x = midpointX - (projectedX - cam.x) * zoomScale;
+              cam.y = midpointY - (projectedY - cam.y) * zoomScale;
+            }
+            
             lastTouchDistance = newDistance;
             clampLatitude();
           }
