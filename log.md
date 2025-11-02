@@ -869,3 +869,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-11-02T12:21:22+00:00
 - Reviewed the fullscreen portal requirement for the options sheet and updated `src/components/ui/sheet.tsx` to track the fullscreen element for the sheet portal, including lifecycle cleanup.
+## 2025-11-02T12:15:17+00:00
+- Cleared cyan border accents from the bottom command bar in `src/pages/Index.tsx` while keeping its flex layout utilities intact.
+- Removed the cyan border styling from `src/components/NewsTicker.tsx` to keep the ticker fully transparent.
