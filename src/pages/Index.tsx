@@ -4,12 +4,19 @@ import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X } from 'lucide-react';
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
@@ -8707,17 +8714,74 @@ export default function NoradVector() {
               >
                 EMPIRE INFO
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setOptionsOpen(true);
-                  AudioSys.playSFX('click');
-                }}
-                className="h-7 px-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
-              >
-                OPTIONS
-              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                  >
+                    <Menu className="h-4 w-4 mr-1" />
+                    MENU
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                  align="end" 
+                  className="w-48 bg-black/95 border-cyan-500/50 backdrop-blur-sm z-50"
+                >
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setOptionsOpen(true);
+                      AudioSys.playSFX('click');
+                    }}
+                    className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/20 cursor-pointer focus:bg-cyan-500/20 focus:text-cyan-300"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Options
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator className="bg-cyan-500/30" />
+                  
+                  <DropdownMenuItem
+                    onClick={() => {
+                      toast({ title: 'Save Game', description: 'Save functionality coming soon' });
+                      AudioSys.playSFX('click');
+                    }}
+                    className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/20 cursor-pointer focus:bg-cyan-500/20 focus:text-cyan-300"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem
+                    onClick={() => {
+                      toast({ title: 'Load Game', description: 'Load functionality coming soon' });
+                      AudioSys.playSFX('click');
+                    }}
+                    className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/20 cursor-pointer focus:bg-cyan-500/20 focus:text-cyan-300"
+                  >
+                    <FolderOpen className="h-4 w-4 mr-2" />
+                    Load
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator className="bg-cyan-500/30" />
+                  
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (confirm('Are you sure you want to quit? Unsaved progress will be lost.')) {
+                        navigate('/');
+                        AudioSys.playSFX('click');
+                      }
+                    }}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/20 cursor-pointer focus:bg-red-500/20 focus:text-red-300"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Quit
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
               <Button
                 size="sm"
                 variant="ghost"
