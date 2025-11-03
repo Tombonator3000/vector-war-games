@@ -4425,6 +4425,23 @@ function endTurn() {
         }
       }
 
+      // Process simplified bio-attack effects for all nations
+      const messages: string[] = [];
+      const updatedNationsFromBio = nations.map(nation => {
+        if (nation.eliminated) return nation;
+
+        const result = processAllBioAttacks(nation, S.turn);
+        messages.push(...result.messages);
+
+        if (result.totalDamage > 0) {
+          log(`${nation.name} suffers ${result.totalDamage.toLocaleString()} casualties from bio-weapons`, 'crisis');
+        }
+
+        return result.nation;
+      });
+
+      updateNations(updatedNationsFromBio);
+
       // Process AI bio-warfare for all AI nations
       const difficulty = S.difficulty || 'medium';
       processAllAINationsBioWarfare(nations, S.turn, difficulty, {
@@ -5135,6 +5152,7 @@ export default function NoradVector() {
     return true;
   });
   const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
+  const [isCulturePanelOpen, setIsCulturePanelOpen] = useState(false);
   const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
   const [isIntelOperationsOpen, setIsIntelOperationsOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
@@ -5232,6 +5250,25 @@ export default function NoradVector() {
       initNations();
       setConventionalState(S.conventional ?? createDefaultConventionalState());
       CityLights.generate();
+
+      // Initialize simplified systems for all nations
+      const initializedNations = nations.map(nation => {
+        // Initialize bio-warfare state
+        const withBio = initializeBioWarfareState(nation);
+
+        // Initialize relationships if not present
+        if (!withBio.relationships) {
+          withBio.relationships = {};
+        }
+
+        return withBio;
+      });
+
+      // Apply diplomacy migration
+      const migratedNations = migrateGameDiplomacy(initializedNations);
+      updateNations(migratedNations);
+
+      log('Simplified gameplay systems initialized', 'system');
     }
 
     if (!gameLoopRunning) {
@@ -7485,6 +7522,235 @@ export default function NoradVector() {
 
     deployBioWeapon(selections, S.turn);
   }, [deployBioWeapon, S.turn]);
+
+  // ========== SIMPLIFIED SYSTEM HANDLERS ==========
+
+  // Unified Diplomacy Handlers
+  const handleDiplomaticProposal = useCallback((type: ProposalType, targetId: string, terms?: any) => {
+    const player = PlayerManager.get();
+    const target = getNationById(nations, targetId);
+    if (!player || !target) return;
+
+    log(`Diplomatic proposal sent: ${type} to ${target.name}`, 'diplomatic');
+
+    // Apply relationship changes based on proposal type
+    if (type === 'aid' && terms?.resourceAmount) {
+      // Deduct resources and improve relationship
+      player.production = Math.max(0, player.production - terms.resourceAmount);
+
+      const updatedNations = nations.map(n => {
+        if (n.id === target.id && n.relationships) {
+          return {
+            ...n,
+            relationships: {
+              ...n.relationships,
+              [player.id]: Math.min(100, (n.relationships[player.id] || 0) + 10),
+            },
+          };
+        }
+        if (n.id === player.id && n.relationships) {
+          return {
+            ...n,
+            relationships: {
+              ...n.relationships,
+              [targetId]: Math.min(100, (n.relationships[targetId] || 0) + 10),
+            },
+          };
+        }
+        return n;
+      });
+
+      updateNations(updatedNations);
+      toast({
+        title: 'Aid Sent',
+        description: `Sent ${terms.resourceAmount} production to ${target.name}. Relationship improved by +10.`,
+      });
+    } else if (type === 'alliance') {
+      // Check if relationship is high enough
+      const relationship = getRelationship(player, targetId, nations);
+      if (relationship < 60) {
+        toast({
+          title: 'Alliance Rejected',
+          description: `${target.name} requires a relationship of at least +60. Current: ${relationship}`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Form alliance
+      const updatedNations = nations.map(n => {
+        if (n.id === player.id) {
+          return { ...n, alliances: [...(n.alliances || []), targetId] };
+        }
+        if (n.id === targetId) {
+          return { ...n, alliances: [...(n.alliances || []), player.id] };
+        }
+        return n;
+      });
+
+      updateNations(updatedNations);
+      log(`Alliance formed between ${player.name} and ${target.name}!`, 'diplomatic');
+      toast({
+        title: 'Alliance Formed',
+        description: `You are now allied with ${target.name}.`,
+      });
+    }
+  }, [nations, log, toast]);
+
+  // Simplified Bio-Warfare Handlers
+  const handleBioWeaponResearch = useCallback(() => {
+    const player = PlayerManager.get();
+    if (!player) return;
+
+    player.bioWeaponResearched = true;
+    player.production = Math.max(0, player.production - 100);
+    player.intel = Math.max(0, player.intel - 50);
+
+    log('Bio-weapon research completed', 'military');
+    toast({
+      title: 'Bio-Weapons Ready',
+      description: 'Your nation can now deploy biological weapons.',
+    });
+  }, [log, toast]);
+
+  const handleBioDefenseUpgrade = useCallback(() => {
+    const player = PlayerManager.get();
+    if (!player) return;
+
+    const currentLevel = player.bioDefenseLevel || 0;
+    if (currentLevel >= 3) return;
+
+    const nextDefense = [
+      { prod: 80, intel: 30 },
+      { prod: 150, intel: 50 },
+      { prod: 250, intel: 80 },
+    ][currentLevel];
+
+    player.bioDefenseLevel = currentLevel + 1;
+    player.production = Math.max(0, player.production - nextDefense.prod);
+    player.intel = Math.max(0, player.intel - nextDefense.intel);
+
+    log(`Bio-defense upgraded to level ${currentLevel + 1}`, 'military');
+    toast({
+      title: 'Bio-Defense Upgraded',
+      description: `Now at level ${currentLevel + 1}. Increased protection against bio-weapons.`,
+    });
+  }, [log, toast]);
+
+  const handleSimplifiedBioWeaponDeploy = useCallback((targetId: string) => {
+    const player = PlayerManager.get();
+    const target = getNationById(nations, targetId);
+    if (!player || !target) return;
+
+    const result = deployBioWeapon(player, target, S.turn);
+
+    if (!result.success) {
+      toast({
+        title: 'Deployment Failed',
+        description: result.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Update nations
+    const updatedNations = nations.map(n => {
+      if (n.id === player.id) return result.attacker;
+      if (n.id === target.id) return result.target;
+      return n;
+    });
+    updateNations(updatedNations);
+
+    log(result.message, 'military');
+    toast({
+      title: result.detected ? 'Bio-Weapon Detected!' : 'Bio-Weapon Deployed',
+      description: result.message,
+      variant: result.detected ? 'destructive' : 'default',
+    });
+  }, [nations, S.turn, log, toast]);
+
+  // Streamlined Culture Handlers
+  const handleLaunchPropaganda = useCallback((type: PropagandaType, targetId: string) => {
+    const player = PlayerManager.get();
+    const target = getNationById(nations, targetId);
+    if (!player || !target) return;
+
+    const result = launchPropagandaCampaign(player, target, type, S.turn, nations);
+
+    if (!result.success) {
+      toast({
+        title: 'Campaign Failed',
+        description: result.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Update nations
+    const updatedNations = nations.map(n => {
+      if (n.id === player.id) return result.launcher;
+      if (n.id === target.id) return result.target;
+      return n;
+    });
+    updateNations(updatedNations);
+
+    log(result.message, 'diplomatic');
+    toast({
+      title: result.discovered ? 'Campaign Discovered!' : 'Propaganda Launched',
+      description: result.message,
+      variant: result.discovered ? 'destructive' : 'default',
+    });
+  }, [nations, S.turn, log, toast]);
+
+  const handleBuildWonder = useCallback((wonderType: CulturalWonderType) => {
+    const player = PlayerManager.get();
+    if (!player) return;
+
+    const result = buildWonder(player, wonderType, S.turn);
+
+    if (!result.success) {
+      toast({
+        title: 'Construction Failed',
+        description: result.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Update player nation
+    const updatedNations = nations.map(n => {
+      if (n.id === player.id) return result.nation;
+      return n;
+    });
+    updateNations(updatedNations);
+
+    log(result.message, 'diplomatic');
+    toast({
+      title: 'Wonder Complete',
+      description: result.message,
+    });
+  }, [nations, S.turn, log, toast]);
+
+  const handleSetImmigrationPolicy = useCallback((policy: ImmigrationPolicy) => {
+    const player = PlayerManager.get();
+    if (!player) return;
+
+    const updatedPlayer = applyImmigrationPolicy(player, policy);
+
+    const updatedNations = nations.map(n => {
+      if (n.id === player.id) return updatedPlayer;
+      return n;
+    });
+    updateNations(updatedNations);
+
+    log(`Immigration policy changed to: ${policy}`, 'diplomatic');
+    toast({
+      title: 'Policy Updated',
+      description: `Immigration policy set to: ${policy}`,
+    });
+  }, [nations, log, toast]);
+
+  // ========== END SIMPLIFIED SYSTEM HANDLERS ==========
 
   const handleCulture = useCallback(async () => {
     const approved = await requestApproval('CULTURE', { description: 'Cultural operations briefing' });
@@ -9850,14 +10116,14 @@ export default function NoradVector() {
                   </Button>
 
                   <Button
-                    onClick={handleCulture}
+                    onClick={() => setIsCulturePanelOpen(!isCulturePanelOpen)}
                     variant="ghost"
                     size="icon"
                     data-role-locked={!cultureAllowed}
                     className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
                       cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                     }`}
-                    title={cultureAllowed ? 'CULTURE - Cultural warfare' : 'Requires co-commander approval to launch culture ops'}
+                    title={cultureAllowed ? 'CULTURE - Cultural warfare (simplified)' : 'Requires co-commander approval to launch culture ops'}
                   >
                     <Radio className="h-5 w-5" />
                     <span className="text-[8px] font-mono">CULTURE</span>
@@ -10120,26 +10386,25 @@ export default function NoradVector() {
         </DialogContent>
       </Dialog>
 
-      <BioWarfareLab
-        open={isBioWarfareOpen}
-        onOpenChange={setIsBioWarfareOpen}
-        plagueState={plagueState}
-        enabled={pandemicIntegrationEnabled && bioWarfareEnabled}
-        labTier={labFacility.tier}
-        availableNations={nations
-          .filter(n => n.id !== playerNationId && !n.eliminated)
-          .map(n => ({
-            id: n.id,
-            name: n.name,
-            intelligence: n.intelligence || 50,
-          }))}
-        playerActions={S.actionsRemaining}
-        playerIntel={PlayerManager.get()?.intel || 0}
-        onSelectPlagueType={selectPlagueType}
-        onEvolveNode={(nodeId: string) => evolveNode({ nodeId: nodeId as EvolutionNodeId })}
-        onDevolveNode={(nodeId: string) => devolveNode({ nodeId: nodeId as EvolutionNodeId })}
-        onDeployBioWeapon={handleDeployBioWeapon}
-      />
+      {isBioWarfareOpen && (() => {
+        const player = PlayerManager.get();
+        if (!player) return null;
+
+        const enemies = nations.filter(n => !n.eliminated && n.id !== player.id);
+        const activeBioAttacks = nations.flatMap(n => n.activeBioAttacks || []);
+
+        return (
+          <SimplifiedBioWarfarePanel
+            player={player}
+            enemies={enemies}
+            activeBioAttacks={activeBioAttacks}
+            onResearchBioWeapon={handleBioWeaponResearch}
+            onUpgradeBioDefense={handleBioDefenseUpgrade}
+            onDeployBioWeapon={handleSimplifiedBioWeaponDeploy}
+            onClose={() => setIsBioWarfareOpen(false)}
+          />
+        );
+      })()}
 
       <Dialog open={isIntelOperationsOpen} onOpenChange={setIsIntelOperationsOpen}>
         <DialogContent className="max-w-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
@@ -10161,6 +10426,27 @@ export default function NoradVector() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Streamlined Culture Panel */}
+      {isCulturePanelOpen && (() => {
+        const player = PlayerManager.get();
+        if (!player) return null;
+
+        const enemies = nations.filter(n => !n.eliminated && n.id !== player.id);
+        const currentImmigrationPolicy = (player.immigrationPolicy as ImmigrationPolicy) || 'restricted';
+
+        return (
+          <StreamlinedCulturePanel
+            player={player}
+            enemies={enemies}
+            onLaunchPropaganda={handleLaunchPropaganda}
+            onBuildWonder={handleBuildWonder}
+            onSetImmigrationPolicy={handleSetImmigrationPolicy}
+            currentImmigrationPolicy={currentImmigrationPolicy}
+            onClose={() => setIsCulturePanelOpen(false)}
+          />
+        );
+      })()}
 
       {showPandemicPanel && (
         <PandemicPanel
@@ -10578,14 +10864,14 @@ export default function NoradVector() {
         const player = PlayerManager.get();
         if (!player) return null;
 
+        const enemies = nations.filter(n => !n.eliminated && n.id !== player.id);
+
         return (
-          <EnhancedDiplomacyModal
+          <UnifiedDiplomacyPanel
             player={player}
             nations={nations}
-            phase3State={diplomacyPhase3State ?? undefined}
+            onProposal={handleDiplomaticProposal}
             onClose={() => setShowEnhancedDiplomacy(false)}
-            onAction={handleEnhancedDiplomacyAction}
-            onOpenLeadersScreen={() => setLeadersScreenOpen(true)}
           />
         );
       })()}
