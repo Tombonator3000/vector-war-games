@@ -7,6 +7,7 @@ import type {
   VictoryMilestone,
   VictoryType,
 } from '@/types/victory';
+import { getVictoryProgress, checkVictory, VICTORY_PATHS } from '@/types/streamlinedVictoryConditions';
 import { safePercentage, safeDivide } from '@/lib/safeMath';
 
 interface UseVictoryTrackingProps {
@@ -34,36 +35,62 @@ export function useVictoryTracking({
       return createEmptyAnalysis();
     }
 
-    const aliveNations = nations.filter((n) => n.population > 0);
-    const totalNations = aliveNations.length;
-    const aliveEnemies = aliveNations.filter((n) => n.name !== playerName);
-
-    // Calculate each victory path
-    const diplomaticPath = calculateDiplomaticVictory(
-      playerNation,
-      aliveNations,
+    // Create a simplified gameState for victory checking
+    const gameState = {
+      turn: currentTurn,
       defcon,
-      diplomacyState
-    );
-    const dominationPath = calculateDominationVictory(playerNation, aliveEnemies, nations);
-    const economicPath = calculateEconomicVictory(playerNation);
-    const demographicPath = calculateDemographicVictory(playerNation, nations);
-    const survivalPath = calculateSurvivalVictory(playerNation, currentTurn);
-    const culturalPath = calculateCulturalVictory(playerNation, aliveNations);
+      diplomacy: diplomacyState,
+    };
 
-    const paths = [
-      diplomaticPath,
-      dominationPath,
-      economicPath,
-      demographicPath,
-      survivalPath,
-      culturalPath,
-    ];
+    // Use streamlined victory system (4 paths: diplomatic, domination, economic, survival)
+    const victoryCheck = checkVictory(playerNation, nations, gameState as any);
+    const progressData = getVictoryProgress(playerNation, nations, gameState as any);
+
+    // Convert streamlined data to VictoryPath format
+    const paths: VictoryPath[] = progressData.map((pathData) => {
+      const conditions: VictoryCondition[] = pathData.conditions.map((cond) => ({
+        id: cond.id,
+        description: cond.description,
+        current: cond.current,
+        required: cond.required,
+        isMet: cond.isMet,
+        unit: cond.unit,
+      }));
+
+      const milestones: VictoryMilestone[] = [];
+
+      // Generate milestones based on unmet conditions
+      conditions.forEach((cond) => {
+        if (!cond.isMet) {
+          milestones.push({
+            description: cond.description,
+            priority: 'critical',
+          });
+        }
+      });
+
+      // Estimate turns to victory
+      const unmetConditions = conditions.filter(c => !c.isMet).length;
+      const estimatedTurns = unmetConditions === 0 ? 0 : unmetConditions * 3;
+
+      return {
+        type: pathData.type,
+        name: pathData.name,
+        icon: pathData.icon,
+        description: pathData.description,
+        progress: pathData.progress,
+        conditions,
+        nextMilestones: milestones,
+        estimatedTurnsToVictory: estimatedTurns > 0 ? estimatedTurns : 0,
+        isBlocked: false,
+        color: pathData.color.replace('text-', '').replace('-500', ''),
+      };
+    });
 
     // Find closest victory
     const sortedPaths = [...paths].sort((a, b) => b.progress - a.progress);
     const closestPath = sortedPaths[0];
-    const closestVictory = closestPath.progress > 0 ? closestPath.type : null;
+    const closestVictory = closestPath && closestPath.progress > 0 ? closestPath.type : null;
 
     // Find recommended path (highest progress that's not blocked)
     const viablePaths = paths.filter((p) => !p.isBlocked && p.progress > 0);
@@ -74,430 +101,28 @@ export function useVictoryTracking({
 
     // Generate warnings
     const warnings: string[] = [];
-    if (defcon <= 2 && diplomaticPath.progress > 50) {
+    const diplomaticPath = paths.find(p => p.type === 'diplomatic');
+    if (defcon <= 2 && diplomaticPath && diplomaticPath.progress > 50) {
       warnings.push('Low DEFCON blocks Diplomatic Victory - restore peace!');
     }
-    if (aliveEnemies.length === 0 && dominationPath.progress < 100) {
+
+    const aliveEnemies = nations.filter((n) => !n.eliminated && !n.isPlayer && n.name !== playerName);
+    const dominationPath = paths.find(p => p.type === 'domination');
+    if (aliveEnemies.length === 0 && dominationPath && dominationPath.progress < 100) {
       warnings.push('No enemies left but victory not achieved - check conditions');
     }
 
     return {
       paths,
       closestVictory,
-      turnsUntilClosestVictory: closestPath.estimatedTurnsToVictory,
+      turnsUntilClosestVictory: closestPath?.estimatedTurnsToVictory || null,
       recommendedPath,
       warnings,
     };
   }, [nations, playerName, currentTurn, defcon, diplomacyState]);
 }
 
-function calculateDiplomaticVictory(
-  player: Nation,
-  allNations: Nation[],
-  defcon: number,
-  diplomacyState?: {
-    peaceTurns: number;
-    allianceRatio: number;
-    influenceScore: number;
-  }
-): VictoryPath {
-  const totalNations = allNations.length - 1; // Exclude player
-  const requiredAlliances = Math.ceil(totalNations * 0.6); // 60% of nations
-  const currentAlliances = player.alliances?.length || 0;
-  const requiredPeaceTurns = 4;
-  const peaceTurns = diplomacyState?.peaceTurns || 0;
-  const requiredInfluence = 120;
-  const currentInfluence = diplomacyState?.influenceScore || 0;
-
-  const conditions: VictoryCondition[] = [
-    {
-      id: 'alliances',
-      description: 'Form alliances with 60% of nations',
-      current: currentAlliances,
-      required: requiredAlliances,
-      isMet: currentAlliances >= requiredAlliances,
-      unit: 'nations',
-    },
-    {
-      id: 'peace',
-      description: 'Maintain peace (DEFCON ≥4) for consecutive turns',
-      current: peaceTurns,
-      required: requiredPeaceTurns,
-      isMet: peaceTurns >= requiredPeaceTurns,
-      unit: 'turns',
-    },
-    {
-      id: 'influence',
-      description: 'Achieve global influence score',
-      current: currentInfluence,
-      required: requiredInfluence,
-      isMet: currentInfluence >= requiredInfluence,
-      unit: 'points',
-    },
-  ];
-
-  const progress = calculateOverallProgress(conditions);
-  const isBlocked = defcon <= 2;
-
-  const milestones: VictoryMilestone[] = [];
-  if (!conditions[0].isMet) {
-    milestones.push({
-      description: `Form ${requiredAlliances - currentAlliances} more alliance${
-        requiredAlliances - currentAlliances !== 1 ? 's' : ''
-      }`,
-      actionHint: 'Diplomacy → Propose Alliance',
-      priority: 'critical',
-    });
-  }
-  if (!conditions[1].isMet) {
-    milestones.push({
-      description: `Maintain DEFCON ≥4 for ${requiredPeaceTurns - peaceTurns} more turn${
-        requiredPeaceTurns - peaceTurns !== 1 ? 's' : ''
-      }`,
-      actionHint: 'Avoid aggressive actions',
-      priority: 'critical',
-    });
-  }
-  if (!conditions[2].isMet) {
-    milestones.push({
-      description: `Gain ${requiredInfluence - currentInfluence} more influence`,
-      actionHint: 'Form alliances and avoid war',
-      priority: 'important',
-    });
-  }
-
-  return {
-    type: 'diplomatic',
-    name: 'Diplomatic Victory',
-    icon: '🤝',
-    description: 'Unite nations through alliances and peace',
-    progress,
-    conditions,
-    nextMilestones: milestones,
-    estimatedTurnsToVictory: isBlocked ? null : estimateTurnsToVictory(conditions, 2),
-    isBlocked,
-    blockReason: isBlocked ? 'DEFCON too low - restore peace first' : undefined,
-    color: 'blue',
-  };
-}
-
-function calculateDominationVictory(
-  player: Nation,
-  aliveEnemies: Nation[],
-  allNations: Nation[]
-): VictoryPath {
-  // Calculate total initial enemies (all nations except player, including eliminated)
-  const totalInitialEnemies = allNations.filter((n) => n.name !== player.name).length;
-  const enemiesDestroyed = totalInitialEnemies - aliveEnemies.length;
-
-  const conditions: VictoryCondition[] = [
-    {
-      id: 'eliminate_all',
-      description: 'Eliminate all rival nations',
-      current: enemiesDestroyed,
-      required: totalInitialEnemies,
-      isMet: aliveEnemies.length === 0,
-      unit: 'nations',
-    },
-  ];
-
-  const progress = aliveEnemies.length === 0 ? 100 : safePercentage(enemiesDestroyed, totalInitialEnemies, 0);
-
-  const milestones: VictoryMilestone[] = [];
-  if (aliveEnemies.length > 0) {
-    milestones.push({
-      description: `Destroy ${aliveEnemies.length} remaining nation${
-        aliveEnemies.length !== 1 ? 's' : ''
-      }`,
-      actionHint: 'Launch nuclear weapons or conventional assault',
-      priority: 'critical',
-    });
-    if (player.missiles < 10) {
-      milestones.push({
-        description: 'Build more missiles for offensive capability',
-        actionHint: 'Production → Build Missiles',
-        priority: 'important',
-      });
-    }
-  }
-
-  return {
-    type: 'domination',
-    name: 'Total Domination',
-    icon: '☢️',
-    description: 'Destroy all rival nations through force',
-    progress,
-    conditions,
-    nextMilestones: milestones,
-    estimatedTurnsToVictory: aliveEnemies.length > 0 ? aliveEnemies.length * 3 : 0,
-    isBlocked: false,
-    color: 'red',
-  };
-}
-
-function calculateEconomicVictory(player: Nation): VictoryPath {
-  const requiredCities = 10;
-  const currentCities = player.cities || 0;
-
-  const conditions: VictoryCondition[] = [
-    {
-      id: 'cities',
-      description: 'Control 10+ cities through territorial expansion',
-      current: currentCities,
-      required: requiredCities,
-      isMet: currentCities >= requiredCities,
-      unit: 'cities',
-    },
-  ];
-
-  const progress = Math.min(100, safePercentage(currentCities, requiredCities, 0));
-
-  const milestones: VictoryMilestone[] = [];
-  if (!conditions[0].isMet) {
-    const citiesNeeded = requiredCities - currentCities;
-    milestones.push({
-      description: `Build ${citiesNeeded} more city${citiesNeeded !== 1 ? 'ies' : ''}`,
-      actionHint: 'Production → Build City (150 Production each)',
-      priority: 'critical',
-    });
-    milestones.push({
-      description: 'Control territories to build cities',
-      actionHint: 'Territory Map → Capture territories',
-      priority: 'important',
-    });
-  }
-
-  return {
-    type: 'economic',
-    name: 'Economic Victory',
-    icon: '🏭',
-    description: 'Build industrial empire through cities',
-    progress,
-    conditions,
-    nextMilestones: milestones,
-    estimatedTurnsToVictory: conditions[0].isMet ? 0 : (requiredCities - currentCities) * 4,
-    isBlocked: false,
-    color: 'green',
-  };
-}
-
-function calculateDemographicVictory(player: Nation, allNations: Nation[]): VictoryPath {
-  const totalPopulation = allNations.reduce((sum, n) => sum + n.population, 0);
-  const playerPopulation = player.population;
-  const populationPercent = safePercentage(playerPopulation, totalPopulation, 0);
-  const requiredPercent = 60;
-  const currentInstability = player.instability || 0;
-  const maxInstability = 30;
-
-  const conditions: VictoryCondition[] = [
-    {
-      id: 'population',
-      description: 'Control 60% of world population',
-      current: Math.round(populationPercent),
-      required: requiredPercent,
-      isMet: populationPercent >= requiredPercent,
-      unit: '%',
-    },
-    {
-      id: 'stability',
-      description: 'Maintain low instability (<30)',
-      current: currentInstability,
-      required: maxInstability,
-      isMet: currentInstability < maxInstability,
-      unit: 'points',
-    },
-  ];
-
-  const progress = calculateOverallProgress(conditions);
-
-  const milestones: VictoryMilestone[] = [];
-  if (!conditions[0].isMet) {
-    milestones.push({
-      description: `Increase population control to ${requiredPercent}%`,
-      actionHint: 'Accept refugees, conquer populated territories',
-      priority: 'critical',
-    });
-  }
-  if (!conditions[1].isMet) {
-    milestones.push({
-      description: 'Reduce instability through governance',
-      actionHint: 'Improve morale and public opinion',
-      priority: 'important',
-    });
-  }
-
-  return {
-    type: 'demographic',
-    name: 'Demographic Victory',
-    icon: '👥',
-    description: 'Control majority of world population',
-    progress,
-    conditions,
-    nextMilestones: milestones,
-    estimatedTurnsToVictory: estimateTurnsToVictory(conditions, 8),
-    isBlocked: false,
-    color: 'purple',
-  };
-}
-
-function calculateSurvivalVictory(player: Nation, currentTurn: number): VictoryPath {
-  const requiredTurns = 50;
-  const requiredPopulation = 50_000_000;
-  const currentPopulation = player.population;
-
-  const conditions: VictoryCondition[] = [
-    {
-      id: 'turns',
-      description: 'Survive 50+ turns',
-      current: currentTurn,
-      required: requiredTurns,
-      isMet: currentTurn >= requiredTurns,
-      unit: 'turns',
-    },
-    {
-      id: 'population',
-      description: 'Maintain population above 50M',
-      current: currentPopulation,
-      required: requiredPopulation,
-      isMet: currentPopulation >= requiredPopulation,
-      unit: 'people',
-    },
-  ];
-
-  const progress = calculateOverallProgress(conditions);
-
-  const milestones: VictoryMilestone[] = [];
-  if (!conditions[0].isMet) {
-    milestones.push({
-      description: `Survive ${requiredTurns - currentTurn} more turn${
-        requiredTurns - currentTurn !== 1 ? 's' : ''
-      }`,
-      actionHint: 'Focus on defense and survival',
-      priority: 'critical',
-    });
-  }
-  if (!conditions[1].isMet) {
-    milestones.push({
-      description: 'Protect population - build defenses',
-      actionHint: 'Production → Build Defense Systems',
-      priority: 'critical',
-    });
-  }
-
-  return {
-    type: 'survival',
-    name: 'Survival Victory',
-    icon: '🛡️',
-    description: 'Survive 50 turns with 50M+ population',
-    progress,
-    conditions,
-    nextMilestones: milestones,
-    estimatedTurnsToVictory: conditions[0].isMet && conditions[1].isMet ? 0 : requiredTurns - currentTurn,
-    isBlocked: false,
-    color: 'gray',
-  };
-}
-
-function calculateCulturalVictory(player: Nation, allNations: Nation[]): VictoryPath {
-  // Cultural victory requires controlling >50% of global intel (cultural influence)
-  const playerIntel = player.intel || 0;
-  const totalIntel = allNations.reduce((sum, nation) => sum + (nation.intel || 0), 0);
-
-  // Calculate cultural influence as percentage of total intel
-  const influencePercentage = totalIntel > 0 ? (playerIntel / totalIntel) * 100 : 0;
-
-  // Check for propaganda mastery research (boosts effectiveness)
-  const hasPropagandaMastery = player.researched?.intelligence_propaganda || false;
-
-  // Victory requires: 50 intel + >50% influence
-  const hasMinimumIntel = playerIntel >= 50;
-  const hasMajorityInfluence = influencePercentage > 50;
-
-  const conditions: VictoryCondition[] = [
-    {
-      id: 'intel_resources',
-      description: 'Accumulate 50 INTEL for victory attempt',
-      current: playerIntel,
-      required: 50,
-      isMet: hasMinimumIntel,
-      unit: 'intel',
-    },
-    {
-      id: 'cultural_influence',
-      description: 'Control majority of global cultural influence',
-      current: Math.round(influencePercentage),
-      required: 50,
-      isMet: hasMajorityInfluence,
-      unit: '%',
-    },
-  ];
-
-  const progress = calculateOverallProgress(conditions);
-
-  const milestones: VictoryMilestone[] = [];
-
-  if (!hasPropagandaMastery) {
-    milestones.push({
-      description: 'Research Propaganda Mastery (+50% meme wave effectiveness)',
-      actionHint: 'Research → Intelligence → Propaganda Mastery',
-      priority: 'important',
-    });
-  }
-
-  if (!hasMinimumIntel) {
-    milestones.push({
-      description: `Accumulate ${50 - playerIntel} more INTEL`,
-      actionHint: 'Build → Intelligence Satellites, or Espionage actions',
-      priority: 'critical',
-    });
-  } else if (!hasMajorityInfluence) {
-    const neededIntel = Math.ceil((totalIntel * 0.51) - playerIntel);
-    milestones.push({
-      description: `Increase cultural influence by ${Math.round(50 - influencePercentage)}%`,
-      actionHint: `Need ${neededIntel} more INTEL to reach majority (${Math.round(influencePercentage)}% → 51%)`,
-      priority: 'critical',
-    });
-  } else {
-    milestones.push({
-      description: 'Declare Cultural Victory!',
-      actionHint: 'Culture → Propaganda Victory (costs 50 INTEL)',
-      priority: 'critical',
-    });
-  }
-
-  const canWinNow = hasMinimumIntel && hasMajorityInfluence;
-  const estimatedTurns = canWinNow ? 0 : null;
-
-  return {
-    type: 'cultural',
-    name: 'Cultural Victory',
-    icon: '📻',
-    description: 'Dominate global culture through propaganda and intel',
-    progress,
-    conditions,
-    nextMilestones: milestones,
-    estimatedTurnsToVictory: estimatedTurns,
-    isBlocked: false,
-    color: 'yellow',
-  };
-}
-
-// Helper functions
-function calculateOverallProgress(conditions: VictoryCondition[]): number {
-  if (conditions.length === 0) return 0;
-  const totalProgress = conditions.reduce((sum, condition) => {
-    const conditionProgress = Math.min(100, safePercentage(condition.current, condition.required, 0));
-    return sum + conditionProgress;
-  }, 0);
-  return Math.round(safeDivide(totalProgress, conditions.length, 0));
-}
-
-function estimateTurnsToVictory(conditions: VictoryCondition[], avgTurnsPerCondition: number): number | null {
-  const unmetConditions = conditions.filter((c) => !c.isMet);
-  if (unmetConditions.length === 0) return 0;
-  return unmetConditions.length * avgTurnsPerCondition;
-}
-
+// Helper function
 function createEmptyAnalysis(): VictoryAnalysis {
   return {
     paths: [],
