@@ -13,6 +13,10 @@ import type {
 import { DIPEarning, DIPCosts } from '@/types/diplomacyPhase3';
 import { initializeNationDiplomaticInfluence } from '@/types/diplomacyPhase3';
 
+type LegacyDiplomaticInfluence = DiplomaticInfluence & {
+  currentDIP?: number;
+};
+
 /**
  * Get nation's DIP balance
  */
@@ -20,7 +24,16 @@ export function getDIP(nation: Nation): number {
   if (!nation.diplomaticInfluence) {
     return 0;
   }
-  return nation.diplomaticInfluence.points;
+
+  const influence = nation.diplomaticInfluence as LegacyDiplomaticInfluence;
+  if (typeof influence.points === 'number' && Number.isFinite(influence.points)) {
+    return influence.points;
+  }
+
+  const legacyValue = influence.currentDIP;
+  return typeof legacyValue === 'number' && Number.isFinite(legacyValue)
+    ? legacyValue
+    : 0;
 }
 
 /**
@@ -57,8 +70,8 @@ export function modifyDIP(
     nation = initializeDIP(nation);
   }
 
-  const influence = nation.diplomaticInfluence!;
-  const oldBalance = influence.points;
+  const influence = nation.diplomaticInfluence as LegacyDiplomaticInfluence;
+  const oldBalance = getDIP(nation);
   const newBalance = Math.max(0, Math.min(influence.capacity, oldBalance + delta));
 
   const transaction: DIPTransaction = {

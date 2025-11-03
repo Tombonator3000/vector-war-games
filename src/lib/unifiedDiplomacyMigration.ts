@@ -7,6 +7,7 @@
 
 import type { Nation } from '@/types/game';
 import { clampRelationship, NEUTRAL_RELATIONSHIP } from '@/types/unifiedDiplomacy';
+import { getDIP } from '@/lib/diplomaticCurrencyUtils';
 
 /**
  * Migrate existing diplomacy data to unified relationship score
@@ -20,12 +21,36 @@ export function migrateToUnifiedRelationship(nation: Nation, targetId: string): 
   let relationship = NEUTRAL_RELATIONSHIP;
 
   // Phase 1: Trust (0-100)
-  const trust = nation.trustRecords?.[targetId]?.score ?? 50; // Default to neutral
+  const trustRecord = nation.trustRecords?.[targetId];
+  let trust = 50;
+  if (trustRecord) {
+    const modernValue = (trustRecord as { value?: number }).value;
+    if (typeof modernValue === 'number') {
+      trust = modernValue;
+    } else {
+      const legacyScore = (trustRecord as { score?: number }).score;
+      if (typeof legacyScore === 'number') {
+        trust = legacyScore;
+      }
+    }
+  }
   // Convert trust to relationship: trust 0 = -100, trust 50 = 0, trust 100 = +100
   relationship += (trust - 50) * 2;
 
   // Phase 1: Favors (-100 to +100)
-  const favors = nation.favorBalances?.[targetId]?.balance ?? 0;
+  const favorRecord = nation.favorBalances?.[targetId];
+  let favors = 0;
+  if (favorRecord) {
+    const modernValue = (favorRecord as { value?: number }).value;
+    if (typeof modernValue === 'number') {
+      favors = modernValue;
+    } else {
+      const legacyBalance = (favorRecord as { balance?: number }).balance;
+      if (typeof legacyBalance === 'number') {
+        favors = legacyBalance;
+      }
+    }
+  }
   relationship += favors / 2; // Halve favor impact
 
   // Phase 2: Grievances (each grievance = -10 relationship)
@@ -38,7 +63,7 @@ export function migrateToUnifiedRelationship(nation: Nation, targetId: string): 
   relationship += grievancePenalty;
 
   // Phase 3: Diplomatic Influence (bonus for high influence)
-  const influence = nation.diplomaticInfluence?.currentDIP ?? 0;
+  const influence = getDIP(nation);
   if (influence > 50) {
     relationship += Math.min(10, Math.floor((influence - 50) / 10)); // Max +10
   }
