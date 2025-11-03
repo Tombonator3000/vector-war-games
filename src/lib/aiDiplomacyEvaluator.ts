@@ -2,6 +2,7 @@
  * AI Diplomacy Evaluator
  * Determines whether AI nations should accept or reject diplomatic proposals
  * Based on threat levels, military power, personality, and strategic considerations
+ * ENHANCED: Now integrates advanced negotiation triggers for sophisticated AI diplomacy
  */
 
 import { Nation } from '@/types/game';
@@ -19,6 +20,7 @@ import { getTrust, getFavors, getTrustModifier } from '@/types/trustAndFavors';
 import { getPromiseTrustworthiness } from '@/lib/promiseActions';
 import { getGrievanceDiplomacyPenalty, getClaimWarJustification } from '@/lib/grievancesAndClaimsUtils';
 import { getAllianceBetween } from '@/types/specializedAlliances';
+import { checkAllTriggers } from '@/lib/aiNegotiationTriggers';
 
 /**
  * Evaluate whether AI should accept a player's diplomatic proposal
@@ -400,8 +402,94 @@ function generateResponseReason(
 /**
  * Determine if AI should initiate a proposal to the player
  * Returns a proposal if AI wants to make one, null otherwise
+ * ENHANCED: Now uses sophisticated trigger system with 6+ negotiation types
  */
 export function shouldAIInitiateProposal(
+  aiNation: Nation,
+  playerNation: Nation,
+  turn: number,
+  rng?: { next: () => number },
+  allNations?: Nation[]
+): DiplomacyProposal | null {
+  // If allNations is provided, use advanced trigger system
+  if (allNations) {
+    const trigger = checkAllTriggers(aiNation, playerNation, allNations, turn, 0);
+
+    if (trigger) {
+      // Convert sophisticated trigger to legacy proposal format
+      const proposalType = convertPurposeToProposalType(trigger.purpose);
+
+      return {
+        id: `ai-proposal-${turn}-${aiNation.id}`,
+        type: proposalType,
+        proposerId: aiNation.id,
+        targetId: playerNation.id,
+        terms: generateTermsFromTrigger(trigger),
+        message: trigger.context.reason,
+        turn,
+        playerInitiated: false,
+        // Enhanced metadata
+        metadata: {
+          purpose: trigger.purpose,
+          urgency: trigger.urgency,
+          priority: trigger.priority,
+          triggerContext: trigger.context
+        }
+      };
+    }
+  }
+
+  // Fallback to legacy simple logic if no allNations provided
+  return shouldAIInitiateProposalLegacy(aiNation, playerNation, turn, rng);
+}
+
+/**
+ * Convert negotiation purpose to legacy proposal type
+ */
+function convertPurposeToProposalType(purpose: string): string {
+  switch (purpose) {
+    case 'request-help': return 'aid-request';
+    case 'offer-alliance': return 'alliance';
+    case 'reconciliation': return 'peace-offer';
+    case 'demand-compensation': return 'demand-compensation';
+    case 'warning': return 'warning';
+    case 'peace-offer': return 'peace-offer';
+    case 'trade-opportunity': return 'trade';
+    case 'mutual-defense': return 'alliance';
+    case 'joint-venture': return 'joint-war';
+    default: return 'alliance';
+  }
+}
+
+/**
+ * Generate proposal terms from trigger context
+ */
+function generateTermsFromTrigger(trigger: any): any {
+  const terms: any = {};
+
+  if (trigger.context.targetNation) {
+    terms.targetNationId = trigger.context.targetNation;
+  }
+
+  if (trigger.context.resourceType) {
+    terms.resourceType = trigger.context.resourceType;
+  }
+
+  if (trigger.context.grievanceId) {
+    terms.grievanceId = trigger.context.grievanceId;
+  }
+
+  if (trigger.purpose === 'demand-compensation' && trigger.context.totalSeverity) {
+    terms.compensationAmount = trigger.context.totalSeverity * 10;
+  }
+
+  return terms;
+}
+
+/**
+ * Legacy proposal logic (fallback)
+ */
+function shouldAIInitiateProposalLegacy(
   aiNation: Nation,
   playerNation: Nation,
   turn: number,
