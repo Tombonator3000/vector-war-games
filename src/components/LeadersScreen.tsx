@@ -210,16 +210,21 @@ export function LeadersScreen({
                 }}
               >
                 <CardHeader className="pb-3">
-                  <div className="flex items-start gap-3">
-                    <LeaderAvatarWithTooltip
-                      leaderName={nation.leaderName || 'Unknown'}
-                      nationName={nation.name}
-                      mood={relationship >= 0 ? 'friendly' : 'hostile'}
-                      size="md"
-                      relationship={relationship}
-                      trust={trust}
-                      showTooltip={false}
-                    />
+                  <div className="flex items-start gap-4">
+                    {/* Leader Image - Prominent Display */}
+                    <div className="flex-shrink-0">
+                      <LeaderAvatarWithTooltip
+                        leaderName={nation.leaderName || 'Unknown'}
+                        nationName={nation.name}
+                        mood={relationship >= 0 ? 'friendly' : 'hostile'}
+                        size="lg"
+                        relationship={relationship}
+                        trust={trust}
+                        showTooltip={false}
+                      />
+                    </div>
+
+                    {/* Leader Info */}
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-lg truncate">
                         {nation.leaderName || 'Unknown Leader'}
@@ -227,7 +232,7 @@ export function LeadersScreen({
                       <CardDescription className="truncate">
                         {nation.name}
                       </CardDescription>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-2">
                         <Badge variant="outline" className="text-xs">
                           {nation.aiPersonality || 'Balanced'}
                         </Badge>
