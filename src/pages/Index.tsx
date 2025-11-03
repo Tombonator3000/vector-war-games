@@ -3501,8 +3501,9 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
       DoomsdayClock.tick(0.5);
     }
   }
-  
+
   checkVictory();
+  checkVictoryProgress();
 }
 
 // Launch submarine
@@ -3646,6 +3647,86 @@ function evaluateDiplomaticProgress(player: Nation) {
   };
 }
 
+// Victory progress notifications
+function checkVictoryProgress() {
+  if (S.gameOver) return;
+
+  const player = PlayerManager.get();
+  if (!player) return;
+
+  const alive = nations.filter(n => n.population > 0);
+  const totalPop = alive.reduce((sum, n) => sum + n.population, 0);
+
+  // Initialize progress tracking if not exists
+  if (!S.victoryProgressNotifications) {
+    S.victoryProgressNotifications = {
+      economic: false,
+      demographic: false,
+      cultural: false,
+      survival: false,
+      domination: false,
+    };
+  }
+
+  // Economic Victory Progress (10 cities)
+  const cities = player.cities || 0;
+  if (cities >= 7 && cities < 10 && !S.victoryProgressNotifications.economic) {
+    S.victoryProgressNotifications.economic = true;
+    toast({
+      title: '🏭 Economic Victory Approaching',
+      description: `${cities}/10 cities built. Industrial dominance within reach!`
+    });
+    log(`Economic Victory Progress: ${cities}/10 cities`, 'success');
+  }
+
+  // Demographic Victory Progress (60% population)
+  const popPercent = (player.population / totalPop) * 100;
+  if (popPercent >= 45 && popPercent < 60 && (player.instability || 0) < 30 && !S.victoryProgressNotifications.demographic) {
+    S.victoryProgressNotifications.demographic = true;
+    toast({
+      title: '👥 Demographic Victory Approaching',
+      description: `Control ${Math.round(popPercent)}% of world population (need 60%)`
+    });
+    log(`Demographic Victory Progress: ${Math.round(popPercent)}% population control`, 'success');
+  }
+
+  // Cultural Victory Progress (50 intel + >50% influence)
+  const totalIntel = alive.reduce((sum, n) => sum + (n.intel || 0), 0);
+  if (totalIntel > 0) {
+    const influenceShare = ((player.intel || 0) / totalIntel) * 100;
+    if ((player.intel || 0) >= 40 && influenceShare >= 40 && !S.victoryProgressNotifications.cultural) {
+      S.victoryProgressNotifications.cultural = true;
+      toast({
+        title: '📻 Cultural Victory Approaching',
+        description: `${Math.round(influenceShare)}% cultural influence (need 50% + 50 INTEL)`
+      });
+      log(`Cultural Victory Progress: ${Math.round(influenceShare)}% influence, ${player.intel || 0}/50 INTEL`, 'success');
+    }
+  }
+
+  // Survival Victory Progress (50 turns)
+  if (S.turn >= 40 && S.turn < 50 && player.population >= 50_000_000 && !S.victoryProgressNotifications.survival) {
+    S.victoryProgressNotifications.survival = true;
+    const turnsLeft = 50 - S.turn;
+    toast({
+      title: '🛡️ Survival Victory Approaching',
+      description: `Survive ${turnsLeft} more turn${turnsLeft !== 1 ? 's' : ''} to achieve victory!`
+    });
+    log(`Survival Victory Progress: ${S.turn}/50 turns`, 'success');
+  }
+
+  // Domination Victory Progress
+  const aliveEnemies = alive.filter(n => n.name !== player.name);
+  if (aliveEnemies.length <= 2 && aliveEnemies.length > 0 && !S.victoryProgressNotifications.domination) {
+    S.victoryProgressNotifications.domination = true;
+    toast({
+      title: '☢️ Total Domination Approaching',
+      description: `Only ${aliveEnemies.length} nation${aliveEnemies.length !== 1 ? 's' : ''} remain!`
+    });
+    log(`Domination Victory Progress: ${aliveEnemies.length} enemies left`, 'success');
+  }
+}
+
 // Victory check
 function checkVictory() {
   if (S.gameOver) return;
@@ -3696,13 +3777,23 @@ function checkVictory() {
     endGame(true, 'ECONOMIC VICTORY - Industrial supremacy achieved!');
     return;
   }
-  
+
   if (player.population / totalPop > 0.6 && (player.instability || 0) < 30) {
     endGame(true, 'DEMOGRAPHIC VICTORY - You control the world through immigration!');
     return;
   }
-  
-  if (S.turn >= 50 && player.population >= 50) {
+
+  // Cultural Victory - automatic check
+  const totalIntel = alive.reduce((sum, n) => sum + (n.intel || 0), 0);
+  if (totalIntel > 0) {
+    const influenceShare = (player.intel || 0) / totalIntel;
+    if ((player.intel || 0) >= 50 && influenceShare > 0.5) {
+      endGame(true, 'CULTURAL VICTORY - Your propaganda dominates the world\'s minds!');
+      return;
+    }
+  }
+
+  if (S.turn >= 50 && player.population >= 50_000_000) {
     const score = S.turn * 10 + player.population * 5 + player.missiles * 20;
     endGame(true, `SURVIVAL VICTORY - Endured 50 turns! Score: ${score}`);
     return;
@@ -4541,6 +4632,7 @@ function endTurn() {
 
       updateDisplay();
       checkVictory();
+      checkVictoryProgress();
     }, 1500);
   }, aiActionCount * 500 + 500);
 }
