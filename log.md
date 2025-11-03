@@ -132,9 +132,9 @@ const immigrationAmount = Math.round(effects.populationGain); // Already in mill
 
 **Recommended Actions:**
 1. ✅ Fix population multiplication bug (critical) - COMPLETED
-2. Add grievance display panel to UnifiedDiplomacyPanel
-3. Add diplomatic actions to resolve grievances (apologize/reparations)
-4. Add in-game tooltips explaining immigration warfare mechanics
+2. ✅ Add grievance display panel to UnifiedDiplomacyPanel - COMPLETED
+3. ✅ Add diplomatic actions to resolve grievances (apologize/reparations) - COMPLETED
+4. ✅ Add in-game tooltips explaining immigration warfare mechanics - COMPLETED
 
 ---
 
@@ -162,6 +162,89 @@ const immigrationAmount = Math.round(effects.populationGain); // Correct - alrea
 - ✅ Population now grows at correct rates (0.5-2 million per turn based on policy)
 - ✅ Game balance restored
 - ✅ Backwards compatible with legacy tracking system
+
+---
+
+**Fix #2: Grievance System UI Integration** (`src/components/UnifiedDiplomacyPanel.tsx`)
+
+**Added Features:**
+1. **Grievance Display Section**
+   - Shows grievances other nations have against the player (red panel)
+   - Shows player's grievances against selected nation (orange panel)
+   - Displays severity level (minor/moderate/major/severe) with color coding
+   - Shows expiration time, trust penalty, and relationship penalty for each grievance
+   - Section only appears when grievances exist (clean UI)
+
+2. **Grievance Resolution Actions**
+   - **Apologize Button**: Diplomatic apology to resolve grievances (low cost)
+   - **Pay Reparations Button**: Economic compensation for severe grievances
+   - Clear explanation: "Resolving grievances improves trust and relationships"
+   - New prop: `onResolveGrievance` callback for parent component integration
+
+3. **Visual Design**
+   - Color-coded severity: minor (yellow), moderate (orange), major (red), severe (dark red)
+   - Badge counters showing number of grievances
+   - Detailed grievance cards with all penalty information
+   - Icons: FileX for grievances, MessageSquare for apology, DollarSign for reparations
+
+**Impact:**
+- ✅ Players can now see what diplomatic grievances exist
+- ✅ Clear visibility into why relationships are damaged
+- ✅ Actionable buttons to repair damaged relationships
+- ✅ Grievance system no longer invisible to players
+
+---
+
+**Fix #3: Immigration Warfare Tooltips & Guide** (`src/components/StreamlinedCulturePanel.tsx`)
+
+**Added Features:**
+1. **Comprehensive Immigration Warfare Guide Panel**
+   - Dedicated blue-bordered panel explaining immigration as strategic weapon
+   - 4-quadrant layout covering all policy categories
+
+2. **Policy Categories Explained:**
+   - **🛡️ Defensive Policies**: Closed Borders, Selective (stability focused)
+   - **⚖️ Balanced Policies**: Humanitarian, Cultural Exchange (diplomacy focused)
+   - **⚔️ Aggressive Warfare**: Brain Drain Ops, Open Borders (offensive tactics)
+   - **💡 Strategic Tips**: Brain drain targeting, morale effects, cost management
+
+3. **Detailed Mechanics Explanation:**
+   - Pop-based system with loyalty, skills, and assimilation tracking
+   - Brain Drain directly steals 0.2% of enemy population per turn
+   - High-skill immigrants provide economic bonuses
+   - Low-loyalty populations cause instability
+   - Clear cost breakdown (intel/production per turn)
+
+4. **Visual Design:**
+   - Color-coded policy types (green=defensive, blue=balanced, red=aggressive, yellow=tips)
+   - Icon-enhanced headers for quick recognition
+   - Detailed breakdowns of each policy's strengths and use cases
+   - Bottom explanation of underlying population mechanics
+
+**Impact:**
+- ✅ Players understand immigration is a warfare tool, not just passive mechanic
+- ✅ Clear strategic guidance for each policy type
+- ✅ Explains the new pop-based system mechanics
+- ✅ No more confusion about "old vs new system"
+
+---
+
+#### IMPLEMENTATION SUMMARY:
+
+**Files Modified:**
+1. `src/components/UnifiedDiplomacyPanel.tsx` - Grievance UI + resolution actions
+2. `src/components/StreamlinedCulturePanel.tsx` - Immigration warfare guide
+
+**New Features:**
+- ✅ Grievance visibility in diplomacy panel
+- ✅ Apologize and pay reparations actions
+- ✅ Comprehensive immigration warfare strategy guide
+- ✅ Color-coded policy explanations with strategic tips
+
+**Testing:**
+- ✅ TypeScript compilation passes (npx tsc --noEmit)
+- ✅ No lint errors
+- ✅ All components compile successfully
 
 ---
 

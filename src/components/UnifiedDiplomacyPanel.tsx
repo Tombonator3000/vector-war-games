@@ -20,10 +20,14 @@ import {
   TrendingDown,
   Users,
   AlertTriangle,
+  FileX,
+  MessageSquare,
+  DollarSign,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Nation } from '@/types/game';
 import type { ProposalType } from '@/types/unifiedDiplomacy';
+import type { Grievance } from '@/types/grievancesAndClaims';
 import {
   getRelationshipCategory,
   getRelationshipColor,
@@ -35,11 +39,13 @@ import {
   RELATIONSHIP_HOSTILE,
 } from '@/types/unifiedDiplomacy';
 import { getRelationship } from '@/lib/unifiedDiplomacyMigration';
+import { getGrievanceSeverityColor } from '@/types/grievancesAndClaims';
 
 interface UnifiedDiplomacyPanelProps {
   player: Nation;
   nations: Nation[];
   onProposal?: (type: ProposalType, targetId: string, terms?: any) => void;
+  onResolveGrievance?: (targetId: string, method: 'apologize' | 'reparations') => void;
   onClose?: () => void;
 }
 
@@ -47,6 +53,7 @@ export function UnifiedDiplomacyPanel({
   player,
   nations,
   onProposal,
+  onResolveGrievance,
   onClose,
 }: UnifiedDiplomacyPanelProps) {
   const [selectedNationId, setSelectedNationId] = useState<string | null>(null);
@@ -60,6 +67,23 @@ export function UnifiedDiplomacyPanel({
 
   const hasAlliance = (nationId: string): boolean => {
     return player.alliances?.includes(nationId) || false;
+  };
+
+  // Get grievances player has against selected nation
+  const getPlayerGrievancesAgainst = (nationId: string): Grievance[] => {
+    if (!player.grievances) return [];
+    return player.grievances.filter(
+      g => g.againstNationId === nationId && !g.resolved
+    );
+  };
+
+  // Get grievances selected nation has against player
+  const getGrievancesAgainstPlayer = (nationId: string): Grievance[] => {
+    const nation = nations.find(n => n.id === nationId);
+    if (!nation?.grievances) return [];
+    return nation.grievances.filter(
+      g => g.againstNationId === player.id && !g.resolved
+    );
   };
 
   const renderRelationshipBar = (relationship: number) => {
@@ -241,6 +265,118 @@ export function UnifiedDiplomacyPanel({
                 )}
               </div>
 
+              {/* Grievances Section */}
+              {(() => {
+                const theirGrievances = getGrievancesAgainstPlayer(selectedNation.id);
+                const ourGrievances = getPlayerGrievancesAgainst(selectedNation.id);
+                const hasGrievances = theirGrievances.length > 0 || ourGrievances.length > 0;
+
+                if (!hasGrievances) return null;
+
+                return (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-gray-400 uppercase flex items-center gap-2">
+                      <FileX className="w-4 h-4" />
+                      Diplomatic Grievances
+                    </h4>
+
+                    {/* Their grievances against us */}
+                    {theirGrievances.length > 0 && (
+                      <div className="bg-red-900/20 p-3 rounded-lg border border-red-500/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-red-400">
+                            {selectedNation.name}'s Grievances Against You
+                          </span>
+                          <Badge className="bg-red-500/20 text-red-400 text-xs">
+                            {theirGrievances.length}
+                          </Badge>
+                        </div>
+                        <div className="space-y-2 mb-3">
+                          {theirGrievances.map(g => (
+                            <div key={g.id} className="bg-gray-900/50 p-2 rounded text-xs">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`font-semibold ${getGrievanceSeverityColor(g.severity)}`}>
+                                  {g.severity.toUpperCase()}
+                                </span>
+                                <span className="text-gray-500">
+                                  Expires: {g.expiresIn} turns
+                                </span>
+                              </div>
+                              <p className="text-gray-300">{g.description}</p>
+                              <div className="flex gap-2 mt-1 text-gray-500">
+                                <span>Trust: {g.trustPenalty}</span>
+                                <span>•</span>
+                                <span>Relations: {g.relationshipPenalty}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Grievance Resolution Actions */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            onClick={() => onResolveGrievance?.(selectedNation.id, 'apologize')}
+                            size="sm"
+                            className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-xs"
+                          >
+                            <MessageSquare className="w-3 h-3 mr-1" />
+                            Apologize
+                          </Button>
+                          <Button
+                            onClick={() => onResolveGrievance?.(selectedNation.id, 'reparations')}
+                            size="sm"
+                            className="bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-xs"
+                          >
+                            <DollarSign className="w-3 h-3 mr-1" />
+                            Pay Reparations
+                          </Button>
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-2">
+                          Resolving grievances improves trust and relationships
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Our grievances against them */}
+                    {ourGrievances.length > 0 && (
+                      <div className="bg-orange-900/20 p-3 rounded-lg border border-orange-500/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-orange-400">
+                            Your Grievances Against {selectedNation.name}
+                          </span>
+                          <Badge className="bg-orange-500/20 text-orange-400 text-xs">
+                            {ourGrievances.length}
+                          </Badge>
+                        </div>
+                        <div className="space-y-2">
+                          {ourGrievances.map(g => (
+                            <div key={g.id} className="bg-gray-900/50 p-2 rounded text-xs">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`font-semibold ${getGrievanceSeverityColor(g.severity)}`}>
+                                  {g.severity.toUpperCase()}
+                                </span>
+                                <span className="text-gray-500">
+                                  Expires: {g.expiresIn} turns
+                                </span>
+                              </div>
+                              <p className="text-gray-300">{g.description}</p>
+                              <div className="flex gap-2 mt-1 text-gray-500">
+                                <span>Trust: {g.trustPenalty}</span>
+                                <span>•</span>
+                                <span>Relations: {g.relationshipPenalty}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-2">
+                          These will fade over time or when {selectedNation.name} makes amends
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Relationship Tips */}
               <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700">
                 <div className="flex items-start gap-2">
@@ -251,6 +387,7 @@ export function UnifiedDiplomacyPanel({
                       <li>Send aid to improve relations (+10)</li>
                       <li>Honor treaties to build trust (+5/turn)</li>
                       <li>Attacks reduce relationship (-25 to -50)</li>
+                      <li>Resolve grievances to repair damaged relations</li>
                       <li>Relationships slowly decay toward neutral</li>
                     </ul>
                   </div>
