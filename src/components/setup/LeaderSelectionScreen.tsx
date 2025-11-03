@@ -9,10 +9,11 @@
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronUp, Info, Lightbulb } from 'lucide-react';
+import { ChevronDown, ChevronUp, Info, Lightbulb, User } from 'lucide-react';
 import type { RefObject } from 'react';
 import { useState } from 'react';
 import { getLeaderBiography } from '@/data/leaderBiographies';
+import { getLeaderImage } from '@/lib/leaderImages';
 
 export interface Leader {
   name: string;
@@ -72,8 +73,23 @@ export function LeaderSelectionScreen({
                     onClick={() => !isExpanded && onSelectLeader(leader.name)}
                     className={`p-6 ${!isExpanded && 'cursor-pointer'}`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
+                    <div className="flex items-start gap-4 justify-between">
+                      {/* Leader Portrait */}
+                      <div className="flex-shrink-0">
+                        {getLeaderImage(leader.name) ? (
+                          <img
+                            src={getLeaderImage(leader.name)}
+                            alt={leader.name}
+                            className="w-20 h-20 rounded-lg object-cover border-2 border-cyan/50"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 rounded-lg bg-cyan/20 border-2 border-cyan/50 flex items-center justify-center">
+                            <User className="w-10 h-10 text-cyan" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
                         <h3 className="text-xl font-mono text-neon-green mb-1">{leader.name}</h3>
                         <p className="text-sm text-muted-foreground uppercase tracking-wide">
                           {leader.ai}
@@ -85,7 +101,7 @@ export function LeaderSelectionScreen({
                       {bio && (
                         <button
                           onClick={(e) => toggleLeaderInfo(leader.name, e)}
-                          className="ml-2 p-2 hover:bg-cyan/20 rounded transition-colors"
+                          className="ml-2 p-2 hover:bg-cyan/20 rounded transition-colors flex-shrink-0"
                         >
                           {isExpanded ? (
                             <ChevronUp className="w-5 h-5 text-cyan" />

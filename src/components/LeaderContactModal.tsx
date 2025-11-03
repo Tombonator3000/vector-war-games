@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { LeaderAvatarWithTooltip } from './LeaderAvatar';
 import { NegotiationInterface } from './NegotiationInterface';
+import { getLeaderImage } from '@/lib/leaderImages';
 import type { Nation } from '@/types/game';
 import type {
   LeaderContactState,
@@ -255,6 +256,7 @@ export function LeaderContactModal({
               relationship={relationship}
               trust={trust}
               showTooltip={false}
+              imageUrl={getLeaderImage(targetNation.leaderName)}
             />
             <div className="flex-1">
               <DialogTitle className="text-2xl">
