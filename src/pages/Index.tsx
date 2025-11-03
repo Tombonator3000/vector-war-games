@@ -134,7 +134,7 @@ import { initializeWeek3State, updateWeek3Systems, type Week3ExtendedState } fro
 import { initializePhase2State, updatePhase2Systems, checkPhase2UnlockConditions, type Phase2State } from '@/lib/phase2Integration';
 import { initializePhase3State, updatePhase3Systems, checkPhase3UnlockConditions } from '@/lib/phase3Integration';
 import type { Phase3State } from '@/types/phase3Types';
-import { DoctrineSelectionPanel, CouncilSchismModal, OrderCommandPanel, SanityHeatMapPanel, RitualSitePanel, MissionBoardPanel, UnitRosterPanel, Phase2DoctrinePanel } from '@/components/greatOldOnes';
+import { DoctrineSelectionPanel, CouncilSchismModal, CouncilSchismButton, OrderCommandPanel, SanityHeatMapPanel, GlobalSanityIndicator, RegionalSanityOverlay, RitualSitePanel, MissionBoardPanel, UnitRosterPanel, Phase2DoctrinePanel } from '@/components/greatOldOnes';
 import type { Phase2Operation } from '@/components/greatOldOnes/Phase2DoctrinePanel';
 import {
   aiSignMutualTruce,
@@ -5071,6 +5071,7 @@ export default function NoradVector() {
   // Great Old Ones state
   const [greatOldOnesState, setGreatOldOnesState] = useState<GreatOldOnesState | null>(null);
   const [councilSchismModalOpen, setCouncilSchismModalOpen] = useState(false);
+  const [regionalSanityOverlayVisible, setRegionalSanityOverlayVisible] = useState(false);
   const [phase2PanelOpen, setPhase2PanelOpen] = useState(false);
   const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
   const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
@@ -9400,6 +9401,12 @@ export default function NoradVector() {
                 <span className="text-cyan-400 text-sm">DEFCON</span>
                 <span className="text-neon-green font-bold text-2xl" id="defcon">5</span>
               </div>
+
+              {/* Global Sanity - Great Old Ones Campaign */}
+              {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && greatOldOnesState.doctrine && (
+                <GlobalSanityIndicator state={greatOldOnesState} />
+              )}
+
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">TURN</span>
                 <span className="text-neon-green font-bold text-base" id="turn">1</span>
@@ -10030,7 +10037,6 @@ export default function NoradVector() {
 
             {greatOldOnesState.doctrine && (
               <>
-                <SanityHeatMapPanel state={greatOldOnesState} />
                 <OrderCommandPanel
                   state={greatOldOnesState}
                   onIssueOrder={(order) => {
@@ -10038,30 +10044,6 @@ export default function NoradVector() {
                     toast({ title: 'Order Issued', description: order });
                   }}
                 />
-
-                {/* Council Schism Button - Only shown if not already used */}
-                {!greatOldOnesState.councilSchismUsed && (
-                  <Card className="bg-slate-800 border-slate-700">
-                    <CardHeader>
-                      <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5 text-amber-500" />
-                        Council Schism
-                      </CardTitle>
-                      <CardDescription>
-                        Force a change in doctrine through council upheaval (once per campaign)
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Button
-                        variant="destructive"
-                        onClick={() => setCouncilSchismModalOpen(true)}
-                        className="w-full"
-                      >
-                        Initiate Council Schism
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
 
                 {/* Phase 2 Operations Button - Only shown if Phase 2 is unlocked */}
                 {phase2State && phase2State.unlocked && (
@@ -10112,6 +10094,24 @@ export default function NoradVector() {
             )}
           </div>
         </>
+      )}
+
+      {/* Regional Sanity Overlay - Great Old Ones map overlay */}
+      {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && greatOldOnesState.doctrine && (
+        <RegionalSanityOverlay
+          state={greatOldOnesState}
+          showOverlay={regionalSanityOverlayVisible}
+          onToggleOverlay={() => setRegionalSanityOverlayVisible(!regionalSanityOverlayVisible)}
+        />
+      )}
+
+      {/* Council Schism Button - Great Old Ones bottom action */}
+      {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && greatOldOnesState.doctrine && !greatOldOnesState.councilSchismUsed && (
+        <CouncilSchismButton
+          onClick={() => setCouncilSchismModalOpen(true)}
+          councilUnity={greatOldOnesState.council?.unity || 0}
+          eldritchPower={greatOldOnesState.resources?.eldritchPower || 0}
+        />
       )}
 
       {/* Council Schism Modal - Great Old Ones doctrine change */}
