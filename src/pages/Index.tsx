@@ -5590,6 +5590,32 @@ export default function NoradVector() {
     onStateChange: setConventionalState,
     onConsumeAction: consumeAction,
     onUpdateDisplay: updateDisplay,
+    onDefconChange: (delta) => {
+      const previous = S.defcon;
+      S.defcon = Math.max(1, Math.min(5, S.defcon + delta));
+      if (S.defcon !== previous) {
+        AudioSys.playSFX('defcon');
+        const message = delta < 0
+          ? `DEFCON ${S.defcon}: Military tensions escalate from territorial conflict`
+          : `DEFCON ${S.defcon}: Global tensions ease`;
+        log(message, delta < 0 ? 'warning' : 'success');
+        addNewsItem('military', message, delta < 0 ? 'critical' : 'important');
+        updateDisplay();
+      }
+    },
+    onRelationshipChange: (nationId1, nationId2, delta) => {
+      modifyRelationship(nations, nationId1, nationId2, delta);
+      const nation1 = getNationById(nations, nationId1);
+      const nation2 = getNationById(nations, nationId2);
+      if (nation1 && nation2 && Math.abs(delta) >= 10) {
+        const message = delta < 0
+          ? `${nation1.name} ↔ ${nation2.name} relations deteriorate (${delta})`
+          : `${nation1.name} ↔ ${nation2.name} relations improve (+${delta})`;
+        log(message, delta < 0 ? 'warning' : 'success');
+        addNewsItem('diplomacy', message, Math.abs(delta) >= 25 ? 'critical' : 'important');
+      }
+      updateDisplay();
+    },
   });
 
   const cyber = useCyberWarfare({
@@ -5778,9 +5804,12 @@ export default function NoradVector() {
     logs: conventionalLogs,
     trainUnit: trainConventionalUnit,
     deployUnit: deployConventionalUnitBase,
+    moveArmies: moveConventionalArmies,
     resolveBorderConflict: resolveConventionalBorderConflictBase,
     resolveProxyEngagement: resolveConventionalProxyEngagement,
     getUnitsForNation: getConventionalUnitsForNation,
+    placeReinforcements: placeConventionalReinforcements,
+    getReinforcements: getConventionalReinforcements,
   } = conventional;
 
   const getNationAnchor = useCallback((ownerId: string) => {
@@ -5892,79 +5921,80 @@ export default function NoradVector() {
     [conventionalTerritories],
   );
 
-  const resolveConventionalBorderConflict = useCallback(
-    (territoryId: string, attackerId: string, defenderId: string) => {
-      const attackerUnitsBefore = Object.values(conventionalUnits).filter(
-        (unit) => unit.ownerId === attackerId && unit.locationId === territoryId && unit.status === 'deployed',
-      );
-      const defenderUnitsBefore = Object.values(conventionalUnits).filter(
-        (unit) => unit.ownerId === defenderId && unit.locationId === territoryId && unit.status === 'deployed',
-      );
+  // New Risk-style attack function
+  const resolveConventionalAttack = useCallback(
+    (fromTerritoryId: string, toTerritoryId: string, attackingArmies: number) => {
+      const fromTerritory = conventionalTerritories[fromTerritoryId];
+      const toTerritory = conventionalTerritories[toTerritoryId];
 
-      const attackerOrigin = findStagingTerritory(attackerId, territoryId);
-      const defenderOrigin = findStagingTerritory(defenderId, territoryId);
+      if (!fromTerritory || !toTerritory) {
+        return { success: false, reason: 'Invalid territories' };
+      }
 
-      const result = resolveConventionalBorderConflictBase(territoryId, attackerId, defenderId);
-      if (result.success) {
-        const attackerFallback = getNationAnchor(attackerId);
-        const defenderFallback = getNationAnchor(defenderId);
+      const attackerId = fromTerritory.controllingNationId;
+      const defenderId = toTerritory.controllingNationId;
 
-        if (result.attackerVictory) {
-          attackerUnitsBefore.forEach((unit) => {
-            registerConventionalMovement({
-              unitId: unit.id,
-              templateId: unit.templateId,
-              ownerId: unit.ownerId,
-              fromTerritoryId: attackerOrigin ?? null,
-              toTerritoryId: territoryId,
-              fallbackEnd: attackerFallback,
-            });
-          });
+      const result = resolveConventionalBorderConflictBase(fromTerritoryId, toTerritoryId, attackingArmies);
 
-          defenderUnitsBefore.forEach((unit) => {
-            registerConventionalMovement({
-              unitId: unit.id,
-              templateId: unit.templateId,
-              ownerId: unit.ownerId,
-              fromTerritoryId: territoryId,
-              toTerritoryId: defenderOrigin,
-              fallbackEnd: defenderFallback,
-            });
-          });
-        } else {
-          attackerUnitsBefore.forEach((unit) => {
-            registerConventionalMovement({
-              unitId: unit.id,
-              templateId: unit.templateId,
-              ownerId: unit.ownerId,
-              fromTerritoryId: territoryId,
-              toTerritoryId: attackerOrigin,
-              fallbackEnd: attackerFallback,
-            });
-          });
-
-          defenderUnitsBefore.forEach((unit) => {
-            registerConventionalMovement({
-              unitId: unit.id,
-              templateId: unit.templateId,
-              ownerId: unit.ownerId,
-              fromTerritoryId: defenderOrigin ?? null,
-              toTerritoryId: territoryId,
-              fallbackEnd: defenderFallback,
-            });
-          });
-        }
+      if (result.success && attackerId) {
+        // Register visual movement on map
+        registerConventionalMovement({
+          unitId: `attack_${Date.now()}`,
+          templateId: 'armored_corps',
+          ownerId: attackerId,
+          fromTerritoryId,
+          toTerritoryId,
+        });
       }
 
       return result;
     },
-    [
-      conventionalUnits,
-      findStagingTerritory,
-      getNationAnchor,
-      registerConventionalMovement,
-      resolveConventionalBorderConflictBase,
-    ],
+    [conventionalTerritories, registerConventionalMovement, resolveConventionalBorderConflictBase],
+  );
+
+  // Legacy wrapper for old signature (keeps existing modal working)
+  const resolveConventionalBorderConflict = useCallback(
+    (territoryId: string, attackerId: string, defenderId: string) => {
+      // Find an adjacent territory owned by attacker to use as source
+      const territory = conventionalTerritories[territoryId];
+      if (!territory) {
+        return { success: false, reason: 'Unknown territory' };
+      }
+
+      const attackerTerritory = Object.values(conventionalTerritories).find(
+        t => t.controllingNationId === attackerId &&
+             territory.neighbors.includes(t.id)
+      );
+
+      if (!attackerTerritory) {
+        return { success: false, reason: 'No adjacent territory to attack from' };
+      }
+
+      // Use all available armies minus 1
+      const attackingArmies = Math.max(1, attackerTerritory.armies - 1);
+      return resolveConventionalAttack(attackerTerritory.id, territoryId, attackingArmies);
+    },
+    [conventionalTerritories, resolveConventionalAttack],
+  );
+
+  const moveConventionalArmiesWithAnimation = useCallback(
+    (fromTerritoryId: string, toTerritoryId: string, count: number) => {
+      const fromTerritory = conventionalTerritories[fromTerritoryId];
+      const result = moveConventionalArmies(fromTerritoryId, toTerritoryId, count);
+
+      if (result.success && fromTerritory?.controllingNationId) {
+        registerConventionalMovement({
+          unitId: `move_${Date.now()}`,
+          templateId: 'armored_corps',
+          ownerId: fromTerritory.controllingNationId,
+          fromTerritoryId,
+          toTerritoryId,
+        });
+      }
+
+      return result;
+    },
+    [conventionalTerritories, moveConventionalArmies, registerConventionalMovement],
   );
 
   useEffect(() => {
@@ -6694,29 +6724,29 @@ export default function NoradVector() {
   const renderMilitaryModal = useCallback((): ReactNode => {
     return (
       <MilitaryModal
-        conventionalUnits={conventionalUnits}
         conventionalTerritories={conventionalTerritories}
         conventionalTemplatesMap={conventionalTemplatesMap}
         conventionalLogs={conventionalLogs}
         trainConventionalUnit={trainConventionalUnit}
-        deployConventionalUnit={deployConventionalUnit}
-        getConventionalUnitsForNation={getConventionalUnitsForNation}
-        resolveConventionalBorderConflict={resolveConventionalBorderConflict}
+        resolveConventionalAttack={resolveConventionalAttack}
+        moveConventionalArmies={moveConventionalArmiesWithAnimation}
         resolveConventionalProxyEngagement={resolveConventionalProxyEngagement}
+        placeConventionalReinforcements={placeConventionalReinforcements}
+        getConventionalReinforcements={getConventionalReinforcements}
         toast={toast}
         addNewsItem={addNewsItem}
       />
     );
   }, [
-    conventionalUnits,
     conventionalTerritories,
     conventionalTemplatesMap,
     conventionalLogs,
     trainConventionalUnit,
-    deployConventionalUnit,
-    getConventionalUnitsForNation,
-    resolveConventionalBorderConflict,
+    resolveConventionalAttack,
+    moveConventionalArmiesWithAnimation,
     resolveConventionalProxyEngagement,
+    placeConventionalReinforcements,
+    getConventionalReinforcements,
     toast,
     addNewsItem,
   ]);
