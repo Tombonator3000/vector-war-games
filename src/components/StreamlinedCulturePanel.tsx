@@ -296,6 +296,65 @@ export function StreamlinedCulturePanel({
         </div>
       </div>
 
+      {/* Immigration Warfare Guide */}
+      <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30">
+        <div className="flex items-start gap-2 mb-3">
+          <Info className="w-5 h-5 text-blue-400 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-semibold text-blue-300 mb-1">⚔️ Immigration Warfare Guide</h3>
+            <p className="text-xs text-gray-400">Immigration is a strategic weapon. Use it to strengthen your economy, weaken enemies, or gain diplomatic influence.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          {/* Defensive Policies */}
+          <div className="bg-gray-900/50 p-2 rounded">
+            <h4 className="font-semibold text-green-400 mb-1.5">🛡️ Defensive Policies</h4>
+            <ul className="space-y-1 text-gray-400">
+              <li><strong className="text-white">Closed Borders:</strong> No immigration. Maximize stability at cost of growth.</li>
+              <li><strong className="text-white">Selective:</strong> High-skill only. Expensive but strong economic boost (+8 prod/turn).</li>
+            </ul>
+          </div>
+
+          {/* Balanced Policies */}
+          <div className="bg-gray-900/50 p-2 rounded">
+            <h4 className="font-semibold text-blue-400 mb-1.5">⚖️ Balanced Policies</h4>
+            <ul className="space-y-1 text-gray-400">
+              <li><strong className="text-white">Humanitarian:</strong> Accept refugees. Major reputation boost (+10) but reduces stability.</li>
+              <li><strong className="text-white">Cultural Exchange:</strong> Balanced immigration with +8 reputation. Good for diplomacy.</li>
+            </ul>
+          </div>
+
+          {/* Aggressive Policies */}
+          <div className="bg-gray-900/50 p-2 rounded">
+            <h4 className="font-semibold text-red-400 mb-1.5">⚔️ Aggressive Warfare</h4>
+            <ul className="space-y-1 text-gray-400">
+              <li><strong className="text-white">Brain Drain Ops:</strong> Steal elite talent from unstable enemies. Damages their economy and reputation (-10).</li>
+              <li><strong className="text-white">Open Borders:</strong> Rapid growth (2x) but high instability. Use when you need population fast.</li>
+            </ul>
+          </div>
+
+          {/* Strategic Tips */}
+          <div className="bg-gray-900/50 p-2 rounded">
+            <h4 className="font-semibold text-yellow-400 mb-1.5">💡 Strategic Tips</h4>
+            <ul className="space-y-1 text-gray-400 list-disc list-inside">
+              <li>Brain Drain targets weakest nations automatically</li>
+              <li>High morale increases immigration effectiveness</li>
+              <li>Policies cost intel/production per turn</li>
+              <li>Switch policies based on game phase</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-gray-700">
+          <p className="text-xs text-gray-500">
+            <strong className="text-gray-400">Population System:</strong> Immigrants are tracked as separate groups with loyalty, skills, and assimilation rates.
+            High-skill immigrants provide economic bonuses. Low-loyalty populations cause instability.
+            Brain Drain directly steals 0.2% of enemy population per turn.
+          </p>
+        </div>
+      </div>
+
       {/* Info Footer */}
       <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700">
         <div className="flex items-start gap-2">
@@ -309,9 +368,6 @@ export function StreamlinedCulturePanel({
             </p>
             <p>
               <strong className="text-gray-300">Propaganda:</strong> Temporary campaigns affecting enemy nations (30% discovery chance)
-            </p>
-            <p>
-              <strong className="text-gray-300">Immigration Strategy:</strong> Use immigration as a weapon! Brain Drain steals talent, Humanitarian gains diplomatic power, Selective boosts economy
             </p>
           </div>
         </div>

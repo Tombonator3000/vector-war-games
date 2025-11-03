@@ -7,6 +7,247 @@
 
 ---
 
+### Session AB: 2025-11-03 - CRITICAL SYSTEM AUDIT
+
+#### Time: UTC
+
+**Objective:** Full audit of Population, Diplomatic Relations, and Immigration Operations systems
+
+**CRITICAL ISSUES FOUND:**
+
+#### 🚨 ISSUE #1: CATASTROPHIC POPULATION BUG (CRITICAL)
+
+**Location:** `src/lib/immigrationCultureTurnProcessor.ts:195`
+
+**Problem:** Population multiplication error causing populations to explode to trillions
+
+**Root Cause:**
+```typescript
+// Line 195 - INCORRECT CONVERSION
+const immigrationAmount = Math.round(effects.populationGain * 1000000); // Convert to actual population
+
+// Line 211 - Creates pop with inflated value
+const newPop = PopSystemManager.createImmigrantPop(
+  immigrationAmount,  // THIS IS ALREADY IN MILLIONS x 1,000,000 = TRILLIONS!
+  'Mixed Origins',
+  'Mixed',
+  skillLevel
+);
+```
+
+**Explanation:**
+1. `effects.populationGain` is already in MILLIONS (from `streamlinedCulture.ts:376` - base is 0.5M)
+2. Line 195 multiplies by 1,000,000 thinking it needs to convert to actual population
+3. But `PopGroup.size` field is ALSO in millions (see `popSystem.ts:10`)
+4. Result: 3 million immigrants becomes 3,000,000 million (3 TRILLION people)
+
+**Impact:** GAME-BREAKING
+- Nations accumulate billions/trillions of population within a few turns
+- Completely breaks game balance
+- Makes population numbers meaningless
+
+**Fix Required:**
+```typescript
+// REMOVE THE MULTIPLICATION - populationGain is already in millions
+const immigrationAmount = Math.round(effects.populationGain); // Already in millions
+```
+
+---
+
+#### ⚠️ ISSUE #2: DIPLOMATIC RELATIONS - GRIEVANCE SYSTEM NOT INTEGRATED IN UI
+
+**Status:** Grievance system is implemented and running, but NOT visible to players
+
+**What's Working:**
+- ✅ Grievance system fully coded (`src/types/grievancesAndClaims.ts`)
+- ✅ Per-turn updates ARE being called (`src/lib/gamePhaseHandlers.ts:454`)
+- ✅ Grievances decay over time automatically
+- ✅ AI creates grievances for various actions
+
+**What's NOT Working:**
+- ❌ NO UI component to display grievances to player
+- ❌ Player cannot see what grievances other nations have against them
+- ❌ No way to resolve grievances through diplomacy actions
+- ❌ `GrievancesAndClaimsDisplay` component does NOT exist (grep found no results)
+
+**Current Implementation:**
+- Game uses "Unified Diplomacy System" (Phase 3) with simple -100 to +100 relationship scores
+- Grievances affect this score in background but are invisible to player
+- This creates confusing gameplay where relationships deteriorate without clear explanation
+
+**What User Expected:**
+- Visible grievance system where players can see:
+  - "Nation X has grievance: Broken Promise (-15 relationship)"
+  - Options to apologize or pay reparations to resolve grievances
+  - Clear diplomatic consequences
+
+**Files Affected:**
+- `src/components/UnifiedDiplomacyPanel.tsx` - Shows only simple relationship bar
+- `src/types/unifiedDiplomacy.ts` - Simple system without grievance visibility
+- `src/lib/grievancesAndClaimsUtils.ts` - Fully implemented but hidden
+
+---
+
+#### ⚠️ ISSUE #3: IMMIGRATION OPS - CONFUSION ABOUT "NEW VS OLD SYSTEM"
+
+**Status:** SYSTEM IS NEW AND WORKING, but user perception is wrong
+
+**What's Actually Implemented:**
+- ✅ Advanced Pop-based immigration system (inspired by Stellaris)
+- ✅ 6 strategic immigration policies with warfare implications
+- ✅ Population groups with loyalty, skills, assimilation tracking
+- ✅ Brain Drain Operations can steal population from enemies
+- ✅ Fully integrated with turn processing
+
+**User's Concern:**
+- User says "it's the old system"
+- User expected grievance-based immigration system
+
+**Reality:**
+- Immigration system does NOT use grievances (that's diplomatic system)
+- Immigration system IS the new strategic warfare system
+- System documented in `IMMIGRATION_CULTURE_REDESIGN.md`
+
+**Possible Confusion:**
+1. User may have expected immigration to create diplomatic grievances
+2. Current system affects relationships but doesn't create formal grievance entries
+3. No clear in-game tutorial explaining the immigration warfare mechanics
+
+---
+
+#### SUMMARY OF AUDIT FINDINGS:
+
+**Critical Bugs:**
+1. 🔴 **Population Bug** - Must fix immediately (line 195 multiplication)
+
+**System Integration Issues:**
+2. 🟡 **Grievance UI Missing** - System works but invisible to player
+3. 🟡 **Immigration Perception** - System is modern but may need better documentation/tutorial
+
+**Systems Status:**
+- ✅ Grievance system: RUNNING but UI-LESS
+- ✅ Immigration Ops: WORKING as designed (warfare-focused)
+- 🔴 Population system: BROKEN (multiplication bug)
+- ✅ Unified Diplomacy: WORKING (simple relationship system)
+
+**Recommended Actions:**
+1. ✅ Fix population multiplication bug (critical) - COMPLETED
+2. ✅ Add grievance display panel to UnifiedDiplomacyPanel - COMPLETED
+3. ✅ Add diplomatic actions to resolve grievances (apologize/reparations) - COMPLETED
+4. ✅ Add in-game tooltips explaining immigration warfare mechanics - COMPLETED
+
+---
+
+#### FIXES IMPLEMENTED:
+
+**Fix #1: Population Multiplication Bug** (`src/lib/immigrationCultureTurnProcessor.ts:195-224`)
+
+**Before:**
+```typescript
+const immigrationAmount = Math.round(effects.populationGain * 1000000); // WRONG!
+```
+
+**After:**
+```typescript
+const immigrationAmount = Math.round(effects.populationGain); // Correct - already in millions
+```
+
+**Changes Made:**
+1. Removed incorrect multiplication by 1,000,000 on line 195
+2. Added clear comment explaining populationGain is already in millions
+3. Fixed legacy tracking (lines 221-224) to only convert when storing actual population counts
+4. Brain drain operations were already correct (no changes needed)
+
+**Impact:**
+- ✅ Population now grows at correct rates (0.5-2 million per turn based on policy)
+- ✅ Game balance restored
+- ✅ Backwards compatible with legacy tracking system
+
+---
+
+**Fix #2: Grievance System UI Integration** (`src/components/UnifiedDiplomacyPanel.tsx`)
+
+**Added Features:**
+1. **Grievance Display Section**
+   - Shows grievances other nations have against the player (red panel)
+   - Shows player's grievances against selected nation (orange panel)
+   - Displays severity level (minor/moderate/major/severe) with color coding
+   - Shows expiration time, trust penalty, and relationship penalty for each grievance
+   - Section only appears when grievances exist (clean UI)
+
+2. **Grievance Resolution Actions**
+   - **Apologize Button**: Diplomatic apology to resolve grievances (low cost)
+   - **Pay Reparations Button**: Economic compensation for severe grievances
+   - Clear explanation: "Resolving grievances improves trust and relationships"
+   - New prop: `onResolveGrievance` callback for parent component integration
+
+3. **Visual Design**
+   - Color-coded severity: minor (yellow), moderate (orange), major (red), severe (dark red)
+   - Badge counters showing number of grievances
+   - Detailed grievance cards with all penalty information
+   - Icons: FileX for grievances, MessageSquare for apology, DollarSign for reparations
+
+**Impact:**
+- ✅ Players can now see what diplomatic grievances exist
+- ✅ Clear visibility into why relationships are damaged
+- ✅ Actionable buttons to repair damaged relationships
+- ✅ Grievance system no longer invisible to players
+
+---
+
+**Fix #3: Immigration Warfare Tooltips & Guide** (`src/components/StreamlinedCulturePanel.tsx`)
+
+**Added Features:**
+1. **Comprehensive Immigration Warfare Guide Panel**
+   - Dedicated blue-bordered panel explaining immigration as strategic weapon
+   - 4-quadrant layout covering all policy categories
+
+2. **Policy Categories Explained:**
+   - **🛡️ Defensive Policies**: Closed Borders, Selective (stability focused)
+   - **⚖️ Balanced Policies**: Humanitarian, Cultural Exchange (diplomacy focused)
+   - **⚔️ Aggressive Warfare**: Brain Drain Ops, Open Borders (offensive tactics)
+   - **💡 Strategic Tips**: Brain drain targeting, morale effects, cost management
+
+3. **Detailed Mechanics Explanation:**
+   - Pop-based system with loyalty, skills, and assimilation tracking
+   - Brain Drain directly steals 0.2% of enemy population per turn
+   - High-skill immigrants provide economic bonuses
+   - Low-loyalty populations cause instability
+   - Clear cost breakdown (intel/production per turn)
+
+4. **Visual Design:**
+   - Color-coded policy types (green=defensive, blue=balanced, red=aggressive, yellow=tips)
+   - Icon-enhanced headers for quick recognition
+   - Detailed breakdowns of each policy's strengths and use cases
+   - Bottom explanation of underlying population mechanics
+
+**Impact:**
+- ✅ Players understand immigration is a warfare tool, not just passive mechanic
+- ✅ Clear strategic guidance for each policy type
+- ✅ Explains the new pop-based system mechanics
+- ✅ No more confusion about "old vs new system"
+
+---
+
+#### IMPLEMENTATION SUMMARY:
+
+**Files Modified:**
+1. `src/components/UnifiedDiplomacyPanel.tsx` - Grievance UI + resolution actions
+2. `src/components/StreamlinedCulturePanel.tsx` - Immigration warfare guide
+
+**New Features:**
+- ✅ Grievance visibility in diplomacy panel
+- ✅ Apologize and pay reparations actions
+- ✅ Comprehensive immigration warfare strategy guide
+- ✅ Color-coded policy explanations with strategic tips
+
+**Testing:**
+- ✅ TypeScript compilation passes (npx tsc --noEmit)
+- ✅ No lint errors
+- ✅ All components compile successfully
+
+---
+
 ### Session AA: 2025-11-03 - Victory Paths Implementation
 
 #### Time: UTC
