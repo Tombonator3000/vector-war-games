@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Viewer,
   Ion,
@@ -35,6 +35,8 @@ export const CesiumHeroGlobe = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const spinCallbackRef = useRef<((scene: any, time: any) => void) | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -42,16 +44,20 @@ export const CesiumHeroGlobe = () => {
     let destroyed = false;
 
     const initViewer = async () => {
-      // Always use OpenStreetMap for reliable Earth imagery
-      const imageryProvider = new OpenStreetMapImageryProvider({
-        url: 'https://a.tile.openstreetmap.org/',
-      });
+      try {
+        setIsLoading(true);
+        setHasError(false);
 
-      if (destroyed || !containerRef.current) {
-        return;
-      }
+        // Always use OpenStreetMap for reliable Earth imagery
+        const imageryProvider = new OpenStreetMapImageryProvider({
+          url: 'https://a.tile.openstreetmap.org/',
+        });
 
-      const viewer = new Viewer(containerRef.current, {
+        if (destroyed || !containerRef.current) {
+          return;
+        }
+
+        const viewer = new Viewer(containerRef.current, {
         baseLayerPicker: false,
         geocoder: false,
         homeButton: false,
@@ -113,12 +119,30 @@ export const CesiumHeroGlobe = () => {
 
       spinCallbackRef.current = spinCallback;
       viewer.scene.preRender.addEventListener(spinCallback);
+
+        // Wait a bit for tiles to load
+        setTimeout(() => {
+          if (!destroyed) {
+            setIsLoading(false);
+          }
+        }, 1500);
+      } catch (error) {
+        console.error('Failed to initialize Cesium viewer:', error);
+        if (!destroyed) {
+          setHasError(true);
+          setIsLoading(false);
+        }
+      }
     };
 
-    initViewer();
+    // Small delay to ensure container is fully rendered
+    const timer = setTimeout(() => {
+      initViewer();
+    }, 100);
 
     return () => {
       destroyed = true;
+      clearTimeout(timer);
       if (viewerRef.current) {
         if (spinCallbackRef.current) {
           viewerRef.current.scene.preRender.removeEventListener(spinCallbackRef.current);
@@ -129,7 +153,24 @@ export const CesiumHeroGlobe = () => {
     };
   }, []);
 
-  return <div ref={containerRef} className="hero-cesium-globe" />;
+  return (
+    <div ref={containerRef} className="hero-cesium-globe">
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-[#020512] to-[#051428] rounded-full">
+          <div className="text-cyan-400 font-mono text-sm animate-pulse">
+            Loading Earth...
+          </div>
+        </div>
+      )}
+      {hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-[#020512] to-[#051428] rounded-full">
+          <div className="text-red-400 font-mono text-xs text-center px-4">
+            Failed to load globe
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default CesiumHeroGlobe;
