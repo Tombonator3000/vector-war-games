@@ -134,7 +134,7 @@ All colors MUST be HSL.
 
     --game-top-bar-height: 2.5rem;
     --game-top-ticker-height: 2rem;
-    --game-top-stack-gap: 0.5rem;
+    --game-top-stack-gap: 0rem;
     --game-top-stack-offset: calc(
       var(--game-top-bar-height) + var(--game-top-ticker-height) + var(--game-top-stack-gap)
     );
@@ -2458,11 +2458,11 @@ body.theme-synthwave .command-button--neutral:hover {
   font-family: 'Share Tech Mono', monospace;
 }
 
-@media (max-width: 768px) {
+  @media (max-width: 768px) {
   :root {
     --game-top-bar-height: 3.25rem;
     --game-top-ticker-height: 2.25rem;
-    --game-top-stack-gap: 0.35rem;
+    --game-top-stack-gap: 0rem;
   }
 
   .game-top-bar {

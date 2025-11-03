@@ -3319,8 +3319,8 @@ function drawFX() {
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.strokeStyle = 'rgba(0,0,0,0.6)';
     ctx.lineWidth = 4;
-    ctx.strokeText(S.overlay.text, W / 2, 80);
-    ctx.fillText(S.overlay.text, W / 2, 80);
+    ctx.strokeText(S.overlay.text, W / 2, H / 2);
+    ctx.fillText(S.overlay.text, W / 2, H / 2);
     ctx.restore();
     if (S.overlay.ttl <= 0) S.overlay = null;
   }
