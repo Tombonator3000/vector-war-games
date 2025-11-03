@@ -37,7 +37,27 @@ export const COSTS = {
   immigration_skilled: { production: 10, intel: 5 },
   immigration_mass: { production: 5, intel: 2 },
   immigration_refugee: { intel: 15 },
-  immigration_brain: { intel: 20 }
+  immigration_brain: { intel: 20 },
+
+  // New Cultural Warfare Operations
+  propaganda_campaign_subversion: { intel: 15 }, // Per turn cost
+  propaganda_campaign_attraction: { intel: 15 },
+  propaganda_campaign_demoralization: { intel: 12 },
+  propaganda_campaign_conversion: { intel: 18 },
+
+  // Cultural Defenses
+  counter_propaganda: { intel: 15 },
+  cultural_preservation: { production: 20 },
+  education_programs: { production: 40 },
+  intelligence_sweep: { intel: 30 },
+  loyalty_incentives: { production: 25 },
+
+  // Cultural Wonders (base costs)
+  cultural_wonder_media: { production: 80, intel: 60 },
+  cultural_wonder_academy: { production: 60, intel: 40 },
+  cultural_wonder_heritage: { production: 50, intel: 30 },
+  cultural_wonder_university: { production: 70, intel: 50 },
+  cultural_wonder_propaganda: { production: 55, intel: 70 }
 };
 
 /**
