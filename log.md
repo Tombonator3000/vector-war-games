@@ -79,6 +79,20 @@ Implementing comprehensive tech tree expansions and fixes based on the COMPREHEN
 
 ## 📝 Session Log
 
+### Session 4: 2025-11-02 - Agenda Modifier Evaluation
+
+#### Time: 09:10 UTC
+
+- Reviewed diplomacy agenda instructions and scoped affected agenda, AI, and UI modules prior to code changes.
+
+#### Time: 09:25 UTC
+
+- Added per-modifier predicate support to agendas, refreshed agenda definitions, refactored agenda system calculations, and updated AI negotiation/trigger/UI consumers.
+
+#### Time: 09:55 UTC
+
+- Ran `npm run test`; encountered three pre-existing Vitest failures (conventional warfare randomness spies and tutorial provider context coverage) unrelated to the agenda refactor.
+
 ### Session 3: 2025-11-01 - Cuba flashpoint turn alignment
 
 #### Time: 13:21 UTC
@@ -1373,3 +1387,7 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Not so cheap that diplomacy becomes trivial
 - Maintains strategic resource management
 - Late-game actions remain expensive relative to income
+
+## 2025-11-03T07:56:51Z
+- Captured the returned trust/favor records during both standard and Cuban Crisis nation initialization flows so diplomacy systems operate on updated nation objects before follow-up setup runs.
+- Added a Vitest scenario boosting trust early to confirm `shouldRevealHiddenAgenda` reveals prior to the 30-turn timeout once the trust gate is satisfied.

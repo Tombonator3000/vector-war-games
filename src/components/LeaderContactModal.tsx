@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { LeaderAvatarWithTooltip } from './LeaderAvatar';
 import { NegotiationInterface } from './NegotiationInterface';
+import { getLeaderImage } from '@/lib/leaderImages';
 import type { Nation } from '@/types/game';
 import type {
   LeaderContactState,
@@ -142,10 +143,8 @@ export function LeaderContactModal({
   const mood = calculateMood(relationship);
 
   // Get nation's agendas and check for violations (Phase 4: Agenda System)
-  const { agendas, violations, feedbackMessages } = useMemo(() => {
+  const { agendas, violations, agendaFeedback } = useMemo(() => {
     const nationAgendas = getNationAgendas(targetNation);
-    const revealedAgendas = nationAgendas.filter(a => a.isRevealed);
-
     const gameState = { nations: allNations, turn: currentTurn } as any;
     const agendaViolations = checkAgendaViolations(playerNation, targetNation, gameState);
     const feedback = getAgendaFeedback(playerNation, targetNation, gameState);
@@ -153,9 +152,15 @@ export function LeaderContactModal({
     return {
       agendas: nationAgendas,
       violations: agendaViolations,
-      feedbackMessages: feedback,
+      agendaFeedback: feedback,
     };
   }, [targetNation, playerNation, allNations, currentTurn]);
+
+  const feedbackMessages = useMemo(() => agendaFeedback.all, [agendaFeedback]);
+  const violationAgendaIds = useMemo(
+    () => new Set(violations.map(v => v.agenda.id)),
+    [violations]
+  );
 
   // Mock recent events (in real implementation, get from diplomatic history)
   const recentEvents: DiplomaticEvent[] = useMemo(() => {
@@ -255,6 +260,7 @@ export function LeaderContactModal({
               relationship={relationship}
               trust={trust}
               showTooltip={false}
+              imageUrl={getLeaderImage(targetNation.leaderName)}
             />
             <div className="flex-1">
               <DialogTitle className="text-2xl">
@@ -372,8 +378,15 @@ export function LeaderContactModal({
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {agendas.map((agenda) => {
-                    const isViolated = violations.some(v => v.id === agenda.id);
-                    const hasBonus = !isViolated && agenda.isRevealed;
+                    const agendaSpecificFeedback = agendaFeedback.byAgenda[agenda.id] || {
+                      positive: [],
+                      negative: [],
+                      neutral: [],
+                    };
+                    const isViolated = violationAgendaIds.has(agenda.id);
+                    const hasBonus = agendaSpecificFeedback.positive.length > 0;
+                    const violationDetail = agendaSpecificFeedback.negative[0];
+                    const positiveDetail = agendaSpecificFeedback.positive[0];
 
                     if (!agenda.isRevealed) {
                       // Hidden agenda - show placeholder with reveal progress
@@ -481,7 +494,7 @@ export function LeaderContactModal({
                                 Violation Detected
                               </p>
                               <p className="text-xs text-red-300 mt-0.5">
-                                Your actions conflict with this leader's values
+                                {violationDetail || "Your actions conflict with this leader's values"}
                               </p>
                             </div>
                           </div>
@@ -492,7 +505,7 @@ export function LeaderContactModal({
                           <div className="flex items-start gap-2 mt-2 p-2 rounded bg-green-500/20">
                             <Star className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
                             <p className="text-xs text-green-300">
-                              Your actions align with this leader's values
+                              {positiveDetail || 'Your actions align with this leader\'s values'}
                             </p>
                           </div>
                         )}

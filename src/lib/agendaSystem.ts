@@ -6,7 +6,7 @@
  */
 
 import type { Nation, GameState } from '@/types/game';
-import type { Agenda } from '@/types/negotiation';
+import type { Agenda, AgendaModifier } from '@/types/negotiation';
 import {
   getPrimaryAgendas,
   getHiddenAgendas,
@@ -14,6 +14,72 @@ import {
 } from './agendaDefinitions';
 import { getRelationship } from './relationshipUtils';
 import { getTrust } from '@/types/trustAndFavors';
+
+export interface AgendaEvaluation {
+  agenda: Agenda;
+  modifiers: AgendaModifier[];
+  totalEffect: number;
+  totalEvaluationBonus: number;
+}
+
+export interface AgendaFeedbackBuckets {
+  positive: string[];
+  negative: string[];
+  neutral: string[];
+}
+
+export interface AgendaFeedbackResult extends AgendaFeedbackBuckets {
+  all: string[];
+  byAgenda: Record<string, AgendaFeedbackBuckets>;
+}
+
+export type AgendaViolation = AgendaEvaluation;
+
+function isModifierApplicable(
+  modifier: AgendaModifier,
+  playerNation: Nation,
+  aiNation: Nation,
+  gameState: GameState
+): boolean {
+  if (typeof modifier.applies === 'function') {
+    return modifier.applies(playerNation, aiNation, gameState);
+  }
+  return true;
+}
+
+function evaluateAgendaStates(
+  playerNation: Nation,
+  aiNation: Nation,
+  gameState: GameState
+): AgendaEvaluation[] {
+  const agendas: Agenda[] = aiNation.agendas || [];
+  const evaluations: AgendaEvaluation[] = [];
+
+  for (const agenda of agendas) {
+    const activeModifiers = agenda.modifiers.filter(modifier =>
+      isModifierApplicable(modifier, playerNation, aiNation, gameState)
+    );
+
+    if (activeModifiers.length === 0) {
+      continue;
+    }
+
+    const totalEffect = activeModifiers.reduce((sum, modifier) => sum + modifier.effect, 0);
+    const totalEvaluationBonus = activeModifiers.reduce(
+      (sum, modifier) => sum + (modifier.evaluationBonus || 0),
+      0
+    );
+
+    evaluations.push({
+      agenda,
+      modifiers: activeModifiers,
+      totalEffect,
+      totalEvaluationBonus,
+    });
+  }
+
+  return evaluations;
+}
 
 // ============================================================================
 // Agenda Assignment
@@ -234,21 +300,32 @@ export function checkAgendaViolations(
   playerNation: Nation,
   aiNation: Nation,
   gameState: GameState
-): Agenda[] {
-  const agendas: Agenda[] = aiNation.agendas || [];
-  const violations: Agenda[] = [];
+): AgendaViolation[] {
+  const evaluations = evaluateAgendaStates(playerNation, aiNation, gameState);
+  const violations: AgendaViolation[] = [];
 
-  for (const agenda of agendas) {
-    // Only check revealed agendas for violations
-    if (!agenda.isRevealed) continue;
-
-    if (agenda.checkCondition && agenda.checkCondition(playerNation, aiNation, gameState)) {
-      // Check if this is a negative modifier
-      const hasNegativeModifier = agenda.modifiers.some(m => m.effect < 0);
-      if (hasNegativeModifier) {
-        violations.push(agenda);
-      }
+  for (const evaluation of evaluations) {
+    if (!evaluation.agenda.isRevealed) {
+      continue;
     }
+
+    const negativeModifiers = evaluation.modifiers.filter(modifier => modifier.effect < 0);
+    if (negativeModifiers.length === 0) {
+      continue;
+    }
+
+    const totalEffect = negativeModifiers.reduce((sum, modifier) => sum + modifier.effect, 0);
+    const totalEvaluationBonus = negativeModifiers.reduce(
+      (sum, modifier) => sum + (modifier.evaluationBonus || 0),
+      0
+    );
+
+    violations.push({
+      agenda: evaluation.agenda,
+      modifiers: negativeModifiers,
+      totalEffect,
+      totalEvaluationBonus,
+    });
   }
 
   return violations;
@@ -262,19 +339,8 @@ export function calculateAgendaModifier(
   aiNation: Nation,
   gameState: GameState
 ): number {
-  const agendas: Agenda[] = aiNation.agendas || [];
-  let totalModifier = 0;
-
-  for (const agenda of agendas) {
-    if (agenda.checkCondition && agenda.checkCondition(playerNation, aiNation, gameState)) {
-      // Sum up all matching modifiers
-      for (const modifier of agenda.modifiers) {
-        totalModifier += modifier.effect;
-      }
-    }
-  }
-
-  return totalModifier;
+  const evaluations = evaluateAgendaStates(playerNation, aiNation, gameState);
+  return evaluations.reduce((sum, evaluation) => sum + evaluation.totalEffect, 0);
 }
 
 /**
@@ -285,19 +351,8 @@ export function calculateAgendaNegotiationBonus(
   aiNation: Nation,
   gameState: GameState
 ): number {
-  const agendas: Agenda[] = aiNation.agendas || [];
-  let totalBonus = 0;
-
-  for (const agenda of agendas) {
-    if (agenda.checkCondition && agenda.checkCondition(playerNation, aiNation, gameState)) {
-      // Sum up evaluation bonuses
-      for (const modifier of agenda.modifiers) {
-        totalBonus += modifier.evaluationBonus || 0;
-      }
-    }
-  }
-
-  return totalBonus;
+  const evaluations = evaluateAgendaStates(playerNation, aiNation, gameState);
+  return evaluations.reduce((sum, evaluation) => sum + evaluation.totalEvaluationBonus, 0);
 }
 
 /**
@@ -307,23 +362,50 @@ export function getAgendaFeedback(
   playerNation: Nation,
   aiNation: Nation,
   gameState: GameState
-): string[] {
-  const agendas: Agenda[] = aiNation.agendas || [];
-  const feedback: string[] = [];
+): AgendaFeedbackResult {
+  const evaluations = evaluateAgendaStates(playerNation, aiNation, gameState);
+  const result: AgendaFeedbackResult = {
+    positive: [],
+    negative: [],
+    neutral: [],
+    all: [],
+    byAgenda: {},
+  };
 
-  for (const agenda of agendas) {
-    // Only give feedback for revealed agendas
-    if (!agenda.isRevealed) continue;
-
-    if (agenda.checkCondition && agenda.checkCondition(playerNation, aiNation, gameState)) {
-      // Find matching modifiers
-      for (const modifier of agenda.modifiers) {
-        feedback.push(modifier.description);
-      }
+  for (const evaluation of evaluations) {
+    if (!evaluation.agenda.isRevealed) {
+      continue;
     }
+
+    const agendaFeedback = result.byAgenda[evaluation.agenda.id] || {
+      positive: [],
+      negative: [],
+      neutral: [],
+    };
+
+    for (const modifier of evaluation.modifiers) {
+      if (!modifier.description) {
+        continue;
+      }
+
+      if (modifier.effect > 0) {
+        agendaFeedback.positive.push(modifier.description);
+        result.positive.push(modifier.description);
+      } else if (modifier.effect < 0) {
+        agendaFeedback.negative.push(modifier.description);
+        result.negative.push(modifier.description);
+      } else {
+        agendaFeedback.neutral.push(modifier.description);
+        result.neutral.push(modifier.description);
+      }
+
+      result.all.push(modifier.description);
+    }
+
+    result.byAgenda[evaluation.agenda.id] = agendaFeedback;
   }
 
-  return feedback;
+  return result;
 }
 
 // ============================================================================
@@ -518,20 +600,23 @@ export function calculateAgendaCompatibility(
   aiNation: Nation,
   gameState: GameState
 ): number {
-  const agendas: Agenda[] = aiNation.agendas || [];
+  const evaluations = evaluateAgendaStates(playerNation, aiNation, gameState).filter(
+    evaluation => evaluation.agenda.isRevealed
+  );
+
   let compatibility = 0;
   let count = 0;
 
-  for (const agenda of agendas) {
-    if (agenda.checkCondition && agenda.checkCondition(playerNation, aiNation, gameState)) {
-      for (const modifier of agenda.modifiers) {
-        compatibility += modifier.effect;
-        count++;
-      }
+  for (const evaluation of evaluations) {
+    for (const modifier of evaluation.modifiers) {
+      compatibility += modifier.effect;
+      count++;
     }
   }
 
-  // Normalize to -100 to +100 range
-  if (count === 0) return 0;
+  if (count === 0) {
+    return 0;
+  }
+
   return Math.max(-100, Math.min(100, compatibility));
 }

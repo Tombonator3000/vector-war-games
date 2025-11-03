@@ -27,6 +27,7 @@ import { LeaderAvatarWithTooltip } from './LeaderAvatar';
 import type { Nation } from '@/types/game';
 import { getRelationship } from '@/lib/relationshipUtils';
 import { getTrust, getFavors } from '@/types/trustAndFavors';
+import { getLeaderImage } from '@/lib/leaderImages';
 import {
   Users,
   Globe,
@@ -221,6 +222,7 @@ export function LeadersScreen({
                         relationship={relationship}
                         trust={trust}
                         showTooltip={false}
+                        imageUrl={getLeaderImage(nation.leaderName)}
                       />
                     </div>
 
