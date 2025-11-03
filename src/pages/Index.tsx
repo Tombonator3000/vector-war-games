@@ -9647,39 +9647,35 @@ export default function NoradVector() {
                     <span className="text-[8px] font-mono">BUILD</span>
                   </Button>
 
-                  {tutorialContext.progressDisclosure.showResearch && (
-                    <Button
-                      onClick={handleResearch}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!researchAllowed}
-                      data-tutorial="research-button"
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                        researchAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={researchAllowed ? 'RESEARCH - Technology advancement' : 'Strategist approval required to manage research'}
-                    >
-                      <Microscope className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">RESEARCH</span>
-                    </Button>
-                  )}
+                  <Button
+                    onClick={handleResearch}
+                    variant="ghost"
+                    size="icon"
+                    data-role-locked={!researchAllowed}
+                    data-tutorial="research-button"
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      researchAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                    }`}
+                    title={researchAllowed ? 'RESEARCH - Technology advancement' : 'Strategist approval required to manage research'}
+                  >
+                    <Microscope className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">RESEARCH</span>
+                  </Button>
 
-                  {tutorialContext.progressDisclosure.showIntel && (
-                    <Button
-                      onClick={handleIntel}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!intelAllowed}
-                      data-tutorial="intel-button"
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                        intelAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={intelAllowed ? 'INTEL - Intelligence operations' : 'Tactician authorization required to operate intel'}
-                    >
-                      <Satellite className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">INTEL</span>
-                    </Button>
-                  )}
+                  <Button
+                    onClick={handleIntel}
+                    variant="ghost"
+                    size="icon"
+                    data-role-locked={!intelAllowed}
+                    data-tutorial="intel-button"
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      intelAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                    }`}
+                    title={intelAllowed ? 'INTEL - Intelligence operations' : 'Tactician authorization required to operate intel'}
+                  >
+                    <Satellite className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">INTEL</span>
+                  </Button>
 
                   <Button
                     onClick={handleBioWarfareLabToggle}
@@ -9722,53 +9718,47 @@ export default function NoradVector() {
                     <span className="text-[8px] font-mono">LAB</span>
                   </Button>
 
-                  {tutorialContext.progressDisclosure.showCulture && (
-                    <Button
-                      onClick={handleCulture}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!cultureAllowed}
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                        cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={cultureAllowed ? 'CULTURE - Cultural warfare' : 'Requires co-commander approval to launch culture ops'}
-                    >
-                      <Radio className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">CULTURE</span>
-                    </Button>
-                  )}
-
-                  {tutorialContext.progressDisclosure.showDiplomacy && (
-                    <Button
-                      onClick={handleImmigration}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!immigrationAllowed}
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                        immigrationAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={immigrationAllowed ? 'IMMIGRATION - Population management' : 'Immigration changes require strategist approval'}
-                    >
-                      <Users className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">IMMIGR</span>
-                    </Button>
-                  )}
-
-                  {tutorialContext.progressDisclosure.showDiplomacy && (
-                    <Button
-                      onClick={handleDiplomacy}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!diplomacyAllowed}
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                        diplomacyAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                  <Button
+                    onClick={handleCulture}
+                    variant="ghost"
+                    size="icon"
+                    data-role-locked={!cultureAllowed}
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                     }`}
-                      title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
-                    >
-                      <Handshake className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">DIPLO</span>
-                    </Button>
-                  )}
+                    title={cultureAllowed ? 'CULTURE - Cultural warfare' : 'Requires co-commander approval to launch culture ops'}
+                  >
+                    <Radio className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">CULTURE</span>
+                  </Button>
+
+                  <Button
+                    onClick={handleImmigration}
+                    variant="ghost"
+                    size="icon"
+                    data-role-locked={!immigrationAllowed}
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      immigrationAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                    }`}
+                    title={immigrationAllowed ? 'IMMIGRATION - Population management' : 'Immigration changes require strategist approval'}
+                  >
+                    <Users className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">IMMIGR</span>
+                  </Button>
+
+                  <Button
+                    onClick={handleDiplomacy}
+                    variant="ghost"
+                    size="icon"
+                    data-role-locked={!diplomacyAllowed}
+                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      diplomacyAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                  }`}
+                    title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
+                  >
+                    <Handshake className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">DIPLO</span>
+                  </Button>
 
                   <Button
                     onClick={handleMilitary}
