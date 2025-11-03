@@ -56,6 +56,7 @@ export interface TriggerResult {
 
 /**
  * Threat Trigger: AI seeks help when facing a powerful enemy
+ * ENHANCED: Personality affects willingness to ask for help
  */
 export function checkThreatTrigger(
   aiNation: Nation,
@@ -75,7 +76,32 @@ export function checkThreatTrigger(
   const threats = aiNation.threats || {};
   const maxThreat = Math.max(...Object.values(threats));
 
-  if (maxThreat < 50) {
+  // ENHANCED: Personality affects threat threshold
+  const aiType = aiNation.ai || 'balanced';
+  let threatThreshold = 50;
+
+  switch (aiType) {
+    case 'defensive':
+      threatThreshold = 40; // Seeks help earlier
+      break;
+    case 'aggressive':
+      threatThreshold = 70; // Reluctant to ask for help
+      break;
+    case 'isolationist':
+      threatThreshold = 90; // Almost never asks for help
+      break;
+    case 'balanced':
+      threatThreshold = 50;
+      break;
+    case 'trickster':
+      threatThreshold = 45; // Quick to seek allies against threats
+      break;
+    case 'chaotic':
+      threatThreshold = 60;
+      break;
+  }
+
+  if (maxThreat < threatThreshold) {
     return result; // Not threatened enough
   }
 
@@ -121,12 +147,34 @@ export function checkThreatTrigger(
   result.urgency = urgency;
   result.priority = Math.min(100, maxThreat + 20);
   result.context = {
-    reason: `We face a serious threat from ${biggestThreat.name}. Your help would be invaluable.`,
+    reason: getThreatRequestMessage(aiType, biggestThreat.name),
     targetNation: biggestThreatId,
     threatLevel: maxThreat,
   };
 
   return result;
+}
+
+/**
+ * Get personality-appropriate threat request message
+ */
+function getThreatRequestMessage(aiType: string, threatName: string): string {
+  switch (aiType) {
+    case 'defensive':
+      return `${threatName} poses a grave threat to our security. We must stand together against this danger.`;
+    case 'aggressive':
+      return `${threatName} challenges us both. Together we can crush them decisively.`;
+    case 'balanced':
+      return `We face a serious threat from ${threatName}. Your help would be invaluable.`;
+    case 'isolationist':
+      return `I rarely ask for assistance, but ${threatName} threatens our very existence. Will you help?`;
+    case 'trickster':
+      return `${threatName} grows too powerful. Perhaps we could... arrange their downfall? Mutually beneficial, of course.`;
+    case 'chaotic':
+      return `${threatName} is being VERY rude! Let's teach them a lesson together! Or separately! Or maybe just confuse them!`;
+    default:
+      return `We face a serious threat from ${threatName}. Your help would be invaluable.`;
+  }
 }
 
 /**
@@ -187,6 +235,7 @@ export function checkResourceSurplusTrigger(
 
 /**
  * Reconciliation Trigger: AI seeks to repair damaged relationship
+ * ENHANCED: More sophisticated personality-based decision making
  */
 export function checkReconciliationTrigger(
   aiNation: Nation,
@@ -229,15 +278,42 @@ export function checkReconciliationTrigger(
     return result; // Trust too low
   }
 
-  // Calculate priority based on how much we want to reconcile
-  // Defensive AIs are more likely to reconcile
-  const personalityBonus = aiNation.ai === 'defensive' ? 20 : 0;
+  // ENHANCED: Personality-based reconciliation likelihood
+  const aiType = aiNation.ai || 'balanced';
+  let personalityBonus = 0;
+  let shouldAttempt = true;
+
+  switch (aiType) {
+    case 'defensive':
+      personalityBonus = 25; // Very likely to reconcile
+      break;
+    case 'balanced':
+      personalityBonus = 10; // Moderately likely
+      break;
+    case 'aggressive':
+      personalityBonus = -15; // Less likely, prefers confrontation
+      shouldAttempt = relationship > -40; // Only if not too hostile
+      break;
+    case 'isolationist':
+      personalityBonus = 15; // Prefer peace over conflict
+      break;
+    case 'trickster':
+      personalityBonus = 5; // May reconcile for strategic advantage
+      break;
+    case 'chaotic':
+      personalityBonus = Math.random() > 0.5 ? 20 : -20; // Unpredictable
+      break;
+  }
+
+  if (!shouldAttempt) {
+    return result;
+  }
 
   result.shouldTrigger = true;
   result.urgency = 'medium';
   result.priority = 40 + personalityBonus + (trust * 0.3);
   result.context = {
-    reason: 'Our recent conflicts have damaged our relationship. Perhaps we can find common ground.',
+    reason: getReconciliationMessage(aiType),
     grievanceCount: totalGrievances,
   };
 
@@ -245,7 +321,30 @@ export function checkReconciliationTrigger(
 }
 
 /**
+ * Get personality-appropriate reconciliation message
+ */
+function getReconciliationMessage(aiType: string): string {
+  switch (aiType) {
+    case 'defensive':
+      return 'Our conflicts serve neither of us. Let us find peace and mutual security.';
+    case 'aggressive':
+      return 'You have proven resilient. Perhaps there is value in cooperation over conflict.';
+    case 'balanced':
+      return 'Our recent conflicts have damaged our relationship. Perhaps we can find common ground.';
+    case 'isolationist':
+      return 'I wish to end our hostilities and return to peaceful coexistence.';
+    case 'trickster':
+      return 'Our past quarrels are... unfortunate. Shall we explore more profitable arrangements?';
+    case 'chaotic':
+      return 'Why fight when we could be friends? Or enemies who pretend to be friends? Either way!';
+    default:
+      return 'Our recent conflicts have damaged our relationship. Perhaps we can find common ground.';
+  }
+}
+
+/**
  * Compensation Demand Trigger: AI demands compensation for grievances
+ * ENHANCED: Personality affects likelihood and tone of demands
  */
 export function checkCompensationDemandTrigger(
   aiNation: Nation,
@@ -278,8 +377,37 @@ export function checkCompensationDemandTrigger(
     return result; // Grievances not severe enough
   }
 
-  // More likely to demand compensation if aggressive
-  const personalityBonus = aiNation.ai === 'aggressive' ? 30 : 0;
+  // ENHANCED: Personality affects likelihood and priority
+  const aiType = aiNation.ai || 'balanced';
+  let personalityBonus = 0;
+  let shouldDemand = true;
+
+  switch (aiType) {
+    case 'aggressive':
+      personalityBonus = 35; // Very likely to demand
+      break;
+    case 'balanced':
+      personalityBonus = 10;
+      break;
+    case 'defensive':
+      personalityBonus = -10; // Less confrontational
+      shouldDemand = totalSeverity > 5; // Only for serious grievances
+      break;
+    case 'isolationist':
+      personalityBonus = -20; // Avoids confrontation
+      shouldDemand = totalSeverity > 8;
+      break;
+    case 'trickster':
+      personalityBonus = 20; // Sees opportunity in grievances
+      break;
+    case 'chaotic':
+      personalityBonus = Math.random() > 0.3 ? 25 : -10; // Unpredictable
+      break;
+  }
+
+  if (!shouldDemand) {
+    return result;
+  }
 
   // Calculate urgency based on severity
   let urgency: NegotiationUrgency = 'medium';
@@ -289,13 +417,35 @@ export function checkCompensationDemandTrigger(
   result.urgency = urgency;
   result.priority = 50 + personalityBonus + (totalSeverity * 5);
   result.context = {
-    reason: `Your recent actions against us demand compensation.`,
+    reason: getCompensationMessage(aiType, totalSeverity),
     grievanceId: recentGrievances[0].id,
     grievanceCount: recentGrievances.length,
     totalSeverity,
   };
 
   return result;
+}
+
+/**
+ * Get personality-appropriate compensation demand message
+ */
+function getCompensationMessage(aiType: string, severity: number): string {
+  switch (aiType) {
+    case 'aggressive':
+      return severity > 8
+        ? 'Your transgressions against us will not be forgotten. Pay the price or face our wrath.'
+        : 'You have wronged us. Compensation is not optional.';
+    case 'balanced':
+      return 'Your recent actions against us demand compensation. Let us resolve this fairly.';
+    case 'defensive':
+      return 'Your actions have harmed our people. We request reparations to restore balance.';
+    case 'trickster':
+      return 'Such unfortunate... incidents. Surely you wish to make amends? I have calculated the exact price of your forgiveness.';
+    case 'chaotic':
+      return 'You broke the rules! Or maybe there were no rules? Either way, COMPENSATION! Now! Or later! Your choice! Not really!';
+    default:
+      return 'Your recent actions against us demand compensation.';
+  }
 }
 
 /**

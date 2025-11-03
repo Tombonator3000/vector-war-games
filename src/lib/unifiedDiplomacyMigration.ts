@@ -3,11 +3,14 @@
  *
  * Converts old diplomacy systems (Trust/Favors, Grievances, DIP currency)
  * to the unified relationship system (-100 to +100)
+ * ENHANCED: Now maintains underlying trust/favors systems for sophisticated AI
  */
 
 import type { Nation } from '@/types/game';
 import { clampRelationship, NEUTRAL_RELATIONSHIP } from '@/types/unifiedDiplomacy';
 import { getDIP } from '@/lib/diplomaticCurrencyUtils';
+import { clampTrust, clampFavors, DEFAULT_TRUST } from '@/types/trustAndFavors';
+import type { TrustRecord, FavorBalance } from '@/types/trustAndFavors';
 
 /**
  * Migrate existing diplomacy data to unified relationship score
@@ -129,6 +132,7 @@ export function getRelationship(nationA: Nation, nationBId: string, allNations?:
 
 /**
  * Update relationship between two nations (bidirectional)
+ * ENHANCED: Also updates underlying trust system for sophisticated AI
  */
 export function updateRelationship(
   nationA: Nation,
@@ -152,6 +156,42 @@ export function updateRelationship(
   const newA = clampRelationship(currentA + delta);
   const newB = clampRelationship(currentB + delta);
 
+  // ENHANCEMENT: Update underlying trust system in parallel
+  // Trust changes are 1/4 of relationship changes (for slower long-term build)
+  const trustDelta = Math.round(delta / 4);
+
+  // Update trust for nation A
+  const currentTrustA = nationA.trustRecords?.[nationB.id]?.value ?? DEFAULT_TRUST;
+  const newTrustA = clampTrust(currentTrustA + trustDelta);
+
+  const updatedTrustRecordsA = {
+    ...(nationA.trustRecords || {}),
+    [nationB.id]: {
+      value: newTrustA,
+      lastUpdated: turn,
+      history: [
+        ...((nationA.trustRecords?.[nationB.id] as TrustRecord)?.history || []).slice(-10), // Keep last 10
+        { turn, delta: trustDelta, reason, newValue: newTrustA }
+      ]
+    } as TrustRecord
+  };
+
+  // Update trust for nation B
+  const currentTrustB = nationB.trustRecords?.[nationA.id]?.value ?? DEFAULT_TRUST;
+  const newTrustB = clampTrust(currentTrustB + trustDelta);
+
+  const updatedTrustRecordsB = {
+    ...(nationB.trustRecords || {}),
+    [nationA.id]: {
+      value: newTrustB,
+      lastUpdated: turn,
+      history: [
+        ...((nationB.trustRecords?.[nationA.id] as TrustRecord)?.history || []).slice(-10),
+        { turn, delta: trustDelta, reason, newValue: newTrustB }
+      ]
+    } as TrustRecord
+  };
+
   // Update relationships
   const updatedA = {
     ...nationA,
@@ -159,6 +199,7 @@ export function updateRelationship(
       ...nationA.relationships,
       [nationB.id]: newA,
     },
+    trustRecords: updatedTrustRecordsA, // ENHANCED: Maintain trust
     relationshipHistory: [
       ...(nationA.relationshipHistory || []),
       {
@@ -177,6 +218,7 @@ export function updateRelationship(
       ...nationB.relationships,
       [nationA.id]: newB,
     },
+    trustRecords: updatedTrustRecordsB, // ENHANCED: Maintain trust
     relationshipHistory: [
       ...(nationB.relationshipHistory || []),
       {

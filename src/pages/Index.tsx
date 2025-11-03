@@ -4004,7 +4004,8 @@ function aiTurn(n: Nation) {
 
   // Check if AI wants to initiate a proposal to the player
   if (player && !n.isPlayer) {
-    const proposal = shouldAIInitiateProposal(n, player, S.turn);
+    // ENHANCED: Pass nations array to enable advanced trigger system
+    const proposal = shouldAIInitiateProposal(n, player, S.turn, undefined, nations);
     if (proposal) {
       // Queue the proposal to show to player
       if (enqueueAIProposalRef) {
