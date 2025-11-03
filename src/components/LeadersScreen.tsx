@@ -66,9 +66,9 @@ function getRelationshipStatus(relationship: number): { label: string; color: st
  * Calculate military power score
  */
 function getMilitaryPower(nation: Nation): number {
-  const missileCount = (nation.missiles || 0) + (nation.icbms || 0);
-  const territoryCount = nation.territoryIds?.length || 0;
-  return missileCount * 10 + territoryCount * 5 + (nation.population || 0);
+  const missileCount = (nation.missiles || 0);
+  const population = nation.population || 0;
+  return missileCount * 10 + population;
 }
 
 /**
@@ -193,7 +193,7 @@ export function LeadersScreen({
             const trust = getTrust(playerNation, nation.id);
             const favors = getFavors(playerNation, nation.id);
             const isAllied = playerNation.alliances?.includes(nation.id);
-            const isAtWar = playerNation.atWarWith?.includes(nation.id);
+            const isAtWar = false; // War state not tracked in current Nation type
             const { label: relLabel, color: relColor } = getRelationshipStatus(relationship);
             const militaryPower = getMilitaryPower(nation);
 
@@ -276,7 +276,7 @@ export function LeadersScreen({
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                         <Globe className="h-3 w-3" />
                       </div>
-                      <div className="font-bold">{nation.territoryIds?.length || 0}</div>
+                      <div className="font-bold">{nation.population}M</div>
                       <div className="text-muted-foreground">Territories</div>
                     </div>
                     <div className="text-center p-2 rounded bg-slate-900/50">
@@ -291,7 +291,7 @@ export function LeadersScreen({
                         <Swords className="h-3 w-3" />
                       </div>
                       <div className="font-bold">
-                        {(nation.missiles || 0) + (nation.icbms || 0)}
+                        {(nation.missiles || 0)}
                       </div>
                       <div className="text-muted-foreground">Missiles</div>
                     </div>
