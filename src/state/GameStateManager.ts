@@ -84,6 +84,13 @@ export interface GameState {
   endGameStatistics?: unknown;
   scenario?: ScenarioConfig;
   greatOldOnes?: GreatOldOnesState;
+  victoryProgressNotifications?: {
+    economic: boolean;
+    demographic: boolean;
+    cultural: boolean;
+    survival: boolean;
+    domination: boolean;
+  };
 }
 
 /**
