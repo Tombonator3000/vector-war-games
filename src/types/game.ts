@@ -6,6 +6,7 @@ import type { TrustRecord, FavorBalance, DiplomaticPromise } from './trustAndFav
 import type { Grievance, Claim } from './grievancesAndClaims';
 import type { SpecializedAlliance } from './specializedAlliances';
 import type { DiplomaticInfluence, CouncilMembershipType } from './diplomacyPhase3';
+import type { DoctrineIncidentState, DoctrineShiftState } from './doctrineIncidents';
 
 export interface FalloutMark {
   id: string;
@@ -288,6 +289,12 @@ export interface GameState {
 
   /** Multi-Party Diplomacy state (FASE 3.4) */
   multiPartyDiplomacy?: import('./multiPartyDiplomacy').MultiPartyDiplomacyState;
+
+  /** Doctrine Incident System state */
+  doctrineIncidentState?: DoctrineIncidentState;
+
+  /** Doctrine Shift Tracking state */
+  doctrineShiftState?: DoctrineShiftState;
 }
 
 export interface ConventionalWarfareDelta {

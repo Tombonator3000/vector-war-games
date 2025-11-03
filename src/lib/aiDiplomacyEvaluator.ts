@@ -176,6 +176,21 @@ function calculateRelationshipScore(nation1: Nation, nation2: Nation): number {
     score += 5; // Observers get slight respect
   }
 
+  // *** DOCTRINE SYSTEM: Doctrine compatibility ***
+  // Military doctrines affect diplomatic compatibility
+  if (nation1.doctrine && nation2.doctrine) {
+    try {
+      const { getDoctrineCompatibilityModifier } = require('@/lib/doctrineDiplomacyUtils');
+      const doctrineModifier = getDoctrineCompatibilityModifier(
+        nation1.doctrine as any,
+        nation2.doctrine as any
+      );
+      score += doctrineModifier; // -25 to +20 based on doctrine compatibility
+    } catch {
+      // Doctrine system not available, skip modifier
+    }
+  }
+
   return score;
 }
 
