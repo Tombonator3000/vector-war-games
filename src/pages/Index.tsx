@@ -9393,13 +9393,13 @@ export default function NoradVector() {
         )}
 
         <div className="hud-layers pointer-events-none touch-none">
-          {/* Minimal top status bar */}
-          <header className="game-top-bar fixed top-0 left-0 right-0 h-12 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
-            <div className="game-top-bar__metrics flex items-center gap-6 text-xs font-mono">
+          <div className="game-top-stack pointer-events-none">
+            <header className="game-top-bar w-full bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between pointer-events-auto touch-auto">
+              <div className="game-top-bar__metrics flex items-center gap-5 text-[11px] font-mono">
               {/* DEFCON - Enlarged for prominence */}
-              <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded">
-                <span className="text-cyan-400 text-sm">DEFCON</span>
-                <span className="text-neon-green font-bold text-2xl" id="defcon">5</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-red-500/10 border border-red-500/30 rounded">
+                <span className="text-cyan-300 text-xs tracking-wide">DEFCON</span>
+                <span className="text-neon-green font-bold text-xl" id="defcon">5</span>
               </div>
 
               {/* Global Sanity - Great Old Ones Campaign */}
@@ -9410,25 +9410,28 @@ export default function NoradVector() {
               <div className="flex items-center gap-2">
                 <span className="text-cyan-400">TURN</span>
                 <span className="text-neon-green font-bold text-base" id="turn">1</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-cyan-300 text-[11px] tracking-wide">TURN</span>
+                <span className="text-neon-green font-semibold text-sm" id="turn">1</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-cyan-400">ACTIONS</span>
-                <span className="text-neon-green font-bold text-base" id="actionsDisplay">1/1</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-cyan-300 text-[11px] tracking-wide">ACTIONS</span>
+                <span className="text-neon-green font-semibold text-sm" id="actionsDisplay">1/1</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-cyan-400">DATE</span>
-                <span className="text-neon-green font-bold text-base" id="gameTimeDisplay">—</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-cyan-300 text-[11px] tracking-wide">DATE</span>
+                <span className="text-neon-green font-semibold text-sm" id="gameTimeDisplay">—</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-cyan-400">CYBER</span>
-                <span className="text-neon-green font-bold text-base" id="cyberDisplay">60/100</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-cyan-300 text-[11px] tracking-wide">CYBER</span>
+                <span className="text-neon-green font-semibold text-sm" id="cyberDisplay">60/100</span>
               </div>
-            </div>
+              </div>
 
-            <div className="game-top-bar__actions flex items-center gap-3">
+              <div className="game-top-bar__actions flex items-center gap-2.5">
               <SyncStatusBadge />
-              <div className="text-xs font-mono text-neon-magenta mr-4">
-                <span className="text-cyan-400">DOOMSDAY</span>{' '}
+              <div className="text-[11px] font-mono text-neon-magenta mr-3">
+                <span className="text-cyan-300 tracking-wide">DOOMSDAY</span>{' '}
                 <span id="doomsdayTime" className="font-bold">7:00</span>
               </div>
               <Button
@@ -9438,7 +9441,7 @@ export default function NoradVector() {
                   setCivInfoPanelOpen(true);
                   AudioSys.playSFX('click');
                 }}
-                className="h-7 px-2 text-xs text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10"
+                className="h-6 px-2 text-[11px] text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10"
                 title="Empire Status (Press I)"
               >
                 EMPIRE INFO
@@ -9449,9 +9452,9 @@ export default function NoradVector() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 px-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                    className="h-6 px-2 text-[11px] text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
                   >
-                    <Menu className="h-4 w-4 mr-1" />
+                    <Menu className="h-3.5 w-3.5 mr-1" />
                     MENU
                   </Button>
                 </DropdownMenuTrigger>
@@ -9515,15 +9518,26 @@ export default function NoradVector() {
                 size="sm"
                 variant="ghost"
                 onClick={toggleFullscreen}
-                className="h-7 px-2 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                className="h-6 px-2 text-[11px] text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
               >
                 {isFullscreen ? 'EXIT FS' : 'FULLSCREEN'}
               </Button>
+              </div>
+            </header>
+
+            <div className="game-top-ticker pointer-events-auto touch-auto">
+              <NewsTicker
+                items={newsItems}
+                className="pointer-events-auto touch-auto"
+              />
             </div>
-          </header>
+          </div>
 
           {coopEnabled ? (
-            <div className="fixed top-14 right-3 pointer-events-auto touch-auto z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))]">
+            <div
+              className="fixed right-3 pointer-events-auto touch-auto z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))]"
+              style={{ top: 'var(--game-top-stack-offset)' }}
+            >
               <ApprovalQueue />
             </div>
           ) : null}
@@ -9616,10 +9630,6 @@ export default function NoradVector() {
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
             <div className="flex flex-col gap-1">
-              <NewsTicker
-                items={newsItems}
-                className="pointer-events-auto touch-auto"
-              />
               <div className="h-16 sm:h-20 pointer-events-auto touch-auto">
                 <div className="h-full flex items-center justify-center gap-1 px-4">
                   <Button
