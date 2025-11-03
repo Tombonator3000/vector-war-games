@@ -9407,9 +9407,6 @@ export default function NoradVector() {
                 <GlobalSanityIndicator state={greatOldOnesState} />
               )}
 
-              <div className="flex items-center gap-2">
-                <span className="text-cyan-400">TURN</span>
-                <span className="text-neon-green font-bold text-base" id="turn">1</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-cyan-300 text-[11px] tracking-wide">TURN</span>
                 <span className="text-neon-green font-semibold text-sm" id="turn">1</span>
