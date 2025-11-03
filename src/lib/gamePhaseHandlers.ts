@@ -251,6 +251,25 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
     }
     S.nuclearWinterLevel *= 0.95;
   }
+
+  // Update Doctrine Incident System (only for player)
+  const playerNation = nations.find(n => n.isPlayer);
+  if (playerNation && S.doctrineIncidentState) {
+    try {
+      const { updateDoctrineIncidentSystem } = require('@/lib/doctrineIncidentSystem');
+      S.doctrineIncidentState = updateDoctrineIncidentSystem(
+        S,
+        playerNation,
+        S.doctrineIncidentState
+      );
+
+      if (S.doctrineIncidentState.activeIncident) {
+        log('⚠️ Doctrine incident requires your attention!', 'alert');
+      }
+    } catch (err) {
+      console.error('[Doctrine System] Error updating incidents:', err);
+    }
+  }
 }
 
 /**

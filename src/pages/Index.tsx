@@ -197,6 +197,15 @@ import {
   processExpiredVotes,
 } from '@/lib/internationalCouncilUtils';
 import { IntroLogo } from '@/components/intro/IntroLogo';
+import {
+  initializeDoctrineIncidentState,
+  initializeDoctrineShiftState,
+  updateDoctrineIncidentSystem,
+  resolveIncident,
+} from '@/lib/doctrineIncidentSystem';
+import { DoctrineIncidentModal } from '@/components/DoctrineIncidentModal';
+import { DoctrineStatusPanel } from '@/components/DoctrineStatusPanel';
+import type { DoctrineKey } from '@/types/doctrineIncidents';
 import { Starfield } from '@/components/intro/Starfield';
 import { SpinningEarth } from '@/components/intro/SpinningEarth';
 import { OperationModal, type OperationAction, type OperationModalProps } from '@/components/modals/OperationModal';
@@ -6412,6 +6421,11 @@ export default function NoradVector() {
     // Reset AI negotiation trigger tracking for new game
     resetTriggerTracking();
 
+    // Initialize Doctrine Incident System
+    S.doctrineIncidentState = initializeDoctrineIncidentState();
+    S.doctrineShiftState = initializeDoctrineShiftState(doctrineToUse as DoctrineKey);
+    console.log('[Doctrine System] Initialized for doctrine:', doctrineToUse);
+
     // Expose updated S to window when game starts
     if (typeof window !== 'undefined') {
       (window as any).S = S;
@@ -6420,6 +6434,66 @@ export default function NoradVector() {
 
     setIsGameStarted(true);
   }, [selectedLeader, selectedDoctrine]);
+
+  // Doctrine Incident Choice Handler
+  const handleDoctrineIncidentChoice = useCallback((choiceId: string) => {
+    if (!S.doctrineIncidentState?.activeIncident || !S.doctrineShiftState) {
+      console.error('[Doctrine System] No active incident to resolve');
+      return;
+    }
+
+    const playerNation = PlayerManager.get();
+    if (!playerNation) {
+      console.error('[Doctrine System] No player nation found');
+      return;
+    }
+
+    try {
+      const result = resolveIncident(
+        S.doctrineIncidentState.activeIncident,
+        choiceId,
+        S,
+        playerNation,
+        S.doctrineIncidentState,
+        S.doctrineShiftState
+      );
+
+      // Apply updates
+      PlayerManager.set(result.updatedNation);
+      S.doctrineIncidentState = result.updatedIncidentState;
+      S.doctrineShiftState = result.updatedShiftState;
+
+      // Add news items
+      result.newsItems.forEach(newsItem => {
+        addNewsItem(newsItem.category as any, newsItem.headline, newsItem.priority as any);
+      });
+
+      // Handle special effects
+      if (result.triggeredWar) {
+        log('⚔️ Your decision has triggered war!', 'alert');
+        S.defcon = Math.max(1, S.defcon - 1);
+      }
+
+      if (result.brokeTreaties) {
+        log('📜 Treaties have been broken!', 'warning');
+      }
+
+      // Show follow-up incident if any
+      if (result.followUpIncidentId) {
+        // Will be triggered on next turn
+        console.log('[Doctrine System] Follow-up incident queued:', result.followUpIncidentId);
+      }
+
+      console.log('[Doctrine System] Incident resolved:', choiceId);
+      updateDisplay();
+    } catch (err) {
+      console.error('[Doctrine System] Error resolving incident:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to process your choice. Please try again.',
+      });
+    }
+  }, []);
 
   // MilitaryModal - Extracted to src/components/game/MilitaryModal.tsx (Phase 7 refactoring)
   const renderMilitaryModal = useCallback((): ReactNode => {
@@ -9231,6 +9305,22 @@ export default function NoradVector() {
         )}
 
         <div className="hud-layers pointer-events-none touch-none">
+          {/* Doctrine Status Panel (Top-left sidebar for base game) */}
+          {S.scenario?.id !== 'greatOldOnes' && S.doctrineShiftState && (() => {
+            const playerNation = PlayerManager.get();
+            if (!playerNation) return null;
+
+            return (
+              <div className="fixed top-16 left-4 z-40 pointer-events-auto touch-auto max-w-xs">
+                <DoctrineStatusPanel
+                  playerNation={playerNation}
+                  allNations={nations}
+                  shiftState={S.doctrineShiftState}
+                />
+              </div>
+            );
+          })()}
+
           {/* Minimal top status bar */}
           <header className="game-top-bar fixed top-0 left-0 right-0 h-12 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
             <div className="game-top-bar__metrics flex items-center gap-6 text-xs font-mono">
@@ -10365,6 +10455,14 @@ export default function NoradVector() {
               prev.filter(n => n.proposedDeal.id !== negotiationId)
             );
           }}
+        />
+      )}
+
+      {/* Doctrine Incident Modal */}
+      {S.doctrineIncidentState?.activeIncident && (
+        <DoctrineIncidentModal
+          incident={S.doctrineIncidentState.activeIncident}
+          onChoose={handleDoctrineIncidentChoice}
         />
       )}
 
