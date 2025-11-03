@@ -1,80 +1,88 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import type { LocalNation } from '@/state';
 import { PlayerManager } from '@/state';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
+import { BattleResultDisplay } from '@/components/DiceRoller';
 import { RESEARCH_LOOKUP } from '@/lib/gameConstants';
 import type {
-  ConventionalUnitState,
   TerritoryState,
   ConventionalUnitTemplate,
   EngagementLogEntry,
   NationConventionalProfile,
+  DiceRollResult,
 } from '@/hooks/useConventionalWarfare';
 import { createDefaultNationConventionalProfile } from '@/hooks/useConventionalWarfare';
 
 export interface MilitaryModalProps {
-  conventionalUnits: Record<string, ConventionalUnitState>;
   conventionalTerritories: Record<string, TerritoryState>;
   conventionalTemplatesMap: Record<string, ConventionalUnitTemplate>;
   conventionalLogs: EngagementLogEntry[];
-  trainConventionalUnit: (nationId: string, templateId: string) => any;
-  deployConventionalUnit: (unitId: string, territoryId: string) => any;
-  getConventionalUnitsForNation: (nationId: string) => ConventionalUnitState[];
-  resolveConventionalBorderConflict: (
-    territoryId: string,
-    attackerId: string,
-    defenderId: string
-  ) => any;
+  trainConventionalUnit: (nationId: string, templateId: string, territoryId?: string) => any;
+  resolveConventionalAttack: (fromTerritoryId: string, toTerritoryId: string, armies: number) => any;
+  moveConventionalArmies: (fromTerritoryId: string, toTerritoryId: string, count: number) => any;
   resolveConventionalProxyEngagement: (
     territoryId: string,
     sponsorId: string,
     opposingId: string
   ) => any;
+  placeConventionalReinforcements: (nationId: string, territoryId: string, count: number) => any;
+  getConventionalReinforcements: (nationId: string) => number;
   toast: (options: { title: string; description: string }) => void;
   addNewsItem: (category: string, text: string, importance: string) => void;
 }
 
 /**
- * MilitaryModal - Conventional warfare command interface
+ * MilitaryModal - Risk-style conventional warfare command interface
  *
  * Displays:
  * - Conventional forces panel (training, deployment)
- * - Theatre overview map
+ * - Territory map with army counts and actions
+ * - Battle results with dice rolls
  * - Recent engagement logs
  */
 export function MilitaryModal({
-  conventionalUnits,
   conventionalTerritories,
   conventionalTemplatesMap,
   conventionalLogs,
   trainConventionalUnit,
-  deployConventionalUnit,
-  getConventionalUnitsForNation,
-  resolveConventionalBorderConflict,
+  resolveConventionalAttack,
+  moveConventionalArmies,
   resolveConventionalProxyEngagement,
+  placeConventionalReinforcements,
+  getConventionalReinforcements,
   toast,
   addNewsItem,
 }: MilitaryModalProps): ReactNode {
   const player = PlayerManager.get() as LocalNation | null;
+  const [lastBattleResult, setLastBattleResult] = useState<{
+    diceRolls: DiceRollResult[];
+    attackerName: string;
+    defenderName: string;
+    territory: string;
+  } | null>(null);
 
   if (!player) {
     return <div className="text-sm text-cyan-200">No player nation data available.</div>;
   }
 
-  const playerUnits = getConventionalUnitsForNation(player.id);
   const territoryList = Object.values(conventionalTerritories);
   const templates = Object.values(conventionalTemplatesMap);
   const recentLogs = [...conventionalLogs].slice(-6).reverse();
 
+  const playerTerritories = territoryList.filter(t => t.controllingNationId === player.id);
+  const totalArmies = playerTerritories.reduce((sum, t) => sum + t.armies, 0);
+
   const profile: NationConventionalProfile = {
     ...(player.conventional ?? createDefaultNationConventionalProfile()),
-    reserve: playerUnits.filter(unit => unit.status === 'reserve').length,
-    deployedUnits: playerUnits.filter(unit => unit.status === 'deployed').map(unit => unit.id),
+    reserve: 0, // Not used in new army-based system
+    deployedUnits: [], // Not used in new army-based system
   };
 
-  const handleTrain = (templateId: string) => {
-    const result = trainConventionalUnit(player.id, templateId);
+  const availableReinforcements = getConventionalReinforcements(player.id);
+
+  const handleTrain = (templateId: string, territoryId?: string) => {
+    const result = trainConventionalUnit(player.id, templateId, territoryId);
     if (!result.success) {
       let description = 'Requested formation template is unavailable.';
       if (result.reason === 'Insufficient resources') {
@@ -95,44 +103,68 @@ export function MilitaryModal({
     }
 
     const template = conventionalTemplatesMap[templateId];
-    toast({ title: 'Formation queued', description: `${template?.name ?? 'New unit'} added to reserves.` });
+    toast({
+      title: 'Formation deployed',
+      description: result.territorySummary || `${template?.name ?? 'New unit'} deployed.`
+    });
     addNewsItem('military', `${player.name} mobilises ${template?.name ?? 'new forces'}`, 'important');
   };
 
-  const handleDeployUnit = (unitId: string, territoryId: string) => {
-    const result = deployConventionalUnit(unitId, territoryId);
-    if (!result.success) {
-      toast({ title: 'Deployment failed', description: result.reason ?? 'Unable to deploy selected unit.' });
+  const handleAttack = (fromTerritoryId: string, toTerritoryId: string, armies: number) => {
+    const fromTerritory = conventionalTerritories[fromTerritoryId];
+    const toTerritory = conventionalTerritories[toTerritoryId];
+
+    if (!fromTerritory || !toTerritory) {
+      toast({ title: 'Attack failed', description: 'Invalid territories selected.' });
       return;
     }
 
-    const territory = conventionalTerritories[territoryId];
-    toast({
-      title: 'Unit deployed',
-      description: `${player.name} reinforces ${territory?.name ?? 'forward position'}.`,
-    });
-    addNewsItem('military', `${player.name} deploys assets to ${territory?.name ?? territoryId}`, 'important');
-  };
-
-  const handleBorderConflict = (territoryId: string, defenderId: string) => {
-    const territory = conventionalTerritories[territoryId];
-    const result = resolveConventionalBorderConflict(territoryId, player.id, defenderId);
+    const result = resolveConventionalAttack(fromTerritoryId, toTerritoryId, armies);
     if (!result.success) {
-      toast({ title: 'Conflict aborted', description: 'Border offensive could not be executed.' });
+      toast({ title: 'Attack failed', description: result.reason || 'Unable to execute attack.' });
       return;
     }
 
+    // Show dice roll results
+    if (result.diceRolls && result.diceRolls.length > 0) {
+      setLastBattleResult({
+        diceRolls: result.diceRolls,
+        attackerName: player.name,
+        defenderName: toTerritory.controllingNationId || 'Neutral',
+        territory: toTerritory.name,
+      });
+    }
+
     toast({
-      title: result.attackerVictory ? 'Border seized' : 'Advance repelled',
-      description: `${territory?.name ?? 'Target region'} engagement odds ${(result.odds * 100).toFixed(0)}%.`,
+      title: result.attackerVictory ? '🎯 Territory conquered!' : '❌ Attack repelled',
+      description: result.attackerVictory
+        ? `${toTerritory.name} captured after ${result.diceRolls?.length || 0} rounds! Lost ${result.attackerLosses} armies.`
+        : `Failed to capture ${toTerritory.name}. Lost ${result.attackerLosses} armies.`,
     });
+
     addNewsItem(
       'military',
       result.attackerVictory
-        ? `${player.name} captures ${territory?.name ?? territoryId}`
-        : `${player.name} fails to secure ${territory?.name ?? territoryId}`,
+        ? `${player.name} conquers ${toTerritory.name} (${result.diceRolls?.length || 0} rounds)`
+        : `${player.name} fails to take ${toTerritory.name}`,
       result.attackerVictory ? 'critical' : 'urgent'
     );
+  };
+
+  const handleMove = (fromTerritoryId: string, toTerritoryId: string, count: number) => {
+    const fromTerritory = conventionalTerritories[fromTerritoryId];
+    const toTerritory = conventionalTerritories[toTerritoryId];
+
+    const result = moveConventionalArmies(fromTerritoryId, toTerritoryId, count);
+    if (!result.success) {
+      toast({ title: 'Movement failed', description: result.reason || 'Unable to move armies.' });
+      return;
+    }
+
+    toast({
+      title: 'Armies repositioned',
+      description: `Moved ${count} armies from ${fromTerritory?.name} to ${toTerritory?.name}.`,
+    });
   };
 
   const handleProxyEngagement = (territoryId: string, opposingId: string) => {
@@ -156,31 +188,72 @@ export function MilitaryModal({
     );
   };
 
+  const handlePlaceReinforcements = (territoryId: string, count: number) => {
+    const territory = conventionalTerritories[territoryId];
+    const result = placeConventionalReinforcements(player.id, territoryId, count);
+
+    if (!result.success) {
+      toast({ title: 'Reinforcement failed', description: result.reason || 'Unable to place reinforcements.' });
+      return;
+    }
+
+    toast({
+      title: 'Reinforcements deployed',
+      description: `Placed ${count} armies in ${territory?.name}.`,
+    });
+  };
+
   return (
     <div className="space-y-6">
+      {/* Battle Results Display */}
+      {lastBattleResult && (
+        <section className="rounded-lg border-2 border-yellow-500/50 bg-slate-800/50 p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-yellow-300">
+              Battle Report: {lastBattleResult.territory}
+            </h3>
+            <button
+              onClick={() => setLastBattleResult(null)}
+              className="text-xs text-cyan-400 hover:text-cyan-300"
+            >
+              Clear
+            </button>
+          </div>
+          <BattleResultDisplay
+            diceRolls={lastBattleResult.diceRolls}
+            attackerName={lastBattleResult.attackerName}
+            defenderName={lastBattleResult.defenderName}
+          />
+        </section>
+      )}
+
       <ConventionalForcesPanel
         templates={templates}
-        units={playerUnits}
         territories={territoryList}
         profile={profile}
         onTrain={handleTrain}
-        onDeploy={handleDeployUnit}
         researchUnlocks={player.researched ?? {}}
         playerPopulation={player.population}
+        availableReinforcements={availableReinforcements}
+        playerId={player.id}
       />
 
       <section className="rounded-lg border border-cyan-500/30 bg-slate-800/50 p-6">
         <header className="mb-6 flex items-center justify-between border-b border-cyan-500/20 pb-4">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Theatre Overview</h3>
-          <span className="text-sm text-cyan-400">{territoryList.length} theatres monitored</span>
+          <div className="flex gap-4 text-sm">
+            <span className="text-cyan-400">{playerTerritories.length} territories</span>
+            <span className="text-cyan-400">{totalArmies} total armies</span>
+          </div>
         </header>
         <TerritoryMapPanel
           territories={territoryList}
-          units={Object.values(conventionalUnits)}
           playerId={player.id}
-          onBorderConflict={handleBorderConflict}
+          onAttack={handleAttack}
+          onMove={handleMove}
           onProxyEngagement={handleProxyEngagement}
-          playerPopulation={player.population}
+          availableReinforcements={availableReinforcements}
+          onPlaceReinforcements={handlePlaceReinforcements}
         />
       </section>
 
@@ -199,6 +272,11 @@ export function MilitaryModal({
                 <span>{logEntry.summary}</span>
                 <span className="text-gray-400">Turn {logEntry.turn}</span>
               </div>
+              {logEntry.diceRolls && logEntry.diceRolls.length > 0 && (
+                <div className="mt-2 text-xs text-cyan-400">
+                  🎲 {logEntry.diceRolls.length} combat rounds
+                </div>
+              )}
               <div className="mt-2 text-xs text-gray-500">
                 Casualties: {Object.entries(logEntry.casualties)
                   .map(([key, value]) => `${key}: ${value}`)

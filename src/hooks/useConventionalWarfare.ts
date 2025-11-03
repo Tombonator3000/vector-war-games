@@ -49,18 +49,32 @@ export interface TerritoryState {
   instabilityModifier: number;
   conflictRisk: number;
   neighbors: string[];
+  armies: number; // Total armies stationed (Risk-style)
+  unitComposition: { // Track unit types for combat bonuses
+    army: number;
+    navy: number;
+    air: number;
+  };
+}
+
+export interface DiceRollResult {
+  attackerDice: number[];
+  defenderDice: number[];
+  attackerLosses: number;
+  defenderLosses: number;
 }
 
 export interface EngagementLogEntry {
   id: string;
   turn: number;
   territoryId: string;
-  type: 'border' | 'proxy';
+  type: 'border' | 'proxy' | 'movement';
   outcome: 'attacker' | 'defender' | 'stalemate';
   summary: string;
   casualties: Record<string, number>;
   instabilityDelta: Record<string, number>;
   productionDelta: Record<string, number>;
+  diceRolls?: DiceRollResult[]; // Track all dice rolls in battle
 }
 
 export interface NationConventionalProfile {
@@ -91,6 +105,8 @@ export interface ConventionalNationRef {
   unitAttackBonus?: number;
   unitDefenseBonus?: number;
   combinedArmsBonus?: number;
+  relationships?: Record<string, number>;
+  alliances?: string[];
 }
 
 interface UseConventionalWarfareOptions {
@@ -100,14 +116,30 @@ interface UseConventionalWarfareOptions {
   onStateChange?: (state: ConventionalState) => void;
   onConsumeAction?: () => void;
   onUpdateDisplay?: () => void;
+  onDefconChange?: (delta: number) => void;
+  onRelationshipChange?: (nationId1: string, nationId2: string, delta: number) => void;
 }
+
+// Unit to armies conversion (Risk-style)
+const UNIT_ARMIES: Record<ForceType, number> = {
+  army: 5,  // Armored Corps = 5 armies
+  navy: 4,  // Carrier Strike Group = 4 armies
+  air: 3,   // Air Wing = 3 armies
+};
+
+// Combat bonuses for unit types
+const UNIT_COMBAT_BONUS: Record<ForceType, { attack: number; defense: number }> = {
+  army: { attack: 0, defense: 0 },   // Standard
+  navy: { attack: 0, defense: 1 },   // +1 to defense dice
+  air: { attack: 1, defense: 0 },    // +1 to attack dice
+};
 
 const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
   {
     id: 'armored_corps',
     type: 'army',
     name: 'Armored Corps',
-    description: 'Mechanised ground formation built around heavy armor spearheads.',
+    description: 'Mechanised ground formation. Deploys 5 armies to selected territory.',
     attack: 7,
     defense: 5,
     support: 2,
@@ -119,7 +151,7 @@ const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
     id: 'carrier_fleet',
     type: 'navy',
     name: 'Carrier Strike Group',
-    description: 'Blue-water naval group with integrated air and missile coverage.',
+    description: 'Blue-water naval group. Deploys 4 armies with +1 defense dice bonus.',
     attack: 6,
     defense: 8,
     support: 3,
@@ -131,7 +163,7 @@ const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
     id: 'air_wing',
     type: 'air',
     name: 'Expeditionary Air Wing',
-    description: 'Long-range tactical aviation with SEAD and strike capability.',
+    description: 'Long-range tactical aviation. Deploys 3 armies with +1 attack dice bonus.',
     attack: 8,
     defense: 4,
     support: 3,
@@ -155,6 +187,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     instabilityModifier: -8,
     conflictRisk: 10,
     neighbors: ['atlantic_corridor', 'arctic_circle'],
+    armies: 5,
+    unitComposition: { army: 5, navy: 0, air: 0 },
     defaultOwner: 'player',
   },
   {
@@ -170,6 +204,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     instabilityModifier: -3,
     conflictRisk: 18,
     neighbors: ['north_america', 'eastern_bloc', 'arctic_circle'],
+    armies: 0,
+    unitComposition: { army: 0, navy: 0, air: 0 },
     defaultOwner: 'player',
   },
   {
@@ -185,6 +221,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     instabilityModifier: -4,
     conflictRisk: 22,
     neighbors: ['atlantic_corridor', 'indo_pacific', 'arctic_circle'],
+    armies: 5,
+    unitComposition: { army: 5, navy: 0, air: 0 },
     defaultOwner: 'ai_0',
   },
   {
@@ -200,6 +238,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     instabilityModifier: -2,
     conflictRisk: 20,
     neighbors: ['eastern_bloc', 'southern_front'],
+    armies: 3,
+    unitComposition: { army: 0, navy: 0, air: 3 },
     defaultOwner: 'ai_1',
   },
   {
@@ -215,6 +255,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     instabilityModifier: -1,
     conflictRisk: 14,
     neighbors: ['indo_pacific', 'equatorial_belt'],
+    armies: 4,
+    unitComposition: { army: 0, navy: 4, air: 0 },
     defaultOwner: 'ai_2',
   },
   {
@@ -230,6 +272,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     instabilityModifier: -6,
     conflictRisk: 24,
     neighbors: ['southern_front', 'atlantic_corridor'],
+    armies: 5,
+    unitComposition: { army: 5, navy: 0, air: 0 },
     defaultOwner: 'ai_3',
   },
   {
@@ -245,6 +289,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     instabilityModifier: 8,
     conflictRisk: 28,
     neighbors: ['equatorial_belt', 'eastern_bloc'],
+    armies: 0,
+    unitComposition: { army: 0, navy: 0, air: 0 },
   },
   {
     id: 'arctic_circle',
@@ -259,6 +305,8 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     instabilityModifier: 5,
     conflictRisk: 12,
     neighbors: ['north_america', 'atlantic_corridor', 'eastern_bloc'],
+    armies: 0,
+    unitComposition: { army: 0, navy: 0, air: 0 },
   },
 ];
 
@@ -266,6 +314,117 @@ const templateLookup = UNIT_TEMPLATES.reduce<Record<string, ConventionalUnitTemp
   acc[template.id] = template;
   return acc;
 }, {});
+
+// Risk-style dice rolling combat system
+function rollDice(count: number, rng: { next: () => number }): number[] {
+  return Array.from({ length: count }, () => Math.floor(rng.next() * 6) + 1)
+    .sort((a, b) => b - a); // Sort highest to lowest
+}
+
+function resolveDiceRoll(
+  attackerArmies: number,
+  defenderArmies: number,
+  attackBonus: number,
+  defenseBonus: number,
+  rng: { next: () => number },
+): DiceRollResult {
+  // Attacker rolls up to 3 dice, defender up to 2 (Risk rules)
+  const attackDiceCount = Math.min(3, attackerArmies);
+  const defendDiceCount = Math.min(2, defenderArmies);
+
+  const attackRolls = rollDice(attackDiceCount, rng);
+  const defendRolls = rollDice(defendDiceCount, rng);
+
+  // Apply unit type bonuses to dice
+  const bonusedAttackRolls = attackRolls.map(die => Math.min(6, die + attackBonus));
+  const bonusedDefendRolls = defendRolls.map(die => Math.min(6, die + defenseBonus));
+
+  // Compare highest dice (ties favor defender in Risk)
+  let attackerLosses = 0;
+  let defenderLosses = 0;
+
+  const comparisons = Math.min(bonusedAttackRolls.length, bonusedDefendRolls.length);
+  for (let i = 0; i < comparisons; i++) {
+    if (bonusedAttackRolls[i] > bonusedDefendRolls[i]) {
+      defenderLosses++;
+    } else {
+      attackerLosses++;
+    }
+  }
+
+  return {
+    attackerDice: bonusedAttackRolls,
+    defenderDice: bonusedDefendRolls,
+    attackerLosses,
+    defenderLosses,
+  };
+}
+
+// Calculate unit type bonuses for a territory
+function getTerritoryBonuses(territory: TerritoryState): { attack: number; defense: number } {
+  let attackBonus = 0;
+  let defenseBonus = 0;
+
+  // Air units give +1 attack per 3 air units
+  if (territory.unitComposition.air >= 3) {
+    attackBonus += Math.floor(territory.unitComposition.air / 3) * UNIT_COMBAT_BONUS.air.attack;
+  }
+
+  // Navy units give +1 defense per 2 navy units
+  if (territory.unitComposition.navy >= 2) {
+    defenseBonus += Math.floor(territory.unitComposition.navy / 2) * UNIT_COMBAT_BONUS.navy.defense;
+  }
+
+  return { attack: attackBonus, defense: defenseBonus };
+}
+
+// Region definitions for reinforcement bonuses (like Risk continents)
+const REGIONS = {
+  'Western Hemisphere': ['north_america'],
+  'Atlantic': ['atlantic_corridor'],
+  'Europe & Siberia': ['eastern_bloc'],
+  'Pacific': ['indo_pacific'],
+  'South Atlantic': ['southern_front'],
+  'Africa & Middle East': ['equatorial_belt', 'proxy_middle_east'],
+  'Arctic': ['arctic_circle'],
+};
+
+const REGION_BONUSES: Record<string, number> = {
+  'Western Hemisphere': 2,
+  'Atlantic': 1,
+  'Europe & Siberia': 3,
+  'Pacific': 2,
+  'South Atlantic': 2,
+  'Africa & Middle East': 3,
+  'Arctic': 1,
+};
+
+// Calculate reinforcements (Risk-style)
+export function calculateReinforcements(
+  nationId: string,
+  territories: Record<string, TerritoryState>
+): number {
+  const controlledTerritories = Object.values(territories).filter(
+    t => t.controllingNationId === nationId
+  );
+
+  // Base reinforcements: territories / 3 (minimum 3)
+  const baseReinforcements = Math.max(3, Math.floor(controlledTerritories.length / 3));
+
+  // Region bonuses: bonus for controlling all territories in a region
+  let regionBonus = 0;
+  Object.entries(REGIONS).forEach(([regionName, territoryIds]) => {
+    const controlsAll = territoryIds.every(tid => {
+      const territory = territories[tid];
+      return territory && territory.controllingNationId === nationId;
+    });
+    if (controlsAll) {
+      regionBonus += REGION_BONUSES[regionName] || 0;
+    }
+  });
+
+  return baseReinforcements + regionBonus;
+}
 
 const computeUnitAttack = (unit: ConventionalUnitState, nation?: ConventionalNationRef): number => {
   const template = templateLookup[unit.templateId];
@@ -364,6 +523,8 @@ export function useConventionalWarfare({
   onStateChange,
   onConsumeAction,
   onUpdateDisplay,
+  onDefconChange,
+  onRelationshipChange,
 }: UseConventionalWarfareOptions) {
   const { rng } = useRNG();
   const [state, setState] = useState<ConventionalState>(() => initialState ?? createDefaultConventionalState());
@@ -490,7 +651,7 @@ export function useConventionalWarfare({
   );
 
   const trainUnit = useCallback(
-    (nationId: string, templateId: string) => {
+    (nationId: string, templateId: string, territoryId?: string) => {
       const template = templates[templateId];
       if (!template) {
         return { success: false, reason: 'Unknown unit template' } as const;
@@ -513,40 +674,57 @@ export function useConventionalWarfare({
         return { success: false, reason: 'Insufficient resources' } as const;
       }
 
-      const moraleModifier = calculateMoraleRecruitmentModifier(nation.morale ?? 50);
-      const profile = nation.conventional ?? createDefaultNationConventionalProfile();
-      const readinessGain = Math.max(1, Math.round(5 * moraleModifier));
-      const unitId = `${nationId}_${templateId}_${Date.now().toString(36)}`;
+      // Find a default territory for this nation if none specified
+      let targetTerritoryId = territoryId;
+      if (!targetTerritoryId) {
+        const controlledTerritories = Object.values(territories).filter(
+          t => t.controllingNationId === nationId
+        );
+        if (controlledTerritories.length === 0) {
+          return { success: false, reason: 'No controlled territories to deploy to' } as const;
+        }
+        // Prefer land for army, sea for navy
+        const preferredType = template.type === 'navy' ? 'sea' : 'land';
+        const preferred = controlledTerritories.find(t => t.type === preferredType);
+        targetTerritoryId = (preferred || controlledTerritories[0]).id;
+      }
+
+      const territory = territories[targetTerritoryId];
+      if (!territory || territory.controllingNationId !== nationId) {
+        return { success: false, reason: 'Must deploy to controlled territory' } as const;
+      }
+
+      // Add armies to territory (Risk-style)
+      const armiesToAdd = UNIT_ARMIES[template.type];
 
       syncState((prev) => ({
         ...prev,
-        units: {
-          ...prev.units,
-          [unitId]: {
-            id: unitId,
-            templateId,
-            ownerId: nationId,
-            label: `${profile.focus.toUpperCase()} ${profile.deployedUnits.length + 1}`,
-            readiness: clamp(profile.readiness + readinessGain, 10, 100),
-            experience: 0,
-            locationId: null,
-            status: 'reserve',
+        territories: {
+          ...prev.territories,
+          [targetTerritoryId]: {
+            ...prev.territories[targetTerritoryId],
+            armies: prev.territories[targetTerritoryId].armies + armiesToAdd,
+            unitComposition: {
+              ...prev.territories[targetTerritoryId].unitComposition,
+              [template.type]: prev.territories[targetTerritoryId].unitComposition[template.type] + armiesToAdd,
+            },
           },
         },
       }));
 
-      const nationProfile = nation.conventional ?? createDefaultNationConventionalProfile(profile.focus);
+      const profile = nation.conventional ?? createDefaultNationConventionalProfile();
+      const moraleModifier = calculateMoraleRecruitmentModifier(nation.morale ?? 50);
+      const readinessGain = Math.max(1, Math.round(5 * moraleModifier));
       nation.conventional = {
-        ...nationProfile,
-        reserve: nationProfile.reserve + 1,
-        readiness: clamp(nationProfile.readiness + readinessGain * 0.5, 10, 100),
+        ...profile,
+        readiness: clamp(profile.readiness + readinessGain * 0.5, 10, 100),
       };
 
       onUpdateDisplay?.();
       onConsumeAction?.();
-      return { success: true, unitId } as const;
+      return { success: true, territorySummary: `+${armiesToAdd} armies to ${territory.name}` } as const;
     },
-    [getNation, onConsumeAction, onUpdateDisplay, spendResources, syncState, templates],
+    [getNation, onConsumeAction, onUpdateDisplay, spendResources, syncState, templates, territories],
   );
 
   const deployUnit = useCallback(
@@ -592,128 +770,290 @@ export function useConventionalWarfare({
     [getNation, onConsumeAction, onUpdateDisplay, state.units, syncState, territories],
   );
 
-  const resolveBorderConflict = useCallback(
-    (territoryId: string, attackerId: string, defenderId: string) => {
-      const territory = territories[territoryId];
-      if (!territory) {
+  // Move armies between territories (Risk-style)
+  const moveArmies = useCallback(
+    (fromTerritoryId: string, toTerritoryId: string, count: number) => {
+      const fromTerritory = territories[fromTerritoryId];
+      const toTerritory = territories[toTerritoryId];
+
+      if (!fromTerritory || !toTerritory) {
         return { success: false, reason: 'Unknown territory' } as const;
       }
 
-      const attackerUnits = (unitsByNation[attackerId] || []).filter(
-        (unit) => unit.locationId === territoryId && unit.status === 'deployed',
-      );
-      const defenderUnits = (unitsByNation[defenderId] || []).filter(
-        (unit) => unit.locationId === territoryId && unit.status === 'deployed',
-      );
+      // Must control both territories
+      if (fromTerritory.controllingNationId !== toTerritory.controllingNationId) {
+        return { success: false, reason: 'Can only move armies between your own territories' } as const;
+      }
+
+      // Must be neighbors
+      if (!fromTerritory.neighbors.includes(toTerritoryId)) {
+        return { success: false, reason: 'Territories must be adjacent' } as const;
+      }
+
+      // Must leave at least 1 army in source
+      if (fromTerritory.armies - count < 1) {
+        return { success: false, reason: 'Must leave at least 1 army in territory' } as const;
+      }
+
+      if (count < 1) {
+        return { success: false, reason: 'Must move at least 1 army' } as const;
+      }
+
+      // Move armies proportionally by unit composition
+      const fromComposition = fromTerritory.unitComposition;
+      const totalArmies = fromTerritory.armies;
+      const proportions = {
+        army: fromComposition.army / totalArmies,
+        navy: fromComposition.navy / totalArmies,
+        air: fromComposition.air / totalArmies,
+      };
+
+      syncState((prev) => {
+        const updatedFrom = { ...prev.territories[fromTerritoryId] };
+        const updatedTo = { ...prev.territories[toTerritoryId] };
+
+        updatedFrom.armies -= count;
+        updatedTo.armies += count;
+
+        // Proportionally move unit types
+        const movedComposition = {
+          army: Math.round(count * proportions.army),
+          navy: Math.round(count * proportions.navy),
+          air: Math.round(count * proportions.air),
+        };
+
+        updatedFrom.unitComposition = {
+          army: Math.max(0, updatedFrom.unitComposition.army - movedComposition.army),
+          navy: Math.max(0, updatedFrom.unitComposition.navy - movedComposition.navy),
+          air: Math.max(0, updatedFrom.unitComposition.air - movedComposition.air),
+        };
+
+        updatedTo.unitComposition = {
+          army: updatedTo.unitComposition.army + movedComposition.army,
+          navy: updatedTo.unitComposition.navy + movedComposition.navy,
+          air: updatedTo.unitComposition.air + movedComposition.air,
+        };
+
+        return createEngagementLog({
+          ...prev,
+          territories: {
+            ...prev.territories,
+            [fromTerritoryId]: updatedFrom,
+            [toTerritoryId]: updatedTo,
+          },
+        }, {
+          turn: currentTurn,
+          territoryId: toTerritoryId,
+          type: 'movement',
+          outcome: 'stalemate',
+          summary: `Moved ${count} armies from ${fromTerritory.name} to ${toTerritory.name}`,
+          casualties: {},
+          instabilityDelta: {},
+          productionDelta: {},
+        }, rng);
+      });
+
+      onUpdateDisplay?.();
+      onConsumeAction?.();
+      return { success: true } as const;
+    },
+    [currentTurn, onConsumeAction, onUpdateDisplay, rng, syncState, territories],
+  );
+
+  const resolveBorderConflict = useCallback(
+    (fromTerritoryId: string, toTerritoryId: string, attackingArmies: number) => {
+      const fromTerritory = territories[fromTerritoryId];
+      const toTerritory = territories[toTerritoryId];
+
+      if (!fromTerritory || !toTerritory) {
+        return { success: false, reason: 'Unknown territory' } as const;
+      }
+
+      const attackerId = fromTerritory.controllingNationId;
+      const defenderId = toTerritory.controllingNationId;
+
+      if (!attackerId) {
+        return { success: false, reason: 'No attacker controlling source territory' } as const;
+      }
+
+      if (!defenderId) {
+        // Uncontested territory - just move armies
+        return moveArmies(fromTerritoryId, toTerritoryId, attackingArmies);
+      }
+
+      // Must be neighbors
+      if (!fromTerritory.neighbors.includes(toTerritoryId)) {
+        return { success: false, reason: 'Territories must be adjacent' } as const;
+      }
+
+      // Must have enough armies
+      if (attackingArmies > fromTerritory.armies - 1) {
+        return { success: false, reason: 'Must leave at least 1 army in source territory' } as const;
+      }
+
+      if (attackingArmies < 1) {
+        return { success: false, reason: 'Must attack with at least 1 army' } as const;
+      }
 
       const attackerNation = getNation(attackerId);
       const defenderNation = getNation(defenderId);
 
-      // Calculate attack and defense power with tech bonuses
-      let attackerPower = attackerUnits.reduce((total, unit) => total + computeUnitAttack(unit, attackerNation), 0);
-      const defenderPower = defenderUnits.reduce((total, unit) => total + computeUnitDefense(unit, defenderNation), 0);
+      // DEFCON Impact: Major military action lowers DEFCON (increases threat)
+      // Territory strategic value determines how much it affects global tension
+      const defconImpact = Math.min(2, Math.ceil(toTerritory.strategicValue / 3));
+      onDefconChange?.(-defconImpact); // Lower DEFCON (1 = max threat)
 
-      // Apply Combined Arms Doctrine bonus if multiple unit types present
-      if (attackerNation?.combinedArmsBonus) {
-        const unitTypes = new Set(attackerUnits.map(u => templateLookup[u.templateId]?.type).filter(Boolean));
-        if (unitTypes.size >= 2) {
-          const bonus = attackerNation.combinedArmsBonus;
-          attackerPower = attackerPower * (1 + bonus);
+      // Diplomatic Relations Impact
+      const TERRITORIAL_ATTACK_PENALTY = -25;
+      onRelationshipChange?.(attackerId, defenderId, TERRITORIAL_ATTACK_PENALTY);
+
+      // Allies of defender get upset
+      defenderNation?.alliances?.forEach(allyId => {
+        if (allyId !== attackerId) {
+          onRelationshipChange?.(attackerId, allyId, -15);
         }
+      });
+
+      // Get unit composition bonuses
+      const attackBonuses = getTerritoryBonuses(fromTerritory);
+      const defenseBonuses = getTerritoryBonuses(toTerritory);
+
+      // Resolve combat using Risk-style dice until one side is eliminated or attacker retreats
+      let remainingAttackers = attackingArmies;
+      let remainingDefenders = toTerritory.armies;
+      const diceRolls: DiceRollResult[] = [];
+      const maxRounds = 20; // Prevent infinite loops
+
+      for (let round = 0; round < maxRounds && remainingAttackers > 0 && remainingDefenders > 0; round++) {
+        const rollResult = resolveDiceRoll(
+          remainingAttackers,
+          remainingDefenders,
+          attackBonuses.attack,
+          defenseBonuses.defense,
+          rng,
+        );
+
+        diceRolls.push(rollResult);
+        remainingAttackers -= rollResult.attackerLosses;
+        remainingDefenders -= rollResult.defenderLosses;
       }
 
-      const readinessEdge = (getNation(attackerId)?.conventional?.readiness ?? 60) -
-        (getNation(defenderId)?.conventional?.readiness ?? 60);
-      const readinessModifier = readinessEdge / 200;
+      const attackerVictory = remainingDefenders === 0;
+      const attackerLosses = attackingArmies - remainingAttackers;
+      const defenderLosses = toTerritory.armies - remainingDefenders;
 
-      const baseOdds = safeDivide(attackerPower, attackerPower + defenderPower, 0.5);
-      const tensionModifier = territory.conflictRisk / 200;
-      const odds = safeClamp(baseOdds + readinessModifier + tensionModifier - 0.1, 0.15, 0.85);
+      const casualties: Record<string, number> = {
+        [attackerId]: attackerLosses,
+        [defenderId]: defenderLosses,
+      };
 
-      const roll = rng.next();
-      const attackerVictory = roll < odds;
-      const outcome: EngagementLogEntry['outcome'] = attackerVictory ? 'attacker' : 'defender';
-
-      const casualties: Record<string, number> = {};
       const instabilityDelta: Record<string, number> = {};
       const productionDelta: Record<string, number> = {};
 
-      casualties[attackerId] = Math.round((defenderPower || 4) * (attackerVictory ? 0.5 : 0.9));
-      casualties[defenderId] = Math.round((attackerPower || 4) * (attackerVictory ? 0.9 : 0.4));
+      // Update territories and conquest
+      syncState((prev) => {
+        const updatedTerritories = { ...prev.territories };
 
-      if (attackerVictory) {
-        updateTerritoryControl(territoryId, attackerId);
-        instabilityDelta[attackerId] = -territory.instabilityModifier;
-        instabilityDelta[defenderId] = territory.instabilityModifier;
-        productionDelta[attackerId] = territory.productionBonus;
-        productionDelta[defenderId] = -territory.productionBonus;
-      } else {
-        adjustNationInstability(attackerId, territory.instabilityModifier / 2);
-        instabilityDelta[attackerId] = territory.instabilityModifier / 2;
-      }
+        if (attackerVictory) {
+          // Attacker conquers territory
+          updatedTerritories[toTerritoryId] = {
+            ...toTerritory,
+            controllingNationId: attackerId,
+            armies: remainingAttackers,
+            unitComposition: fromTerritory.unitComposition, // Inherit attacking composition
+          };
 
+          // Remove armies from source
+          updatedTerritories[fromTerritoryId] = {
+            ...fromTerritory,
+            armies: fromTerritory.armies - attackingArmies,
+          };
+
+          // Update production and instability
+          adjustNationProduction(attackerId, toTerritory.productionBonus);
+          adjustNationProduction(defenderId, -toTerritory.productionBonus);
+          adjustNationInstability(attackerId, -toTerritory.instabilityModifier);
+          adjustNationInstability(defenderId, toTerritory.instabilityModifier);
+
+          instabilityDelta[attackerId] = -toTerritory.instabilityModifier;
+          instabilityDelta[defenderId] = toTerritory.instabilityModifier;
+          productionDelta[attackerId] = toTerritory.productionBonus;
+          productionDelta[defenderId] = -toTerritory.productionBonus;
+
+          // Update territory control lists
+          updateTerritoryControl(toTerritoryId, attackerId);
+        } else {
+          // Defender holds
+          updatedTerritories[toTerritoryId] = {
+            ...toTerritory,
+            armies: remainingDefenders,
+          };
+
+          // Remove casualties from source
+          updatedTerritories[fromTerritoryId] = {
+            ...fromTerritory,
+            armies: fromTerritory.armies - attackerLosses,
+          };
+
+          adjustNationInstability(attackerId, toTerritory.instabilityModifier / 2);
+          instabilityDelta[attackerId] = toTerritory.instabilityModifier / 2;
+        }
+
+        return createEngagementLog({
+          ...prev,
+          territories: updatedTerritories,
+        }, {
+          turn: currentTurn,
+          territoryId: toTerritoryId,
+          type: 'border',
+          outcome: attackerVictory ? 'attacker' : 'defender',
+          summary: attackerVictory
+            ? `${attackerNation?.name || attackerId} conquers ${toTerritory.name}! (${diceRolls.length} rounds)`
+            : `${defenderNation?.name || defenderId} holds ${toTerritory.name}! (${diceRolls.length} rounds)`,
+          casualties,
+          instabilityDelta,
+          productionDelta,
+          diceRolls,
+        }, rng);
+      });
+
+      // Update readiness
       if (attackerNation) {
         const profile = attackerNation.conventional ?? createDefaultNationConventionalProfile();
         attackerNation.conventional = {
           ...profile,
-          readiness: clamp(profile.readiness - (attackerVictory ? 6 : 12), 20, 100),
+          readiness: clamp(profile.readiness - (attackerVictory ? 8 : 15), 20, 100),
         };
       }
       if (defenderNation) {
         const profile = defenderNation.conventional ?? createDefaultNationConventionalProfile();
         defenderNation.conventional = {
           ...profile,
-          readiness: clamp(profile.readiness - (attackerVictory ? 14 : 7), 20, 100),
+          readiness: clamp(profile.readiness - (attackerVictory ? 18 : 10), 20, 100),
         };
       }
 
-      syncState((prev) => {
-        const updatedUnits = { ...prev.units };
-        [...attackerUnits, ...defenderUnits].forEach((unit) => {
-          const current = updatedUnits[unit.id];
-          if (!current) return;
-          const fatigue = unit.ownerId === attackerId
-            ? (attackerVictory ? 12 : 18)
-            : (attackerVictory ? 22 : 10);
-          updatedUnits[unit.id] = {
-            ...current,
-            readiness: clamp(current.readiness - fatigue, 10, 100),
-            experience: current.experience + (attackerVictory === (unit.ownerId === attackerId) ? 1 : 0),
-          };
-        });
-
-        const nextState = {
-          ...prev,
-          units: updatedUnits,
-        };
-
-        return createEngagementLog(nextState, {
-          turn: currentTurn,
-          territoryId,
-          type: 'border',
-          outcome,
-          summary: attackerVictory
-            ? `${attackerId} seizes ${territory.name}`
-            : `${defenderId} holds ${territory.name}`,
-          casualties,
-          instabilityDelta,
-          productionDelta,
-        }, rng);
-      });
-
       onUpdateDisplay?.();
       onConsumeAction?.();
-      return { success: true, attackerVictory, odds } as const;
+      return {
+        success: true,
+        attackerVictory,
+        diceRolls,
+        attackerLosses,
+        defenderLosses,
+      } as const;
     },
     [
       adjustNationInstability,
+      adjustNationProduction,
       currentTurn,
       getNation,
+      moveArmies,
       onConsumeAction,
       onUpdateDisplay,
+      rng,
       syncState,
       territories,
-      unitsByNation,
       updateTerritoryControl,
     ],
   );
@@ -807,6 +1147,48 @@ export function useConventionalWarfare({
     [territories],
   );
 
+  const placeReinforcements = useCallback(
+    (nationId: string, territoryId: string, count: number) => {
+      const territory = territories[territoryId];
+      if (!territory) {
+        return { success: false, reason: 'Unknown territory' } as const;
+      }
+
+      if (territory.controllingNationId !== nationId) {
+        return { success: false, reason: 'Can only reinforce your own territories' } as const;
+      }
+
+      if (count < 1) {
+        return { success: false, reason: 'Must place at least 1 army' } as const;
+      }
+
+      syncState((prev) => ({
+        ...prev,
+        territories: {
+          ...prev.territories,
+          [territoryId]: {
+            ...prev.territories[territoryId],
+            armies: prev.territories[territoryId].armies + count,
+            // Reinforcements default to army type
+            unitComposition: {
+              ...prev.territories[territoryId].unitComposition,
+              army: prev.territories[territoryId].unitComposition.army + count,
+            },
+          },
+        },
+      }));
+
+      onUpdateDisplay?.();
+      return { success: true } as const;
+    },
+    [onUpdateDisplay, syncState, territories],
+  );
+
+  const getReinforcements = useCallback(
+    (nationId: string) => calculateReinforcements(nationId, territories),
+    [territories],
+  );
+
   return {
     state,
     templates,
@@ -815,9 +1197,12 @@ export function useConventionalWarfare({
     logs: state.logs,
     trainUnit,
     deployUnit,
+    moveArmies,
     resolveBorderConflict,
     resolveProxyEngagement,
     getUnitsForNation,
     getTerritoriesForNation,
+    placeReinforcements,
+    getReinforcements,
   };
 }
