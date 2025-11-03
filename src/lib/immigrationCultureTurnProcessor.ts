@@ -192,7 +192,8 @@ function processImmigrationPolicy(nation: Nation, allNations: Nation[]): void {
 
   // Apply population gain
   if (effects.populationGain > 0) {
-    const immigrationAmount = Math.round(effects.populationGain * 1000000); // Convert to actual population
+    // populationGain is already in millions, no conversion needed
+    const immigrationAmount = Math.round(effects.populationGain);
 
     // Determine skill distribution based on policy
     let skillLevel: import('../types/popSystem').SkillLevel = 'medium';
@@ -217,9 +218,10 @@ function processImmigrationPolicy(nation: Nation, allNations: Nation[]): void {
       nation.popGroups.push(newPop);
     }
 
-    // Track for legacy system
-    nation.migrantsThisTurn = (nation.migrantsThisTurn || 0) + immigrationAmount;
-    nation.migrantsTotal = (nation.migrantsTotal || 0) + immigrationAmount;
+    // Track for legacy system (converted to individual count for backwards compatibility)
+    const actualPopulationCount = Math.round(immigrationAmount * 1000000);
+    nation.migrantsThisTurn = (nation.migrantsThisTurn || 0) + actualPopulationCount;
+    nation.migrantsTotal = (nation.migrantsTotal || 0) + actualPopulationCount;
   }
 
   // Apply diplomatic impact to all other nations
