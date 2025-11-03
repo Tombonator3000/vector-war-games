@@ -110,6 +110,14 @@ import {
   INTEL_OPERATIONS,
   type IntelOperationType,
 } from '@/types/unifiedIntelOperations';
+import { UnifiedDiplomacyPanel } from '@/components/UnifiedDiplomacyPanel';
+import { SimplifiedBioWarfarePanel } from '@/components/SimplifiedBioWarfarePanel';
+import { StreamlinedCulturePanel } from '@/components/StreamlinedCulturePanel';
+import type { ProposalType } from '@/types/unifiedDiplomacy';
+import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/types/streamlinedCulture';
+import { migrateGameDiplomacy, getRelationship } from '@/lib/unifiedDiplomacyMigration';
+import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from '@/lib/simplifiedBioWarfareLogic';
+import { launchPropagandaCampaign, buildWonder, applyImmigrationPolicy } from '@/lib/streamlinedCultureLogic';
 import {
   useCyberWarfare,
   createDefaultNationCyberProfile,
