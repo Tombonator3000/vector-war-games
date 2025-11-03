@@ -17,6 +17,26 @@ export const leaderImages: Record<string, string> = {
   
   'Fidel Castro': '/leaders/fidel-castro.jpg',
   'Castro': '/leaders/fidel-castro.jpg',
+  
+  // Great Old Ones
+  'Cthulhu': '/leaders/cthulhu.jpg',
+  'Azathoth': '/leaders/azathoth.jpg',
+  'Nyarlathotep': '/leaders/nyarlathotep.jpg',
+  'Hastur': '/leaders/hastur.jpg',
+  'Shub-Niggurath': '/leaders/shub-niggurath.jpg',
+  'Yog-Sothoth': '/leaders/yog-sothoth.jpg',
+  
+  // Parody leaders
+  'Ronnie Raygun': '/leaders/ronnie-raygun.jpg',
+  'Tricky Dick': '/leaders/tricky-dick.jpg',
+  'Jimi Farmer': '/leaders/jimi-farmer.jpg',
+  'E. Musk Rat': '/leaders/e-musk-rat.jpg',
+  'Donnie Trumpf': '/leaders/donnie-trumpf.jpg',
+  'Atom Hus-Bomb': '/leaders/atom-hus-bomb.jpg',
+  'Krazy Re-Entry': '/leaders/krazy-re-entry.jpg',
+  "Odd'n Wild Card": '/leaders/oddn-wild-card.jpg',
+  'Oil-Stain Lint-Off': '/leaders/oil-stain-lint-off.jpg',
+  'Ruin Annihilator': '/leaders/ruin-annihilator.jpg',
 };
 
 /**
