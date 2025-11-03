@@ -1391,3 +1391,7 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 ## 2025-11-03T07:56:51Z
 - Captured the returned trust/favor records during both standard and Cuban Crisis nation initialization flows so diplomacy systems operate on updated nation objects before follow-up setup runs.
 - Added a Vitest scenario boosting trust early to confirm `shouldRevealHiddenAgenda` reveals prior to the 30-turn timeout once the trust gate is satisfied.
+
+## 2025-11-03T08:35:00Z
+- Routed doctrine status data through the Civilization Info panel so the floating HUD widget could be removed without losing coverage of shift warnings or compatibility cues.
+- Embedded the existing `DoctrineStatusPanel` styling inside the "Your Empire" tab, forwarding all nations and the live shift state to derive the player context locally.

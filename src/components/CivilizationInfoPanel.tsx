@@ -9,6 +9,8 @@ import { VictoryPathsSection } from './VictoryPathsSection';
 import { ResearchTreeFlow } from './ResearchTreeFlow';
 import { BioLabTreeFlow } from './BioLabTreeFlow';
 import { motion } from 'framer-motion';
+import { DoctrineStatusPanel } from './DoctrineStatusPanel';
+import type { DoctrineShiftState } from '@/types/doctrineIncidents';
 
 interface CivilizationInfoPanelProps {
   nations: Nation[];
@@ -23,6 +25,7 @@ interface CivilizationInfoPanelProps {
   onStartBioLabConstruction?: (tier: BioLabTier) => void;
   onCancelBioLabConstruction?: () => void;
   defaultTab?: TabType;
+  doctrineShiftState?: DoctrineShiftState;
 }
 
 type TabType = 'own-status' | 'enemy-status' | 'diplomacy' | 'research';
@@ -40,6 +43,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   onStartBioLabConstruction,
   onCancelBioLabConstruction,
   defaultTab = 'own-status',
+  doctrineShiftState,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
   const [showNukaPedia, setShowNukaPedia] = useState(false);
@@ -133,6 +137,23 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
         {...victoryAnalysis}
         currentTurn={currentTurn}
       />
+
+      {player.doctrine && (
+        <div>
+          <h3 className="text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            Doctrine Status
+          </h3>
+          <div className="bg-gray-800/50 border border-cyan-500/30 rounded-lg p-4">
+            <DoctrineStatusPanel
+              playerNation={player}
+              allNations={nations}
+              shiftState={doctrineShiftState}
+              className="bg-transparent border-0 p-0"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Resources Section */}
       <div>
