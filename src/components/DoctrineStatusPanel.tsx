@@ -17,6 +17,7 @@ export interface DoctrineStatusPanelProps {
   allNations: Nation[];
   shiftState?: DoctrineShiftState;
   onShowDetails?: () => void;
+  className?: string;
 }
 
 export function DoctrineStatusPanel({
@@ -24,6 +25,7 @@ export function DoctrineStatusPanel({
   allNations,
   shiftState,
   onShowDetails,
+  className,
 }: DoctrineStatusPanelProps) {
   const currentDoctrine = playerNation.doctrine as DoctrineKey;
 
@@ -66,7 +68,7 @@ export function DoctrineStatusPanel({
   });
 
   return (
-    <div className="bg-card border border-gray-800 rounded-lg p-4 space-y-4">
+    <div className={`bg-card border border-gray-800 rounded-lg p-4 space-y-4 ${className ?? ''}`}>
       {/* Current Doctrine */}
       <div>
         <div className="flex items-center justify-between mb-2">

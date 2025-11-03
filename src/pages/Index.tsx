@@ -203,7 +203,6 @@ import {
   resolveIncident,
 } from '@/lib/doctrineIncidentSystem';
 import { DoctrineIncidentModal } from '@/components/DoctrineIncidentModal';
-import { DoctrineStatusPanel } from '@/components/DoctrineStatusPanel';
 import type { DoctrineKey } from '@/types/doctrineIncidents';
 import { getLeaderDefaultDoctrine } from '@/data/leaderDoctrines';
 import { Starfield } from '@/components/intro/Starfield';
@@ -9301,22 +9300,6 @@ export default function NoradVector() {
         )}
 
         <div className="hud-layers pointer-events-none touch-none">
-          {/* Doctrine Status Panel (Top-left sidebar for base game) */}
-          {S.scenario?.id !== 'greatOldOnes' && S.doctrineShiftState && (() => {
-            const playerNation = PlayerManager.get();
-            if (!playerNation) return null;
-
-            return (
-              <div className="fixed top-16 left-4 z-40 pointer-events-auto touch-auto max-w-xs">
-                <DoctrineStatusPanel
-                  playerNation={playerNation}
-                  allNations={nations}
-                  shiftState={S.doctrineShiftState}
-                />
-              </div>
-            );
-          })()}
-
           {/* Minimal top status bar */}
           <header className="game-top-bar fixed top-0 left-0 right-0 h-12 bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between px-4 pointer-events-auto touch-auto z-50">
             <div className="game-top-bar__metrics flex items-center gap-6 text-xs font-mono">
@@ -10319,6 +10302,7 @@ export default function NoradVector() {
         onStartBioLabConstruction={handleStartLabConstruction}
         onCancelBioLabConstruction={handleCancelLabConstruction}
         defaultTab={civInfoDefaultTab}
+        doctrineShiftState={S.doctrineShiftState}
       />
 
       <GameHelper
