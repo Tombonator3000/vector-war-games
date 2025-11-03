@@ -281,29 +281,90 @@ export function getCulturalWonderBonuses(nation: Nation): {
 }
 
 /**
- * Simplified immigration system
- * Immigration now just provides population growth based on morale and policy
+ * Strategic immigration system - Immigration as a weapon
+ * Policies now have economic, diplomatic, and warfare implications
  */
-export type ImmigrationPolicy = 'closed' | 'restricted' | 'open';
+export type ImmigrationPolicy =
+  | 'closed_borders'
+  | 'selective'
+  | 'humanitarian'
+  | 'open_borders'
+  | 'cultural_exchange'
+  | 'brain_drain_ops';
 
-export const IMMIGRATION_POLICIES = {
-  closed: {
+export interface ImmigrationPolicyDefinition {
+  name: string;
+  description: string;
+  populationGrowthModifier: number;
+  instabilityModifier: number;
+  economicGrowthBonus: number; // Production bonus per turn
+  diplomaticImpact: number; // Reputation modifier
+  intelCostPerTurn: number; // Ongoing intel cost
+  productionCostPerTurn?: number; // Optional production cost
+  icon: string;
+}
+
+export const IMMIGRATION_POLICIES: Record<ImmigrationPolicy, ImmigrationPolicyDefinition> = {
+  closed_borders: {
     name: 'Closed Borders',
+    description: 'No immigration. Increases stability but reduces growth and hurts reputation.',
     populationGrowthModifier: 0,
-    instabilityModifier: -2, // Less instability
+    instabilityModifier: -5, // +5% stability
+    economicGrowthBonus: -2, // -2 production per turn
+    diplomaticImpact: -5, // Hurts reputation
+    intelCostPerTurn: 3, // Border enforcement
     icon: '🚫',
   },
-  restricted: {
-    name: 'Restricted Immigration',
-    populationGrowthModifier: 0.5,
-    instabilityModifier: 0,
-    icon: '⚖️',
+  selective: {
+    name: 'Selective Immigration',
+    description: 'High-skill immigrants only. Expensive but strong economic benefits.',
+    populationGrowthModifier: 0.8,
+    instabilityModifier: 2, // Slight stability boost
+    economicGrowthBonus: 8, // +8 production per turn
+    diplomaticImpact: 0,
+    intelCostPerTurn: 6, // Expensive screening
+    icon: '🎓',
   },
-  open: {
+  humanitarian: {
+    name: 'Humanitarian Policy',
+    description: 'Accept refugees. Strains resources but greatly improves diplomatic standing.',
+    populationGrowthModifier: 1.2,
+    instabilityModifier: 5, // -5% stability (strain)
+    economicGrowthBonus: 0,
+    diplomaticImpact: 10, // Major reputation boost
+    intelCostPerTurn: 8, // Processing costs
+    productionCostPerTurn: 5, // Housing and services
+    icon: '🕊️',
+  },
+  open_borders: {
     name: 'Open Borders',
-    populationGrowthModifier: 1.5,
-    instabilityModifier: 3, // More instability from rapid growth
+    description: 'Maximum immigration. Rapid growth but high instability.',
+    populationGrowthModifier: 2.0,
+    instabilityModifier: 10, // -10% stability
+    economicGrowthBonus: 5, // Large labor force
+    diplomaticImpact: 3,
+    intelCostPerTurn: 1, // Minimal bureaucracy
     icon: '🌍',
+  },
+  cultural_exchange: {
+    name: 'Cultural Exchange',
+    description: 'Balanced exchange programs. Mutual understanding and diplomatic ties.',
+    populationGrowthModifier: 1.0,
+    instabilityModifier: 0,
+    economicGrowthBonus: 3,
+    diplomaticImpact: 8, // Strong reputation boost
+    intelCostPerTurn: 7, // Program management
+    icon: '🤝',
+  },
+  brain_drain_ops: {
+    name: 'Brain Drain Operations',
+    description: '⚔️ WEAPON: Aggressively recruit elite talent. Powerful economic boost but damages relations.',
+    populationGrowthModifier: 0.6,
+    instabilityModifier: 3, // Some disruption
+    economicGrowthBonus: 12, // +12 production (elite talent)
+    diplomaticImpact: -8, // Damages relations (aggressive poaching)
+    intelCostPerTurn: 15, // Very expensive campaigns
+    icon: '🧠',
   },
 } as const;
 
@@ -316,4 +377,41 @@ export function calculateImmigrationBonus(
   const moraleMultiplier = Math.max(0, nation.morale / 50); // 0-2x based on morale
 
   return baseBonusPerTurn * policyDef.populationGrowthModifier * moraleMultiplier;
+}
+
+/**
+ * Apply immigration policy effects to nation (called each turn)
+ */
+export function applyImmigrationPolicyEffects(
+  nation: Nation,
+  policy: ImmigrationPolicy
+): {
+  populationGain: number;
+  instabilityChange: number;
+  productionBonus: number;
+  intelCost: number;
+  productionCost: number;
+} {
+  const policyDef = IMMIGRATION_POLICIES[policy];
+
+  // Calculate population gain
+  const populationGain = calculateImmigrationBonus(nation, policy);
+
+  // Apply instability change (negative modifier = more stable)
+  const instabilityChange = -policyDef.instabilityModifier;
+
+  // Apply economic growth bonus
+  const productionBonus = policyDef.economicGrowthBonus;
+
+  // Get costs
+  const intelCost = policyDef.intelCostPerTurn;
+  const productionCost = policyDef.productionCostPerTurn || 0;
+
+  return {
+    populationGain,
+    instabilityChange,
+    productionBonus,
+    intelCost,
+    productionCost,
+  };
 }
