@@ -1391,3 +1391,5 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 ## 2025-11-03T07:56:51Z
 - Captured the returned trust/favor records during both standard and Cuban Crisis nation initialization flows so diplomacy systems operate on updated nation objects before follow-up setup runs.
 - Added a Vitest scenario boosting trust early to confirm `shouldRevealHiddenAgenda` reveals prior to the 30-turn timeout once the trust gate is satisfied.
+## 2025-11-03T09:07:54Z
+- Shifted doctrine choice follow-up incident ids from the nested `consequences` payload to the choice level so the resolver can enqueue chained incidents again.
