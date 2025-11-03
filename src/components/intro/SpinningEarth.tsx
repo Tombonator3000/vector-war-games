@@ -1,14 +1,14 @@
 /**
  * SpinningEarth Component
  *
- * Realistic 3D Earth globe component with real textures and cloud layers.
+ * Realistic 3D Earth globe component with real textures matching dramatic space view.
  * Extracted from Index.tsx as part of refactoring effort.
  */
 
-import CesiumHeroGlobe from '@/components/CesiumHeroGlobe';
+import { Globe3D } from '@/components/Globe3D';
 
 export const SpinningEarth = () => (
-  <div className="earth-container" style={{ position: 'relative' }}>
-    <CesiumHeroGlobe />
+  <div className="earth-container" style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <Globe3D />
   </div>
 );
