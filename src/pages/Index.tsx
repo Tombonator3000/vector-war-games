@@ -123,7 +123,6 @@ import { enhancedAIActions } from '@/lib/aiActionEnhancements';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 import { IntroScreen } from '@/components/setup/IntroScreen';
 import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen';
-import { DoctrineSelectionScreen } from '@/components/setup/DoctrineSelectionScreen';
 import { canAfford, pay, getCityCost, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
 import { modifyRelationship } from '@/lib/relationshipUtils';
@@ -9242,20 +9241,6 @@ export default function NoradVector() {
     );
   };
 
-  const renderDoctrineSelection = () => (
-    <DoctrineSelectionScreen
-      interfaceRef={interfaceRef}
-      doctrines={doctrines}
-      selectedLeader={selectedLeader}
-      onSelectDoctrine={(doctrineKey) => {
-        setSelectedDoctrine(doctrineKey);
-        startGame(selectedLeader ?? undefined, doctrineKey);
-        setGamePhase('game');
-      }}
-      onBack={() => setGamePhase('leader')}
-    />
-  );
-
   // Early returns for different phases
   if (gamePhase === 'intro') {
     return renderIntroScreen();
@@ -9265,9 +9250,8 @@ export default function NoradVector() {
     return renderLeaderSelection();
   }
 
-  if (gamePhase === 'doctrine') {
-    return renderDoctrineSelection();
-  }
+  // Note: Doctrine selection phase removed - doctrine is now auto-assigned based on leader
+  // See getLeaderDefaultDoctrine() in src/data/leaderDoctrines.ts
 
   const buildAllowed = coopEnabled ? canExecute('BUILD') : true;
   const researchAllowed = coopEnabled ? canExecute('RESEARCH') : true;
