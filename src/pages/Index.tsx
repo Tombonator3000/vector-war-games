@@ -10442,25 +10442,27 @@ export default function NoradVector() {
       </Dialog>
 
       {/* Streamlined Culture Panel */}
-      {isCulturePanelOpen && (() => {
-        const player = PlayerManager.get();
-        if (!player) return null;
-
-        const enemies = nations.filter(n => !n.eliminated && n.id !== player.id);
-        const currentImmigrationPolicy = (player.immigrationPolicy as ImmigrationPolicy) || 'restricted';
-
-        return (
+      <Dialog open={isCulturePanelOpen} onOpenChange={setIsCulturePanelOpen}>
+        <DialogContent className="max-w-5xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
+            <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">
+              Cultural Operations
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-400 mt-1">
+              Launch propaganda campaigns, build cultural wonders, and set immigration policies
+            </DialogDescription>
+          </DialogHeader>
           <StreamlinedCulturePanel
-            player={player}
-            enemies={enemies}
+            player={PlayerManager.get() || {} as Nation}
+            enemies={nations.filter(n => !n.eliminated && n.id !== (PlayerManager.get()?.id))}
             onLaunchPropaganda={handleLaunchPropaganda}
             onBuildWonder={handleBuildWonder}
             onSetImmigrationPolicy={handleSetImmigrationPolicy}
-            currentImmigrationPolicy={currentImmigrationPolicy}
+            currentImmigrationPolicy={(PlayerManager.get()?.immigrationPolicy as ImmigrationPolicy) || 'restricted'}
             onClose={() => setIsCulturePanelOpen(false)}
           />
-        );
-      })()}
+        </DialogContent>
+      </Dialog>
 
       {showPandemicPanel && (
         <PandemicPanel
@@ -10874,21 +10876,24 @@ export default function NoradVector() {
       })()}
 
       {/* Enhanced Diplomacy Modal */}
-      {showEnhancedDiplomacy && (() => {
-        const player = PlayerManager.get();
-        if (!player) return null;
-
-        const enemies = nations.filter(n => !n.eliminated && n.id !== player.id);
-
-        return (
+      <Dialog open={showEnhancedDiplomacy} onOpenChange={setShowEnhancedDiplomacy}>
+        <DialogContent className="max-w-5xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
+            <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">
+              Diplomatic Relations
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-400 mt-1">
+              Manage relationships and form alliances with other nations
+            </DialogDescription>
+          </DialogHeader>
           <UnifiedDiplomacyPanel
-            player={player}
+            player={PlayerManager.get() || {} as Nation}
             nations={nations}
             onProposal={handleDiplomaticProposal}
             onClose={() => setShowEnhancedDiplomacy(false)}
           />
-        );
-      })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Leader Contact Modal (Phase 2 Negotiation System) */}
       {leaderContactModalOpen && leaderContactTargetNationId && (() => {

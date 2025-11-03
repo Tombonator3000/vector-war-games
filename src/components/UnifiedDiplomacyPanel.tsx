@@ -8,16 +8,14 @@
  */
 
 import { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
   Handshake,
   Shield,
   Gift,
   Heart,
-  X,
   TrendingUp,
   TrendingDown,
   Users,
@@ -106,24 +104,7 @@ export function UnifiedDiplomacyPanel({
   };
 
   return (
-    <Card className="bg-gray-900/95 border-cyan-500/30 p-6 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-3">
-          <Users className="w-6 h-6 text-cyan-400" />
-          <h2 className="text-2xl font-bold text-cyan-400">Diplomatic Relations</h2>
-        </div>
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="text-gray-400 hover:text-white"
-          >
-            <X className="w-5 h-5" />
-          </Button>
-        )}
-      </div>
-
+    <div className="space-y-4">
       <div className="grid grid-cols-2 gap-6">
         {/* Left: Nation List */}
         <div className="space-y-3">
@@ -287,6 +268,6 @@ export function UnifiedDiplomacyPanel({
           )}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

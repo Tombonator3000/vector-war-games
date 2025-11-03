@@ -33,7 +33,6 @@ export const INTEL_OPERATIONS: Record<IntelOperationType, IntelOperation> = {
     description: 'Deploy surveillance satellite to reveal enemy nation stats (missiles, warheads, resources) for 5 turns',
     intelCost: 15,
     cooldown: 3,
-    requiredResearch: 'satellite_surveillance',
     icon: '🛰️',
   },
   sabotage: {
@@ -42,7 +41,6 @@ export const INTEL_OPERATIONS: Record<IntelOperationType, IntelOperation> = {
     description: 'Covert operation to destroy enemy missiles or warheads. High risk of discovery.',
     intelCost: 30,
     cooldown: 5,
-    requiredResearch: 'covert_operations',
     icon: '💣',
   },
   'cyber-attack': {
@@ -51,7 +49,6 @@ export const INTEL_OPERATIONS: Record<IntelOperationType, IntelOperation> = {
     description: 'Hack enemy systems to disable missiles temporarily and steal intel. Harder to detect than sabotage.',
     intelCost: 25,
     cooldown: 4,
-    requiredResearch: 'cyber_warfare',
     icon: '💻',
   },
 };
