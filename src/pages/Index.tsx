@@ -9443,7 +9443,7 @@ export default function NoradVector() {
       ? leaders.filter(l => l.isHistoricalCubanCrisis === true)
       : isGreatOldOnesScenario
         ? leaders.filter(l => l.isLovecraftian === true)
-        : leaders;
+        : leaders.filter(l => !l.isLovecraftian && !l.isHistoricalCubanCrisis);
 
     return (
       <LeaderSelectionScreen
