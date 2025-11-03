@@ -1926,9 +1926,12 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   initializeAllAINations(nations, difficulty);
 
   // Initialize Diplomacy Phase 1-3 systems
-  initializeGameTrustAndFavors(nations);
-  initializeGrievancesAndClaims(nations);
-  initializeSpecializedAlliances(nations);
+  let diplomacyReadyNations = initializeGameTrustAndFavors(nations);
+  diplomacyReadyNations = initializeGrievancesAndClaims(diplomacyReadyNations);
+  diplomacyReadyNations = initializeSpecializedAlliances(diplomacyReadyNations);
+
+  nations.length = 0;
+  nations.push(...diplomacyReadyNations);
 
   // Initialize DIP (Diplomatic Influence Points) for all nations
   nations.forEach((nation, index) => {
@@ -1938,9 +1941,9 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   // Initialize Agenda System (Phase 4): Assign unique leader agendas to AI nations
   const playerNation = nations.find(n => n.isPlayer);
   if (playerNation) {
-    const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
+    const agendaReadyNations = initializeNationAgendas(nations, playerNation.id, Math.random);
     nations.length = 0;
-    nations.push(...updatedNations);
+    nations.push(...agendaReadyNations);
 
     // Initialize firstContactTurn for all AI nations (needed for hidden agenda revelation)
     nations.forEach(nation => {
@@ -2166,9 +2169,12 @@ function initNations() {
   initializeAllAINations(nations, difficulty);
 
   // Initialize Diplomacy Phase 1-3 systems
-  initializeGameTrustAndFavors(nations);
-  initializeGrievancesAndClaims(nations);
-  initializeSpecializedAlliances(nations);
+  let diplomacyReadyNations = initializeGameTrustAndFavors(nations);
+  diplomacyReadyNations = initializeGrievancesAndClaims(diplomacyReadyNations);
+  diplomacyReadyNations = initializeSpecializedAlliances(diplomacyReadyNations);
+
+  nations.length = 0;
+  nations.push(...diplomacyReadyNations);
 
   // Initialize DIP (Diplomatic Influence Points) for all nations
   nations.forEach((nation, index) => {
@@ -2178,9 +2184,9 @@ function initNations() {
   // Initialize Agenda System (Phase 4): Assign unique leader agendas to AI nations
   playerNation = nations.find(n => n.isPlayer) as LocalNation;
   if (playerNation) {
-    const updatedNations = initializeNationAgendas(nations, playerNation.id, Math.random);
+    const agendaReadyNations = initializeNationAgendas(nations, playerNation.id, Math.random);
     nations.length = 0;
-    nations.push(...updatedNations);
+    nations.push(...agendaReadyNations);
 
     // Initialize firstContactTurn for all AI nations (needed for hidden agenda revelation)
     nations.forEach(nation => {

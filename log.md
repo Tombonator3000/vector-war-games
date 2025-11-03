@@ -1373,3 +1373,7 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 - Not so cheap that diplomacy becomes trivial
 - Maintains strategic resource management
 - Late-game actions remain expensive relative to income
+
+## 2025-11-03T07:56:51Z
+- Captured the returned trust/favor records during both standard and Cuban Crisis nation initialization flows so diplomacy systems operate on updated nation objects before follow-up setup runs.
+- Added a Vitest scenario boosting trust early to confirm `shouldRevealHiddenAgenda` reveals prior to the 30-turn timeout once the trust gate is satisfied.
