@@ -9,10 +9,9 @@
  */
 
 import { useState } from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, Sparkles, Building, Users, TrendingUp, Info } from 'lucide-react';
+import { Sparkles, Building, Users, TrendingUp, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Nation } from '@/types/game';
 import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/types/streamlinedCulture';
@@ -50,27 +49,14 @@ export function StreamlinedCulturePanel({
   const builtWonders = player.culturalWonders || [];
 
   return (
-    <Card className="bg-gray-900/95 border-cyan-500/30 p-6 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-3">
-          <Sparkles className="w-6 h-6 text-cyan-400" />
-          <div>
-            <h2 className="text-2xl font-bold text-cyan-400">Cultural Operations</h2>
-            <p className="text-sm text-gray-400">
-              Cultural Power: <span className="text-cyan-300 font-semibold">{Math.round(culturalPower)}</span>
-            </p>
-          </div>
+    <div className="space-y-4">
+      {/* Cultural Power Display */}
+      <div className="bg-gray-800/50 p-3 rounded-lg border border-cyan-500/30">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-cyan-400" />
+          <span className="text-sm text-gray-400">Cultural Power:</span>
+          <span className="text-cyan-300 font-semibold text-lg">{Math.round(culturalPower)}</span>
         </div>
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="text-gray-400 hover:text-white"
-          >
-            <X className="w-5 h-5" />
-          </Button>
-        )}
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
@@ -280,6 +266,6 @@ export function StreamlinedCulturePanel({
           </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
