@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Nation, NationCyberProfile } from '@/types/game';
+import { createEnhancedCyberOutcome, applyCyberEffects } from '@/types/enhancedCyberFeedback';
 
 export type CyberActionId = 'intrusion' | 'fortify' | 'false_flag';
 export type CyberLogTone = 'normal' | 'warning' | 'success' | 'alert';
@@ -378,13 +379,19 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
         }
       }
 
-      const readinessDamage = success ? Math.round(16 + attackerProfile.offense / 18) : 6;
-      const intelDrain = success ? Math.max(2, Math.round(attackerProfile.offense / 25) + 4) : 0;
+      // Use enhanced cyber feedback system for specific, visible effects
+      const outcome = createEnhancedCyberOutcome(
+        attacker,
+        target,
+        success,
+        detected,
+        attributed,
+        attributedTo
+      );
 
+      // Apply cyber effects to target
       if (success) {
-        targetProfile.readiness = Math.max(0, targetProfile.readiness - readinessDamage);
-        target.intel = Math.max(0, (target.intel || 0) - intelDrain);
-        target.instability = Math.max(0, (target.instability || 0) + (detected ? 4 : 7));
+        applyCyberEffects(target, outcome.effects);
         increaseThreat(target, attacker.id, detected ? 12 : 6);
         if (falseFlagSuccess && attributedTo) {
           const scapegoat = getNation(attributedTo);
@@ -401,31 +408,15 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
       const targetName = target.name;
       const scapegoatName = scapegoatId ? getNation(scapegoatId)?.name : null;
 
-      let summary: string;
-      if (success) {
-        summary = detected
-          ? `Cyber breach hit ${targetName}, but defenses exposed the attack.`
-          : `Stealth intrusion siphoned intel from ${targetName}.`;
-      } else {
-        summary = detected
-          ? `${targetName} neutralised an incoming cyber offensive from ${attackerName}.`
-          : `${targetName} shrugged off a probing intrusion attempt.`;
-      }
-
+      // Log enhanced summary message
       const tone: CyberLogTone = success ? (detected ? 'warning' : 'success') : 'warning';
-      onLog?.(summary, tone);
+      onLog?.(outcome.summaryMessage, tone);
 
-      const title = success
-        ? detected
-          ? 'Intrusion Exposed'
-          : 'Network Breached'
-        : detected
-        ? 'Counter-Intrusion Success'
-        : 'Attack Foiled';
+      // Show enhanced toast notification
       onToast?.({
-        title,
-        description: summary,
-        variant: detected && (!falseFlagSuccess || attributedTo === attacker.id) ? 'destructive' : 'default',
+        title: outcome.toastTitle,
+        description: outcome.toastDescription,
+        variant: outcome.toastVariant,
       });
 
       if (detected) {
@@ -469,7 +460,7 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
         success,
         detected,
         attributedTo: attributed ? attributedTo ?? null : null,
-        summary,
+        summary: outcome.summaryMessage,
         falseFlag: !!scapegoatId,
       };
       pushLog(entry);
@@ -481,7 +472,7 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
         attributed,
         attributedTo,
         falseFlag: !!scapegoatId,
-        message: summary,
+        message: outcome.summaryMessage,
         severity: success && detected ? 'major' : 'minor',
       };
     },
