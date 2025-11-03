@@ -1,16 +1,15 @@
 /**
  * Victory System Types
  *
- * Comprehensive victory tracking with clear milestones and next steps
+ * STREAMLINED: Reduced from 6 to 4 clear victory paths
+ * Removed: Cultural (too complex), Demographic (broken threshold)
  */
 
 export type VictoryType =
   | 'diplomatic'
   | 'domination'
   | 'economic'
-  | 'demographic'
-  | 'survival'
-  | 'cultural';
+  | 'survival';
 
 export interface VictoryCondition {
   id: string;
