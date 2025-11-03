@@ -181,50 +181,100 @@ export function StreamlinedCulturePanel({
           </div>
         </div>
 
-        {/* Immigration Policy */}
+        {/* Immigration Policy - Strategic Warfare System */}
         <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
           <h3 className="font-semibold text-blue-300 flex items-center gap-2 mb-3">
             <Users className="w-4 h-4" />
-            Immigration Policy
+            Immigration Strategy
           </h3>
 
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
             {(Object.entries(IMMIGRATION_POLICIES) as [ImmigrationPolicy, any][]).map(([policy, def]) => {
               const isActive = currentImmigrationPolicy === policy;
+              const canAfford = player.intel >= def.intelCostPerTurn;
 
               return (
                 <motion.div
                   key={policy}
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => onSetImmigrationPolicy?.(policy)}
-                  className={`p-3 rounded cursor-pointer transition-all ${
+                  whileHover={{ scale: 1.01 }}
+                  onClick={() => canAfford && onSetImmigrationPolicy?.(policy)}
+                  className={`p-2.5 rounded cursor-pointer transition-all ${
                     isActive
                       ? 'bg-blue-500/20 border-2 border-blue-500'
-                      : 'bg-gray-900/50 border border-gray-700 hover:border-gray-600'
+                      : canAfford
+                      ? 'bg-gray-900/50 border border-gray-700 hover:border-gray-600'
+                      : 'bg-gray-900/30 border border-gray-800 opacity-50 cursor-not-allowed'
                   }`}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-sm font-semibold">
+                  <div className="flex justify-between items-start mb-1.5">
+                    <span className="text-xs font-semibold">
                       {def.icon} {def.name}
                     </span>
                     {isActive && (
-                      <Badge className="bg-blue-500/20 text-blue-400 text-xs">Active</Badge>
+                      <Badge className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5">Active</Badge>
                     )}
                   </div>
-                  <div className="text-xs space-y-1">
-                    <div className={def.populationGrowthModifier > 0 ? 'text-green-400' : 'text-gray-400'}>
-                      Population growth: {def.populationGrowthModifier}x
+
+                  <p className="text-[10px] text-gray-400 mb-1.5 leading-tight">{def.description}</p>
+
+                  <div className="text-[10px] space-y-0.5">
+                    {/* Population Growth */}
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Pop Growth:</span>
+                      <span className={def.populationGrowthModifier > 0 ? 'text-green-400' : 'text-gray-400'}>
+                        {def.populationGrowthModifier}x
+                      </span>
                     </div>
-                    <div className={def.instabilityModifier < 0 ? 'text-green-400' : def.instabilityModifier > 0 ? 'text-red-400' : 'text-gray-400'}>
-                      Instability: {def.instabilityModifier > 0 ? '+' : ''}{def.instabilityModifier}
+
+                    {/* Economic Bonus */}
+                    {def.economicGrowthBonus !== 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Production:</span>
+                        <span className={def.economicGrowthBonus > 0 ? 'text-green-400' : 'text-red-400'}>
+                          {def.economicGrowthBonus > 0 ? '+' : ''}{def.economicGrowthBonus}/turn
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Stability Impact */}
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Stability:</span>
+                      <span className={def.instabilityModifier < 0 ? 'text-green-400' : def.instabilityModifier > 0 ? 'text-red-400' : 'text-gray-400'}>
+                        {def.instabilityModifier > 0 ? '-' : def.instabilityModifier < 0 ? '+' : ''}{Math.abs(def.instabilityModifier)}
+                      </span>
                     </div>
+
+                    {/* Diplomatic Impact */}
+                    {def.diplomaticImpact !== 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Reputation:</span>
+                        <span className={def.diplomaticImpact > 0 ? 'text-green-400' : 'text-red-400'}>
+                          {def.diplomaticImpact > 0 ? '+' : ''}{def.diplomaticImpact}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Costs */}
+                    <div className="flex justify-between pt-0.5 border-t border-gray-800">
+                      <span className="text-gray-500">Intel Cost:</span>
+                      <span className={canAfford ? 'text-cyan-400' : 'text-red-400'}>
+                        {def.intelCostPerTurn}/turn
+                      </span>
+                    </div>
+
+                    {def.productionCostPerTurn && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Prod Cost:</span>
+                        <span className="text-yellow-400">{def.productionCostPerTurn}/turn</span>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               );
             })}
           </div>
 
-          <div className="mt-4 pt-3 border-t border-gray-700">
+          <div className="mt-3 pt-3 border-t border-gray-700">
             <p className="text-xs text-gray-400 mb-1">Current Status:</p>
             <div className="space-y-1 text-xs">
               <div className="flex justify-between">
@@ -261,7 +311,7 @@ export function StreamlinedCulturePanel({
               <strong className="text-gray-300">Propaganda:</strong> Temporary campaigns affecting enemy nations (30% discovery chance)
             </p>
             <p>
-              <strong className="text-gray-300">Immigration:</strong> Higher immigration = faster population growth but more instability
+              <strong className="text-gray-300">Immigration Strategy:</strong> Use immigration as a weapon! Brain Drain steals talent, Humanitarian gains diplomatic power, Selective boosts economy
             </p>
           </div>
         </div>

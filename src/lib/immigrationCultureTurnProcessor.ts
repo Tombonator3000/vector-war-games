@@ -7,7 +7,7 @@ import type { Nation, GameState } from '../types/game';
 import { PopSystemManager } from './popSystemManager';
 import { CulturalInfluenceManager } from './culturalInfluenceManager';
 import { CulturalWarfareManager } from './culturalWarfareManager';
-import { IMMIGRATION_POLICIES } from './immigrationPoliciesData';
+import { IMMIGRATION_POLICIES, applyImmigrationPolicyEffects } from '../types/streamlinedCulture';
 
 /**
  * Initialize nation with pop system (one-time migration from old system)
@@ -39,6 +39,15 @@ export function initializeNationPopSystem(nation: Nation): void {
     } else {
       nation.currentImmigrationPolicy = 'selective';
     }
+  }
+
+  // Migrate old policy names to new format
+  if (nation.currentImmigrationPolicy === 'closed' as any) {
+    nation.currentImmigrationPolicy = 'closed_borders';
+  } else if (nation.currentImmigrationPolicy === 'restricted' as any) {
+    nation.currentImmigrationPolicy = 'selective';
+  } else if (nation.currentImmigrationPolicy === 'open' as any) {
+    nation.currentImmigrationPolicy = 'open_borders';
   }
 
   // Create initial pop groups from existing population
@@ -153,22 +162,37 @@ export function processImmigrationAndCultureTurn(
 
 /**
  * Process immigration for a nation based on their current policy
+ * Now uses strategic warfare-oriented immigration system
  */
 function processImmigrationPolicy(nation: Nation, allNations: Nation[]): void {
   const policyType = nation.currentImmigrationPolicy;
   if (!policyType) return;
 
   const policy = IMMIGRATION_POLICIES[policyType];
+  if (!policy) return;
 
-  // Deduct policy costs
-  nation.intel = Math.max(0, nation.intel - policy.intelCostPerTurn);
-  if (policy.productionCostPerTurn) {
-    nation.production = Math.max(0, nation.production - policy.productionCostPerTurn);
+  // Apply all policy effects using the streamlined system
+  const effects = applyImmigrationPolicyEffects(nation, policyType);
+
+  // Deduct costs
+  nation.intel = Math.max(0, nation.intel - effects.intelCost);
+  if (effects.productionCost > 0) {
+    nation.production = Math.max(0, nation.production - effects.productionCost);
   }
 
-  // Apply immigration if policy allows it
-  if (policy.immigrationRate > 0) {
-    const immigrationAmount = policy.immigrationRate;
+  // Apply production bonus from economic growth
+  if (effects.productionBonus !== 0) {
+    nation.production = Math.max(0, nation.production + effects.productionBonus);
+  }
+
+  // Apply instability change
+  if (effects.instabilityChange !== 0) {
+    nation.instability = Math.max(0, (nation.instability || 0) + effects.instabilityChange);
+  }
+
+  // Apply population gain
+  if (effects.populationGain > 0) {
+    const immigrationAmount = Math.round(effects.populationGain * 1000000); // Convert to actual population
 
     // Determine skill distribution based on policy
     let skillLevel: import('../types/popSystem').SkillLevel = 'medium';
@@ -198,19 +222,60 @@ function processImmigrationPolicy(nation: Nation, allNations: Nation[]): void {
     nation.migrantsTotal = (nation.migrantsTotal || 0) + immigrationAmount;
   }
 
-  // Apply policy modifiers
-  if (policy.stabilityModifier) {
-    const stabilityChange = -policy.stabilityModifier; // Positive modifier = reduce instability
-    nation.instability = Math.max(0, (nation.instability || 0) + stabilityChange);
+  // Apply diplomatic impact to all other nations
+  if (policy.diplomaticImpact !== 0) {
+    for (const otherNation of allNations) {
+      if (otherNation.id === nation.id || otherNation.eliminated) continue;
+
+      // Initialize relationships if needed
+      if (!otherNation.relationships) {
+        otherNation.relationships = {};
+      }
+
+      // Apply diplomatic modifier (scaled by 0.5 for balance)
+      const currentRelationship = otherNation.relationships[nation.id] || 0;
+      otherNation.relationships[nation.id] = Math.max(
+        -100,
+        Math.min(100, currentRelationship + policy.diplomaticImpact * 0.5)
+      );
+    }
   }
 
-  // Apply economic growth modifier
-  if (policy.economicGrowth && nation.productionMultiplier) {
-    nation.productionMultiplier += policy.economicGrowth / 100;
-  }
+  // Brain Drain Operations - actively damage specific nations
+  if (policyType === 'brain_drain_ops') {
+    // Target the weakest or most vulnerable nations
+    const targetNations = allNations
+      .filter(n => !n.eliminated && n.id !== nation.id)
+      .sort((a, b) => (a.instability || 0) - (b.instability || 0))
+      .slice(0, 2); // Target top 2 unstable nations
 
-  // Update assimilation rate
-  nation.assimilationRate = (nation.assimilationRate || 5) + policy.culturalAssimilationRate;
+    for (const target of targetNations) {
+      // Steal small amount of population (brain drain)
+      const stolenPop = Math.floor(target.population * 0.002); // 0.2% of population
+      if (stolenPop > 0 && target.population > stolenPop) {
+        target.population -= stolenPop;
+
+        // Add to attacker as high-skill immigrant
+        if (nation.popGroups) {
+          const brainDrainPop = PopSystemManager.createImmigrantPop(
+            stolenPop,
+            target.name,
+            target.culturalIdentity || target.name,
+            'high'
+          );
+          nation.popGroups.push(brainDrainPop);
+        }
+
+        // Damage relationship significantly
+        if (target.relationships) {
+          target.relationships[nation.id] = Math.max(
+            -100,
+            (target.relationships[nation.id] || 0) - 10
+          );
+        }
+      }
+    }
+  }
 }
 
 /**
