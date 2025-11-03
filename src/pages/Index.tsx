@@ -118,6 +118,7 @@ import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/ty
 import { migrateGameDiplomacy, getRelationship } from '@/lib/unifiedDiplomacyMigration';
 import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from '@/lib/simplifiedBioWarfareLogic';
 import { launchPropagandaCampaign, buildWonder, applyImmigrationPolicy } from '@/lib/streamlinedCultureLogic';
+import { processImmigrationAndCultureTurn, initializeNationPopSystem } from '@/lib/immigrationCultureTurnProcessor';
 import {
   useCyberWarfare,
   createDefaultNationCyberProfile,
@@ -1957,6 +1958,13 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   nations.length = 0;
   nations.push(...diplomacyReadyNations);
 
+  // Initialize immigration & culture systems (popGroups, cultural identity, etc.)
+  nations.forEach(nation => {
+    if (!nation.eliminated) {
+      initializeNationPopSystem(nation);
+    }
+  });
+
   // Initialize DIP (Diplomatic Influence Points) for all nations
   nations.forEach((nation, index) => {
     nations[index] = initializeDIP(nation);
@@ -2199,6 +2207,13 @@ function initNations() {
 
   nations.length = 0;
   nations.push(...diplomacyReadyNations);
+
+  // Initialize immigration & culture systems (popGroups, cultural identity, etc.)
+  nations.forEach(nation => {
+    if (!nation.eliminated) {
+      initializeNationPopSystem(nation);
+    }
+  });
 
   // Initialize DIP (Diplomatic Influence Points) for all nations
   nations.forEach((nation, index) => {
@@ -4423,6 +4438,15 @@ function endTurn() {
         if (newNegotiations.length > 0) {
           setAiInitiatedNegotiations(prev => [...prev, ...newNegotiations]);
         }
+      }
+
+      // Process immigration and culture systems for all nations
+      try {
+        processImmigrationAndCultureTurn(nations, S);
+        GameStateManager.setNations(nations);
+        PlayerManager.setNations(nations);
+      } catch (error) {
+        console.error('Error processing immigration and culture turn:', error);
       }
 
       // Process simplified bio-attack effects for all nations
