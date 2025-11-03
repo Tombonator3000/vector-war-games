@@ -206,6 +206,7 @@ import {
 import { DoctrineIncidentModal } from '@/components/DoctrineIncidentModal';
 import { DoctrineStatusPanel } from '@/components/DoctrineStatusPanel';
 import type { DoctrineKey } from '@/types/doctrineIncidents';
+import { getLeaderDefaultDoctrine } from '@/data/leaderDoctrines';
 import { Starfield } from '@/components/intro/Starfield';
 import { SpinningEarth } from '@/components/intro/SpinningEarth';
 import { OperationModal, type OperationAction, type OperationModalProps } from '@/components/modals/OperationModal';
@@ -9227,9 +9228,14 @@ export default function NoradVector() {
         leaders={availableLeaders}
         onSelectLeader={(leaderName) => {
           setSelectedLeader(leaderName);
-          // All scenarios now require doctrine selection for strategic depth
-          // Great Old Ones can also select doctrine during setup for proper initialization
-          setGamePhase('doctrine');
+
+          // Auto-assign doctrine based on leader
+          const defaultDoctrine = getLeaderDefaultDoctrine(leaderName);
+          setSelectedDoctrine(defaultDoctrine);
+
+          // Start game directly with leader's doctrine
+          startGame(leaderName, defaultDoctrine);
+          setGamePhase('game');
         }}
         onBack={() => setGamePhase('intro')}
       />

@@ -13,6 +13,7 @@ import { ChevronDown, ChevronUp, Info, Lightbulb } from 'lucide-react';
 import type { RefObject } from 'react';
 import { useState } from 'react';
 import { getLeaderBiography } from '@/data/leaderBiographies';
+import { getLeaderDefaultDoctrine, getDoctrineName, getDoctrineDescription } from '@/data/leaderDoctrines';
 
 export interface Leader {
   name: string;
@@ -58,6 +59,9 @@ export function LeaderSelectionScreen({
             {leaders.map((leader) => {
               const bio = getLeaderBiography(leader.name);
               const isExpanded = expandedLeader === leader.name;
+              const defaultDoctrine = getLeaderDefaultDoctrine(leader.name);
+              const doctrineName = getDoctrineName(defaultDoctrine);
+              const doctrineDescription = getDoctrineDescription(defaultDoctrine);
 
               return (
                 <div
@@ -80,6 +84,13 @@ export function LeaderSelectionScreen({
                         </p>
                         {bio && (
                           <p className="text-xs text-cyan/60 mt-1">{bio.title}</p>
+                        )}
+                        {!isExpanded && (
+                          <div className="mt-2">
+                            <Badge className="text-xs bg-neon-green/20 text-neon-green border-neon-green">
+                              {doctrineName}
+                            </Badge>
+                          </div>
                         )}
                       </div>
                       {bio && (
@@ -130,14 +141,15 @@ export function LeaderSelectionScreen({
                                   {bio.difficulty}
                                 </Badge>
                               </div>
-                              {bio.recommendedDoctrine && (
-                                <div>
-                                  <span className="text-xs text-muted-foreground">Doctrine:</span>
-                                  <p className="text-xs text-neon-green mt-1">
-                                    {bio.recommendedDoctrine}
-                                  </p>
-                                </div>
-                              )}
+                              <div>
+                                <span className="text-xs text-muted-foreground">Doctrine:</span>
+                                <Badge className="ml-2 text-xs bg-neon-green/20 text-neon-green border-neon-green">
+                                  {doctrineName}
+                                </Badge>
+                                <p className="text-xs text-cyan/60 mt-1">
+                                  {doctrineDescription}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
