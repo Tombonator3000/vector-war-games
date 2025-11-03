@@ -427,14 +427,9 @@ export function shouldAIInitiateProposal(
         terms: generateTermsFromTrigger(trigger),
         message: trigger.context.reason,
         turn,
-        playerInitiated: false,
-        // Enhanced metadata
-        metadata: {
-          purpose: trigger.purpose,
-          urgency: trigger.urgency,
-          priority: trigger.priority,
-          triggerContext: trigger.context
-        }
+        playerInitiated: false
+        // Note: metadata stripped to match DiplomacyProposal interface
+        // Original metadata: purpose, urgency, priority, triggerContext
       };
     }
   }
@@ -445,16 +440,17 @@ export function shouldAIInitiateProposal(
 
 /**
  * Convert negotiation purpose to legacy proposal type
+ * Maps new purpose types to valid ProposalType values
  */
-function convertPurposeToProposalType(purpose: string): string {
+function convertPurposeToProposalType(purpose: string): 'alliance' | 'truce' | 'non-aggression' | 'aid-request' | 'sanction-lift' | 'joint-war' | 'demand-surrender' | 'peace-offer' {
   switch (purpose) {
     case 'request-help': return 'aid-request';
     case 'offer-alliance': return 'alliance';
     case 'reconciliation': return 'peace-offer';
-    case 'demand-compensation': return 'demand-compensation';
-    case 'warning': return 'warning';
+    case 'demand-compensation': return 'demand-surrender'; // Map to valid type: demands are similar
+    case 'warning': return 'truce'; // Map to valid type: warning implies de-escalation
     case 'peace-offer': return 'peace-offer';
-    case 'trade-opportunity': return 'trade';
+    case 'trade-opportunity': return 'aid-request'; // Map to valid type: economic cooperation
     case 'mutual-defense': return 'alliance';
     case 'joint-venture': return 'joint-war';
     default: return 'alliance';
