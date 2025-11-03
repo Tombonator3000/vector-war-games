@@ -8029,8 +8029,6 @@ export default function NoradVector() {
     const approved = await requestApproval('DIPLOMACY', { description: 'Diplomatic operations request' });
     if (!approved) return;
     AudioSys.playSFX('click');
-    const player = getBuildContext('Diplomacy');
-    if (!player) return;
 
     // Show enhanced diplomacy modal with Phase 3 features
     setShowEnhancedDiplomacy(true);
@@ -8442,7 +8440,7 @@ export default function NoradVector() {
         accent="fuchsia"
       />
     );
-  }, [closeModal, getBuildContext, openModal, requestApproval, targetableNations]);
+  }, [requestApproval]);
 
   useEffect(() => {
     handleAttackRef.current = handleAttack;
