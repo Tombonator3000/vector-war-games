@@ -100,6 +100,7 @@ import {
   createDefaultNationConventionalProfile,
   territoryAnchors,
 } from '@/hooks/useConventionalWarfare';
+import { makeAITurn as makeConventionalAITurn } from '@/lib/conventionalAI';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 import { UnifiedIntelOperationsPanel } from '@/components/UnifiedIntelOperationsPanel';
@@ -4315,6 +4316,50 @@ function aiTurn(n: Nation) {
   if (cyberOutcome?.executed) {
     updateDisplay();
   }
+
+  // NEW: Risk-style conventional warfare AI
+  if (window.__conventionalAI) {
+    const aiDecisions = window.__conventionalAI.makeAITurn(
+      n.id,
+      conventionalTerritories,
+      window.__conventionalAI.getReinforcements(n.id)
+    );
+
+    // Execute reinforcements
+    for (const decision of aiDecisions.reinforcements) {
+      if (decision.toTerritoryId) {
+        window.__conventionalAI.placeReinforcements(n.id, decision.toTerritoryId, decision.armies || 3);
+        log(`${n.name}: ${decision.reason}`);
+      }
+    }
+
+    // Execute attacks
+    for (const decision of aiDecisions.attacks) {
+      if (decision.fromTerritoryId && decision.toTerritoryId && decision.armies) {
+        const result = window.__conventionalAI.attack(
+          decision.fromTerritoryId,
+          decision.toTerritoryId,
+          decision.armies
+        );
+        if (result?.success) {
+          log(`${n.name}: ${decision.reason} - ${result.attackerVictory ? 'Victory!' : 'Repelled'}`);
+          if (result.attackerVictory) {
+            maybeBanter(n, 0.6);
+          }
+        }
+      }
+    }
+
+    // Execute moves
+    for (const decision of aiDecisions.moves) {
+      if (decision.fromTerritoryId && decision.toTerritoryId && decision.armies) {
+        window.__conventionalAI.move(decision.fromTerritoryId, decision.toTerritoryId, decision.armies);
+        log(`${n.name}: ${decision.reason}`);
+      }
+    }
+
+    updateDisplay();
+  }
 }
 
 // End turn
@@ -6005,6 +6050,26 @@ export default function NoradVector() {
       delete window.__cyberAiPlan;
     };
   }, [advanceCyberTurn, runCyberAiPlan]);
+
+  // Expose conventional AI functions for Risk-style gameplay
+  useEffect(() => {
+    window.__conventionalAI = {
+      makeAITurn: (aiId: string, territories: any, reinforcements: number) =>
+        makeConventionalAITurn(aiId, territories, reinforcements),
+      getReinforcements: (nationId: string) => getConventionalReinforcements(nationId),
+      placeReinforcements: placeConventionalReinforcements,
+      attack: resolveConventionalAttack,
+      move: moveConventionalArmiesWithAnimation,
+    };
+    return () => {
+      delete window.__conventionalAI;
+    };
+  }, [
+    getConventionalReinforcements,
+    placeConventionalReinforcements,
+    resolveConventionalAttack,
+    moveConventionalArmiesWithAnimation,
+  ]);
 
   const handlePandemicTrigger = useCallback((payload: PandemicTriggerPayload) => {
     if (!pandemicIntegrationEnabled) {

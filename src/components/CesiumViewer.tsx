@@ -626,6 +626,101 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
     });
   }, [territories, nations]);
 
+  // Render territory connections (neighbor borders)
+  useEffect(() => {
+    if (!viewerRef.current || !territories || territories.length === 0) return;
+
+    const viewer = viewerRef.current;
+
+    // Clear old connection entities
+    entitiesRef.current.forEach((entity, key) => {
+      if (key.startsWith('connection-')) {
+        viewer.entities.remove(entity);
+        entitiesRef.current.delete(key);
+      }
+    });
+
+    // Create connections between neighboring territories
+    const processedPairs = new Set<string>();
+
+    territories.forEach(territory => {
+      const fromCenter = getTerritoryCenter(territory.id);
+      if (!fromCenter) return;
+
+      territory.neighbors.forEach(neighborId => {
+        // Create a unique key for this connection (sorted to avoid duplicates)
+        const pairKey = [territory.id, neighborId].sort().join('-');
+        if (processedPairs.has(pairKey)) return;
+        processedPairs.add(pairKey);
+
+        const neighbor = territories.find(t => t.id === neighborId);
+        if (!neighbor) return;
+
+        const toCenter = getTerritoryCenter(neighborId);
+        if (!toCenter) return;
+
+        // Determine line color based on ownership
+        let lineColor: Color;
+        let lineWidth: number;
+        let glowPower: number;
+
+        const fromNation = nations.find(n => n.id === territory.controllingNationId);
+        const toNation = nations.find(n => n.id === neighbor.controllingNationId);
+
+        if (territory.controllingNationId === neighbor.controllingNationId) {
+          // Same owner - friendly connection (green)
+          lineColor = Color.GREEN.withAlpha(0.4);
+          lineWidth = 2;
+          glowPower = 0.1;
+        } else if (territory.controllingNationId && neighbor.controllingNationId) {
+          // Different owners - hostile border (red)
+          lineColor = Color.RED.withAlpha(0.6);
+          lineWidth = 4;
+          glowPower = 0.25;
+        } else {
+          // One or both uncontrolled - neutral (yellow)
+          lineColor = Color.YELLOW.withAlpha(0.3);
+          lineWidth = 2;
+          glowPower = 0.1;
+        }
+
+        // Create polyline connecting the two territories
+        const connectionEntity = viewer.entities.add({
+          name: `connection-${pairKey}`,
+          polyline: {
+            positions: [
+              Cartesian3.fromDegrees(fromCenter.lon, fromCenter.lat, 10000),
+              Cartesian3.fromDegrees(toCenter.lon, toCenter.lat, 10000),
+            ],
+            width: lineWidth,
+            material: new PolylineGlowMaterialProperty({
+              glowPower: glowPower,
+              taperPower: 0.5,
+              color: lineColor,
+            }),
+            clampToGround: false,
+          },
+          description: `
+            <div style="padding: 10px;">
+              <h4>Territory Connection</h4>
+              <p><strong>From:</strong> ${territory.name} (${fromNation?.name || 'Uncontrolled'})</p>
+              <p><strong>To:</strong> ${neighbor.name} (${toNation?.name || 'Uncontrolled'})</p>
+              <p><strong>Status:</strong> ${
+                territory.controllingNationId === neighbor.controllingNationId
+                  ? 'Friendly Territory'
+                  : territory.controllingNationId && neighbor.controllingNationId
+                  ? 'Hostile Border'
+                  : 'Neutral Border'
+              }</p>
+            </div>
+          `,
+        });
+
+        entitiesRef.current.set(`connection-${pairKey}`, connectionEntity);
+      });
+    });
+  }, [territories, nations]);
+
   // Render military units with 3D models (Phase 2 improvement)
   useEffect(() => {
     if (!viewerRef.current) return;
