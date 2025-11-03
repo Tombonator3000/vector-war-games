@@ -46,8 +46,9 @@ export function Globe3D({ nations = [], onNationClick }: Globe3DProps) {
   return (
     <div className="w-full h-full">
       <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
-        <ambientLight intensity={0.3} />
-        <pointLight position={[10, 10, 10]} intensity={1} />
+        <ambientLight intensity={0.6} />
+        <pointLight position={[10, 10, 10]} intensity={2} />
+        <pointLight position={[-10, -10, -10]} intensity={0.8} />
         <Stars radius={100} depth={50} count={5000} factor={4} />
         <Earth />
         <OrbitControls 

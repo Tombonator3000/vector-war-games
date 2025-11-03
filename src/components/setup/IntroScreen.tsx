@@ -106,7 +106,7 @@ export function IntroScreen({
 
           {/* Highscore Section */}
           {highscores.length > 0 && (
-            <div className="absolute bottom-8 left-8 bg-black/80 border border-cyan-500/50 rounded-lg p-4 w-80 backdrop-blur-sm">
+            <div className="absolute bottom-8 left-8 bg-black/80 border border-cyan-500/50 rounded-lg p-4 w-80 backdrop-blur-sm z-10">
               <h3 className="text-lg font-mono text-cyan-400 mb-3 tracking-wider uppercase flex items-center gap-2">
                 <span className="text-yellow-400">★</span>
                 Hall of Fame
