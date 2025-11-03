@@ -1461,3 +1461,9 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-11-03T09:29:59Z
 - Shifted the floating GameHelper trigger button to the lower-left corner and confirmed it clears the events log widget by maintaining the existing bottom offset gap.
+
+## 2025-11-03T14:51:30Z
+- Investigated diplomacy regression reports, reviewing unified diplomacy migration and DIP currency utilities for legacy field mismatches after the streamlined systems update.
+
+## 2025-11-03T14:53:45Z
+- Implemented compatibility fixes for legacy trust, favor, and DIP fields, updated migration logic to use modern getters, and added Vitest coverage to prevent future diplomacy initialization regressions.
