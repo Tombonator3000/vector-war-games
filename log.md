@@ -1458,3 +1458,6 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 ## 2025-11-03T08:35:00Z
 - Routed doctrine status data through the Civilization Info panel so the floating HUD widget could be removed without losing coverage of shift warnings or compatibility cues.
 - Embedded the existing `DoctrineStatusPanel` styling inside the "Your Empire" tab, forwarding all nations and the live shift state to derive the player context locally.
+
+## 2025-11-03T09:29:59Z
+- Shifted the floating GameHelper trigger button to the lower-left corner and confirmed it clears the events log widget by maintaining the existing bottom offset gap.
