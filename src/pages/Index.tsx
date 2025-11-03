@@ -7255,7 +7255,7 @@ export default function NoradVector() {
         accent="cyan"
       />
     );
-  }, [closeModal, getBuildContext, openModal, targetableNations]);
+  }, [closeModal, getBuildContext, openModal, targetableNations, nations, requestApproval, getCyberActionAvailability, launchCyberAttack, hardenCyberNetworks, launchCyberFalseFlag, log, registerSatelliteOrbit, adjustThreat, updateDisplay, consumeAction]);
 
   const handleBioWarfareLabToggle = useCallback(async () => {
     if (!bioWarfareAvailable) {
