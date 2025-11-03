@@ -7,6 +7,8 @@ import type { Grievance, Claim } from './grievancesAndClaims';
 import type { SpecializedAlliance } from './specializedAlliances';
 import type { DiplomaticInfluence, CouncilMembershipType } from './diplomacyPhase3';
 import type { DoctrineIncidentState, DoctrineShiftState } from './doctrineIncidents';
+import type { PopGroup, ImmigrationPolicyType } from './popSystem';
+import type { CulturalInfluence, PropagandaCampaign, CulturalWonder } from './culturalWarfare';
 
 export interface FalloutMark {
   id: string;
@@ -204,6 +206,17 @@ export interface Nation {
   hasRegimeDestabilization?: boolean;
   eliminated?: boolean;
   intelligence?: number;
+
+  // Pop System & Cultural Warfare (Enhanced Immigration & Culture)
+  popGroups?: PopGroup[];                           // Detailed population groups
+  culturalIdentity?: string;                        // National culture (defaults to nation name)
+  culturalPower?: number;                           // Cultural strength (0-100+)
+  assimilationRate?: number;                        // Base assimilation rate per turn
+  currentImmigrationPolicy?: ImmigrationPolicyType; // Active immigration policy
+  culturalInfluences?: CulturalInfluence[];         // Cultural influence zones
+  propagandaCampaigns?: PropagandaCampaign[];       // Active propaganda campaigns
+  culturalWonders?: CulturalWonder[];               // Built cultural wonders
+  activeCulturalDefenses?: string[];                // Active defense types
 
   // Bio-warfare capabilities (AI nations)
   bioLab?: BioLabFacility;
