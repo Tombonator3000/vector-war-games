@@ -1467,3 +1467,181 @@ lout visuals, decay, and multiplayer syncing into `Index.tsx`.
 
 ## 2025-11-03T14:53:45Z
 - Implemented compatibility fixes for legacy trust, favor, and DIP fields, updated migration logic to use modern getters, and added Vitest coverage to prevent future diplomacy initialization regressions.
+
+---
+
+## 2025-11-03 - DIPLOMATIC RELATIONS & IMMIGRATION OPS SYSTEM AUDIT
+
+### Time: 21:00 UTC
+
+**Objective:** Investigate user report that Diplomatic Relations and Immigration OPS are "still the old system" despite improvements.
+
+### INVESTIGATION FINDINGS:
+
+#### ✅ DIPLOMACY SYSTEM - VERIFIED IMPROVEMENTS EXIST
+
+**Recent Enhancement (Commit 0df647d - 2025-11-03 20:39:23):**
+
+**1. Advanced AI Negotiation Triggers (6 types restored):**
+- `threat-based-help`: AI seeks allies against powerful enemies
+- `compensation-demand`: AI demands reparations for grievances
+- `reconciliation`: AI attempts to repair damaged relationships
+- `alliance-proposal`: AI forms alliances based on common threats
+- `warning-trigger`: AI issues warnings about behavior violations
+- `trade-opportunity`: AI proposes trade when resources surplus
+
+**2. Personality-Based Diplomacy Enhanced:**
+- Aggressive: More likely to demand compensation, reluctant to ask for help
+- Defensive: Seeks help earlier, more willing to reconcile
+- Isolationist: Almost never asks for help, avoids confrontation
+- Trickster: Quick to exploit opportunities, strategic negotiations
+- Chaotic: Unpredictable behavior with unique messaging
+- Balanced: Moderate behavior across all triggers
+
+**3. Code Integration Points:**
+- ✅ `src/lib/aiNegotiationTriggers.ts:596` - `checkAllTriggers()` implemented
+- ✅ `src/lib/aiDiplomacyEvaluator.ts:416` - `shouldAIInitiateProposal()` calls checkAllTriggers
+- ✅ `src/pages/Index.tsx:4008` - AI proposal system integrated (legacy path)
+- ✅ `src/pages/Index.tsx:4410` - AI negotiation system integrated (advanced path)
+
+**4. Underlying Systems Restored:**
+- Trust records update in parallel with relationship scores
+- Trust changes at 1/4 rate of relationships (slower long-term build)
+- Advanced triggers use trust/favor/grievance data for decisions
+- Maintains sophisticated AI decision-making
+
+**⚠️ POTENTIAL ISSUE IDENTIFIED:**
+- `shouldAIInitiateProposal()` has dual-path logic:
+  - **Advanced path**: Uses `checkAllTriggers()` when `allNations` parameter provided
+  - **Legacy fallback**: Uses simple logic if `allNations` not provided
+- Line 4008 in Index.tsx may use legacy path: `shouldAIInitiateProposal(n, player, S.turn, undefined, nations)`
+- Fifth parameter `nations` IS provided, so advanced system SHOULD be active
+- However, needs runtime verification to confirm triggers are firing
+
+---
+
+#### ✅ IMMIGRATION OPS SYSTEM - VERIFIED IMPROVEMENTS EXIST
+
+**Recent Enhancement (Commit 8a696b8 - 2025-11-03 20:26:14):**
+
+**1. Expanded from 3 basic policies to 6 strategic options:**
+
+**Old System (3 policies):**
+- Closed Borders
+- Selective
+- Open Borders
+
+**New System (6 policies):**
+
+1. **Closed Borders** 🚫
+   - +5% stability, -2 production/turn
+   - -5 diplomatic reputation
+   - 3 intel/turn cost
+
+2. **Selective Immigration** 🎓
+   - +8 production/turn (high-skill workers)
+   - +2% stability
+   - 6 intel/turn cost (screening)
+
+3. **Humanitarian Policy** 🕊️ **[NEW]**
+   - +10 diplomatic reputation (major boost)
+   - +20% population growth
+   - -5% stability (resource strain)
+   - 8 intel + 5 production/turn cost
+
+4. **Open Borders** 🌍
+   - +100% population growth
+   - +5 production/turn
+   - -10% stability
+   - 1 intel/turn cost
+
+5. **Cultural Exchange** 🤝 **[NEW]**
+   - +8 diplomatic reputation
+   - +3 production/turn
+   - Balanced population growth
+   - 7 intel/turn cost
+
+6. **Brain Drain Operations** 🧠 **[NEW - WEAPON]**
+   - ⚔️ **Actively steals 0.2% population from 2 most unstable nations**
+   - +12 production/turn (elite talent acquisition)
+   - -8 diplomatic reputation (aggressive poaching)
+   - Damages target relations -10
+   - 15 intel/turn cost (expensive campaigns)
+
+**2. Strategic Warfare Capabilities:**
+- Brain Drain targets vulnerable nations and damages them
+- Humanitarian policy as diplomatic weapon (+10 reputation)
+- Each policy has economic bonuses, diplomatic impact, stability effects
+- Policies now affect multiple game systems simultaneously
+
+**3. Code Integration:**
+- ✅ `src/types/streamlinedCulture.ts:287-369` - All 6 policies defined
+- ✅ `src/lib/immigrationCultureTurnProcessor.ts:94,167-279` - Policy processing implemented
+- ✅ `src/lib/immigrationCultureTurnProcessor.ts:244-278` - Brain Drain attack logic
+- ✅ `src/pages/Index.tsx:4446` - `processImmigrationAndCultureTurn()` called each turn
+- ✅ `src/components/StreamlinedCulturePanel.tsx:184-270` - UI shows all 6 policies with stats
+
+**4. UI Display:**
+- Immigration Strategy section shows all 6 policies
+- Displays: Pop Growth, Production bonus, Stability impact, Diplomatic impact
+- Shows costs (intel/turn, production/turn)
+- Color-coded stats (green=good, red=bad)
+- Active policy highlighted
+- Affordability validation
+
+---
+
+### 🎯 VERIFICATION STATUS:
+
+**Backend Code:**
+- ✅ Diplomacy: Advanced triggers implemented and integrated
+- ✅ Immigration: 6 policies with warfare capabilities implemented
+
+**UI Components:**
+- ✅ Immigration: StreamlinedCulturePanel displays all features
+- ⚠️ Diplomacy: Need to verify EnhancedDiplomacyModal displays new features
+
+**Runtime Execution:**
+- ✅ Immigration: `processImmigrationAndCultureTurn()` called in game loop (Index.tsx:4446)
+- ✅ Diplomacy: `checkAllTriggers()` called in game loop (Index.tsx:4410)
+- ⚠️ Need runtime testing to verify AI is actually using advanced triggers
+
+---
+
+### 🔧 POSSIBLE ISSUES TO INVESTIGATE:
+
+1. **AI Trigger Frequency**: Advanced triggers may have high thresholds, appearing inactive
+2. **UI Feedback**: Player may not see notifications when AI uses advanced triggers
+3. **Legacy Path**: Some code paths may still use old logic
+4. **Turn Processor Order**: Effects may not be visible due to processing order
+
+---
+
+### 📊 FILES EXAMINED:
+- `src/lib/aiNegotiationTriggers.ts` (596 lines)
+- `src/lib/aiDiplomacyEvaluator.ts` (407-438 lines)
+- `src/lib/immigrationCultureTurnProcessor.ts` (279 lines)
+- `src/types/streamlinedCulture.ts` (418 lines)
+- `src/components/StreamlinedCulturePanel.tsx` (270 lines)
+- `src/pages/Index.tsx` (diplomacy integration points)
+
+---
+
+### 🎯 CONCLUSION:
+
+**Both systems HAVE been significantly improved in the codebase.** The enhancements are:
+- ✅ Implemented in backend logic
+- ✅ Integrated into game loop
+- ✅ (Partially) displayed in UI
+
+**Possible reasons for "same old system" perception:**
+1. Player hasn't triggered advanced AI negotiations yet (threshold-based)
+2. UI doesn't prominently show when AI uses new triggers
+3. Immigration improvements may not be immediately visible without checking panel
+4. Effects may be subtle and require multiple turns to notice
+
+**Next steps would be:**
+1. Runtime testing to verify AI trigger activation
+2. Add prominent UI notifications when AI uses advanced triggers
+3. Verify Brain Drain Operations actually execute damage
+4. Check if all 6 immigration policies appear in-game menu
