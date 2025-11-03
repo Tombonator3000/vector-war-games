@@ -62,12 +62,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
 
   if (!player) return null;
 
-  // Calculate win condition progress
-  const totalNations = nations.filter(n => n).length;
-  const enemiesEliminated = nations.filter(n => n && !n.isPlayer && n.population <= 0).length;
-  const militaryProgress = totalNations > 1 ? (enemiesEliminated / (totalNations - 1)) * 100 : 0;
-  const economicProgress = Math.min(100, (player.cities / 12) * 100);
-  const culturalProgress = Math.min(100, (player.intel / 50) * 100);
+  // Victory progress now handled by VictoryPathsSection using streamlined victory conditions
 
   // Calculate total military power
   const calculateMilitaryPower = (nation: Nation): number => {
@@ -309,120 +304,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
         </div>
       </div>
 
-      {/* Victory Progress - Enhanced */}
-      <div>
-        <h3 className="text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
-          <Trophy className={`w-5 h-5 ${Math.max(militaryProgress, economicProgress, culturalProgress) >= 70 ? 'text-yellow-400 animate-pulse' : 'text-cyan-400'}`} />
-          Victory Progress
-        </h3>
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-cyan-500/30">
-          <div className="space-y-4">
-            {/* Military Victory */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Skull className="w-4 h-4 text-red-400" />
-                  <span className="text-sm font-mono text-cyan-200">Military</span>
-                  {militaryProgress === Math.max(militaryProgress, economicProgress, culturalProgress) && militaryProgress >= 50 && (
-                    <span className="text-[10px] text-yellow-400 font-bold animate-pulse">
-                      LEADING
-                    </span>
-                  )}
-                </div>
-                <span className="text-sm font-mono text-cyan-300 font-bold">
-                  {Math.round(militaryProgress)}%
-                </span>
-              </div>
-              <div className="relative h-3 bg-gray-900 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${militaryProgress}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                  className={`h-full bg-red-500 ${militaryProgress >= 90 ? 'animate-pulse' : ''}`}
-                />
-              </div>
-              <div className="text-xs text-gray-400 mt-1">
-                Eliminated {enemiesEliminated} / {totalNations - 1} nations
-              </div>
-            </div>
-
-            {/* Economic Victory */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-green-400" />
-                  <span className="text-sm font-mono text-cyan-200">Economic</span>
-                  {economicProgress === Math.max(militaryProgress, economicProgress, culturalProgress) && economicProgress >= 50 && (
-                    <span className="text-[10px] text-yellow-400 font-bold animate-pulse">
-                      LEADING
-                    </span>
-                  )}
-                </div>
-                <span className="text-sm font-mono text-cyan-300 font-bold">
-                  {Math.round(economicProgress)}%
-                </span>
-              </div>
-              <div className="relative h-3 bg-gray-900 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${economicProgress}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                  className={`h-full bg-green-500 ${economicProgress >= 90 ? 'animate-pulse' : ''}`}
-                />
-              </div>
-              <div className="text-xs text-gray-400 mt-1">
-                Control {player.cities} / 12 cities
-              </div>
-            </div>
-
-            {/* Cultural Victory */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-purple-400" />
-                  <span className="text-sm font-mono text-cyan-200">Cultural</span>
-                  {culturalProgress === Math.max(militaryProgress, economicProgress, culturalProgress) && culturalProgress >= 50 && (
-                    <span className="text-[10px] text-yellow-400 font-bold animate-pulse">
-                      LEADING
-                    </span>
-                  )}
-                </div>
-                <span className="text-sm font-mono text-cyan-300 font-bold">
-                  {Math.round(culturalProgress)}%
-                </span>
-              </div>
-              <div className="relative h-3 bg-gray-900 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${culturalProgress}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                  className={`h-full bg-purple-500 ${culturalProgress >= 90 ? 'animate-pulse' : ''}`}
-                />
-              </div>
-              <div className="text-xs text-gray-400 mt-1">
-                Cultural influence: {Math.min(100, Math.round((player.intel / 50) * 100))} / 100
-              </div>
-            </div>
-          </div>
-
-          {/* Victory warning */}
-          {Math.max(militaryProgress, economicProgress, culturalProgress) >= 70 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded"
-            >
-              <p className="text-xs text-yellow-200 text-center font-mono">
-                ⚠️ Victory approaching! Press your advantage!
-              </p>
-            </motion.div>
-          )}
-
-          <p className="mt-3 text-[10px] text-cyan-400/60 text-center">
-            First to 100% wins
-          </p>
-        </div>
-      </div>
+      {/* Victory Progress section removed - now handled by VictoryPathsSection above */}
 
       {/* Morale Outlook - All Nations */}
       <div>
@@ -574,20 +456,22 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
         const hasTruce = (player.treaties?.[enemy.id]?.truceTurns || 0) > 0;
         const truceTurnsLeft = player.treaties?.[enemy.id]?.truceTurns || 0;
 
-        // Calculate enemy win condition progress
+        // Calculate enemy win condition progress using streamlined system
+        // For display purposes, show approximate progress without full victory analysis
+        const totalNations = nations.filter(n => n && !n.isPlayer).length;
         const enemyEliminatedCount = nations.filter(n =>
           n && n.id !== enemy.id && !n.isPlayer && n.population <= 0
         ).length;
-        const enemyMilitaryProgress = totalNations > 1
-          ? (enemyEliminatedCount / (totalNations - 1)) * 100
+        const enemyDominationProgress = totalNations > 0
+          ? (enemyEliminatedCount / totalNations) * 100
           : 0;
-        const enemyEconomicProgress = Math.min(100, (enemy.cities / 12) * 100);
-        const enemyCulturalProgress = Math.min(100, (enemy.intel / 50) * 100);
+        const enemyEconomicProgress = Math.min(100, ((enemy.cities || 0) / 10) * 100);
+        const enemySurvivalProgress = Math.min(100, ((currentTurn / 50) * 50) + ((enemy.population >= 50 ? 1 : (enemy.population / 50)) * 50));
 
         const maxProgress = Math.max(
-          enemyMilitaryProgress,
+          enemyDominationProgress,
           enemyEconomicProgress,
-          enemyCulturalProgress
+          enemySurvivalProgress
         );
 
         return (
@@ -696,7 +580,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
                   </div>
                 </div>
 
-                {/* Victory Progress */}
+                {/* Victory Progress - Streamlined System */}
                 <div className="border-t border-gray-700 pt-3">
                   <div className="flex justify-between text-xs text-gray-400 mb-2">
                     <span>Closest to Victory</span>
@@ -706,12 +590,12 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <div className="text-xs text-gray-500 w-16">Military</div>
+                      <div className="text-xs text-gray-500 w-16">Domination</div>
                       <div className="flex-1">
-                        {renderProgressBar(enemyMilitaryProgress, 'bg-red-500')}
+                        {renderProgressBar(enemyDominationProgress, 'bg-red-500')}
                       </div>
                       <div className="text-xs text-gray-400 w-12 text-right">
-                        {enemyMilitaryProgress.toFixed(0)}%
+                        {enemyDominationProgress.toFixed(0)}%
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -724,12 +608,12 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="text-xs text-gray-500 w-16">Cultural</div>
+                      <div className="text-xs text-gray-500 w-16">Survival</div>
                       <div className="flex-1">
-                        {renderProgressBar(enemyCulturalProgress, 'bg-purple-500')}
+                        {renderProgressBar(enemySurvivalProgress, 'bg-green-500')}
                       </div>
                       <div className="text-xs text-gray-400 w-12 text-right">
-                        {enemyCulturalProgress.toFixed(0)}%
+                        {enemySurvivalProgress.toFixed(0)}%
                       </div>
                     </div>
                   </div>

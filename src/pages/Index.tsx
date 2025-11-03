@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle } from 'lucide-react';
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle, Target } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
@@ -102,6 +102,14 @@ import {
 } from '@/hooks/useConventionalWarfare';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
+import { UnifiedIntelOperationsPanel } from '@/components/UnifiedIntelOperationsPanel';
+import {
+  executeSatelliteDeployment,
+  executeSabotageOperation,
+  executeCyberAttack,
+  INTEL_OPERATIONS,
+  type IntelOperationType,
+} from '@/types/unifiedIntelOperations';
 import {
   useCyberWarfare,
   createDefaultNationCyberProfile,
@@ -4316,6 +4324,20 @@ function endTurn() {
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
 
+      // Decrement intel operation cooldowns
+      nations.forEach(nation => {
+        if (nation.intelOperationCooldowns) {
+          Object.keys(nation.intelOperationCooldowns).forEach(opType => {
+            if (nation.intelOperationCooldowns![opType] > 0) {
+              nation.intelOperationCooldowns![opType]--;
+              if (nation.intelOperationCooldowns![opType] <= 0) {
+                delete nation.intelOperationCooldowns![opType];
+              }
+            }
+          });
+        }
+      });
+
       // Process Agenda Revelations (Phase 4): Check if hidden agendas should be revealed
       const player = PlayerManager.get();
       if (player) {
@@ -5106,6 +5128,7 @@ export default function NoradVector() {
   });
   const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
   const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
+  const [isIntelOperationsOpen, setIsIntelOperationsOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const lastTargetPingIdRef = useRef<string | null>(null);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
@@ -6627,6 +6650,109 @@ export default function NoradVector() {
   const handleMilitary = useCallback(() => {
     openModal('CONVENTIONAL COMMAND', renderMilitaryModal);
   }, [openModal, renderMilitaryModal]);
+
+  const handleIntelOperations = useCallback(() => {
+    AudioSys.playSFX('click');
+    setIsIntelOperationsOpen(true);
+  }, []);
+
+  const handleDeploySatellite = useCallback((targetId: string) => {
+    const player = PlayerManager.get();
+    if (!player) return;
+
+    // Execute satellite deployment
+    const result = executeSatelliteDeployment(player, getNationById(nations, targetId) as Nation, S.turn);
+
+    // Deduct intel cost
+    player.intel = Math.max(0, player.intel - INTEL_OPERATIONS.satellite.intelCost);
+
+    // Set cooldown
+    if (!player.intelOperationCooldowns) {
+      player.intelOperationCooldowns = {};
+    }
+    player.intelOperationCooldowns['satellite'] = INTEL_OPERATIONS.satellite.cooldown;
+
+    // Apply satellite coverage
+    if (!player.satellites) {
+      player.satellites = {};
+    }
+    player.satellites[targetId] = true;
+
+    log(`Deployed satellite over ${result.targetId}. Intel coverage active for ${result.duration} turns.`);
+    toast({ title: 'Satellite Deployed', description: `Intelligence coverage established over target nation` });
+    setIsIntelOperationsOpen(false);
+  }, [nations, S.turn, log]);
+
+  const handleSabotageOperation = useCallback((targetId: string, targetType: 'missiles' | 'warheads') => {
+    const player = PlayerManager.get();
+    const target = getNationById(nations, targetId) as Nation;
+    if (!player || !target) return;
+
+    // Execute sabotage
+    const result = executeSabotageOperation(player, target, targetType);
+
+    // Deduct intel cost
+    player.intel = Math.max(0, player.intel - INTEL_OPERATIONS.sabotage.intelCost);
+
+    // Set cooldown
+    if (!player.intelOperationCooldowns) {
+      player.intelOperationCooldowns = {};
+    }
+    player.intelOperationCooldowns['sabotage'] = INTEL_OPERATIONS.sabotage.cooldown;
+
+    log(result.message);
+
+    if (result.discovered) {
+      toast({
+        title: 'Sabotage Detected!',
+        description: `Operation was discovered by ${target.name}`,
+        variant: 'destructive'
+      });
+
+      // Apply relationship penalty
+      if (result.relationshipPenalty && player.relationships) {
+        player.relationships[targetId] = Math.max(-100,
+          (player.relationships[targetId] || 0) + result.relationshipPenalty
+        );
+      }
+    } else {
+      toast({ title: 'Sabotage Complete', description: result.message });
+    }
+
+    setIsIntelOperationsOpen(false);
+  }, [nations, log]);
+
+  const handleCyberAttackOperation = useCallback((targetId: string) => {
+    const player = PlayerManager.get();
+    const target = getNationById(nations, targetId) as Nation;
+    if (!player || !target) return;
+
+    // Execute cyber attack
+    const result = executeCyberAttack(player, target);
+
+    // Deduct intel cost
+    player.intel = Math.max(0, player.intel - INTEL_OPERATIONS['cyber-attack'].intelCost);
+
+    // Set cooldown
+    if (!player.intelOperationCooldowns) {
+      player.intelOperationCooldowns = {};
+    }
+    player.intelOperationCooldowns['cyber-attack'] = INTEL_OPERATIONS['cyber-attack'].cooldown;
+
+    log(result.message);
+
+    if (result.discovered) {
+      toast({
+        title: result.attributed ? 'Cyber Attack Attributed!' : 'Cyber Attack Detected',
+        description: result.attributed ? `Attack traced back to you!` : `Target detected the attack`,
+        variant: result.attributed ? 'destructive' : 'default'
+      });
+    } else {
+      toast({ title: 'Cyber Attack Successful', description: result.message });
+    }
+
+    setIsIntelOperationsOpen(false);
+  }, [nations, log]);
 
   // ResearchModal - Extracted to src/components/game/ResearchModal.tsx (Phase 7 refactoring)
   const renderResearchModal = useCallback((): ReactNode => {
@@ -9660,7 +9786,7 @@ export default function NoradVector() {
                   </Button>
 
                   <Button
-                    onClick={handleIntel}
+                    onClick={handleIntelOperations}
                     variant="ghost"
                     size="icon"
                     data-role-locked={!intelAllowed}
@@ -9668,9 +9794,9 @@ export default function NoradVector() {
                     className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
                       intelAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                     }`}
-                    title={intelAllowed ? 'INTEL - Intelligence operations' : 'Tactician authorization required to operate intel'}
+                    title={intelAllowed ? 'INTEL - Intelligence operations (satellite, sabotage, cyber)' : 'Tactician authorization required to operate intel'}
                   >
-                    <Satellite className="h-5 w-5" />
+                    <Target className="h-5 w-5" />
                     <span className="text-[8px] font-mono">INTEL</span>
                   </Button>
 
@@ -10006,6 +10132,27 @@ export default function NoradVector() {
         onDevolveNode={(nodeId: string) => devolveNode({ nodeId: nodeId as EvolutionNodeId })}
         onDeployBioWeapon={handleDeployBioWeapon}
       />
+
+      <Dialog open={isIntelOperationsOpen} onOpenChange={setIsIntelOperationsOpen}>
+        <DialogContent className="max-w-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
+            <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">
+              Intelligence Operations
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-400 mt-1">
+              Unified intel operations: Satellite deployment, sabotage, and cyber attacks
+            </DialogDescription>
+          </DialogHeader>
+          <UnifiedIntelOperationsPanel
+            player={PlayerManager.get() || {} as Nation}
+            enemies={nations.filter(n => !n.isPlayer && !n.eliminated)}
+            onDeploySatellite={handleDeploySatellite}
+            onSabotageOperation={handleSabotageOperation}
+            onCyberAttack={handleCyberAttackOperation}
+            operationCooldowns={PlayerManager.get()?.intelOperationCooldowns}
+          />
+        </DialogContent>
+      </Dialog>
 
       {showPandemicPanel && (
         <PandemicPanel

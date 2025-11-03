@@ -1,28 +1,38 @@
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Trophy, Skull, Building2, Sparkles } from 'lucide-react';
+import { Trophy, Skull, Building2, Handshake, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface VictoryProgressPanelProps {
-  militaryProgress: number; // 0-100
+  diplomaticProgress: number; // 0-100
+  dominationProgress: number; // 0-100
   economicProgress: number; // 0-100
-  culturalProgress: number; // 0-100
+  survivalProgress: number; // 0-100
   isVisible: boolean;
 }
 
 export function VictoryProgressPanel({
-  militaryProgress,
+  diplomaticProgress,
+  dominationProgress,
   economicProgress,
-  culturalProgress,
+  survivalProgress,
   isVisible,
 }: VictoryProgressPanelProps) {
   if (!isVisible) return null;
 
   const progressItems = [
     {
+      icon: Handshake,
+      label: 'Diplomatic',
+      progress: diplomaticProgress,
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-500/20',
+      progressColor: 'bg-blue-500',
+    },
+    {
       icon: Skull,
-      label: 'Military',
-      progress: militaryProgress,
+      label: 'Domination',
+      progress: dominationProgress,
       color: 'text-red-400',
       bgColor: 'bg-red-500/20',
       progressColor: 'bg-red-500',
@@ -31,21 +41,21 @@ export function VictoryProgressPanel({
       icon: Building2,
       label: 'Economic',
       progress: economicProgress,
+      color: 'text-yellow-400',
+      bgColor: 'bg-yellow-500/20',
+      progressColor: 'bg-yellow-500',
+    },
+    {
+      icon: Shield,
+      label: 'Survival',
+      progress: survivalProgress,
       color: 'text-green-400',
       bgColor: 'bg-green-500/20',
       progressColor: 'bg-green-500',
     },
-    {
-      icon: Sparkles,
-      label: 'Cultural',
-      progress: culturalProgress,
-      color: 'text-purple-400',
-      bgColor: 'bg-purple-500/20',
-      progressColor: 'bg-purple-500',
-    },
   ];
 
-  const maxProgress = Math.max(militaryProgress, economicProgress, culturalProgress);
+  const maxProgress = Math.max(diplomaticProgress, dominationProgress, economicProgress, survivalProgress);
   const isCloseToVictory = maxProgress >= 70;
 
   return (

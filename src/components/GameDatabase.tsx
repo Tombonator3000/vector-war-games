@@ -714,20 +714,19 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
     unlockTurn: 8
   },
 
-  // VICTORY CONDITIONS
+  // VICTORY CONDITIONS - STREAMLINED (4 PATHS)
   {
     id: 'victory-diplomatic',
     title: 'Diplomatisk Seier',
     category: 'victory',
     icon: <Trophy className="h-5 w-5" />,
-    summary: 'Vinn gjennom diplomati og allianser uten krig.',
-    details: 'Form allianser med 60% av nasjoner, hold DEFCON høyt, og oppnå global innflytelse.',
+    summary: 'Vinn gjennom diplomati og fred.',
+    details: 'Form allianser med 60% av levende nasjoner og oppretthold fred i 5 runder.',
     mechanics: [
-      'Krever: 60% av nasjoner i allianser',
-      'DEFCON: ≥4 i 4+ runder',
-      'Global innflytelse: ≥120 poeng',
-      'Tidligst: Tur 10',
-      'Bonus: Ingen militære tap'
+      'Krever: Alliert med 60% av levende nasjoner',
+      'DEFCON: ≥4 i 5+ sammenhengende runder',
+      'Tidligst: Tur 5',
+      'Bonus: Fredelig seier uten militære tap'
     ],
     tips: [
       'Form allianser tidlig og ofte',
@@ -736,7 +735,7 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
       'Mest fredelig seiersvei'
     ],
     relatedTopics: ['diplomacy', 'alliances', 'trust-system'],
-    unlockTurn: 10
+    unlockTurn: 1
   },
   {
     id: 'victory-domination',
@@ -766,46 +765,22 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
     title: 'Økonomisk Seier',
     category: 'victory',
     icon: <Factory className="h-5 w-5" />,
-    summary: 'Dominer globalt gjennom økonomisk makt og handel.',
-    details: 'Kontroller byer, etabler handelsruter, og oppretthold positiv ressursbalanse.',
+    summary: 'Dominer globalt gjennom økonomisk makt.',
+    details: 'Kontroller 10+ byer og oppretthold 200+ produksjon per runde.',
     mechanics: [
-      'Krever: 10+ byer kontrollert',
-      '4+ handelsruter etablert',
-      'Ressursbalanse: +50/runde',
-      'Tidligst: Tur 11',
-      'Bonus: Minimal militær aktivitet'
+      'Krever: Kontroll over 10+ byer',
+      'Produksjon: ≥200 per runde',
+      'Tidligst: Tur 10',
+      'Bonus: Kan oppnås med eller uten krig'
     ],
     tips: [
       'Bruk konvensjonelle styrker for erobring',
-      'Prioriter ressurs-rike byer',
-      'Etabler handelsruter tidlig',
+      'Prioriter by-erobring',
+      'Bygg fabrikker for produksjon',
       'Beskytt dine økonomiske interesser'
     ],
     relatedTopics: ['conventional-warfare', 'territory-control'],
-    unlockTurn: 11
-  },
-  {
-    id: 'victory-demographic',
-    title: 'Demografisk Seier',
-    category: 'victory',
-    icon: <Globe className="h-5 w-5" />,
-    summary: 'Kontroller majoritet av verdens befolkning.',
-    details: 'Oppnå kontroll over 60% av verdens befolkning mens du holder ustabilitet lav.',
-    mechanics: [
-      'Krever: 60% av global befolkning',
-      'Ustabilitet: <30',
-      'Metode: Erobring og anneksjon',
-      'Immigration: Kan øke befolkning',
-      'Tidligst: Tur 15'
-    ],
-    tips: [
-      'Erobr tett befolkede områder',
-      'Hold befolkningen lykkelig',
-      'Unngå massiv død fra våpen',
-      'Balancer erobring og stabilitet'
-    ],
-    relatedTopics: ['territory-control', 'governance'],
-    unlockTurn: 15
+    unlockTurn: 1
   },
   {
     id: 'victory-survival',
@@ -828,29 +803,6 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
     ],
     relatedTopics: ['missile-defense', 'governance'],
     unlockTurn: 1
-  },
-  {
-    id: 'victory-cultural',
-    title: 'Kulturell/Propaganda Seier',
-    category: 'victory',
-    icon: <Radio className="h-5 w-5" />,
-    summary: 'Spre din kultur og påvirkning globalt.',
-    details: 'Bruk propaganda for å konvertere fiendtlig lederskap og spre din innflytelse.',
-    mechanics: [
-      'Krever: Propaganda-teknologi',
-      'Konverter fiendtlig lederskap',
-      'Spre kulturell innflytelse',
-      'Tidligst: Tur 26',
-      'Bonus: Minimal vold'
-    ],
-    tips: [
-      'Forsk propaganda-teknologi',
-      'Target svake fiender først',
-      'Kombinér med diplomati',
-      'Pasifistisk seiersvei'
-    ],
-    relatedTopics: ['research-system', 'diplomacy'],
-    unlockTurn: 26
   },
 
   // GREAT OLD ONES (BONUS CAMPAIGN)
