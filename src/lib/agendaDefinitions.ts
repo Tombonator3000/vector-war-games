@@ -10,6 +10,106 @@
 import type { Nation, GameState } from '@/types/game';
 import type { Agenda, AgendaModifier } from '@/types/negotiation';
 
+const countWarheads = (nation: Nation): number => {
+  return Object.values(nation.warheads || {}).reduce((sum, count) => sum + count, 0);
+};
+
+const getAllianceCount = (nation: Nation): number => nation.alliances?.length || 0;
+
+const hasActiveWar = (nation: Nation): boolean => {
+  const treaties = nation.treaties ? Object.values(nation.treaties) : [];
+  return treaties.some(treaty => treaty.alliance === false && (treaty.truceTurns ?? 0) <= 0);
+};
+
+const getActiveWarCount = (nation: Nation): number => {
+  const treaties = nation.treaties ? Object.values(nation.treaties) : [];
+  return treaties.filter(treaty => treaty.alliance === false && (treaty.truceTurns ?? 0) <= 0).length;
+};
+
+const hasSharedAlliance = (a: Nation, b: Nation): boolean => {
+  const aAlliances = a.alliances || [];
+  const bAlliances = b.alliances || [];
+  return aAlliances.includes(b.id) && bAlliances.includes(a.id);
+};
+
+const hasBrokenAlliance = (player: Nation, ai: Nation): boolean => {
+  const treaty = player.treaties?.[ai.id];
+  if (!treaty) {
+    return false;
+  }
+  const allianceActive = hasSharedAlliance(player, ai);
+  return !allianceActive && treaty.alliance === false && (treaty.truceTurns ?? 0) > 0;
+};
+
+const hasUsedNuclearWeapons = (player: Nation, _ai: Nation, gameState: GameState): boolean => {
+  const environmentPenalty = player.environmentPenaltyTurns ?? 0;
+  const winterLevel = gameState.nuclearWinterLevel ?? 0;
+  const radiationZones = gameState.radiationZones?.length ?? 0;
+  return environmentPenalty > 0 || winterLevel > 0 || radiationZones > 0;
+};
+
+const isNuclearDisarmed = (player: Nation): boolean => {
+  const warheads = countWarheads(player);
+  const missiles = player.missiles || 0;
+  return warheads === 0 && missiles === 0;
+};
+
+const causesEnvironmentalDamage = (player: Nation): boolean => {
+  return (player.environmentPenaltyTurns ?? 0) > 0;
+};
+
+const protectsEnvironment = (player: Nation): boolean => {
+  const penalty = player.environmentPenaltyTurns ?? 0;
+  const greenShift = player.greenShiftTurns ?? 0;
+  return penalty === 0 && greenShift > 0;
+};
+
+const getMilitaryStrength = (nation: Nation): number => {
+  const missiles = nation.missiles || 0;
+  const bombers = (nation.bombers || 0) * 5;
+  const submarines = (nation.submarines || 0) * 3;
+  return missiles + bombers + submarines;
+};
+
+const hasSharedResources = (player: Nation, ai: Nation): boolean => {
+  const favor = ai.favorBalances?.[player.id]?.value ?? 0;
+  return favor > 20;
+};
+
+const hoardsResources = (player: Nation, ai: Nation): boolean => {
+  const favor = ai.favorBalances?.[player.id]?.value ?? 0;
+  return favor < -10;
+};
+
+const hasAdvancedTechnology = (player: Nation): boolean => {
+  const researchCount = player.researched ? Object.keys(player.researched).length : 0;
+  return researchCount > 10;
+};
+
+const hasStrongMilitary = (nation: Nation): boolean => getMilitaryStrength(nation) >= 50;
+
+const hasWeakMilitary = (nation: Nation): boolean => getMilitaryStrength(nation) < 25;
+
+const hasHighTrust = (ai: Nation, playerId: string): boolean => {
+  const trust = ai.trustRecords?.[playerId]?.value ?? 50;
+  return trust > 70;
+};
+
+const keepsPromises = (ai: Nation, playerId: string): boolean => {
+  const promises = ai.diplomaticPromises || [];
+  return promises.some(promise => promise.toNationId === playerId && !promise.broken);
+};
+
+const hasActiveTrade = (player: Nation): boolean => (player.production || 0) > 150;
+
+const imposesSanctions = (player: Nation): boolean => {
+  return (player.sanctionTurns ?? 0) > 0 || player.sanctioned === true;
+};
+
+const respectsCulture = (player: Nation): boolean => (player.cultureBombCostReduction ?? 0) > 0 || (player.greenShiftTurns ?? 0) > 0;
+
+const threatensCulture = (player: Nation): boolean => (player.coverOpsTurns ?? 0) > 0 || imposesSanctions(player);
+
 // ============================================================================
 // Primary Agendas (Always visible)
 // ============================================================================
@@ -27,19 +127,17 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         effect: -30,
         description: 'You have used nuclear weapons',
         evaluationBonus: -100,
+        applies: (player: Nation, ai: Nation, gameState: GameState) =>
+          hasUsedNuclearWeapons(player, ai, gameState),
       },
       {
         condition: 'player has no nukes',
         effect: +10,
         description: 'You show restraint with nuclear weapons',
         evaluationBonus: +20,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => isNuclearDisarmed(player),
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      // Check if player has used nuclear weapons
-      // In a real implementation, this would check game history
-      return (player.warheads && Object.keys(player.warheads).length > 0);
-    },
   },
 
   {
@@ -54,18 +152,16 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         effect: -25,
         description: 'You have declared too many wars',
         evaluationBonus: -80,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => getActiveWarCount(player) > 1,
       },
       {
         condition: 'player is peaceful',
         effect: +15,
         description: 'You are a peaceful nation',
         evaluationBonus: +30,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => getActiveWarCount(player) === 0,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      // This would check war history - placeholder for now
-      return false;
-    },
   },
 
   {
@@ -80,18 +176,16 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         effect: +25,
         description: 'Our alliance has stood the test of time',
         evaluationBonus: +60,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) => hasSharedAlliance(player, ai),
       },
       {
         condition: 'player broke alliance',
         effect: -40,
         description: 'You betrayed our alliance',
         evaluationBonus: -120,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) => hasBrokenAlliance(player, ai),
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      const hasAlliance = ai.alliances?.includes(player.id);
-      return hasAlliance || false;
-    },
   },
 
   {
@@ -106,18 +200,16 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         effect: -15,
         description: 'Your many alliances concern me',
         evaluationBonus: -40,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => getAllianceCount(player) > 3,
       },
       {
         condition: 'player respects isolation',
         effect: +10,
         description: 'You respect our desire for independence',
         evaluationBonus: +20,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => getAllianceCount(player) <= 1,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      const allianceCount = player.alliances?.length || 0;
-      return allianceCount > 3;
-    },
   },
 
   {
@@ -132,21 +224,16 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         effect: +20,
         description: 'You are a champion of peace',
         evaluationBonus: +50,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => !hasActiveWar(player),
       },
       {
         condition: 'player is at war',
         effect: -15,
         description: 'You are engaged in warfare',
         evaluationBonus: -30,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => hasActiveWar(player),
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      // Check if player is currently at war
-      const atWar = player.treaties && Object.values(player.treaties).some(
-        treaty => treaty.alliance === false && treaty.truceTurns === undefined
-      );
-      return atWar || false;
-    },
   },
 
   {
@@ -161,18 +248,16 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         effect: +15,
         description: 'You protect the environment',
         evaluationBonus: +35,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => protectsEnvironment(player),
       },
       {
         condition: 'player damages environment',
         effect: -20,
         description: 'Your actions harm the environment',
         evaluationBonus: -50,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => causesEnvironmentalDamage(player),
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      // Check environmental penalties
-      return (player.environmentPenaltyTurns || 0) > 0;
-    },
   },
 
   {
@@ -187,19 +272,24 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         effect: +10,
         description: 'You maintain a strong military',
         evaluationBonus: +25,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) => {
+          const playerStrength = getMilitaryStrength(player);
+          const aiStrength = Math.max(1, getMilitaryStrength(ai));
+          return playerStrength >= aiStrength * 0.75 && playerStrength <= aiStrength * 1.1;
+        },
       },
       {
         condition: 'player threatens our supremacy',
         effect: -25,
         description: 'You challenge our military dominance',
         evaluationBonus: -60,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) => {
+          const playerStrength = getMilitaryStrength(player);
+          const aiStrength = getMilitaryStrength(ai);
+          return playerStrength > aiStrength * 1.1;
+        },
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      const playerMilitary = (player.missiles || 0) + (player.bombers || 0) * 5;
-      const aiMilitary = (ai.missiles || 0) + (ai.bombers || 0) * 5;
-      return playerMilitary > aiMilitary;
-    },
   },
 
   {
@@ -214,18 +304,18 @@ export const PRIMARY_AGENDAS: Agenda[] = [
         effect: +20,
         description: 'You share our ideology',
         evaluationBonus: +45,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) =>
+          player.doctrine !== undefined && player.doctrine === ai.doctrine,
       },
       {
         condition: 'player opposes ideology',
         effect: -25,
         description: 'Your ideology conflicts with ours',
         evaluationBonus: -65,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) =>
+          !!player.doctrine && !!ai.doctrine && player.doctrine !== ai.doctrine,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      // Check if doctrines match
-      return player.doctrine !== ai.doctrine;
-    },
   },
 ];
 
@@ -246,19 +336,16 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         effect: +15,
         description: 'Impressed by your territorial expansion',
         evaluationBonus: +35,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => (player.cities || 0) > 5,
       },
       {
         condition: 'player is weak',
         effect: -10,
         description: 'You lack territorial ambition',
         evaluationBonus: -20,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => (player.cities || 0) <= 2,
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      // Check territory count
-      const cities = player.cities || 1;
-      return cities > 5;
-    },
   },
 
   {
@@ -273,19 +360,16 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         effect: +20,
         description: 'You generously share your resources',
         evaluationBonus: +50,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) => hasSharedResources(player, ai),
       },
       {
         condition: 'player hoards resources',
         effect: -10,
         description: 'You hoard your resources',
         evaluationBonus: -25,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) => hoardsResources(player, ai),
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      // Check if player has sent aid recently
-      const favorBalance = ai.favorBalances?.[player.id];
-      return favorBalance && favorBalance.value > 20;
-    },
   },
 
   {
@@ -300,18 +384,17 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         effect: +15,
         description: 'Your technological progress impresses me',
         evaluationBonus: +40,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => hasAdvancedTechnology(player),
       },
       {
         condition: 'player shares technology',
         effect: +20,
         description: 'You share your technological advances',
         evaluationBonus: +55,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) =>
+          hasAdvancedTechnology(player) && hasSharedResources(player, ai),
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      const researchCount = player.researched ? Object.keys(player.researched).length : 0;
-      return researchCount > 10;
-    },
   },
 
   {
@@ -326,18 +409,16 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         effect: +15,
         description: 'Your military strength is admirable',
         evaluationBonus: +40,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => hasStrongMilitary(player),
       },
       {
         condition: 'player has weak military',
         effect: -10,
         description: 'Your military is weak',
         evaluationBonus: -25,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => hasWeakMilitary(player),
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      const military = (player.missiles || 0) + (player.bombers || 0) * 5;
-      return military > 50;
-    },
   },
 
   {
@@ -352,18 +433,17 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         effect: +20,
         description: 'You are an active diplomat',
         evaluationBonus: +50,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) =>
+          hasHighTrust(ai, player.id) || getAllianceCount(player) > 0 || getAllianceCount(ai) > 0,
       },
       {
         condition: 'player keeps promises',
         effect: +15,
         description: 'You honor your diplomatic commitments',
         evaluationBonus: +40,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) => keepsPromises(ai, player.id),
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      const trust = ai.trustRecords?.[player.id]?.value || 50;
-      return trust > 70;
-    },
   },
 
   {
@@ -378,18 +458,18 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         effect: +10,
         description: 'This benefits us both',
         evaluationBonus: +30,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) =>
+          hasSharedResources(player, ai) || getAllianceCount(player) > 0 || getAllianceCount(ai) > 0,
       },
       {
         condition: 'player is rigid',
         effect: -5,
         description: 'You are too inflexible',
         evaluationBonus: -15,
+        applies: (player: Nation, ai: Nation, _gameState: GameState) =>
+          getAllianceCount(player) === 0 && !hasSharedResources(player, ai),
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      // Opportunist is always looking for advantage
-      return true;
-    },
   },
 
   {
@@ -404,18 +484,16 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         effect: +15,
         description: 'Our trade relationship is valuable',
         evaluationBonus: +40,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => hasActiveTrade(player),
       },
       {
         condition: 'player imposes sanctions',
         effect: -20,
         description: 'Your sanctions harm our trade',
         evaluationBonus: -55,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => imposesSanctions(player),
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      const production = player.production || 0;
-      return production > 150;
-    },
   },
 
   {
@@ -430,18 +508,16 @@ export const HIDDEN_AGENDAS: Agenda[] = [
         effect: +15,
         description: 'You respect our cultural heritage',
         evaluationBonus: +35,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => respectsCulture(player),
       },
       {
         condition: 'player threatens culture',
         effect: -20,
         description: 'You threaten our cultural identity',
         evaluationBonus: -50,
+        applies: (player: Nation, _ai: Nation, _gameState: GameState) => threatensCulture(player),
       },
     ],
-    checkCondition: (player: Nation, ai: Nation, gameState: GameState) => {
-      // Check for cultural aggression - placeholder
-      return false;
-    },
   },
 ];
 

@@ -416,9 +416,15 @@ export function checkWarningTrigger(
 
   // Create context with appropriate reason
   if (hasSevereAgendaViolation) {
+    const primaryViolation = agendaViolations[0];
+    const violationDetail = primaryViolation.modifiers[0]?.description;
+    const reason = violationDetail
+      ? `Your actions violate my ${primaryViolation.agenda.name} values. ${violationDetail} Change your behavior or face consequences.`
+      : `Your actions violate my ${primaryViolation.agenda.name} values. Change your behavior or face consequences.`;
+
     result.context = {
-      reason: `Your actions violate my ${agendaViolations[0].name} values. Change your behavior or face consequences.`,
-      agendaId: agendaViolations[0].id,
+      reason,
+      agendaId: primaryViolation.agenda.id,
     };
   } else {
     result.context = {

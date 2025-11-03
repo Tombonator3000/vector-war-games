@@ -207,7 +207,6 @@ export interface Agenda {
   description: string;                  // Description of the agenda
   isRevealed: boolean;                  // Whether player knows about it
   modifiers: AgendaModifier[];          // Relationship modifiers
-  checkCondition?: (player: Nation, ai: Nation, gameState: GameState) => boolean;
 }
 
 /**
@@ -218,6 +217,7 @@ export interface AgendaModifier {
   effect: number;                       // Relationship modifier
   description: string;                  // Player-visible description
   evaluationBonus?: number;             // Bonus to negotiation evaluation
+  applies?: (player: Nation, ai: Nation, gameState: GameState) => boolean; // Predicate for applicability
 }
 
 /**
