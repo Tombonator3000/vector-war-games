@@ -212,15 +212,21 @@ export function evaluateNegotiation(
         aiNation,
         { nations: allNations, turn: currentTurn }
       );
-      const feedbackMessages = getAgendaFeedback(
+      const agendaFeedback = getAgendaFeedback(
         playerNation,
         aiNation,
         { nations: allNations, turn: currentTurn }
       );
 
-      // Add feedback for revealed agendas only
-      if (violations.length > 0 && feedbackMessages.length > 0) {
-        rejectionReasons.push(feedbackMessages[0]);
+      if (violations.length > 0) {
+        const firstViolation = violations[0];
+        const violationFeedback = agendaFeedback.byAgenda[firstViolation.agenda.id]?.negative[0]
+          || agendaFeedback.negative[0]
+          || firstViolation.modifiers[0]?.description;
+
+        if (violationFeedback) {
+          rejectionReasons.push(violationFeedback);
+        }
       }
     }
   }
