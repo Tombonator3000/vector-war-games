@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag, Smile, Meh, Frown, AlertTriangle, Trophy, Skull, Building2, Sparkles, Calendar, ThumbsUp, FlaskConical } from 'lucide-react';
+import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag, Smile, Meh, Frown, AlertTriangle, Trophy, Skull, Building2, Sparkles, Calendar, ThumbsUp, FlaskConical, BookOpen } from 'lucide-react';
+import { GameDatabase } from './GameDatabase';
 import { Nation } from '../types/game';
 import type { GovernanceMetrics } from '@/hooks/useGovernance';
 import type { VictoryAnalysis } from '@/types/victory';
@@ -41,6 +42,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   defaultTab = 'own-status',
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
+  const [showNukaPedia, setShowNukaPedia] = useState(false);
 
   // Reset to default tab when panel opens
   React.useEffect(() => {
@@ -943,21 +945,31 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="bg-gray-900 border-2 border-yellow-600 rounded-lg shadow-2xl w-full h-full flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-yellow-900 to-yellow-700 p-4 flex justify-between items-center rounded-t-lg">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <TrendingUp className="w-6 h-6" />
-            Civilization Status Report
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-white hover:text-red-400 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+        <div className="bg-gray-900 border-2 border-yellow-600 rounded-lg shadow-2xl w-full h-full flex flex-col">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-yellow-900 to-yellow-700 p-4 flex justify-between items-center rounded-t-lg">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <TrendingUp className="w-6 h-6" />
+              Civilization Status Report
+            </h2>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowNukaPedia(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded transition-colors font-medium"
+              >
+                <BookOpen className="w-5 h-5" />
+                NukaPedia
+              </button>
+              <button
+                onClick={onClose}
+                className="text-white hover:text-red-400 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
 
         {/* Tabs */}
         <div className="flex border-b border-gray-700 bg-gray-800">
@@ -1031,5 +1043,12 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
         </div>
       </div>
     </div>
+
+    <GameDatabase 
+      open={showNukaPedia} 
+      onClose={() => setShowNukaPedia(false)} 
+      currentTurn={currentTurn}
+    />
+  </>
   );
 };
