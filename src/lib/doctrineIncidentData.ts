@@ -32,6 +32,7 @@ export const DOCTRINE_INCIDENTS: DoctrineIncident[] = [
         id: 'launch_anyway',
         text: 'LAUNCH IMMEDIATE RETALIATION - Stand by doctrine',
         doctrineAlignment: 'mad',
+        followUpIncident: 'mad_false_alarm_aftermath',
         consequences: {
           newsEvent: {
             category: 'military',
@@ -42,7 +43,6 @@ export const DOCTRINE_INCIDENTS: DoctrineIncident[] = [
           globalRelationshipChange: -30,
           instabilityDelta: 25,
           moraleDelta: -15,
-          followUpIncident: 'mad_false_alarm_aftermath',
         },
       },
       {
@@ -460,6 +460,7 @@ export const DOCTRINE_INCIDENTS: DoctrineIncident[] = [
         id: 'wait_confirmation',
         text: 'WAIT FOR CONFIRMATION - Gather more intelligence',
         doctrineAlignment: 'defense',
+        followUpIncident: 'firstStrike_intel_followup',
         consequences: {
           intelCost: 25,
           newsEvent: {
@@ -471,7 +472,6 @@ export const DOCTRINE_INCIDENTS: DoctrineIncident[] = [
             toward: 'defense',
             amount: 12,
           },
-          followUpIncident: 'firstStrike_intel_followup',
         },
       },
       {
@@ -692,6 +692,7 @@ export const DOCTRINE_INCIDENTS: DoctrineIncident[] = [
         id: 'purge_hardliners',
         text: 'PURGE HARDLINERS - Remove dissenters from power',
         doctrineAlignment: 'detente',
+        followUpIncident: 'detente_purge_aftermath',
         consequences: {
           instabilityDelta: 25,
           moraleDelta: -20,
@@ -701,7 +702,6 @@ export const DOCTRINE_INCIDENTS: DoctrineIncident[] = [
             priority: 'critical',
           },
           deterrenceChange: -15,
-          followUpIncident: 'detente_purge_aftermath',
         },
       },
     ],
