@@ -4440,7 +4440,9 @@ function endTurn() {
         return result.nation;
       });
 
-      updateNations(updatedNationsFromBio);
+      nations = updatedNationsFromBio;
+      GameStateManager.setNations(updatedNationsFromBio);
+      PlayerManager.setNations(updatedNationsFromBio);
 
       // Process AI bio-warfare for all AI nations
       const difficulty = S.difficulty || 'medium';
@@ -5266,7 +5268,9 @@ export default function NoradVector() {
 
       // Apply diplomacy migration
       const migratedNations = migrateGameDiplomacy(initializedNations);
-      updateNations(migratedNations);
+      nations = migratedNations;
+      GameStateManager.setNations(migratedNations);
+      PlayerManager.setNations(migratedNations);
 
       log('Simplified gameplay systems initialized', 'system');
     }
@@ -7560,7 +7564,9 @@ export default function NoradVector() {
         return n;
       });
 
-      updateNations(updatedNations);
+      nations = updatedNations;
+      GameStateManager.setNations(updatedNations);
+      PlayerManager.setNations(updatedNations);
       toast({
         title: 'Aid Sent',
         description: `Sent ${terms.resourceAmount} production to ${target.name}. Relationship improved by +10.`,
@@ -7588,7 +7594,9 @@ export default function NoradVector() {
         return n;
       });
 
-      updateNations(updatedNations);
+      nations = updatedNations;
+      GameStateManager.setNations(updatedNations);
+      PlayerManager.setNations(updatedNations);
       log(`Alliance formed between ${player.name} and ${target.name}!`, 'diplomatic');
       toast({
         title: 'Alliance Formed',
@@ -7659,7 +7667,9 @@ export default function NoradVector() {
       if (n.id === target.id) return result.target;
       return n;
     });
-    updateNations(updatedNations);
+    nations = updatedNations;
+    GameStateManager.setNations(updatedNations);
+    PlayerManager.setNations(updatedNations);
 
     log(result.message, 'military');
     toast({
@@ -7692,7 +7702,9 @@ export default function NoradVector() {
       if (n.id === target.id) return result.target;
       return n;
     });
-    updateNations(updatedNations);
+    nations = updatedNations;
+    GameStateManager.setNations(updatedNations);
+    PlayerManager.setNations(updatedNations);
 
     log(result.message, 'diplomatic');
     toast({
@@ -7722,7 +7734,9 @@ export default function NoradVector() {
       if (n.id === player.id) return result.nation;
       return n;
     });
-    updateNations(updatedNations);
+    nations = updatedNations;
+    GameStateManager.setNations(updatedNations);
+    PlayerManager.setNations(updatedNations);
 
     log(result.message, 'diplomatic');
     toast({
@@ -7741,7 +7755,9 @@ export default function NoradVector() {
       if (n.id === player.id) return updatedPlayer;
       return n;
     });
-    updateNations(updatedNations);
+    nations = updatedNations;
+    GameStateManager.setNations(updatedNations);
+    PlayerManager.setNations(updatedNations);
 
     log(`Immigration policy changed to: ${policy}`, 'diplomatic');
     toast({
