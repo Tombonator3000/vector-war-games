@@ -340,15 +340,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         flatLayer.brightness = 1.08;
         flatLayer.contrast = 1.1;
 
-        const gridLayer = imageryLayers.addImageryProvider(
-          new GridImageryProvider({
-            color: Color.fromAlpha(Color.CYAN, 0.22),
-            glowColor: Color.fromAlpha(Color.CYAN, 0.12),
-            cells: 36,
-          })
-        );
-        gridLayer.alpha = 0.55;
-        gridLayerRef.current = gridLayer;
+        // Grid removed for clean flat-realistic view
 
         const updateTranslateState = () => {
           const helper = cameraHeightHelperRef.current;
@@ -577,15 +569,13 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       };
 
       if (polygonCoords && polygonCoords.length > 0) {
-        // Use GeoJSON polygon boundary
+        // Use GeoJSON polygon boundary - invisible for clean map
         entityConfig.polygon = {
           hierarchy: new PolygonHierarchy(
             Cartesian3.fromDegreesArray(polygonCoords)
           ),
-          material: color.withAlpha(0.4),
-          outline: true,
-          outlineColor: Color.WHITE.withAlpha(0.8),
-          outlineWidth: 2,
+          material: Color.TRANSPARENT,
+          outline: false,
           height: 0,
           extrudedHeight: 0,
         };
@@ -593,15 +583,13 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           ? Cartesian3.fromDegrees(labelPosition.lon, labelPosition.lat, 0)
           : Cartesian3.fromDegrees(territory.anchorLon, territory.anchorLat, 0);
       } else {
-        // Fallback to circular region
+        // Fallback to circular region - invisible for clean map
         entityConfig.position = Cartesian3.fromDegrees(territory.anchorLon, territory.anchorLat, 0);
         entityConfig.ellipse = {
           semiMinorAxis: 800000,
           semiMajorAxis: 800000,
-          material: color.withAlpha(0.4),
-          outline: true,
-          outlineColor: Color.WHITE.withAlpha(0.8),
-          outlineWidth: 2,
+          material: Color.TRANSPARENT,
+          outline: false,
           height: 0,
         };
       }
