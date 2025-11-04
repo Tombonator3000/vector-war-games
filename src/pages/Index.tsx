@@ -3722,12 +3722,12 @@ function evaluateDiplomaticProgress(player: Nation) {
   const allianceRatio = potentialPartners > 0 ? allianceCount / potentialPartners : 0;
   const truceCount = aliveNations.filter(n => n !== player && player.treaties?.[n.id]?.truceTurns).length;
 
+  let peaceTurns = diplomacy.peaceTurns;
   if (diplomacy.lastEvaluatedTurn !== S.turn) {
-    diplomacy.lastEvaluatedTurn = S.turn;
     if (S.defcon >= DIPLOMATIC_VICTORY_CRITERIA.requiredDefcon) {
-      diplomacy.peaceTurns += 1;
+      peaceTurns += 1;
     } else {
-      diplomacy.peaceTurns = 0;
+      peaceTurns = 0;
     }
   }
 
@@ -3738,24 +3738,22 @@ function evaluateDiplomaticProgress(player: Nation) {
     Math.max(0, (player.production || 0) * 0.5) +
     S.defcon * 5;
 
-  diplomacy.allianceRatio = allianceRatio;
-  diplomacy.influenceScore = influenceScore;
-
   const allianceProgress = Math.min(1, allianceRatio / DIPLOMATIC_VICTORY_CRITERIA.allianceRatio);
-  const peaceProgress = Math.min(1, diplomacy.peaceTurns / DIPLOMATIC_VICTORY_CRITERIA.peaceTurns);
+  const peaceProgress = Math.min(1, peaceTurns / DIPLOMATIC_VICTORY_CRITERIA.peaceTurns);
   const influenceProgress = Math.min(1, influenceScore / DIPLOMATIC_VICTORY_CRITERIA.influenceTarget);
   const overallProgress = (allianceProgress + peaceProgress + influenceProgress) / 3;
 
+  let nearVictoryNotified = diplomacy.nearVictoryNotified;
   if (overallProgress < DIPLOMATIC_VICTORY_CRITERIA.resetNearThreshold) {
-    diplomacy.nearVictoryNotified = false;
+    nearVictoryNotified = false;
   }
 
   if (
-    !diplomacy.nearVictoryNotified &&
+    !nearVictoryNotified &&
     overallProgress >= DIPLOMATIC_VICTORY_CRITERIA.nearProgressThreshold &&
     (allianceProgress < 1 || peaceProgress < 1 || influenceProgress < 1)
   ) {
-    diplomacy.nearVictoryNotified = true;
+    nearVictoryNotified = true;
     toast({
       title: 'Diplomatic Momentum',
       description: 'World leaders are rallying behind you. Maintain the peace to secure a diplomatic victory.'
@@ -3765,11 +3763,12 @@ function evaluateDiplomaticProgress(player: Nation) {
 
   const victoryAchieved =
     allianceRatio >= DIPLOMATIC_VICTORY_CRITERIA.allianceRatio &&
-    diplomacy.peaceTurns >= DIPLOMATIC_VICTORY_CRITERIA.peaceTurns &&
+    peaceTurns >= DIPLOMATIC_VICTORY_CRITERIA.peaceTurns &&
     influenceScore >= DIPLOMATIC_VICTORY_CRITERIA.influenceTarget;
 
-  if (victoryAchieved && !diplomacy.victoryAnnounced) {
-    diplomacy.victoryAnnounced = true;
+  let victoryAnnounced = diplomacy.victoryAnnounced;
+  if (victoryAchieved && !victoryAnnounced) {
+    victoryAnnounced = true;
     toast({
       title: 'Diplomatic Victory Achieved',
       description: 'A worldwide alliance recognizes your leadership.'
@@ -3777,10 +3776,20 @@ function evaluateDiplomaticProgress(player: Nation) {
     window.__gameAddNewsItem?.('diplomatic', 'Diplomatic triumph! A global coalition is declared.', 'critical');
   }
 
+  // Create a new diplomacy object to trigger React updates
+  S.diplomacy = {
+    peaceTurns,
+    lastEvaluatedTurn: S.turn,
+    allianceRatio,
+    influenceScore,
+    nearVictoryNotified,
+    victoryAnnounced,
+  };
+
   return {
     victory: victoryAchieved,
     message: victoryAchieved
-      ? `DIPLOMATIC VICTORY - Forged alliances with ${allianceCount} nations, preserved peace for ${diplomacy.peaceTurns} turns, and achieved influence score ${Math.floor(
+      ? `DIPLOMATIC VICTORY - Forged alliances with ${allianceCount} nations, preserved peace for ${peaceTurns} turns, and achieved influence score ${Math.floor(
           influenceScore
         )}.`
       : undefined
