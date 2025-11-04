@@ -2142,6 +2142,7 @@ function initNations() {
     production: 25,
     uranium: 15,
     intel: 10,
+    gold: 1000,
     cities: 1,
     warheads: { 10: 3, 20: 2 },
     researched: { warhead_20: true },
@@ -2210,6 +2211,7 @@ function initNations() {
       production: 20 + Math.floor(Math.random() * 15), // 20-35 production (player has 25)
       uranium: 12 + Math.floor(Math.random() * 8), // 12-20 uranium (player has 15)
       intel: 8 + Math.floor(Math.random() * 8), // 8-16 intel (player has 10)
+      gold: 800 + Math.floor(Math.random() * 400), // 800-1200 gold (player has 1000)
       cities: 1,
       warheads: { 
         10: 2 + Math.floor(Math.random() * 2), // 2-3 10MT
