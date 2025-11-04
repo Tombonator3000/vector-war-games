@@ -126,6 +126,11 @@ import {
   applyCyberResearchUnlock,
 } from '@/hooks/useCyberWarfare';
 import { GovernanceEventDialog } from '@/components/governance/GovernanceEventDialog';
+import { PoliticalStatusWidget } from '@/components/governance/PoliticalStatusWidget';
+import { GovernanceDetailPanel } from '@/components/governance/GovernanceDetailPanel';
+import { PolicySelectionPanel } from '@/components/governance/PolicySelectionPanel';
+import { PoliticalStabilityOverlay } from '@/components/governance/PoliticalStabilityOverlay';
+import { usePolicySystem } from '@/hooks/usePolicySystem';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 import { getDefaultScenario, type ScenarioConfig, SCENARIOS } from '@/types/scenario';
 import { getGameTimestamp, turnsUntilEvent, isEventTurn } from '@/lib/timeSystem';
@@ -4388,7 +4393,47 @@ function endTurn() {
     setTimeout(() => {
       S.phase = 'PRODUCTION';
       productionPhase();
-      
+
+      // Apply policy effects for player nation
+      if (player && policySystem.totalEffects) {
+        const effects = policySystem.totalEffects;
+
+        // Apply per-turn resource gains/costs
+        if (effects.goldPerTurn) {
+          player.gold = Math.max(0, (player.gold || 0) + effects.goldPerTurn);
+        }
+        if (effects.uraniumPerTurn) {
+          player.uranium = Math.max(0, (player.uranium || 0) + effects.uraniumPerTurn);
+        }
+        if (effects.intelPerTurn) {
+          player.intel = Math.max(0, (player.intel || 0) + effects.intelPerTurn);
+        }
+
+        // Apply maintenance costs for active policies
+        policySystem.activePolicies.forEach(activePolicy => {
+          const policy = require('@/lib/policyData').getPolicyById(activePolicy.policyId);
+          if (policy?.maintenanceCost) {
+            if (policy.maintenanceCost.gold) {
+              player.gold = Math.max(0, (player.gold || 0) - policy.maintenanceCost.gold);
+            }
+            if (policy.maintenanceCost.intel) {
+              player.intel = Math.max(0, (player.intel || 0) - policy.maintenanceCost.intel);
+            }
+          }
+        });
+
+        // Apply governance modifiers from policies
+        if (governance.metrics[player.id]) {
+          const delta: GovernanceDelta = {
+            morale: effects.moraleModifier || 0,
+            publicOpinion: effects.publicOpinionModifier || 0,
+            cabinetApproval: effects.cabinetApprovalModifier || 0,
+            instability: effects.instabilityModifier || 0
+          };
+          governance.applyDelta(player.id, delta);
+        }
+      }
+
       S.turn++;
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
@@ -5202,6 +5247,9 @@ export default function NoradVector() {
   });
   const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
   const [isCulturePanelOpen, setIsCulturePanelOpen] = useState(false);
+  const [showGovernanceDetails, setShowGovernanceDetails] = useState(false);
+  const [showPolicyPanel, setShowPolicyPanel] = useState(false);
+  const [showStabilityOverlay, setShowStabilityOverlay] = useState(false);
   const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
   const [isIntelOperationsOpen, setIsIntelOperationsOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
@@ -5710,6 +5758,25 @@ export default function NoradVector() {
     getNations: getGovernanceNations,
     onMetricsSync: handleGovernanceMetricsSync,
     onApplyDelta: handleGovernanceDelta,
+    onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
+  });
+
+  // Policy system for strategic national policies
+  const player = nations.find(n => n.isPlayer);
+  const policySystem = usePolicySystem({
+    currentTurn: S.turn,
+    nationId: player?.id || '',
+    availableGold: player?.gold || 0,
+    availableProduction: player?.production || 0,
+    availableIntel: player?.intel || 0,
+    onResourceCost: (gold, production, intel) => {
+      if (player) {
+        player.gold = Math.max(0, (player.gold || 0) - gold);
+        player.production = Math.max(0, player.production - production);
+        player.intel = Math.max(0, (player.intel || 0) - intel);
+        updateDisplay();
+      }
+    },
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
   });
 
@@ -9903,6 +9970,23 @@ export default function NoradVector() {
           />
         )}
 
+        {canvasRef.current && showStabilityOverlay && (
+          <PoliticalStabilityOverlay
+            nations={nations.map(n => ({
+              id: n.id,
+              name: n.name,
+              lon: n.lon || 0,
+              lat: n.lat || 0,
+              morale: governance.metrics[n.id]?.morale || 50,
+              publicOpinion: governance.metrics[n.id]?.publicOpinion || 50,
+              instability: governance.metrics[n.id]?.instability || 0
+            }))}
+            canvasWidth={canvasRef.current.width}
+            canvasHeight={canvasRef.current.height}
+            visible={showStabilityOverlay}
+          />
+        )}
+
         <div className="hud-layers pointer-events-none touch-none">
           <div className="game-top-stack pointer-events-none">
             <header className="game-top-bar w-full bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between pointer-events-auto touch-auto">
@@ -9954,7 +10038,24 @@ export default function NoradVector() {
               >
                 EMPIRE INFO
               </Button>
-              
+
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setShowStabilityOverlay(!showStabilityOverlay);
+                  AudioSys.playSFX('click');
+                }}
+                className={`h-6 px-2 text-[11px] ${
+                  showStabilityOverlay
+                    ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+                    : 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10'
+                }`}
+                title="Toggle Political Stability Overlay"
+              >
+                {showStabilityOverlay ? '✓ ' : ''}STABILITY
+              </Button>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -10040,6 +10141,20 @@ export default function NoradVector() {
               />
             </div>
           </div>
+
+          {player && governance.metrics[player.id] ? (
+            <div
+              className="fixed left-3 pointer-events-auto touch-auto z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))]"
+              style={{ top: 'var(--game-top-stack-offset)' }}
+            >
+              <PoliticalStatusWidget
+                metrics={governance.metrics[player.id]}
+                nationName={player.name}
+                instability={governance.metrics[player.id].instability || 0}
+                onOpenDetails={() => setShowGovernanceDetails(true)}
+              />
+            </div>
+          ) : null}
 
           {coopEnabled ? (
             <div
@@ -10255,6 +10370,17 @@ export default function NoradVector() {
                   </Button>
 
                   <Button
+                    onClick={() => setShowPolicyPanel(true)}
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                    title="POLICY - National strategic policies"
+                  >
+                    <Shield className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">POLICY</span>
+                  </Button>
+
+                  <Button
                     onClick={handleDiplomacy}
                     variant="ghost"
                     size="icon"
@@ -10364,6 +10490,62 @@ export default function NoradVector() {
           updateDisplay();
         }}
       />
+
+      {player && governance.metrics[player.id] ? (
+        <GovernanceDetailPanel
+          open={showGovernanceDetails}
+          onOpenChange={setShowGovernanceDetails}
+          metrics={governance.metrics[player.id]}
+          nationName={player.name}
+          instability={governance.metrics[player.id].instability || 0}
+          production={player.production}
+          intel={player.intel || 0}
+        />
+      ) : null}
+
+      {player ? (
+        <PolicySelectionPanel
+          open={showPolicyPanel}
+          onOpenChange={setShowPolicyPanel}
+          activePolicies={policySystem.activePolicies}
+          availableGold={player.gold || 0}
+          availableProduction={player.production}
+          availableIntel={player.intel || 0}
+          currentTurn={S.turn}
+          onEnactPolicy={(policyId) => {
+            const result = policySystem.enactPolicy(policyId);
+            if (result.success) {
+              toast({
+                title: 'Policy Enacted',
+                description: 'The policy has been successfully enacted.',
+              });
+              updateDisplay();
+            } else {
+              toast({
+                title: 'Failed to Enact Policy',
+                description: result.reason || 'Unknown error',
+                variant: 'destructive',
+              });
+            }
+          }}
+          onRepealPolicy={(policyId) => {
+            const result = policySystem.repealPolicy(policyId);
+            if (result.success) {
+              toast({
+                title: 'Policy Repealed',
+                description: 'The policy has been successfully repealed.',
+              });
+              updateDisplay();
+            } else {
+              toast({
+                title: 'Failed to Repeal Policy',
+                description: result.reason || 'Unknown error',
+                variant: 'destructive',
+              });
+            }
+          }}
+        />
+      ) : null}
 
       <Dialog open={Boolean(pendingLaunch)} onOpenChange={(open) => { if (!open) resetLaunchControl(); }}>
         <DialogContent className="max-w-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm">
