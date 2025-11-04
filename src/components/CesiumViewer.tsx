@@ -1006,6 +1006,11 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
     const viewer = viewerRef.current;
 
     const updateWeather = () => {
+      // Check if viewer and entities are initialized
+      if (!viewer || !viewer.entities) {
+        return;
+      }
+
       // Clear old weather entities
       entitiesRef.current.forEach((entity, key) => {
         if (key.startsWith('weather-')) {
