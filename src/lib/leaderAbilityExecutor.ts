@@ -12,6 +12,7 @@ import type {
   AbilityEffectResult,
 } from '@/types/leaderAbilities';
 import { useAbility } from '@/types/leaderAbilities';
+import PlayerManager from '@/state/PlayerManager';
 
 /**
  * Execute a leader ability
@@ -147,10 +148,11 @@ function executeForcePeace(
   const duration = effect.duration || 3;
 
   // Find all nations at war with the player
-  for (const otherNation of gameState.nations) {
+  const nations = PlayerManager.getNations();
+  for (const otherNation of nations) {
     if (otherNation.id === nation.id) continue;
 
-    const relationship = nation.relationship?.[otherNation.id] || 0;
+    const relationship = nation.relationships?.[otherNation.id] || 0;
     if (relationship < -50) {
       // Force truce
       if (!nation.treaties) nation.treaties = {};
@@ -160,11 +162,11 @@ function executeForcePeace(
       otherNation.treaties[nation.id] = { truceTurns: duration, forcedPeace: true };
 
       // Improve relationship slightly
-      if (nation.relationship) {
-        nation.relationship[otherNation.id] = Math.max(-40, relationship + 10);
+      if (nation.relationships) {
+        nation.relationships[otherNation.id] = Math.max(-40, relationship + 10);
       }
-      if (otherNation.relationship) {
-        otherNation.relationship[nation.id] = Math.max(-40, relationship + 10);
+      if (otherNation.relationships) {
+        otherNation.relationships[nation.id] = Math.max(-40, relationship + 10);
       }
 
       results.push({
@@ -296,9 +298,9 @@ function executeRealityWarp(
       nation.uranium = Math.floor(nation.uranium * 2);
 
       // Boost all relationships
-      if (nation.relationship) {
-        for (const otherId in nation.relationship) {
-          nation.relationship[otherId] = Math.min(100, nation.relationship[otherId] + 50);
+      if (nation.relationships) {
+        for (const otherId in nation.relationships) {
+          nation.relationships[otherId] = Math.min(100, nation.relationships[otherId] + 50);
         }
       }
 

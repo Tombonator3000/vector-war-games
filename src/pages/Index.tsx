@@ -630,6 +630,21 @@ const leaders: { name: string; ai: string; color: string; isHistoricalCubanCrisi
   { name: 'John F. Kennedy', ai: 'balanced', color: '#0047AB', isHistoricalCubanCrisis: true }, // US President, balanced approach during crisis
   { name: 'Nikita Khrushchev', ai: 'aggressive', color: '#CC0000', isHistoricalCubanCrisis: true }, // Soviet Premier, aggressive but pragmatic
   { name: 'Fidel Castro', ai: 'aggressive', color: '#CE1126', isHistoricalCubanCrisis: true }, // Cuban leader, revolutionary and aggressive
+  
+  // Cold War Historical Leaders
+  { name: 'Ronald Reagan', ai: 'aggressive', color: '#C8102E' }, // 40th US President, aggressive Cold Warrior
+  { name: 'Mikhail Gorbachev', ai: 'balanced', color: '#DA291C' }, // Soviet leader, reformist
+  { name: 'Margaret Thatcher', ai: 'defensive', color: '#0087DC' }, // UK Prime Minister, Iron Lady
+  { name: 'Mao Zedong', ai: 'aggressive', color: '#DE2910' }, // Chinese Communist leader
+  { name: 'Charles de Gaulle', ai: 'defensive', color: '#002395' }, // French President, nationalist
+  { name: 'Indira Gandhi', ai: 'balanced', color: '#FF9933' }, // Indian Prime Minister
+  { name: 'Leonid Brezhnev', ai: 'defensive', color: '#DA291C' }, // Soviet General Secretary
+  { name: 'Richard Nixon', ai: 'balanced', color: '#0047AB' }, // 37th US President
+  { name: 'Jimmy Carter', ai: 'balanced', color: '#0047AB' }, // 39th US President, peace-focused
+  { name: 'Dwight Eisenhower', ai: 'balanced', color: '#0047AB' }, // 34th US President, general
+  { name: 'Lyndon Johnson', ai: 'aggressive', color: '#0047AB' }, // 36th US President
+  { name: 'Gerald Ford', ai: 'balanced', color: '#0047AB' }, // 38th US President
+  
   // Lovecraftian leaders (for Great Old Ones scenario)
   { name: 'Cthulhu', ai: 'aggressive', color: '#004d00', isLovecraftian: true }, // The Great Dreamer, aggressive domination
   { name: 'Azathoth', ai: 'chaotic', color: '#1a0033', isLovecraftian: true }, // The Blind Idiot God, chaotic and unpredictable
@@ -637,6 +652,7 @@ const leaders: { name: string; ai: string; color: string; isHistoricalCubanCrisi
   { name: 'Hastur', ai: 'balanced', color: '#4d1a00', isLovecraftian: true }, // The Unspeakable One, balanced corruption
   { name: 'Shub-Niggurath', ai: 'aggressive', color: '#003300', isLovecraftian: true }, // The Black Goat, aggressive expansion
   { name: 'Yog-Sothoth', ai: 'defensive', color: '#1a1a33', isLovecraftian: true }, // The Gate and the Key, strategic defense
+  
   // Parody leaders (for other scenarios)
   { name: 'Ronnie Raygun', ai: 'aggressive', color: '#ff5555' },
   { name: 'Tricky Dick', ai: 'defensive', color: '#5599ff' },

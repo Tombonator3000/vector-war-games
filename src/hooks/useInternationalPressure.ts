@@ -475,7 +475,7 @@ export function useInternationalPressure(options: UseInternationalPressureOption
       pressure.activeSanctions.forEach((sanctionId) => {
         const sanction = sanctions.get(sanctionId);
         if (sanction) {
-          productionPenalty += (sanction.effects.productionPenalty * sanction.effects.compliance) / 100;
+          productionPenalty += sanction.effects.productionPenalty || 0;
           goldPenalty += sanction.effects.goldPenalty;
         }
       });
