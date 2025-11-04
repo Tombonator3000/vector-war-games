@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sparkles, Building, Users, TrendingUp, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Nation } from '@/types/game';
-import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/types/streamlinedCulture';
+import type { PropagandaType, CulturalWonderType, ImmigrationPolicy, SimplifiedPropagandaCampaign } from '@/types/streamlinedCulture';
 import {
   PROPAGANDA_DEFINITIONS,
   CULTURAL_WONDERS,
@@ -30,6 +30,7 @@ interface StreamlinedCulturePanelProps {
   onBuildWonder?: (wonderType: CulturalWonderType) => void;
   onSetImmigrationPolicy?: (policy: ImmigrationPolicy) => void;
   currentImmigrationPolicy?: ImmigrationPolicy;
+  activeCampaigns?: SimplifiedPropagandaCampaign[];
   onClose?: () => void;
 }
 
@@ -40,6 +41,7 @@ export function StreamlinedCulturePanel({
   onBuildWonder,
   onSetImmigrationPolicy,
   currentImmigrationPolicy = 'selective',
+  activeCampaigns = [],
   onClose,
 }: StreamlinedCulturePanelProps) {
   const [selectedPropagandaTarget, setSelectedPropagandaTarget] = useState<string | null>(null);
@@ -134,6 +136,7 @@ export function StreamlinedCulturePanel({
           <div className="space-y-2 mb-3">
             {(Object.entries(PROPAGANDA_DEFINITIONS) as [PropagandaType, any][]).map(([type, def]) => {
               const canAfford = player.intel >= def.intelCost;
+              const typeCampaigns = activeCampaigns.filter(c => c.type === type && c.launcherIds === player.id);
 
               return (
                 <div key={type} className="p-2 rounded bg-gray-900/50 border border-gray-700">
@@ -141,9 +144,33 @@ export function StreamlinedCulturePanel({
                     <span className="text-sm font-semibold">
                       {def.icon} {def.name}
                     </span>
-                    <span className="text-xs text-gray-400">{def.intelCost} Intel</span>
+                    <div className="flex items-center gap-1">
+                      {typeCampaigns.length > 0 && (
+                        <Badge className="bg-purple-500/20 text-purple-400 text-[10px] px-1.5 py-0.5">
+                          {typeCampaigns.length} Active
+                        </Badge>
+                      )}
+                      <span className="text-xs text-gray-400">{def.intelCost} Intel</span>
+                    </div>
                   </div>
                   <p className="text-xs text-gray-400 mb-2">{def.description}</p>
+
+                  {/* Show active campaigns */}
+                  {typeCampaigns.length > 0 && (
+                    <div className="mb-2 p-1.5 bg-purple-500/10 border border-purple-500/30 rounded">
+                      <div className="text-[10px] text-purple-300 font-semibold mb-1">Active Campaigns:</div>
+                      {typeCampaigns.map(campaign => {
+                        const target = enemies.find(e => e.id === campaign.targetId);
+                        return (
+                          <div key={campaign.id} className="text-[10px] text-gray-400 flex justify-between">
+                            <span>→ {target?.name || 'Unknown'}</span>
+                            <span className="text-purple-400">{campaign.turnsRemaining} turns left</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div className="text-xs text-gray-500 mb-2">
                     Duration: {def.duration} turns
                   </div>

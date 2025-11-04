@@ -10108,7 +10108,7 @@ export default function NoradVector() {
           case '2': handleResearch(); break;
           case '3': handleIntel(); break;
           case '4': handleCulture(); break;
-          case '5': handleImmigration(); break;
+          case '5': handleCulture(); break; // Immigration now part of Cultural Ops
           case '6': handleDiplomacy(); break;
           case 'l': // 'L' for Leaders - open leaders screen (Civilization-style)
           case 'L':
@@ -10183,7 +10183,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted, viewerType, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, handleMilitary, handlePauseToggle, openModal, resizeCanvas]);
+  }, [isGameStarted, viewerType, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleMilitary, handlePauseToggle, openModal, resizeCanvas]);
 
 
   // Render functions for different phases
@@ -10689,14 +10689,14 @@ export default function NoradVector() {
                   </Button>
 
                   <Button
-                    onClick={handleImmigration}
+                    onClick={handleCulture}
                     variant="ghost"
                     size="icon"
-                    data-role-locked={!immigrationAllowed}
+                    data-role-locked={!cultureAllowed}
                     className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      immigrationAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                     }`}
-                    title={immigrationAllowed ? 'IMMIGRATION - Population management' : 'Immigration changes require strategist approval'}
+                    title={cultureAllowed ? 'CULTURAL OPS - Propaganda, wonders, and immigration' : 'Requires co-commander approval to launch culture ops'}
                   >
                     <Users className="h-5 w-5" />
                     <span className="text-[8px] font-mono">IMMIGR</span>
@@ -11071,6 +11071,7 @@ export default function NoradVector() {
             onBuildWonder={handleBuildWonder}
             onSetImmigrationPolicy={handleSetImmigrationPolicy}
             currentImmigrationPolicy={(PlayerManager.get()?.immigrationPolicy as ImmigrationPolicy) || 'restricted'}
+            activeCampaigns={(PlayerManager.get()?.propagandaCampaigns as any) || []}
             onClose={() => setIsCulturePanelOpen(false)}
           />
         </DialogContent>
