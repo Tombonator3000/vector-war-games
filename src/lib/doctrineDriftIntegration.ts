@@ -181,10 +181,10 @@ export function updateDoctrineDriftPerTurn(
 
   if (driftDoctrine && driftDoctrine !== state.doctrine) {
     // Doctrine drift threshold reached!
-    updatedState = applyDoctrineDrift(updatedState, driftDoctrine);
+    const driftedState = applyDoctrineDrift(updatedState, driftDoctrine);
 
     // Add mission log entry
-    updatedState = addMissionLogEntry(updatedState, {
+    return addMissionLogEntry(driftedState, {
       category: 'event',
       title: 'Doctrine Drift Detected',
       description: `Your actions have fundamentally changed the Order's approach. The council has shifted to the ${driftDoctrine} doctrine due to your consistent ${driftDoctrine}-aligned operations.`,

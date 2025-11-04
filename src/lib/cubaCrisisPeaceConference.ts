@@ -606,8 +606,7 @@ function evaluateTerm(
       case 'disarmament':
         if (term.description.includes('Soviet missiles') && term.description.includes('Cuba')) {
           // Cuba wants missiles gone but needs security
-          const currentProposal = proposal;
-          if (currentProposal.terms.some((t) => t.type === 'non-aggression-pact')) {
+          if (proposal.terms.some((t) => t.type === 'non-aggression-pact')) {
             impact += 10; // Acceptable if security guaranteed
           } else {
             impact -= 20;

@@ -7,6 +7,7 @@ function createBaseNation(overrides: Partial<Nation> = {}): Nation {
   return {
     id: 'test-nation',
     name: 'Test Nation',
+    leader: 'Test Leader',
     isPlayer: false,
     lon: 0,
     lat: 0,

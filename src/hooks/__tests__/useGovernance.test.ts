@@ -52,7 +52,7 @@ describe('useGovernance', () => {
   });
 
   const wrapper = ({ children }: { children: ReactNode }) =>
-    createElement(RNGProvider, { initialSeed: 42 }, children);
+    createElement(RNGProvider, { initialSeed: 42, children });
 
   const getNations = () => nations;
 

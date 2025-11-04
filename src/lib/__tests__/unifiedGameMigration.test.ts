@@ -6,6 +6,7 @@ function createTestNation(overrides: Partial<Nation> = {}): Nation {
   return {
     id: overrides.id || 'test-nation',
     name: overrides.name || 'Test Nation',
+    leader: overrides.leader || 'Test Leader',
     isPlayer: false,
     lon: 0,
     lat: 0,
@@ -21,21 +22,34 @@ function createTestNation(overrides: Partial<Nation> = {}): Nation {
     publicOpinion: 60,
     electionTimer: 10,
     cabinetApproval: 55,
-    cities: [],
+    cities: 0,
     ...overrides,
   };
 }
 
 function createTestGameState(): GameState {
+  const testNation = createTestNation();
   return {
     turn: 1,
-    phase: 'PLAYER',
+    phase: 'PLAYER' as const,
     defcon: 5,
     actionsRemaining: 3,
     difficulty: 'medium',
     doomsdayClock: 100,
     isHardcoreMode: false,
     isCoopGame: false,
+    paused: false,
+    gameOver: false,
+    selectedLeader: 'test',
+    selectedDoctrine: 'convergence',
+    selectedScenario: 'coldWar',
+    setupComplete: true,
+    winner: null,
+    player: testNation,
+    nations: [testNation],
+    missiles: [],
+    bombers: [],
+    submarines: [],
   } as GameState;
 }
 
