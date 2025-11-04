@@ -358,6 +358,20 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         updateTranslateState();
         break;
       }
+      case 'nightlights': {
+        // NASA Black Marble - Earth at Night
+        if (baseLayer) {
+          baseLayer.show = false;
+        }
+        
+        if (nightLayer) {
+          nightLayer.show = true;
+          nightLayer.alpha = 1.0;
+          nightLayer.brightness = 1.5;
+          nightLayer.contrast = 1.3;
+        }
+        break;
+      }
       default: {
         if (nightLayer) {
           nightLayer.alpha = 0.25;
