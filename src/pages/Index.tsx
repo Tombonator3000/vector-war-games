@@ -65,6 +65,7 @@ import type { ActionConsequences } from '@/types/consequences';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { applyRemoteGameStateSync } from '@/lib/coopSync';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
+import { ResourceStockpileDisplay } from '@/components/ResourceStockpileDisplay';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
 import { LeaderContactModal } from '@/components/LeaderContactModal';
@@ -10337,6 +10338,16 @@ export default function NoradVector() {
                 <span className="text-cyan-300 text-[11px] tracking-wide">CYBER</span>
                 <span className="text-neon-green font-semibold text-sm" id="cyberDisplay">60/100</span>
               </div>
+
+              {/* Strategic Resources Display */}
+              {(() => {
+                const playerNation = nations.find(n => n.isPlayer);
+                return playerNation?.resourceStockpile ? (
+                  <div className="flex items-center gap-1.5 pl-3 ml-3 border-l border-cyan-500/30">
+                    <ResourceStockpileDisplay nation={playerNation} compact={true} />
+                  </div>
+                ) : null;
+              })()}
               </div>
 
               <div className="game-top-bar__actions flex items-center gap-2.5">
