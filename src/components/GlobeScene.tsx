@@ -376,6 +376,45 @@ function EarthNight({
   );
 }
 
+function EarthNightlights({
+  earthRef,
+}: {
+  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
+}) {
+  const textureUrl = useMemo(() => {
+    const base = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+    return `${base}textures/earth_nightlights.jpg`;
+  }, []);
+
+  const nightlightsMap = useLoader(THREE.TextureLoader, textureUrl);
+
+  useEffect(() => {
+    if (nightlightsMap) {
+      nightlightsMap.colorSpace = THREE.SRGBColorSpace;
+      nightlightsMap.anisotropy = 16;
+      nightlightsMap.generateMipmaps = true;
+      nightlightsMap.minFilter = THREE.LinearMipmapLinearFilter;
+      nightlightsMap.magFilter = THREE.LinearFilter;
+      nightlightsMap.needsUpdate = true;
+    }
+  }, [nightlightsMap]);
+
+  return (
+    <group>
+      <mesh ref={earthRef}>
+        <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
+        <meshBasicMaterial
+          map={nightlightsMap}
+          color="#ffffff"
+          transparent
+          opacity={1}
+        />
+      </mesh>
+      <Atmosphere />
+    </group>
+  );
+}
+
 function EarthPolitical({
   earthRef,
   vectorTexture,
@@ -417,7 +456,7 @@ function SceneContent({
 }) {
   const { camera, size } = useThree();
   const earthRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>(null);
-  const isFlat = mapStyle === 'flat' || mapStyle === 'flat-realistic';
+  const isFlat = mapStyle === 'flat' || mapStyle === 'flat-realistic' || mapStyle === 'flat-nightlights';
 
   useEffect(() => {
     register({
@@ -478,10 +517,17 @@ function SceneContent({
         return <EarthWireframe earthRef={earthRef} vectorTexture={texture} />;
       case 'night':
         return <EarthNight earthRef={earthRef} />;
+      case 'nightlights':
+        return (
+          <Suspense fallback={fallback}>
+            <EarthNightlights earthRef={earthRef} />
+          </Suspense>
+        );
       case 'political':
         return <EarthPolitical earthRef={earthRef} vectorTexture={texture} />;
       case 'flat':
       case 'flat-realistic':
+      case 'flat-nightlights':
         return null;
       default:
         return fallback;
