@@ -325,6 +325,17 @@ export function ResearchTreeFlow({
   const [activeTab, setActiveTab] = useState<ResearchCategory>('nuclear');
   const [selectedTech, setSelectedTech] = useState<string | null>(null);
 
+  // Categories to display (excluding empty ones)
+  const displayCategories: ResearchCategory[] = [
+    'nuclear',
+    'cyber',
+    'conventional',
+    'economy',
+    'culture',
+    'space',
+    'intelligence',
+  ];
+
   // Calculate research counts per category
   const researched = new Set(Object.keys(nation.researched || {}));
 
@@ -384,18 +395,7 @@ export function ResearchTreeFlow({
       playerIntel: nation.intel,
       playerUranium: nation.uranium,
     };
-  }, [selectedTech, nation, currentResearch, researched]);
-
-  // Categories to display (excluding empty ones)
-  const displayCategories: ResearchCategory[] = [
-    'nuclear',
-    'cyber',
-    'conventional',
-    'economy',
-    'culture',
-    'space',
-    'intelligence',
-  ];
+  }, [selectedTech, nation, currentResearch, researched, displayCategories]);
 
   return (
     <div className="w-full">
