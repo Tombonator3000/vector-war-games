@@ -177,6 +177,190 @@ export const LEADER_BIOGRAPHIES: Record<string, LeaderBiography> = {
   },
 
   // ============================================================================
+  // COLD WAR ERA HISTORICAL LEADERS
+  // ============================================================================
+
+  'Ronald Reagan': {
+    name: 'Ronald Reagan',
+    title: '40th President of the United States',
+    biography: 'The Great Communicator who ended the Cold War through "Peace through Strength." Former Hollywood actor turned politician, Reagan\'s Strategic Defense Initiative and aggressive military buildup pressured the Soviet Union while his diplomatic relationship with Gorbachev helped end decades of nuclear tension.',
+    strategyTips: [
+      'Invest heavily in missile defense systems - your SDI program can neutralize enemy attacks',
+      'Use aggressive rhetoric but seek diplomatic solutions - "Trust but verify"',
+      'Build massive nuclear arsenals to negotiate from strength',
+      'Form strong alliances with Western nations for economic and military support',
+    ],
+    recommendedDoctrine: 'mad',
+    playstyle: 'defensive',
+    difficulty: 'medium',
+  },
+
+  'Mikhail Gorbachev': {
+    name: 'Mikhail Gorbachev',
+    title: 'General Secretary of the Soviet Union',
+    biography: 'The reformer who ended the Cold War. Introduced Glasnost (openness) and Perestroika (restructuring), fundamentally changing Soviet policy. Negotiated major arms reduction treaties with the West and chose dialogue over confrontation, ultimately leading to the dissolution of the Soviet Union.',
+    strategyTips: [
+      'Prioritize diplomatic solutions and arms reduction treaties',
+      'Reduce military spending to invest in economy and infrastructure',
+      'Seek cooperation with Western nations rather than confrontation',
+      'Use transparency and openness to build international trust',
+    ],
+    recommendedDoctrine: 'detente',
+    playstyle: 'diplomatic',
+    difficulty: 'hard',
+  },
+
+  'Margaret Thatcher': {
+    name: 'Margaret Thatcher',
+    title: 'Prime Minister of the United Kingdom',
+    biography: 'The Iron Lady of British politics. Strong advocate for Western unity during the Cold War, close ally of Reagan. Maintained Britain\'s independent nuclear deterrent while supporting NATO and challenging Soviet expansionism with unwavering resolve.',
+    strategyTips: [
+      'Maintain strong defensive capabilities - your independent deterrent is non-negotiable',
+      'Form close alliances with the USA for mutual support',
+      'Stand firm against aggression - never back down from confrontation',
+      'Balance military strength with economic development',
+    ],
+    recommendedDoctrine: 'defense',
+    playstyle: 'defensive',
+    difficulty: 'medium',
+  },
+
+  'Mao Zedong': {
+    name: 'Mao Zedong',
+    title: 'Chairman of the Communist Party of China',
+    biography: 'Revolutionary leader who transformed China into a nuclear power. Developed the doctrine of "People\'s War" and massive retaliation. Initially allied with the USSR but later pursued an independent path, playing both superpowers against each other during the Sino-Soviet split.',
+    strategyTips: [
+      'Develop nuclear weapons quickly - your deterrent must be credible',
+      'Use your massive population as strategic leverage',
+      'Play superpowers against each other for maximum advantage',
+      'Pursue aggressive expansion to secure your borders',
+    ],
+    recommendedDoctrine: 'mad',
+    playstyle: 'aggressive',
+    difficulty: 'hard',
+  },
+
+  'Charles de Gaulle': {
+    name: 'Charles de Gaulle',
+    title: 'President of France',
+    biography: 'Architect of French independence and the Force de Frappe nuclear deterrent. Withdrew France from NATO\'s integrated military command to maintain sovereignty while still supporting Western values. Believed in a "Europe from the Atlantic to the Urals" independent of both superpowers.',
+    strategyTips: [
+      'Build an independent nuclear force - rely on no one else for your security',
+      'Maintain diplomatic flexibility between East and West',
+      'Invest in technology and military innovation',
+      'Pursue French grandeur and strategic autonomy above all',
+    ],
+    recommendedDoctrine: 'defense',
+    playstyle: 'balanced',
+    difficulty: 'hard',
+  },
+
+  'Indira Gandhi': {
+    name: 'Indira Gandhi',
+    title: 'Prime Minister of India',
+    biography: 'Leader of the Non-Aligned Movement who developed India\'s nuclear program. Balanced relations between the USA and USSR while pursuing India\'s independent interests. Demonstrated that middle powers could chart their own course during the Cold War.',
+    strategyTips: [
+      'Maintain neutrality between superpowers while building your own strength',
+      'Develop nuclear weapons for regional security and global respect',
+      'Use diplomacy to extract benefits from both sides',
+      'Focus on strategic autonomy and self-reliance',
+    ],
+    recommendedDoctrine: 'defense',
+    playstyle: 'balanced',
+    difficulty: 'medium',
+  },
+
+  'Leonid Brezhnev': {
+    name: 'Leonid Brezhnev',
+    title: 'General Secretary of the Soviet Union',
+    biography: 'Led the USSR during its period of nuclear parity with the USA. Oversaw massive military buildup and the "Brezhnev Doctrine" of limited sovereignty for Warsaw Pact nations. Pursued détente while simultaneously expanding Soviet influence globally.',
+    strategyTips: [
+      'Achieve nuclear parity with your opponents through massive arsenals',
+      'Maintain control over your sphere of influence at all costs',
+      'Use arms control talks as diplomatic cover for military expansion',
+      'Project power globally through proxy conflicts',
+    ],
+    recommendedDoctrine: 'mad',
+    playstyle: 'aggressive',
+    difficulty: 'medium',
+  },
+
+  'Richard Nixon': {
+    name: 'Richard Nixon',
+    title: '37th President of the United States',
+    biography: 'Architect of détente and the opening to China. Master of realpolitik who negotiated SALT I arms control treaty and Anti-Ballistic Missile Treaty. Despite Watergate scandal, his foreign policy achievements reshaped the Cold War balance of power.',
+    strategyTips: [
+      'Use diplomatic triangulation - play rivals against each other',
+      'Negotiate arms control treaties while maintaining strategic advantage',
+      'Open unexpected diplomatic channels for strategic surprise',
+      'Pursue peace through calculated risk-taking',
+    ],
+    recommendedDoctrine: 'detente',
+    playstyle: 'diplomatic',
+    difficulty: 'medium',
+  },
+
+  'Jimmy Carter': {
+    name: 'Jimmy Carter',
+    title: '39th President of the United States',
+    biography: 'Moralist president who emphasized human rights in foreign policy. Negotiated SALT II treaty and Camp David Accords. Faced challenges with Iran hostage crisis and Soviet invasion of Afghanistan, but maintained commitment to peace and arms control.',
+    strategyTips: [
+      'Prioritize human rights and diplomatic solutions',
+      'Negotiate comprehensive arms control agreements',
+      'Build international coalitions based on shared values',
+      'Be prepared for unexpected crises - moral clarity is your strength',
+    ],
+    recommendedDoctrine: 'detente',
+    playstyle: 'diplomatic',
+    difficulty: 'hard',
+  },
+
+  'Dwight D. Eisenhower': {
+    name: 'Dwight D. Eisenhower',
+    title: '34th President of the United States',
+    biography: 'Supreme Allied Commander in WWII who became president during early Cold War. Developed "New Look" policy emphasizing nuclear deterrence over conventional forces. Warned against the "military-industrial complex" while maintaining American nuclear superiority.',
+    strategyTips: [
+      'Rely on nuclear weapons for cost-effective deterrence',
+      'Avoid expensive conventional force buildups',
+      'Use covert operations and intelligence rather than direct confrontation',
+      'Maintain technological superiority through research investment',
+    ],
+    recommendedDoctrine: 'defense',
+    playstyle: 'balanced',
+    difficulty: 'medium',
+  },
+
+  'Lyndon B. Johnson': {
+    name: 'Lyndon B. Johnson',
+    title: '36th President of the United States',
+    biography: 'Escalated Vietnam War while pursuing Great Society reforms at home. Continued Kennedy\'s containment policy with massive military commitment. Struggled to balance domestic programs with Cold War military spending.',
+    strategyTips: [
+      'Commit fully to containment - prevent enemy expansion at all costs',
+      'Build overwhelming military superiority',
+      'Balance military spending with domestic development',
+      'Use escalation to demonstrate resolve and force negotiations',
+    ],
+    recommendedDoctrine: 'mad',
+    playstyle: 'aggressive',
+    difficulty: 'hard',
+  },
+
+  'Gerald Ford': {
+    name: 'Gerald Ford',
+    title: '38th President of the United States',
+    biography: 'Assumed presidency after Nixon\'s resignation. Continued détente policies and signed Helsinki Accords. Maintained stability during turbulent transition period while managing the end of Vietnam War and ongoing Cold War tensions.',
+    strategyTips: [
+      'Maintain continuity and stability in nuclear policy',
+      'Continue arms control negotiations started by predecessors',
+      'Focus on defensive preparations and alliance management',
+      'Navigate crises with steady, measured responses',
+    ],
+    recommendedDoctrine: 'defense',
+    playstyle: 'defensive',
+    difficulty: 'easy',
+  },
+
+  // ============================================================================
   // PARODY LEADERS
   // ============================================================================
 

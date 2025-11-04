@@ -26,6 +26,22 @@ export const leaderImages: Record<string, string> = {
   'Shub-Niggurath': '/leaders/shub-niggurath.jpg',
   'Yog-Sothoth': '/leaders/yog-sothoth.jpg',
   
+  // Cold War Era Historical Leaders
+  'Ronald Reagan': '/leaders/ronald-reagan.jpg',
+  'Mikhail Gorbachev': '/leaders/mikhail-gorbachev.jpg',
+  'Margaret Thatcher': '/leaders/margaret-thatcher.jpg',
+  'Mao Zedong': '/leaders/mao-zedong.jpg',
+  'Charles de Gaulle': '/leaders/charles-de-gaulle.jpg',
+  'Indira Gandhi': '/leaders/indira-gandhi.jpg',
+  'Leonid Brezhnev': '/leaders/leonid-brezhnev.jpg',
+  'Richard Nixon': '/leaders/richard-nixon.jpg',
+  'Jimmy Carter': '/leaders/jimmy-carter.jpg',
+  'Dwight D. Eisenhower': '/leaders/dwight-eisenhower.jpg',
+  'Dwight Eisenhower': '/leaders/dwight-eisenhower.jpg',
+  'Lyndon B. Johnson': '/leaders/lyndon-johnson.jpg',
+  'Lyndon Johnson': '/leaders/lyndon-johnson.jpg',
+  'Gerald Ford': '/leaders/gerald-ford.jpg',
+  
   // Parody leaders
   'Ronnie Raygun': '/leaders/ronnie-raygun.jpg',
   'Tricky Dick': '/leaders/tricky-dick.jpg',
