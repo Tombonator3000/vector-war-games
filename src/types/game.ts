@@ -11,6 +11,8 @@ import type { PopGroup, ImmigrationPolicyType } from './popSystem';
 import type { CulturalInfluence, PropagandaCampaign, CulturalWonder } from './culturalWarfare';
 import type { IdeologyState, RevolutionState } from './ideology';
 import type { ResourceStockpile, ResourceTrade, TerritoryResources } from './territorialResources';
+import type { ResourceMarket } from '@/lib/resourceMarketSystem';
+import type { DepletionWarning } from '@/lib/resourceDepletionSystem';
 
 export interface FalloutMark {
   id: string;
@@ -328,6 +330,8 @@ export interface GameState {
   /** Territorial Resources System */
   territoryResources?: Record<string, TerritoryResources>;  // Resource deposits per territory
   resourceTrades?: ResourceTrade[];                         // Active resource trade agreements
+  resourceMarket?: ResourceMarket;                          // Resource market with dynamic pricing
+  depletionWarnings?: DepletionWarning[];                   // Active depletion warnings
 }
 
 export interface ConventionalWarfareDelta {

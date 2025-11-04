@@ -29,6 +29,14 @@ import {
   initializeResourceStockpile,
   assignTerritoryResources
 } from '@/lib/territorialResourcesSystem';
+import {
+  initializeResourceMarket,
+  updateResourceMarket
+} from '@/lib/resourceMarketSystem';
+import {
+  processResourceDepletion,
+  DEFAULT_DEPLETION_CONFIG
+} from '@/lib/resourceDepletionSystem';
 
 // Types for dependencies that will be injected
 export interface LaunchDependencies {
@@ -291,6 +299,8 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
   if (!S.territoryResources && conventionalState?.territories) {
     S.territoryResources = assignTerritoryResources(conventionalState.territories);
     S.resourceTrades = [];
+    S.resourceMarket = initializeResourceMarket();
+    S.depletionWarnings = [];
     log('Territorial Resources System initialized', 'success');
   }
 
@@ -373,6 +383,45 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
   // Process territorial resources generation and consumption
   if (S.territoryResources && conventionalState?.territories) {
+    // Update resource market with dynamic pricing
+    if (S.resourceMarket) {
+      S.resourceMarket = updateResourceMarket(S.resourceMarket, S, nations, S.turn);
+
+      // Log market events for player
+      const player = PlayerManager.get();
+      if (player && S.resourceMarket.activeEvent && S.resourceMarket.eventDuration === S.resourceMarket.activeEvent.duration) {
+        // Event just started
+        log(`📊 Market Event: ${S.resourceMarket.activeEvent.name} - ${S.resourceMarket.activeEvent.description}`, 'alert');
+      }
+    }
+
+    // Process resource depletion
+    const depletionResult = processResourceDepletion(
+      S.territoryResources,
+      conventionalState.territories,
+      nations,
+      DEFAULT_DEPLETION_CONFIG
+    );
+    S.territoryResources = depletionResult.territoryResources;
+    S.depletionWarnings = depletionResult.warnings;
+
+    // Warn player about critical depletion
+    const player = PlayerManager.get();
+    if (player) {
+      const playerWarnings = depletionResult.warnings.filter(w => {
+        const territory = conventionalState.territories[w.territoryId];
+        return territory?.controllingNationId === player.id;
+      });
+
+      playerWarnings.forEach(warning => {
+        if (warning.severity === 'depleted') {
+          log(`💀 ${warning.resource.toUpperCase()} DEPLETED in ${warning.territoryName}!`, 'alert');
+        } else if (warning.severity === 'critical') {
+          log(`⚠️ ${warning.resource.toUpperCase()} critical in ${warning.territoryName} (${Math.round(warning.remainingPercent)}% remaining)`, 'warning');
+        }
+      });
+    }
+
     // First process any active trades
     if (S.resourceTrades) {
       S.resourceTrades = processResourceTrades(S.resourceTrades, nations, S.turn);
