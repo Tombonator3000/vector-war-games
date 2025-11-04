@@ -330,6 +330,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
             new SingleTileImageryProvider({
               url: resolvePublicAssetPath('textures/earth_day.jpg'),
               rectangle: Rectangle.fromDegrees(-180, -90, 180, 90),
+              tileWidth: 2048,
+              tileHeight: 1024,
             }),
             0
           );
@@ -389,6 +391,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
             new SingleTileImageryProvider({
               url: resolvePublicAssetPath('textures/earth_nightlights.jpg'),
               rectangle: Rectangle.fromDegrees(-180, -90, 180, 90),
+              tileWidth: 2048,
+              tileHeight: 1024,
             }),
             0
           );
@@ -489,6 +493,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           new SingleTileImageryProvider({
             url: nightTextureUrl,
             rectangle: Rectangle.fromDegrees(-180, -90, 180, 90),
+            tileWidth: 2048,
+            tileHeight: 1024,
           })
         );
         nightLayer.alpha = 0.25;
