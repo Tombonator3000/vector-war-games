@@ -136,7 +136,8 @@ export type ResolutionType =
   | 'ceasefire'             // Demand ceasefire in ongoing war
   | 'nuclear-ban'           // Ban nuclear weapons usage
   | 'environmental'         // Environmental protection measures
-  | 'expand-council';       // Add new permanent/elected members
+  | 'expand-council'        // Add new permanent/elected members
+  | 'espionage-limitation'; // Limit espionage activities between nations
 
 export interface CouncilResolution {
   id: string;
