@@ -39,6 +39,7 @@ import {
   canResearch,
 } from '@/lib/researchData';
 import { ResearchFlowNode } from './ResearchFlowNode';
+import { TechDetailsDialog } from './TechDetailsDialog';
 import { getLayoutedElements } from '@/lib/evolutionFlowLayout';
 
 interface ResearchTreeFlowProps {
@@ -185,6 +186,7 @@ function CategoryFlowPanel({
   currentResearch,
   onStartResearch,
   onCancelResearch,
+  onNodeClick,
 }: {
   category: ResearchCategory;
   nodes: ResearchNode[];
@@ -192,11 +194,42 @@ function CategoryFlowPanel({
   currentResearch: ResearchTreeFlowProps['currentResearch'];
   onStartResearch: (nodeId: string) => void;
   onCancelResearch?: (nodeId: string) => void;
+  onNodeClick: (nodeId: string) => void;
 }) {
   // Create flow nodes and edges
   const flowNodes = useMemo(
-    () => createFlowNodes(researchNodes, nation, currentResearch, onStartResearch, onCancelResearch),
-    [researchNodes, nation, currentResearch, onStartResearch, onCancelResearch]
+    () => {
+      const researched = new Set(Object.keys(nation.researched || {}));
+      return researchNodes.map((node) => {
+        const isResearched = researched.has(node.id);
+        const isResearching = currentResearch?.projectId === node.id;
+        const canResearchNode = canResearch(node.id, researched);
+        const canAfford =
+          nation.production >= (node.cost.production || 0) &&
+          nation.intel >= (node.cost.intel || 0) &&
+          nation.uranium >= (node.cost.uranium || 0);
+
+        return {
+          id: node.id,
+          type: 'researchNode',
+          position: { x: 0, y: 0 },
+          data: {
+            ...node,
+            researched: isResearched,
+            canResearch: canResearchNode,
+            canAfford,
+            isResearching,
+            researchProgress: isResearching ? currentResearch?.progress : undefined,
+            onStartResearch: () => onNodeClick(node.id),
+            onCancelResearch: onCancelResearch ? () => onCancelResearch(node.id) : undefined,
+            playerProduction: nation.production,
+            playerIntel: nation.intel,
+            playerUranium: nation.uranium,
+          },
+        };
+      });
+    },
+    [researchNodes, nation, currentResearch, onNodeClick, onCancelResearch]
   );
 
   const flowEdges = useMemo(
@@ -290,15 +323,68 @@ export function ResearchTreeFlow({
   currentResearch,
 }: ResearchTreeFlowProps) {
   const [activeTab, setActiveTab] = useState<ResearchCategory>('nuclear');
+  const [selectedTech, setSelectedTech] = useState<string | null>(null);
 
   // Calculate research counts per category
   const researched = new Set(Object.keys(nation.researched || {}));
+
   const getCategoryStats = (category: ResearchCategory) => {
     const nodes = CATEGORY_RESEARCH_MAP[category];
     const researchedCount = nodes.filter((n) => researched.has(n.id)).length;
     const totalCount = nodes.length;
     return { researchedCount, totalCount };
   };
+
+  const handleNodeClick = useCallback((nodeId: string) => {
+    setSelectedTech(nodeId);
+  }, []);
+
+  const handleCloseDialog = useCallback(() => {
+    setSelectedTech(null);
+  }, []);
+
+  const handleStartResearch = useCallback(() => {
+    if (selectedTech) {
+      onStartResearch(selectedTech);
+      setSelectedTech(null);
+    }
+  }, [selectedTech, onStartResearch]);
+
+  const handleCancelResearch = useCallback(() => {
+    if (selectedTech && onCancelResearch) {
+      onCancelResearch(selectedTech);
+      setSelectedTech(null);
+    }
+  }, [selectedTech, onCancelResearch]);
+
+  // Get selected tech data
+  const selectedTechNode = useMemo(() => {
+    if (!selectedTech) return null;
+    
+    const allNodes = displayCategories.flatMap(cat => CATEGORY_RESEARCH_MAP[cat]);
+    const node = allNodes.find(n => n.id === selectedTech);
+    if (!node) return null;
+
+    const isResearched = researched.has(node.id);
+    const isResearching = currentResearch?.projectId === node.id;
+    const canResearchNode = canResearch(node.id, researched);
+    const canAfford =
+      nation.production >= (node.cost.production || 0) &&
+      nation.intel >= (node.cost.intel || 0) &&
+      nation.uranium >= (node.cost.uranium || 0);
+
+    return {
+      ...node,
+      researched: isResearched,
+      canResearch: canResearchNode,
+      canAfford,
+      isResearching,
+      researchProgress: isResearching ? currentResearch?.progress : undefined,
+      playerProduction: nation.production,
+      playerIntel: nation.intel,
+      playerUranium: nation.uranium,
+    };
+  }, [selectedTech, nation, currentResearch, researched]);
 
   // Categories to display (excluding empty ones)
   const displayCategories: ResearchCategory[] = [
@@ -366,10 +452,20 @@ export function ResearchTreeFlow({
               currentResearch={currentResearch}
               onStartResearch={onStartResearch}
               onCancelResearch={onCancelResearch}
+              onNodeClick={handleNodeClick}
             />
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Tech Details Dialog */}
+      <TechDetailsDialog
+        isOpen={selectedTech !== null}
+        onClose={handleCloseDialog}
+        tech={selectedTechNode}
+        onStartResearch={handleStartResearch}
+        onCancelResearch={handleCancelResearch}
+      />
     </div>
   );
 }

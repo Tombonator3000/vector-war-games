@@ -8,6 +8,7 @@ import type { BioLabFacility, BioLabTier } from '@/types/bioLab';
 import { VictoryPathsSection } from './VictoryPathsSection';
 import { ResearchTreeFlow } from './ResearchTreeFlow';
 import { BioLabTreeFlow } from './BioLabTreeFlow';
+import { UnifiedDiplomacyPanel } from './UnifiedDiplomacyPanel';
 import { motion } from 'framer-motion';
 import { DoctrineStatusPanel } from './DoctrineStatusPanel';
 import type { DoctrineShiftState } from '@/types/doctrineIncidents';
@@ -652,102 +653,12 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
     </div>
   );
 
-  const renderDiplomacy = () => {
-    const allRelations = enemies.map(enemy => {
-      const hasAlliance = player.treaties?.[enemy.id]?.alliance;
-      const hasTruce = (player.treaties?.[enemy.id]?.truceTurns || 0) > 0;
-      const truceTurnsLeft = player.treaties?.[enemy.id]?.truceTurns || 0;
-      const isSanctioned = Array.isArray(enemy.sanctioned) && enemy.sanctioned.includes(player.id);
-      const playerSanctionsEnemy = Array.isArray(player.sanctioned) && player.sanctioned.includes(enemy.id);
-
-      return {
-        nation: enemy,
-        hasAlliance,
-        hasTruce,
-        truceTurnsLeft,
-        isSanctioned,
-        playerSanctionsEnemy,
-        relation: hasAlliance ? 'allied' : hasTruce ? 'truce' : 'hostile'
-      };
-    });
-
-    const allies = allRelations.filter(r => r.hasAlliance);
-    const neutral = allRelations.filter(r => r.hasTruce && !r.hasAlliance);
-    const hostile = allRelations.filter(r => !r.hasTruce && !r.hasAlliance);
-
-    return (
-      <div className="space-y-6">
-        {/* Summary */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-green-500/20 border border-green-500/30 rounded p-3 text-center">
-            <div className="text-2xl font-bold text-green-400">{allies.length}</div>
-            <div className="text-xs text-green-300">Allied</div>
-          </div>
-          <div className="bg-blue-500/20 border border-blue-500/30 rounded p-3 text-center">
-            <div className="text-2xl font-bold text-blue-400">{neutral.length}</div>
-            <div className="text-xs text-blue-300">Neutral</div>
-          </div>
-          <div className="bg-red-500/20 border border-red-500/30 rounded p-3 text-center">
-            <div className="text-2xl font-bold text-red-400">{hostile.length}</div>
-            <div className="text-xs text-red-300">Hostile</div>
-          </div>
-        </div>
-
-        {/* Allies */}
-        {allies.length > 0 && (
-          <div>
-            <h3 className="text-sm font-bold text-green-400 mb-2 flex items-center gap-2">
-              <Flag className="w-4 h-4" />
-              Allied Nations
-            </h3>
-            <div className="space-y-2">
-              {allies.map(({ nation, isSanctioned, playerSanctionsEnemy }) => (
-                <div key={nation.id} className="bg-gray-800/50 border border-green-500/30 rounded p-3">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: nation.color }} />
-                      <span className="text-white font-medium">{nation.name}</span>
-                    </div>
-                    <div className="text-xs text-gray-400">{nation.leader}</div>
-                  </div>
-                  {(isSanctioned || playerSanctionsEnemy) && (
-                    <div className="mt-2 text-xs text-yellow-400">
-                      {isSanctioned && '⚠ They sanctioned you • '}
-                      {playerSanctionsEnemy && '⚠ You sanctioned them'}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Neutral */}
-        {neutral.length > 0 && (
-          <div>
-            <h3 className="text-sm font-bold text-blue-400 mb-2">Neutral Relations (Truce)</h3>
-            <div className="space-y-2">
-              {neutral.map(({ nation, truceTurnsLeft, isSanctioned, playerSanctionsEnemy }) => (
-                <div key={nation.id} className="bg-gray-800/50 border border-blue-500/30 rounded p-3">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: nation.color }} />
-                      <span className="text-white font-medium">{nation.name}</span>
-                    </div>
-                    <div className="text-xs text-blue-400">
-                      Truce expires in {truceTurnsLeft} turns
-                    </div>
-                  </div>
-                  {(isSanctioned || playerSanctionsEnemy) && (
-                    <div className="mt-2 text-xs text-yellow-400">
-                      {isSanctioned && '⚠ They sanctioned you • '}
-                      {playerSanctionsEnemy && '⚠ You sanctioned them'}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+  const renderDiplomacy = () => (
+    <UnifiedDiplomacyPanel
+      player={player}
+      nations={nations}
+    />
+  );
         )}
 
         {/* Hostile */}
