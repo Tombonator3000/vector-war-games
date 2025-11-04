@@ -10,6 +10,7 @@
 
 import type { Nation, GameState } from '@/types/game';
 import { calculateMoraleProductionMultiplier } from '@/hooks/useGovernance';
+import { getCityMaintenanceCosts } from '@/lib/gameUtils';
 import {
   calculatePublicOpinion,
   runElection,
@@ -59,6 +60,7 @@ export interface ResolutionPhaseDependencies {
   projectLocal: (lon: number, lat: number) => [number, number];
   explode: (x: number, y: number, target: Nation, yieldMT: number) => void;
   advanceResearch: (nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') => void;
+  advanceCityConstruction: (nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') => void;
 }
 
 export interface ProductionPhaseDependencies {
@@ -66,6 +68,7 @@ export interface ProductionPhaseDependencies {
   nations: Nation[];
   log: (msg: string, type?: string) => void;
   advanceResearch: (nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') => void;
+  advanceCityConstruction: (nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') => void;
   leaders: any[];
   PlayerManager: any;
   conventionalState?: any;  // Optional: conventional warfare state with territories
@@ -176,7 +179,7 @@ export function launch(
  * Process resolution phase - handle missile impacts, radiation, and threats
  */
 export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
-  const { S, nations, log, projectLocal, explode, advanceResearch } = deps;
+  const { S, nations, log, projectLocal, explode, advanceResearch, advanceCityConstruction } = deps;
 
   log('=== RESOLUTION PHASE ===', 'success');
 
@@ -245,6 +248,7 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
   });
 
   nations.forEach(n => advanceResearch(n, 'RESOLUTION'));
+  nations.forEach(n => advanceCityConstruction(n, 'RESOLUTION'));
 
   log('=== RESOLUTION PHASE COMPLETE ===', 'success');
 
@@ -291,7 +295,7 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
  * Process production phase - generate resources, handle timers, elections
  */
 export function productionPhase(deps: ProductionPhaseDependencies): void {
-  const { S, nations, log, advanceResearch, leaders, PlayerManager, conventionalState } = deps;
+  const { S, nations, log, advanceResearch, advanceCityConstruction, leaders, PlayerManager, conventionalState } = deps;
 
   log('=== PRODUCTION PHASE ===', 'success');
 
@@ -460,6 +464,40 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       // Store generation for UI display
       n.resourceGeneration = result.generation;
     });
+
+    // Apply city maintenance costs
+    nations.forEach(n => {
+      if (n.population <= 0) return;
+      if (!n.cities || n.cities < 1) return;
+
+      const maintenanceCosts = getCityMaintenanceCosts(n);
+      if (!n.resourceStockpile) return;
+
+      let totalShortage = 0;
+
+      // Deduct maintenance costs
+      Object.entries(maintenanceCosts).forEach(([resource, amount]) => {
+        const available = n.resourceStockpile![resource as keyof typeof n.resourceStockpile] || 0;
+        const deficit = Math.max(0, amount - available);
+
+        if (deficit > 0) {
+          totalShortage += deficit / amount; // Normalize shortage
+          n.resourceStockpile![resource as keyof typeof n.resourceStockpile] = 0;
+        } else {
+          n.resourceStockpile![resource as keyof typeof n.resourceStockpile] = available - amount;
+        }
+      });
+
+      // Apply penalties for maintenance shortages
+      if (totalShortage > 0) {
+        const moraleImpact = Math.floor(totalShortage * 10);
+        n.morale = Math.max(0, (n.morale || 100) - moraleImpact);
+
+        if (n === PlayerManager.get()) {
+          log(`⚠️ City maintenance shortages! Morale -${moraleImpact}`, 'warning');
+        }
+      }
+    });
   }
 
   nations.forEach(n => {
@@ -584,4 +622,5 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
   });
 
   nations.forEach(n => advanceResearch(n, 'PRODUCTION'));
+  nations.forEach(n => advanceCityConstruction(n, 'PRODUCTION'));
 }

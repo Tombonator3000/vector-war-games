@@ -9,9 +9,17 @@ import type { Nation } from '@/types/game';
 
 /**
  * Check if a nation can afford a given resource cost
+ * Handles both traditional resources (production, intel, uranium) and strategic resources (oil, rare_earths, food)
  */
 export function canAfford(nation: Nation, cost: Record<string, number>): boolean {
   return Object.entries(cost).every(([resource, amount]) => {
+    // Strategic resources are in resourceStockpile
+    if (resource === 'oil' || resource === 'rare_earths' || resource === 'food') {
+      const stockpile = nation.resourceStockpile || { oil: 0, uranium: 0, rare_earths: 0, food: 0 };
+      return (stockpile[resource] || 0) >= amount;
+    }
+
+    // Traditional resources (production, intel, uranium)
     const current = nation[resource as keyof Nation] as number || 0;
     return current >= amount;
   });
@@ -19,21 +27,66 @@ export function canAfford(nation: Nation, cost: Record<string, number>): boolean
 
 /**
  * Deduct resources from a nation
+ * Handles both traditional resources (production, intel, uranium) and strategic resources (oil, rare_earths, food)
  */
 export function pay(nation: Nation, cost: Record<string, number>): void {
   Object.entries(cost).forEach(([resource, amount]) => {
-    const key = resource as keyof Nation;
-    const currentValue = nation[key] as number;
-    (nation[key] as number) = currentValue - amount;
+    // Strategic resources are in resourceStockpile
+    if (resource === 'oil' || resource === 'rare_earths' || resource === 'food') {
+      if (!nation.resourceStockpile) {
+        nation.resourceStockpile = { oil: 0, uranium: 0, rare_earths: 0, food: 0 };
+      }
+      nation.resourceStockpile[resource] = (nation.resourceStockpile[resource] || 0) - amount;
+    } else {
+      // Traditional resources (production, intel, uranium)
+      const key = resource as keyof Nation;
+      const currentValue = nation[key] as number;
+      (nation[key] as number) = currentValue - amount;
+    }
   });
 }
 
 /**
- * Calculate the cost of building a new city
+ * Calculate the cost of building a new city (exponential scaling)
  */
 export function getCityCost(nation: Nation): Record<string, number> {
   const cityCount = nation.cities || 1;
-  return { production: 20 + (cityCount - 1) * 5 };
+  const nextCityIndex = cityCount;
+
+  // Exponential cost scaling
+  const productionCost = Math.floor(20 * Math.pow(1.5, nextCityIndex));
+  const rareEarthsCost = Math.floor(5 * Math.pow(1.6, nextCityIndex));
+
+  const cost: Record<string, number> = {
+    production: productionCost,
+    rare_earths: rareEarthsCost,
+  };
+
+  // Oil requirement starting from 3rd city
+  if (nextCityIndex >= 3) {
+    cost.oil = 5 * (nextCityIndex - 2);
+  }
+
+  return cost;
+}
+
+/**
+ * Calculate the construction time for a new city
+ */
+export function getCityBuildTime(nation: Nation): number {
+  const cityCount = nation.cities || 1;
+  return 2 + cityCount; // City 1: 3 turns, City 2: 4 turns, etc.
+}
+
+/**
+ * Calculate per-turn maintenance costs for all cities
+ */
+export function getCityMaintenanceCosts(nation: Nation): Record<string, number> {
+  const cityCount = nation.cities || 1;
+  return {
+    oil: cityCount * 0.5,      // 0.5 oil per city per turn
+    food: cityCount * 10,       // 10 food per city per turn (equivalent to 100 population)
+  };
 }
 
 /**

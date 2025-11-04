@@ -153,7 +153,7 @@ import { enhancedAIActions } from '@/lib/aiActionEnhancements';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 import { IntroScreen } from '@/components/setup/IntroScreen';
 import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen';
-import { canAfford, pay, getCityCost, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
+import { canAfford, pay, getCityCost, getCityBuildTime, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
 import { modifyRelationship } from '@/lib/relationshipUtils';
 import { project, toLonLat, getPoliticalFill, resolvePublicAssetPath, POLITICAL_COLOR_PALETTE, type ProjectionContext } from '@/lib/renderingUtils';
@@ -1785,9 +1785,40 @@ function advanceResearch(nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') {
 
   if (nation.isPlayer) {
     AudioSys.playSFX('success');
-    toast({ 
-      title: '✅ Research Complete', 
+    toast({
+      title: '✅ Research Complete',
       description: `${project.name} breakthrough achieved! New capabilities unlocked.`,
+    });
+    updateDisplay();
+  }
+}
+
+function advanceCityConstruction(nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') {
+  if (!nation.cityConstructionQueue || nation.cityConstructionQueue.turnsRemaining <= 0) return;
+
+  nation.cityConstructionQueue.turnsRemaining = Math.max(0, nation.cityConstructionQueue.turnsRemaining - 1);
+
+  if (nation.cityConstructionQueue.turnsRemaining > 0) return;
+
+  // Construction complete
+  nation.cityConstructionQueue = null;
+  nation.cities = (nation.cities || 1) + 1;
+
+  // Add city lights to the map
+  const spread = 6;
+  const angle = Math.random() * Math.PI * 2;
+  const newLat = nation.lat + Math.sin(angle) * spread;
+  const newLon = nation.lon + Math.cos(angle) * spread;
+  CityLights.addCity(newLat, newLon, 1.0);
+
+  const message = `${nation.name} completes city #${nation.cities}!`;
+  log(message, 'success');
+
+  if (nation.isPlayer) {
+    AudioSys.playSFX('success');
+    toast({
+      title: '🏙️ City Established',
+      description: `Urban center ${nation.cities} constructed. Production capacity increased.`,
     });
     updateDisplay();
   }
@@ -2460,6 +2491,7 @@ function resolutionPhase() {
     projectLocal,
     explode,
     advanceResearch,
+    advanceCityConstruction,
   };
   runResolutionPhase(deps);
 }
@@ -2471,6 +2503,7 @@ function productionPhase() {
     nations,
     log,
     advanceResearch,
+    advanceCityConstruction,
     leaders,
     PlayerManager,
   };
@@ -7306,29 +7339,38 @@ export default function NoradVector() {
     const player = getBuildContext('Infrastructure');
     if (!player) return;
 
+    // Check if already constructing a city
+    if (player.cityConstructionQueue) {
+      toast({
+        title: 'Construction in Progress',
+        description: `A city is already under construction (${player.cityConstructionQueue.turnsRemaining} turns remaining).`
+      });
+      return;
+    }
+
     const cityCost = getCityCost(player);
     if (!canAfford(player, cityCost)) {
       const costText = Object.entries(cityCost)
-        .map(([resource, amount]) => `${amount} ${resource.toUpperCase()}`)
+        .map(([resource, amount]) => `${amount} ${resource.toUpperCase().replace('_', ' ')}`)
         .join(' & ');
-      toast({ title: 'Insufficient production', description: `Constructing a new city requires ${costText}.` });
+      toast({ title: 'Insufficient resources', description: `Constructing a new city requires ${costText}.` });
       return;
     }
 
     pay(player, cityCost);
-    player.cities = (player.cities || 1) + 1;
 
-    const spread = 6;
-    const angle = Math.random() * Math.PI * 2;
-    const newLat = player.lat + Math.sin(angle) * spread;
-    const newLon = player.lon + Math.cos(angle) * spread;
-    CityLights.addCity(newLat, newLon, 1.0);
+    const buildTime = getCityBuildTime(player);
+    player.cityConstructionQueue = {
+      turnsRemaining: buildTime,
+      totalTurns: buildTime,
+    };
 
+    const nextCityNumber = (player.cities || 1) + 1;
     AudioSys.playSFX('build');
-    log(`${player.name} establishes city #${player.cities}`);
-    toast({ 
-      title: '🏙️ City Established', 
-      description: `Urban center ${player.cities} constructed. Population capacity increased.`,
+    log(`${player.name} begins construction of city #${nextCityNumber} (${buildTime} turns)`);
+    toast({
+      title: '🏗️ City Construction Started',
+      description: `Construction of city #${nextCityNumber} will complete in ${buildTime} turns.`,
     });
     updateDisplay();
     consumeAction();
