@@ -41,6 +41,7 @@ import {
   Rectangle,
   GridImageryProvider,
   ArcGisMapServerImageryProvider,
+  NearFarScalar,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import type { MapStyle } from '@/components/GlobeScene';
@@ -670,6 +671,75 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       entitiesRef.current.set(`territory-${territory.id}`, entity);
     });
   }, [territories, nations]);
+
+  // Render nation name labels
+  useEffect(() => {
+    if (!viewerRef.current) return;
+
+    const viewer = viewerRef.current;
+
+    // Clear old nation label entities
+    entitiesRef.current.forEach((entity, key) => {
+      if (key.startsWith('nation-label-')) {
+        viewer.entities.remove(entity);
+        entitiesRef.current.delete(key);
+      }
+    });
+
+    // Add nation name labels
+    nations.forEach(nation => {
+      // Find the first territory controlled by this nation, or use a default position
+      const nationTerritories = territories.filter(t => t.controllingNationId === nation.id);
+      
+      if (nationTerritories.length === 0) return;
+
+      // Calculate average position of all controlled territories
+      let avgLon = 0;
+      let avgLat = 0;
+      let count = 0;
+
+      nationTerritories.forEach(territory => {
+        const center = getTerritoryCenter(territory.id);
+        if (center) {
+          avgLon += center.lon;
+          avgLat += center.lat;
+          count++;
+        } else {
+          avgLon += territory.anchorLon;
+          avgLat += territory.anchorLat;
+          count++;
+        }
+      });
+
+      if (count === 0) return;
+
+      const labelLon = avgLon / count;
+      const labelLat = avgLat / count;
+      const color = Color.fromCssColorString(nation.color);
+
+      // Create nation label entity
+      const nationLabelEntity = viewer.entities.add({
+        name: `nation-label-${nation.id}`,
+        position: Cartesian3.fromDegrees(labelLon, labelLat, 500000), // Higher altitude for prominence
+        label: {
+          text: nation.name.toUpperCase(),
+          font: 'bold 24px monospace',
+          fillColor: color,
+          outlineColor: Color.BLACK,
+          outlineWidth: 3,
+          style: 1, // FILL_AND_OUTLINE
+          showBackground: true,
+          backgroundColor: Color.BLACK.withAlpha(0.8),
+          backgroundPadding: new Cartesian2(12, 8),
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          scaleByDistance: new NearFarScalar(1e3, 1.5, 2e7, 0.5), // Scale based on camera distance
+          translucencyByDistance: new NearFarScalar(1e3, 1.0, 3e7, 0.3), // Fade at extreme distances
+        },
+      });
+
+      entitiesRef.current.set(`nation-label-${nation.id}`, nationLabelEntity);
+    });
+  }, [nations, territories]);
 
   // Render territory connections (neighbor borders)
   useEffect(() => {
