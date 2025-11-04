@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { TerritoryState } from '@/hooks/useConventionalWarfare';
 import { Swords, ArrowRight, Shield, Users, Globe, List } from 'lucide-react';
 import { GlobeScene } from './GlobeScene';
 import { TerritoryMarkers3D } from './TerritoryMarkers3D';
+import { MovingArmies3D } from './MovingArmies3D';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Canvas } from '@react-three/fiber';
 
@@ -29,6 +30,17 @@ export function TerritoryMapPanel({
   const [selectedSourceTerritory, setSelectedSourceTerritory] = useState<string | null>(null);
   const [armyCount, setArmyCount] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'3d' | 'list'>('3d');
+  
+  // Track active army movements for animation
+  const [activeMovements, setActiveMovements] = useState<Array<{
+    id: string;
+    fromLon: number;
+    fromLat: number;
+    toLon: number;
+    toLat: number;
+    count: number;
+    startTime: number;
+  }>>([]);
 
   const sortedTerritories = useMemo(
     () => [...territories].sort((a, b) => a.name.localeCompare(b.name)),
@@ -228,6 +240,10 @@ export function TerritoryMapPanel({
     );
   };
 
+  const handleMovementComplete = useCallback((movementId: string) => {
+    setActiveMovements(prev => prev.filter(m => m.id !== movementId));
+  }, []);
+
   const handleTerritoryClick = (territoryId: string) => {
     if (selectedSourceTerritory && sourceTerritory) {
       // We have a source selected - check if this is a valid target
@@ -244,6 +260,18 @@ export function TerritoryMapPanel({
 
       const targetTerritory = territories.find(t => t.id === territoryId);
       if (!targetTerritory) return;
+
+      // Create movement animation
+      const movementId = `move-${Date.now()}-${Math.random()}`;
+      setActiveMovements(prev => [...prev, {
+        id: movementId,
+        fromLon: sourceTerritory.anchorLon,
+        fromLat: sourceTerritory.anchorLat,
+        toLon: targetTerritory.anchorLon,
+        toLat: targetTerritory.anchorLat,
+        count: armyCount,
+        startTime: Date.now(),
+      }]);
 
       // This is a valid neighbor - execute action
       if (targetTerritory.controllingNationId !== playerId) {
@@ -345,6 +373,12 @@ export function TerritoryMapPanel({
                 playerId={playerId}
                 selectedTerritoryId={selectedSourceTerritory}
                 onTerritoryClick={handleTerritoryClick}
+              />
+
+              {/* Animated army movements */}
+              <MovingArmies3D
+                movements={activeMovements}
+                onMovementComplete={handleMovementComplete}
               />
             </Canvas>
           </div>
