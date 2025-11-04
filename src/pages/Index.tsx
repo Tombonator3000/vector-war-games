@@ -71,6 +71,7 @@ import { LeaderContactModal } from '@/components/LeaderContactModal';
 import { LeadersScreen } from '@/components/LeadersScreen';
 import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
+import { AIDiplomacyProposalModal } from '@/components/AIDiplomacyProposalModal';
 import { EndGameScreen } from '@/components/EndGameScreen';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
 // Removed - using unified diplomacy DiplomaticProposal instead
@@ -5170,6 +5171,7 @@ export default function NoradVector() {
 
   // AI-Initiated Negotiations state (Phase 4)
   const [aiInitiatedNegotiations, setAiInitiatedNegotiations] = useState<any[]>([]);
+  const [activeAIProposal, setActiveAIProposal] = useState<any | null>(null);
 
   useEffect(() => {
     enqueueAIProposalRef = (proposal) => {
@@ -11485,15 +11487,9 @@ export default function NoradVector() {
           negotiations={aiInitiatedNegotiations}
           allNations={nations}
           onView={(negotiation) => {
-            // Open negotiation interface
-            const aiNation = nations.find(n => n.id === negotiation.aiNationId);
-            if (aiNation) {
-              setLeaderContactTargetNationId(aiNation.id);
-              setLeaderContactModalOpen(true);
-              // Add negotiation to active negotiations
-              setActiveNegotiations(prev => [...prev, negotiation.proposedDeal]);
-            }
-            // Remove from queue
+            // Open the dramatic Civilization-style diplomacy modal
+            setActiveAIProposal(negotiation);
+            // Remove from notification queue
             setAiInitiatedNegotiations(prev =>
               prev.filter(n => n.proposedDeal.id !== negotiation.proposedDeal.id)
             );
@@ -11506,6 +11502,108 @@ export default function NoradVector() {
           }}
         />
       )}
+
+      {/* AI Diplomacy Proposal Modal - Civilization Style */}
+      {activeAIProposal && (() => {
+        const aiNation = nations.find(n => n.id === activeAIProposal.aiNationId);
+        const playerNation = nations.find(n => n.id === humanPlayerId);
+        if (!aiNation || !playerNation) return null;
+
+        const relationship = aiNation.relationships?.[humanPlayerId] || 0;
+        const trust = aiNation.trustRecords?.[humanPlayerId]?.trustLevel || 50;
+
+        return (
+          <AIDiplomacyProposalModal
+            open={true}
+            onClose={() => setActiveAIProposal(null)}
+            negotiation={activeAIProposal}
+            aiNation={aiNation}
+            playerNation={playerNation}
+            relationship={relationship}
+            trust={trust}
+            onAccept={() => {
+              // Apply the deal
+              const result = applyNegotiationDeal(
+                activeAIProposal.proposedDeal,
+                playerNation,
+                aiNation,
+                nations,
+                turn
+              );
+
+              if (result.success) {
+                // Update nations with the result
+                setNations(result.nations);
+
+                // Log success
+                addLog(`✅ Accepted ${aiNation.name}'s proposal: ${activeAIProposal.message}`);
+
+                // Show success toast
+                toast({
+                  title: "Deal Accepted",
+                  description: `You have accepted ${aiNation.name}'s proposal.`,
+                  variant: "default",
+                });
+
+                // Improve relationship
+                const updatedNations = result.nations.map(n => {
+                  if (n.id === aiNation.id) {
+                    const newRelationship = Math.min(100, (n.relationships?.[humanPlayerId] || 0) + 10);
+                    return {
+                      ...n,
+                      relationships: {
+                        ...n.relationships,
+                        [humanPlayerId]: newRelationship
+                      }
+                    };
+                  }
+                  return n;
+                });
+                setNations(updatedNations);
+              } else {
+                addLog(`❌ Failed to accept ${aiNation.name}'s proposal: ${result.error}`);
+                toast({
+                  title: "Deal Failed",
+                  description: result.error || "Failed to apply deal.",
+                  variant: "destructive",
+                });
+              }
+
+              setActiveAIProposal(null);
+            }}
+            onReject={() => {
+              // Worsen relationship
+              const updatedNations = nations.map(n => {
+                if (n.id === aiNation.id) {
+                  const penalty = activeAIProposal.urgency === 'critical' ? -15 : -10;
+                  const newRelationship = Math.max(-100, (n.relationships?.[humanPlayerId] || 0) + penalty);
+                  return {
+                    ...n,
+                    relationships: {
+                      ...n.relationships,
+                      [humanPlayerId]: newRelationship
+                    }
+                  };
+                }
+                return n;
+              });
+              setNations(updatedNations);
+
+              // Log rejection
+              addLog(`❌ Rejected ${aiNation.name}'s proposal.`);
+
+              // Show rejection toast
+              toast({
+                title: "Proposal Rejected",
+                description: `${aiNation.name} is displeased with your decision.`,
+                variant: "destructive",
+              });
+
+              setActiveAIProposal(null);
+            }}
+          />
+        );
+      })()}
 
       {/* Doctrine Incident Modal */}
       {S.doctrineIncidentState?.activeIncident && (
