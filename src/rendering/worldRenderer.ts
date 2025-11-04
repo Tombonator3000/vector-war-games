@@ -29,6 +29,23 @@ export interface NationRenderContext extends WorldRenderContext {
   selectedTargetRefId: string | null;
 }
 
+export interface TerritoryRenderContext extends WorldRenderContext {
+  territories: Array<{
+    id: string;
+    name: string;
+    anchorLon: number;
+    anchorLat: number;
+    armies: number;
+    controllingNationId: string | null;
+    unitComposition: { army: number; navy: number; air: number };
+    strategicValue: number;
+  }>;
+  playerId: string;
+  selectedTerritoryId: string | null;
+  hoveredTerritoryId: string | null;
+  onTerritoryClick?: (territoryId: string) => void;
+}
+
 /**
  * Draw a path on the world map
  */
@@ -324,5 +341,112 @@ export function drawNations(style: MapStyle, context: NationRenderContext): void
     ctx.textAlign = 'center';
     ctx.fillText(`${Math.floor(n.population)}M`, x, y + 30 * z);
     ctx.restore();
+  });
+}
+
+/**
+ * Render territory markers with army counts (Risk-style)
+ */
+export function drawTerritories(context: TerritoryRenderContext): void {
+  const {
+    ctx,
+    territories,
+    playerId,
+    selectedTerritoryId,
+    hoveredTerritoryId,
+    projectLocal,
+    cam,
+  } = context;
+
+  if (!ctx || territories.length === 0) return;
+
+  const z = Math.max(0.8, Math.min(1.8, cam.zoom));
+
+  territories.forEach(territory => {
+    const [x, y] = projectLocal(territory.anchorLon, territory.anchorLat);
+    if (isNaN(x) || isNaN(y)) return;
+
+    const isPlayerOwned = territory.controllingNationId === playerId;
+    const isSelected = territory.id === selectedTerritoryId;
+    const isHovered = territory.id === hoveredTerritoryId;
+
+    const baseColor = isPlayerOwned ? '#22d3ee' : (territory.controllingNationId ? '#f87171' : '#9ca3af');
+    const glowColor = isSelected ? '#fbbf24' : baseColor;
+
+    // Selection ring
+    if (isSelected) {
+      const pulse = (Math.sin(Date.now() / 300) + 1) / 2;
+      const ringRadius = 30 * z + pulse * 8;
+      
+      ctx.save();
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2 * z;
+      ctx.globalAlpha = 0.6 + pulse * 0.3;
+      ctx.beginPath();
+      ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Army count circle
+    const circleRadius = 18 * z;
+    ctx.save();
+
+    ctx.fillStyle = isPlayerOwned ? 'rgba(34, 211, 238, 0.3)' : 'rgba(248, 113, 113, 0.3)';
+    ctx.beginPath();
+    ctx.arc(x, y, circleRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = baseColor;
+    ctx.lineWidth = 2 * z;
+    ctx.beginPath();
+    ctx.arc(x, y, circleRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = isSelected ? 20 : 10;
+    ctx.strokeStyle = glowColor;
+    ctx.lineWidth = 1.5 * z;
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath();
+    ctx.arc(x, y, circleRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Army count number
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `bold ${Math.round(20 * z)}px monospace`;
+    ctx.fillStyle = isPlayerOwned ? '#e0f2fe' : '#fee2e2';
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 6;
+    ctx.fillText(territory.armies.toString(), x, y);
+    ctx.restore();
+
+    // Territory name
+    const nameY = y + circleRadius + 12 * z;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = `${Math.round(9 * z)}px monospace`;
+    
+    const nameWidth = ctx.measureText(territory.name).width + 8 * z;
+    const nameHeight = 14 * z;
+    ctx.fillStyle = isPlayerOwned ? 'rgba(23, 37, 84, 0.9)' : 'rgba(69, 10, 10, 0.9)';
+    ctx.fillRect(x - nameWidth / 2, nameY - 10 * z, nameWidth, nameHeight);
+    
+    ctx.fillStyle = isPlayerOwned ? '#67e8f9' : '#fca5a5';
+    ctx.fillText(territory.name, x, nameY - 3 * z);
+    ctx.restore();
+
+    // Strategic value
+    if (territory.strategicValue > 3) {
+      ctx.save();
+      ctx.font = `${Math.round(14 * z)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText('⭐', x, y - circleRadius - 8 * z);
+      ctx.restore();
+    }
   });
 }

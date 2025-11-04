@@ -1,12 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { TerritoryState } from '@/hooks/useConventionalWarfare';
-import { Swords, ArrowRight, Shield, Users, Globe, List } from 'lucide-react';
-import { GlobeScene } from './GlobeScene';
-import { TerritoryMarkers3D } from './TerritoryMarkers3D';
-import { MovingArmies3D } from './MovingArmies3D';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Canvas } from '@react-three/fiber';
+import { Swords, ArrowRight, Shield, Users } from 'lucide-react';
 
 interface TerritoryMapPanelProps {
   territories: TerritoryState[];
@@ -29,18 +24,6 @@ export function TerritoryMapPanel({
 }: TerritoryMapPanelProps) {
   const [selectedSourceTerritory, setSelectedSourceTerritory] = useState<string | null>(null);
   const [armyCount, setArmyCount] = useState<number>(1);
-  const [viewMode, setViewMode] = useState<'3d' | 'list'>('3d');
-  
-  // Track active army movements for animation
-  const [activeMovements, setActiveMovements] = useState<Array<{
-    id: string;
-    fromLon: number;
-    fromLat: number;
-    toLon: number;
-    toLat: number;
-    count: number;
-    startTime: number;
-  }>>([]);
 
   const sortedTerritories = useMemo(
     () => [...territories].sort((a, b) => a.name.localeCompare(b.name)),
@@ -241,7 +224,7 @@ export function TerritoryMapPanel({
   };
 
   const handleMovementComplete = useCallback((movementId: string) => {
-    setActiveMovements(prev => prev.filter(m => m.id !== movementId));
+    // Movement completed
   }, []);
 
   const handleTerritoryClick = (territoryId: string) => {
@@ -260,18 +243,6 @@ export function TerritoryMapPanel({
 
       const targetTerritory = territories.find(t => t.id === territoryId);
       if (!targetTerritory) return;
-
-      // Create movement animation
-      const movementId = `move-${Date.now()}-${Math.random()}`;
-      setActiveMovements(prev => [...prev, {
-        id: movementId,
-        fromLon: sourceTerritory.anchorLon,
-        fromLat: sourceTerritory.anchorLat,
-        toLon: targetTerritory.anchorLon,
-        toLat: targetTerritory.anchorLat,
-        count: armyCount,
-        startTime: Date.now(),
-      }]);
 
       // This is a valid neighbor - execute action
       if (targetTerritory.controllingNationId !== playerId) {
@@ -335,56 +306,7 @@ export function TerritoryMapPanel({
       )}
 
       {/* View Mode Toggle */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as '3d' | 'list')} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto">
-          <TabsTrigger value="3d" className="flex items-center gap-2">
-            <Globe className="h-4 w-4" />
-            3D Globe View
-          </TabsTrigger>
-          <TabsTrigger value="list" className="flex items-center gap-2">
-            <List className="h-4 w-4" />
-            List View
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="3d" className="mt-6">
-          <div className="h-[700px] rounded-lg border border-cyan-500/30 bg-slate-950 overflow-hidden">
-            <Canvas
-              camera={{ position: [0, 0, 5], fov: 45 }}
-              dpr={[1, 1.5]}
-            >
-              <ambientLight intensity={0.4} />
-              <directionalLight position={[5, 3, 5]} intensity={1.2} />
-              <directionalLight position={[-3, -2, -3]} intensity={0.4} />
-
-              {/* Earth sphere */}
-              <mesh>
-                <sphereGeometry args={[1.8, 64, 64]} />
-                <meshStandardMaterial
-                  color="#0a1929"
-                  roughness={0.8}
-                  metalness={0.2}
-                />
-              </mesh>
-
-              {/* Territory markers with Risk-style army counts */}
-              <TerritoryMarkers3D
-                territories={territories}
-                playerId={playerId}
-                selectedTerritoryId={selectedSourceTerritory}
-                onTerritoryClick={handleTerritoryClick}
-              />
-
-              {/* Animated army movements */}
-              <MovingArmies3D
-                movements={activeMovements}
-                onMovementComplete={handleMovementComplete}
-              />
-            </Canvas>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="list" className="mt-6 space-y-6">
+      <div className="space-y-6">
 
           {/* Your Territories */}
           <section>
@@ -419,8 +341,7 @@ export function TerritoryMapPanel({
               </div>
             </section>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
     </div>
   );
 }
