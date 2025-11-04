@@ -12,6 +12,7 @@ import { UnifiedDiplomacyPanel } from './UnifiedDiplomacyPanel';
 import { motion } from 'framer-motion';
 import { DoctrineStatusPanel } from './DoctrineStatusPanel';
 import type { DoctrineShiftState } from '@/types/doctrineIncidents';
+import { ResourceStockpileDisplay } from './ResourceStockpileDisplay';
 
 interface CivilizationInfoPanelProps {
   nations: Nation[];
@@ -192,6 +193,19 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Strategic Resources Section */}
+      {player.resourceStockpile && (
+        <div>
+          <h3 className="text-lg font-bold text-amber-300 mb-3 flex items-center gap-2">
+            <Sparkles className="w-5 h-5" />
+            Strategic Resources
+          </h3>
+          <div className="bg-gray-800/50 p-4 rounded-lg border border-amber-500/30">
+            <ResourceStockpileDisplay nation={player} />
+          </div>
+        </div>
+      )}
 
       {/* Election Countdown */}
       {governanceMetrics['player'] && (

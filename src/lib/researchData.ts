@@ -16,7 +16,7 @@ export type ResearchCategory =
   | 'defense'
   | 'delivery';
 
-export type ResourceCost = Partial<Record<'production' | 'intel' | 'uranium', number>>;
+export type ResourceCost = Partial<Record<'production' | 'intel' | 'uranium' | 'oil' | 'rare_earths', number>>;
 
 export interface ResearchNode {
   id: string;
@@ -152,10 +152,10 @@ export const CYBER_RESEARCH: ResearchNode[] = [
   {
     id: 'cyber_advanced_offense',
     name: 'Advanced Offensive Algorithms',
-    description: 'AI-driven attack optimization reduces intrusion costs and increases success rates.',
+    description: 'AI-driven attack optimization reduces intrusion costs and increases success rates. Requires Rare Earths.',
     category: 'cyber',
     turns: 4,
-    cost: { production: 35, intel: 30 },
+    cost: { production: 35, intel: 30, rare_earths: 8 },
     prerequisites: ['cyber_ids'],
     onComplete: nation => {
       window.__applyCyberResearchUnlock?.(nation, 'advanced_offense');
@@ -188,10 +188,10 @@ export const CYBER_RESEARCH: ResearchNode[] = [
   {
     id: 'cyber_ai_defense',
     name: 'AI-Driven Cyber Defenses',
-    description: 'Autonomous defense systems automatically counter-attack intruders.',
+    description: 'Autonomous defense systems automatically counter-attack intruders. Requires Rare Earths.',
     category: 'cyber',
     turns: 5,
-    cost: { production: 50, intel: 45 },
+    cost: { production: 50, intel: 45, rare_earths: 10 },
     prerequisites: ['cyber_firewalls'],
     onComplete: nation => {
       window.__applyCyberResearchUnlock?.(nation, 'ai_defense');
@@ -200,10 +200,10 @@ export const CYBER_RESEARCH: ResearchNode[] = [
   {
     id: 'cyber_superweapon',
     name: 'Cyber Superweapon',
-    description: 'Devastating one-time cyber attack capable of crippling enemy infrastructure for 3 turns.',
+    description: 'Devastating one-time cyber attack capable of crippling enemy infrastructure for 3 turns. Requires Rare Earths.',
     category: 'cyber',
     turns: 6,
-    cost: { production: 80, intel: 60, uranium: 20 },
+    cost: { production: 80, intel: 60, uranium: 20, rare_earths: 15 },
     prerequisites: ['cyber_advanced_offense', 'cyber_attribution_obfuscation'],
     onComplete: nation => {
       window.__applyCyberResearchUnlock?.(nation, 'cyber_superweapon');

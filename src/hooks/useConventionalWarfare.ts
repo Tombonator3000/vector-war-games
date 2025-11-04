@@ -9,6 +9,8 @@ export interface ResourceCost {
   production?: number;
   intel?: number;
   uranium?: number;
+  oil?: number;           // New: Oil requirement for military units
+  rare_earths?: number;   // New: Rare earths for advanced units
 }
 
 export interface ConventionalUnitTemplate {
@@ -107,6 +109,12 @@ export interface ConventionalNationRef {
   combinedArmsBonus?: number;
   relationships?: Record<string, number>;
   alliances?: string[];
+  resourceStockpile?: {  // New: Resource stockpile for checking oil/rare earth availability
+    oil: number;
+    uranium: number;
+    rare_earths: number;
+    food: number;
+  };
 }
 
 interface UseConventionalWarfareOptions {
@@ -139,11 +147,11 @@ const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
     id: 'armored_corps',
     type: 'army',
     name: 'Armored Corps',
-    description: 'Mechanised ground formation. Deploys 5 armies to selected territory.',
+    description: 'Mechanised ground formation. Deploys 5 armies. Requires Oil.',
     attack: 7,
     defense: 5,
     support: 2,
-    cost: { production: 12 },
+    cost: { production: 12, oil: 5 },  // Now requires oil!
     readinessImpact: 6,
     requiresResearch: 'conventional_armored_doctrine',
   },
@@ -151,11 +159,11 @@ const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
     id: 'carrier_fleet',
     type: 'navy',
     name: 'Carrier Strike Group',
-    description: 'Blue-water naval group. Deploys 4 armies with +1 defense dice bonus.',
+    description: 'Blue-water naval group. Deploys 4 armies with +1 defense dice bonus. Requires Oil and Uranium.',
     attack: 6,
     defense: 8,
     support: 3,
-    cost: { production: 16, uranium: 2 },
+    cost: { production: 16, uranium: 2, oil: 6 },  // Requires oil!
     readinessImpact: 8,
     requiresResearch: 'conventional_carrier_battlegroups',
   },
@@ -163,11 +171,11 @@ const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
     id: 'air_wing',
     type: 'air',
     name: 'Expeditionary Air Wing',
-    description: 'Long-range tactical aviation. Deploys 3 armies with +1 attack dice bonus.',
+    description: 'Long-range tactical aviation. Deploys 3 armies with +1 attack dice bonus. Requires Oil and Rare Earths.',
     attack: 8,
     defense: 4,
     support: 3,
-    cost: { production: 14, intel: 4 },
+    cost: { production: 14, intel: 4, oil: 4, rare_earths: 2 },  // Requires oil and rare earths!
     readinessImpact: 7,
     requiresResearch: 'conventional_expeditionary_airframes',
   },
@@ -632,12 +640,20 @@ export function useConventionalWarfare({
       if ((cost.production ?? 0) > nation.production) {
         return false;
       }
-      if ((cost.intel ?? 0) > nation.intel) {
+      if ((cost.intel ?? 0) > (nation.intel ?? 0)) {
         return false;
       }
-      if ((cost.uranium ?? 0) > nation.uranium) {
+      if ((cost.uranium ?? 0) > (nation.uranium ?? 0)) {
         return false;
       }
+      // Check strategic resources
+      if (cost.oil && (!nation.resourceStockpile || nation.resourceStockpile.oil < cost.oil)) {
+        return false;
+      }
+      if (cost.rare_earths && (!nation.resourceStockpile || nation.resourceStockpile.rare_earths < cost.rare_earths)) {
+        return false;
+      }
+
       nation.production -= cost.production ?? 0;
       if (typeof nation.intel === 'number') {
         nation.intel = Math.max(0, nation.intel - (cost.intel ?? 0));
@@ -645,6 +661,17 @@ export function useConventionalWarfare({
       if (typeof nation.uranium === 'number') {
         nation.uranium = Math.max(0, nation.uranium - (cost.uranium ?? 0));
       }
+
+      // Deduct strategic resources
+      if (nation.resourceStockpile) {
+        if (cost.oil) {
+          nation.resourceStockpile.oil = Math.max(0, nation.resourceStockpile.oil - cost.oil);
+        }
+        if (cost.rare_earths) {
+          nation.resourceStockpile.rare_earths = Math.max(0, nation.resourceStockpile.rare_earths - cost.rare_earths);
+        }
+      }
+
       return true;
     },
     [getNation],

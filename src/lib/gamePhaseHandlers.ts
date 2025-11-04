@@ -23,6 +23,20 @@ import { updateAlliancesPerTurn } from '@/lib/specializedAlliancesUtils';
 import { updatePhase2PerTurn } from '@/lib/diplomacyPhase2Integration';
 import { calculateDIPIncome } from '@/lib/diplomaticCurrencyUtils';
 import { applyIdeologyBonusesForProduction } from '@/lib/ideologyIntegration';
+import {
+  processNationResources,
+  processResourceTrades,
+  initializeResourceStockpile,
+  assignTerritoryResources
+} from '@/lib/territorialResourcesSystem';
+import {
+  initializeResourceMarket,
+  updateResourceMarket
+} from '@/lib/resourceMarketSystem';
+import {
+  processResourceDepletion,
+  DEFAULT_DEPLETION_CONFIG
+} from '@/lib/resourceDepletionSystem';
 
 // Types for dependencies that will be injected
 export interface LaunchDependencies {
@@ -54,6 +68,7 @@ export interface ProductionPhaseDependencies {
   advanceResearch: (nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') => void;
   leaders: any[];
   PlayerManager: any;
+  conventionalState?: any;  // Optional: conventional warfare state with territories
 }
 
 /**
@@ -276,9 +291,25 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
  * Process production phase - generate resources, handle timers, elections
  */
 export function productionPhase(deps: ProductionPhaseDependencies): void {
-  const { S, nations, log, advanceResearch, leaders, PlayerManager } = deps;
+  const { S, nations, log, advanceResearch, leaders, PlayerManager, conventionalState } = deps;
 
   log('=== PRODUCTION PHASE ===', 'success');
+
+  // Initialize territorial resources system if needed
+  if (!S.territoryResources && conventionalState?.territories) {
+    S.territoryResources = assignTerritoryResources(conventionalState.territories);
+    S.resourceTrades = [];
+    S.resourceMarket = initializeResourceMarket();
+    S.depletionWarnings = [];
+    log('Territorial Resources System initialized', 'success');
+  }
+
+  // Initialize resource stockpiles for all nations
+  nations.forEach(n => {
+    if (n.population > 0 && !n.resourceStockpile) {
+      initializeResourceStockpile(n);
+    }
+  });
 
   // Apply ideology bonuses to all nations BEFORE resource generation
   applyIdeologyBonusesForProduction(nations);
@@ -349,6 +380,87 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       n.intel += intelBonus;
     }
   });
+
+  // Process territorial resources generation and consumption
+  if (S.territoryResources && conventionalState?.territories) {
+    // Update resource market with dynamic pricing
+    if (S.resourceMarket) {
+      S.resourceMarket = updateResourceMarket(S.resourceMarket, S, nations, S.turn);
+
+      // Log market events for player
+      const player = PlayerManager.get();
+      if (player && S.resourceMarket.activeEvent && S.resourceMarket.eventDuration === S.resourceMarket.activeEvent.duration) {
+        // Event just started
+        log(`📊 Market Event: ${S.resourceMarket.activeEvent.name} - ${S.resourceMarket.activeEvent.description}`, 'alert');
+      }
+    }
+
+    // Process resource depletion
+    const depletionResult = processResourceDepletion(
+      S.territoryResources,
+      conventionalState.territories,
+      nations,
+      DEFAULT_DEPLETION_CONFIG
+    );
+    S.territoryResources = depletionResult.territoryResources;
+    S.depletionWarnings = depletionResult.warnings;
+
+    // Warn player about critical depletion
+    const player = PlayerManager.get();
+    if (player) {
+      const playerWarnings = depletionResult.warnings.filter(w => {
+        const territory = conventionalState.territories[w.territoryId];
+        return territory?.controllingNationId === player.id;
+      });
+
+      playerWarnings.forEach(warning => {
+        if (warning.severity === 'depleted') {
+          log(`💀 ${warning.resource.toUpperCase()} DEPLETED in ${warning.territoryName}!`, 'alert');
+        } else if (warning.severity === 'critical') {
+          log(`⚠️ ${warning.resource.toUpperCase()} critical in ${warning.territoryName} (${Math.round(warning.remainingPercent)}% remaining)`, 'warning');
+        }
+      });
+    }
+
+    // First process any active trades
+    if (S.resourceTrades) {
+      S.resourceTrades = processResourceTrades(S.resourceTrades, nations, S.turn);
+    }
+
+    // Then process each nation's resources
+    nations.forEach(n => {
+      if (n.population <= 0) return;
+
+      const result = processNationResources(
+        n,
+        conventionalState.territories,
+        S.territoryResources!,
+        S.resourceTrades || [],
+        S.turn
+      );
+
+      // Log resource changes for player
+      if (n === PlayerManager.get() && result.generation) {
+        const gen = result.generation;
+        if (gen.oil > 0 || gen.uranium > 0 || gen.rare_earths > 0 || gen.food > 0) {
+          log(
+            `Resources: +${gen.oil} Oil, +${gen.uranium} Uranium, +${gen.rare_earths} Rare Earths, +${gen.food} Food`,
+            'success'
+          );
+        }
+
+        // Warn about shortages
+        if (result.shortages.length > 0) {
+          result.shortages.forEach(shortage => {
+            log(`⚠️ ${shortage.resource.toUpperCase()} SHORTAGE! (${Math.round(shortage.severity * 100)}%)`, 'warning');
+          });
+        }
+      }
+
+      // Store generation for UI display
+      n.resourceGeneration = result.generation;
+    });
+  }
 
   nations.forEach(n => {
     if (n.coverOpsTurns && n.coverOpsTurns > 0) {

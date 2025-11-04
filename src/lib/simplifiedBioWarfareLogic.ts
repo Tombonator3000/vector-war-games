@@ -4,7 +4,7 @@
  * Game logic for simplified bio-warfare system
  */
 
-import type { Nation } from '@/types/game';
+import type { Nation, GameState } from '@/types/game';
 import type { BioAttackDeployment } from '@/types/simplifiedBiowarfare';
 import {
   calculateBioWeaponDamage,
@@ -15,6 +15,7 @@ import {
   BIO_WEAPON_GLOBAL_OPINION_PENALTY,
 } from '@/types/simplifiedBiowarfare';
 import { updateRelationship } from '@/lib/unifiedDiplomacyMigration';
+import { applyBioWarfareDamage } from '@/lib/territorialResourcesSystem';
 
 /**
  * Initialize bio-warfare state on a nation if not present
@@ -173,10 +174,13 @@ export function processBioAttackTurn(
 
 /**
  * Process all bio-attacks for a nation in a turn
+ * Now also damages food production in controlled territories
  */
 export function processAllBioAttacks(
   nation: Nation,
-  currentTurn: number
+  currentTurn: number,
+  gameState?: GameState,
+  conventionalState?: any
 ): {
   nation: Nation;
   messages: string[];
@@ -194,6 +198,28 @@ export function processAllBioAttacks(
   const messages: string[] = [];
   let totalDamage = 0;
   const updatedAttacks: BioAttackDeployment[] = [];
+
+  // Bio-warfare damages food production in controlled territories
+  if (gameState?.territoryResources && conventionalState?.territories) {
+    const controlledTerritories = Object.values(conventionalState.territories).filter(
+      (t: any) => t.controllingNationId === nation.id
+    );
+
+    // Each active bio-attack reduces food production by 10% per turn
+    const damagePerAttack = 0.10;
+    const totalFoodDamage = Math.min(0.90, damagePerAttack * nation.activeBioAttacks.length);
+
+    controlledTerritories.forEach((territory: any) => {
+      const territoryResource = gameState.territoryResources![territory.id];
+      if (territoryResource) {
+        applyBioWarfareDamage(territoryResource, totalFoodDamage);
+      }
+    });
+
+    if (totalFoodDamage > 0) {
+      messages.push(`Bio-warfare reduces food production by ${Math.round(totalFoodDamage * 100)}% in ${nation.name}`);
+    }
+  }
 
   for (const attack of nation.activeBioAttacks) {
     const result = processBioAttackTurn(updatedNation, attack, currentTurn);
