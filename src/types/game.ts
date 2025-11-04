@@ -224,6 +224,11 @@ export interface Nation {
   ideologyState?: IdeologyState;                    // Nation's ideology and support levels
   revolutionState?: RevolutionState;                // Revolution risk tracking
 
+  // Casus Belli System (War Justification & Peace Terms)
+  casusBelli?: import('./casusBelli').CasusBelli[];        // Available reasons for war
+  activeWars?: import('./casusBelli').WarState[];          // Active wars this nation is involved in
+  peaceOffers?: import('./casusBelli').PeaceOffer[];       // Pending peace offers
+
   // Bio-warfare capabilities (AI nations)
   bioLab?: BioLabFacility;
   plagueState?: PlagueState;
@@ -308,6 +313,12 @@ export interface GameState {
 
   /** Multi-Party Diplomacy state (FASE 3.4) */
   multiPartyDiplomacy?: import('./multiPartyDiplomacy').MultiPartyDiplomacyState;
+
+  /** Casus Belli System state */
+  casusBelliState?: {
+    allWars: import('./casusBelli').WarState[];        // All active wars in the game
+    warHistory: import('./casusBelli').WarState[];     // Completed wars
+  };
 
   /** Doctrine Incident System state */
   doctrineIncidentState?: DoctrineIncidentState;
