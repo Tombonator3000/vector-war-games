@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { canAfford, getCityCost } from '@/lib/gameUtils';
+import { canAfford, getCityCost, getCityBuildTime, getCityMaintenanceCosts } from '@/lib/gameUtils';
 import { PlayerManager, GameStateManager } from '@/state';
 import { COSTS, RESEARCH_LOOKUP, WARHEAD_YIELD_TO_ID, type ResourceCost } from '@/lib/gameConstants';
 
@@ -87,6 +87,8 @@ export function BuildModal({
 
   const cityCost = getCityCost(player);
   const nextCityNumber = (player.cities || 1) + 1;
+  const cityBuildTime = getCityBuildTime(player);
+  const cityMaintenanceCosts = getCityMaintenanceCosts(player);
 
   type BuildOption = {
     key: string;
@@ -125,14 +127,23 @@ export function BuildModal({
     },
   ];
 
+  // Format maintenance costs for display
+  const maintenanceText = Object.entries(cityMaintenanceCosts)
+    .map(([resource, amount]) => `${amount} ${resource.toUpperCase().replace('_', ' ')}`)
+    .join(' • ');
+
   const infrastructureOptions: BuildOption[] = [
     {
       key: 'city',
-      label: `Build City #${nextCityNumber}`,
-      description: 'Expand industrial capacity and resource yields.',
+      label: player.cityConstructionQueue
+        ? `City #${nextCityNumber} Under Construction`
+        : `Build City #${nextCityNumber}`,
+      description: player.cityConstructionQueue
+        ? `Construction progress: ${player.cityConstructionQueue.turnsRemaining} turns remaining`
+        : `Construction time: ${cityBuildTime} turns. Maintenance: ${maintenanceText}/turn`,
       cost: cityCost,
       onClick: buildCity,
-      statusLine: `Existing cities: ${player.cities || 1}`,
+      statusLine: `Existing cities: ${player.cities || 1} • Total maintenance: ${maintenanceText}/turn`,
     },
   ];
 
