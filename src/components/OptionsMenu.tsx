@@ -72,6 +72,7 @@ const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }
   { value: 'night', label: 'Night Lights', description: 'City illumination against a dark globe.' },
   { value: 'nightlights', label: 'Nightlights', description: 'NASA Black Marble - Earth at night imagery.' },
   { value: 'flat-nightlights', label: 'Flat Nightlights', description: 'Flat 2D NASA Black Marble nightlights map.' },
+  { value: 'topo', label: 'Topographic', description: 'NASA topographic and bathymetric relief map.' },
   { value: 'political', label: 'Political', description: 'Colored territorial boundaries and claims.' },
   { value: 'flat', label: 'Flat', description: 'Orthographic projection with a 2D world canvas.' },
   {

@@ -18,7 +18,7 @@ export interface CityLight {
   nationId: string;
 }
 
-export type MapStyle = 'realistic' | 'wireframe' | 'night' | 'political' | 'flat' | 'flat-realistic' | 'nightlights' | 'flat-nightlights';
+export type MapStyle = 'realistic' | 'wireframe' | 'night' | 'political' | 'flat' | 'flat-realistic' | 'nightlights' | 'flat-nightlights' | 'topo';
 
 export interface GlobeSceneProps {
   cam: { x: number; y: number; zoom: number };
@@ -415,6 +415,44 @@ function EarthNightlights({
   );
 }
 
+function EarthTopo({
+  earthRef,
+}: {
+  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
+}) {
+  const textureUrl = useMemo(() => {
+    const base = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+    return `${base}textures/earth_topo_bathy.jpg`;
+  }, []);
+
+  const topoMap = useLoader(THREE.TextureLoader, textureUrl);
+
+  useEffect(() => {
+    if (topoMap) {
+      topoMap.colorSpace = THREE.SRGBColorSpace;
+      topoMap.anisotropy = 16;
+      topoMap.generateMipmaps = true;
+      topoMap.minFilter = THREE.LinearMipmapLinearFilter;
+      topoMap.magFilter = THREE.LinearFilter;
+      topoMap.needsUpdate = true;
+    }
+  }, [topoMap]);
+
+  return (
+    <group>
+      <mesh ref={earthRef} castShadow receiveShadow>
+        <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
+        <meshStandardMaterial
+          map={topoMap}
+          roughness={0.8}
+          metalness={0.1}
+        />
+      </mesh>
+      <Atmosphere />
+    </group>
+  );
+}
+
 function EarthPolitical({
   earthRef,
   vectorTexture,
@@ -521,6 +559,12 @@ function SceneContent({
         return (
           <Suspense fallback={fallback}>
             <EarthNightlights earthRef={earthRef} />
+          </Suspense>
+        );
+      case 'topo':
+        return (
+          <Suspense fallback={fallback}>
+            <EarthTopo earthRef={earthRef} />
           </Suspense>
         );
       case 'political':
