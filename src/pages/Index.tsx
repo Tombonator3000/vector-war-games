@@ -4383,17 +4383,43 @@ function aiTurn(n: Nation) {
   }
 }
 
+// Global flag to prevent multiple simultaneous endTurn calls
+let turnInProgress = false;
+
 // End turn
 function endTurn() {
-  console.log('[Turn Debug] endTurn called, current phase:', S.phase, 'gameOver:', S.gameOver);
+  console.log('[Turn Debug] endTurn called, current phase:', S.phase, 'gameOver:', S.gameOver, 'turnInProgress:', turnInProgress);
+
+  // Guard: prevent multiple simultaneous calls
+  if (turnInProgress) {
+    console.warn('[Turn Debug] Blocked: Turn already in progress');
+    return;
+  }
+
   if (S.gameOver || S.phase !== 'PLAYER') {
     console.log('[Turn Debug] Blocked: gameOver or not in PLAYER phase');
     return;
   }
-  
+
+  // Set flag to prevent re-entry
+  turnInProgress = true;
+
+  // Safety timeout: auto-release lock after 30 seconds to prevent permanent lock
+  const safetyTimeout = setTimeout(() => {
+    if (turnInProgress) {
+      console.error('[Turn Debug] SAFETY: Force-releasing turn lock after timeout');
+      turnInProgress = false;
+      if (S.phase !== 'PLAYER') {
+        S.phase = 'PLAYER';
+        S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+        updateDisplay();
+      }
+    }
+  }, 30000);
+
   S.actionsRemaining = 0;
   S.phase = 'AI';
-  console.log('[Turn Debug] Phase set to AI');
+  console.log('[Turn Debug] Phase set to AI, turn lock acquired');
   updateDisplay();
   
   const aiNations = nations.filter(n => !n.isPlayer && n.population > 0);
@@ -4404,8 +4430,12 @@ function endTurn() {
   aiNations.forEach(ai => {
     for (let i = 0; i < actionsPerAI; i++) {
       setTimeout(() => {
-        console.log('[Turn Debug] AI turn executing for', ai.name);
-        aiTurn(ai);
+        try {
+          console.log('[Turn Debug] AI turn executing for', ai.name);
+          aiTurn(ai);
+        } catch (error) {
+          console.error('[Turn Debug] ERROR in AI turn for', ai.name, ':', error);
+        }
       }, 500 * aiActionCount++);
     }
   });
@@ -4414,15 +4444,25 @@ function endTurn() {
   console.log('[Turn Debug] Resolution phase scheduled in', resolutionDelay, 'ms');
   
   setTimeout(() => {
-    console.log('[Turn Debug] RESOLUTION phase starting');
-    S.phase = 'RESOLUTION';
-    updateDisplay();
-    resolutionPhase();
-    
+    try {
+      console.log('[Turn Debug] RESOLUTION phase starting');
+      S.phase = 'RESOLUTION';
+      updateDisplay();
+      resolutionPhase();
+    } catch (error) {
+      console.error('[Turn Debug] ERROR in RESOLUTION phase:', error);
+      log('⚠️ Error in resolution phase - continuing turn', 'warning');
+    }
+
     setTimeout(() => {
-      console.log('[Turn Debug] PRODUCTION phase starting');
-      S.phase = 'PRODUCTION';
-      productionPhase();
+      try {
+        console.log('[Turn Debug] PRODUCTION phase starting');
+        S.phase = 'PRODUCTION';
+        productionPhase();
+      } catch (error) {
+        console.error('[Turn Debug] ERROR in PRODUCTION phase:', error);
+        log('⚠️ Error in production phase - continuing turn', 'warning');
+      }
 
       // Apply policy effects for player nation
       if (player && policySystem.totalEffects) {
@@ -4467,7 +4507,11 @@ function endTurn() {
       S.turn++;
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
-      console.log('[Turn Debug] Turn complete! New turn:', S.turn, 'Phase:', S.phase, 'Actions:', S.actionsRemaining);
+
+      // Release the turn lock and clear safety timeout
+      turnInProgress = false;
+      clearTimeout(safetyTimeout);
+      console.log('[Turn Debug] Turn complete! New turn:', S.turn, 'Phase:', S.phase, 'Actions:', S.actionsRemaining, 'turn lock released');
 
       // Decrement intel operation cooldowns
       nations.forEach(nation => {

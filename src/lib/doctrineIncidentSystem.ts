@@ -51,7 +51,8 @@ export function canIncidentOccur(
   incident: DoctrineIncident,
   gameState: GameState,
   playerNation: Nation,
-  incidentState: DoctrineIncidentState
+  incidentState: DoctrineIncidentState,
+  allNations: Nation[]
 ): boolean {
   // Already resolved and not repeatable?
   if (!incident.repeatable && incidentState.resolvedIncidents.includes(incident.id)) {
@@ -84,8 +85,6 @@ export function canIncidentOccur(
   }
 
   // Check alliance requirements
-  // Note: nations are stored separately, not on gameState
-  const allNations = (window as any).__nations || [];
   const hasAllies = allNations.some(
     (nation: Nation) =>
       nation.id !== playerNation.id &&
@@ -163,7 +162,8 @@ export function calculateIncidentProbability(
 export function tryGenerateIncident(
   gameState: GameState,
   playerNation: Nation,
-  incidentState: DoctrineIncidentState
+  incidentState: DoctrineIncidentState,
+  allNations: Nation[]
 ): DoctrineIncident | null {
   // Don't generate if there's already an active incident
   if (incidentState.activeIncident) {
@@ -177,7 +177,7 @@ export function tryGenerateIncident(
 
   // Get all eligible incidents for player's doctrine
   const eligibleIncidents = getIncidentsForDoctrine(playerDoctrine).filter((incident) =>
-    canIncidentOccur(incident, gameState, playerNation, incidentState)
+    canIncidentOccur(incident, gameState, playerNation, incidentState, allNations)
   );
 
   if (eligibleIncidents.length === 0) {
@@ -387,11 +387,12 @@ export function resolveIncident(
 export function updateDoctrineIncidentSystem(
   gameState: GameState,
   playerNation: Nation,
-  incidentState: DoctrineIncidentState
+  incidentState: DoctrineIncidentState,
+  allNations: Nation[]
 ): DoctrineIncidentState {
   // Try to generate new incident if none active
   if (!incidentState.activeIncident) {
-    const newIncident = tryGenerateIncident(gameState, playerNation, incidentState);
+    const newIncident = tryGenerateIncident(gameState, playerNation, incidentState, allNations);
     if (newIncident) {
       return {
         ...incidentState,

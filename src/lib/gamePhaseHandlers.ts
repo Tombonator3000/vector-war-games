@@ -260,7 +260,8 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
       S.doctrineIncidentState = updateDoctrineIncidentSystem(
         S,
         playerNation,
-        S.doctrineIncidentState
+        S.doctrineIncidentState,
+        nations
       );
 
       if (S.doctrineIncidentState.activeIncident) {
