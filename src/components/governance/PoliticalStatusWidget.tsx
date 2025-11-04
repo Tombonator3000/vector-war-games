@@ -9,17 +9,22 @@ interface PoliticalStatusWidgetProps {
   nationName: string;
   instability: number;
   onOpenDetails?: () => void;
+  onOpenPolicyPanel?: () => void;
 }
 
-export function PoliticalStatusWidget({ 
-  metrics, 
-  nationName, 
+export function PoliticalStatusWidget({
+  metrics,
+  nationName,
   instability,
-  onOpenDetails 
+  onOpenDetails,
+  onOpenPolicyPanel
 }: PoliticalStatusWidgetProps) {
   const stabilityLevel = getStabilityLevel(metrics.morale, metrics.publicOpinion, instability);
   const stabilityColor = getStabilityColor(stabilityLevel);
   const stabilityIcon = getStabilityIcon(stabilityLevel);
+
+  const crisisReasons = getCrisisReasons(metrics.morale, metrics.publicOpinion, instability);
+  const recoveryActions = getRecoveryActions(metrics.morale, metrics.publicOpinion, metrics.cabinetApproval);
 
   return (
     <Card className="bg-slate-950/90 border-cyan-500/30 p-3">
@@ -72,9 +77,39 @@ export function PoliticalStatusWidget({
       )}
 
       {stabilityLevel === 'CRISIS' && (
-        <div className="mt-2 p-2 bg-red-900/20 border border-red-500/30 rounded text-xs text-red-300">
-          <AlertTriangle className="inline h-3 w-3 mr-1" />
-          Critical instability! Regime change imminent!
+        <div className="mt-2 space-y-2">
+          <div className="p-2 bg-red-900/20 border border-red-500/30 rounded text-xs text-red-300">
+            <div className="flex items-start gap-1 mb-2">
+              <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 animate-pulse" />
+              <div>
+                <div className="font-bold mb-1">CRITICAL POLITICAL CRISIS!</div>
+                <div className="text-red-200 mb-2">{crisisReasons}</div>
+                {(metrics.publicOpinion < 20 || metrics.morale < 15) && (
+                  <div className="font-bold text-red-100 mb-1 animate-pulse">
+                    ⚠️ GAME OVER IMMINENT! Act now!
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="border-t border-red-500/20 pt-2 mt-2">
+              <div className="font-semibold mb-1 text-red-200">Recovery Actions:</div>
+              <ul className="list-disc list-inside space-y-0.5 text-red-300 mb-2">
+                {recoveryActions.map((action, i) => (
+                  <li key={i}>{action}</li>
+                ))}
+              </ul>
+              {onOpenPolicyPanel && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-red-300 border-red-500/50 hover:bg-red-500/20 text-xs"
+                  onClick={onOpenPolicyPanel}
+                >
+                  Open Policy Panel to Enact Reforms
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </Card>
@@ -154,4 +189,73 @@ function getMetricColor(value: number): string {
   if (value >= 50) return 'text-cyan-100';
   if (value >= 30) return 'text-yellow-300';
   return 'text-red-300';
+}
+
+function getCrisisReasons(morale: number, publicOpinion: number, instability: number): string {
+  const reasons: string[] = [];
+
+  if (publicOpinion < 30) {
+    if (publicOpinion < 20) {
+      reasons.push(`Public Opinion critically low (${Math.round(publicOpinion)}%)`);
+    } else {
+      reasons.push(`Public Opinion very low (${Math.round(publicOpinion)}%)`);
+    }
+  }
+
+  if (morale < 30) {
+    if (morale < 15) {
+      reasons.push(`Morale critically low (${Math.round(morale)}%)`);
+    } else {
+      reasons.push(`Morale very low (${Math.round(morale)}%)`);
+    }
+  }
+
+  if (instability > 75) {
+    reasons.push(`Instability extremely high (${Math.round(instability)}%)`);
+  }
+
+  if (reasons.length === 0) {
+    return 'Multiple factors creating instability';
+  }
+
+  return reasons.join(', ');
+}
+
+function getRecoveryActions(morale: number, publicOpinion: number, cabinetApproval: number): string[] {
+  const actions: string[] = [];
+
+  // Most critical issue first
+  if (publicOpinion < 25) {
+    actions.push('Enact Welfare State policy (+2 opinion/turn)');
+    actions.push('Enact Propaganda Ministry (+2 opinion/turn)');
+    actions.push('Wait for Mass Uprising event and negotiate with opposition');
+  } else if (publicOpinion < 35) {
+    actions.push('Enact Free Press or Welfare State policies');
+    actions.push('Handle political events carefully');
+  }
+
+  if (morale < 25) {
+    actions.push('Enact Welfare State (+3 morale/turn)');
+    actions.push('Launch Cultural Resilience program (event option)');
+  } else if (morale < 35) {
+    actions.push('Consider Peace Dividend or Massive Stimulus policies');
+  }
+
+  if (cabinetApproval < 35) {
+    actions.push('Purge corrupt cabinet members (event option)');
+    actions.push('Enact Free Press policy (+2 approval/turn)');
+  }
+
+  // General advice
+  if (actions.length === 0) {
+    actions.push('Reduce instability through policy reforms');
+    actions.push('Wait for political events and choose carefully');
+  }
+
+  // Always include reminder about events
+  if (publicOpinion < 35 || morale < 35) {
+    actions.push('Political events will trigger - choose wisely!');
+  }
+
+  return actions;
 }
