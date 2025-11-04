@@ -206,7 +206,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
     removeLayer(gridLayerRef);
     removeLayer(politicalLayerRef);
-    if (style !== 'flat-realistic') {
+    if (style !== 'flat-realistic' && style !== 'flat-nightlights') {
       removeLayer(flatRealisticLayerRef);
     }
 
@@ -225,7 +225,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       nightLayer.brightness = 1.2;
     }
 
-    const isFlatProjection = style === 'flat' || style === 'flat-realistic';
+    const isFlatProjection = style === 'flat' || style === 'flat-realistic' || style === 'flat-nightlights';
     if (isFlatProjection) {
       viewer.scene.morphTo2D(0);
       viewer.camera.setView({ destination: Rectangle.fromDegrees(-180, -90, 180, 90) });
@@ -370,6 +370,49 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
           nightLayer.brightness = 1.5;
           nightLayer.contrast = 1.3;
         }
+        break;
+      }
+      case 'flat-nightlights': {
+        // Flat 2D NASA Black Marble nightlights
+        if (nightLayer) {
+          nightLayer.show = false;
+        }
+
+        if (baseLayer) {
+          baseLayer.show = false;
+        }
+
+        let flatLayer = flatRealisticLayerRef.current;
+        if (!flatLayer) {
+          flatLayer = imageryLayers.addImageryProvider(
+            new SingleTileImageryProvider({
+              url: resolvePublicAssetPath('textures/earth_nightlights.jpg'),
+              rectangle: Rectangle.fromDegrees(-180, -90, 180, 90),
+            }),
+            0
+          );
+          flatRealisticLayerRef.current = flatLayer;
+        }
+
+        flatLayer.show = true;
+        flatLayer.alpha = 1;
+        flatLayer.brightness = 1.2;
+        flatLayer.contrast = 1.1;
+
+        const updateTranslateState = () => {
+          const helper = cameraHeightHelperRef.current;
+          const height = helper ? helper() : Number.POSITIVE_INFINITY;
+          const shouldEnableTranslate = height <= FLAT_REALISTIC_TRANSLATE_THRESHOLD;
+
+          if (controller.enableTranslate !== shouldEnableTranslate) {
+            controller.enableTranslate = shouldEnableTranslate;
+            viewer.scene.requestRender();
+          }
+        };
+
+        cameraChangeCallbackRef.current = updateTranslateState;
+        viewer.camera.changed.addEventListener(updateTranslateState);
+        updateTranslateState();
         break;
       }
       default: {

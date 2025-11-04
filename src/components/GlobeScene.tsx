@@ -18,7 +18,7 @@ export interface CityLight {
   nationId: string;
 }
 
-export type MapStyle = 'realistic' | 'wireframe' | 'night' | 'political' | 'flat' | 'flat-realistic' | 'nightlights';
+export type MapStyle = 'realistic' | 'wireframe' | 'night' | 'political' | 'flat' | 'flat-realistic' | 'nightlights' | 'flat-nightlights';
 
 export interface GlobeSceneProps {
   cam: { x: number; y: number; zoom: number };
