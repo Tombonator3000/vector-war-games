@@ -9,6 +9,7 @@ import type { DiplomaticInfluence, CouncilMembershipType } from './diplomacyPhas
 import type { DoctrineIncidentState, DoctrineShiftState } from './doctrineIncidents';
 import type { PopGroup, ImmigrationPolicyType } from './popSystem';
 import type { CulturalInfluence, PropagandaCampaign, CulturalWonder } from './culturalWarfare';
+import type { IdeologyState, RevolutionState } from './ideology';
 
 export interface FalloutMark {
   id: string;
@@ -218,6 +219,10 @@ export interface Nation {
   propagandaCampaigns?: PropagandaCampaign[];       // Active propaganda campaigns
   culturalWonders?: CulturalWonder[];               // Built cultural wonders
   activeCulturalDefenses?: string[];                // Active defense types
+
+  // Ideology System
+  ideologyState?: IdeologyState;                    // Nation's ideology and support levels
+  revolutionState?: RevolutionState;                // Revolution risk tracking
 
   // Bio-warfare capabilities (AI nations)
   bioLab?: BioLabFacility;
