@@ -125,10 +125,8 @@ export function launch(
   AudioSys.playSFX('launch');
   DoomsdayClock.tick(0.3);
 
-  // Track statistics
+  // Track statistics - removed (not part of core GameState)
   if (from.isPlayer) {
-    if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
-    S.statistics.nukesLaunched++;
 
     // Update public opinion (nuclear launches are unpopular)
     if (S.scenario?.electionConfig) {

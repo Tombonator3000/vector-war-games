@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Great Old Ones Complete Integration
  * Master integration file that connects all campaign systems

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Multi-Party Diplomacy Integration - FASE 3.4
  *

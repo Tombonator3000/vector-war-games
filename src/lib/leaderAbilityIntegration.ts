@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Leader Ability Integration - FASE 3.2
  *

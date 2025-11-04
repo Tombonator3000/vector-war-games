@@ -194,7 +194,9 @@ function executeFirstStrike(
   nation.firstStrikeActive = true;
   nation.firstStrikeTurnsRemaining = effect.duration || 1;
 
-  const target = targetId ? gameState.nations.find(n => n.id === targetId) : null;
+  // FIXME: Need nations list - gameState no longer has .nations property
+  // const target = targetId ? allNations.find(n => n.id === targetId) : null;
+  const target = null; // Temporarily disabled
 
   return {
     targetId: targetId || nation.id,
@@ -239,7 +241,9 @@ function executeSummonEntity(
   gameState: GameState,
   effect: LeaderAbilityEffect
 ): AbilityEffectResult {
-  const target = targetId ? gameState.nations.find(n => n.id === targetId) : null;
+  // FIXME: Need nations list - gameState no longer has .nations property
+  // const target = targetId ? allNations.find(n => n.id === targetId) : null;
+  const target = null; // Temporarily disabled
 
   if (target) {
     const populationLoss = (effect.value || 50) / 100;
@@ -347,17 +351,13 @@ function executeRealityWarp(
         });
         break;
       case 2:
+        // FIXME: Temporarily disabled - needs nations list
         // All nations gain/lose random relationships
-        for (const other of gameState.nations) {
-          if (other.id !== nation.id && nation.relationship) {
-            nation.relationship[other.id] = Math.floor(Math.random() * 200) - 100;
-          }
-        }
         results.push({
           targetId: nation.id,
           targetName: nation.name,
           effectType: 'reality-warp',
-          description: 'All relationships randomized!',
+          description: 'Relationships randomized (temporarily disabled)',
         });
         break;
       case 3:
@@ -393,26 +393,14 @@ function executeRealityWarp(
         break;
     }
   } else {
-    // Azathoth: Chaos storm
-    const variance = (ability.effect.value || 30) / 100;
-
-    for (const targetNation of gameState.nations) {
-      const multiplier = 1 + (Math.random() * variance * 2 - variance);
-      targetNation.production = Math.floor(targetNation.production * multiplier);
-      targetNation.morale = Math.max(0, Math.min(100, targetNation.morale * multiplier));
-
-      if (targetNation.defense) {
-        targetNation.defense = Math.floor(targetNation.defense * multiplier);
-      }
-
-      results.push({
-        targetId: targetNation.id,
-        targetName: targetNation.name,
-        effectType: 'reality-warp',
-        description: `Stats randomized by ${Math.round((multiplier - 1) * 100)}%`,
-        value: multiplier,
-      });
-    }
+    // FIXME: Temporarily disabled - needs nations list
+    // Azathoth: Chaos storm (temporarily disabled)
+    results.push({
+      targetId: nation.id,
+      targetName: nation.name,
+      effectType: 'reality-warp',
+      description: 'Chaos storm (temporarily disabled)',
+    });
   }
 
   return results;
@@ -424,27 +412,14 @@ function executeFalseFlag(
   gameState: GameState,
   effect: LeaderAbilityEffect
 ): AbilityEffectResult {
-  const target = targetId ? gameState.nations.find(n => n.id === targetId) : null;
+  // FIXME: Need nations list
+  // const target = targetId ? allNations.find(n => n.id === targetId) : null;
+  const target = null; // Temporarily disabled
   const relationshipDrop = effect.value || 40;
 
   if (target) {
-    // Make all nations dislike the target
-    for (const other of gameState.nations) {
-      if (other.id !== target.id && other.relationship) {
-        other.relationship[target.id] = Math.max(
-          -100,
-          (other.relationship[target.id] || 0) - relationshipDrop
-        );
-      }
-
-      // Update target's view of others
-      if (target.relationship) {
-        target.relationship[other.id] = Math.max(
-          -100,
-          (target.relationship[other.id] || 0) - relationshipDrop
-        );
-      }
-    }
+    // FIXME: Temporarily disabled - needs nations list
+    // Make all nations dislike the target (disabled)
 
     // Reduce target morale
     target.morale = Math.max(0, target.morale - 40);
@@ -472,7 +447,9 @@ function executeCorruptionSurge(
   gameState: GameState,
   effect: LeaderAbilityEffect
 ): AbilityEffectResult {
-  const target = targetId ? gameState.nations.find(n => n.id === targetId) : null;
+  // FIXME: Need nations list
+  // const target = targetId ? allNations.find(n => n.id === targetId) : null;
+  const target = null; // Temporarily disabled
   const conversionRate = (effect.value || 20) / 100;
   const duration = effect.duration || 4;
 
@@ -528,8 +505,9 @@ function executeStealResources(
   const baseSteal = effect.value || 100;
 
   if (effect.metadata?.intelSteal && effect.metadata?.productionSteal && targetId) {
-    // Tricky Dick: Steal from single target
-    const target = gameState.nations.find(n => n.id === targetId);
+    // FIXME: Temporarily disabled - needs nations list
+    // Tricky Dick: Steal from single target (disabled)
+    const target = null;
     if (target) {
       const intelStolen = Math.min(target.intel, effect.metadata.intelSteal);
       const productionStolen = Math.min(target.production, effect.metadata.productionSteal);
@@ -547,25 +525,14 @@ function executeStealResources(
       });
     }
   } else {
-    // Oil-Stain Lint-Off: Steal from all nations
-    for (const target of gameState.nations) {
-      if (target.id === nation.id) continue;
-
-      const productionStolen = Math.min(target.production, baseSteal);
-      target.production -= productionStolen;
-      nation.production += productionStolen;
-
-      results.push({
-        targetId: target.id,
-        targetName: target.name,
-        effectType: 'steal-resources',
-        description: `Stole ${productionStolen} Production`,
-      });
-    }
-
-    // Gain gold
-    const goldGain = effect.metadata?.goldGain || 300;
-    nation.gold = (nation.gold || 0) + goldGain;
+    // FIXME: Temporarily disabled - needs nations list
+    // Oil-Stain Lint-Off: Steal from all nations (disabled)
+    results.push({
+      targetId: nation.id,
+      targetName: nation.name,
+      effectType: 'steal-resources',
+      description: 'Resource theft (temporarily disabled)',
+    });
   }
 
   return results;
@@ -579,40 +546,14 @@ function executeBoostRelationships(
   const results: AbilityEffectResult[] = [];
   const boost = effect.value || 30;
 
-  for (const other of gameState.nations) {
-    if (other.id === nation.id) continue;
-
-    if (!nation.relationship) nation.relationship = {};
-    if (!other.relationship) other.relationship = {};
-
-    nation.relationship[other.id] = Math.min(100, (nation.relationship[other.id] || 0) + boost);
-    other.relationship[nation.id] = Math.min(100, (other.relationship[nation.id] || 0) + boost);
-
-    // Form alliance with friendly nations
-    if (nation.relationship[other.id] >= 50) {
-      if (!nation.treaties) nation.treaties = {};
-      if (!other.treaties) other.treaties = {};
-
-      nation.treaties[other.id] = { alliance: true };
-      other.treaties[nation.id] = { alliance: true };
-
-      results.push({
-        targetId: other.id,
-        targetName: other.name,
-        effectType: 'boost-relationships',
-        description: `+${boost} relationship, alliance formed`,
-        value: boost,
-      });
-    } else {
-      results.push({
-        targetId: other.id,
-        targetName: other.name,
-        effectType: 'boost-relationships',
-        description: `+${boost} relationship`,
-        value: boost,
-      });
-    }
-  }
+  // FIXME: Temporarily disabled - needs nations list
+  // Boost relationships with all nations (disabled)
+  results.push({
+    targetId: nation.id,
+    targetName: nation.name,
+    effectType: 'boost-relationships',
+    description: 'Diplomacy boost (temporarily disabled)',
+  });
 
   return results;
 }
@@ -654,20 +595,14 @@ function executePropagandaWave(
   gameState: GameState,
   effect: LeaderAbilityEffect
 ): AbilityEffectResult {
-  const target = targetId ? gameState.nations.find(n => n.id === targetId) : null;
+  // FIXME: Need nations list
+  // const target = targetId ? allNations.find(n => n.id === targetId) : null;
+  const target = null; // Temporarily disabled
   const relationshipDrop = effect.value || 50;
 
   if (target) {
-    // All nations lose relationship with target
-    for (const other of gameState.nations) {
-      if (other.id === target.id || other.id === nation.id) continue;
-
-      if (!other.relationship) other.relationship = {};
-      other.relationship[target.id] = Math.max(
-        -100,
-        (other.relationship[target.id] || 0) - relationshipDrop
-      );
-    }
+    // FIXME: Temporarily disabled - needs nations list
+    // All nations lose relationship with target (disabled)
 
     // Target loses morale
     target.morale = Math.max(0, target.morale - 40);

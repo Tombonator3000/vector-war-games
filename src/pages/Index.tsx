@@ -73,7 +73,7 @@ import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotif
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { EndGameScreen } from '@/components/EndGameScreen';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
-import type { DiplomacyProposal } from '@/types/diplomacy';
+// Removed - using unified diplomacy DiplomaticProposal instead
 import type { NegotiationState } from '@/types/negotiation';
 import { evaluateNegotiation } from '@/lib/aiNegotiationEvaluator';
 import { applyNegotiationDeal } from '@/lib/negotiationUtils';
@@ -114,8 +114,7 @@ import {
 import { UnifiedDiplomacyPanel } from '@/components/UnifiedDiplomacyPanel';
 import { SimplifiedBioWarfarePanel } from '@/components/SimplifiedBioWarfarePanel';
 import { StreamlinedCulturePanel } from '@/components/StreamlinedCulturePanel';
-import type { ProposalType } from '@/types/unifiedDiplomacy';
-import type { DiplomacyProposal } from '@/types/unifiedDiplomacy';
+import type { ProposalType, DiplomaticProposal } from '@/types/unifiedDiplomacy';
 import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/types/streamlinedCulture';
 import { migrateGameDiplomacy, getRelationship } from '@/lib/unifiedDiplomacyMigration';
 import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from '@/lib/simplifiedBioWarfareLogic';
