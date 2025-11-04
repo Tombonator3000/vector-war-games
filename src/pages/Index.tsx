@@ -165,6 +165,7 @@ import {
   aiHandleTreatyStrain,
   aiHandleDiplomaticUrgencies,
   aiAttemptDiplomacy,
+  processAIProactiveDiplomacy,
 } from '@/lib/aiDiplomacyActions';
 import {
   initializeGameTrustAndFavors,
@@ -183,8 +184,7 @@ import {
   resolveGrievancesWithReparations,
 } from '@/lib/diplomacyPhase2Integration';
 import { initializeNationAgendas, processAgendaRevelations } from '@/lib/agendaSystem';
-import { checkAllTriggers, resetTriggerTracking } from '@/lib/aiNegotiationTriggers';
-import { generateAINegotiationDeal } from '@/lib/aiNegotiationContentGenerator';
+import { resetTriggerTracking } from '@/lib/aiNegotiationTriggers';
 import {
   initializeDiplomacyPhase3State,
   type DiplomacyPhase3State as DiplomacyPhase3SystemState,
@@ -4444,41 +4444,18 @@ function endTurn() {
         }
       }
 
-      // Process AI-Initiated Negotiations (Phase 4): Check if AI wants to start negotiations
+      // Process AI-Initiated Negotiations (Phase 3): AI proactive diplomacy
       if (player) {
-        const aiNations = nations.filter(n => !n.isPlayer);
-        const newNegotiations: any[] = [];
-        let globalNegotiationCount = 0;
+        const aiNations = nations.filter(n => !n.isPlayer && !n.eliminated);
 
-        // Check each AI nation to see if they want to initiate negotiations
-        for (const aiNation of aiNations) {
-          const triggerResult = checkAllTriggers(
-            aiNation,
-            player,
-            nations,
-            S.turn,
-            globalNegotiationCount
-          );
-
-          if (triggerResult) {
-            // Generate negotiation content based on trigger
-            const negotiation = generateAINegotiationDeal(
-              aiNation,
-              player,
-              nations,
-              triggerResult,
-              S.turn
-            );
-
-            if (negotiation) {
-              newNegotiations.push(negotiation);
-              globalNegotiationCount++;
-
-              console.log(`🤝 AI NEGOTIATION INITIATED: ${aiNation.name} - ${triggerResult.purpose}`);
-              log(`📨 ${aiNation.name} has initiated diplomatic contact: ${triggerResult.purpose}`, 'diplomacy');
-            }
-          }
-        }
+        // Use the proper integrated function for AI proactive diplomacy
+        const newNegotiations = processAIProactiveDiplomacy(
+          aiNations,
+          player,
+          nations,
+          S.turn,
+          log
+        );
 
         // Add new negotiations to state
         if (newNegotiations.length > 0) {
