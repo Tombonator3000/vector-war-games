@@ -4385,28 +4385,42 @@ function aiTurn(n: Nation) {
 
 // End turn
 function endTurn() {
-  if (S.gameOver || S.phase !== 'PLAYER') return;
+  console.log('[Turn Debug] endTurn called, current phase:', S.phase, 'gameOver:', S.gameOver);
+  if (S.gameOver || S.phase !== 'PLAYER') {
+    console.log('[Turn Debug] Blocked: gameOver or not in PLAYER phase');
+    return;
+  }
   
   S.actionsRemaining = 0;
   S.phase = 'AI';
+  console.log('[Turn Debug] Phase set to AI');
   updateDisplay();
   
   const aiNations = nations.filter(n => !n.isPlayer && n.population > 0);
   const actionsPerAI = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+  console.log('[Turn Debug] AI nations:', aiNations.length, 'actions per AI:', actionsPerAI);
   
   let aiActionCount = 0;
   aiNations.forEach(ai => {
     for (let i = 0; i < actionsPerAI; i++) {
-      setTimeout(() => aiTurn(ai), 500 * aiActionCount++);
+      setTimeout(() => {
+        console.log('[Turn Debug] AI turn executing for', ai.name);
+        aiTurn(ai);
+      }, 500 * aiActionCount++);
     }
   });
   
+  const resolutionDelay = aiActionCount * 500 + 500;
+  console.log('[Turn Debug] Resolution phase scheduled in', resolutionDelay, 'ms');
+  
   setTimeout(() => {
+    console.log('[Turn Debug] RESOLUTION phase starting');
     S.phase = 'RESOLUTION';
     updateDisplay();
     resolutionPhase();
     
     setTimeout(() => {
+      console.log('[Turn Debug] PRODUCTION phase starting');
       S.phase = 'PRODUCTION';
       productionPhase();
 
@@ -4453,6 +4467,7 @@ function endTurn() {
       S.turn++;
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+      console.log('[Turn Debug] Turn complete! New turn:', S.turn, 'Phase:', S.phase, 'Actions:', S.actionsRemaining);
 
       // Decrement intel operation cooldowns
       nations.forEach(nation => {

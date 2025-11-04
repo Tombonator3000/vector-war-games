@@ -59,7 +59,7 @@ export function canIncidentOccur(
   }
 
   // Too soon since last incident? (minimum 3 turns between incidents)
-  if (gameState.turnCount - incidentState.lastIncidentTurn < 3) {
+  if (gameState.turn - incidentState.lastIncidentTurn < 3) {
     return false;
   }
 
@@ -67,10 +67,10 @@ export function canIncidentOccur(
   if (!conditions) return true;
 
   // Check turn requirements
-  if (conditions.minTurn && gameState.turnCount < conditions.minTurn) {
+  if (conditions.minTurn && gameState.turn < conditions.minTurn) {
     return false;
   }
-  if (conditions.maxTurn && gameState.turnCount > conditions.maxTurn) {
+  if (conditions.maxTurn && gameState.turn > conditions.maxTurn) {
     return false;
   }
 
@@ -84,11 +84,13 @@ export function canIncidentOccur(
   }
 
   // Check alliance requirements
-  const hasAllies = Object.entries(gameState.nations).some(
-    ([id, nation]) =>
-      id !== playerNation.id &&
-      playerNation.treaties?.[id]?.type === 'alliance' &&
-      playerNation.treaties[id].active
+  // Note: nations are stored separately, not on gameState
+  const allNations = (window as any).__nations || [];
+  const hasAllies = allNations.some(
+    (nation: Nation) =>
+      nation.id !== playerNation.id &&
+      playerNation.treaties?.[nation.id]?.type === 'alliance' &&
+      playerNation.treaties[nation.id].active
   );
   if (conditions.requiresAllies && !hasAllies) {
     return false;
@@ -139,15 +141,15 @@ export function calculateIncidentProbability(
   probability *= tensionMultiplier;
 
   // Increase probability in mid-late game
-  if (gameState.turnCount > 15) {
+  if (gameState.turn > 15) {
     probability *= 1.3;
   }
-  if (gameState.turnCount > 30) {
+  if (gameState.turn > 30) {
     probability *= 1.5;
   }
 
   // Reduce if recent incident
-  const turnsSinceLastIncident = gameState.turnCount - (gameState.doctrineIncidentState?.lastIncidentTurn || 0);
+  const turnsSinceLastIncident = gameState.turn - (gameState.doctrineIncidentState?.lastIncidentTurn || 0);
   if (turnsSinceLastIncident < 5) {
     probability *= 0.5;
   }
@@ -261,7 +263,7 @@ export function applyIncidentConsequences(
     // Track action
     updatedShiftState.recentActions.push({
       action: choice.text,
-      turn: gameState.turnCount,
+      turn: gameState.turn,
       shiftEffect: { toward, amount },
     });
 
@@ -360,12 +362,12 @@ export function resolveIncident(
       ...incidentState.incidentHistory,
       {
         incidentId: incident.id,
-        turn: gameState.turnCount,
+        turn: gameState.turn,
         choiceId: choice.id,
         outcome: choice.text,
       },
     ],
-    lastIncidentTurn: gameState.turnCount,
+    lastIncidentTurn: gameState.turn,
   };
 
   return {
