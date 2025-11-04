@@ -237,6 +237,9 @@ export interface Nation {
   // Leader Abilities (FASE 3.2)
   leaderAbilityState?: import('./leaderAbilities').LeaderAbilityState;
 
+  // Spy Network System
+  spyNetwork?: import('./spySystem').SpyNetworkState;
+
   // Temporary ability effects
   firstStrikeBonus?: number;
   firstStrikeActive?: boolean;

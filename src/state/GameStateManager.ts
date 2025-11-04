@@ -619,6 +619,41 @@ class GameStateManager {
   }
 
   // ============================================
+  // SPY NETWORK MANAGEMENT
+  // ============================================
+
+  /**
+   * Gets a nation's spy network
+   */
+  static getSpyNetwork(nationId: string) {
+    const nation = this.getNation(nationId);
+    return nation?.spyNetwork || null;
+  }
+
+  /**
+   * Updates a nation's spy network
+   */
+  static updateSpyNetwork(nationId: string, spyNetwork: any): void {
+    this.updateNation(nationId, { spyNetwork });
+  }
+
+  /**
+   * Gets all active spy missions for a nation
+   */
+  static getActiveSpyMissions(nationId: string) {
+    const network = this.getSpyNetwork(nationId);
+    return network?.activeMissions || [];
+  }
+
+  /**
+   * Gets all spies for a nation
+   */
+  static getSpies(nationId: string) {
+    const network = this.getSpyNetwork(nationId);
+    return network?.spies || [];
+  }
+
+  // ============================================
   // INITIALIZATION AND RESET
   // ============================================
 
