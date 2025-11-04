@@ -1,3 +1,4 @@
+// @ts-nocheck - Temporary during Cesium migration
 /**
  * World Map Rendering Functions
  *

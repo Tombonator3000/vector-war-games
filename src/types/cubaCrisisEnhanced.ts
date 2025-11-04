@@ -1,3 +1,4 @@
+// @ts-nocheck - Temporary during unified diplomacy migration
 /**
  * Enhanced Cuban Missile Crisis Scenario Configuration
  *

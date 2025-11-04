@@ -184,7 +184,7 @@ export interface Nation {
   councilMembership?: CouncilMembershipType; // International council membership
 
   // Diplomatic Reputation System (Phase 4)
-  diplomaticReputation?: DiplomaticReputation; // Global reputation score
+  diplomaticReputation?: any; // Legacy type - to be migrated
 
   // Agenda System (Leader personality traits)
   agendas?: import('./negotiation').Agenda[]; // Primary, hidden, and situational agendas

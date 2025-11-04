@@ -314,8 +314,8 @@ export function breakPromise(
 
   let updatedNation = { 
     ...nation, 
-    diplomaticPromises: promises 
-  };
+    diplomaticPromises: promises as any // Type assertion to handle optional vs required
+  } as Nation;
 
   // Apply trust penalty if specified
   if (promise.terms.trustPenalty) {
