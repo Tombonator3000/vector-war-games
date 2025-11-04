@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TerritoryState } from '@/hooks/useConventionalWarfare';
-import { Swords, ArrowRight, Shield, Users, Map, List } from 'lucide-react';
-import { RiskStyleMap } from './game/RiskStyleMap';
+import { Swords, ArrowRight, Shield, Users, Globe, List } from 'lucide-react';
+import { GlobeScene } from './GlobeScene';
+import { TerritoryMarkers3D } from './TerritoryMarkers3D';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Canvas } from '@react-three/fiber';
 
 interface TerritoryMapPanelProps {
   territories: TerritoryState[];
@@ -26,7 +28,7 @@ export function TerritoryMapPanel({
 }: TerritoryMapPanelProps) {
   const [selectedSourceTerritory, setSelectedSourceTerritory] = useState<string | null>(null);
   const [armyCount, setArmyCount] = useState<number>(1);
-  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [viewMode, setViewMode] = useState<'3d' | 'list'>('3d');
 
   const sortedTerritories = useMemo(
     () => [...territories].sort((a, b) => a.name.localeCompare(b.name)),
@@ -226,18 +228,41 @@ export function TerritoryMapPanel({
     );
   };
 
-  const handleMapAttack = (targetId: string) => {
-    if (!sourceTerritory) return;
-    onAttack(sourceTerritory.id, targetId, armyCount);
-    setSelectedSourceTerritory(null);
-    setArmyCount(1);
-  };
+  const handleTerritoryClick = (territoryId: string) => {
+    if (selectedSourceTerritory && sourceTerritory) {
+      // We have a source selected - check if this is a valid target
+      const isNeighbor = sourceTerritory.neighbors.includes(territoryId);
+      if (!isNeighbor) {
+        // Not a neighbor - just select this territory instead
+        setSelectedSourceTerritory(territoryId);
+        const newTerritory = territories.find(t => t.id === territoryId);
+        if (newTerritory) {
+          setArmyCount(Math.min(1, newTerritory.armies - 1));
+        }
+        return;
+      }
 
-  const handleMapMove = (targetId: string) => {
-    if (!sourceTerritory) return;
-    onMove(sourceTerritory.id, targetId, armyCount);
-    setSelectedSourceTerritory(null);
-    setArmyCount(1);
+      const targetTerritory = territories.find(t => t.id === territoryId);
+      if (!targetTerritory) return;
+
+      // This is a valid neighbor - execute action
+      if (targetTerritory.controllingNationId !== playerId) {
+        // Attack enemy/neutral territory
+        onAttack(sourceTerritory.id, territoryId, armyCount);
+      } else {
+        // Move to own territory
+        onMove(sourceTerritory.id, territoryId, armyCount);
+      }
+      setSelectedSourceTerritory(null);
+      setArmyCount(1);
+    } else {
+      // No source selected - select this territory
+      const territory = territories.find(t => t.id === territoryId);
+      if (territory && territory.controllingNationId === playerId && territory.armies > 1) {
+        setSelectedSourceTerritory(territoryId);
+        setArmyCount(Math.min(1, territory.armies - 1));
+      }
+    }
   };
 
   return (
@@ -282,11 +307,11 @@ export function TerritoryMapPanel({
       )}
 
       {/* View Mode Toggle */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'map' | 'list')} className="w-full">
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as '3d' | 'list')} className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto">
-          <TabsTrigger value="map" className="flex items-center gap-2">
-            <Map className="h-4 w-4" />
-            Map View
+          <TabsTrigger value="3d" className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            3D Globe View
           </TabsTrigger>
           <TabsTrigger value="list" className="flex items-center gap-2">
             <List className="h-4 w-4" />
@@ -294,16 +319,34 @@ export function TerritoryMapPanel({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="map" className="mt-6">
-          <div className="h-[700px]">
-            <RiskStyleMap
-              territories={territories}
-              playerId={playerId}
-              selectedTerritoryId={selectedSourceTerritory}
-              onSelectTerritory={setSelectedSourceTerritory}
-              onAttack={handleMapAttack}
-              onMove={handleMapMove}
-            />
+        <TabsContent value="3d" className="mt-6">
+          <div className="h-[700px] rounded-lg border border-cyan-500/30 bg-slate-950 overflow-hidden">
+            <Canvas
+              camera={{ position: [0, 0, 5], fov: 45 }}
+              dpr={[1, 1.5]}
+            >
+              <ambientLight intensity={0.4} />
+              <directionalLight position={[5, 3, 5]} intensity={1.2} />
+              <directionalLight position={[-3, -2, -3]} intensity={0.4} />
+
+              {/* Earth sphere */}
+              <mesh>
+                <sphereGeometry args={[1.8, 64, 64]} />
+                <meshStandardMaterial
+                  color="#0a1929"
+                  roughness={0.8}
+                  metalness={0.2}
+                />
+              </mesh>
+
+              {/* Territory markers with Risk-style army counts */}
+              <TerritoryMarkers3D
+                territories={territories}
+                playerId={playerId}
+                selectedTerritoryId={selectedSourceTerritory}
+                onTerritoryClick={handleTerritoryClick}
+              />
+            </Canvas>
           </div>
         </TabsContent>
 
