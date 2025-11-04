@@ -659,36 +659,6 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
       nations={nations}
     />
   );
-        )}
-
-        {/* Hostile */}
-        {hostile.length > 0 && (
-          <div>
-            <h3 className="text-sm font-bold text-red-400 mb-2">Hostile Nations</h3>
-            <div className="space-y-2">
-              {hostile.map(({ nation, isSanctioned, playerSanctionsEnemy }) => (
-                <div key={nation.id} className="bg-gray-800/50 border border-red-500/30 rounded p-3">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: nation.color }} />
-                      <span className="text-white font-medium">{nation.name}</span>
-                    </div>
-                    <div className="text-xs text-red-400">At War</div>
-                  </div>
-                  {(isSanctioned || playerSanctionsEnemy) && (
-                    <div className="mt-2 text-xs text-yellow-400">
-                      {isSanctioned && '⚠ They sanctioned you • '}
-                      {playerSanctionsEnemy && '⚠ You sanctioned them'}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   const renderResearch = () => {
     if (!player) return null;
