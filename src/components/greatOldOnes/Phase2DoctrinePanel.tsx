@@ -779,8 +779,9 @@ const ProgressView: React.FC<{ state: GreatOldOnesState; phase2State: Phase2Stat
 
           {(() => {
             // Get victory conditions for current doctrine
+            const currentDoctrine = state.doctrine || 'domination';
             const availableVictories = Object.values(OCCULT_VICTORY_CONDITIONS).filter(
-              vc => vc.doctrinesAllowed.includes(doctrine!)
+              vc => vc.doctrinesAllowed.includes(currentDoctrine)
             );
 
             if (availableVictories.length === 0) {
@@ -804,7 +805,7 @@ const ProgressView: React.FC<{ state: GreatOldOnesState; phase2State: Phase2Stat
                     totalConditions++;
                     const regions = state.regions || [];
                     const avgCorruption = regions.length > 0
-                      ? regions.reduce((sum, r) => sum + (r.corruptionLevel || 0), 0) / regions.length
+                      ? regions.reduce((sum, r) => sum + (r.corruption || 0), 0) / regions.length
                       : 0;
                     const progress = Math.min(100, (avgCorruption / conditions.corruptionThreshold) * 100);
                     totalProgress += progress;
@@ -833,7 +834,7 @@ const ProgressView: React.FC<{ state: GreatOldOnesState; phase2State: Phase2Stat
                   // Regions Controlled
                   if (conditions.regionsControlled !== undefined) {
                     totalConditions++;
-                    const controlled = (state.regions || []).filter(r => r.infiltrationLevel >= 80).length;
+                    const controlled = (state.regions || []).filter(r => (r.cultistCells || 0) >= 80).length;
                     const progress = Math.min(100, (controlled / conditions.regionsControlled) * 100);
                     totalProgress += progress;
                     conditionDetails.push({
@@ -848,8 +849,8 @@ const ProgressView: React.FC<{ state: GreatOldOnesState; phase2State: Phase2Stat
                   if (conditions.voluntaryConversionRate !== undefined) {
                     totalConditions++;
                     const regions = state.regions || [];
-                    const totalPop = regions.reduce((sum, r) => sum + (r.population || 0), 0);
-                    const convertedPop = regions.reduce((sum, r) => sum + (r.voluntaryConverts || 0), 0);
+                    const totalPop = regions.reduce((sum, r) => sum + 1000000, 0);
+                    const convertedPop = regions.reduce((sum, r) => sum + (r.cultistCells * 1000), 0);
                     const conversionRate = totalPop > 0 ? (convertedPop / totalPop) * 100 : 0;
                     const progress = Math.min(100, (conversionRate / conditions.voluntaryConversionRate) * 100);
                     totalProgress += progress;
@@ -866,7 +867,7 @@ const ProgressView: React.FC<{ state: GreatOldOnesState; phase2State: Phase2Stat
                     totalConditions++;
                     const regions = state.regions || [];
                     const avgSanity = regions.length > 0
-                      ? regions.reduce((sum, r) => sum + (r.populationSanity || 100), 0) / regions.length
+                      ? regions.reduce((sum, r) => sum + (r.sanitySanity || 100), 0) / regions.length
                       : 100;
                     // Lower sanity is better for some victories
                     const progress = avgSanity <= conditions.sanityThreshold

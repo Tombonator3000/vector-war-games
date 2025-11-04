@@ -191,15 +191,11 @@ export function UnifiedDiplomacyPanel({
                   </div>
                   <div className="bg-gray-900/50 p-2 rounded">
                     <span className="text-gray-400">Cities:</span>
-                    <span className="ml-2 font-semibold">{selectedNation.cities.length}</span>
+                    <span className="ml-2 font-semibold">{selectedNation.cities || 0}</span>
                   </div>
                   <div className="bg-gray-900/50 p-2 rounded">
                     <span className="text-gray-400">Missiles:</span>
                     <span className="ml-2 font-semibold">{selectedNation.missiles}</span>
-                  </div>
-                  <div className="bg-gray-900/50 p-2 rounded">
-                    <span className="text-gray-400">DEFCON:</span>
-                    <span className="ml-2 font-semibold">{selectedNation.defcon || 5}</span>
                   </div>
                 </div>
               </div>

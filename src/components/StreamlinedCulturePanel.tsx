@@ -39,7 +39,7 @@ export function StreamlinedCulturePanel({
   onLaunchPropaganda,
   onBuildWonder,
   onSetImmigrationPolicy,
-  currentImmigrationPolicy = 'restricted',
+  currentImmigrationPolicy = 'selective',
   onClose,
 }: StreamlinedCulturePanelProps) {
   const [selectedPropagandaTarget, setSelectedPropagandaTarget] = useState<string | null>(null);

@@ -56,8 +56,8 @@ export function SimplifiedBioWarfarePanel({
 }: SimplifiedBioWarfarePanelProps) {
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
 
-  const bioWeaponResearched = player.bioLab?.facilitiesBuilt.weaponLab || false;
-  const bioDefenseLevel = player.bioLab?.facilitiesBuilt.bsl4Lab ? 3 : player.bioLab?.facilitiesBuilt.bsl3Lab ? 2 : player.bioLab?.facilitiesBuilt.bsl2Lab ? 1 : 0;
+  const bioWeaponResearched = (player.bioLab?.tier ?? 0) >= 3 || false;
+  const bioDefenseLevel = player.bioLab?.tier ?? 0;
   const currentDefense = getBioDefense(bioDefenseLevel);
   const nextDefense = bioDefenseLevel < 3 ? getBioDefense(bioDefenseLevel + 1) : null;
 

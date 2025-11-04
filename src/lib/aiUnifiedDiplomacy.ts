@@ -74,7 +74,7 @@ export function evaluateProposal(
       const acceptChance = baseChance + relationshipBonus;
 
       // Higher chance if AI is weak
-      const isWeak = aiNation.missiles < 10 || aiNation.cities.length <= 2;
+      const isWeak = aiNation.missiles < 10 || (aiNation.cities || 0) <= 2;
       const weaknessBonus = isWeak ? 0.3 : 0;
 
       const finalChance = Math.min(0.95, Math.max(0.05, acceptChance + weaknessBonus));
@@ -111,7 +111,7 @@ export function evaluateProposal(
 
     case 'peace': {
       // Similar to truce
-      const isLosingWar = aiNation.cities.length <= 2 || aiNation.missiles < 5;
+      const isLosingWar = (aiNation.cities || 0) <= 2 || aiNation.missiles < 5;
 
       if (isLosingWar || relationship > RELATIONSHIP_UNFRIENDLY) {
         return {
@@ -188,7 +188,7 @@ export function considerDiplomaticAction(
   }
 
   // Consider peace if at war and AI is weak
-  const isWeak = aiNation.missiles < 10 || aiNation.cities.length <= 2;
+  const isWeak = aiNation.missiles < 10 || (aiNation.cities || 0) <= 2;
   if (isWeak && relationship < RELATIONSHIP_UNFRIENDLY) {
     return {
       action: 'peace',

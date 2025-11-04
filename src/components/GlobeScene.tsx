@@ -299,7 +299,7 @@ function EarthRealistic({
   const textureUrls = useMemo(() => {
     const base = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
     return [
-      `${base}textures/earth_day.jpg`,
+      `${base}textures/earth_topo_bathy.jpg`,
       `${base}textures/earth_normal.jpg`,
       `${base}textures/earth_specular.jpg`,
     ];

@@ -403,12 +403,8 @@ function humanizeVictoryType(type: VictoryPath['type']) {
       return 'Domination Victory';
     case 'economic':
       return 'Economic Victory';
-    case 'demographic':
-      return 'Demographic Victory';
     case 'survival':
       return 'Survival Victory';
-    case 'cultural':
-      return 'Cultural Victory';
     default:
       return 'Unknown Victory';
   }

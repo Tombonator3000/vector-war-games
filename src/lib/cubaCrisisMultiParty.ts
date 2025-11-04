@@ -432,6 +432,7 @@ export const TURKEY_ACTOR: ThirdPartyActor = {
         relationshipChanges: {
           us: -5,
         },
+        trustChanges: {},
         escalationChange: 5,
         narrative:
           '🇹🇷 Turkey Invokes Article 4: Turkish government formally requests NATO consultation under Article 4. Any deal involving Turkish missiles must be discussed with all NATO members. This slows negotiations.',
@@ -545,7 +546,6 @@ export const NATO_ACTOR: ThirdPartyActor = {
         },
       ],
       effects: {
-        trustChanges: {},
         relationshipChanges: {
           us: 5,
         },
@@ -598,6 +598,7 @@ export const NATO_ACTOR: ThirdPartyActor = {
         relationshipChanges: {
           ussr: -10,
         },
+        trustChanges: {},
         escalationChange: 10,
         narrative:
           '🛡️ NATO Alert: NATO forces across Europe move to high readiness. Armored divisions in West Germany deploy to border positions. The Soviets respond by mobilizing Warsaw Pact forces. Tension in Europe soars.',
