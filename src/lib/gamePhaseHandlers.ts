@@ -22,6 +22,7 @@ import { updateGrievancesAndClaimsPerTurn } from '@/lib/grievancesAndClaimsUtils
 import { updateAlliancesPerTurn } from '@/lib/specializedAlliancesUtils';
 import { updatePhase2PerTurn } from '@/lib/diplomacyPhase2Integration';
 import { calculateDIPIncome } from '@/lib/diplomaticCurrencyUtils';
+import { applyIdeologyBonusesForProduction } from '@/lib/ideologyIntegration';
 
 // Types for dependencies that will be injected
 export interface LaunchDependencies {
@@ -278,6 +279,9 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
   const { S, nations, log, advanceResearch, leaders, PlayerManager } = deps;
 
   log('=== PRODUCTION PHASE ===', 'success');
+
+  // Apply ideology bonuses to all nations BEFORE resource generation
+  applyIdeologyBonusesForProduction(nations);
 
   nations.forEach(n => {
     if (n.population <= 0) return;

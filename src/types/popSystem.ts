@@ -15,6 +15,8 @@ export interface PopGroup {
   assimilation: number;         // 0-100, how integrated they are
   happiness: number;            // 0-100, affects productivity
   yearsSinceArrival: number;    // Time since immigration (in turns)
+  ideologyPreference?: import('./ideology').IdeologyType; // Preferred ideology
+  ideologySupport?: number;     // 0-100, support for their preferred ideology
 }
 
 /**

@@ -122,6 +122,12 @@ import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from
 import { launchPropagandaCampaign, buildWonder, applyImmigrationPolicy } from '@/lib/streamlinedCultureLogic';
 import { processImmigrationAndCultureTurn, initializeNationPopSystem } from '@/lib/immigrationCultureTurnProcessor';
 import {
+  initializeIdeologySystem,
+  processIdeologySystemTurn,
+  applyIdeologyBonusesForProduction,
+  generateIdeologicalGrievances,
+} from '@/lib/ideologyIntegration';
+import {
   useCyberWarfare,
   createDefaultNationCyberProfile,
   applyCyberResearchUnlock,
@@ -1996,6 +2002,9 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     }
   });
 
+  // Initialize ideology system for all nations
+  initializeIdeologySystem(nations);
+
   // Initialize DIP (Diplomatic Influence Points) for all nations
   nations.forEach((nation, index) => {
     nations[index] = initializeDIP(nation);
@@ -2247,6 +2256,9 @@ function initNations() {
       initializeNationPopSystem(nation);
     }
   });
+
+  // Initialize ideology system for all nations
+  initializeIdeologySystem(nations);
 
   // Initialize DIP (Diplomatic Influence Points) for all nations
   nations.forEach((nation, index) => {
@@ -4694,6 +4706,28 @@ function endTurn() {
         PlayerManager.setNations(nations);
       } catch (error) {
         console.error('Error processing immigration and culture turn:', error);
+      }
+
+      // Process ideology system for all nations
+      try {
+        const ideologyEvents = processIdeologySystemTurn(nations, S);
+
+        // Log ideology events (revolutions, etc.)
+        ideologyEvents.forEach(event => {
+          if (event.type === 'revolution') {
+            log(`🔥 REVOLUTION! ${event.description}`, 'crisis');
+          } else if (event.type === 'ideology_change') {
+            log(`⚖️ ${event.description}`, 'alert');
+          }
+        });
+
+        // Generate ideological grievances between incompatible nations
+        generateIdeologicalGrievances(nations, S.turn);
+
+        GameStateManager.setNations(nations);
+        PlayerManager.setNations(nations);
+      } catch (error) {
+        console.error('Error processing ideology turn:', error);
       }
 
       // Process simplified bio-attack effects for all nations
