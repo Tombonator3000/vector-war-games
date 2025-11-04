@@ -17,7 +17,7 @@ export const policies: Policy[] = [
     description: 'Convert civilian industry to military production. Massive production boost at cost of public approval.',
     flavorText: 'Every factory becomes a forge of war.',
     prerequisites: [],
-    enactmentCost: { gold: 500, production: 200 },
+    enactmentCost: { production: 150 },
     maintenanceCost: { approvalPerTurn: -2 },
     effects: {
       productionModifier: 1.25,
@@ -31,7 +31,7 @@ export const policies: Policy[] = [
       description: 'Additional +10% production from synergy'
     },
     canRepeal: true,
-    repealCost: { gold: 200 }
+    repealCost: { production: 50 }
   },
   {
     id: 'peace_dividend',
