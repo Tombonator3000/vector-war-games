@@ -10682,24 +10682,10 @@ export default function NoradVector() {
                     className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
                       cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                     }`}
-                    title={cultureAllowed ? 'CULTURE - Cultural warfare (simplified)' : 'Requires co-commander approval to launch culture ops'}
+                    title={cultureAllowed ? 'CULTURAL OPS - Propaganda, wonders, and immigration' : 'Requires co-commander approval to launch culture ops'}
                   >
                     <Radio className="h-5 w-5" />
                     <span className="text-[8px] font-mono">CULTURE</span>
-                  </Button>
-
-                  <Button
-                    onClick={handleCulture}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!cultureAllowed}
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={cultureAllowed ? 'CULTURAL OPS - Propaganda, wonders, and immigration' : 'Requires co-commander approval to launch culture ops'}
-                  >
-                    <Users className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">IMMIGR</span>
                   </Button>
 
                   <Button
