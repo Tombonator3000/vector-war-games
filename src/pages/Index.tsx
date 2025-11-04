@@ -115,6 +115,7 @@ import { UnifiedDiplomacyPanel } from '@/components/UnifiedDiplomacyPanel';
 import { SimplifiedBioWarfarePanel } from '@/components/SimplifiedBioWarfarePanel';
 import { StreamlinedCulturePanel } from '@/components/StreamlinedCulturePanel';
 import type { ProposalType } from '@/types/unifiedDiplomacy';
+import type { DiplomacyProposal } from '@/types/unifiedDiplomacy';
 import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/types/streamlinedCulture';
 import { migrateGameDiplomacy, getRelationship } from '@/lib/unifiedDiplomacyMigration';
 import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from '@/lib/simplifiedBioWarfareLogic';
@@ -172,6 +173,11 @@ import {
   aiAttemptDiplomacy,
   processAIProactiveDiplomacy,
 } from '@/lib/aiDiplomacyActions';
+import {
+  considerDiplomaticAction,
+  applyRelationshipChange,
+  getHostileNations,
+} from '@/lib/aiUnifiedDiplomacy';
 import {
   initializeGameTrustAndFavors,
   applyTrustDecay,
@@ -4040,8 +4046,57 @@ function aiTurn(n: Nation) {
     }
   }
 
+  // UNIFIED DIPLOMACY: AI proactive diplomacy actions
   const diplomacyBias = 0.18 + Math.max(0, defenseMod * 0.5) + (n.ai === 'defensive' ? 0.1 : 0) + (n.ai === 'balanced' ? 0.05 : 0);
   if (Math.random() < diplomacyBias) {
+    console.log(`[AI Diplomacy] ${n.name} considering diplomatic actions...`);
+    
+    // Try unified diplomacy first
+    const potentialTargets = nations.filter(t => t !== n && !t.eliminated);
+    for (const target of potentialTargets) {
+      const { action, reason } = considerDiplomaticAction(n, target, nations, S.turn);
+      if (action) {
+        console.log(`[AI Diplomacy] ${n.name} wants to ${action} with ${target.name}: ${reason}`);
+        
+        // For now, just create a proposal to player if target is player
+        if (target.isPlayer && player) {
+          const proposal: DiplomacyProposal = {
+            id: `ai-${n.id}-${target.id}-${S.turn}`,
+            type: action,
+            proposerId: n.id,
+            targetId: target.id,
+            message: `${n.name} proposes ${action}`,
+            turn: S.turn,
+            playerInitiated: false,
+          };
+          
+          if (enqueueAIProposalRef) {
+            enqueueAIProposalRef(proposal);
+            log(`${n.name} proposes ${action} to ${target.name}`);
+            return;
+          }
+        } else if (!target.isPlayer) {
+          // AI-to-AI diplomacy - auto-accept if relationship is good enough
+          log(`${n.name} ${action}s with ${target.name} (${reason})`);
+          
+          // Update relationships
+          if (action === 'alliance') {
+            applyRelationshipChange(nations, n.id, target.id, 40, `Alliance formed`, S.turn);
+            n.alliances = n.alliances || [];
+            if (!n.alliances.includes(target.id)) n.alliances.push(target.id);
+            target.alliances = target.alliances || [];
+            if (!target.alliances.includes(n.id)) target.alliances.push(n.id);
+          } else if (action === 'truce') {
+            applyRelationshipChange(nations, n.id, target.id, 15, `Truce agreed`, S.turn);
+          } else if (action === 'aid') {
+            applyRelationshipChange(nations, n.id, target.id, 10, `Aid sent`, S.turn);
+          }
+          return;
+        }
+      }
+    }
+    
+    // Fallback to old system if unified diplomacy didn't trigger
     if (aiAttemptDiplomacy(n, nations, log)) {
       return;
     }
