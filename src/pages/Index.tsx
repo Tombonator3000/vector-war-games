@@ -10471,6 +10471,7 @@ export default function NoradVector() {
                 nationName={player.name}
                 instability={governance.metrics[player.id].instability || 0}
                 onOpenDetails={() => setShowGovernanceDetails(true)}
+                onOpenPolicyPanel={() => setShowPolicyPanel(true)}
               />
             </div>
           ) : null}
