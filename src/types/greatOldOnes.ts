@@ -1,4 +1,3 @@
-// @ts-nocheck - Temporary during unified diplomacy migration
 /**
  * Great Old Ones Total Conversion - Type Definitions
  * Transforms Vector War into a Lovecraftian cult management strategy game

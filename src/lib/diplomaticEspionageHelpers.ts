@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Diplomatic Espionage System Helpers
  * Functions to execute and manage espionage operations

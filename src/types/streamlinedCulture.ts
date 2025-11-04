@@ -1,4 +1,3 @@
-// @ts-nocheck - Temporary during unified diplomacy migration
 /**
  * STREAMLINED CULTURE SYSTEM
  *

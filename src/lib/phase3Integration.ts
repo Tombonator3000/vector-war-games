@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Phase 3 Integration - Weeks 8-11
  * Integrates narrative arcs, counter-occult mechanics, and endgame systems

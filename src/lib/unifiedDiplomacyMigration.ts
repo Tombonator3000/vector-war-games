@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * UNIFIED DIPLOMACY MIGRATION
  *
