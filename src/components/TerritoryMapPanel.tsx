@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TerritoryState } from '@/hooks/useConventionalWarfare';
-import { Swords, ArrowRight, Shield, Users } from 'lucide-react';
+import { Swords, ArrowRight, Shield, Users, Map, List } from 'lucide-react';
+import { RiskStyleMap } from './game/RiskStyleMap';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface TerritoryMapPanelProps {
   territories: TerritoryState[];
@@ -24,6 +26,7 @@ export function TerritoryMapPanel({
 }: TerritoryMapPanelProps) {
   const [selectedSourceTerritory, setSelectedSourceTerritory] = useState<string | null>(null);
   const [armyCount, setArmyCount] = useState<number>(1);
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
 
   const sortedTerritories = useMemo(
     () => [...territories].sort((a, b) => a.name.localeCompare(b.name)),
@@ -223,6 +226,20 @@ export function TerritoryMapPanel({
     );
   };
 
+  const handleMapAttack = (targetId: string) => {
+    if (!sourceTerritory) return;
+    onAttack(sourceTerritory.id, targetId, armyCount);
+    setSelectedSourceTerritory(null);
+    setArmyCount(1);
+  };
+
+  const handleMapMove = (targetId: string) => {
+    if (!sourceTerritory) return;
+    onMove(sourceTerritory.id, targetId, armyCount);
+    setSelectedSourceTerritory(null);
+    setArmyCount(1);
+  };
+
   return (
     <div className="space-y-6">
       {availableReinforcements !== undefined && availableReinforcements > 0 && (
@@ -239,48 +256,94 @@ export function TerritoryMapPanel({
 
       {selectedSourceTerritory && sourceTerritory && (
         <div className="rounded-lg border-2 border-yellow-500/50 bg-yellow-500/10 p-4">
-          <p className="text-sm font-semibold text-yellow-200">
-            📍 Selected: {sourceTerritory.name} ({sourceTerritory.armies} armies)
-          </p>
-          <p className="mt-1 text-xs text-yellow-300/80">
-            Click a neighboring territory to attack or move armies
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-yellow-200">
+                📍 Selected: {sourceTerritory.name} ({sourceTerritory.armies} armies)
+              </p>
+              <p className="mt-1 text-xs text-yellow-300/80">
+                Click a neighboring territory to attack or move armies
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-yellow-300">Armies:</label>
+              <input
+                type="number"
+                min={1}
+                max={sourceTerritory.armies - 1}
+                value={armyCount}
+                onChange={(e) => setArmyCount(Math.max(1, Math.min(sourceTerritory.armies - 1, parseInt(e.target.value) || 1)))}
+                className="w-16 rounded border border-yellow-500/50 bg-black/60 px-2 py-1 text-sm text-yellow-200"
+              />
+              <span className="text-xs text-yellow-400">/ {sourceTerritory.armies - 1}</span>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Your Territories */}
-      <section>
-        <h3 className="mb-3 text-lg font-semibold tracking-wide text-cyan-300">
-          Your Territories ({playerTerritories.length})
-        </h3>
-        <div className="grid gap-3 md:grid-cols-2">
-          {playerTerritories.map(territory => renderTerritory(territory, true))}
-        </div>
-      </section>
+      {/* View Mode Toggle */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'map' | 'list')} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto">
+          <TabsTrigger value="map" className="flex items-center gap-2">
+            <Map className="h-4 w-4" />
+            Map View
+          </TabsTrigger>
+          <TabsTrigger value="list" className="flex items-center gap-2">
+            <List className="h-4 w-4" />
+            List View
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Enemy Territories */}
-      {enemyTerritories.length > 0 && (
-        <section>
-          <h3 className="mb-3 text-lg font-semibold tracking-wide text-red-300">
-            Enemy Territories ({enemyTerritories.length})
-          </h3>
-          <div className="grid gap-3 md:grid-cols-2">
-            {enemyTerritories.map(territory => renderTerritory(territory, false))}
+        <TabsContent value="map" className="mt-6">
+          <div className="h-[700px]">
+            <RiskStyleMap
+              territories={territories}
+              playerId={playerId}
+              selectedTerritoryId={selectedSourceTerritory}
+              onSelectTerritory={setSelectedSourceTerritory}
+              onAttack={handleMapAttack}
+              onMove={handleMapMove}
+            />
           </div>
-        </section>
-      )}
+        </TabsContent>
 
-      {/* Neutral Territories */}
-      {neutralTerritories.length > 0 && (
-        <section>
-          <h3 className="mb-3 text-lg font-semibold tracking-wide text-gray-300">
-            Neutral Territories ({neutralTerritories.length})
-          </h3>
-          <div className="grid gap-3 md:grid-cols-2">
-            {neutralTerritories.map(territory => renderTerritory(territory, false))}
-          </div>
-        </section>
-      )}
+        <TabsContent value="list" className="mt-6 space-y-6">
+
+          {/* Your Territories */}
+          <section>
+            <h3 className="mb-3 text-lg font-semibold tracking-wide text-cyan-300">
+              Your Territories ({playerTerritories.length})
+            </h3>
+            <div className="grid gap-3 md:grid-cols-2">
+              {playerTerritories.map(territory => renderTerritory(territory, true))}
+            </div>
+          </section>
+
+          {/* Enemy Territories */}
+          {enemyTerritories.length > 0 && (
+            <section>
+              <h3 className="mb-3 text-lg font-semibold tracking-wide text-red-300">
+                Enemy Territories ({enemyTerritories.length})
+              </h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                {enemyTerritories.map(territory => renderTerritory(territory, false))}
+              </div>
+            </section>
+          )}
+
+          {/* Neutral Territories */}
+          {neutralTerritories.length > 0 && (
+            <section>
+              <h3 className="mb-3 text-lg font-semibold tracking-wide text-gray-300">
+                Neutral Territories ({neutralTerritories.length})
+              </h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                {neutralTerritories.map(territory => renderTerritory(territory, false))}
+              </div>
+            </section>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
