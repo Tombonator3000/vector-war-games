@@ -1,4 +1,3 @@
-// @ts-nocheck - Temporary during unified diplomacy migration
 /**
  * Leader Abilities Types - FASE 3.2
  *

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Policy } from '@/types/policy';
 
 /**

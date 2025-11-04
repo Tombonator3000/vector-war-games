@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Act-based Campaign System Implementation
  * Manages the three-act structure for Great Old Ones campaign

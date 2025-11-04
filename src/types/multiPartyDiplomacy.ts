@@ -1,4 +1,3 @@
-// @ts-nocheck - Temporary during unified diplomacy migration
 /**
  * Multi-Party Diplomacy Types - FASE 3.4
  *

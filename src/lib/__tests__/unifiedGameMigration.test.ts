@@ -1,4 +1,3 @@
-// @ts-nocheck - Temporary during unified diplomacy migration
 import { describe, expect, it, beforeEach } from 'vitest';
 import { migrateGameSystems, needsMigration, getMigrationStatus, validateMigration } from '@/lib/unifiedGameMigration';
 import type { Nation, GameState } from '@/types/game';

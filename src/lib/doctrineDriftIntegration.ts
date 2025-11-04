@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Doctrine Drift Game Loop Integration
  * Tracks player actions and gradually shifts doctrine over time

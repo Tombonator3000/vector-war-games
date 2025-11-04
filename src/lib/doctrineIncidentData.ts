@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Doctrine Incident Data
  *

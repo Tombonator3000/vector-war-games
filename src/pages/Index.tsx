@@ -1,4 +1,3 @@
-// @ts-nocheck - Temporary during unified diplomacy & Cesium migration
 import { useEffect, useRef, useState, useCallback, useMemo, ReactNode, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { feature } from 'topojson-client';
@@ -1006,7 +1005,6 @@ const leaderBonuses: Record<string, LeaderBonus[]> = {
   ]
 };
 
-// @ts-nocheck - Temporary during unified diplomacy migration
 /**
  * Apply leader-specific bonuses to a nation
  * Called during game initialization
