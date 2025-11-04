@@ -10972,25 +10972,25 @@ export default function NoradVector() {
         );
       })()}
 
-      {/* Enhanced Diplomacy Modal */}
-      <Dialog open={showEnhancedDiplomacy} onOpenChange={setShowEnhancedDiplomacy}>
-        <DialogContent className="max-w-5xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
-            <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">
-              Diplomatic Relations
-            </DialogTitle>
-            <DialogDescription className="text-sm text-gray-400 mt-1">
-              Manage relationships and form alliances with other nations
-            </DialogDescription>
-          </DialogHeader>
-          <UnifiedDiplomacyPanel
-            player={PlayerManager.get() || {} as Nation}
+      {/* Enhanced Diplomacy Modal - Phase 1, 2, 3 Full Features */}
+      {showEnhancedDiplomacy && (() => {
+        const player = PlayerManager.get();
+        if (!player) return null;
+
+        return (
+          <EnhancedDiplomacyModal
+            player={player}
             nations={nations}
-            onProposal={handleDiplomaticProposal}
+            phase3State={diplomacyPhase3State || undefined}
             onClose={() => setShowEnhancedDiplomacy(false)}
+            onAction={handleEnhancedDiplomacyAction}
+            onOpenLeadersScreen={() => {
+              setShowEnhancedDiplomacy(false);
+              setLeadersScreenOpen(true);
+            }}
           />
-        </DialogContent>
-      </Dialog>
+        );
+      })()}
 
       {/* Leader Contact Modal (Phase 2 Negotiation System) */}
       {leaderContactModalOpen && leaderContactTargetNationId && (() => {
