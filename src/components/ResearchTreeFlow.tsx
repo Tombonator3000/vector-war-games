@@ -255,7 +255,7 @@ function CategoryFlowPanel({
   const categoryColor = CATEGORY_COLORS[category];
 
   return (
-    <div className="w-full h-[600px] border border-cyan-500/30 rounded-lg overflow-hidden bg-gray-950/50">
+    <div className="w-full h-[700px] border border-cyan-500/30 rounded-lg overflow-hidden bg-gray-950/50">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -403,7 +403,7 @@ export function ResearchTreeFlow({
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as ResearchCategory)}
       >
-        <TabsList className="grid w-full grid-cols-7 bg-black/60 border border-cyan-500/30">
+        <TabsList className="grid w-full grid-cols-7 bg-black/60 border border-cyan-500/30 h-auto p-1">
           {displayCategories.map((category) => {
             const Icon = CATEGORY_ICONS[category];
             const { researchedCount, totalCount } = getCategoryStats(category);
@@ -413,38 +413,29 @@ export function ResearchTreeFlow({
               <TabsTrigger
                 key={category}
                 value={category}
-                className="flex flex-col items-center gap-1 data-[state=active]:bg-cyan-500/20 data-[state=active]:border-cyan-400/60 p-2"
+                className="flex items-center justify-center gap-1.5 data-[state=active]:bg-cyan-500/20 data-[state=active]:border-cyan-400/60 px-2 py-1.5 h-auto"
               >
-                <Icon className="h-4 w-4" style={{ color }} />
-                <span className="uppercase tracking-wide text-[9px]">
-                  {CATEGORY_NAMES[category].split(' ')[0]}
-                </span>
-                {researchedCount > 0 && (
-                  <span
-                    className="text-[8px] px-1.5 py-0.5 rounded"
-                    style={{
-                      background: color + '30',
-                      color: color,
-                    }}
-                  >
-                    {researchedCount}/{totalCount}
+                <Icon className="h-5 w-5 shrink-0" style={{ color }} />
+                <div className="flex flex-col items-start min-w-0">
+                  <span className="uppercase tracking-wide text-[10px] font-bold leading-none truncate">
+                    {CATEGORY_NAMES[category].split(' ')[0]}
                   </span>
-                )}
+                  {researchedCount > 0 && (
+                    <span
+                      className="text-[9px] leading-none mt-0.5"
+                      style={{ color: color }}
+                    >
+                      {researchedCount}/{totalCount}
+                    </span>
+                  )}
+                </div>
               </TabsTrigger>
             );
           })}
         </TabsList>
 
         {displayCategories.map((category) => (
-          <TabsContent key={category} value={category} className="mt-4">
-            <div className="mb-2">
-              <h3
-                className="text-lg font-bold uppercase tracking-wider"
-                style={{ color: CATEGORY_COLORS[category] }}
-              >
-                {CATEGORY_NAMES[category]}
-              </h3>
-            </div>
+          <TabsContent key={category} value={category} className="mt-2">
             <CategoryFlowPanel
               category={category}
               nodes={CATEGORY_RESEARCH_MAP[category]}
