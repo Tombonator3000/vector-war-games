@@ -346,6 +346,7 @@ export function drawNations(style: MapStyle, context: NationRenderContext): void
 
 /**
  * Render territory markers with army counts (Risk-style)
+ * Exported for use in main game renderer
  */
 export function drawTerritories(context: TerritoryRenderContext): void {
   const {

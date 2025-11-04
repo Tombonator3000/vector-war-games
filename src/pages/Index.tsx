@@ -212,8 +212,10 @@ import {
   drawWorld as renderWorld,
   drawNations as renderNations,
   drawWorldPath as renderWorldPath,
+  drawTerritories as renderTerritories,
   type WorldRenderContext,
   type NationRenderContext,
+  type TerritoryRenderContext,
 } from '@/rendering/worldRenderer';
 import {
   initializeInternationalCouncil,
@@ -2601,6 +2603,31 @@ function drawNations(style: MapStyle) {
     selectedTargetRefId,
   };
   renderNations(style, context);
+}
+
+// Territory rendering - wrapper function for Risk-style markers
+function drawTerritoriesWrapper() {
+  if (!conventionalState || !conventionalState.territories) return;
+
+  const context: TerritoryRenderContext = {
+    ctx,
+    worldCountries,
+    W,
+    H,
+    cam,
+    currentTheme,
+    flatRealisticTexture,
+    flatRealisticTexturePromise,
+    THEME_SETTINGS,
+    projectLocal,
+    preloadFlatRealisticTexture,
+    getPoliticalFill,
+    territories: conventionalState.territories,
+    playerId: player.id,
+    selectedTerritoryId,
+    hoveredTerritoryId,
+  };
+  renderTerritories(context);
 }
 
 type DrawIconOptions = {
@@ -5059,6 +5086,7 @@ function gameLoop() {
   drawWorld(currentMapStyle);
   CityLights.draw(ctx, currentMapStyle);
   drawNations(currentMapStyle);
+  drawTerritoriesWrapper();
   drawSatellites(nowMs);
   drawMissiles();
   drawBombers();
@@ -5416,6 +5444,8 @@ export default function NoradVector() {
   const [isIntelOperationsOpen, setIsIntelOperationsOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const lastTargetPingIdRef = useRef<string | null>(null);
+  const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null);
+  const [hoveredTerritoryId, setHoveredTerritoryId] = useState<string | null>(null);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
     const stored = Storage.getItem('conventional_state');
     if (stored) {
@@ -9634,6 +9664,29 @@ export default function NoradVector() {
       };
 
       const handlePointerMove = (e: PointerEvent) => {
+        // Update hovered territory
+        if (!isDragging && conventionalState && conventionalState.territories) {
+          const rect = canvas?.getBoundingClientRect();
+          if (rect) {
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            
+            let foundHover = false;
+            for (const territory of conventionalState.territories) {
+              const [tx, ty] = projectLocal(territory.anchorLon, territory.anchorLat);
+              const dist = Math.hypot(mx - tx, my - ty);
+              if (dist < 25) {
+                setHoveredTerritoryId(territory.id);
+                foundHover = true;
+                break;
+              }
+            }
+            if (!foundHover && hoveredTerritoryId) {
+              setHoveredTerritoryId(null);
+            }
+          }
+        }
+
         if (!isDragging) return;
         if (e.buttons === 0) {
           handlePointerUp(e);
@@ -9821,7 +9874,7 @@ export default function NoradVector() {
         initialPinchDistance = 0;
       };
 
-      // Click handler for satellite intelligence
+      // Click handler for satellite intelligence and territories
       const handleClick = (e: MouseEvent) => {
         if (e.button !== 0) return;
         if (isDragging) return;
@@ -9833,6 +9886,32 @@ export default function NoradVector() {
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
 
+        // Check for territory clicks first (higher priority)
+        if (conventionalState && conventionalState.territories) {
+          for (const territory of conventionalState.territories) {
+            const [tx, ty] = projectLocal(territory.anchorLon, territory.anchorLat);
+            const dist = Math.hypot(mx - tx, my - ty);
+            const hitRadius = 25;
+
+            if (dist < hitRadius) {
+              // Territory clicked - handle selection logic
+              if (selectedTerritoryId && selectedTerritoryId !== territory.id) {
+                const sourceTerritory = conventionalState.territories.find(t => t.id === selectedTerritoryId);
+                if (sourceTerritory && sourceTerritory.neighbors.includes(territory.id)) {
+                  // Valid neighbor - execute action via conventional warfare
+                  const isAttack = territory.controllingNationId !== player.id;
+                  AudioSys.playSFX('click');
+                  // Actions will be handled through TerritoryMapPanel callbacks
+                }
+              }
+              setSelectedTerritoryId(territory.id);
+              AudioSys.playSFX('click');
+              return; // Exit early - don't check nations
+            }
+          }
+        }
+
+        // Check for nation clicks (original logic)
         for (const n of nations) {
           if (n.isPlayer) continue;
           if (n.population <= 0) continue;
