@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-09T00:00:00Z - Conventional token drag interactions
+- Refactored `src/pages/Index.tsx` pointer handling to support Risk-style unit dragging on the 2D map, including hover highlights, pointer mode tracking, and toast feedback for moves vs. attacks.
+- Added map overlay token render while dragging along with dynamic target labeling and enhanced highlight rendering in `src/rendering/worldRenderer.ts`.
+- Persisted derived territory lists/maps for reuse across UI interactions and exposed drag context state to the canvas renderer.
+
 ### 2025-11-08T12:00:00Z - Public opinion normalization patch
 - Updated `src/lib/electionSystem.ts` to normalize opinion factors against scenario caps, reintroducing a 55 baseline and morale adjustment so Cold War starts retain 60-68% approval.
 - Added `src/lib/__tests__/electionSystem.test.ts` covering USA and USSR first-turn opinions with Cold War seed data.
