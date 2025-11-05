@@ -2084,3 +2084,88 @@ Master plan: `docs/MORALE_POLITICAL_SYSTEM_IMPLEMENTATION.md`
 ⏳ Priority 3-7 - Awaiting implementation
 
 **Political system core functionality now live in main game!**
+
+---
+
+### Session AC: 2025-11-05 - PUBLIC OPINION BUG FIX
+
+#### Time: UTC
+
+**Objective:** Fix bug where Public Opinion automatically falls after the first round
+
+**Branch:** `claude/fix-public-opinion-bug-011CUpVcrGHQ3LD8e5HY4Mqb`
+
+#### 🚨 ISSUE: PUBLIC OPINION FALLS ON GAME START (CRITICAL)
+
+**Location:** `src/hooks/useGovernance.ts:285`
+
+**Problem:** Public Opinion and other governance metrics apply drift calculations immediately on turn 1 (game start), instead of preserving initial values
+
+**Root Cause:**
+```typescript
+// Line 285 - INCORRECT TURN CHECK
+if (isFirstTime || currentTurn === 0) {
+  // Set initial values without drift
+}
+```
+
+**Explanation:**
+1. The game starts at **turn 1**, not turn 0 (confirmed in `src/pages/Index.tsx:2082, 2338`)
+2. The `useState` initialization (lines 192-198) pre-populates metrics for all nations using `seedMetrics()`
+3. When the useEffect runs on turn 1:
+   - `isFirstTime = false` (because useState already created the metrics)
+   - `currentTurn = 1` (not 0, because game starts at turn 1)
+   - The condition `if (isFirstTime || currentTurn === 0)` evaluates to FALSE
+   - Drift calculations run immediately on the first turn!
+4. This causes morale decay and public opinion drift before player even sees the initial values
+
+**Previous Fix Attempts:**
+- Commit `ff311f9`: Added debug logging only
+- Commit `e31f1ef`: Changed from `current.morale` to `nation.morale` in initial setup
+- Commit `e5ee043`: Restructured if/else for drift logic
+- All previous attempts missed the core issue: checking for turn 0 instead of turn 1
+
+**Impact:** GAME-BREAKING for user experience
+- Players start game and immediately see Public Opinion drop
+- Initial values are never preserved for even one turn
+- Creates confusion about starting conditions
+- Undermines strategic planning (can't assess baseline before changes occur)
+
+**Fix Required:**
+```typescript
+// Change turn check from 0 to 1 - game starts at turn 1
+if (isFirstTime || currentTurn === 1) {
+  // Set initial values without drift
+}
+```
+
+**Fix Implemented:**
+Changed condition in `src/hooks/useGovernance.ts:286` from `currentTurn === 0` to `currentTurn === 1`
+
+**Before:**
+```typescript
+// On first initialization (turn 0 or when nation is new), use the nation's actual values without drift calculations
+if (isFirstTime || currentTurn === 0) {
+```
+
+**After:**
+```typescript
+// On first initialization (turn 1 or when nation is new), use the nation's actual values without drift calculations
+// The game starts at turn 1, so we need to preserve initial values on the first turn
+if (isFirstTime || currentTurn === 1) {
+```
+
+**Expected Behavior After Fix:**
+- Turn 1: Initial metrics preserved from nation values (no drift)
+- Turn 2+: Normal drift calculations apply
+- Player can see actual starting values for one full turn before any passive changes occur
+
+**Files Modified:**
+- `src/hooks/useGovernance.ts` (line 285-286)
+
+**Testing Notes:**
+- Debug logging remains in place to verify behavior
+- Console will show when initial metrics are set vs. when drift is applied
+- Players should now see stable Public Opinion on turn 1
+
+---
