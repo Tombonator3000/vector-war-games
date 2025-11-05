@@ -273,8 +273,9 @@ export function useGovernance({
         const isFirstTime = !prev[nation.id];
         const current = prev[nation.id] ?? seedMetrics(nation);
 
-        // On first initialization, use the nation's actual values without drift calculations
-        if (isFirstTime) {
+        // On first initialization (turn 0 or when nation is new), use the nation's actual values without drift calculations
+        // We check currentTurn === 0 because useState already initialized metrics, so isFirstTime alone isn't reliable
+        if (isFirstTime || currentTurn === 0) {
           const initialMetrics: GovernanceMetrics = {
             morale: current.morale,
             publicOpinion: current.publicOpinion,
@@ -286,7 +287,7 @@ export function useGovernance({
           return;
         }
 
-        // Apply normal drift calculations for existing nations
+        // Apply normal drift calculations for existing nations on subsequent turns
         const moraleDecay = 1 + Math.max(0, (nation.instability ?? 0) - 40) * 0.02;
         const cabinetSupport = (current.cabinetApproval - 50) * 0.02;
         const publicOpinionEffect = (current.publicOpinion - 50) * 0.01;
