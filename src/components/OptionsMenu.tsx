@@ -153,6 +153,10 @@ export interface OptionsMenuProps {
   theme?: ThemeId;
   onThemeChange?: (theme: ThemeId) => void;
 
+  /** Optional controlled music volume */
+  musicVolume?: number;
+  onMusicVolumeChange?: (volume: number) => void;
+
   /** Controlled map style selection */
   mapStyle: MapStyle;
   onMapStyleChange: (style: MapStyle) => void;
@@ -174,6 +178,8 @@ export interface OptionsMenuProps {
 export function OptionsMenu({
   theme: externalTheme,
   onThemeChange,
+  musicVolume: controlledMusicVolume,
+  onMusicVolumeChange,
   mapStyle,
   onMapStyleChange,
   viewerType,
@@ -302,8 +308,24 @@ export function OptionsMenu({
     return stored !== 'false';
   });
 
-  // Always start at 30% volume
-  const [musicVolume, setMusicVolume] = useState(0.3);
+  const [musicVolume, setMusicVolume] = useState(() => {
+    if (typeof controlledMusicVolume === 'number') {
+      return controlledMusicVolume;
+    }
+    if (typeof window !== 'undefined') {
+      const maybeAudioSys = (window as unknown as { AudioSys?: { musicVolume?: number } }).AudioSys;
+      if (typeof maybeAudioSys?.musicVolume === 'number') {
+        return maybeAudioSys.musicVolume;
+      }
+    }
+    return 0.3;
+  });
+
+  useEffect(() => {
+    if (typeof controlledMusicVolume === 'number') {
+      setMusicVolume(controlledMusicVolume);
+    }
+  }, [controlledMusicVolume]);
 
   const [musicSelection, setMusicSelection] = useState(() => {
     const stored = Storage.getItem('audio_music_track');
@@ -335,11 +357,21 @@ export function OptionsMenu({
   const handleMusicVolumeChange = useCallback((value: number[]) => {
     const volume = Math.min(1, Math.max(0, value[0] ?? 0));
     setMusicVolume(volume);
+    if (onMusicVolumeChange) {
+      onMusicVolumeChange(volume);
+    } else if (typeof window !== 'undefined') {
+      const maybeAudioSys = (window as unknown as {
+        AudioSys?: { setMusicVolume?: (next: number) => void };
+        NoradVector?: { setMusicVolume?: (next: number) => void };
+      });
+      maybeAudioSys.AudioSys?.setMusicVolume?.(volume);
+      maybeAudioSys.NoradVector?.setMusicVolume?.(volume);
+    }
     // Don't save to storage - always reset to 30% on page load
     if (onChange) {
       onChange();
     }
-  }, [onChange]);
+  }, [onChange, onMusicVolumeChange]);
 
   const handleMusicTrackChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
