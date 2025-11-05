@@ -145,9 +145,16 @@ export function LeaderAvatar({
           'transition-all duration-300'
         )}
       >
-        {imageUrl ? (
-          <AvatarImage src={imageUrl} alt={`${leaderName} of ${nationName}`} />
-        ) : null}
+        {imageUrl && (
+          <AvatarImage
+            src={imageUrl}
+            alt={`${leaderName} of ${nationName}`}
+            onError={(e) => {
+              // Hide broken image and show fallback instead
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        )}
         <AvatarFallback
           className={cn(
             'bg-gradient-to-br',

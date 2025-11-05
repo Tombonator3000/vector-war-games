@@ -47,8 +47,8 @@ export function StreamlinedCulturePanel({
 
   const culturalPower = calculateCulturalPower(player);
   const wonderBonuses = getCulturalWonderBonuses(player);
-  const builtWonders = player.culturalWonders || [];
-  const activePropaganda = player.propagandaCampaigns || [];
+  const builtWonders = Array.isArray(player.culturalWonders) ? player.culturalWonders : [];
+  const activePropaganda = Array.isArray(player.propagandaCampaigns) ? player.propagandaCampaigns : [];
 
   return (
     <div className="space-y-4">

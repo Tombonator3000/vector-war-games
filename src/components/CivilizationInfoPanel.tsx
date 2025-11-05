@@ -412,7 +412,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
               <TrendingUp className="w-3 h-3" />
               Public Opinion
             </div>
-            <span className="text-white font-bold text-lg">{player.publicOpinion.toFixed(0)}%</span>
+            <span className="text-white font-bold text-lg">{(player.publicOpinion ?? 50).toFixed(0)}%</span>
           </div>
         </div>
       </div>
