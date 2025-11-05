@@ -101,7 +101,13 @@ export function StreamlinedCulturePanel({
               <p className="text-sm text-gray-400 italic">No active propaganda campaigns</p>
             ) : (
               <div className="space-y-2">
-                {activePropaganda.map((campaign: any) => {
+                {activePropaganda.map((campaign: any, index: number) => {
+                  // Skip if campaign is invalid
+                  if (!campaign || !campaign.type || !campaign.id) {
+                    console.warn(`Invalid campaign at index ${index}:`, campaign);
+                    return null;
+                  }
+
                   const target = enemies.find(e => e.id === campaign.targetNation);
                   const propagandaDef = PROPAGANDA_DEFINITIONS[campaign.type as PropagandaType];
 
@@ -121,7 +127,7 @@ export function StreamlinedCulturePanel({
                           {propagandaDef.icon} {propagandaDef.name}
                         </span>
                         <Badge className="bg-purple-500/20 text-purple-400 text-xs">
-                          {campaign.turnsRemaining} turns left
+                          {campaign.turnsRemaining || 0} turns left
                         </Badge>
                       </div>
                       <div className="text-xs text-gray-400">
@@ -196,7 +202,13 @@ export function StreamlinedCulturePanel({
               <p className="text-sm text-gray-400 italic">No cultural wonders built yet</p>
             ) : (
               <div className="space-y-2">
-                {builtWonders.map((wonder: any) => {
+                {builtWonders.map((wonder: any, index: number) => {
+                  // Skip if wonder is invalid
+                  if (!wonder || !wonder.type) {
+                    console.warn(`Invalid wonder at index ${index}:`, wonder);
+                    return null;
+                  }
+
                   const wonderDef = CULTURAL_WONDERS[wonder.type as CulturalWonderType];
 
                   // Skip if wonder definition not found
