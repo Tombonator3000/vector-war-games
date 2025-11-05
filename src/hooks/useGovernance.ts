@@ -281,8 +281,9 @@ export function useGovernance({
           prevExists: !!prev[nation.id]
         });
 
-        // On first initialization (turn 0 or when nation is new), use the nation's actual values without drift calculations
-        if (isFirstTime || currentTurn === 0) {
+        // On first initialization (turn 1 or when nation is new), use the nation's actual values without drift calculations
+        // The game starts at turn 1, so we need to preserve initial values on the first turn
+        if (isFirstTime || currentTurn === 1) {
           const initialMetrics: GovernanceMetrics = {
             morale: nation.morale,
             publicOpinion: nation.publicOpinion,
