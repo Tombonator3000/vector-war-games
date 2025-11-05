@@ -5505,16 +5505,8 @@ export default function NoradVector() {
   const initialMusicEnabled = storedMusicEnabled === 'true' ? true : storedMusicEnabled === 'false' ? false : AudioSys.musicEnabled;
   const storedSfxEnabled = Storage.getItem('audio_sfx_enabled');
   const initialSfxEnabled = storedSfxEnabled === 'true' ? true : storedSfxEnabled === 'false' ? false : AudioSys.sfxEnabled;
-  const storedMusicVolume = Storage.getItem('audio_music_volume');
-  const initialMusicVolume = (() => {
-    if (storedMusicVolume !== null) {
-      const parsed = Number.parseFloat(storedMusicVolume);
-      if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 1) {
-        return parsed;
-      }
-    }
-    return AudioSys.musicVolume;
-  })();
+  // Always start at 30% volume
+  const initialMusicVolume = 0.3;
   const storedMusicTrack = Storage.getItem('audio_music_track');
   const initialMusicSelection: string = (() => {
     if (storedMusicTrack === 'random') {
@@ -6727,7 +6719,7 @@ export default function NoradVector() {
   const handleMusicVolumeChange = useCallback((value: number[]) => {
     const volume = Math.min(1, Math.max(0, value[0] ?? 0));
     AudioSys.setMusicVolume(volume);
-    Storage.setItem('audio_music_volume', String(volume));
+    // Don't save to storage - always reset to 30% on page load
     setMusicVolume(volume);
   }, []);
 
