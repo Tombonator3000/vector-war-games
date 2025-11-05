@@ -135,7 +135,7 @@ export interface Nation {
   researchQueue?: { projectId: string; turnsRemaining: number; totalTurns: number } | null;
   cityConstructionQueue?: { turnsRemaining: number; totalTurns: number } | null;
   treaties?: Record<string, Treaty>;
-  satellites?: Record<string, boolean>;
+  satellites?: Record<string, number>; // targetId -> expiresAtTurn
   intelOperationCooldowns?: Record<string, number>; // Unified intel operations cooldown tracking
   bordersClosedTurns?: number;
   greenShiftTurns?: number;
