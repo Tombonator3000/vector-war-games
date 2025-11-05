@@ -276,10 +276,10 @@ export function useGovernance({
         // On first initialization (turn 0 or when nation is new), use the nation's actual values without drift calculations
         if (isFirstTime || currentTurn === 0) {
           const initialMetrics: GovernanceMetrics = {
-            morale: current.morale,
-            publicOpinion: current.publicOpinion,
-            cabinetApproval: current.cabinetApproval,
-            electionTimer: current.electionTimer,
+            morale: nation.morale,
+            publicOpinion: nation.publicOpinion,
+            cabinetApproval: nation.cabinetApproval,
+            electionTimer: nation.electionTimer,
           };
           next[nation.id] = initialMetrics;
           updates.push({ id: nation.id, metrics: initialMetrics });
