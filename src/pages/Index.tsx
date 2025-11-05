@@ -7185,6 +7185,9 @@ export default function NoradVector() {
     }
     player.satellites[targetId] = true;
 
+    // Register satellite orbit for visual display
+    registerSatelliteOrbit(player.id, targetId);
+
     log(`Deployed satellite over ${result.targetId}. Intel coverage active for ${result.duration} turns.`);
     toast({ title: 'Satellite Deployed', description: `Intelligence coverage established over target nation` });
     setIsIntelOperationsOpen(false);
