@@ -215,21 +215,21 @@ export function LeadersScreen({
                     {/* Leader Image - Prominent Display */}
                     <div className="flex-shrink-0">
                       <LeaderAvatarWithTooltip
-                        leaderName={nation.leaderName || 'Unknown'}
+                        leaderName={nation.leaderName || nation.leader || 'Unknown'}
                         nationName={nation.name}
                         mood={relationship >= 0 ? 'friendly' : 'hostile'}
                         size="lg"
                         relationship={relationship}
                         trust={trust}
                         showTooltip={false}
-                        imageUrl={getLeaderImage(nation.leaderName)}
+                        imageUrl={getLeaderImage(nation.leaderName || nation.leader)}
                       />
                     </div>
 
                     {/* Leader Info */}
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-lg truncate">
-                        {nation.leaderName || 'Unknown Leader'}
+                        {nation.leaderName || nation.leader || 'Unknown Leader'}
                       </CardTitle>
                       <CardDescription className="truncate">
                         {nation.name}

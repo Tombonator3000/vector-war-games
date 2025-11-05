@@ -224,7 +224,7 @@ export function AIDiplomacyProposalModal({
   trust,
 }: AIDiplomacyProposalModalProps) {
   const mood = useMemo(() => calculateMood(relationship), [relationship]);
-  const leaderImage = useMemo(() => getLeaderImage(aiNation.leaderName), [aiNation.leaderName]);
+  const leaderImage = useMemo(() => getLeaderImage(aiNation.leaderName || aiNation.leader), [aiNation.leaderName, aiNation.leader]);
   const moodGradient = useMemo(() => getMoodGradient(mood), [mood]);
   const moodBorderColor = useMemo(() => getMoodBorderColor(mood), [mood]);
 
@@ -261,12 +261,12 @@ export function AIDiplomacyProposalModal({
               {leaderImage ? (
                 <img
                   src={leaderImage}
-                  alt={aiNation.leaderName}
+                  alt={aiNation.leaderName || aiNation.leader}
                   className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-6xl font-bold text-white">
-                  {aiNation.leaderName?.charAt(0) || '?'}
+                  {(aiNation.leaderName || aiNation.leader)?.charAt(0) || '?'}
                 </div>
               )}
             </div>
@@ -274,7 +274,7 @@ export function AIDiplomacyProposalModal({
             {/* Leader name and nation */}
             <div className="mt-4 text-center">
               <h2 className="text-3xl font-bold text-white mb-1">
-                {aiNation.leaderName || 'Unknown Leader'}
+                {aiNation.leaderName || aiNation.leader || 'Unknown Leader'}
               </h2>
               <p className="text-xl text-gray-300">
                 {getPurposeTitle(negotiation.purpose)}
