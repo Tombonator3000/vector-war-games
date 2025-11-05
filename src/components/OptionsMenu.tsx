@@ -302,10 +302,8 @@ export function OptionsMenu({
     return stored !== 'false';
   });
 
-  const [musicVolume, setMusicVolume] = useState(() => {
-    const stored = Storage.getItem('audio_music_volume');
-    return stored ? parseFloat(stored) : 0.3;
-  });
+  // Always start at 30% volume
+  const [musicVolume, setMusicVolume] = useState(0.3);
 
   const [musicSelection, setMusicSelection] = useState(() => {
     const stored = Storage.getItem('audio_music_track');
@@ -337,7 +335,7 @@ export function OptionsMenu({
   const handleMusicVolumeChange = useCallback((value: number[]) => {
     const volume = Math.min(1, Math.max(0, value[0] ?? 0));
     setMusicVolume(volume);
-    Storage.setItem('audio_music_volume', String(volume));
+    // Don't save to storage - always reset to 30% on page load
     if (onChange) {
       onChange();
     }
