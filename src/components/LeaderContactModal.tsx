@@ -293,18 +293,18 @@ export function LeaderContactModal({
         <DialogHeader>
           <div className="flex items-center gap-4">
             <LeaderAvatarWithTooltip
-              leaderName={targetNation.leaderName || 'Unknown Leader'}
+              leaderName={targetNation.leaderName || targetNation.leader || 'Unknown Leader'}
               nationName={targetNation.name}
               mood={mood}
               size="xl"
               relationship={relationship}
               trust={trust}
               showTooltip={false}
-              imageUrl={getLeaderImage(targetNation.leaderName)}
+              imageUrl={getLeaderImage(targetNation.leaderName || targetNation.leader)}
             />
             <div className="flex-1">
               <DialogTitle className="text-2xl">
-                {targetNation.leaderName || 'Unknown Leader'}
+                {targetNation.leaderName || targetNation.leader || 'Unknown Leader'}
               </DialogTitle>
               <DialogDescription className="text-base">
                 Leader of {targetNation.name}
