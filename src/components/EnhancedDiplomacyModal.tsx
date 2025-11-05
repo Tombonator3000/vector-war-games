@@ -61,7 +61,7 @@ export function EnhancedDiplomacyModal({
     {
       id: 'build-trust',
       title: 'BUILD TRUST',
-      subtitle: 'Demonstrate goodwill and reliability',
+      subtitle: 'Costs 10 DIP. Increases trust by +10 and relationship by +5. Demonstrates goodwill and reliability to strengthen diplomatic ties.',
       category: 'trust',
       dipCost: 10,  // Reduced from 15 to make early-game diplomacy more accessible (FASE 3.3)
       requiresTarget: true,
@@ -69,7 +69,7 @@ export function EnhancedDiplomacyModal({
     {
       id: 'grant-favor',
       title: 'GRANT FAVOR',
-      subtitle: 'Provide assistance to gain future leverage',
+      subtitle: 'Costs 12 DIP. Grants a favor that they can call in later. Increases relationship by +3. Build leverage for future negotiations.',
       category: 'trust',
       dipCost: 12,  // Reduced from 20 to make early-game diplomacy more accessible (FASE 3.3)
       requiresTarget: true,
@@ -77,7 +77,7 @@ export function EnhancedDiplomacyModal({
     {
       id: 'call-in-favor',
       title: 'CALL IN FAVOR',
-      subtitle: 'Request assistance based on past help',
+      subtitle: 'Costs 5 DIP. Requires at least 1 favor owed to you. Request assistance based on past help you provided to them.',
       category: 'trust',
       dipCost: 5,
       requiresTarget: true,
@@ -87,7 +87,7 @@ export function EnhancedDiplomacyModal({
     {
       id: 'make-promise',
       title: 'MAKE PROMISE',
-      subtitle: 'Pledge future action or restraint',
+      subtitle: 'Costs 10 DIP. Make a binding promise (no attack, defense support, no nukes, etc.). Increases trust by +10-15. WARNING: Breaking promises damages trust by -25 to -40.',
       category: 'promises',
       dipCost: 10,
       requiresTarget: true,
@@ -95,7 +95,7 @@ export function EnhancedDiplomacyModal({
     {
       id: 'verify-promise',
       title: 'VERIFY PROMISE',
-      subtitle: 'Request proof of commitment',
+      subtitle: 'Costs 15 DIP. Request proof that they are honoring their promises to you. Ensures accountability and builds diplomatic confidence.',
       category: 'promises',
       dipCost: 15,
       requiresTarget: true,
@@ -105,7 +105,7 @@ export function EnhancedDiplomacyModal({
     {
       id: 'apologize',
       title: 'FORMAL APOLOGY',
-      subtitle: 'Acknowledge wrongdoing and seek reconciliation',
+      subtitle: 'Costs 25 DIP. Formally apologize for past wrongdoings. Resolves active grievances and improves relationship by +15-25. Shows willingness to reconcile.',
       category: 'grievances',
       dipCost: 25,
       requiresTarget: true,
@@ -113,7 +113,7 @@ export function EnhancedDiplomacyModal({
     {
       id: 'reparations',
       title: 'OFFER REPARATIONS',
-      subtitle: 'Provide compensation for past harm',
+      subtitle: 'Costs 30 DIP + resources. Provide material compensation for harm done. Resolves severe grievances and restores trust by +20-30. Demonstrates commitment to making amends.',
       category: 'grievances',
       dipCost: 30,
       requiresTarget: true,
@@ -123,7 +123,7 @@ export function EnhancedDiplomacyModal({
     {
       id: 'propose-resolution',
       title: 'PROPOSE RESOLUTION',
-      subtitle: 'Submit proposal to International Council',
+      subtitle: 'Costs 40 DIP. Submit a formal proposal to the International Council for voting. Can address global issues and establish international norms.',
       category: 'council',
       dipCost: 40,
       requiresTarget: false,
@@ -131,7 +131,7 @@ export function EnhancedDiplomacyModal({
     {
       id: 'call-session',
       title: 'CALL EMERGENCY SESSION',
-      subtitle: 'Convene urgent council meeting',
+      subtitle: 'Costs 50 DIP. Convene an urgent council meeting to address critical international crises. Requires strong justification.',
       category: 'council',
       dipCost: 50,
       requiresTarget: false,
@@ -139,7 +139,7 @@ export function EnhancedDiplomacyModal({
     {
       id: 'back-channel',
       title: 'BACK-CHANNEL COMMUNICATION',
-      subtitle: 'Private diplomatic letter',
+      subtitle: 'Costs 20 DIP. Send a private diplomatic letter to secretly communicate with another nation away from public scrutiny.',
       category: 'council',
       dipCost: 20,
       requiresTarget: true,

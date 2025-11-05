@@ -168,7 +168,10 @@ export function LeaderContactModal({
     return [];
   }, [playerNation, targetNation]);
 
-  // Available actions
+  // Get player's diplomatic influence points
+  const playerDIP = playerNation.diplomaticInfluence?.points || 0;
+
+  // Available actions - comprehensive diplomatic action list with clear descriptions
   const availableActions: DiplomaticAction[] = useMemo(() => {
     const actions: DiplomaticAction[] = [
       {
@@ -176,38 +179,75 @@ export function LeaderContactModal({
         label: 'Propose Deal',
         type: 'propose-deal',
         enabled: true,
+        description: 'Open multi-item negotiation interface to propose trades, treaties, and agreements.',
       },
-    ];
-
-    if (favors > 0) {
-      actions.push({
+      {
+        id: 'build-trust',
+        label: 'Build Trust',
+        type: 'build-trust',
+        enabled: playerDIP >= 10,
+        cost: { diplomaticInfluence: 10 },
+        description: 'Costs 10 DIP. Increases trust by +10 and relationship by +5. Demonstrates goodwill and reliability to strengthen diplomatic ties.',
+      },
+      {
+        id: 'grant-favor',
+        label: 'Grant Favor',
+        type: 'grant-favor',
+        enabled: playerDIP >= 12,
+        cost: { diplomaticInfluence: 12 },
+        description: 'Costs 12 DIP. Grants a favor that they can call in later. Increases relationship by +3. Build leverage for future negotiations.',
+      },
+      {
         id: 'call-favor',
         label: 'Call in Favor',
         type: 'make-request',
-        enabled: true,
-        cost: { favors: 1 },
-      });
-    }
-
-    if (relationship < -25) {
-      actions.push({
+        enabled: favors > 0 && playerDIP >= 5,
+        cost: { diplomaticInfluence: 5, favors: 1 },
+        description: `Costs 5 DIP. Requires ${favors} favor(s) owed to you. Request assistance based on past help you provided.`,
+      },
+      {
+        id: 'make-promise',
+        label: 'Make Promise',
+        type: 'make-promise',
+        enabled: playerDIP >= 10,
+        cost: { diplomaticInfluence: 10 },
+        description: 'Costs 10 DIP. Make a binding promise (no attack, defense support, no nukes, etc.). Increases trust by +10-15. WARNING: Breaking promises damages trust by -25 to -40.',
+      },
+      {
+        id: 'verify-promise',
+        label: 'Verify Promise',
+        type: 'verify-promise',
+        enabled: playerDIP >= 15,
+        cost: { diplomaticInfluence: 15 },
+        description: 'Costs 15 DIP. Request proof that they are honoring their promises to you. Ensures accountability and builds confidence.',
+      },
+      {
         id: 'apologize',
-        label: 'Apologize',
+        label: 'Formal Apology',
         type: 'apologize',
+        enabled: playerDIP >= 25,
+        cost: { diplomaticInfluence: 25 },
+        description: 'Costs 25 DIP. Formally apologize for past wrongdoings. Resolves active grievances and improves relationship by +15-25. Shows willingness to reconcile.',
+      },
+      {
+        id: 'reparations',
+        label: 'Offer Reparations',
+        type: 'reparations',
+        enabled: playerDIP >= 30,
+        cost: { diplomaticInfluence: 30 },
+        description: 'Costs 30 DIP + resources. Provide material compensation for harm done. Resolves severe grievances and restores trust by +20-30. Demonstrates commitment to making amends.',
+      },
+      {
+        id: 'discuss',
+        label: 'Discuss Relations',
+        type: 'discuss',
         enabled: true,
-        cost: { diplomaticInfluence: 20 },
-      });
-    }
-
-    actions.push({
-      id: 'discuss',
-      label: 'Discuss Relations',
-      type: 'discuss',
-      enabled: true,
-    });
+        description: 'General diplomatic discussion. Learn about their concerns, interests, and stance on various issues. No cost.',
+      },
+    ];
 
     return actions;
-  }, [relationship, favors]);
+  }, [relationship, favors, playerDIP]);
 
   // Handle start negotiation
   const handleStartNegotiation = () => {
@@ -256,7 +296,7 @@ export function LeaderContactModal({
               leaderName={targetNation.leaderName || 'Unknown Leader'}
               nationName={targetNation.name}
               mood={mood}
-              size="lg"
+              size="xl"
               relationship={relationship}
               trust={trust}
               showTooltip={false}
@@ -542,33 +582,67 @@ export function LeaderContactModal({
                   <Handshake className="h-5 w-5" />
                   Diplomatic Actions
                 </CardTitle>
+                <CardDescription>
+                  Available: {playerDIP} DIP
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-3">
                 {availableActions.map((action) => (
-                  <Button
+                  <div
                     key={action.id}
-                    variant="outline"
-                    className="w-full justify-between"
-                    disabled={!action.enabled}
+                    className={cn(
+                      "border rounded-lg p-3 transition-all",
+                      action.enabled
+                        ? "bg-accent/50 hover:bg-accent cursor-pointer border-accent"
+                        : "bg-muted/30 border-muted cursor-not-allowed opacity-50"
+                    )}
                     onClick={() => {
+                      if (!action.enabled) return;
                       if (action.type === 'propose-deal') {
                         handleStartNegotiation();
                       } else if (action.type === 'make-request' && onMakeRequest) {
                         onMakeRequest(action.id);
                       } else if (action.type === 'discuss' && onDiscuss) {
                         onDiscuss();
+                      } else if (onMakeRequest) {
+                        // Handle other diplomatic actions
+                        onMakeRequest(action.id);
                       }
                     }}
                   >
-                    <span>{action.label}</span>
-                    {action.cost && (
-                      <span className="text-xs text-muted-foreground">
-                        {action.cost.favors && `${action.cost.favors} favor(s)`}
-                        {action.cost.diplomaticInfluence && `${action.cost.diplomaticInfluence} DIP`}
-                      </span>
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="font-semibold text-sm">{action.label}</span>
+                      {action.cost && (
+                        <div className="flex gap-2 text-xs">
+                          {action.cost.diplomaticInfluence && (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                playerDIP >= action.cost.diplomaticInfluence
+                                  ? "border-green-500/50 text-green-400"
+                                  : "border-red-500/50 text-red-400"
+                              )}
+                            >
+                              {action.cost.diplomaticInfluence} DIP
+                            </Badge>
+                          )}
+                          {action.cost.favors && (
+                            <Badge variant="outline" className="border-blue-500/50 text-blue-400">
+                              {action.cost.favors} Favor(s)
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {action.description}
+                    </p>
+                    {!action.enabled && action.cost?.diplomaticInfluence && playerDIP < action.cost.diplomaticInfluence && (
+                      <p className="text-xs text-red-400 mt-2">
+                        Insufficient DIP (need {action.cost.diplomaticInfluence}, have {playerDIP})
+                      </p>
                     )}
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+                  </div>
                 ))}
               </CardContent>
             </Card>
