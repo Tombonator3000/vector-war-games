@@ -565,7 +565,12 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
   if (S.scenario?.electionConfig.enabled) {
     nations.forEach(n => {
       // Update public opinion based on current state
-      n.publicOpinion = calculatePublicOpinion(n, nations, S.scenario!.electionConfig);
+      // IMPORTANT: Skip recalculation on turns 0-1 to preserve initial values
+      // calculatePublicOpinion uses economic/military/diplomatic factors that are all low at game start,
+      // which causes public opinion to drop massively on turn 1 before player has taken any actions
+      if (S.turn > 1) {
+        n.publicOpinion = calculatePublicOpinion(n, nations, S.scenario!.electionConfig);
+      }
 
       // Decrease election timer
       if (n.electionTimer > 0) {

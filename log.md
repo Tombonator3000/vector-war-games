@@ -2245,3 +2245,102 @@ if (isFirstTime || currentTurn <= 1) {
 Always consider the FULL lifecycle of component initialization, not just the "game start" state. The component may mount and run effects before the game state is fully initialized.
 
 ---
+
+### Session AE: 2025-11-05 - PUBLIC OPINION BUG - ACTUAL ROOT CAUSE FIX
+
+#### Time: UTC
+
+**Objective:** Fix the ACTUAL root cause of Public Opinion dropping on turn 1
+
+**Branch:** `claude/debug-public-opinion-011CUpb29AkBT2TExNk7PC87`
+
+#### 🚨 CRITICAL: PREVIOUS TWO FIX ATTEMPTS WERE FIXING THE WRONG PLACE!
+
+**Sessions AC & AD fixed the wrong location:**
+- Both sessions modified `src/hooks/useGovernance.ts` to check for turn 0 or turn <= 1
+- These fixes only prevented the **useGovernance drift calculations** from running
+- BUT they didn't fix the ACTUAL problem!
+
+**THE REAL ROOT CAUSE:**
+
+**Location:** `src/lib/gamePhaseHandlers.ts:568`
+
+```typescript
+// This runs EVERY turn, including turn 1!
+n.publicOpinion = calculatePublicOpinion(n, nations, S.scenario!.electionConfig);
+```
+
+**Why This Causes the Bug:**
+
+1. The `calculatePublicOpinion` function (in `src/lib/electionSystem.ts:30-60`) recalculates public opinion from scratch based on:
+   - Economic Performance (production per capita)
+   - Military Strength (missiles, defense, bombers)
+   - Diplomatic Success (alliances, treaties)
+   - War Status (threat levels)
+   - Stability (instability levels)
+   - Foreign Influence
+
+2. On **turn 1** (game start), these factors are ALL LOW:
+   - No alliances yet (diplomaticSuccess = 0)
+   - Low production (economicPerformance = low)
+   - Few missiles/defense (militaryStrength = low)
+   - Potentially high instability (stability = negative)
+
+3. The weighted calculation returns a value MUCH LOWER than the initial 50-60 starting opinion
+
+4. This overwrites `n.publicOpinion` immediately on turn 1, BEFORE the player sees the initial values!
+
+**Why Previous Fixes Didn't Work:**
+
+- **Session AC:** Changed `useGovernance.ts` to check `currentTurn === 1` instead of `currentTurn === 0`
+  - ✗ Didn't address the recalculation in `gamePhaseHandlers.ts`
+  
+- **Session AD:** Changed `useGovernance.ts` to check `currentTurn <= 1`
+  - ✗ Still didn't address the recalculation in `gamePhaseHandlers.ts`
+  - The useGovernance drift prevented, BUT the calculatePublicOpinion still ran!
+
+**The Correct Fix:**
+
+Changed `src/lib/gamePhaseHandlers.ts:568-573` to skip recalculation on turns 0-1:
+
+```typescript
+// Before (BROKEN):
+n.publicOpinion = calculatePublicOpinion(n, nations, S.scenario!.electionConfig);
+
+// After (FIXED):
+// Skip recalculation on turns 0-1 to preserve initial values
+if (S.turn > 1) {
+  n.publicOpinion = calculatePublicOpinion(n, nations, S.scenario!.electionConfig);
+}
+```
+
+**Why This Fix Works:**
+
+- **Turn 0-1:** Public opinion is NOT recalculated, preserving the initial values from nation initialization
+- **Turn 2+:** Normal recalculation applies based on economic/military/diplomatic factors
+- Players see the true starting values for at least one full turn before any automatic changes occur
+
+**Expected Behavior After Fix:**
+
+✅ Turn 1: Public Opinion starts at initial value (e.g., 55) and STAYS at 55
+✅ Turn 2: Public Opinion recalculates based on player's actions and game state
+✅ No more massive drops on game start!
+
+**Files Modified:**
+- `src/lib/gamePhaseHandlers.ts` (lines 568-573)
+
+**Technical Validation:**
+- ✅ TypeScript compilation passes (`npx tsc --noEmit`)
+- ✅ No type errors introduced
+- ✅ Logic is sound and addresses the actual root cause
+
+**Key Lesson:**
+
+When debugging complex systems with multiple layers (hooks, turn processing, state management), always trace the FULL execution path. The bug was not in the governance hook (which applies drift) but in the turn processing (which recalculates from scratch)!
+
+**Status:**
+✅ Root cause identified and fixed
+✅ TypeScript validation passed
+⏳ Awaiting gameplay testing
+
+---
