@@ -281,19 +281,22 @@ export function useGovernance({
           prevExists: !!prev[nation.id]
         });
 
-        // On first initialization (turn 0 or 1, or when nation is new), use the nation's actual values without drift calculations
-        // The game may start at turn 0 (during initialization) or turn 1, so we preserve initial values for both
-        // This prevents drift calculations from running before the player even sees the initial state
-        if (isFirstTime || currentTurn <= 1) {
-          const initialMetrics: GovernanceMetrics = {
-            morale: nation.morale,
-            publicOpinion: nation.publicOpinion,
-            cabinetApproval: nation.cabinetApproval,
-            electionTimer: nation.electionTimer,
-          };
-          console.log(`[Governance Debug] Setting initial metrics for ${nation.id}:`, initialMetrics);
+        // Handle three cases:
+        // 1. New nation (isFirstTime): Initialize from nation values
+        // 2. Turn 0 or 1: Preserve existing metrics (already initialized by useState)
+        // 3. Turn 2+: Apply drift calculations
+        if (isFirstTime) {
+          // New nation appearing mid-game - initialize with seed metrics
+          const initialMetrics = seedMetrics(nation);
+          console.log(`[Governance Debug] New nation ${nation.id}, initializing:`, initialMetrics);
           next[nation.id] = initialMetrics;
           updates.push({ id: nation.id, metrics: initialMetrics });
+        } else if (currentTurn <= 1) {
+          // Turn 0 or 1 - preserve existing metrics without drift
+          // This prevents re-reading from nation object which may have been modified
+          console.log(`[Governance Debug] Turn ${currentTurn}, preserving metrics for ${nation.id}:`, current);
+          next[nation.id] = current;
+          updates.push({ id: nation.id, metrics: current });
         } else {
           // Apply normal drift calculations for existing nations on subsequent turns
           const moraleDecay = 1 + Math.max(0, (nation.instability ?? 0) - 40) * 0.02;

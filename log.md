@@ -2245,3 +2245,87 @@ if (isFirstTime || currentTurn <= 1) {
 Always consider the FULL lifecycle of component initialization, not just the "game start" state. The component may mount and run effects before the game state is fully initialized.
 
 ---
+
+### Session AE: 2025-11-05 - PUBLIC OPINION BUG FIX (CORRECT FIX)
+
+#### Time: UTC
+
+**Objective:** Fix the ACTUAL root cause - previous fixes kept re-reading from nation object, causing circular updates
+
+**Branch:** `claude/fix-public-opinion-error-011CUpdvDBXQ7oBpCnqyxqWk`
+
+#### 🚨 CRITICAL ISSUE: THE REAL ROOT CAUSE IDENTIFIED!
+
+**Location:** `src/hooks/useGovernance.ts:287`
+
+**Problem:** All previous fixes missed the fundamental issue:
+
+1. **useState** (lines 192-198) initializes metrics from nation values ✓
+2. **useEffect** then RE-READS from nation object and OVERWRITES the metrics
+3. **handleGovernanceMetricsSync** syncs metrics BACK to nation object
+4. This creates a circular dependency where we keep re-reading and re-writing the same values
+
+**Root Cause Analysis:**
+
+The previous fixes tried to control WHEN we read from nation object by checking `currentTurn <= 1`. But the real issue is that we should NOT be re-reading from nation object at all after useState has initialized the metrics!
+
+**Flow with previous fix:**
+1. useState: metrics['USA'].publicOpinion = 68 (from nation.publicOpinion)
+2. useEffect (turn 1): Read nation.publicOpinion (68) → set metrics to 68
+3. handleGovernanceMetricsSync: Write metrics (68) → nation.publicOpinion = 68
+4. useEffect runs again (due to dependency change or re-render)
+5. Read nation.publicOpinion (68) → set metrics to 68 AGAIN
+6. This keeps happening... and if nation object is modified elsewhere, we lose the original value!
+
+**The Correct Fix:**
+
+Stop re-reading from nation object on turn 0-1. Instead, PRESERVE the metrics that were already set by useState:
+
+```typescript
+// Before (Session AD - STILL BROKEN):
+if (isFirstTime || currentTurn <= 1) {
+  const initialMetrics = {
+    publicOpinion: nation.publicOpinion,  // ← Re-reading from nation!
+    ...
+  };
+  next[nation.id] = initialMetrics;
+}
+
+// After (Session AE - CORRECT):
+if (isFirstTime) {
+  // New nation - initialize from nation values
+  next[nation.id] = seedMetrics(nation);
+} else if (currentTurn <= 1) {
+  // Preserve existing metrics (don't re-read from nation)
+  next[nation.id] = current;  // ← Use existing metrics!
+} else {
+  // Apply drift
+}
+```
+
+**Why This Works:**
+
+- **Turn 0/1:** Preserve metrics from useState (no re-reading, no drift)
+- **Turn 2+:** Apply drift calculations using the preserved baseline
+- **New nations:** Initialize correctly with seedMetrics
+- **No circular updates:** We stop the read → write → read cycle
+
+**Expected Behavior After Fix:**
+
+- Turn 0-1: Metrics preserved from useState initialization (publicOpinion stays at 68)
+- Turn 2+: Normal drift calculations apply
+- No more re-reading from nation object during initialization phase
+
+**Files Modified:**
+- `src/hooks/useGovernance.ts` (lines 284-300)
+
+**Testing:**
+- ✅ TypeScript compilation passes
+- Debug logging still active to verify behavior
+- Build successful
+
+**Key Lesson:**
+
+When state is initialized in multiple places (useState + useEffect), be careful not to create circular dependencies. Use existing state when possible instead of re-reading from external sources.
+
+---
