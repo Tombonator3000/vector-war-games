@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-05T21:02:00Z - Satellite coverage visual refresh
+- Added high-visibility satellite SVG icon for tactical map overlays.
+- Updated `src/pages/Index.tsx` to draw the new icon, pulse highlights on covered opponents, and adapt glow colors for enemy vs. allied satellites.
+- Ran `npm run build` to confirm the UI layer compiles after the rendering changes.
+
 ### Session AB: 2025-11-03 - CRITICAL SYSTEM AUDIT
 
 #### Time: UTC
