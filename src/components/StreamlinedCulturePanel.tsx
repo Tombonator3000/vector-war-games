@@ -105,6 +105,12 @@ export function StreamlinedCulturePanel({
                   const target = enemies.find(e => e.id === campaign.targetNation);
                   const propagandaDef = PROPAGANDA_DEFINITIONS[campaign.type as PropagandaType];
 
+                  // Skip if propaganda definition not found
+                  if (!propagandaDef) {
+                    console.warn(`Unknown propaganda type: ${campaign.type}`);
+                    return null;
+                  }
+
                   return (
                     <div
                       key={campaign.id}
@@ -112,7 +118,7 @@ export function StreamlinedCulturePanel({
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-sm font-semibold text-purple-300">
-                          {propagandaDef?.icon} {propagandaDef?.name || campaign.type}
+                          {propagandaDef.icon} {propagandaDef.name}
                         </span>
                         <Badge className="bg-purple-500/20 text-purple-400 text-xs">
                           {campaign.turnsRemaining} turns left
@@ -122,7 +128,7 @@ export function StreamlinedCulturePanel({
                         Target: <span className="text-gray-300">{target?.name || 'Unknown'}</span>
                       </div>
                       <div className="text-xs text-gray-400 mt-1">
-                        {propagandaDef?.description}
+                        {propagandaDef.description}
                       </div>
                     </div>
                   );
@@ -139,7 +145,12 @@ export function StreamlinedCulturePanel({
             </h3>
 
             {(() => {
-              const currentPolicy = IMMIGRATION_POLICIES[currentImmigrationPolicy];
+              // Ensure we have a valid policy, fallback to selective if not found
+              const validPolicy = currentImmigrationPolicy && IMMIGRATION_POLICIES[currentImmigrationPolicy]
+                ? currentImmigrationPolicy
+                : 'selective' as ImmigrationPolicy;
+              const currentPolicy = IMMIGRATION_POLICIES[validPolicy];
+
               return (
                 <div className="p-3 rounded bg-blue-500/10 border border-blue-500/30">
                   <div className="flex justify-between items-start mb-2">
@@ -187,6 +198,13 @@ export function StreamlinedCulturePanel({
               <div className="space-y-2">
                 {builtWonders.map((wonder: any) => {
                   const wonderDef = CULTURAL_WONDERS[wonder.type as CulturalWonderType];
+
+                  // Skip if wonder definition not found
+                  if (!wonderDef) {
+                    console.warn(`Unknown wonder type: ${wonder.type}`);
+                    return null;
+                  }
+
                   return (
                     <div
                       key={wonder.type}
@@ -194,14 +212,14 @@ export function StreamlinedCulturePanel({
                     >
                       <div className="flex justify-between items-start">
                         <span className="text-sm font-semibold text-green-300">
-                          {wonderDef?.icon} {wonderDef?.name}
+                          {wonderDef.icon} {wonderDef.name}
                         </span>
                         <Badge className="bg-green-500/20 text-green-400 text-xs">Built</Badge>
                       </div>
                       <div className="text-xs text-gray-400 mt-1 space-y-0.5">
-                        <div>+{wonderDef?.productionBonus} Production</div>
-                        <div>+{wonderDef?.intelBonus} Intel</div>
-                        <div>+{wonderDef?.culturalPowerBonus} Cultural Power</div>
+                        <div>+{wonderDef.productionBonus} Production</div>
+                        <div>+{wonderDef.intelBonus} Intel</div>
+                        <div>+{wonderDef.culturalPowerBonus} Cultural Power</div>
                       </div>
                     </div>
                   );
