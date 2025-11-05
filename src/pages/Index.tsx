@@ -2088,6 +2088,33 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   updateDisplay();
 }
 
+/**
+ * Completely resets all game state to initial values
+ * Called when starting a new game to ensure no state persists from previous sessions
+ */
+function resetGameState() {
+  console.log('[Game State] Performing complete game state reset');
+
+  // Reset GameStateManager (includes all core game state)
+  GameStateManager.reset();
+
+  // Update module-level references to point to the fresh state
+  S = GameStateManager.getState();
+  nations = GameStateManager.getNations();
+  conventionalDeltas = GameStateManager.getConventionalDeltas();
+
+  // Reset PlayerManager cache
+  PlayerManager.reset();
+
+  // Expose fresh S to window
+  if (typeof window !== 'undefined') {
+    (window as any).S = S;
+    console.log('[Game State] Exposed fresh S to window after reset');
+  }
+
+  console.log('[Game State] Game state reset complete');
+}
+
 // Game initialization
 function initNations() {
   // Prevent re-initialization if game is already running
@@ -7056,6 +7083,18 @@ export default function NoradVector() {
     if (!leaderToUse || !doctrineToUse) {
       return;
     }
+
+    // CRITICAL: Reset all game state before starting a new game
+    // This ensures no state persists from previous sessions (immigration policy, etc.)
+    resetGameState();
+
+    // Reset bootstrap flag to allow game initialization to run again
+    hasBootstrappedGameRef.current = false;
+    hasAutoplayedTurnOneMusicRef.current = false;
+
+    // Re-sync S reference after reset
+    S = GameStateManager.getState();
+
     S.selectedLeader = leaderToUse;
     S.selectedDoctrine = doctrineToUse;
     S.playerName = leaderToUse;
