@@ -287,11 +287,7 @@ let enqueueAIProposalRef: ((proposal: DiplomaticProposal) => void) | null = null
 
 type ThemeId =
   | 'synthwave'
-  | 'retro80s'
-  | 'wargames'
-  | 'nightmode'
-  | 'highcontrast'
-  | 'vectorclassic';
+  | 'wargames';
 type LayoutDensity = 'expanded' | 'compact' | 'minimal';
 
 type LayoutDensityOption = {
@@ -540,11 +536,7 @@ const THEME_SETTINGS: Record<ThemeId, {
 
 const themeOptions: { id: ThemeId; label: string }[] = [
   { id: 'synthwave', label: 'Synthwave' },
-  { id: 'retro80s', label: 'Retro 80s' },
-  { id: 'wargames', label: 'WARGAMES' },
-  { id: 'nightmode', label: 'Night Mode' },
-  { id: 'highcontrast', label: 'High Contrast' },
-  { id: 'vectorclassic', label: 'Vector (Classic)' }
+  { id: 'wargames', label: 'WARGAMES' }
 ];
 
 let currentTheme: ThemeId = 'synthwave';

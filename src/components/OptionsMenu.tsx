@@ -36,11 +36,7 @@ const Storage = {
 
 type ThemeId =
   | 'synthwave'
-  | 'retro80s'
-  | 'wargames'
-  | 'nightmode'
-  | 'highcontrast'
-  | 'vectorclassic';
+  | 'wargames';
 
 type LayoutDensity = 'expanded' | 'compact' | 'minimal';
 type ScreenResolution = 'auto' | '1280x720' | '1600x900' | '1920x1080' | '2560x1440' | '3840x2160';
@@ -59,11 +55,7 @@ type MusicTrackId = MusicTrack['id'];
 
 const themeOptions: { id: ThemeId; label: string }[] = [
   { id: 'synthwave', label: 'Synthwave' },
-  { id: 'retro80s', label: 'Retro 80s' },
-  { id: 'wargames', label: 'WARGAMES' },
-  { id: 'nightmode', label: 'Night Mode' },
-  { id: 'highcontrast', label: 'High Contrast' },
-  { id: 'vectorclassic', label: 'Vector (Classic)' }
+  { id: 'wargames', label: 'WARGAMES' }
 ];
 
 const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }[] = [
