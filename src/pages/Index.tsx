@@ -434,6 +434,7 @@ const armyIcon = loadIcon('/icons/army.svg');
 const navyIcon = loadIcon('/icons/navy.svg');
 const airIcon = loadIcon('/icons/air.svg');
 const radiationIcon = loadIcon('/icons/radiation.svg');
+const satelliteIcon = loadIcon('/icons/satellite.svg');
 
 const conventionalIconLookup: Record<ForceType, CanvasIcon> = {
   army: armyIcon,
@@ -445,6 +446,7 @@ const MISSILE_ICON_BASE_SCALE = 0.14;
 const BOMBER_ICON_BASE_SCALE = 0.18;
 const SUBMARINE_ICON_BASE_SCALE = 0.2;
 const RADIATION_ICON_BASE_SCALE = 0.16;
+const SATELLITE_ICON_BASE_SCALE = 0.18;
 const easeInOutQuad = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const SATELLITE_ORBIT_RADIUS = 34;
 const SATELLITE_ORBIT_TTL_MS = 3600000; // 1 hour - long enough for satellites to expire naturally via turn-based cleanup
@@ -2748,37 +2750,6 @@ function drawIcon(
   ctx.restore();
 }
 
-function drawSatelliteIcon(x: number, y: number, rotation: number) {
-  if (!ctx) {
-    return;
-  }
-
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(rotation);
-
-  // Larger, more visible satellite body
-  ctx.fillStyle = 'rgba(210,240,255,0.95)';
-  ctx.fillRect(-7, -3.5, 14, 7);
-
-  // Solar panels with glow effect
-  ctx.shadowBlur = 8;
-  ctx.shadowColor = 'rgba(100,200,255,0.8)';
-  ctx.fillStyle = 'rgba(130,210,255,0.95)';
-  ctx.fillRect(-16, -2, 7, 4);
-  ctx.fillRect(9, -2, 7, 4);
-
-  // Bright antenna/sensor
-  ctx.beginPath();
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = 'rgba(255,255,255,0.9)';
-  ctx.fillStyle = 'rgba(255,255,255,1)';
-  ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.restore();
-}
-
 function drawSatellites(nowMs: number) {
   if (!ctx) {
     return;
@@ -2791,6 +2762,7 @@ function drawSatellites(nowMs: number) {
 
   const activeOrbits: SatelliteOrbit[] = [];
   const player = PlayerManager.get();
+  const isFlatRealistic = currentMapStyle === 'flat-realistic';
 
   orbits.forEach(orbit => {
     const targetNation = nations.find(nation => nation.id === orbit.targetId);
@@ -2823,10 +2795,38 @@ function drawSatellites(nowMs: number) {
     const satelliteX = targetX + Math.cos(angle) * SATELLITE_ORBIT_RADIUS;
     const satelliteY = targetY + Math.sin(angle) * SATELLITE_ORBIT_RADIUS;
 
+    const isPlayerOwned = player?.id === owner.id;
+    const orbitColor = isPlayerOwned ? 'rgba(120,220,255,0.65)' : 'rgba(255,140,120,0.75)';
+    const highlightColor = isPlayerOwned ? 'rgba(90,200,255,1)' : 'rgba(255,140,140,1)';
+
+    // Pulse highlight directly over the target nation so the opponent is clearly marked
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineWidth = 2.25;
+    const pulse = 0.55 + 0.45 * Math.sin(nowMs / 420 + orbit.phaseOffset * 0.8);
+    ctx.strokeStyle = highlightColor.replace('1)', `${0.35 + pulse * 0.4})`);
+    ctx.beginPath();
+    ctx.arc(targetX, targetY, 18 + pulse * 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    if (isFlatRealistic) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const gradient = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, 22);
+      gradient.addColorStop(0, highlightColor.replace('1)', '0.45)'));
+      gradient.addColorStop(1, highlightColor.replace('1)', '0)'));
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(targetX, targetY, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     // Draw orbit path with enhanced visibility
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = 'rgba(120,220,255,0.65)';
+    ctx.strokeStyle = orbitColor;
     ctx.lineWidth = 2;
     ctx.setLineDash([8, 8]);
     ctx.beginPath();
@@ -2855,22 +2855,24 @@ function drawSatellites(nowMs: number) {
     const glowPulse = 0.6 + 0.4 * Math.sin(nowMs / 320 + orbit.phaseOffset);
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = glowPulse * 0.7;
-    ctx.fillStyle = 'rgba(100,200,255,1)';
+    ctx.fillStyle = isPlayerOwned ? 'rgba(100,200,255,1)' : 'rgba(255,150,150,1)';
     ctx.beginPath();
     ctx.arc(satelliteX, satelliteY, 10 + glowPulse * 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // Draw the satellite icon
-    drawSatelliteIcon(satelliteX, satelliteY, angle);
+    // Draw the satellite icon asset to keep styling consistent with other units
+    drawIcon(satelliteIcon, satelliteX, satelliteY, angle + Math.PI / 2, SATELLITE_ICON_BASE_SCALE, {
+      alpha: 0.95,
+    });
 
     // Draw satellite label
     ctx.save();
     ctx.font = 'bold 11px monospace';
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillStyle = isPlayerOwned ? 'rgba(210,235,255,0.95)' : 'rgba(255,200,200,0.95)';
     ctx.strokeStyle = 'rgba(0,0,0,0.8)';
     ctx.lineWidth = 3;
-    const label = '🛰️ SAT';
+    const label = isPlayerOwned ? '🛰️ SAT' : '🛰️ ENEMY';
     ctx.strokeText(label, satelliteX + 12, satelliteY - 8);
     ctx.fillText(label, satelliteX + 12, satelliteY - 8);
     ctx.restore();
