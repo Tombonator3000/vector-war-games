@@ -98,6 +98,7 @@ import {
   type ConventionalState,
   type NationConventionalProfile,
   type ForceType,
+  type TerritoryState,
   createDefaultConventionalState,
   createDefaultNationConventionalProfile,
   territoryAnchors,
@@ -2691,7 +2692,7 @@ function drawNations(style: MapStyle) {
 
 // Territory rendering - wrapper function for Risk-style markers
 function drawTerritoriesWrapper() {
-  if (!conventionalState || !conventionalState.territories) return;
+  if (!territoryList.length) return;
 
   const context: TerritoryRenderContext = {
     ctx,
@@ -2706,10 +2707,12 @@ function drawTerritoriesWrapper() {
     projectLocal,
     preloadFlatRealisticTexture,
     getPoliticalFill,
-    territories: conventionalState.territories,
+    territories: territoryList,
     playerId: player.id,
     selectedTerritoryId,
     hoveredTerritoryId,
+    draggingTerritoryId: draggingArmy?.sourceId ?? null,
+    dragTargetTerritoryId,
   };
   renderTerritories(context);
 }
@@ -5597,6 +5600,9 @@ export default function NoradVector() {
   const lastTargetPingIdRef = useRef<string | null>(null);
   const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null);
   const [hoveredTerritoryId, setHoveredTerritoryId] = useState<string | null>(null);
+  const [draggingArmy, setDraggingArmy] = useState<{ sourceId: string; armies: number } | null>(null);
+  const [draggingArmyPosition, setDraggingArmyPosition] = useState<{ x: number; y: number } | null>(null);
+  const [dragTargetTerritoryId, setDragTargetTerritoryId] = useState<string | null>(null);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
     const stored = Storage.getItem('conventional_state');
     if (stored) {
@@ -5611,6 +5617,47 @@ export default function NoradVector() {
       nations.map(nation => ({ id: nation.id, isPlayer: nation.isPlayer }))
     );
   });
+
+  const territoryList = useMemo<TerritoryState[]>(() => {
+    const source = conventionalState?.territories as unknown;
+    if (!source) {
+      return [];
+    }
+    if (Array.isArray(source)) {
+      return source as TerritoryState[];
+    }
+    return Object.values(source as Record<string, TerritoryState>);
+  }, [conventionalState]);
+
+  const territoryMap = useMemo(() => {
+    const map = new Map<string, TerritoryState>();
+    territoryList.forEach(territory => {
+      map.set(territory.id, territory);
+    });
+    return map;
+  }, [territoryList]);
+
+  const territoryListRef = useRef<TerritoryState[]>(territoryList);
+  useEffect(() => {
+    territoryListRef.current = territoryList;
+  }, [territoryList]);
+
+  const getTerritoryById = useCallback(
+    (territoryId: string | null | undefined) => {
+      if (!territoryId) {
+        return null;
+      }
+      return territoryMap.get(territoryId) ?? null;
+    },
+    [territoryMap],
+  );
+
+  const dragTargetName = useMemo(() => {
+    if (!dragTargetTerritoryId) {
+      return null;
+    }
+    return territoryMap.get(dragTargetTerritoryId)?.name ?? null;
+  }, [dragTargetTerritoryId, territoryMap]);
 
   const selectedLeaderGlobal = S.selectedLeader;
   const selectedDoctrineGlobal = S.selectedDoctrine;
@@ -6243,6 +6290,16 @@ export default function NoradVector() {
     placeReinforcements: placeConventionalReinforcements,
     getReinforcements: getConventionalReinforcements,
   } = conventional;
+
+  const moveArmiesRef = useRef(moveConventionalArmies);
+  useEffect(() => {
+    moveArmiesRef.current = moveConventionalArmies;
+  }, [moveConventionalArmies]);
+
+  const resolveBorderConflictRef = useRef(resolveConventionalBorderConflictBase);
+  useEffect(() => {
+    resolveBorderConflictRef.current = resolveConventionalBorderConflictBase;
+  }, [resolveConventionalBorderConflictBase]);
 
   const getNationAnchor = useCallback((ownerId: string) => {
     let nation = getNationById(nations, ownerId);
@@ -9722,6 +9779,32 @@ export default function NoradVector() {
       let touching = false;
       let touchStart = { x: 0, y: 0 };
       let zoomedIn = false;
+      type PointerMode = 'none' | 'map-pan' | 'unit-drag';
+      let pointerMode: PointerMode = 'none';
+      let dragSourceTerritoryId: string | null = null;
+      let dragArmiesCount = 0;
+      let dragTargetId: string | null = null;
+      let lastHoverId: string | null = null;
+
+      const getTerritories = () => territoryListRef.current ?? [];
+
+      const updateHover = (territoryId: string | null) => {
+        if (lastHoverId !== territoryId) {
+          lastHoverId = territoryId;
+          setHoveredTerritoryId(territoryId);
+        }
+      };
+
+      const resetUnitDragState = () => {
+        dragSourceTerritoryId = null;
+        dragArmiesCount = 0;
+        dragTargetId = null;
+        pointerMode = 'none';
+        setDraggingArmy(null);
+        setDraggingArmyPosition(null);
+        setDragTargetTerritoryId(null);
+        updateHover(null);
+      };
 
       const clampLatitude = () => {
         const maxLat = 85;
@@ -9745,17 +9828,120 @@ export default function NoradVector() {
       const handlePointerUp = (e: PointerEvent) => {
         if (canvas && activePointerId !== null && canvas.hasPointerCapture(activePointerId)) {
           canvas.releasePointerCapture(activePointerId);
-          activePointerId = null;
         }
+        activePointerId = null;
+
+        if (pointerMode === 'unit-drag') {
+          const player = PlayerManager.get();
+          const territories = getTerritories();
+          const source = territories.find(entry => entry.id === dragSourceTerritoryId) ?? null;
+          const target = dragTargetId ? territories.find(entry => entry.id === dragTargetId) ?? null : null;
+
+          if (player && source && source.controllingNationId === player.id) {
+            const maxAvailable = Math.max(1, source.armies - 1);
+            const armiesToSend = Math.min(maxAvailable, Math.max(1, dragArmiesCount));
+
+            if (armiesToSend < 1) {
+              AudioSys.playSFX('error');
+              toast({ title: 'Cannot move armies', description: 'At least one army must remain behind.', variant: 'destructive' });
+            } else if (target && source.neighbors.includes(target.id)) {
+              if (!target.controllingNationId || target.controllingNationId === player.id) {
+                const result = moveArmiesRef.current?.(source.id, target.id, armiesToSend);
+                if (result?.success) {
+                  AudioSys.playSFX('success');
+                  toast({
+                    title: 'Armies redeployed',
+                    description: `Moved ${armiesToSend} armies from ${source.name} to ${target.name}.`,
+                  });
+                  setSelectedTerritoryId(target.id);
+                } else if (result && !result.success) {
+                  AudioSys.playSFX('error');
+                  toast({ title: 'Cannot move armies', description: result.reason, variant: 'destructive' });
+                  setSelectedTerritoryId(source.id);
+                }
+              } else {
+                const result = resolveBorderConflictRef.current?.(source.id, target.id, armiesToSend);
+                if (result?.success) {
+                  AudioSys.playSFX('success');
+                  toast({
+                    title: 'Assault initiated',
+                    description: `Launching ${armiesToSend} armies into ${target.name}.`,
+                  });
+                  setSelectedTerritoryId(null);
+                } else if (result && !result.success) {
+                  AudioSys.playSFX('error');
+                  toast({ title: 'Cannot launch attack', description: result.reason, variant: 'destructive' });
+                  setSelectedTerritoryId(source.id);
+                }
+              }
+            } else if (dragTargetId) {
+              AudioSys.playSFX('error');
+              toast({ title: 'Invalid target', description: 'Armies can only move to adjacent territories.', variant: 'destructive' });
+              setSelectedTerritoryId(source.id);
+            }
+          }
+
+          resetUnitDragState();
+        }
+
         isDragging = false;
         dragButton = null;
-        if (activePointerId === e.pointerId) {
-          activePointerId = null;
+        if (pointerMode !== 'unit-drag') {
+          pointerMode = 'none';
         }
       };
 
       const handlePointerDown = (e: PointerEvent) => {
         if (e.button !== 0 && e.button !== 2) return;
+
+        const rect = canvas?.getBoundingClientRect();
+        const territories = getTerritories();
+        const player = PlayerManager.get();
+
+        if (
+          e.button === 0 &&
+          !S.gameOver &&
+          rect &&
+          player &&
+          territories.length > 0
+        ) {
+          const mx = e.clientX - rect.left;
+          const my = e.clientY - rect.top;
+
+          for (const territory of territories) {
+            const [tx, ty] = projectLocal(territory.anchorLon, territory.anchorLat);
+            const dist = Math.hypot(mx - tx, my - ty);
+            if (dist < 25 && territory.controllingNationId === player.id && territory.armies > 1) {
+              pointerMode = 'unit-drag';
+              isDragging = true;
+              dragButton = e.button;
+              dragStart = { x: e.clientX, y: e.clientY };
+              dragSourceTerritoryId = territory.id;
+              const maxAvailable = Math.max(1, territory.armies - 1);
+              const desiredCount = e.shiftKey
+                ? 1
+                : e.altKey
+                ? Math.max(1, Math.floor(territory.armies / 2))
+                : maxAvailable;
+              dragArmiesCount = Math.min(maxAvailable, desiredCount);
+              dragTargetId = null;
+              updateHover(null);
+              setSelectedTerritoryId(territory.id);
+              setDraggingArmy({ sourceId: territory.id, armies: dragArmiesCount });
+              setDraggingArmyPosition({ x: mx, y: my });
+              setDragTargetTerritoryId(null);
+              activePointerId = e.pointerId;
+              canvas?.setPointerCapture(e.pointerId);
+              AudioSys.playSFX('click');
+              return;
+            }
+          }
+        }
+
+        pointerMode = 'map-pan';
+        setDragTargetTerritoryId(null);
+        setDraggingArmy(null);
+        setDraggingArmyPosition(null);
         isDragging = true;
         dragButton = e.button;
         dragStart = { x: e.clientX, y: e.clientY };
@@ -9764,30 +9950,62 @@ export default function NoradVector() {
       };
 
       const handlePointerMove = (e: PointerEvent) => {
-        // Update hovered territory
-        if (!isDragging && conventionalState && conventionalState.territories) {
-          const rect = canvas?.getBoundingClientRect();
+        const rect = canvas?.getBoundingClientRect();
+
+        if (!isDragging && pointerMode !== 'unit-drag') {
           if (rect) {
             const mx = e.clientX - rect.left;
             const my = e.clientY - rect.top;
-            
-            let foundHover = false;
-            for (const territory of conventionalState.territories) {
+            let nextHover: string | null = null;
+            for (const territory of getTerritories()) {
               const [tx, ty] = projectLocal(territory.anchorLon, territory.anchorLat);
               const dist = Math.hypot(mx - tx, my - ty);
               if (dist < 25) {
-                setHoveredTerritoryId(territory.id);
-                foundHover = true;
+                nextHover = territory.id;
                 break;
               }
             }
-            if (!foundHover && hoveredTerritoryId) {
-              setHoveredTerritoryId(null);
-            }
+            updateHover(nextHover);
           }
         }
 
+        if (pointerMode === 'unit-drag') {
+          if (!rect) return;
+          const mx = e.clientX - rect.left;
+          const my = e.clientY - rect.top;
+          setDraggingArmyPosition({ x: mx, y: my });
+
+          const territories = getTerritories();
+          const source = territories.find(entry => entry.id === dragSourceTerritoryId) ?? null;
+          let nextTarget: string | null = null;
+
+          if (source) {
+            for (const territory of territories) {
+              if (territory.id === source.id) continue;
+              const [tx, ty] = projectLocal(territory.anchorLon, territory.anchorLat);
+              const dist = Math.hypot(mx - tx, my - ty);
+              if (dist < 28) {
+                nextTarget = territory.id;
+                break;
+              }
+            }
+            if (nextTarget && !source.neighbors.includes(nextTarget)) {
+              nextTarget = null;
+            }
+          }
+
+          if (dragTargetId !== nextTarget) {
+            dragTargetId = nextTarget;
+            setDragTargetTerritoryId(nextTarget);
+            updateHover(nextTarget);
+          }
+          return;
+        }
+
         if (!isDragging) return;
+        if (pointerMode !== 'map-pan') {
+          return;
+        }
         if (e.buttons === 0) {
           handlePointerUp(e);
           return;
@@ -9811,7 +10029,16 @@ export default function NoradVector() {
       };
 
       const handlePointerCancel = (e: PointerEvent) => {
-        handlePointerUp(e);
+        if (canvas && activePointerId !== null && canvas.hasPointerCapture(activePointerId)) {
+          canvas.releasePointerCapture(activePointerId);
+        }
+        activePointerId = null;
+        if (pointerMode === 'unit-drag') {
+          resetUnitDragState();
+        }
+        isDragging = false;
+        dragButton = null;
+        pointerMode = 'none';
       };
 
       const handleWheel = (e: WheelEvent) => {
@@ -9987,21 +10214,22 @@ export default function NoradVector() {
         const my = e.clientY - rect.top;
 
         // Check for territory clicks first (higher priority)
-        if (conventionalState && conventionalState.territories) {
-          for (const territory of conventionalState.territories) {
+        const territories = territoryListRef.current ?? [];
+        if (territories.length > 0) {
+          for (const territory of territories) {
             const [tx, ty] = projectLocal(territory.anchorLon, territory.anchorLat);
             const dist = Math.hypot(mx - tx, my - ty);
             const hitRadius = 25;
 
             if (dist < hitRadius) {
-              // Territory clicked - handle selection logic
-              if (selectedTerritoryId && selectedTerritoryId !== territory.id) {
-                const sourceTerritory = conventionalState.territories.find(t => t.id === selectedTerritoryId);
-                if (sourceTerritory && sourceTerritory.neighbors.includes(territory.id)) {
-                  // Valid neighbor - execute action via conventional warfare
+              const sourceTerritory = getTerritoryById(selectedTerritoryId);
+              if (sourceTerritory && sourceTerritory.id !== territory.id) {
+                if (sourceTerritory.neighbors.includes(territory.id)) {
                   const isAttack = territory.controllingNationId !== player.id;
-                  AudioSys.playSFX('click');
                   // Actions will be handled through TerritoryMapPanel callbacks
+                  if (!isAttack) {
+                    setDragTargetTerritoryId(territory.id);
+                  }
                 }
               }
               setSelectedTerritoryId(territory.id);
@@ -10307,6 +10535,24 @@ export default function NoradVector() {
             mapStyle={mapStyle}
             className="w-full h-full"
           />
+        )}
+
+        {draggingArmy && draggingArmyPosition && (
+          <div className="pointer-events-none absolute inset-0 z-30">
+            <div
+              className="pointer-events-none flex flex-col items-center"
+              style={{ transform: `translate(${draggingArmyPosition.x - 24}px, ${draggingArmyPosition.y - 24}px)` }}
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-cyan-400 bg-cyan-500/30 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.65)] backdrop-blur-sm">
+                <span className="text-sm font-bold">{draggingArmy.armies}</span>
+              </div>
+              {dragTargetName && (
+                <div className="mt-1 rounded bg-black/70 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide text-yellow-300 shadow-lg">
+                  Drop on {dragTargetName}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {canvasRef.current && showStabilityOverlay && (

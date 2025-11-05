@@ -44,6 +44,8 @@ export interface TerritoryRenderContext extends WorldRenderContext {
   selectedTerritoryId: string | null;
   hoveredTerritoryId: string | null;
   onTerritoryClick?: (territoryId: string) => void;
+  draggingTerritoryId?: string | null;
+  dragTargetTerritoryId?: string | null;
 }
 
 /**
@@ -357,6 +359,8 @@ export function drawTerritories(context: TerritoryRenderContext): void {
     hoveredTerritoryId,
     projectLocal,
     cam,
+    draggingTerritoryId = null,
+    dragTargetTerritoryId = null,
   } = context;
 
   if (!ctx || territories.length === 0) return;
@@ -370,9 +374,11 @@ export function drawTerritories(context: TerritoryRenderContext): void {
     const isPlayerOwned = territory.controllingNationId === playerId;
     const isSelected = territory.id === selectedTerritoryId;
     const isHovered = territory.id === hoveredTerritoryId;
+    const isDraggingSource = territory.id === draggingTerritoryId;
+    const isDragTarget = territory.id === dragTargetTerritoryId;
 
     const baseColor = isPlayerOwned ? '#22d3ee' : (territory.controllingNationId ? '#f87171' : '#9ca3af');
-    const glowColor = isSelected ? '#fbbf24' : baseColor;
+    const glowColor = isSelected || isDragTarget ? '#fbbf24' : baseColor;
 
     // Selection ring
     if (isSelected) {
@@ -389,11 +395,39 @@ export function drawTerritories(context: TerritoryRenderContext): void {
       ctx.restore();
     }
 
+    if (isDraggingSource) {
+      ctx.save();
+      ctx.setLineDash([4 * z, 4 * z]);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5 * z;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.arc(x, y, 24 * z, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (isHovered || isDragTarget) {
+      ctx.save();
+      ctx.strokeStyle = isDragTarget ? '#facc15' : '#67e8f9';
+      ctx.lineWidth = isDragTarget ? 3 * z : 2.2 * z;
+      ctx.globalAlpha = isDragTarget ? 0.9 : 0.6;
+      ctx.beginPath();
+      ctx.arc(x, y, 24 * z, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // Army count circle
     const circleRadius = 18 * z;
     ctx.save();
 
-    ctx.fillStyle = isPlayerOwned ? 'rgba(34, 211, 238, 0.3)' : 'rgba(248, 113, 113, 0.3)';
+    const baseFill = isPlayerOwned ? 'rgba(34, 211, 238, 0.3)' : 'rgba(248, 113, 113, 0.3)';
+    ctx.fillStyle = isDragTarget
+      ? 'rgba(250, 204, 21, 0.35)'
+      : isHovered
+      ? 'rgba(103, 232, 249, 0.28)'
+      : baseFill;
     ctx.beginPath();
     ctx.arc(x, y, circleRadius, 0, Math.PI * 2);
     ctx.fill();
@@ -405,7 +439,7 @@ export function drawTerritories(context: TerritoryRenderContext): void {
     ctx.stroke();
 
     ctx.shadowColor = glowColor;
-    ctx.shadowBlur = isSelected ? 20 : 10;
+    ctx.shadowBlur = isSelected || isHovered || isDragTarget ? 22 : 10;
     ctx.strokeStyle = glowColor;
     ctx.lineWidth = 1.5 * z;
     ctx.globalAlpha = 0.8;
