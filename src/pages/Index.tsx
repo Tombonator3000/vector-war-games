@@ -1832,6 +1832,8 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     isPlayer: isKennedy,
     name: 'United States',
     leader: 'John F. Kennedy',
+    leaderName: 'John F. Kennedy',
+    aiPersonality: 'balanced',
     ai: 'balanced',
     lon: -95,
     lat: 39,
@@ -1875,6 +1877,8 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     isPlayer: isKhrushchev,
     name: 'Soviet Union',
     leader: 'Nikita Khrushchev',
+    leaderName: 'Nikita Khrushchev',
+    aiPersonality: 'aggressive',
     ai: 'aggressive',
     lon: 37,
     lat: 55,
@@ -1918,6 +1922,8 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     isPlayer: isCastro,
     name: 'Cuba',
     leader: 'Fidel Castro',
+    leaderName: 'Fidel Castro',
+    aiPersonality: 'aggressive',
     ai: 'aggressive',
     lon: -80,
     lat: 22,
@@ -2106,6 +2112,12 @@ function resetGameState() {
   // Reset PlayerManager cache
   PlayerManager.reset();
 
+  // CRITICAL: Clear localStorage items that persist game state between sessions
+  // This ensures no state from previous games leaks into new games
+  Storage.removeItem('save_snapshot');
+  Storage.removeItem('conventional_state');
+  console.log('[Game State] Cleared localStorage: save_snapshot, conventional_state');
+
   // Expose fresh S to window
   if (typeof window !== 'undefined') {
     (window as any).S = S;
@@ -2213,6 +2225,8 @@ function initNations() {
       isPlayer: false,
       name: pos.name,
       leader: leaderConfig?.name || `AI_${i}`,
+      leaderName: leaderConfig?.name || `AI_${i}`, // Explicit leader name for UI display
+      aiPersonality: leaderConfig?.ai || 'balanced', // AI personality for UI display
       ai: leaderConfig?.ai || 'balanced',
       doctrine: aiDoctrine,
       lon: pos.lon,
