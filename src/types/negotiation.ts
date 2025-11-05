@@ -263,6 +263,7 @@ export interface DiplomaticAction {
   enabled: boolean;                     // Whether action is available
   disabledReason?: string;              // Reason if disabled
   cost?: ResourceCost;                  // Cost to perform action
+  description?: string;                 // Clear description of what the action does
 }
 
 /**
@@ -274,7 +275,12 @@ export type DiplomaticActionType =
   | 'discuss'           // Discuss relationship
   | 'accuse'            // Confront about grievance
   | 'apologize'         // Apologize for action
-  | 'view-history';     // View interaction history
+  | 'view-history'      // View interaction history
+  | 'build-trust'       // Build trust through goodwill gestures
+  | 'grant-favor'       // Grant a favor to another nation
+  | 'make-promise'      // Make a binding diplomatic promise
+  | 'verify-promise'    // Verify another nation's promises
+  | 'reparations';      // Offer reparations for past harm
 
 /**
  * Resource cost for an action

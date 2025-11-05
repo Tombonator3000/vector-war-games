@@ -204,6 +204,55 @@ export function UnifiedDiplomacyPanel({
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-gray-400 uppercase">Diplomatic Actions</h4>
 
+                {/* Build Trust */}
+                <Button
+                  onClick={() => onProposal?.('build-trust' as ProposalType, selectedNation.id)}
+                  className="w-full justify-start bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30"
+                >
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  <div className="flex-1 text-left">
+                    <div className="font-semibold">Build Trust</div>
+                    <div className="text-xs text-gray-400">Costs 10 DIP. +10 trust, +5 relationship. Demonstrate goodwill.</div>
+                  </div>
+                </Button>
+
+                {/* Grant Favor */}
+                <Button
+                  onClick={() => onProposal?.('grant-favor' as ProposalType, selectedNation.id)}
+                  className="w-full justify-start bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30"
+                >
+                  <Gift className="w-4 h-4 mr-2" />
+                  <div className="flex-1 text-left">
+                    <div className="font-semibold">Grant Favor</div>
+                    <div className="text-xs text-gray-400">Costs 12 DIP. +3 relationship. They owe you a favor.</div>
+                  </div>
+                </Button>
+
+                {/* Call in Favor */}
+                <Button
+                  onClick={() => onProposal?.('call-favor' as ProposalType, selectedNation.id)}
+                  disabled={getPlayerGrievancesAgainst(selectedNation.id).length === 0}
+                  className="w-full justify-start bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 disabled:opacity-50"
+                >
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  <div className="flex-1 text-left">
+                    <div className="font-semibold">Call in Favor</div>
+                    <div className="text-xs text-gray-400">Costs 5 DIP. Requires favor owed. Request assistance.</div>
+                  </div>
+                </Button>
+
+                {/* Make Promise */}
+                <Button
+                  onClick={() => onProposal?.('make-promise' as ProposalType, selectedNation.id)}
+                  className="w-full justify-start bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  <div className="flex-1 text-left">
+                    <div className="font-semibold">Make Promise</div>
+                    <div className="text-xs text-gray-400">Costs 10 DIP. +10-15 trust. Breaking it: -25 to -40 trust.</div>
+                  </div>
+                </Button>
+
                 {/* Alliance */}
                 <Button
                   onClick={() => onProposal?.('alliance', selectedNation.id)}
@@ -230,7 +279,7 @@ export function UnifiedDiplomacyPanel({
                   <Shield className="w-4 h-4 mr-2" />
                   <div className="flex-1 text-left">
                     <div className="font-semibold">Propose Truce</div>
-                    <div className="text-xs text-gray-400">10 turns of peace</div>
+                    <div className="text-xs text-gray-400">10 turns of peace. No attacks allowed.</div>
                   </div>
                 </Button>
 
@@ -242,7 +291,7 @@ export function UnifiedDiplomacyPanel({
                   <Gift className="w-4 h-4 mr-2" />
                   <div className="flex-1 text-left">
                     <div className="font-semibold">Send Aid</div>
-                    <div className="text-xs text-gray-400">+10 relationship, costs 50 production</div>
+                    <div className="text-xs text-gray-400">Costs 50 production. +10 relationship.</div>
                   </div>
                 </Button>
 
@@ -250,12 +299,12 @@ export function UnifiedDiplomacyPanel({
                 {getRelationshipWithPlayer(selectedNation.id) < RELATIONSHIP_UNFRIENDLY && (
                   <Button
                     onClick={() => onProposal?.('peace', selectedNation.id)}
-                    className="w-full justify-start bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30"
+                    className="w-full justify-start bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30"
                   >
                     <Heart className="w-4 h-4 mr-2" />
                     <div className="flex-1 text-left">
                       <div className="font-semibold">Propose Peace</div>
-                      <div className="text-xs text-gray-400">End hostilities</div>
+                      <div className="text-xs text-gray-400">End hostilities. Reset to neutral relations.</div>
                     </div>
                   </Button>
                 )}
