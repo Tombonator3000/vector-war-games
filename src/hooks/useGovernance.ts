@@ -273,6 +273,14 @@ export function useGovernance({
         const isFirstTime = !prev[nation.id];
         const current = prev[nation.id] ?? seedMetrics(nation);
 
+        console.log(`[Governance Debug] Turn ${currentTurn}, Nation ${nation.id}:`, {
+          isFirstTime,
+          currentTurn,
+          nationPublicOpinion: nation.publicOpinion,
+          currentPublicOpinion: current.publicOpinion,
+          prevExists: !!prev[nation.id]
+        });
+
         // On first initialization (turn 0 or when nation is new), use the nation's actual values without drift calculations
         if (isFirstTime || currentTurn === 0) {
           const initialMetrics: GovernanceMetrics = {
@@ -281,6 +289,7 @@ export function useGovernance({
             cabinetApproval: nation.cabinetApproval,
             electionTimer: nation.electionTimer,
           };
+          console.log(`[Governance Debug] Setting initial metrics for ${nation.id}:`, initialMetrics);
           next[nation.id] = initialMetrics;
           updates.push({ id: nation.id, metrics: initialMetrics });
         } else {
