@@ -43,13 +43,41 @@ export function StreamlinedCulturePanel({
   onClose,
 }: StreamlinedCulturePanelProps) {
   const [selectedPropagandaTarget, setSelectedPropagandaTarget] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'operations' | 'active'>('operations');
 
   const culturalPower = calculateCulturalPower(player);
   const wonderBonuses = getCulturalWonderBonuses(player);
   const builtWonders = player.culturalWonders || [];
+  const activePropaganda = player.propagandaCampaigns || [];
 
   return (
     <div className="space-y-4">
+      {/* Tab Navigation */}
+      <div className="flex gap-2 border-b border-gray-700">
+        <button
+          onClick={() => setActiveTab('operations')}
+          className={`px-4 py-2 text-sm font-semibold transition-colors ${
+            activeTab === 'operations'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          Operations
+        </button>
+        <button
+          onClick={() => setActiveTab('active')}
+          className={`px-4 py-2 text-sm font-semibold transition-colors ${
+            activeTab === 'active'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          Active {activePropaganda.length > 0 && (
+            <Badge className="ml-1 bg-cyan-500/20 text-cyan-400 text-xs">{activePropaganda.length}</Badge>
+          )}
+        </button>
+      </div>
+
       {/* Cultural Power Display */}
       <div className="bg-gray-800/50 p-3 rounded-lg border border-cyan-500/30">
         <div className="flex items-center gap-2">
@@ -59,7 +87,135 @@ export function StreamlinedCulturePanel({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      {/* Active Tab Content */}
+      {activeTab === 'active' && (
+        <div className="space-y-4">
+          {/* Active Propaganda Campaigns */}
+          <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+            <h3 className="font-semibold text-purple-300 flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4" />
+              Active Propaganda Campaigns
+            </h3>
+
+            {activePropaganda.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">No active propaganda campaigns</p>
+            ) : (
+              <div className="space-y-2">
+                {activePropaganda.map((campaign: any) => {
+                  const target = enemies.find(e => e.id === campaign.targetNation);
+                  const propagandaDef = PROPAGANDA_DEFINITIONS[campaign.type as PropagandaType];
+
+                  return (
+                    <div
+                      key={campaign.id}
+                      className="p-3 rounded bg-purple-500/10 border border-purple-500/30"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-sm font-semibold text-purple-300">
+                          {propagandaDef?.icon} {propagandaDef?.name || campaign.type}
+                        </span>
+                        <Badge className="bg-purple-500/20 text-purple-400 text-xs">
+                          {campaign.turnsRemaining} turns left
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Target: <span className="text-gray-300">{target?.name || 'Unknown'}</span>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {propagandaDef?.description}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Current Immigration Policy */}
+          <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+            <h3 className="font-semibold text-blue-300 flex items-center gap-2 mb-3">
+              <Users className="w-4 h-4" />
+              Current Immigration Policy
+            </h3>
+
+            {(() => {
+              const currentPolicy = IMMIGRATION_POLICIES[currentImmigrationPolicy];
+              return (
+                <div className="p-3 rounded bg-blue-500/10 border border-blue-500/30">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-sm font-semibold text-blue-300">
+                      {currentPolicy.icon} {currentPolicy.name}
+                    </span>
+                    <Badge className="bg-blue-500/20 text-blue-400 text-xs">Active</Badge>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-2">{currentPolicy.description}</p>
+                  <div className="text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Pop Growth:</span>
+                      <span className="text-green-400">{currentPolicy.populationGrowthModifier}x</span>
+                    </div>
+                    {currentPolicy.economicGrowthBonus !== 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Production:</span>
+                        <span className={currentPolicy.economicGrowthBonus > 0 ? 'text-green-400' : 'text-red-400'}>
+                          {currentPolicy.economicGrowthBonus > 0 ? '+' : ''}{currentPolicy.economicGrowthBonus}/turn
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Stability Impact:</span>
+                      <span className={currentPolicy.instabilityModifier < 0 ? 'text-green-400' : currentPolicy.instabilityModifier > 0 ? 'text-red-400' : 'text-gray-400'}>
+                        {currentPolicy.instabilityModifier > 0 ? '+' : ''}{currentPolicy.instabilityModifier}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Built Wonders Summary */}
+          <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+            <h3 className="font-semibold text-yellow-300 flex items-center gap-2 mb-3">
+              <Building className="w-4 h-4" />
+              Built Cultural Wonders ({builtWonders.length}/3)
+            </h3>
+
+            {builtWonders.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">No cultural wonders built yet</p>
+            ) : (
+              <div className="space-y-2">
+                {builtWonders.map((wonder: any) => {
+                  const wonderDef = CULTURAL_WONDERS[wonder.type as CulturalWonderType];
+                  return (
+                    <div
+                      key={wonder.type}
+                      className="p-2 rounded bg-green-500/10 border border-green-500/30"
+                    >
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-semibold text-green-300">
+                          {wonderDef?.icon} {wonderDef?.name}
+                        </span>
+                        <Badge className="bg-green-500/20 text-green-400 text-xs">Built</Badge>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1 space-y-0.5">
+                        <div>+{wonderDef?.productionBonus} Production</div>
+                        <div>+{wonderDef?.intelBonus} Intel</div>
+                        <div>+{wonderDef?.culturalPowerBonus} Cultural Power</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Operations Tab Content */}
+      {activeTab === 'operations' && (
+        <>
+          <div className="grid grid-cols-3 gap-4 mb-6">
         {/* Cultural Wonders */}
         <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
           <h3 className="font-semibold text-yellow-300 flex items-center gap-2 mb-3">
@@ -354,6 +510,8 @@ export function StreamlinedCulturePanel({
           </p>
         </div>
       </div>
+        </>
+      )}
 
       {/* Info Footer */}
       <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700">
