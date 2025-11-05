@@ -274,7 +274,6 @@ export function useGovernance({
         const current = prev[nation.id] ?? seedMetrics(nation);
 
         // On first initialization (turn 0 or when nation is new), use the nation's actual values without drift calculations
-        // We check currentTurn === 0 because useState already initialized metrics, so isFirstTime alone isn't reliable
         if (isFirstTime || currentTurn === 0) {
           const initialMetrics: GovernanceMetrics = {
             morale: current.morale,
@@ -284,29 +283,28 @@ export function useGovernance({
           };
           next[nation.id] = initialMetrics;
           updates.push({ id: nation.id, metrics: initialMetrics });
-          return;
+        } else {
+          // Apply normal drift calculations for existing nations on subsequent turns
+          const moraleDecay = 1 + Math.max(0, (nation.instability ?? 0) - 40) * 0.02;
+          const cabinetSupport = (current.cabinetApproval - 50) * 0.02;
+          const publicOpinionEffect = (current.publicOpinion - 50) * 0.01;
+          const morale = clamp(current.morale - moraleDecay + cabinetSupport + publicOpinionEffect, 0, 100);
+
+          const opinionDrift = (morale - current.publicOpinion) * 0.05;
+          const nextPublicOpinion = clamp(current.publicOpinion + opinionDrift, 0, 100);
+          const approvalDrift = (nextPublicOpinion - current.cabinetApproval) * 0.04;
+          const nextCabinetApproval = clamp(current.cabinetApproval + approvalDrift, 0, 100);
+
+          const nextMetrics: GovernanceMetrics = {
+            morale,
+            publicOpinion: nextPublicOpinion,
+            cabinetApproval: nextCabinetApproval,
+            electionTimer: Math.max(0, current.electionTimer - 1),
+          };
+
+          next[nation.id] = nextMetrics;
+          updates.push({ id: nation.id, metrics: nextMetrics });
         }
-
-        // Apply normal drift calculations for existing nations on subsequent turns
-        const moraleDecay = 1 + Math.max(0, (nation.instability ?? 0) - 40) * 0.02;
-        const cabinetSupport = (current.cabinetApproval - 50) * 0.02;
-        const publicOpinionEffect = (current.publicOpinion - 50) * 0.01;
-        const morale = clamp(current.morale - moraleDecay + cabinetSupport + publicOpinionEffect, 0, 100);
-
-        const opinionDrift = (morale - current.publicOpinion) * 0.05;
-        const nextPublicOpinion = clamp(current.publicOpinion + opinionDrift, 0, 100);
-        const approvalDrift = (nextPublicOpinion - current.cabinetApproval) * 0.04;
-        const nextCabinetApproval = clamp(current.cabinetApproval + approvalDrift, 0, 100);
-
-        const nextMetrics: GovernanceMetrics = {
-          morale,
-          publicOpinion: nextPublicOpinion,
-          cabinetApproval: nextCabinetApproval,
-          electionTimer: Math.max(0, current.electionTimer - 1),
-        };
-
-        next[nation.id] = nextMetrics;
-        updates.push({ id: nation.id, metrics: nextMetrics });
       });
       return next;
     });
