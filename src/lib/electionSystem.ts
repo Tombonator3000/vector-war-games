@@ -34,7 +34,6 @@ export function calculatePublicOpinion(
 ): number {
   const factors = getPublicOpinionFactors(nation, allNations, config);
 
-  // Weighted average
   const weights = {
     economicPerformance: 0.3,
     militaryStrength: 0.15,
@@ -42,21 +41,49 @@ export function calculatePublicOpinion(
     warStatus: 0.15,
     stability: 0.15,
     foreignInfluence: 0.05,
+  } as const;
+
+  const expectedMaximums = {
+    economicPerformance: 50,
+    militaryStrength: 40,
+    diplomaticSuccess: 35,
+    warStatus: 30,
+    stability: 40,
+    foreignInfluence: 15,
+  } as const;
+
+  const normalize = (value: number, max: number) => {
+    if (max === 0) return 0;
+    const normalized = value / max;
+    return Math.max(-1, Math.min(1, normalized));
   };
 
-  let opinion = 0;
-  opinion += factors.economicPerformance * weights.economicPerformance;
-  opinion += factors.militaryStrength * weights.militaryStrength;
-  opinion += factors.diplomaticSuccess * weights.diplomaticSuccess;
-  opinion += factors.warStatus * weights.warStatus;
-  opinion += factors.stability * weights.stability;
-  opinion += factors.foreignInfluence * weights.foreignInfluence;
+  const normalizedScores = {
+    economicPerformance: normalize(factors.economicPerformance, expectedMaximums.economicPerformance),
+    militaryStrength: normalize(factors.militaryStrength, expectedMaximums.militaryStrength),
+    diplomaticSuccess: normalize(factors.diplomaticSuccess, expectedMaximums.diplomaticSuccess),
+    warStatus: normalize(factors.warStatus, expectedMaximums.warStatus),
+    stability: normalize(factors.stability, expectedMaximums.stability),
+    foreignInfluence: normalize(factors.foreignInfluence, expectedMaximums.foreignInfluence),
+  };
 
-  // Apply morale bonus
-  opinion += nation.morale * 0.15;
+  const weightedScore =
+    normalizedScores.economicPerformance * weights.economicPerformance +
+    normalizedScores.militaryStrength * weights.militaryStrength +
+    normalizedScores.diplomaticSuccess * weights.diplomaticSuccess +
+    normalizedScores.warStatus * weights.warStatus +
+    normalizedScores.stability * weights.stability +
+    normalizedScores.foreignInfluence * weights.foreignInfluence;
 
-  // Clamp to -20 to 100 range
-  return Math.max(-20, Math.min(100, opinion));
+  const baseline = 55;
+  const scaledScore = baseline + weightedScore * 45;
+
+  const moraleNormalized = Math.max(-1, Math.min(1, (nation.morale - 50) / 50));
+  const moraleInfluence = moraleNormalized * 12;
+
+  const finalOpinion = scaledScore + moraleInfluence;
+
+  return Math.max(0, Math.min(100, finalOpinion));
 }
 
 /**
