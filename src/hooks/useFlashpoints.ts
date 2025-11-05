@@ -14,6 +14,8 @@ export interface FlashpointEvent {
   triggeredAt: number;
   followUpId?: string; // ID of the follow-up event to trigger
   triggeredBy?: string; // ID of the parent event that triggered this one
+  minYear?: number; // Minimum year this flashpoint can occur (for historical accuracy)
+  maxYear?: number; // Maximum year this flashpoint can occur (for historical accuracy)
 }
 
 export interface FlashpointOption {
@@ -229,6 +231,7 @@ const FOLLOWUP_FLASHPOINTS: Record<string, Record<string, Omit<FlashpointEvent, 
       category: 'rogue',
       severity: 'critical',
       timeLimit: 60,
+      minYear: 2000, // AI and cyber warfare capabilities
       options: [
         {
           id: 'hunt_fragments',
@@ -1646,8 +1649,46 @@ type WindowWithScenario = Window & {
   S?: {
     scenario?: {
       id?: string;
+      timeConfig?: {
+        startYear: number;
+        unit: string;
+        unitsPerTurn: number;
+      };
     } | null;
   };
+};
+
+/**
+ * Calculate the current game year based on scenario and turn
+ */
+const getCurrentYear = (turn: number): number | undefined => {
+  if (typeof window === 'undefined') return undefined;
+
+  const globalWindow = window as WindowWithScenario;
+  const timeConfig = globalWindow.S?.scenario?.timeConfig;
+
+  if (!timeConfig) return undefined;
+
+  const { startYear, unit, unitsPerTurn } = timeConfig;
+
+  // Calculate years passed based on time unit
+  let yearsPassed = 0;
+  switch (unit) {
+    case 'year':
+      yearsPassed = (turn - 1) * unitsPerTurn;
+      break;
+    case 'month':
+      yearsPassed = Math.floor(((turn - 1) * unitsPerTurn) / 12);
+      break;
+    case 'week':
+      yearsPassed = Math.floor(((turn - 1) * unitsPerTurn) / 52);
+      break;
+    case 'day':
+      yearsPassed = Math.floor(((turn - 1) * unitsPerTurn) / 365);
+      break;
+  }
+
+  return startYear + yearsPassed;
 };
 
 const getActiveScenarioId = (): string | undefined => {
@@ -1855,6 +1896,7 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'blackswan',
     severity: 'catastrophic',
     timeLimit: 75,
+    minYear: 2000, // AI and cyber warfare capabilities
     options: [
       {
         id: 'shutdown',
@@ -2001,6 +2043,7 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'blackswan',
     severity: 'critical',
     timeLimit: 75,
+    minYear: 1990, // Modern bio-terrorism threat
     options: [
       {
         id: 'bioshield',
@@ -2161,6 +2204,871 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
             vaccineProgress: -10
           }
         }
+      }
+    ],
+    consequences: {}
+  },
+  // ===== NEW HISTORICALLY ACCURATE FLASHPOINTS (1945-2025) =====
+  {
+    title: 'BERLIN AIRLIFT CRISIS: Soviet Blockade',
+    description: 'Stalin has sealed all land routes to West Berlin. 2.5 million civilians face starvation. The Soviets demand we abandon the city or risk war.',
+    category: 'coup',
+    severity: 'critical',
+    timeLimit: 90,
+    minYear: 1948,
+    maxYear: 1949,
+    options: [
+      {
+        id: 'airlift',
+        text: 'Organize Massive Airlift',
+        description: 'Supply Berlin by air - Operation Vittles',
+        advisorSupport: ['diplomatic', 'military'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.7,
+          success: { morale: +15, diplomacy: +20, berlinHeld: true },
+          failure: { morale: -10, supplies: -50 }
+        },
+        successNarrative: 'Operation Vittles succeeds! C-47s and C-54s deliver 4,700 tons daily. After 11 months, Stalin lifts the blockade. West Berlin stands as a symbol of Western resolve. NATO solidarity strengthened.',
+        failureNarrative: 'Weather and Soviet harassment disrupt supply flights. Starvation spreads in West Berlin. International pressure mounts to abandon the city or escalate militarily.'
+      },
+      {
+        id: 'convoy',
+        text: 'Force Land Corridor',
+        description: 'Send armed convoy through Soviet checkpoints',
+        advisorSupport: ['military'],
+        advisorOppose: ['diplomatic', 'science'],
+        outcome: {
+          probability: 0.3,
+          success: { berlinHeld: true, tensions: +30 },
+          failure: { war: true, berlinLost: true }
+        },
+        successNarrative: 'Armor-backed convoy crashes through Soviet roadblocks. Stalin backs down to avoid war. Berlin corridor reopened, but East-West relations poisoned for years.',
+        failureNarrative: 'Soviet forces fire on the convoy. Tank battle erupts. WWIII begins in the rubble of Berlin. Nuclear escalation imminent.'
+      },
+      {
+        id: 'withdraw',
+        text: 'Negotiate Withdrawal',
+        description: 'Accept Soviet demands, evacuate civilians',
+        advisorSupport: [],
+        advisorOppose: ['military', 'diplomatic'],
+        outcome: {
+          probability: 0.9,
+          success: { berlinLost: true, morale: -25, allies: -30 },
+          failure: { berlinLost: true, morale: -35 }
+        },
+        successNarrative: 'West Berlin evacuated. Stalin consolidates control. Europe sees American retreat. France, Britain question NATO commitment. Domino of doubt begins.',
+        failureNarrative: 'Evacuation descends into chaos. Thousands trapped. Soviet takeover brutal. Western alliance credibility shattered.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'KOREAN WAR: Chinese Intervention',
+    description: 'MacArthur pushed to the Yalu River. Now 300,000 Chinese "volunteers" flood across the border. UN forces in full retreat. MacArthur requests nuclear authorization.',
+    category: 'rogue',
+    severity: 'catastrophic',
+    timeLimit: 75,
+    minYear: 1950,
+    maxYear: 1951,
+    options: [
+      {
+        id: 'deny_nukes',
+        text: 'Deny Nuclear Request',
+        description: 'Order retreat, conventional defense only',
+        advisorSupport: ['diplomatic', 'science'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.6,
+          success: { war: false, korea: 'stalemate', macarthur: 'fired' },
+          failure: { korea: 'lost', morale: -20 }
+        },
+        successNarrative: 'You overrule MacArthur. UN forces stabilize at 38th parallel. MacArthur publicly defies orders and is relieved. Armistice negotiations begin. Limited war doctrine established.',
+        failureNarrative: 'Retreat becomes rout. Chinese push past 38th parallel. Seoul falls again. Allies question US military competence.'
+      },
+      {
+        id: 'tactical_nukes',
+        text: 'Authorize Tactical Nuclear Strikes',
+        description: 'Nuclear weapons on Chinese concentrations',
+        advisorSupport: ['military'],
+        advisorOppose: ['diplomatic', 'science'],
+        outcome: {
+          probability: 0.5,
+          success: { korea: 'won', chinaHumiliated: true, nuclearTaboo: 'broken' },
+          failure: { sovietIntervention: true, nuclearWar: true }
+        },
+        successNarrative: 'Nuclear strikes devastate Chinese forces. Korea unified under UN control. But nuclear precedent set horrifies world. NATO allies distance themselves. Arms race accelerates.',
+        failureNarrative: 'Soviet Union honors mutual defense treaty. Nuclear strikes exchanged. WWIII erupts. The peninsula becomes ground zero for apocalypse.'
+      },
+      {
+        id: 'macarthur',
+        text: 'Give MacArthur Full Authority',
+        description: 'Let theater commander decide',
+        advisorSupport: [],
+        advisorOppose: ['diplomatic'],
+        outcome: {
+          probability: 0.4,
+          success: { korea: 'won', civilMilitary: 'crisis' },
+          failure: { nuclearWar: true, macarthurCoup: true }
+        },
+        successNarrative: 'MacArthur\'s aggressive strategy succeeds but establishes dangerous precedent. Military increasingly independent of civilian control. Constitutional crisis looms.',
+        failureNarrative: 'MacArthur uses nuclear weapons without authorization. Soviet response follows. Civilian control of military breaks down as world burns.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'SUEZ CRISIS: Anglo-French Invasion',
+    description: 'Britain, France, and Israel have invaded Egypt to seize the Suez Canal. Eisenhower is furious - allies acted without consultation. Soviets threaten rocket attacks on London and Paris.',
+    category: 'coup',
+    severity: 'critical',
+    timeLimit: 60,
+    minYear: 1956,
+    maxYear: 1957,
+    options: [
+      {
+        id: 'support_allies',
+        text: 'Support Allied Invasion',
+        description: 'Stand with Britain and France',
+        advisorSupport: ['military'],
+        advisorOppose: ['diplomatic'],
+        outcome: {
+          probability: 0.4,
+          success: { suez: 'held', soviets: 'angry', thirdWorld: -30 },
+          failure: { sovietIntervention: true, oil: 'crisis' }
+        },
+        successNarrative: 'US support ensures Suez occupation. But Arab world turns hostile. Nasser becomes martyr. Soviet influence spreads across Middle East. Oil supplies threatened.',
+        failureNarrative: 'Soviet "volunteers" deploy to Egypt with advanced weapons. Regional war erupts. Oil embargo cripples Western economies.'
+      },
+      {
+        id: 'force_withdrawal',
+        text: 'Force Allied Withdrawal',
+        description: 'Economic pressure on Britain, support UN',
+        advisorSupport: ['diplomatic', 'intel'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.8,
+          success: { suez: 'crisis_ended', UN: 'strengthened', allies: 'humiliated' },
+          failure: { allies: 'betrayed', nato: 'weakened' }
+        },
+        successNarrative: 'Run on pound sterling forces British withdrawal. UN peacekeepers deployed. Crisis ends. But Anglo-American "special relationship" damaged. France accelerates independent nuclear program.',
+        failureNarrative: 'Allies feel betrayed. Britain and France question NATO worth. De Gaulle withdraws from NATO command. Alliance fractures.'
+      },
+      {
+        id: 'mediate',
+        text: 'Mediate Settlement',
+        description: 'Broker deal between all parties',
+        advisorSupport: ['diplomatic'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.5,
+          success: { suez: 'internationalized', diplomacy: +15 },
+          failure: { chaos: true, nasser: 'triumphant' }
+        },
+        successNarrative: 'Diplomatic marathon produces compromise. International canal authority established. Soviet intervention avoided. US emerges as honest broker, but colonial powers decline accelerates.',
+        failureNarrative: 'Negotiations fail. Fighting intensifies. Nasser emerges as hero of Arab nationalism. Soviet foothold in Middle East established.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'SOVIET SPACE TRIUMPH: Sputnik Orbits Earth',
+    description: 'Soviet Union has launched first artificial satellite. America shocked. If they can put Sputnik in orbit, they can drop hydrogen bombs on American cities. "Missile gap" panic spreads.',
+    category: 'blackswan',
+    severity: 'critical',
+    timeLimit: 90,
+    minYear: 1957,
+    maxYear: 1958,
+    options: [
+      {
+        id: 'crash_program',
+        text: 'Emergency Space Program',
+        description: 'Massive funding for rocket development',
+        advisorSupport: ['science', 'military'],
+        advisorOppose: ['economic'],
+        outcome: {
+          probability: 0.7,
+          success: { spaceRace: 'started', tech: +25, morale: +10 },
+          failure: { failedLaunch: true, morale: -15 }
+        },
+        successNarrative: 'NASA created. Project Mercury initiated. First American satellite (Explorer 1) launched within months. Space race ignites. STEM education revolution begins. Military-industrial-academic complex expands.',
+        failureNarrative: 'Vanguard rocket explodes on launch pad, humiliating America on live TV. "Flopnik" and "Kaputnik" headlines. Soviet technological superiority confirmed in public mind.'
+      },
+      {
+        id: 'missile_buildup',
+        text: 'Accelerate ICBM Production',
+        description: 'Focus on military rockets, not prestige',
+        advisorSupport: ['military'],
+        advisorOppose: ['science', 'diplomatic'],
+        outcome: {
+          probability: 0.8,
+          success: { missiles: +100, defcon: 3, armsRace: 'accelerated' },
+          failure: { missiles: +50, deficit: +200 }
+        },
+        successNarrative: 'Atlas and Titan ICBM programs fast-tracked. American second-strike capability assured. But space race conceded to Soviets. Prestige gap widens.',
+        failureNarrative: 'Crash production yields unreliable missiles. Costs explode. Technology rushed. Launch failures common. Money spent, security uncertain.'
+      },
+      {
+        id: 'downplay',
+        text: 'Minimize Significance',
+        description: 'Public relations campaign - just a stunt',
+        advisorSupport: ['pr'],
+        advisorOppose: ['military', 'science'],
+        outcome: {
+          probability: 0.3,
+          success: { noConsequence: true },
+          failure: { morale: -25, science: -30, elections: 'lost' }
+        },
+        successNarrative: 'American public convinced Sputnik is minor propaganda stunt. Measured response prevents panic spending. But technological gap remains unaddressed.',
+        failureNarrative: '"Sputnik crisis" defines era. Public demands action. Administration seen as complacent. Soviet technological superiority becomes accepted fact. Democrats sweep midterms.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'U-2 INCIDENT: American Spy Plane Shot Down',
+    description: 'Francis Gary Powers\' U-2 reconnaissance aircraft shot down deep in Soviet territory. Pilot captured alive. Eisenhower initially denied it was a spy plane - now Khrushchev produces pilot and wreckage. Paris Summit in jeopardy.',
+    category: 'accident',
+    severity: 'major',
+    timeLimit: 75,
+    minYear: 1960,
+    maxYear: 1961,
+    options: [
+      {
+        id: 'apologize',
+        text: 'Full Apology',
+        description: 'Admit espionage, apologize, continue summit',
+        advisorSupport: ['diplomatic'],
+        advisorOppose: ['military', 'intel'],
+        outcome: {
+          probability: 0.5,
+          success: { summit: 'saved', detente: 'possible' },
+          failure: { morale: -15, weakness: 'perceived' }
+        },
+        successNarrative: 'Unprecedented apology salvages Paris Summit. Test ban negotiations continue. But CIA furious. Domestic critics blast "appeasement." Intelligence sources compromised.',
+        failureNarrative: 'Khrushchev rejects apology as insufficient. Summit collapses anyway. US looks weak and dishonest. Spy operations exposed for nothing.'
+      },
+      {
+        id: 'defiant',
+        text: 'Defend Reconnaissance',
+        description: 'Closed societies necessitate surveillance',
+        advisorSupport: ['military', 'intel'],
+        advisorOppose: ['diplomatic'],
+        outcome: {
+          probability: 0.6,
+          success: { summit: 'cancelled', coldWar: 'intensified', domesticSupport: +10 },
+          failure: { summit: 'cancelled', allies: 'angry', powers: 'imprisoned' }
+        },
+        successNarrative: 'Eisenhower defends necessity of reconnaissance. Summit collapses but domestic support strong. Khrushchev uses incident to justify hard line. Arms control hopes die. Powers sentenced to 10 years.',
+        failureNarrative: 'Defiance backfires. European allies criticize reckless spying before crucial summit. Powers subjected to show trial. East-West relations frozen.'
+      },
+      {
+        id: 'trade',
+        text: 'Offer Prisoner Exchange',
+        description: 'Trade Powers for Soviet spies immediately',
+        advisorSupport: ['intel'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.7,
+          success: { powers: 'freed', summit: 'cancelled', intelligence: 'preserved' },
+          failure: { badDeal: true, morale: -10 }
+        },
+        successNarrative: 'Back-channel negotiations secure Powers\' release in exchange for KGB Colonel Abel. Summit lost but intelligence methods protected. Precedent set for spy exchanges.',
+        failureNarrative: 'Soviets demand multiple agents for Powers. Intelligence community objects to imbalanced trade. Negotiations drag on. Summit opportunity lost regardless.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'BERLIN WALL: East Germany Seals Border',
+    description: 'East German forces are erecting a concrete barrier through Berlin. Families separated. Western sectors isolated. US troops at Checkpoint Charlie face off against Soviet tanks. This is a test of resolve.',
+    category: 'coup',
+    severity: 'critical',
+    timeLimit: 60,
+    minYear: 1961,
+    maxYear: 1962,
+    options: [
+      {
+        id: 'tear_down',
+        text: 'Knock Down the Wall',
+        description: 'Send bulldozers and troops to demolish barrier',
+        advisorSupport: ['military'],
+        advisorOppose: ['diplomatic', 'science'],
+        outcome: {
+          probability: 0.3,
+          success: { wall: 'destroyed', berlin: 'unified', war: 'risked' },
+          failure: { war: true, berlin: 'lost' }
+        },
+        successNarrative: 'US armor demolishes sections of wall. Khrushchev backs down rather than risk WWIII. Berlin remains open. But nuclear brinkmanship terrifies world.',
+        failureNarrative: 'Soviet tanks fire on American bulldozers. Battle for Berlin begins. Nuclear war erupts over concrete and barbed wire.'
+      },
+      {
+        id: 'protest',
+        text: 'Vigorous Protest',
+        description: 'Diplomatic condemnation, guarantee West Berlin',
+        advisorSupport: ['diplomatic'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.8,
+          success: { westBerlin: 'secured', wall: 'stands', morale: -5 },
+          failure: { westBerlin: 'threatened', wall: 'stands' }
+        },
+        successNarrative: 'Kennedy declares "Ich bin ein Berliner." West Berlin access guaranteed. Wall becomes symbol of communist oppression. But East Germans trapped behind Iron Curtain.',
+        failureNarrative: 'Protests ring hollow. Wall solidifies. Soviet pressure on West Berlin continues. Allies question American commitment.'
+      },
+      {
+        id: 'accept',
+        text: 'Tacitly Accept',
+        description: 'Wall stops refugee crisis, stabilizes situation',
+        advisorSupport: ['intel'],
+        advisorOppose: ['pr', 'diplomatic'],
+        outcome: {
+          probability: 0.9,
+          success: { wall: 'stands', tensions: 'reduced', morale: -10 },
+          failure: { wall: 'stands', further: 'restrictions' }
+        },
+        successNarrative: 'Wall actually reduces tensions by stopping refugee drain that destabilized East Germany. Crisis shifts from acute to chronic. Ugly but stable status quo established.',
+        failureNarrative: 'Acceptance interpreted as weakness. Soviets impose further restrictions on Western access. Salami tactics continue.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'TET OFFENSIVE: Vietnam Cities Under Attack',
+    description: 'During Tet holiday ceasefire, Viet Cong launched coordinated attacks on 100 cities. US Embassy in Saigon breached. "Light at end of tunnel" revealed as illusion. Westmoreland requests 206,000 more troops.',
+    category: 'coup',
+    severity: 'critical',
+    timeLimit: 90,
+    minYear: 1968,
+    maxYear: 1969,
+    options: [
+      {
+        id: 'escalate',
+        text: 'Grant Troop Request',
+        description: 'Full mobilization, expand war to Cambodia/Laos',
+        advisorSupport: ['military'],
+        advisorOppose: ['diplomatic', 'pr'],
+        outcome: {
+          probability: 0.4,
+          success: { vietnam: 'military_victory', domestic: 'collapse' },
+          failure: { vietnam: 'quagmire', morale: -30, protests: 'massive' }
+        },
+        successNarrative: 'Massive escalation crushes Viet Cong infrastructure. But domestic opposition explodes. Universities shut down by protests. Draft resistance widespread. Pyrrhic victory tears America apart.',
+        failureNarrative: 'More troops achieve nothing. Cambodia invasion spreads war. Kent State massacre shocks nation. Military victory impossible. Political defeat inevitable.'
+      },
+      {
+        id: 'negotiate',
+        text: 'Open Peace Negotiations',
+        description: 'Begin talks with North Vietnam, freeze troop levels',
+        advisorSupport: ['diplomatic'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.6,
+          success: { peace: 'talks_start', morale: +10, vietnamization: true },
+          failure: { peace: 'illusory', south: 'collapses' }
+        },
+        successNarrative: 'Paris Peace Talks begin. "Vietnamization" transfers burden to ARVN. US troops gradually withdraw. "Peace with honor" possible, though South Vietnam\'s survival uncertain.',
+        failureNarrative: 'North Vietnam negotiates in bad faith, using talks to regroup. US withdrawal seen as defeat. South Vietnam collapses within years. Domino theory validated.'
+      },
+      {
+        id: 'withdraw',
+        text: 'Immediate Withdrawal',
+        description: 'Cut losses, evacuate US forces',
+        advisorSupport: [],
+        advisorOppose: ['military', 'diplomatic'],
+        outcome: {
+          probability: 0.9,
+          success: { troops: 'home', vietnam: 'lost', credibility: -40 },
+          failure: { troops: 'home', vietnam: 'bloodbath', allies: 'abandoned' }
+        },
+        successNarrative: 'American troops come home. Antiwar movement vindicated. But South Vietnam falls quickly. Boat people flee. Killing fields in Cambodia. Allies worldwide question US commitments.',
+        failureNarrative: 'Precipitous withdrawal abandons South Vietnamese allies to slaughter. Communist victory complete. Laos and Cambodia follow. US credibility shattered globally.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'YOM KIPPUR WAR: Israel Faces Defeat',
+    description: 'Egypt and Syria launched surprise attack on holiest day of Jewish year. Israeli defenses collapsing. Golda Meir hints at nuclear option. Soviets airlifting supplies to Arabs. US airlift could trigger superpower confrontation.',
+    category: 'terrorist',
+    severity: 'catastrophic',
+    timeLimit: 60,
+    minYear: 1973,
+    maxYear: 1974,
+    options: [
+      {
+        id: 'airlift',
+        text: 'Operation Nickel Grass',
+        description: 'Massive airlift of weapons to Israel',
+        advisorSupport: ['military', 'intel'],
+        advisorOppose: ['diplomatic'],
+        outcome: {
+          probability: 0.7,
+          success: { israel: 'saved', oilEmbargo: true, defcon: 3 },
+          failure: { israel: 'saved', soviet: 'intervention', nuclearAlert: true }
+        },
+        successNarrative: 'C-5 Galaxies deliver tanks, planes, missiles. Israel counterattacks, crosses Suez, encircles Egyptian Third Army. But Arab oil embargo cripples Western economies. Gas lines, inflation, recession follow.',
+        failureNarrative: 'Soviet airborne divisions prepare to deploy. Nixon orders DEFCON 3 nuclear alert. World holds breath. Crisis resolved but both superpowers came to brink over regional war.'
+      },
+      {
+        id: 'restrain',
+        text: 'Restrain Israel',
+        description: 'Force ceasefire, prevent Arab humiliation',
+        advisorSupport: ['diplomatic'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.5,
+          success: { ceasefire: 'quick', oil: 'flows', israel: 'betrayed' },
+          failure: { israel: 'destroyed', holocaust: 'repeated' }
+        },
+        successNarrative: 'US pressure forces early ceasefire. Arab honor preserved. Oil embargo avoided. But Israel feels abandoned, accelerates nuclear program, questions US reliability.',
+        failureNarrative: 'Israel overrun before ceasefire takes effect. Nuclear weapons used in desperation. Middle East becomes radioactive wasteland. Holocaust 2.0 on American watch.'
+      },
+      {
+        id: 'diplomacy',
+        text: 'Shuttle Diplomacy',
+        description: 'Mediate between all parties',
+        advisorSupport: ['diplomatic'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.6,
+          success: { peace: 'process_starts', kissinger: 'hero', stability: +15 },
+          failure: { war: 'continues', us: 'ineffective' }
+        },
+        successNarrative: 'Kissinger\'s shuttle diplomacy produces disengagement agreements. Egyptian-Israeli peace process begins, culminating in Camp David. Soviet influence in Egypt ends. Oil embargo lifted.',
+        failureNarrative: 'Mediation efforts founder on mutual hatred. Fighting continues. US appears impotent. Soviet prestige rises in Arab world.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'SOVIET INVASION OF AFGHANISTAN',
+    description: 'Soviet airborne troops have seized Kabul. Communist puppet installed. Red Army pours across border. Islamic resistance forming. This could be USSR\'s Vietnam - or consolidation of their southern flank.',
+    category: 'coup',
+    severity: 'critical',
+    timeLimit: 75,
+    minYear: 1979,
+    maxYear: 1980,
+    options: [
+      {
+        id: 'arm_mujahideen',
+        text: 'Operation Cyclone',
+        description: 'CIA arms and trains Afghan resistance',
+        advisorSupport: ['military', 'intel'],
+        advisorOppose: ['diplomatic'],
+        outcome: {
+          probability: 0.8,
+          success: { soviet: 'quagmire', mujahideen: 'empowered', blowback: 'future' },
+          failure: { soviet: 'victory', islam: 'crushed' }
+        },
+        successNarrative: 'Stinger missiles turn tide. Soviet helicopters fall from sky. Red Army bleeds in mountain ambushes. Afghanistan becomes USSR\'s Vietnam, contributing to eventual Soviet collapse. But armed fundamentalists will remember US support...',
+        failureNarrative: 'Soviet counterinsurgency succeeds. Afghanistan becomes communist. Islamic resistance crushed. Iran isolated. Soviet warm-water port achieved.'
+      },
+      {
+        id: 'olympics',
+        text: 'Olympic Boycott + Sanctions',
+        description: 'Symbolic protest, grain embargo',
+        advisorSupport: ['diplomatic', 'pr'],
+        advisorOppose: ['economic'],
+        outcome: {
+          probability: 0.9,
+          success: { soviet: 'embarrassed', farmers: 'angry', coldWar: 'intensified' },
+          failure: { soviet: 'unaffected', us: 'isolated' }
+        },
+        successNarrative: '65 nations boycott Moscow Olympics. Grain embargo imposed. Carter Doctrine declared: Persian Gulf vital interest. But Soviets dig in. American farmers suffer. Limited practical effect.',
+        failureNarrative: 'Boycott poorly attended. Embargo undermined by other exporters. Soviets consolidate control. US looks impotent. Allies resist confrontation.'
+      },
+      {
+        id: 'accept',
+        text: 'Accept Fait Accompli',
+        description: 'Afghanistan in Soviet sphere, focus elsewhere',
+        advisorSupport: [],
+        advisorOppose: ['military', 'intel'],
+        outcome: {
+          probability: 0.7,
+          success: { soviet: 'emboldened', detente: 'dead', persian_gulf: 'threatened' },
+          failure: { soviet: 'expansion_continues', iran: 'next' }
+        },
+        successNarrative: 'Afghanistan conceded as Soviet sphere. But Moscow sees green light for further expansion. Poland, Persian Gulf, Africa targeted. Containment doctrine eroding.',
+        failureNarrative: 'Soviet success encourages further adventures. Iran, Pakistan destabilized. Gulf oil threatened. Dominoes falling in reverse - toward communism.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'ABLE ARCHER 83: Soviets Fear NATO First Strike',
+    description: 'NATO nuclear exercise Able Archer 83 appears too realistic. KGB reports suggest it may be cover for actual first strike. Soviet nuclear forces on highest alert. Andropov seriously ill, hardliners influential. World closer to accidental nuclear war than Cuban Missile Crisis.',
+    category: 'accident',
+    severity: 'catastrophic',
+    timeLimit: 45,
+    minYear: 1983,
+    maxYear: 1984,
+    options: [
+      {
+        id: 'stand_down',
+        text: 'Emergency Stand-Down',
+        description: 'Halt exercise, open communications',
+        advisorSupport: ['diplomatic', 'science'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.8,
+          success: { war: 'averted', soviets: 'reassured', exercises: 'reviewed' },
+          failure: { weakness: 'perceived', allies: 'concerned' }
+        },
+        successNarrative: 'Exercise halted. Emergency hotline activated. Reagan shocked by how close to Armageddon. Leads to genuine dialogue, INF treaty, eventual Soviet reforms. Crisis averted by prudence.',
+        failureNarrative: 'Stand-down interpreted as weakness. NATO allies angry about disrupted exercise. Soviet hardliners claim credit for forcing US retreat. Tensions remain.'
+      },
+      {
+        id: 'continue',
+        text: 'Continue Exercise',
+        description: 'Maintain schedule, call Soviet bluff',
+        advisorSupport: ['military'],
+        advisorOppose: ['diplomatic', 'science'],
+        outcome: {
+          probability: 0.5,
+          success: { exercise: 'completed', soviets: 'back_down' },
+          failure: { nuclearWar: true, misunderstanding: 'fatal' }
+        },
+        successNarrative: 'NATO completes exercise on schedule. Soviets observe, realize it\'s just exercise, stand down. But we never knew how close we came. Luck, not wisdom, saved world.',
+        failureNarrative: 'Soviet misperception deepens. Certain NATO first strike imminent, they launch preemptive strike. WWIII begins from mutual fear and misunderstanding. Civilization ends from exercise gone wrong.'
+      },
+      {
+        id: 'backchannel',
+        text: 'Intelligence Backchannel',
+        description: 'Use KGB double agents to reassure Moscow',
+        advisorSupport: ['intel'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.7,
+          success: { war: 'averted', sources: 'preserved', dialogue: 'improved' },
+          failure: { sources: 'burned', trust: 'destroyed' }
+        },
+        successNarrative: 'Back-channel intelligence sharing convinces Soviets exercise is genuine. Crisis defused quietly. Opens door to confidence-building measures, hotline improvements, nuclear risk reduction.',
+        failureNarrative: 'Attempt to use intelligence channels backfires. Soviets suspect disinformation. Double agents compromised. Trust destroyed exactly when needed most.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'CHERNOBYL DISASTER: Nuclear Reactor Explodes',
+    description: 'Reactor 4 at Chernobyl nuclear plant has exploded, spreading radioactive contamination across Europe. Soviets initially denied incident. Radiation detected in Scandinavia forced admission. Catastrophe still unfolding.',
+    category: 'accident',
+    severity: 'critical',
+    timeLimit: 90,
+    minYear: 1986,
+    maxYear: 1987,
+    options: [
+      {
+        id: 'offer_help',
+        text: 'Offer Emergency Assistance',
+        description: 'Send nuclear experts, equipment',
+        advisorSupport: ['science', 'diplomatic'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.7,
+          success: { disaster: 'limited', detente: +20, glasnost: 'accelerated' },
+          failure: { offer: 'rejected', propaganda: 'backfire' }
+        },
+        successNarrative: 'US nuclear experts assist containment. Shared crisis builds trust. Gorbachev realizes Soviet system\'s failures. Accelerates glasnost and perestroika. Humanitarian cooperation becomes template for Cold War\'s end.',
+        failureNarrative: 'Soviet pride rejects assistance. Disaster worsens. International goodwill opportunity lost. Cold War mentality persists despite mutual danger.'
+      },
+      {
+        id: 'exploit',
+        text: 'Exploit Propaganda Value',
+        description: 'Highlight Soviet system failures',
+        advisorSupport: ['pr'],
+        advisorOppose: ['diplomatic'],
+        outcome: {
+          probability: 0.8,
+          success: { soviet: 'embarrassed', western: 'morale_up', relations: 'damaged' },
+          failure: { callous: 'perceived', allies: 'angry' }
+        },
+        successNarrative: 'Western media highlights Soviet incompetence, secrecy, disregard for safety. Communist legitimacy undermined in Eastern Europe. But opportunity for genuine cooperation lost.',
+        failureNarrative: 'Propaganda exploitation seen as callous while people die. European allies criticize American opportunism during humanitarian crisis. Moral high ground forfeited.'
+      },
+      {
+        id: 'evacuate',
+        text: 'Evacuate US Citizens from Europe',
+        description: 'Precautionary evacuation of dependents',
+        advisorSupport: [],
+        advisorOppose: ['diplomatic', 'pr'],
+        outcome: {
+          probability: 0.9,
+          success: { citizens: 'safe', panic: 'caused', allies: 'offended' },
+          failure: { panic: 'massive', economy: 'disrupted' }
+        },
+        successNarrative: 'American evacuation causes panic across Europe. Allies furious at US overreaction undermining confidence. Unnecessary exodus damages relations. Chernobyl radiation dangerous but not apocalyptic.',
+        failureNarrative: 'Evacuation order triggers mass panic. Europeans flood borders. Economic disruption. Turns containable disaster into continent-wide crisis through fear.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'TIANANMEN SQUARE MASSACRE',
+    description: 'Chinese military has violently suppressed pro-democracy protests in Beijing. Tanks crushing protesters. Casualties unknown, possibly thousands. "Tank Man" footage broadcasting worldwide. How should US respond to strategic partner\'s human rights catastrophe?',
+    category: 'coup',
+    severity: 'major',
+    timeLimit: 75,
+    minYear: 1989,
+    maxYear: 1990,
+    options: [
+      {
+        id: 'sanctions',
+        text: 'Comprehensive Sanctions',
+        description: 'Economic isolation, arms embargo',
+        advisorSupport: ['pr', 'diplomatic'],
+        advisorOppose: ['economic', 'intel'],
+        outcome: {
+          probability: 0.7,
+          success: { humanRights: 'priority', china: 'isolated', hardliners: 'empowered' },
+          failure: { china: 'hostile', business: 'lost', russia: 'partnership' }
+        },
+        successNarrative: 'Strong sanctions imposed. Arms sales banned. Most Favored Nation status threatened. But Chinese hardliners consolidate power. Democracy movement crushed. Strategic opening to China jeopardized.',
+        failureNarrative: 'Harsh sanctions drive China toward Russia. Reform setback becomes permanent. American business loses access to world\'s largest market. European/Japanese firms move in.'
+      },
+      {
+        id: 'engagement',
+        text: 'Maintain Engagement',
+        description: 'Quiet diplomacy, preserve strategic relationship',
+        advisorSupport: ['intel', 'economic'],
+        advisorOppose: ['pr'],
+        outcome: {
+          probability: 0.6,
+          success: { china: 'stable', trade: 'continues', criticism: 'domestic' },
+          failure: { humanRights: 'ignored', precedent: 'set' }
+        },
+        successNarrative: 'Engagement continues quietly. Economic ties preserved. Eventually Chinese prosperity leads to gradual liberalization. Long game played. But Tank Man\'s sacrifice seemingly ignored.',
+        failureNarrative: 'Weak response sends message that economic interests trump human rights. Emboldened autocrats worldwide note lesson: US won\'t act against strategic partners\' atrocities.'
+      },
+      {
+        id: 'covert_support',
+        text: 'Covert Democracy Support',
+        description: 'CIA support for dissidents, underground',
+        advisorSupport: ['intel'],
+        advisorOppose: ['diplomatic'],
+        outcome: {
+          probability: 0.4,
+          success: { dissidents: 'empowered', democracy: 'movement_survives' },
+          failure: { operation: 'exposed', relations: 'ruined', dissidents: 'martyred' }
+        },
+        successNarrative: 'Covert support keeps democracy movement alive. Safe houses, communication networks, exile support. Plants seeds for future change. Moral obligation met while managing strategic relationship.',
+        failureNarrative: 'CIA operation exposed. Chinese fury genuine. Dissidents executed as foreign agents. US-China relations poisoned. Democracy movement discredited as Western plot.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: '9/11 TERROR ATTACKS: America Under Attack',
+    description: 'Hijacked airliners have struck World Trade Center and Pentagon. Thousands dead. Additional flights still hijacked. Nation under attack for first time since Pearl Harbor. How we respond will define the century.',
+    category: 'terrorist',
+    severity: 'catastrophic',
+    timeLimit: 120,
+    minYear: 2001,
+    maxYear: 2002,
+    options: [
+      {
+        id: 'afghanistan_only',
+        text: 'Focused Afghanistan Campaign',
+        description: 'Destroy Al-Qaeda, remove Taliban, rebuild',
+        advisorSupport: ['diplomatic', 'intel'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.7,
+          success: { alqaeda: 'degraded', allies: 'united', international: 'support' },
+          failure: { alqaeda: 'survives', taliban: 'returns', mission: 'incomplete' }
+        },
+        successNarrative: 'NATO invokes Article 5. Coalition destroys Al-Qaeda training camps. Taliban regime collapses. Bin Laden hunted. Afghan democracy attempted. Mission stays focused. International support sustained.',
+        failureNarrative: 'Afghanistan campaign bogs down. Bin Laden escapes to Pakistan. Taliban regroups. Mission creeps into nation-building quagmire. But at least focus maintained on actual perpetrators.'
+      },
+      {
+        id: 'global_war',
+        text: 'Global War on Terror',
+        description: 'Confront all terrorist groups worldwide',
+        advisorSupport: ['military'],
+        advisorOppose: ['diplomatic'],
+        outcome: {
+          probability: 0.4,
+          success: { terrorism: 'reduced', resources: 'overextended', liberty: 'curtailed' },
+          failure: { quagmires: 'multiple', terror: 'increased', bankruptcy: 'strategic' }
+        },
+        successNarrative: 'Worldwide campaign targets terrorists everywhere. Enhanced interrogation, drone strikes, special forces raids. Some successes but endless war, massive costs, civil liberties eroded, international goodwill squandered.',
+        failureNarrative: 'Iraq invasion based on false intelligence. Afghanistan neglected. Multiple quagmires. Trillions spent. Thousands of troops dead. Terror franchises multiply. Strategic overreach bankrupts American power.'
+      },
+      {
+        id: 'law_enforcement',
+        text: 'Law Enforcement Approach',
+        description: 'Treat as crime, international police cooperation',
+        advisorSupport: ['diplomatic'],
+        advisorOppose: ['military', 'pr'],
+        outcome: {
+          probability: 0.5,
+          success: { networks: 'disrupted', legitimacy: 'denied', military: 'avoided' },
+          failure: { perceived: 'weakness', attacks: 'continue' }
+        },
+        successNarrative: 'International law enforcement cooperation disrupts terrorist finance, communications. Perpetrators brought to trial. Terrorists denied warrior status. No massive wars. But domestic critics blast "pre-9/11 mentality."',
+        failureNarrative: 'Law enforcement approach seen as inadequate to threat scale. Public demands military response. Additional attacks occur. Administration seen as weak. Loses political support.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'FUKUSHIMA NUCLEAR DISASTER: Earthquake, Tsunami, Meltdown',
+    description: '9.0 earthquake triggered tsunami that flooded Fukushima nuclear plant. Multiple reactor meltdowns in progress. Radioactive releases. Tokyo possibly threatened. Global nuclear power industry in jeopardy.',
+    category: 'accident',
+    severity: 'critical',
+    timeLimit: 90,
+    minYear: 2011,
+    maxYear: 2012,
+    options: [
+      {
+        id: 'emergency_aid',
+        text: 'Operation Tomodachi',
+        description: 'Massive US military humanitarian assistance',
+        advisorSupport: ['military', 'diplomatic'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.8,
+          success: { japan: 'grateful', alliance: 'strengthened', nuclear: 'expertise_shared' },
+          failure: { troops: 'contaminated', costs: 'high' }
+        },
+        successNarrative: 'Carrier Reagan and 24,000 US troops provide massive relief. Nuclear experts assist containment. Alliance with Japan deeply strengthened. Demonstrates US commitment to allies. Disaster diplomacy succeeds.',
+        failureNarrative: 'Some US troops receive radiation exposure. Cleanup costs enormous. But alliance value justifies expense. Japan\'s gratitude enduring.'
+      },
+      {
+        id: 'nuclear_review',
+        text: 'Comprehensive Nuclear Safety Review',
+        description: 'Audit US nuclear plants, update standards',
+        advisorSupport: ['science'],
+        advisorOppose: ['economic', 'pr'],
+        outcome: {
+          probability: 0.7,
+          success: { safety: 'improved', nuclear: 'confidence_restored', costs: 'moderate' },
+          failure: { plants: 'closed', energy: 'crisis' }
+        },
+        successNarrative: 'Thorough safety review improves US nuclear security. Lessons learned from Fukushima applied. Public confidence gradually restored. Nuclear remains part of energy mix. Climate goals achievable.',
+        failureNarrative: 'Safety review reveals multiple plants vulnerable. Closure costs astronomical. Energy shortfall. Fossil fuels fill gap. Climate goals abandoned. Nuclear renaissance ends.'
+      },
+      {
+        id: 'phase_out',
+        text: 'Accelerate Renewable Transition',
+        description: 'Use crisis to shift away from nuclear',
+        advisorSupport: ['pr'],
+        advisorOppose: ['science', 'economic'],
+        outcome: {
+          probability: 0.5,
+          success: { renewables: 'accelerated', nuclear: 'phased_out', climate: 'goals_challenged' },
+          failure: { energy: 'gap', fossil: 'resurgence', emissions: 'up' }
+        },
+        successNarrative: 'Nuclear phase-out accelerates renewable deployment. Solar and wind boom. But baseload challenge remains. Some regions return to coal/gas. Climate goals harder without nuclear.',
+        failureNarrative: 'Premature nuclear shutdown creates energy crisis. Natural gas and coal fill gap. Emissions surge. Climate goals abandoned. Renewable technology not yet ready for full load.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'CRIMEA ANNEXATION: Russia Seizes Ukrainian Territory',
+    description: '"Little green men" without insignia have seized Crimea. Putin denies Russian involvement while Russian troops occupy peninsula. Sham referendum scheduled. First forcible annexation in Europe since WWII. NATO\'s credibility at stake.',
+    category: 'coup',
+    severity: 'critical',
+    timeLimit: 60,
+    minYear: 2014,
+    maxYear: 2015,
+    options: [
+      {
+        id: 'military_aid',
+        text: 'Arm Ukraine',
+        description: 'Lethal military aid, advisors, intelligence',
+        advisorSupport: ['military', 'intel'],
+        advisorOppose: ['diplomatic'],
+        outcome: {
+          probability: 0.6,
+          success: { ukraine: 'resists', russia: 'contained', escalation: 'risk' },
+          failure: { proxy_war: true, europe: 'divided' }
+        },
+        successNarrative: 'Javelin missiles and US advisors stiffen Ukrainian resistance. Russian advance stalls in Donbas. Annexation limited to Crimea. NATO credibility partially restored. But proxy war entrenched.',
+        failureNarrative: 'Military aid triggers wider Russian intervention. Conventional war engulfs eastern Ukraine. Casualties mount. Europe splits over support. Escalation risks spiral.'
+      },
+      {
+        id: 'sanctions',
+        text: 'Economic Sanctions',
+        description: 'Financial isolation, energy sector sanctions',
+        advisorSupport: ['diplomatic', 'economic'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.7,
+          success: { russia: 'weakened', crimea: 'lost', europe: 'united' },
+          failure: { russia: 'adapts', china: 'partnership', sanctions: 'ineffective' }
+        },
+        successNarrative: 'Coordinated sanctions damage Russian economy. Ruble collapses. But Crimea stays annexed. Putin\'s popularity surges on nationalism. Europe mostly united. Long-term pressure strategy begins.',
+        failureNarrative: 'Russia pivots to China, develops sanction-proof economy. European unity crumbles as energy dependence bites. Sanctions lose effectiveness. Crimea annexation becomes permanent fact.'
+      },
+      {
+        id: 'accept',
+        text: 'Accept Fait Accompli',
+        description: 'Recognize Crimea lost, focus on limiting damage',
+        advisorSupport: [],
+        advisorOppose: ['military', 'diplomatic'],
+        outcome: {
+          probability: 0.8,
+          success: { crimea: 'lost', escalation: 'avoided', credibility: 'damaged' },
+          failure: { crimea: 'lost', ukraine: 'next', baltics: 'threatened' }
+        },
+        successNarrative: 'Pragmatic acceptance of Crimea loss limits conflict. Ukraine agrees to neutral status. Wider war avoided. But NATO credibility damaged. Eastern European allies terrified. Russian revanchism emboldened.',
+        failureNarrative: 'Acceptance interpreted as green light. Russia continues into eastern Ukraine. Baltics feel exposed. NATO Article 5 credibility collapses. European security order destroyed.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'COVID-19 PANDEMIC: Global Health Emergency',
+    description: 'Novel coronavirus spreading globally. WHO declares pandemic. Models predict millions of deaths without intervention. Economy facing collapse. Must balance public health, economic survival, civil liberties, and geopolitics.',
+    category: 'blackswan',
+    severity: 'catastrophic',
+    timeLimit: 120,
+    minYear: 2020,
+    maxYear: 2021,
+    options: [
+      {
+        id: 'lockdown',
+        text: 'Comprehensive Lockdown',
+        description: 'Mandatory closures, stay-at-home orders, crush curve',
+        advisorSupport: ['science', 'pr'],
+        advisorOppose: ['economic'],
+        outcome: {
+          probability: 0.6,
+          success: { deaths: 'minimized', economy: 'damaged', recovery: 'possible' },
+          failure: { deaths: 'moderate', economy: 'devastated', liberty: 'eroded' }
+        },
+        successNarrative: 'Strict lockdown flattens curve. Healthcare system survives. Deaths minimized. But economic damage severe. Recovery takes years. Government power expansion concerning. Social fabric strained.',
+        failureNarrative: 'Lockdown partially effective on health but economically catastrophic. Small businesses destroyed. Mental health crisis. Political polarization. Enforcement inconsistent. Worst of both worlds.'
+      },
+      {
+        id: 'focused_protection',
+        text: 'Focused Protection Strategy',
+        description: 'Shield vulnerable, keep society functioning',
+        advisorSupport: ['economic'],
+        advisorOppose: ['science'],
+        outcome: {
+          probability: 0.5,
+          success: { economy: 'sustained', deaths: 'moderate', liberty: 'preserved' },
+          failure: { deaths: 'high', healthcare: 'overwhelmed', political: 'backlash' }
+        },
+        successNarrative: 'Targeted approach protects elderly/vulnerable while maintaining economy. Deaths higher than lockdown but society functions. Herd immunity develops. Balance achieved between health and economics.',
+        failureNarrative: 'Hospital systems overwhelmed. Death toll shocks nation. "Focused protection" proves impossible to implement. Political backlash severe. Economy suffers anyway as fear spreads.'
+      },
+      {
+        id: 'vaccine_sprint',
+        text: 'Operation Warp Speed',
+        description: 'Massive vaccine development investment, emergency authorization',
+        advisorSupport: ['science', 'military'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.8,
+          success: { vaccine: 'record_time', deaths: 'minimized_eventually', economy: 'recovers' },
+          failure: { vaccine: 'delayed', variants: 'escape', endemic: 'reality' }
+        },
+        successNarrative: 'Unprecedented investment produces vaccines in under a year - scientific triumph. Mass vaccination begins. Pandemic eventually controlled. Economy recovers. Biotech revolution accelerated. Preparedness improved.',
+        failureNarrative: 'Vaccine development succeeds but distribution fails. Variants emerge. Pandemic becomes endemic. Multiple booster campaigns needed. Virus permanently part of life. Initial investment insufficient for long haul.'
       }
     ],
     consequences: {}
@@ -2443,8 +3351,25 @@ export function useFlashpoints() {
         return null;
       }
 
+      const currentYear = getCurrentYear(turn);
       const templatePool = scenarioTemplates && scenarioTemplates.length > 0 ? scenarioTemplates : FLASHPOINT_TEMPLATES;
-      const template = rng.choice(templatePool);
+
+      // Filter templates by year restrictions
+      const validTemplates = currentYear
+        ? templatePool.filter(t => {
+            const minYearOk = !t.minYear || currentYear >= t.minYear;
+            const maxYearOk = !t.maxYear || currentYear <= t.maxYear;
+            return minYearOk && maxYearOk;
+          })
+        : templatePool; // If no year info, allow all templates
+
+      // If no valid templates after filtering, return null
+      if (validTemplates.length === 0) {
+        console.log(`[Flashpoint Debug] No valid flashpoints for year ${currentYear}`);
+        return null;
+      }
+
+      const template = rng.choice(validTemplates);
       const baseFlashpoint: FlashpointEvent = {
         ...template,
         id: `flashpoint_${Date.now()}`,
