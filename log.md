@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-08T12:00:00Z - Public opinion normalization patch
+- Updated `src/lib/electionSystem.ts` to normalize opinion factors against scenario caps, reintroducing a 55 baseline and morale adjustment so Cold War starts retain 60-68% approval.
+- Added `src/lib/__tests__/electionSystem.test.ts` covering USA and USSR first-turn opinions with Cold War seed data.
+- Ran `npm test` (fails locally: vitest binary unavailable in container).
+
 ### 2025-11-05T21:02:00Z - Satellite coverage visual refresh
 - Added high-visibility satellite SVG icon for tactical map overlays.
 - Updated `src/pages/Index.tsx` to draw the new icon, pulse highlights on covered opponents, and adapt glow colors for enemy vs. allied satellites.
