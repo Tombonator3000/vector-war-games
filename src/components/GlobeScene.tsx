@@ -637,17 +637,20 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     const projector: ProjectorFn = (lon, lat) => {
       const size = sizeRef.current;
       const overlay = overlayRef.current;
-      const useOverlayDimensions = mapStyle === 'flat' || mapStyle === 'flat-realistic';
-      const width = useOverlayDimensions
-        ? overlay?.width ?? size?.width ?? 1
+      const isFlat = mapStyle === 'flat' || mapStyle === 'flat-realistic' || mapStyle === 'flat-nightlights';
+
+      // For flat maps, always use the actual overlay canvas dimensions
+      const width = isFlat && overlay
+        ? overlay.width
         : size?.width ?? 1;
-      const height = useOverlayDimensions
-        ? overlay?.height ?? size?.height ?? 1
+      const height = isFlat && overlay
+        ? overlay.height
         : size?.height ?? 1;
+
       const baseX = ((lon + 180) / 360) * width;
       const baseY = ((90 - lat) / 180) * height;
 
-      if (mapStyle === 'flat' || mapStyle === 'flat-realistic') {
+      if (isFlat) {
         return {
           x: baseX * cam.zoom + cam.x,
           y: baseY * cam.zoom + cam.y,
@@ -682,7 +685,8 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       const overlay = overlayRef.current;
       if (!container) return null;
 
-      if (mapStyle === 'flat' || mapStyle === 'flat-realistic') {
+      const isFlat = mapStyle === 'flat' || mapStyle === 'flat-realistic' || mapStyle === 'flat-nightlights';
+      if (isFlat) {
         const rect = overlay?.getBoundingClientRect() ?? container.getBoundingClientRect();
         const width = rect.width || 1;
         const height = rect.height || 1;
