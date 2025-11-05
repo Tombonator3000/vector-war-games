@@ -8377,90 +8377,8 @@ export default function NoradVector() {
   ]);
 
 
-  const handleImmigration = useCallback(async () => {
-    const approved = await requestApproval('IMMIGRATION', { description: 'Immigration policy adjustment' });
-    if (!approved) return;
-    AudioSys.playSFX('click');
-    const player = getBuildContext('Immigration');
-    if (!player) return;
-
-    const immigrationActions: OperationAction[] = [
-      {
-        id: 'skilled',
-        title: 'SKILLED IMMIGRATION',
-        subtitle: 'Steal 5% pop, +15 instability',
-        costText: 'Cost: 10 PROD, 5 INTEL',
-        requiresTarget: true,
-        disabled: !canAfford(player, COSTS.immigration_skilled),
-        disabledReason: 'Requires 10 PRODUCTION and 5 INTEL.',
-        targetFilter: nation => nation.population > 1 && hasOpenBorders(nation),
-      },
-      {
-        id: 'mass',
-        title: 'MASS IMMIGRATION',
-        subtitle: 'Drain 10% pop, +25-35 instability',
-        costText: 'Cost: 5 PROD, 2 INTEL',
-        requiresTarget: true,
-        disabled: !canAfford(player, COSTS.immigration_mass),
-        disabledReason: 'Requires 5 PRODUCTION and 2 INTEL.',
-        targetFilter: nation => nation.population > 5 && hasOpenBorders(nation),
-      },
-      {
-        id: 'refugee',
-        title: 'REFUGEE WAVE',
-        subtitle: 'Dump instability onto target',
-        costText: 'Cost: 15 INTEL (requires 50 instability)',
-        requiresTarget: true,
-        disabled: !canAfford(player, COSTS.immigration_refugee) || (player.instability || 0) < 50,
-        disabledReason: 'Requires 15 INTEL and 50+ instability.',
-        targetFilter: nation => nation.population > 5 && hasOpenBorders(nation),
-      },
-      {
-        id: 'brain',
-        title: 'BRAIN DRAIN',
-        subtitle: 'Steal 3% skilled population',
-        costText: 'Cost: 20 INTEL',
-        requiresTarget: true,
-        disabled: !canAfford(player, COSTS.immigration_brain),
-        disabledReason: 'Requires 20 INTEL.',
-        targetFilter: nation => nation.population > 1 && hasOpenBorders(nation),
-      }
-    ];
-
-    const executeImmigrationAction = (action: OperationAction, target?: Nation) => {
-      if (!target) return false;
-      const commander = PlayerManager.get();
-      if (!commander) {
-        toast({ title: 'No command authority', description: 'Player nation could not be located.' });
-        return false;
-      }
-
-      const success = performImmigration(action.id, target);
-      if (!success) {
-        if (!hasOpenBorders(target)) {
-          return false;
-        }
-        toast({ title: 'Operation failed', description: 'Insufficient resources or requirements not met.' });
-        return false;
-      }
-
-      updateDisplay();
-      consumeAction();
-      return true;
-    };
-
-    openModal(
-      'IMMIGRATION OPS',
-      <OperationModal
-        actions={immigrationActions}
-        player={player}
-        targetableNations={targetableNations}
-        onExecute={executeImmigrationAction}
-        onClose={closeModal}
-        accent="emerald"
-      />
-    );
-  }, [closeModal, getBuildContext, openModal, requestApproval, targetableNations]);
+  // REMOVED: Immigration Ops button - functionality integrated into Cultural Operations
+  // const handleImmigration = useCallback(async () => { ... }, []);
 
   const handleDiplomacy = useCallback(async () => {
     const approved = await requestApproval('DIPLOMACY', { description: 'Diplomatic operations request' });
@@ -10108,7 +10026,6 @@ export default function NoradVector() {
           case '2': handleResearch(); break;
           case '3': handleIntel(); break;
           case '4': handleCulture(); break;
-          case '5': handleImmigration(); break;
           case '6': handleDiplomacy(); break;
           case 'l': // 'L' for Leaders - open leaders screen (Civilization-style)
           case 'L':
@@ -10183,7 +10100,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted, viewerType, handleBuild, handleResearch, handleIntel, handleCulture, handleImmigration, handleDiplomacy, handleMilitary, handlePauseToggle, openModal, resizeCanvas]);
+  }, [isGameStarted, viewerType, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleMilitary, handlePauseToggle, openModal, resizeCanvas]);
 
 
   // Render functions for different phases
@@ -10256,7 +10173,6 @@ export default function NoradVector() {
   const intelAllowed = coopEnabled ? canExecute('INTEL') : true;
   const bioWarfareAllowed = coopEnabled ? canExecute('BIOWARFARE') : true;
   const cultureAllowed = coopEnabled ? canExecute('CULTURE') : true;
-  const immigrationAllowed = coopEnabled ? canExecute('IMMIGRATION') : true;
   const diplomacyAllowed = coopEnabled ? canExecute('DIPLOMACY') : true;
 
   return (
@@ -10686,20 +10602,6 @@ export default function NoradVector() {
                   >
                     <Radio className="h-5 w-5" />
                     <span className="text-[8px] font-mono">CULTURE</span>
-                  </Button>
-
-                  <Button
-                    onClick={handleImmigration}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!immigrationAllowed}
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      immigrationAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={immigrationAllowed ? 'IMMIGRATION - Population management' : 'Immigration changes require strategist approval'}
-                  >
-                    <Users className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">IMMIGR</span>
                   </Button>
 
                   <Button
