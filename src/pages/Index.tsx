@@ -6716,11 +6716,11 @@ export default function NoradVector() {
     setSfxEnabled(checked);
   }, []);
 
-  const handleMusicVolumeChange = useCallback((value: number[]) => {
-    const volume = Math.min(1, Math.max(0, value[0] ?? 0));
-    AudioSys.setMusicVolume(volume);
+  const handleMusicVolumeChange = useCallback((volume: number) => {
+    const clamped = Math.min(1, Math.max(0, volume));
+    AudioSys.setMusicVolume(clamped);
     // Don't save to storage - always reset to 30% on page load
-    setMusicVolume(volume);
+    setMusicVolume(clamped);
   }, []);
 
   const handleMusicTrackChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
@@ -10780,6 +10780,8 @@ export default function NoradVector() {
           <OptionsMenu
             theme={theme}
             onThemeChange={setTheme}
+            musicVolume={musicVolume}
+            onMusicVolumeChange={handleMusicVolumeChange}
             mapStyle={mapStyle}
             onMapStyleChange={handleMapStyleChange}
             viewerType={viewerType}
