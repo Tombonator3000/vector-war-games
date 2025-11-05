@@ -270,7 +270,23 @@ export function useGovernance({
     setMetrics((prev) => {
       const next = { ...prev };
       getNations().forEach((nation) => {
+        const isFirstTime = !prev[nation.id];
         const current = prev[nation.id] ?? seedMetrics(nation);
+
+        // On first initialization, use the nation's actual values without drift calculations
+        if (isFirstTime) {
+          const initialMetrics: GovernanceMetrics = {
+            morale: current.morale,
+            publicOpinion: current.publicOpinion,
+            cabinetApproval: current.cabinetApproval,
+            electionTimer: current.electionTimer,
+          };
+          next[nation.id] = initialMetrics;
+          updates.push({ id: nation.id, metrics: initialMetrics });
+          return;
+        }
+
+        // Apply normal drift calculations for existing nations
         const moraleDecay = 1 + Math.max(0, (nation.instability ?? 0) - 40) * 0.02;
         const cabinetSupport = (current.cabinetApproval - 50) * 0.02;
         const publicOpinionEffect = (current.publicOpinion - 50) * 0.01;
