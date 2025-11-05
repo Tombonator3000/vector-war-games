@@ -2757,13 +2757,14 @@ function drawSatellites(nowMs: number) {
       return;
     }
 
-    const owner =
-      player && player.id === orbit.ownerId
-        ? player
-        : nations.find(nation => nation.id === orbit.ownerId) ?? null;
+    // Always get owner from nations array to ensure fresh satellite data
+    const owner = nations.find(nation => nation.id === orbit.ownerId) ?? null;
+    if (!owner) {
+      return;
+    }
 
     const ttlExpired = nowMs - orbit.startedAt > orbit.ttl;
-    const hasCoverage = !!owner?.satellites?.[orbit.targetId];
+    const hasCoverage = owner.satellites?.[orbit.targetId] !== undefined && S.turn < owner.satellites[orbit.targetId];
 
     if (ttlExpired || !hasCoverage) {
       return;
