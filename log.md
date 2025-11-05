@@ -2169,3 +2169,79 @@ if (isFirstTime || currentTurn === 1) {
 - Players should now see stable Public Opinion on turn 1
 
 ---
+
+### Session AD: 2025-11-05 - PUBLIC OPINION BUG FIX (FINAL FIX)
+
+#### Time: UTC
+
+**Objective:** Fix the ACTUAL root cause of Public Opinion bug after previous fix made it worse
+
+**Branch:** `claude/fix-public-opinion-issue-011CUpXLp573feqSYDZWFbZA`
+
+#### 🚨 CRITICAL ISSUE: PREVIOUS FIX MADE IT WORSE!
+
+**Location:** `src/hooks/useGovernance.ts:287`
+
+**Problem:** The previous fix (Session AC) changed the condition from `currentTurn === 0` to `currentTurn === 1`, but this made the bug WORSE because the game may initialize with `currentTurn = 0` (or undefined) BEFORE being set to 1.
+
+**Root Cause Analysis:**
+
+1. **useState Initialization (lines 192-198):** Pre-populates metrics for ALL nations on component mount
+   ```typescript
+   const [metrics, setMetrics] = useState<Record<string, GovernanceMetrics>>(() => {
+     const initial: Record<string, GovernanceMetrics> = {};
+     getNations().forEach((nation) => {
+       initial[nation.id] = seedMetrics(nation);
+     });
+     return initial;
+   });
+   ```
+
+2. **useEffect First Run:** When useEffect first runs:
+   - `isFirstTime = false` (because useState already populated metrics)
+   - `currentTurn = 0 or undefined` (during initial component mount)
+   - With previous fix checking `currentTurn === 1`, the condition is FALSE
+   - **Drift calculations apply immediately on turn 0!**
+
+3. **Why It Got WORSE:**
+   - **Old code (`currentTurn === 0`):** Preserved values when turn = 0 ✓
+   - **Session AC fix (`currentTurn === 1`):** Applied drift when turn = 0, then preserved when turn = 1 ✗✗
+   - The "initial values" set on turn 1 were already drifted from turn 0!
+
+**The Correct Fix:**
+
+Change condition to check for turn <= 1, which handles ALL initial cases (turn 0, undefined, or 1):
+
+```typescript
+// Before (Session AC - BROKEN):
+if (isFirstTime || currentTurn === 1) {
+
+// After (Session AD - CORRECT):
+if (isFirstTime || currentTurn <= 1) {
+```
+
+**Why This Works:**
+
+- **Turn 0 (initialization):** Condition is TRUE → initial values preserved ✓
+- **Turn 1 (game start):** Condition is TRUE → initial values preserved ✓
+- **Turn 2+ (gameplay):** Condition is FALSE → drift calculations apply ✓
+
+**Expected Behavior After Fix:**
+
+- Turn 0-1: Initial metrics preserved from nation values (no drift)
+- Turn 2+: Normal drift calculations apply
+- Player can see actual starting values for the first full turn before any passive changes occur
+
+**Files Modified:**
+- `src/hooks/useGovernance.ts` (lines 284-287)
+
+**Testing:**
+- ✅ TypeScript compilation passes
+- Debug logging remains active to verify behavior
+- Players should now see stable Public Opinion on turns 0-1
+
+**Key Lesson:**
+
+Always consider the FULL lifecycle of component initialization, not just the "game start" state. The component may mount and run effects before the game state is fully initialized.
+
+---
