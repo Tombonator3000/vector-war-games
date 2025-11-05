@@ -447,7 +447,7 @@ const SUBMARINE_ICON_BASE_SCALE = 0.2;
 const RADIATION_ICON_BASE_SCALE = 0.16;
 const easeInOutQuad = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const SATELLITE_ORBIT_RADIUS = 34;
-const SATELLITE_ORBIT_TTL_MS = 180000;
+const SATELLITE_ORBIT_TTL_MS = 3600000; // 1 hour - long enough for satellites to expire naturally via turn-based cleanup
 const SATELLITE_ORBIT_SPEED = (Math.PI * 2) / 12000;
 const MAX_FALLOUT_MARKS = 36;
 const FALLOUT_GROWTH_RATE = 1.1; // units per second
@@ -4257,7 +4257,7 @@ function aiTurn(n: Nation) {
       
       n.intel -= 5;
       n.satellites = n.satellites || {};
-      n.satellites[target.id] = true;
+      n.satellites[target.id] = S.turn + 5; // Expires after 5 turns
       log(`${n.name} deploys satellite over ${target.name}`);
       registerSatelliteOrbit(n.id, target.id);
       return;
@@ -4697,6 +4697,19 @@ function endTurn() {
               nation.intelOperationCooldowns![opType]--;
               if (nation.intelOperationCooldowns![opType] <= 0) {
                 delete nation.intelOperationCooldowns![opType];
+              }
+            }
+          });
+        }
+
+        // Clean up expired satellites
+        if (nation.satellites) {
+          Object.keys(nation.satellites).forEach(targetId => {
+            const expiresAtTurn = nation.satellites![targetId];
+            if (S.turn >= expiresAtTurn) {
+              delete nation.satellites![targetId];
+              if (nation.isPlayer) {
+                log(`Satellite coverage over target has expired`, 'info');
               }
             }
           });
@@ -7179,11 +7192,11 @@ export default function NoradVector() {
     }
     player.intelOperationCooldowns['satellite'] = INTEL_OPERATIONS.satellite.cooldown;
 
-    // Apply satellite coverage
+    // Apply satellite coverage with expiry turn
     if (!player.satellites) {
       player.satellites = {};
     }
-    player.satellites[targetId] = true;
+    player.satellites[targetId] = result.expiresAtTurn;
 
     // Register satellite orbit for visual display
     registerSatelliteOrbit(player.id, targetId);
@@ -7677,9 +7690,12 @@ export default function NoradVector() {
             return false;
           }
           {
-            // Check satellite limit
+            // Check satellite limit (only count non-expired satellites)
             const maxSats = commander.maxSatellites || 3;
-            const currentSats = Object.keys(commander.satellites || {}).filter(id => commander.satellites?.[id]).length;
+            const currentSats = Object.keys(commander.satellites || {}).filter(id => {
+              const expiresAt = commander.satellites?.[id];
+              return expiresAt && S.turn < expiresAt;
+            }).length;
             if (currentSats >= maxSats) {
               toast({ title: 'Satellite limit reached', description: `Maximum ${maxSats} satellites deployed. Research Advanced Satellite Network for more slots.` });
               return false;
@@ -7687,7 +7703,7 @@ export default function NoradVector() {
 
             commander.intel -= 5;
             commander.satellites = commander.satellites || {};
-            commander.satellites[target.id] = true;
+            commander.satellites[target.id] = S.turn + 5; // Expires after 5 turns
             log(`Satellite deployed over ${target.name}`);
             registerSatelliteOrbit(commander.id, target.id);
           }
@@ -7702,7 +7718,11 @@ export default function NoradVector() {
             return false;
           }
           {
-            const targetSatellites = Object.keys(target.satellites || {}).filter(id => target.satellites?.[id]);
+            // Only count non-expired satellites
+            const targetSatellites = Object.keys(target.satellites || {}).filter(id => {
+              const expiresAt = target.satellites?.[id];
+              return expiresAt && S.turn < expiresAt;
+            });
             if (targetSatellites.length === 0) {
               toast({ title: 'No satellites', description: `${target.name} has no satellites to destroy.` });
               return false;
@@ -7864,7 +7884,7 @@ export default function NoradVector() {
           }
           commander.intel -= 30;
           commander.satellites = commander.satellites || {};
-          commander.satellites[target.id] = true;
+          commander.satellites[target.id] = S.turn + 5; // Expires after 5 turns
           commander.deepRecon = commander.deepRecon || {};
           commander.deepRecon[target.id] = (commander.deepRecon[target.id] || 0) + 3;
           log(`Deep recon initiated over ${target.name}. Detailed intel for 3 turns.`);
