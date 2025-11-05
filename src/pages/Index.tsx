@@ -2716,16 +2716,23 @@ function drawSatelliteIcon(x: number, y: number, rotation: number) {
   ctx.translate(x, y);
   ctx.rotate(rotation);
 
-  ctx.fillStyle = 'rgba(210,240,255,0.92)';
-  ctx.fillRect(-5, -2.5, 10, 5);
+  // Larger, more visible satellite body
+  ctx.fillStyle = 'rgba(210,240,255,0.95)';
+  ctx.fillRect(-7, -3.5, 14, 7);
 
-  ctx.fillStyle = 'rgba(130,210,255,0.9)';
-  ctx.fillRect(-12, -1.5, 5, 3);
-  ctx.fillRect(7, -1.5, 5, 3);
+  // Solar panels with glow effect
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = 'rgba(100,200,255,0.8)';
+  ctx.fillStyle = 'rgba(130,210,255,0.95)';
+  ctx.fillRect(-16, -2, 7, 4);
+  ctx.fillRect(9, -2, 7, 4);
 
+  // Bright antenna/sensor
   ctx.beginPath();
-  ctx.fillStyle = 'rgba(255,255,255,0.95)';
-  ctx.arc(0, 0, 2.8, 0, Math.PI * 2);
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = 'rgba(255,255,255,0.9)';
+  ctx.fillStyle = 'rgba(255,255,255,1)';
+  ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
@@ -2774,26 +2781,57 @@ function drawSatellites(nowMs: number) {
     const satelliteX = targetX + Math.cos(angle) * SATELLITE_ORBIT_RADIUS;
     const satelliteY = targetY + Math.sin(angle) * SATELLITE_ORBIT_RADIUS;
 
+    // Draw orbit path with enhanced visibility
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = 'rgba(120,220,255,0.45)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = 'rgba(120,220,255,0.65)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 8]);
     ctx.beginPath();
     ctx.arc(targetX, targetY, SATELLITE_ORBIT_RADIUS, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
 
+    // Draw motion trail behind satellite
     ctx.save();
-    const glowPulse = 0.55 + 0.35 * Math.sin(nowMs / 320 + orbit.phaseOffset);
-    ctx.globalAlpha = glowPulse * 0.6;
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 1; i <= 5; i++) {
+      const trailAngle = angle - (i * 0.15 * orbit.direction);
+      const trailX = targetX + Math.cos(trailAngle) * SATELLITE_ORBIT_RADIUS;
+      const trailY = targetY + Math.sin(trailAngle) * SATELLITE_ORBIT_RADIUS;
+      const trailAlpha = 0.3 * (1 - i / 6);
+      ctx.globalAlpha = trailAlpha;
+      ctx.fillStyle = 'rgba(100,200,255,0.8)';
+      ctx.beginPath();
+      ctx.arc(trailX, trailY, 4 - i * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Draw enhanced glow effect around satellite
+    ctx.save();
+    const glowPulse = 0.6 + 0.4 * Math.sin(nowMs / 320 + orbit.phaseOffset);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = glowPulse * 0.7;
     ctx.fillStyle = 'rgba(100,200,255,1)';
     ctx.beginPath();
-    ctx.arc(satelliteX, satelliteY, 6 + glowPulse * 2, 0, Math.PI * 2);
+    ctx.arc(satelliteX, satelliteY, 10 + glowPulse * 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
+    // Draw the satellite icon
     drawSatelliteIcon(satelliteX, satelliteY, angle);
+
+    // Draw satellite label
+    ctx.save();
+    ctx.font = 'bold 11px monospace';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.lineWidth = 3;
+    const label = '🛰️ SAT';
+    ctx.strokeText(label, satelliteX + 12, satelliteY - 8);
+    ctx.fillText(label, satelliteX + 12, satelliteY - 8);
+    ctx.restore();
   });
 
   S.satelliteOrbits = activeOrbits;
