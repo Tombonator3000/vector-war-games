@@ -752,7 +752,22 @@ const leaders: { name: string; ai: string; color: string; isHistoricalCubanCrisi
   { name: 'Dwight Eisenhower', ai: 'balanced', color: '#0047AB' }, // 34th US President, general
   { name: 'Lyndon Johnson', ai: 'aggressive', color: '#0047AB' }, // 36th US President
   { name: 'Gerald Ford', ai: 'balanced', color: '#0047AB' }, // 38th US President
-  
+  { name: 'Winston Churchill', ai: 'defensive', color: '#00247D' }, // UK Prime Minister, steadfast defender
+  { name: 'Harry S. Truman', ai: 'balanced', color: '#3C3B6E' }, // US President, Truman Doctrine
+  { name: 'Joseph Stalin', ai: 'aggressive', color: '#CC0000' }, // Soviet Premier, hardline expansionist
+  { name: 'Pierre Trudeau', ai: 'balanced', color: '#FF0000' }, // Canadian Prime Minister, charismatic centrist
+  { name: 'Zhou Enlai', ai: 'balanced', color: '#DE2910' }, // Chinese Premier, master diplomat
+  { name: 'Deng Xiaoping', ai: 'defensive', color: '#D62828' }, // Chinese leader, pragmatic reformer
+  { name: 'Ho Chi Minh', ai: 'aggressive', color: '#DA251D' }, // Vietnamese revolutionary leader
+  { name: 'Josip Broz Tito', ai: 'balanced', color: '#0C4076' }, // Yugoslav president, non-aligned strategist
+  { name: 'Gamal Abdel Nasser', ai: 'balanced', color: '#CE1126' }, // Egyptian president, pan-Arab champion
+  { name: 'Jawaharlal Nehru', ai: 'defensive', color: '#FF9933' }, // Indian Prime Minister, non-aligned architect
+  { name: 'Konrad Adenauer', ai: 'defensive', color: '#000000' }, // West German chancellor, pro-West builder
+  { name: 'Willy Brandt', ai: 'balanced', color: '#00008B' }, // West German chancellor, Ostpolitik pioneer
+  { name: 'Helmut Kohl', ai: 'defensive', color: '#1C1C1C' }, // German chancellor, unification steward
+  { name: 'François Mitterrand', ai: 'balanced', color: '#0055A4' }, // French president, European integrationist
+  { name: 'Sukarno', ai: 'aggressive', color: '#E30A17' }, // Indonesian president, revolutionary nationalist
+
   // Lovecraftian leaders (for Great Old Ones scenario)
   { name: 'Cthulhu', ai: 'aggressive', color: '#004d00', isLovecraftian: true }, // The Great Dreamer, aggressive domination
   { name: 'Azathoth', ai: 'chaotic', color: '#1a0033', isLovecraftian: true }, // The Blind Idiot God, chaotic and unpredictable
