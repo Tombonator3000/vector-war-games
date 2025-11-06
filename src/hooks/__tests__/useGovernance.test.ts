@@ -112,6 +112,9 @@ describe('useGovernance', () => {
       }),
     { initialProps: { currentTurn: turn }, wrapper });
 
+    turn += 1;
+    rerender({ currentTurn: turn });
+
     await waitFor(() => {
       expect(nations[0].morale).toBeLessThan(70);
     });
