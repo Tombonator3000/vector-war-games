@@ -7030,8 +7030,9 @@ export default function NoradVector() {
     setSfxEnabled(checked);
   }, []);
 
-  const handleMusicVolumeChange = useCallback((value: number[]) => {
-    const volume = Math.min(1, Math.max(0, value[0] ?? 0));
+  const handleMusicVolumeChange = useCallback((value: number | number[]) => {
+    const normalizedValue = Array.isArray(value) ? value[0] : value;
+    const volume = Math.min(1, Math.max(0, normalizedValue ?? 0));
     AudioSys.setMusicVolume(volume);
     // Don't save to storage - always reset to 30% on page load
     setMusicVolume(volume);
