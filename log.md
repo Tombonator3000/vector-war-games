@@ -7,11 +7,12 @@
 
 ---
 
-### 2025-11-06T02:17:08Z - Civilization ledger integration
-- Added a dedicated Ledger tab to `CivilizationInfoPanel` with memoised row assembly, keyboard shortcut (Alt+L), and refactored enemy dossiers to trigger from table selections.
-- Implemented `LedgerTable` component with sort toggles, filter chips (allies, rivals, top 5 power, intel gaps, high trust), and intel coverage indicators.
-- Documented the ledger in `GameDatabase` and `TUTORIAL_SYSTEM.md` so players learn how to analyse macro data.
-- Ran `npm run test` (fails on existing governance and migration suites plus Index syntax regression).【20904f†L1-L86】
+### 2025-11-06T02:51:15Z - Stabilized streamlined culture feature flagging
+- Fixed `NoradVector` runtime error by deriving `cultureEnabled` from the era progression system and memoizing `cultureAllowed` with co-op permissions.
+- Prevented culture dialogs from opening before the Propaganda Victory unlock or without co-commander approval, and added player-facing toasts for locked states.
+- Ran `npm run build` to verify the Vite production build still succeeds (noted existing bundle size warnings).
+
+---
 
 ### 2025-11-06T01:51:58Z - Strategic outliner integration
 - Implemented `StrategicOutliner` neon HUD component with grouped alerts, blinking critical indicators, and macro action buttons.

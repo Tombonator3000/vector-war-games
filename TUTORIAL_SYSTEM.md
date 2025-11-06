@@ -25,7 +25,6 @@ En komplett referanse-database som dekker alle spillmekanikker og systemer.
 - Forsvarssystemer (Missilforsvar, Orbital Defense, Kraftfelt)
 - Forskningssystem og teknologitre
 - Diplomatisystem (Allianser, Tillit, Favører)
-- Sivilisasjonsledger (Alt+L, makrooversikt over relasjoner, styrke og intel)
 - Konvensjonell krigføring (Hærer, Flåter, Territorial kontroll)
 - Cyberkrigføring (Hacking, Sabotasje, False-flag)
 - Bio-krigføring (Plague-typer, Evolusjonstre, DNA Points)
@@ -173,7 +172,6 @@ Dette sikrer at spillere ikke overveldes av informasjon tidlig i spillet.
 - **Tutorial**: Best for læring før/mellom spillsesjoner
 - **Søk**: Bruk søkefunksjonen i databasen for rask tilgang
 - **Relaterte emner**: Klikk på relaterte emner for å utforske sammenkoblede konsepter
-- **Civilization Ledger**: Trykk Alt+L i Civilization Info Panel for å sortere og filtrere alle nasjoner etter trusler, allianser og seiersprogresjon
 
 ## Fremtidig Utvikling
 

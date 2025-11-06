@@ -17,8 +17,7 @@ import {
   AlertTriangle, Sword, Skull, Biohazard, Network,
   Trophy, Vote, Globe, Flame, Eye, Search, X,
   Rocket, Bomb, ShieldAlert, Satellite, Lock, Unlock,
-  ChevronLeft, Radar, Table
-  ChevronLeft
+  ChevronLeft, Radar
 } from 'lucide-react';
 
 interface DatabaseEntry {
@@ -120,29 +119,6 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
     ],
     unlockTurn: 1,
     relatedTopics: ['governance', 'intelligence', 'conventional'],
-  },
-  {
-    id: 'civilization-ledger',
-    title: 'Sivilisasjonsledger',
-    category: 'diplomacy',
-    icon: <Table className="h-5 w-5" />,
-    summary: 'Sortérbar makro-tabell over alle kjente nasjoner med live diplomati- og styrkedata.',
-    details: 'Ledger-fanen i Civilization Info Panel samler ressursnivåer, militær styrke, relasjoner og seiersfremdrift for hver nasjon. Trykk Alt+L når panelet er åpent for å hoppe direkte til tabellen og filtrer etter allierte, rivaler eller rekognoseringshull.',
-    mechanics: [
-      'Filter-chips: Allies, Rivals, Top 5 Power, Intel Gaps, High Trust',
-      'Klikk på kolonneoverskrifter for å sortere etter militærkraft, relasjonspoeng, ressurser m.m.',
-      'Statusbadger viser om en nasjon er vennlig, nøytral, under våpenhvile eller fiendtlig',
-      'Intel-kolonnen markerer hvilke nasjoner som mangler satellitt/deep recon-dekning',
-      'Rad-klikk åpner Enemy Nations-fanen og laster oppdatert etterretningskort for valgt nasjon'
-    ],
-    tips: [
-      'Bruk Top 5 Power-filteret for å finne hvem som konkurrerer om global dominans',
-      'Intel Gaps-filteret gjør det enkelt å planlegge neste satellittoppskytning eller spionasje-operasjon',
-      'Hold øye med Victory %-kolonnen for å identifisere rivaler som nærmer seg seier',
-      'Ledgeren inkluderer også din egen nasjon – klikk raden for å gå tilbake til "Your Empire"-fanen'
-    ],
-    relatedTopics: ['intelligence', 'strategic-outliner'],
-    unlockTurn: 1,
   },
 
   // NUCLEAR WARFARE
