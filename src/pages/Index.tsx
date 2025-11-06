@@ -6432,9 +6432,8 @@ export default function NoradVector() {
     }, pendingFollowUps[0].triggerAtTurn);
   }, [pendingFollowUps]);
 
-  const playerNation = player;
-  const playerMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;
-  const playerProduction = playerNation?.production ?? 0;
+  const playerMetrics = player ? governance.metrics[player.id] : undefined;
+  const playerProduction = player?.production ?? 0;
   const playerMorale = playerMetrics?.morale ?? 0;
   const playerOpinion = playerMetrics?.publicOpinion ?? 0;
   const electionTimer = playerMetrics?.electionTimer ?? 0;
