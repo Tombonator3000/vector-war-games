@@ -94,11 +94,11 @@ const coldWarNations = [usa, ussr, cuba];
 describe('calculatePublicOpinion', () => {
   it('keeps the United States near its seeded Cold War opinion on the first turn', () => {
     const opinion = calculatePublicOpinion(usa, coldWarNations, coldWarConfig);
-    expect(Math.abs(opinion - usa.publicOpinion)).toBeLessThanOrEqual(10);
+    expect(opinion).toBeCloseTo(usa.publicOpinion, 0);
   });
 
   it('keeps the Soviet Union near its seeded Cold War opinion on the first turn', () => {
     const opinion = calculatePublicOpinion(ussr, coldWarNations, coldWarConfig);
-    expect(Math.abs(opinion - ussr.publicOpinion)).toBeLessThanOrEqual(15);
+    expect(opinion).toBeCloseTo(ussr.publicOpinion, 0);
   });
 });

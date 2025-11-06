@@ -107,7 +107,6 @@ vi.mock('@/components/GlobeScene', async () => {
     default: GlobeScene,
     PickerFn: () => null,
     ProjectorFn: () => null,
-    DEFAULT_MAP_STYLE: { visual: 'realistic', mode: 'standard' },
   };
 });
 
@@ -145,10 +144,6 @@ vi.mock('@/components/ConventionalForcesPanel', () => ({
 
 vi.mock('@/components/TerritoryMapPanel', () => ({
   TerritoryMapPanel: () => <div data-testid="territory-panel" />,
-}));
-
-vi.mock('@/components/MapModeBar', () => ({
-  MapModeBar: () => <div data-testid="map-mode-bar" />,
 }));
 
 vi.mock('@/components/governance/GovernanceEventDialog', () => ({
