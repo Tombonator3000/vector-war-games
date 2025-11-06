@@ -222,6 +222,54 @@ class GameStateManager {
   }
 
   /**
+   * Gets a nation by ID
+   */
+  static getNation(nationId: string): LocalNation | undefined {
+    return this._nations.find((nation) => nation.id === nationId);
+  }
+
+  /**
+   * Updates a single nation with a partial payload or updater function
+   */
+  static updateNation(
+    nationId: string,
+    updates: Partial<LocalNation> | ((nation: LocalNation) => LocalNation)
+  ): LocalNation | undefined {
+    const index = this._nations.findIndex((nation) => nation.id === nationId);
+    if (index === -1) {
+      return undefined;
+    }
+
+    const current = this._nations[index];
+    const next =
+      typeof updates === 'function'
+        ? (updates as (nation: LocalNation) => LocalNation)(current)
+        : { ...current, ...updates };
+
+    this._nations[index] = next;
+    this._state.nations = this._nations;
+    return next;
+  }
+
+  /**
+   * Applies a batch of nation updates in a single pass
+   */
+  static updateNations(updates: Map<string, Partial<LocalNation>>): LocalNation[] {
+    if (updates.size === 0) {
+      return this._nations;
+    }
+
+    const updated = this._nations.map((nation) => {
+      const patch = updates.get(nation.id);
+      return patch ? { ...nation, ...patch } : nation;
+    });
+
+    this._nations = updated;
+    this._state.nations = this._nations;
+    return this._nations;
+  }
+
+  /**
    * Gets the conventional deltas array
    */
   static getConventionalDeltas(): ConventionalWarfareDelta[] {
@@ -703,6 +751,10 @@ class GameStateManager {
       conventional: createDefaultConventionalState(),
       conventionalMovements: [],
       conventionalUnits: [],
+      casusBelliState: {
+        allWars: [],
+        warHistory: [],
+      },
       statistics: {
         nukesLaunched: 0,
         nukesReceived: 0,

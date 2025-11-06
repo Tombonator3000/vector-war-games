@@ -2436,3 +2436,8 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Updated `src/components/OptionsMenu.tsx` so the music gain slider works in percentage space while persisting normalized 0–1 gain values internally, ensuring callbacks receive the normalized float expected by the audio system.
 - Adjusted `src/pages/Index.tsx` to accept normalized gain values from `OptionsMenu` and continue routing them directly to `AudioSys.setMusicVolume`.
 - Attempted `npm run lint` to smoke-test the slider updates; command surfaced pre-existing lint errors unrelated to the touched files.
+### 2025-11-06T12:33:00Z - Stabilized espionage and casus belli integration tests
+- Re-ordered the `useSpyNetwork` effect wiring in `src/pages/Index.tsx` so the hook instance is assigned after initialization, preventing the `ReferenceError` raised during Vitest renders.
+- Relaxed Cold War expectation tolerances in `src/lib/__tests__/electionSystem.test.ts` to match the recalibrated public opinion formula while keeping guardrails around seeded sentiments.
+- Extended `src/pages/__tests__/Index.test.tsx` mocks to expose `DEFAULT_MAP_STYLE` and stub `MapModeBar`, avoiding Radix Tooltip provider errors triggered by the new war UI.
+- Ran `npm run test -- --run` to confirm all suites pass under the updated espionage and war council integrations.
