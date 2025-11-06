@@ -25,6 +25,9 @@ export function executeLeaderAbility(
 ): AbilityUseResult {
   const effects: AbilityEffectResult[] = [];
   let message = '';
+  const nations = PlayerManager.getNations().length
+    ? PlayerManager.getNations()
+    : gameState.nations || [];
 
   try {
     // Update ability state (decrement uses, set cooldown)
@@ -33,13 +36,13 @@ export function executeLeaderAbility(
     // Execute the effect based on type
     switch (ability.effect.type) {
       case 'force-peace':
-        const peaceEffects = executeForcePeace(nation, gameState, ability.effect);
+        const peaceEffects = executeForcePeace(nation, nations, ability.effect);
         effects.push(...peaceEffects);
         message = `${nation.name} has invoked ${ability.name}! All wars are temporarily suspended.`;
         break;
 
       case 'first-strike':
-        const strikeEffect = executeFirstStrike(nation, targetId, gameState, ability.effect);
+        const strikeEffect = executeFirstStrike(nation, targetId, gameState, ability.effect, nations);
         effects.push(strikeEffect);
         message = `${nation.name} launches a devastating ${ability.name}!`;
         break;
@@ -51,25 +54,25 @@ export function executeLeaderAbility(
         break;
 
       case 'summon-entity':
-        const summonEffect = executeSummonEntity(nation, targetId, gameState, ability.effect);
+        const summonEffect = executeSummonEntity(nation, targetId, gameState, ability.effect, nations);
         effects.push(summonEffect);
         message = `${nation.name} summons a Great Old One! Reality trembles!`;
         break;
 
       case 'reality-warp':
-        const warpEffects = executeRealityWarp(nation, gameState, ability);
+        const warpEffects = executeRealityWarp(nation, gameState, ability, nations);
         effects.push(...warpEffects);
         message = `${nation.name} tears the fabric of reality with ${ability.name}!`;
         break;
 
       case 'false-flag':
-        const flagEffect = executeFalseFlag(nation, targetId, gameState, ability.effect);
+        const flagEffect = executeFalseFlag(nation, targetId, gameState, ability.effect, nations);
         effects.push(flagEffect);
         message = `${nation.name} executes a masterful deception!`;
         break;
 
       case 'corruption-surge':
-        const corruptionEffect = executeCorruptionSurge(nation, targetId, gameState, ability.effect);
+        const corruptionEffect = executeCorruptionSurge(nation, targetId, gameState, ability.effect, nations);
         effects.push(corruptionEffect);
         message = `${nation.name} spreads corruption across ${effects[0]?.targetName || 'the target'}!`;
         break;
@@ -81,13 +84,13 @@ export function executeLeaderAbility(
         break;
 
       case 'steal-resources':
-        const stealEffects = executeStealResources(nation, targetId, gameState, ability.effect);
+        const stealEffects = executeStealResources(nation, targetId, gameState, ability.effect, nations);
         effects.push(...stealEffects);
         message = `${nation.name} conducts covert resource acquisition!`;
         break;
 
       case 'boost-relationships':
-        const boostEffects = executeBoostRelationships(nation, gameState, ability.effect);
+        const boostEffects = executeBoostRelationships(nation, gameState, ability.effect, nations);
         effects.push(...boostEffects);
         message = `${nation.name} improves international relations!`;
         break;
@@ -99,7 +102,7 @@ export function executeLeaderAbility(
         break;
 
       case 'propaganda-wave':
-        const propagandaEffect = executePropagandaWave(nation, targetId, gameState, ability.effect);
+        const propagandaEffect = executePropagandaWave(nation, targetId, gameState, ability.effect, nations);
         effects.push(propagandaEffect);
         message = `${nation.name} unleashes a devastating propaganda campaign!`;
         break;
@@ -141,14 +144,13 @@ export function executeLeaderAbility(
 
 function executeForcePeace(
   nation: Nation,
-  gameState: GameState,
+  nations: Nation[],
   effect: LeaderAbilityEffect
 ): AbilityEffectResult[] {
   const results: AbilityEffectResult[] = [];
   const duration = effect.duration || 3;
 
   // Find all nations at war with the player
-  const nations = PlayerManager.getNations();
   for (const otherNation of nations) {
     if (otherNation.id === nation.id) continue;
 
@@ -185,24 +187,65 @@ function executeFirstStrike(
   nation: Nation,
   targetId: string | undefined,
   gameState: GameState,
-  effect: LeaderAbilityEffect
+  effect: LeaderAbilityEffect,
+  nations: Nation[]
 ): AbilityEffectResult {
   const bonus = effect.value || 100;
+  const duration = effect.duration || 1;
+  const defensePenalty = effect.metadata?.defensePenalty ?? 0.5;
+  const selfDamage = effect.metadata?.selfDamage || 0;
 
   // Apply temporary first strike bonus
   nation.firstStrikeBonus = bonus;
   nation.firstStrikeActive = true;
-  nation.firstStrikeTurnsRemaining = effect.duration || 1;
+  nation.firstStrikeTurnsRemaining = duration;
 
-  // FIXME: Need nations list - gameState no longer has .nations property
-  // const target = targetId ? allNations.find(n => n.id === targetId) : null;
-  const target = null; // Temporarily disabled
+  if (selfDamage > 0) {
+    const populationLoss = Math.floor((nation.population * selfDamage) / 100);
+    nation.population = Math.max(0, nation.population - populationLoss);
+    nation.morale = Math.max(0, nation.morale - Math.min(40, selfDamage));
+  }
+
+  const target = targetId ? nations.find(n => n.id === targetId) : undefined;
+
+  if (target) {
+    const originalDefense = target.defense;
+    const defenseReduction = Math.round(originalDefense * defensePenalty);
+    target.defense = Math.max(0, originalDefense - defenseReduction);
+    target.morale = Math.max(0, target.morale - 40);
+    target.publicOpinion = Math.max(0, target.publicOpinion - 30);
+    target.instability = Math.min(100, (target.instability || 0) + 25);
+
+    if (!nation.relationships) nation.relationships = {};
+    if (!target.relationships) target.relationships = {};
+
+    nation.relationships[target.id] = clamp(
+      (nation.relationships[target.id] ?? 0) - 40,
+      -100,
+      100
+    );
+    target.relationships[nation.id] = clamp(
+      (target.relationships[nation.id] ?? 0) - 60,
+      -100,
+      100
+    );
+
+    return {
+      targetId: target.id,
+      targetName: target.name,
+      effectType: 'first-strike',
+      description: `+${bonus}% attack effectiveness and -${Math.round(
+        defensePenalty * 100
+      )}% enemy defense for ${duration} turn(s)`,
+      value: bonus,
+    };
+  }
 
   return {
     targetId: targetId || nation.id,
-    targetName: target?.name || 'Selected targets',
+    targetName: 'Selected targets',
     effectType: 'first-strike',
-    description: `+${bonus}% attack effectiveness for ${effect.duration || 1} turn(s)`,
+    description: `+${bonus}% attack effectiveness for ${duration} turn(s)`,
     value: bonus,
   };
 }
@@ -239,30 +282,60 @@ function executeSummonEntity(
   nation: Nation,
   targetId: string | undefined,
   gameState: GameState,
-  effect: LeaderAbilityEffect
+  effect: LeaderAbilityEffect,
+  nations: Nation[]
 ): AbilityEffectResult {
-  // FIXME: Need nations list - gameState no longer has .nations property
-  // const target = targetId ? allNations.find(n => n.id === targetId) : null;
-  const target = null; // Temporarily disabled
+  const targets: Nation[] = [];
+  if (targetId) {
+    const explicitTarget = nations.find(n => n.id === targetId);
+    if (explicitTarget) targets.push(explicitTarget);
+  } else {
+    for (const other of nations) {
+      if (other.id === nation.id) continue;
+      const relationship = nation.relationships?.[other.id] ?? 0;
+      if (relationship < 0) {
+        targets.push(other);
+      }
+    }
+  }
 
-  if (target) {
-    const populationLoss = (effect.value || 50) / 100;
+  if (targets.length > 0) {
+    const populationLossPercent = effect.value || 50;
+    const defensePenalty = effect.duration ? effect.value || 0 : 0;
 
-    // Reduce target population
-    target.population = Math.floor(target.population * (1 - populationLoss));
+    for (const target of targets) {
+      const populationLoss = Math.floor((target.population * populationLossPercent) / 100);
+      target.population = Math.max(0, target.population - populationLoss);
+      target.morale = Math.max(0, target.morale - 60);
+      target.publicOpinion = Math.max(0, target.publicOpinion - 50);
+      target.instability = Math.min(100, (target.instability || 0) + 40);
+      if (!target.relationships) target.relationships = {};
+      target.relationships[nation.id] = clamp(
+        (target.relationships[nation.id] ?? 0) - 50,
+        -100,
+        100
+      );
 
-    // Increase instability
-    target.instability = Math.min(100, (target.instability || 0) + 40);
+      if (!nation.relationships) nation.relationships = {};
+      nation.relationships[target.id] = clamp(
+        (nation.relationships[target.id] ?? 0) - 30,
+        -100,
+        100
+      );
 
-    // Reduce morale
-    target.morale = Math.max(0, target.morale - 60);
+      if (defensePenalty) {
+        target.unitDefenseBonus = (target.unitDefenseBonus || 0) - defensePenalty;
+      }
+    }
 
     return {
-      targetId: target.id,
-      targetName: target.name,
+      targetId: targets.length === 1 ? targets[0].id : 'multiple-enemies',
+      targetName: targets.length === 1 ? targets[0].name : 'All hostile nations',
       effectType: 'summon-entity',
-      description: `Entity devastates nation: -${effect.value}% population, +40 instability, -60 morale`,
-      value: effect.value,
+      description: targets.length === 1
+        ? `Entity devastates nation: -${populationLossPercent}% population, +40 instability, -60 morale`
+        : `Entities terrorize all hostile nations: -${populationLossPercent}% population and -60 morale each`,
+      value: populationLossPercent,
     };
   }
 
@@ -270,14 +343,15 @@ function executeSummonEntity(
     targetId: nation.id,
     targetName: 'No target',
     effectType: 'summon-entity',
-    description: 'Entity summoned but no target selected',
+    description: 'Entity summoned but no valid enemy was found',
   };
 }
 
 function executeRealityWarp(
   nation: Nation,
   gameState: GameState,
-  ability: LeaderAbility
+  ability: LeaderAbility,
+  nations: Nation[]
 ): AbilityEffectResult[] {
   const results: AbilityEffectResult[] = [];
 
@@ -351,14 +425,36 @@ function executeRealityWarp(
         });
         break;
       case 2:
-        // FIXME: Temporarily disabled - needs nations list
-        // All nations gain/lose random relationships
-        results.push({
-          targetId: nation.id,
-          targetName: nation.name,
-          effectType: 'reality-warp',
-          description: 'Relationships randomized (temporarily disabled)',
-        });
+        {
+          const pairs: string[] = [];
+          for (let i = 0; i < nations.length; i++) {
+            for (let j = i + 1; j < nations.length; j++) {
+              const first = nations[i];
+              const second = nations[j];
+              if (!first.relationships) first.relationships = {};
+              if (!second.relationships) second.relationships = {};
+              const delta = Math.floor(Math.random() * 61) - 30; // -30 to +30
+              first.relationships[second.id] = clamp(
+                (first.relationships[second.id] ?? 0) + delta,
+                -100,
+                100
+              );
+              second.relationships[first.id] = clamp(
+                (second.relationships[first.id] ?? 0) + delta,
+                -100,
+                100
+              );
+              pairs.push(`${first.name}↔${second.name} (${delta >= 0 ? '+' : ''}${delta})`);
+            }
+          }
+
+          results.push({
+            targetId: nation.id,
+            targetName: nation.name,
+            effectType: 'reality-warp',
+            description: `Relationships reshuffled: ${pairs.join(', ')}`,
+          });
+        }
         break;
       case 3:
         nation.morale = 100;
@@ -393,13 +489,33 @@ function executeRealityWarp(
         break;
     }
   } else {
-    // FIXME: Temporarily disabled - needs nations list
-    // Azathoth: Chaos storm (temporarily disabled)
+    const affected: string[] = [];
+    for (const other of nations) {
+      const multiplier = 1 + (Math.random() * 0.6 - 0.3); // ±30%
+      other.production = Math.max(0, Math.floor(other.production * multiplier));
+      other.population = Math.max(0, Math.floor(other.population * multiplier));
+      other.morale = clamp(Math.round(other.morale * multiplier), 0, 100);
+      other.publicOpinion = clamp(Math.round(other.publicOpinion * multiplier), 0, 100);
+
+      if (other !== nation) {
+        if (Math.random() < 0.5) {
+          other.alliances = other.alliances || [];
+          if (!other.alliances.includes(nation.id)) {
+            other.alliances.push(nation.id);
+          }
+        } else if (other.alliances) {
+          other.alliances = other.alliances.filter(id => id !== nation.id);
+        }
+      }
+
+      affected.push(other.name);
+    }
+
     results.push({
       targetId: nation.id,
       targetName: nation.name,
       effectType: 'reality-warp',
-      description: 'Chaos storm (temporarily disabled)',
+      description: `Azathoth's chaos storm warps reality for: ${affected.join(', ')}`,
     });
   }
 
@@ -410,19 +526,48 @@ function executeFalseFlag(
   nation: Nation,
   targetId: string | undefined,
   gameState: GameState,
-  effect: LeaderAbilityEffect
+  effect: LeaderAbilityEffect,
+  nations: Nation[]
 ): AbilityEffectResult {
-  // FIXME: Need nations list
-  // const target = targetId ? allNations.find(n => n.id === targetId) : null;
-  const target = null; // Temporarily disabled
+  const target = targetId ? nations.find(n => n.id === targetId) : undefined;
   const relationshipDrop = effect.value || 40;
 
   if (target) {
-    // FIXME: Temporarily disabled - needs nations list
-    // Make all nations dislike the target (disabled)
+    if (!target.relationships) target.relationships = {};
+    if (!nation.relationships) nation.relationships = {};
 
-    // Reduce target morale
+    for (const other of nations) {
+      if (other.id === target.id) continue;
+      if (!other.relationships) other.relationships = {};
+      other.relationships[target.id] = clamp(
+        (other.relationships[target.id] ?? 0) - relationshipDrop,
+        -100,
+        100
+      );
+
+      if (target.relationships) {
+        target.relationships[other.id] = clamp(
+          (target.relationships[other.id] ?? 0) - Math.floor(relationshipDrop / 2),
+          -100,
+          100
+        );
+      }
+    }
+
     target.morale = Math.max(0, target.morale - 40);
+    target.publicOpinion = Math.max(0, target.publicOpinion - 35);
+    target.instability = Math.min(100, (target.instability || 0) + 30);
+
+    nation.relationships[target.id] = clamp(
+      (nation.relationships[target.id] ?? 0) - 10,
+      -100,
+      100
+    );
+    target.relationships[nation.id] = clamp(
+      (target.relationships[nation.id] ?? 0) - relationshipDrop,
+      -100,
+      100
+    );
 
     return {
       targetId: target.id,
@@ -445,11 +590,10 @@ function executeCorruptionSurge(
   nation: Nation,
   targetId: string | undefined,
   gameState: GameState,
-  effect: LeaderAbilityEffect
+  effect: LeaderAbilityEffect,
+  nations: Nation[]
 ): AbilityEffectResult {
-  // FIXME: Need nations list
-  // const target = targetId ? allNations.find(n => n.id === targetId) : null;
-  const target = null; // Temporarily disabled
+  const target = targetId ? nations.find(n => n.id === targetId) : undefined;
   const conversionRate = (effect.value || 20) / 100;
   const duration = effect.duration || 4;
 
@@ -459,6 +603,23 @@ function executeCorruptionSurge(
     target.corruptionRate = conversionRate;
     target.corruptionTurnsRemaining = duration;
     target.corruptionSourceId = nation.id;
+
+    target.morale = Math.max(0, target.morale - 30);
+    target.publicOpinion = Math.max(0, target.publicOpinion - 25);
+    target.instability = Math.min(100, (target.instability || 0) + 35);
+
+    if (!target.relationships) target.relationships = {};
+    if (!nation.relationships) nation.relationships = {};
+    target.relationships[nation.id] = clamp(
+      (target.relationships[nation.id] ?? 0) - 35,
+      -100,
+      100
+    );
+    nation.relationships[target.id] = clamp(
+      (nation.relationships[target.id] ?? 0) - 15,
+      -100,
+      100
+    );
 
     return {
       targetId: target.id,
@@ -499,15 +660,14 @@ function executeStealResources(
   nation: Nation,
   targetId: string | undefined,
   gameState: GameState,
-  effect: LeaderAbilityEffect
+  effect: LeaderAbilityEffect,
+  nations: Nation[]
 ): AbilityEffectResult[] {
   const results: AbilityEffectResult[] = [];
   const baseSteal = effect.value || 100;
 
   if (effect.metadata?.intelSteal && effect.metadata?.productionSteal && targetId) {
-    // FIXME: Temporarily disabled - needs nations list
-    // Tricky Dick: Steal from single target (disabled)
-    const target = null;
+    const target = nations.find(n => n.id === targetId);
     if (target) {
       const intelStolen = Math.min(target.intel, effect.metadata.intelSteal);
       const productionStolen = Math.min(target.production, effect.metadata.productionSteal);
@@ -517,6 +677,20 @@ function executeStealResources(
       nation.intel += intelStolen;
       nation.production += productionStolen;
 
+      if (!nation.relationships) nation.relationships = {};
+      if (!target.relationships) target.relationships = {};
+
+      nation.relationships[target.id] = clamp(
+        (nation.relationships[target.id] ?? 0) - 15,
+        -100,
+        100
+      );
+      target.relationships[nation.id] = clamp(
+        (target.relationships[nation.id] ?? 0) - 30,
+        -100,
+        100
+      );
+
       results.push({
         targetId: target.id,
         targetName: target.name,
@@ -525,14 +699,47 @@ function executeStealResources(
       });
     }
   } else {
-    // FIXME: Temporarily disabled - needs nations list
-    // Oil-Stain Lint-Off: Steal from all nations (disabled)
-    results.push({
-      targetId: nation.id,
-      targetName: nation.name,
-      effectType: 'steal-resources',
-      description: 'Resource theft (temporarily disabled)',
-    });
+    for (const other of nations) {
+      if (other.id === nation.id) continue;
+      const productionStolen = Math.min(other.production, baseSteal);
+      other.production -= productionStolen;
+      nation.production += productionStolen;
+
+      if (!other.relationships) other.relationships = {};
+      if (!nation.relationships) nation.relationships = {};
+
+      other.relationships[nation.id] = clamp(
+        (other.relationships[nation.id] ?? 0) - 25,
+        -100,
+        100
+      );
+      nation.relationships[other.id] = clamp(
+        (nation.relationships[other.id] ?? 0) - 10,
+        -100,
+        100
+      );
+
+      results.push({
+        targetId: other.id,
+        targetName: other.name,
+        effectType: 'steal-resources',
+        description: `Stole ${productionStolen} Production from ${other.name}`,
+      });
+    }
+
+    if (effect.metadata?.goldGain) {
+      nation.gold = (nation.gold || 0) + effect.metadata.goldGain;
+    }
+
+    if (effect.metadata?.corruption) {
+      const enemies = nations.filter(other => other.id !== nation.id).slice(0, effect.metadata.corruption);
+      for (const enemy of enemies) {
+        enemy.corruptionActive = true;
+        enemy.corruptionRate = Math.max(enemy.corruptionRate || 0, 0.1);
+        enemy.corruptionTurnsRemaining = Math.max(enemy.corruptionTurnsRemaining || 0, 3);
+        enemy.corruptionSourceId = nation.id;
+      }
+    }
   }
 
   return results;
@@ -541,19 +748,41 @@ function executeStealResources(
 function executeBoostRelationships(
   nation: Nation,
   gameState: GameState,
-  effect: LeaderAbilityEffect
+  effect: LeaderAbilityEffect,
+  nations: Nation[]
 ): AbilityEffectResult[] {
   const results: AbilityEffectResult[] = [];
   const boost = effect.value || 30;
 
-  // FIXME: Temporarily disabled - needs nations list
-  // Boost relationships with all nations (disabled)
-  results.push({
-    targetId: nation.id,
-    targetName: nation.name,
-    effectType: 'boost-relationships',
-    description: 'Diplomacy boost (temporarily disabled)',
-  });
+  if (!nation.relationships) nation.relationships = {};
+
+  for (const other of nations) {
+    if (other.id === nation.id) continue;
+    if (!other.relationships) other.relationships = {};
+
+    const newRelation = clamp((nation.relationships[other.id] ?? 0) + boost, -100, 100);
+    nation.relationships[other.id] = newRelation;
+    other.relationships[nation.id] = clamp((other.relationships[nation.id] ?? 0) + boost, -100, 100);
+
+    if (newRelation >= 50) {
+      nation.alliances = nation.alliances || [];
+      other.alliances = other.alliances || [];
+      if (!nation.alliances.includes(other.id)) {
+        nation.alliances.push(other.id);
+      }
+      if (!other.alliances.includes(nation.id)) {
+        other.alliances.push(nation.id);
+      }
+    }
+
+    results.push({
+      targetId: other.id,
+      targetName: other.name,
+      effectType: 'boost-relationships',
+      description: `Relationship improved to ${nation.relationships[other.id]}`,
+      value: boost,
+    });
+  }
 
   return results;
 }
@@ -593,19 +822,49 @@ function executePropagandaWave(
   nation: Nation,
   targetId: string | undefined,
   gameState: GameState,
-  effect: LeaderAbilityEffect
+  effect: LeaderAbilityEffect,
+  nations: Nation[]
 ): AbilityEffectResult {
-  // FIXME: Need nations list
-  // const target = targetId ? allNations.find(n => n.id === targetId) : null;
-  const target = null; // Temporarily disabled
+  const target = targetId ? nations.find(n => n.id === targetId) : undefined;
   const relationshipDrop = effect.value || 50;
 
   if (target) {
-    // FIXME: Temporarily disabled - needs nations list
-    // All nations lose relationship with target (disabled)
+    if (!nation.relationships) nation.relationships = {};
+    if (!target.relationships) target.relationships = {};
 
-    // Target loses morale
+    for (const other of nations) {
+      if (other.id === target.id) continue;
+      if (!other.relationships) other.relationships = {};
+
+      other.relationships[target.id] = clamp(
+        (other.relationships[target.id] ?? 0) - relationshipDrop,
+        -100,
+        100
+      );
+
+      if (target.relationships) {
+        target.relationships[other.id] = clamp(
+          (target.relationships[other.id] ?? 0) - Math.floor(relationshipDrop / 2),
+          -100,
+          100
+        );
+      }
+    }
+
     target.morale = Math.max(0, target.morale - 40);
+    target.publicOpinion = Math.max(0, target.publicOpinion - 45);
+    target.instability = Math.min(100, (target.instability || 0) + 35);
+
+    nation.relationships[target.id] = clamp(
+      (nation.relationships[target.id] ?? 0) - 5,
+      -100,
+      100
+    );
+    target.relationships[nation.id] = clamp(
+      (target.relationships[nation.id] ?? 0) - relationshipDrop,
+      -100,
+      100
+    );
 
     return {
       targetId: target.id,
@@ -622,4 +881,8 @@ function executePropagandaWave(
     effectType: 'propaganda-wave',
     description: 'Propaganda wave failed - no target',
   };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
