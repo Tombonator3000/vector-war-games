@@ -18,7 +18,47 @@ export interface CityLight {
   nationId: string;
 }
 
-export type MapStyle = 'realistic' | 'wireframe' | 'night' | 'political' | 'flat' | 'flat-realistic' | 'nightlights' | 'flat-nightlights' | 'topo';
+export type MapVisualStyle =
+  | 'realistic'
+  | 'wireframe'
+  | 'night'
+  | 'political'
+  | 'flat'
+  | 'flat-realistic'
+  | 'nightlights'
+  | 'flat-nightlights'
+  | 'topo';
+
+export const MAP_VISUAL_STYLES: MapVisualStyle[] = [
+  'realistic',
+  'wireframe',
+  'night',
+  'political',
+  'flat',
+  'flat-realistic',
+  'nightlights',
+  'flat-nightlights',
+  'topo',
+];
+
+export type MapMode = 'standard' | 'diplomatic' | 'intel' | 'resources' | 'unrest';
+
+export const MAP_MODES: MapMode[] = ['standard', 'diplomatic', 'intel', 'resources', 'unrest'];
+
+export interface MapStyle {
+  visual: MapVisualStyle;
+  mode: MapMode;
+}
+
+export interface MapModeOverlayData {
+  playerId: string | null;
+  relationships: Record<string, number>;
+  intelLevels: Record<string, number>;
+  resourceTotals: Record<string, number>;
+  unrest: Record<string, { morale: number; publicOpinion: number; instability: number }>;
+}
+
+export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'realistic', mode: 'standard' };
 
 export interface GlobeSceneProps {
   cam: { x: number; y: number; zoom: number };
@@ -36,6 +76,7 @@ export interface GlobeSceneProps {
   onProjectorReady?: (projector: ProjectorFn) => void;
   onPickerReady?: (picker: PickerFn) => void;
   mapStyle?: MapStyle;
+  modeData?: MapModeOverlayData;
 }
 
 interface SceneRegistration {
@@ -483,7 +524,8 @@ function SceneContent({
   nations,
   onNationClick,
   register,
-  mapStyle = 'realistic',
+  mapStyle = DEFAULT_MAP_STYLE,
+  modeData,
 }: {
   cam: GlobeSceneProps['cam'];
   texture: THREE.Texture | null;
@@ -491,10 +533,52 @@ function SceneContent({
   onNationClick?: GlobeSceneProps['onNationClick'];
   register: (registration: SceneRegistration) => void;
   mapStyle?: MapStyle;
+  modeData?: MapModeOverlayData;
 }) {
   const { camera, size } = useThree();
   const earthRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>(null);
-  const isFlat = mapStyle === 'flat' || mapStyle === 'flat-realistic' || mapStyle === 'flat-nightlights';
+  const visualStyle = mapStyle?.visual ?? 'realistic';
+  const currentMode = mapStyle?.mode ?? 'standard';
+  const isFlat = visualStyle === 'flat' || visualStyle === 'flat-realistic' || visualStyle === 'flat-nightlights';
+
+  const maxIntelLevel = useMemo(() => {
+    if (!modeData) return 1;
+    const values = Object.values(modeData.intelLevels ?? {});
+    return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
+  }, [modeData]);
+
+  const maxResourceTotal = useMemo(() => {
+    if (!modeData) return 1;
+    const values = Object.values(modeData.resourceTotals ?? {});
+    return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
+  }, [modeData]);
+
+  const computeDiplomaticColor = useCallback((score: number) => {
+    if (score >= 60) return '#4ade80';
+    if (score >= 20) return '#22d3ee';
+    if (score <= -40) return '#f87171';
+    return '#facc15';
+  }, []);
+
+  const computeIntelColor = useCallback((normalized: number) => {
+    const clamped = THREE.MathUtils.clamp(normalized, 0, 1);
+    const start = new THREE.Color('#1d4ed8');
+    const end = new THREE.Color('#38bdf8');
+    return start.lerp(end, clamped).getStyle();
+  }, []);
+
+  const computeResourceColor = useCallback((normalized: number) => {
+    const clamped = THREE.MathUtils.clamp(normalized, 0, 1);
+    const start = new THREE.Color('#f97316');
+    const end = new THREE.Color('#facc15');
+    return start.lerp(end, clamped).getStyle();
+  }, []);
+
+  const computeUnrestColor = useCallback((stability: number) => {
+    if (stability >= 65) return '#22c55e';
+    if (stability >= 45) return '#facc15';
+    return '#f87171';
+  }, []);
 
   useEffect(() => {
     register({
@@ -544,7 +628,7 @@ function SceneContent({
       </mesh>
     );
 
-    switch (mapStyle) {
+    switch (visualStyle) {
       case 'realistic':
         return (
           <Suspense fallback={fallback}>
@@ -588,25 +672,93 @@ function SceneContent({
         </>
       )}
       {renderEarth()}
-      {(mapStyle === 'night' || mapStyle === 'realistic') && <CityLights nations={nations} />}
+      {(visualStyle === 'night' || visualStyle === 'realistic') && <CityLights nations={nations} />}
       {!isFlat && (
         <group>
           {nations.map(nation => {
             if (Number.isNaN(nation.lon) || Number.isNaN(nation.lat)) return null;
             const position = latLonToVector3(nation.lon, nation.lat, EARTH_RADIUS + MARKER_OFFSET);
-            const markerColor = nation.isPlayer ? '#7cff6b' : nation.color || '#ff6b6b';
+            const overlayKey = nation.id;
+            let overlayColor: string | null = null;
+            let overlayScale = 0.28;
+            let overlayOpacity = 0.35;
+
+            if (modeData && currentMode !== 'standard') {
+              switch (currentMode) {
+                case 'diplomatic': {
+                  if (modeData.playerId && modeData.playerId !== overlayKey) {
+                    const score = modeData.relationships?.[overlayKey] ?? 0;
+                    overlayColor = computeDiplomaticColor(score);
+                    overlayScale = 0.22 + Math.abs(score) / 500;
+                    overlayOpacity = 0.4;
+                  }
+                  break;
+                }
+                case 'intel': {
+                  const intelValue = modeData.intelLevels?.[overlayKey] ?? 0;
+                  if (intelValue > 0) {
+                    const normalized = intelValue / (maxIntelLevel || 1);
+                    overlayColor = computeIntelColor(normalized);
+                    overlayScale = 0.18 + normalized * 0.35;
+                    overlayOpacity = 0.45;
+                  }
+                  break;
+                }
+                case 'resources': {
+                  const total = modeData.resourceTotals?.[overlayKey] ?? 0;
+                  if (total > 0) {
+                    const normalized = total / (maxResourceTotal || 1);
+                    overlayColor = computeResourceColor(normalized);
+                    overlayScale = 0.2 + normalized * 0.4;
+                    overlayOpacity = 0.42;
+                  }
+                  break;
+                }
+                case 'unrest': {
+                  const unrestMetrics = modeData.unrest?.[overlayKey];
+                  if (unrestMetrics) {
+                    const stability = (unrestMetrics.morale + unrestMetrics.publicOpinion) / 2 - unrestMetrics.instability * 0.35;
+                    overlayColor = computeUnrestColor(stability);
+                    overlayScale = 0.24 + THREE.MathUtils.clamp((70 - stability) / 200, 0, 0.3);
+                    overlayOpacity = stability < 55 ? 0.5 : 0.35;
+                  }
+                  break;
+                }
+                default:
+                  break;
+              }
+            }
+
+            const baseColor = nation.color || '#ff6b6b';
+            const markerColor =
+              nation.isPlayer
+                ? '#7cff6b'
+                : currentMode !== 'standard' && overlayColor
+                  ? overlayColor
+                  : baseColor;
+
             return (
-              <mesh
-                key={nation.id}
-                position={position.toArray() as [number, number, number]}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onNationClick?.(nation.id);
-                }}
-              >
-                <sphereGeometry args={[0.06, 16, 16]} />
-                <meshStandardMaterial color={markerColor} emissive={markerColor} emissiveIntensity={0.6} />
-              </mesh>
+              <group key={nation.id}>
+                <mesh
+                  position={position.toArray() as [number, number, number]}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onNationClick?.(nation.id);
+                  }}
+                >
+                  <sphereGeometry args={[0.06, 16, 16]} />
+                  <meshStandardMaterial color={markerColor} emissive={markerColor} emissiveIntensity={0.6} />
+                </mesh>
+                {overlayColor && currentMode !== 'standard' && (
+                  <mesh
+                    position={position.toArray() as [number, number, number]}
+                    scale={[overlayScale, overlayScale, overlayScale]}
+                  >
+                    <sphereGeometry args={[0.12, 24, 24]} />
+                    <meshBasicMaterial color={overlayColor} transparent opacity={overlayOpacity} />
+                  </mesh>
+                )}
+              </group>
             );
           })}
         </group>
@@ -616,7 +768,16 @@ function SceneContent({
 }
 
 export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function GlobeScene(
-  { cam, nations, worldCountries, onNationClick, onProjectorReady, onPickerReady, mapStyle = 'realistic' }: GlobeSceneProps,
+  {
+    cam,
+    nations,
+    worldCountries,
+    onNationClick,
+    onProjectorReady,
+    onPickerReady,
+    mapStyle = DEFAULT_MAP_STYLE,
+    modeData,
+  }: GlobeSceneProps,
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -626,6 +787,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   const earthMeshRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> | null>(null);
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerVec = useRef(new THREE.Vector2());
+  const visualStyle = mapStyle?.visual ?? DEFAULT_MAP_STYLE.visual;
 
   const texture = useMemo(() => {
     if (typeof document === 'undefined') return null;
@@ -637,7 +799,8 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     const projector: ProjectorFn = (lon, lat) => {
       const size = sizeRef.current;
       const overlay = overlayRef.current;
-      const isFlat = mapStyle === 'flat' || mapStyle === 'flat-realistic' || mapStyle === 'flat-nightlights';
+      const isFlat =
+        visualStyle === 'flat' || visualStyle === 'flat-realistic' || visualStyle === 'flat-nightlights';
 
       // For flat maps, always use the actual overlay canvas dimensions
       const width = isFlat && overlay
@@ -676,7 +839,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       };
     };
     onProjectorReady(projector);
-  }, [cam.x, cam.y, cam.zoom, mapStyle, onProjectorReady]);
+  }, [cam.x, cam.y, cam.zoom, visualStyle, onProjectorReady]);
 
   const updatePicker = useCallback(() => {
     if (!onPickerReady) return;
@@ -685,7 +848,8 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       const overlay = overlayRef.current;
       if (!container) return null;
 
-      const isFlat = mapStyle === 'flat' || mapStyle === 'flat-realistic' || mapStyle === 'flat-nightlights';
+      const isFlat =
+        visualStyle === 'flat' || visualStyle === 'flat-realistic' || visualStyle === 'flat-nightlights';
       if (isFlat) {
         const rect = overlay?.getBoundingClientRect() ?? container.getBoundingClientRect();
         const width = rect.width || 1;
@@ -720,7 +884,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       return { lon, lat };
     };
     onPickerReady(picker);
-  }, [cam.x, cam.y, cam.zoom, mapStyle, onPickerReady]);
+  }, [cam.x, cam.y, cam.zoom, visualStyle, onPickerReady]);
 
   const handleRegister = useCallback(
     ({ camera, size, earth }: SceneRegistration) => {
@@ -758,6 +922,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
           onNationClick={onNationClick}
           register={handleRegister}
           mapStyle={mapStyle}
+          modeData={modeData}
         />
       </Canvas>
       <canvas ref={overlayRef} className="globe-scene__overlay" />

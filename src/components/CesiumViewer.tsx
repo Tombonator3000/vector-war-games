@@ -1,4 +1,4 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import {
   Viewer,
   Ion,
@@ -44,7 +44,8 @@ import {
   NearFarScalar,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
-import type { MapStyle } from '@/components/GlobeScene';
+import type { MapStyle, MapMode, MapModeOverlayData } from '@/components/GlobeScene';
+import { DEFAULT_MAP_STYLE } from '@/components/GlobeScene';
 import type { TerritoryState, ConventionalUnitState } from '@/hooks/useConventionalWarfare';
 import type { Nation } from '@/types/game';
 import {
@@ -84,6 +85,7 @@ export interface CesiumViewerProps {
   infectionData?: Record<string, number>; // countryId -> infection percentage
   className?: string;
   mapStyle?: MapStyle;
+  modeData?: MapModeOverlayData;
   // Phase 2 & 3 features
   enableTerrain?: boolean; // 3D terrain elevation
   enable3DModels?: boolean; // Use 3D models for units instead of points
@@ -103,7 +105,7 @@ export interface CesiumViewerHandle {
   addWeatherEvent: (lon: number, lat: number, type: 'storm' | 'clouds', intensity: number) => void;
 }
 
-const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
+const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({ 
   territories = [],
   units = [],
   nations = [],
@@ -113,7 +115,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   showInfections = false,
   infectionData = {},
   className = '',
-  mapStyle = 'realistic',
+  mapStyle = DEFAULT_MAP_STYLE,
+  modeData,
   enableTerrain = true,
   enable3DModels = true,
   enableWeather = true,
@@ -136,6 +139,19 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   const flatRealisticLayerRef = useRef<ImageryLayer | null>(null);
   const cameraChangeCallbackRef = useRef<(() => void) | null>(null);
   const cameraHeightHelperRef = useRef<(() => number) | null>(null);
+  const visualStyle = mapStyle.visual ?? DEFAULT_MAP_STYLE.visual;
+
+  const maxIntelLevel = useMemo(() => {
+    if (!modeData) return 1;
+    const values = Object.values(modeData.intelLevels ?? {});
+    return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
+  }, [modeData]);
+
+  const maxResourceTotal = useMemo(() => {
+    if (!modeData) return 1;
+    const values = Object.values(modeData.resourceTotals ?? {});
+    return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
+  }, [modeData]);
 
   const getCameraHeight = useCallback(() => {
     const viewer = viewerRef.current;
@@ -184,7 +200,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
     const imageryLayers = viewer.imageryLayers;
     const controller = viewer.scene.screenSpaceCameraController;
-    const isFlatRealisticStyle = style === 'flat-realistic';
+    const visual = style.visual ?? DEFAULT_MAP_STYLE.visual;
+    const isFlatRealisticStyle = visual === 'flat-realistic';
     const FLAT_REALISTIC_TRANSLATE_THRESHOLD = 4_500_000;
 
     detachCameraChangeListener();
@@ -207,7 +224,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
     removeLayer(gridLayerRef);
     removeLayer(politicalLayerRef);
-    if (style !== 'flat-realistic' && style !== 'flat-nightlights') {
+    if (visual !== 'flat-realistic' && visual !== 'flat-nightlights') {
       removeLayer(flatRealisticLayerRef);
     }
 
@@ -226,18 +243,18 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       nightLayer.brightness = 1.2;
     }
 
-    const isFlatProjection = style === 'flat' || style === 'flat-realistic' || style === 'flat-nightlights';
+    const isFlatProjection = visual === 'flat' || visual === 'flat-realistic' || visual === 'flat-nightlights';
     if (isFlatProjection) {
       viewer.scene.morphTo2D(0);
       viewer.camera.setView({ destination: Rectangle.fromDegrees(-180, -90, 180, 90) });
       applyDayNightSettings(viewer, false);
     } else {
       viewer.scene.morphTo3D(0);
-      const shouldEnableLighting = style === 'night' ? true : enableDayNightRef.current;
+      const shouldEnableLighting = visual === 'night' ? true : enableDayNightRef.current;
       applyDayNightSettings(viewer, shouldEnableLighting);
     }
 
-    switch (style) {
+    switch (visual) {
       case 'wireframe': {
         if (baseLayer) {
           baseLayer.alpha = 0.65;
@@ -436,6 +453,124 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
     viewer.scene.requestRender();
   }, [applyDayNightSettings, detachCameraChangeListener]);
 
+  const updateMapModeOverlays = useCallback(
+    (mode: MapMode, data?: MapModeOverlayData) => {
+      const viewer = viewerRef.current;
+      if (!viewer) {
+        return;
+      }
+
+      // Remove existing overlay entities
+      entitiesRef.current.forEach((entity, key) => {
+        if (key.startsWith('mode-overlay-')) {
+          viewer.entities.remove(entity);
+          entitiesRef.current.delete(key);
+        }
+      });
+
+      if (!data || mode === 'standard') {
+        viewer.scene.requestRender();
+        return;
+      }
+
+      const playerId = data.playerId;
+
+      const createEntity = (
+        nationId: string,
+        lon: number,
+        lat: number,
+        radius: number,
+        fill: Color,
+      ) => {
+        const outlineColor = Color.clone(fill, new Color());
+        outlineColor.alpha = Math.min(1, (fill.alpha ?? 0) + 0.25);
+
+        const entity = viewer.entities.add({
+          name: `mode-overlay-${mode}-${nationId}`,
+          position: Cartesian3.fromDegrees(lon, lat, 10000),
+          ellipse: {
+            semiMinorAxis: radius,
+            semiMajorAxis: radius,
+            material: new ColorMaterialProperty(fill),
+            outline: true,
+            outlineColor,
+            outlineWidth: 2,
+            height: 10000,
+          },
+        });
+        entitiesRef.current.set(`mode-overlay-${mode}-${nationId}`, entity);
+      };
+
+      const lerpColor = (startHex: string, endHex: string, t: number, alpha: number) => {
+        const start = Color.fromCssColorString(startHex);
+        const end = Color.fromCssColorString(endHex);
+        const clamped = Math.min(1, Math.max(0, t));
+        const mixed = Color.lerp(start, end, clamped, new Color());
+        return mixed.withAlpha(alpha);
+      };
+
+      nations.forEach(nation => {
+        if (!Number.isFinite(nation.lon) || !Number.isFinite(nation.lat)) {
+          return;
+        }
+
+        switch (mode) {
+          case 'diplomatic': {
+            if (!playerId || nation.id === playerId) {
+              return;
+            }
+            const score = data.relationships?.[nation.id] ?? 0;
+            const colorHex = score >= 60 ? '#4ade80' : score >= 20 ? '#22d3ee' : score <= -40 ? '#f87171' : '#facc15';
+            const fill = Color.fromCssColorString(colorHex).withAlpha(0.42);
+            const radius = 350_000 + Math.abs(score) * 6_000;
+            createEntity(nation.id, nation.lon, nation.lat, radius, fill);
+            break;
+          }
+          case 'intel': {
+            const intelValue = data.intelLevels?.[nation.id] ?? 0;
+            if (intelValue <= 0) {
+              return;
+            }
+            const normalized = intelValue / (maxIntelLevel || 1);
+            const fill = lerpColor('#1d4ed8', '#38bdf8', normalized, 0.5);
+            const radius = 260_000 + normalized * 520_000;
+            createEntity(nation.id, nation.lon, nation.lat, radius, fill);
+            break;
+          }
+          case 'resources': {
+            const total = data.resourceTotals?.[nation.id] ?? 0;
+            if (total <= 0) {
+              return;
+            }
+            const normalized = total / (maxResourceTotal || 1);
+            const fill = lerpColor('#f97316', '#facc15', normalized, 0.48);
+            const radius = 300_000 + normalized * 600_000;
+            createEntity(nation.id, nation.lon, nation.lat, radius, fill);
+            break;
+          }
+          case 'unrest': {
+            const unrestMetrics = data.unrest?.[nation.id];
+            if (!unrestMetrics) {
+              return;
+            }
+            const stability = (unrestMetrics.morale + unrestMetrics.publicOpinion) / 2 - unrestMetrics.instability * 0.35;
+            const colorHex = stability >= 65 ? '#22c55e' : stability >= 45 ? '#facc15' : '#f87171';
+            const severity = Math.min(1, Math.max(0, (70 - stability) / 60));
+            const fill = Color.fromCssColorString(colorHex).withAlpha(0.45 + severity * 0.25);
+            const radius = 320_000 + severity * 550_000;
+            createEntity(nation.id, nation.lon, nation.lat, radius, fill);
+            break;
+          }
+          default:
+            break;
+        }
+      });
+
+      viewer.scene.requestRender();
+    },
+    [nations, maxIntelLevel, maxResourceTotal],
+  );
+
   // Initialize Cesium Viewer
   useEffect(() => {
     if (!containerRef.current || viewerRef.current) return;
@@ -568,12 +703,17 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         handlerRef.current.destroy();
       }
       detachCameraChangeListener();
-      if (viewerRef.current) {
-        viewerRef.current.destroy();
+      const viewer = viewerRef.current;
+      if (viewer) {
+        entitiesRef.current.forEach(entity => {
+          viewer.entities.remove(entity);
+        });
+        entitiesRef.current.clear();
+        viewer.destroy();
         viewerRef.current = null;
       }
     };
-  }, [applyDayNightSettings, applyMapStyle, detachCameraChangeListener, enableDayNight, enableTerrain, mapStyle]);
+  }, [applyDayNightSettings, applyMapStyle, detachCameraChangeListener, enableDayNight, enableTerrain, visualStyle]);
 
   useEffect(() => {
     enableDayNightRef.current = enableDayNight;
@@ -594,6 +734,10 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   useEffect(() => {
     applyMapStyle(mapStyle);
   }, [mapStyle, applyMapStyle]);
+
+  useEffect(() => {
+    updateMapModeOverlays(mapStyle.mode ?? 'standard', modeData);
+  }, [mapStyle.mode, modeData, updateMapModeOverlays]);
 
 
   // Render territories with GeoJSON boundaries (Phase 2 improvement)

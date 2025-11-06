@@ -117,6 +117,27 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
       'Hold øye med relasjonskolonnen for å reagere på diplomatiske svingninger uten å bytte til diplomatifanen'
     ]
   },
+  {
+    id: 'map-modes',
+    title: 'Kartmodus & Overlays',
+    category: 'basics',
+    icon: <Globe className="h-5 w-5" />,
+    summary: 'MapModeBar under topplinjen bytter mellom visuelle operasjonslag for diplomati, etterretning, ressurser og uro.',
+    details: 'Kartmoduser kombinerer funksjonelle overlays med valgt estetikk. MapModeBar (eller hurtigtaster Alt + 1–5) veksler mellom Standard, Diplomatisk, Etterretning, Ressurser og Uro. Dataene trekkes fra diplomati-, etterretnings- og styringssystemene i sanntid, og fungerer både på Three.js-globen og Cesium-visningen.',
+    mechanics: [
+      'Alt + 1: Standard – klassisk kart med markører, DEFCON-rutenett og krystallklar natt/dag-estetikk',
+      'Alt + 2: Diplomatisk – territorier fargekodes etter relasjonen til din regjering, med hurtig oversikt over venn/fiende',
+      'Alt + 3: Etterretning – viser overvåkingsdekning, rekognoseringsnivå og satellittnettverkets status',
+      'Alt + 4: Ressurser – fremhever strategiske reserver, produksjonsknutepunkter og markedspress',
+      'Alt + 5: Uro – aktiverer Political Stability Overlay og markerer morale, opinion og instabilitet pr. nasjon'
+    ],
+    tips: [
+      'Kartmoduser kan kombineres med enhver visuell stil (Realistisk, Natt, Wireframe osv.) uten å miste data-overlays',
+      'Hold Alt nede og trykk på tallene i rekkefølge for rask scanning av globale situasjoner',
+      'Uro-modusen oppdateres når governance-metrikker endres – bruk den etter politiske beslutninger for å se effekt umiddelbart'
+    ],
+    relatedTopics: ['diplomacy', 'intel-operations', 'governance']
+  },
 
   // NUCLEAR WARFARE
   {
