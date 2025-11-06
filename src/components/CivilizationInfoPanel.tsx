@@ -13,6 +13,10 @@ import { motion } from 'framer-motion';
 import { DoctrineStatusPanel } from './DoctrineStatusPanel';
 import type { DoctrineShiftState } from '@/types/doctrineIncidents';
 import { ResourceStockpileDisplay } from './ResourceStockpileDisplay';
+import { ResourceMarketPanel, MarketStatusBadge } from './ResourceMarketPanel';
+import { RESOURCE_INFO } from '@/types/territorialResources';
+import type { ResourceMarket } from '@/lib/resourceMarketSystem';
+import type { DepletionWarning } from '@/lib/resourceDepletionSystem';
 
 interface CivilizationInfoPanelProps {
   nations: Nation[];
@@ -28,6 +32,8 @@ interface CivilizationInfoPanelProps {
   onCancelBioLabConstruction?: () => void;
   defaultTab?: TabType;
   doctrineShiftState?: DoctrineShiftState;
+  resourceMarket?: ResourceMarket;
+  depletionWarnings?: DepletionWarning[];
 }
 
 type TabType = 'own-status' | 'enemy-status' | 'diplomacy' | 'research';
@@ -46,6 +52,8 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   onCancelBioLabConstruction,
   defaultTab = 'own-status',
   doctrineShiftState,
+  resourceMarket,
+  depletionWarnings,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
   const [showNukaPedia, setShowNukaPedia] = useState(false);
@@ -128,84 +136,165 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
     return Math.min(max, Math.max(min, value));
   };
 
-  const renderOwnStatus = () => (
-    <div className="space-y-6">
-      <VictoryPathsSection
-        {...victoryAnalysis}
-        currentTurn={currentTurn}
-      />
+  const renderOwnStatus = () => {
+    const severityStyles = {
+      warning: {
+        container: 'bg-amber-500/10 border-amber-500/40',
+        label: 'Warning',
+        text: 'text-amber-200',
+      },
+      critical: {
+        container: 'bg-red-500/10 border-red-500/60',
+        label: 'Critical',
+        text: 'text-red-200',
+      },
+      depleted: {
+        container: 'bg-red-900/40 border-red-500/70',
+        label: 'Depleted',
+        text: 'text-red-200',
+      },
+    } as const;
+    const playerWarnings = depletionWarnings ?? [];
 
-      {player.doctrine && (
+    return (
+      <div className="space-y-6">
+        <VictoryPathsSection
+          {...victoryAnalysis}
+          currentTurn={currentTurn}
+        />
+
+        {player.doctrine && (
+          <div>
+            <h3 className="text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Doctrine Status
+            </h3>
+            <div className="bg-gray-800/50 border border-cyan-500/30 rounded-lg p-4">
+              <DoctrineStatusPanel
+                playerNation={player}
+                allNations={nations}
+                shiftState={doctrineShiftState}
+                className="bg-transparent border-0 p-0"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Resources Section */}
         <div>
-          <h3 className="text-lg font-bold text-cyan-400 mb-3 flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            Doctrine Status
+          <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
+            <Factory className="w-5 h-5" />
+            Resources
           </h3>
-          <div className="bg-gray-800/50 border border-cyan-500/30 rounded-lg p-4">
-            <DoctrineStatusPanel
-              playerNation={player}
-              allNations={nations}
-              shiftState={doctrineShiftState}
-              className="bg-transparent border-0 p-0"
-            />
+          <div className="grid grid-cols-1 gap-3">
+            <div className="bg-gray-800/50 p-3 rounded">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-gray-300 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-yellow-500" />
+                  Production
+                </span>
+                <span className="text-white font-bold">{Math.floor(player.production)}</span>
+              </div>
+              {renderResourceBar(player.production, 1000, 'bg-yellow-500')}
+            </div>
+
+            <div className="bg-gray-800/50 p-3 rounded">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-gray-300 flex items-center gap-2">
+                  <Radio className="w-4 h-4 text-green-500" />
+                  Uranium
+                </span>
+                <span className="text-white font-bold">{Math.floor(player.uranium)}</span>
+              </div>
+              {renderResourceBar(player.uranium, 500, 'bg-green-500')}
+            </div>
+
+            <div className="bg-gray-800/50 p-3 rounded">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-gray-300 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-blue-500" />
+                  Intel
+                </span>
+                <span className="text-white font-bold">{Math.floor(player.intel)}</span>
+              </div>
+              {renderResourceBar(player.intel, 500, 'bg-blue-500')}
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Resources Section */}
-      <div>
-        <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
-          <Factory className="w-5 h-5" />
-          Resources
-        </h3>
-        <div className="grid grid-cols-1 gap-3">
-          <div className="bg-gray-800/50 p-3 rounded">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-gray-300 flex items-center gap-2">
-                <Zap className="w-4 h-4 text-yellow-500" />
-                Production
-              </span>
-              <span className="text-white font-bold">{Math.floor(player.production)}</span>
+        {/* Strategic Resources Section */}
+        {player.resourceStockpile && (
+          <div>
+            <h3 className="text-lg font-bold text-amber-300 mb-3 flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              Strategic Resources
+            </h3>
+            <div className="bg-gray-800/50 p-4 rounded-lg border border-amber-500/30">
+              <ResourceStockpileDisplay nation={player} />
             </div>
-            {renderResourceBar(player.production, 1000, 'bg-yellow-500')}
           </div>
+        )}
 
-          <div className="bg-gray-800/50 p-3 rounded">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-gray-300 flex items-center gap-2">
-                <Radio className="w-4 h-4 text-green-500" />
-                Uranium
-              </span>
-              <span className="text-white font-bold">{Math.floor(player.uranium)}</span>
+        {resourceMarket && (
+          <div>
+            <h3 className="text-lg font-bold text-cyan-300 mb-3 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Global Resource Market
+            </h3>
+            <div className="bg-gray-800/50 p-4 rounded-lg border border-cyan-500/30 space-y-3">
+              <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-cyan-200/80">
+                <span>Live Pricing</span>
+                <MarketStatusBadge market={resourceMarket} />
+              </div>
+              <ResourceMarketPanel market={resourceMarket} />
             </div>
-            {renderResourceBar(player.uranium, 500, 'bg-green-500')}
           </div>
+        )}
 
-          <div className="bg-gray-800/50 p-3 rounded">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-gray-300 flex items-center gap-2">
-                <Target className="w-4 h-4 text-blue-500" />
-                Intel
-              </span>
-              <span className="text-white font-bold">{Math.floor(player.intel)}</span>
+        {playerWarnings.length > 0 && (
+          <div>
+            <h3 className="text-lg font-bold text-red-300 mb-3 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Resource Depletion Alerts
+            </h3>
+            <div className="space-y-2">
+              {playerWarnings.map(warning => {
+                const info = RESOURCE_INFO[warning.resource];
+                const style = severityStyles[warning.severity];
+                const isDepleted = warning.severity === 'depleted';
+                const Icon = isDepleted ? Skull : AlertTriangle;
+
+                return (
+                  <div
+                    key={`${warning.territoryId}-${warning.resource}`}
+                    className={`border rounded-lg p-3 flex items-start gap-3 ${style.container}`}
+                  >
+                    <Icon className={`w-4 h-4 mt-0.5 ${style.text}`} />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-sm font-semibold">
+                        <span className="flex items-center gap-2">
+                          <span>{info.icon}</span>
+                          <span>{info.name}</span>
+                        </span>
+                        <span className={`text-xs uppercase tracking-[0.25em] font-bold ${style.text}`}>
+                          {style.label}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-300/90 mt-1">
+                        {warning.territoryName}
+                      </div>
+                      {!isDepleted && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          {warning.remainingPercent.toFixed(0)}% capacity remaining
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            {renderResourceBar(player.intel, 500, 'bg-blue-500')}
           </div>
-        </div>
-      </div>
-
-      {/* Strategic Resources Section */}
-      {player.resourceStockpile && (
-        <div>
-          <h3 className="text-lg font-bold text-amber-300 mb-3 flex items-center gap-2">
-            <Sparkles className="w-5 h-5" />
-            Strategic Resources
-          </h3>
-          <div className="bg-gray-800/50 p-4 rounded-lg border border-amber-500/30">
-            <ResourceStockpileDisplay nation={player} />
-          </div>
-        </div>
-      )}
+        )}
 
       {/* Election Countdown */}
       {governanceMetrics['player'] && (
@@ -448,6 +537,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
       </div>
     </div>
   );
+  };
 
   const renderEnemyStatus = () => (
     <div className="space-y-4">

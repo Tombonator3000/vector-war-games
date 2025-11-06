@@ -24,6 +24,8 @@ import {
   calculateResourceShortage,
   RESOURCE_DEPOSIT_TEMPLATES,
 } from '@/types/territorialResources';
+import type { ResourceMarket } from '@/lib/resourceMarketSystem';
+import { getResourceTradePrice } from '@/lib/resourceMarketSystem';
 
 /**
  * Initialize resource stockpile for a nation
@@ -302,7 +304,8 @@ export function createResourceTrade(
 export function processResourceTrades(
   trades: ResourceTrade[],
   nations: Nation[],
-  turn: number
+  turn: number,
+  market?: ResourceMarket
 ): ResourceTrade[] {
   const nationMap = new Map(nations.map(n => [n.id, n]));
   const activeTrades: ResourceTrade[] = [];
@@ -322,14 +325,20 @@ export function processResourceTrades(
       return;
     }
 
+    const dynamicPrice = market
+      ? getResourceTradePrice(trade.resource, trade.amountPerTurn, market)
+      : undefined;
+    const pricePerTurn = dynamicPrice ?? trade.pricePerTurn;
+
     // Deduct from sender (handled in processNationResources for receiver)
     if (fromNation.resourceStockpile && fromNation.resourceStockpile[trade.resource] >= trade.amountPerTurn) {
       fromNation.resourceStockpile[trade.resource] -= trade.amountPerTurn;
 
       // Apply payment if any
-      if (trade.pricePerTurn && toNation.production >= trade.pricePerTurn) {
-        toNation.production -= trade.pricePerTurn;
-        fromNation.production += trade.pricePerTurn;
+      if (pricePerTurn && toNation.production >= pricePerTurn) {
+        toNation.production -= pricePerTurn;
+        fromNation.production += pricePerTurn;
+        trade.pricePerTurn = pricePerTurn;
       }
 
       // Decrement duration

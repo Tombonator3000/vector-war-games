@@ -2358,3 +2358,11 @@ if (isFirstTime) {
 When state is initialized in multiple places (useState + useEffect), be careful not to create circular dependencies. Use existing state when possible instead of re-reading from external sources.
 
 ---
+
+### 2025-11-06T01:33:48Z - Resource market integration pass
+- Wired the dynamic `ResourceMarketPanel` and depletion alerts into `Index.tsx` and `CivilizationInfoPanel.tsx`, including a compact `MarketStatusBadge` in the top HUD.
+- Updated territorial resource generation to honor deposit `depletionRate` values and synchronized `GameStateManager` defaults for market/depletion state.
+- Routed trade processing through `getResourceTradePrice` so active trades respect live market prices.
+- Ran `npm run test -- --run`; suite currently fails due to pre-existing unit issues in conventional warfare, governance decay, migration status, and the election system test harness expecting Jest globals.
+
+---
