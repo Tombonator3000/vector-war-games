@@ -7,6 +7,14 @@
 
 ---
 
+### 2025-11-06T07:25:37Z - Strategic outliner integration
+- Implemented the neon-styled `StrategicOutliner` component to summarize flashpoints, pandemic activity, governance alerts, and macro availability, then mounted it beside the political widget in `Index.tsx` with hotkeys (O / Shift+O) for toggling.
+- Added memoized selectors for player readiness, crisis summaries, and macro permissions so the outliner re-renders minimally, plus wired pulse highlights when opened via keyboard.
+- Documented the panel in `GameDatabase` and `TUTORIAL_SYSTEM.md`, covering grouped alerts and macro-handling shortcuts.
+- Ran `npm run lint`; command reports numerous pre-existing ESLint `any` violations and dependency warnings across the project but no new hook-order issues from this change.
+
+---
+
 ### 2025-11-06T00:40:32Z - Leader ability panel verification
 - Reviewed the LeaderAbilityPanel integration in `src/pages/Index.tsx` and associated mocks in `src/pages/__tests__/Index.test.tsx`.
 - Ran `npm run test -- Index.test.tsx` to confirm the new interaction test passes.
@@ -2365,4 +2373,9 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Routed trade processing through `getResourceTradePrice` so active trades respect live market prices.
 - Ran `npm run test -- --run`; suite currently fails due to pre-existing unit issues in conventional warfare, governance decay, migration status, and the election system test harness expecting Jest globals.
 
+---
+### 2025-11-06T07:28:30Z - Strategic outliner verification session
+- Reviewed `src/components/StrategicOutliner.tsx` and associated `Index.tsx` wiring to confirm grouping, collapse, and hotkey integrations satisfy the latest feature brief.
+- Confirmed documentation touchpoints in `GameDatabase.tsx` and `TUTORIAL_SYSTEM.md` include outliner/macros guidance; no additional narrative changes required.
+- Logged this verification step; no extra code changes performed beyond repository audit.
 ---

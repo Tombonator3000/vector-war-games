@@ -17,7 +17,7 @@ import {
   AlertTriangle, Sword, Skull, Biohazard, Network,
   Trophy, Vote, Globe, Flame, Eye, Search, X,
   Rocket, Bomb, ShieldAlert, Satellite, Lock, Unlock,
-  ChevronLeft
+  ChevronLeft, Sparkles
 } from 'lucide-react';
 
 interface DatabaseEntry {
@@ -983,6 +983,31 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
     ],
     relatedTopics: [],
     unlockTurn: 1
+  },
+
+  {
+    id: 'strategic-outliner',
+    title: 'Strategic Outliner & Makro-kommandoer',
+    category: 'strategy',
+    icon: <Sparkles className="h-5 w-5" />,
+    summary: 'Neon-panel som grupperer produksjon, diplomati og krisevarsler i sanntid.',
+    details:
+      'Outlineren gir et komprimert overblikk over nasjonens makronivå-status: militær beredskap, ressurspuljer, DEFCON, ' +
+      'pågående governance-hendelser og globale kriser. Panelet blinker ved kritiske hendelser og speiler kooperative makro-låser ' +
+      'slik at du vet hvilke handlinger som er blokkert.',
+    mechanics: [
+      'Toggle med O – Shift+O åpner og fokuserer panelet umiddelbart.',
+      'Produksjon & Militær viser readiness, tilgjengelige MAKROER (BUILD/RESEARCH) og siste slaglogg.',
+      'Diplomati & Styresett sporer DEFCON, moral/opinion, regjeringskriser og status for DIPLOMACY/CULTURE-makroer.',
+      'Etterretning & Krise fremhever aktive flashpoints, pandemiforløp og om INTEL/BIO makroene er klare.',
+      'Kritiske kort pulserer rødt for å signalisere handling med høy prioritet.',
+    ],
+    tips: [
+      'Bruk Shift+O når nyhetene blinker for å hoppe direkte til panelet.',
+      'Koordiner med Approval Queue hvis en makro er låst – outlineren viser hvilke roller som holder tilbake.',
+      'Hold øye med ressurspostene: lav produksjon kombinert med rødt readiness-kort betyr at du bør hvile eller reforsterke.',
+    ],
+    relatedTopics: ['defcon', 'resources', 'governance'],
   },
 
   // ADVANCED TIPS

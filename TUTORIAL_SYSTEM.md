@@ -103,6 +103,21 @@ Et interaktivt tutorial-system som guider spillere gjennom alle spillmekanikker 
 #### Tilgang:
 Åpne **Options-menyen** og klikk på **"Komplett Tutorial"** under "TUTORIALS & REFERENCE".
 
+### 3. **Strategic Outliner & Makro-handlinger**
+
+Et neon-belyst kontrollpanel som til enhver tid viser hvilke makrosystemer som trenger oppmerksomhet.
+
+#### Funksjoner:
+- **Grupperte seksjoner** for Produksjon & Militær, Diplomati & Styresett, samt Etterretning & Krise.
+- **Makrostatus**: tydelige indikatorer for BUILD, RESEARCH, INTEL, BIO, CULTURE og DIPLOMACY – spesielt nyttig i co-op når roller låser handlinger.
+- **Live varsler** for DEFCON, governance events, pandemier og aktive flashpoints. Kritiske kort blinker rødt.
+- **Hurtigtaster**: `O` skjuler/viser panelet, mens `Shift+O` åpner det umiddelbart og pulserer rammen for rask orientering.
+- **Konfliktlogg**: de siste konvensjonelle engagementene oppdateres fortløpende slik at du ser hvor styrker tappes.
+
+#### Tilgang:
+- Panelet er montert ved siden av `PoliticalStatusWidget` og Approval Queue på toppstangen.
+- Hurtigtastene fungerer globalt så lenge fokus ikke ligger i et tekstfelt.
+
 ## Integrasjon med Spillet
 
 ### Options Menu
