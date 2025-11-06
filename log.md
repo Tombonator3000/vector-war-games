@@ -2504,3 +2504,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Implemented new hooks (`useEnhancedTradeSystem`, `useResourceRefinement`, `useEconomicInfrastructure`, `useEconomicDepth`) to manage subsystem state, turn processing, and economic recommendations.
 - Built accompanying UI panels and a master dashboard (`src/components/EnhancedTradePanel.tsx`, `ResourceRefinementPanel.tsx`, `EconomicInfrastructurePanel.tsx`, `EconomicDashboard.tsx`) and rewrote `PHASE_3_IMPLEMENTATION.md` to document the delivered scope.
 - Pending follow-up: run the Vitest suite once additional economic integration tests are authored.
+### 2025-11-06T18:05:00Z - Guard refinement orders against missing refineries
+- Updated `processTurn` in `src/hooks/useResourceRefinement.ts` to skip and remove refinement orders when their associated refinery is missing instead of defaulting to the oil recipe.
+- Added a refinery lookup map so each order resolves its conversion safely, preventing phantom resource production from deleted refineries.
