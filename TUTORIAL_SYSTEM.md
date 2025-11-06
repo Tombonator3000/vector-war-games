@@ -118,6 +118,20 @@ Et neon-belyst kontrollpanel som til enhver tid viser hvilke makrosystemer som t
 - Panelet er montert ved siden av `PoliticalStatusWidget` og Approval Queue på toppstangen.
 - Hurtigtastene fungerer globalt så lenge fokus ikke ligger i et tekstfelt.
 
+### 4. **Strategisk Ledger**
+
+Et data-drevet register i CivilizationInfoPanel som viser alle kjente nasjoner i én tabell, slik at du raskt kan sammenligne ressurser, militær styrke og diplomatiske forhold.
+
+#### Funksjoner:
+- **Filtrerbar oversikt**: Chips for Allierte, Fiender, Nøytrale og Topp 5 gir deg et øyeblikksbilde av relevante blokker.
+- **Sorterbare kolonner**: Klikk på kolonneoverskrifter for å prioritere det som betyr mest – produksjon, uran, intel eller ren militær kraft.
+- **Detaljkobling**: Et radklikk åpner det samme detaljerte etterretningskortet som Enemy Nations-fanen, uten å forlate ledgeren.
+- **Statusmerker**: Fargede badges viser tydelig hvem som er alliert, fiendtlig eller under våpenhvile.
+
+#### Tilgang:
+- Åpne CivilizationInfoPanel og velg fanen **"Strategic Ledger"**.
+- Hurtigtast: `Shift+L` hopper direkte til ledger-fanen når panelet er åpent.
+
 ## Integrasjon med Spillet
 
 ### Options Menu

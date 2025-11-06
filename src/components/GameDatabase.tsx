@@ -17,7 +17,7 @@ import {
   AlertTriangle, Sword, Skull, Biohazard, Network,
   Trophy, Vote, Globe, Flame, Eye, Search, X,
   Rocket, Bomb, ShieldAlert, Satellite, Lock, Unlock,
-  ChevronLeft, Sparkles
+  ChevronLeft, Sparkles, ListTree
 } from 'lucide-react';
 
 interface DatabaseEntry {
@@ -95,6 +95,26 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
       'Planlegg handlinger før du bekrefter runden',
       'AI kan reagere på dine handlinger',
       'Visse handlinger tar flere runder å fullføre'
+    ]
+  },
+  {
+    id: 'strategic-ledger',
+    title: 'Strategisk Ledger',
+    category: 'basics',
+    icon: <ListTree className="h-5 w-5" />,
+    summary: 'Tabellarisk makrooversikt over alle nasjoner, med ressurser, militær styrke og diplomatiske bånd i én skjerm.',
+    details: 'Ledger-fanen i CivilizationInfoPanel kombinerer all tilgjengelig etterretning i et sortérbart og filtrerbart oppsett. Klikk på en rad for å hente samme detaljerte kort som Enemy Nations-fanen, eller bruk hurtigtasten Shift + L for å hoppe direkte til oversikten når panelet er åpent.',
+    mechanics: [
+      'Viser alle kjente nasjoner med sanntidsverdier for produksjon, uran, intel og militær styrke',
+      'Filterchips isolerer allierte, fiender, nøytrale stater eller de 5 sterkeste militærmaktene',
+      'Kolonneoverskrifter kan klikkes for å sortere stigende/synkende, og innstillingen beholdes til panelet lukkes',
+      'Radklikk låser opp detaljerte etterretningskort uten å forlate ledgeren',
+      'Shift + L fungerer som hurtigtast for å åpne ledger-fanen når CivilizationInfoPanel allerede er aktiv'
+    ],
+    tips: [
+      'Bruk ledgeren før offensiver for å kontrollere om motstandere matcher din styrke eller ressurser',
+      'Filtrer på “Topp 5 styrke” for raskt å identifisere hvem som kan true deg på kort sikt',
+      'Hold øye med relasjonskolonnen for å reagere på diplomatiske svingninger uten å bytte til diplomatifanen'
     ]
   },
 
