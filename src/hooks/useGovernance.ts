@@ -283,18 +283,18 @@ export function useGovernance({
 
         // Handle three cases:
         // 1. New nation (isFirstTime): Initialize from nation values
-        // 2. Turn 0, 1, or 2: Preserve existing metrics (already initialized by useState)
-        // 3. Turn 3+: Apply drift calculations
+        // 2. Turn 0 or 1: Preserve existing metrics (already initialized by useState)
+        // 3. Turn 2+: Apply drift calculations
         if (isFirstTime) {
           // New nation appearing mid-game - initialize with seed metrics
           const initialMetrics = seedMetrics(nation);
           console.log(`[Governance Debug] New nation ${nation.id}, initializing:`, initialMetrics);
           next[nation.id] = initialMetrics;
           updates.push({ id: nation.id, metrics: initialMetrics });
-        } else if (currentTurn <= 2) {
-          // Turn 0, 1, or 2 - preserve existing metrics without drift
-          // This prevents drift from applying on the first "next turn" press
-          // Game starts at turn 1, first next turn goes to turn 2
+        } else if (currentTurn <= 1) {
+          // Turn 0 or 1 - preserve existing metrics without drift
+          // This prevents drift from applying before the first "next turn" press
+          // Game starts at turn 1; first next turn goes to turn 2 where drift begins
           console.log(`[Governance Debug] Turn ${currentTurn}, preserving metrics for ${nation.id}:`, current);
           next[nation.id] = current;
           updates.push({ id: nation.id, metrics: current });

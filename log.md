@@ -2398,3 +2398,9 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-06T08:53:30Z - Migration status test expectation fix
 - Updated `src/lib/__tests__/unifiedGameMigration.test.ts` so the diplomacy migration count aligns with the seeded nation data (only one nation lacks relationships).
 - Re-ran `npm run test -- unifiedGameMigration` to confirm the suite now passes.
+### 2025-11-06T09:01:48Z - Governance morale decay threshold adjustment
+- Updated `src/hooks/useGovernance.ts` to start morale drift on turn 2 by reducing the early-turn guard and refreshing the inline documentation.
+- Prepared to run targeted governance hook tests to validate morale decay timing.
+### 2025-11-06T09:02:40Z - Governance morale decay test verification
+- Advanced the `useGovernance` external delta test to turn 2 before asserting morale drift so expectations align with the new decay timing.
+- Ran `npm run test -- useGovernance` to confirm morale decay begins on turn 2 and all governance hook tests pass.
