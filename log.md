@@ -2432,6 +2432,10 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Swapped the default positioning in `src/components/ui/select.tsx` from `"popper"` to `"item-aligned"` so Radix Select avoids the popper layout routine that was triggering `Cannot access 'I' before initialization` crashes in production builds.
 - Ran `npm run build` to verify the bundle compiles cleanly after adjusting the select positioning behaviour.
 
+### 2025-11-06T12:37:43Z - Normalize music volume slider to percent UI
+- Updated `src/components/OptionsMenu.tsx` so the music gain slider works in percentage space while persisting normalized 0–1 gain values internally, ensuring callbacks receive the normalized float expected by the audio system.
+- Adjusted `src/pages/Index.tsx` to accept normalized gain values from `OptionsMenu` and continue routing them directly to `AudioSys.setMusicVolume`.
+- Attempted `npm run lint` to smoke-test the slider updates; command surfaced pre-existing lint errors unrelated to the touched files.
 ### 2025-11-06T12:33:00Z - Stabilized espionage and casus belli integration tests
 - Re-ordered the `useSpyNetwork` effect wiring in `src/pages/Index.tsx` so the hook instance is assigned after initialization, preventing the `ReferenceError` raised during Vitest renders.
 - Relaxed Cold War expectation tolerances in `src/lib/__tests__/electionSystem.test.ts` to match the recalibrated public opinion formula while keeping guardrails around seeded sentiments.
