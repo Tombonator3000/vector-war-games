@@ -18,6 +18,7 @@ import {
   Trophy, Vote, Globe, Flame, Eye, Search, X,
   Rocket, Bomb, ShieldAlert, Satellite, Lock, Unlock,
   ChevronLeft, Radar, Table
+  ChevronLeft
 } from 'lucide-react';
 
 interface DatabaseEntry {
