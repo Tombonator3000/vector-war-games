@@ -2431,3 +2431,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-06T11:26:31Z - Radix select positioning fallback
 - Swapped the default positioning in `src/components/ui/select.tsx` from `"popper"` to `"item-aligned"` so Radix Select avoids the popper layout routine that was triggering `Cannot access 'I' before initialization` crashes in production builds.
 - Ran `npm run build` to verify the bundle compiles cleanly after adjusting the select positioning behaviour.
+
+### 2025-11-06T12:17:29Z - Research tree researched-set regression fix
+- Removed the memoized `Set` construction in `src/components/ResearchTreeFlow.tsx` so mutations to `nation.researched` immediately reflect in UI progress indicators during Codex follow-up work on PR #397.

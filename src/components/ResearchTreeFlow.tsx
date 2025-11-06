@@ -442,7 +442,7 @@ export function ResearchTreeFlow({
     }
   }, [displayCategories, activeTab]);
 
-  const researched = useMemo(() => new Set(Object.keys(nation.researched || {})), [nation.researched]);
+  const researched = new Set(Object.keys(nation.researched || {}));
 
   const getCategoryStats = useCallback((category: DisplayCategory) => {
     if (category === 'biolab') {
