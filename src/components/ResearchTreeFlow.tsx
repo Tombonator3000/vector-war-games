@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -21,11 +21,12 @@ import {
   Users,
   Satellite,
   Eye,
-  Shield,
-  Zap,
+  FlaskConical,
 } from 'lucide-react';
 import type { Nation } from '@/types/game';
 import type { ResearchNode, ResearchCategory } from '@/lib/researchData';
+import type { BioLabFacility, BioLabTier } from '@/types/bioLab';
+import type { LucideIcon } from 'lucide-react';
 import {
   NUCLEAR_RESEARCH,
   CYBER_RESEARCH,
@@ -35,12 +36,13 @@ import {
   SPACE_RESEARCH,
   INTELLIGENCE_RESEARCH,
   CATEGORY_COLORS,
-  CATEGORY_NAMES,
+  RESEARCH_LOOKUP,
   canResearch,
 } from '@/lib/researchData';
 import { ResearchFlowNode } from './ResearchFlowNode';
 import { TechDetailsDialog } from './TechDetailsDialog';
 import { getLayoutedElements } from '@/lib/evolutionFlowLayout';
+import { BioLabTreeFlow } from './BioLabTreeFlow';
 
 interface ResearchTreeFlowProps {
   nation: Nation;
@@ -50,22 +52,96 @@ interface ResearchTreeFlowProps {
     projectId: string;
     progress: number;
   };
+  bioLabFacility?: BioLabFacility;
+  onStartBioLabConstruction?: (tier: BioLabTier) => void;
+  onCancelBioLabConstruction?: () => void;
 }
 
 const nodeTypes = {
   researchNode: ResearchFlowNode,
 };
 
-const CATEGORY_ICONS: Record<ResearchCategory, any> = {
-  nuclear: ShieldAlert,
-  cyber: Brain,
-  conventional: Factory,
-  economy: DollarSign,
-  culture: Users,
-  space: Satellite,
-  intelligence: Eye,
-  defense: Shield,
-  delivery: Zap,
+type DisplayCategory = ResearchCategory | 'biolab';
+
+const BASE_CATEGORY_ORDER: ResearchCategory[] = [
+  'nuclear',
+  'cyber',
+  'conventional',
+  'economy',
+  'culture',
+  'space',
+  'intelligence',
+];
+
+type FlowNodeData = ResearchNode & {
+  researched: boolean;
+  canResearch: boolean;
+  canAfford: boolean;
+  isResearching: boolean;
+  researchProgress?: number;
+  onStartResearch: () => void;
+  onCancelResearch?: () => void;
+  playerProduction: number;
+  playerIntel: number;
+  playerUranium: number;
+  prerequisiteNames: string[];
+  leadsTo: string[];
+};
+
+const DISPLAY_CATEGORY_CONFIG: Record<DisplayCategory, {
+  icon: LucideIcon;
+  color: string;
+  label: string;
+  description: string;
+}> = {
+  nuclear: {
+    icon: ShieldAlert,
+    color: CATEGORY_COLORS.nuclear,
+    label: 'Nuclear Arsenal',
+    description: 'Escalate your strategic deterrent with heavier warheads and delivery systems.',
+  },
+  cyber: {
+    icon: Brain,
+    color: CATEGORY_COLORS.cyber,
+    label: 'Cyber Warfare',
+    description: 'Enhance offensive and defensive cyber capabilities to disrupt enemy infrastructure.',
+  },
+  conventional: {
+    icon: Factory,
+    color: CATEGORY_COLORS.conventional,
+    label: 'Conventional Forces',
+    description: 'Modernize armies, navies, and air forces for decisive battlefield superiority.',
+  },
+  economy: {
+    icon: DollarSign,
+    color: CATEGORY_COLORS.economy,
+    label: 'Economy & Production',
+    description: 'Boost industrial throughput and wartime logistics to fuel your war machine.',
+  },
+  culture: {
+    icon: Users,
+    color: CATEGORY_COLORS.culture,
+    label: 'Culture & Diplomacy',
+    description: 'Project soft power, sway global opinion, and secure diplomatic leverage.',
+  },
+  space: {
+    icon: Satellite,
+    color: CATEGORY_COLORS.space,
+    label: 'Space Program',
+    description: 'Launch orbital infrastructure to gain intel, defense, and strategic dominance.',
+  },
+  intelligence: {
+    icon: Eye,
+    color: CATEGORY_COLORS.intelligence,
+    label: 'Intelligence Ops',
+    description: 'Expand espionage networks to infiltrate, destabilize, and reveal adversaries.',
+  },
+  biolab: {
+    icon: FlaskConical,
+    color: '#a855f7',
+    label: 'Bio-Lab Infrastructure',
+    description: 'Upgrade clandestine research facilities to unlock advanced pathogen programs.',
+  },
 };
 
 // Map categories to their research arrays
@@ -83,47 +159,24 @@ const CATEGORY_RESEARCH_MAP: Record<ResearchCategory, ResearchNode[]> = {
   delivery: [], // Combined with nuclear
 };
 
-/**
- * Convert research nodes to React Flow nodes with calculated states
- */
-function createFlowNodes(
-  researchNodes: ResearchNode[],
-  nation: Nation,
-  currentResearch: ResearchTreeFlowProps['currentResearch'],
-  onStartResearch: (nodeId: string) => void,
-  onCancelResearch?: (nodeId: string) => void
-): Node[] {
-  const researched = new Set(Object.keys(nation.researched || {}));
+const RESEARCH_DEPENDENTS: Record<string, string[]> = (() => {
+  const map: Record<string, string[]> = {};
 
-  return researchNodes.map((node) => {
-    const isResearched = researched.has(node.id);
-    const isResearching = currentResearch?.projectId === node.id;
-    const canResearchNode = canResearch(node.id, researched);
-    const canAfford =
-      nation.production >= (node.cost.production || 0) &&
-      nation.intel >= (node.cost.intel || 0) &&
-      nation.uranium >= (node.cost.uranium || 0);
-
-    return {
-      id: node.id,
-      type: 'researchNode',
-      position: { x: 0, y: 0 }, // Will be set by layout algorithm
-      data: {
-        ...node,
-        researched: isResearched,
-        canResearch: canResearchNode,
-        canAfford,
-        isResearching,
-        researchProgress: isResearching ? currentResearch?.progress : undefined,
-        onStartResearch: () => onStartResearch(node.id),
-        onCancelResearch: onCancelResearch ? () => onCancelResearch(node.id) : undefined,
-        playerProduction: nation.production,
-        playerIntel: nation.intel,
-        playerUranium: nation.uranium,
-      },
-    };
+  Object.values(CATEGORY_RESEARCH_MAP).forEach((nodes) => {
+    nodes.forEach((node) => {
+      (node.prerequisites || []).forEach((req) => {
+        if (!map[req]) {
+          map[req] = [];
+        }
+        if (!map[req].includes(node.id)) {
+          map[req].push(node.id);
+        }
+      });
+    });
   });
-}
+
+  return map;
+})();
 
 /**
  * Create edges from node prerequisites
@@ -187,6 +240,8 @@ function CategoryFlowPanel({
   onStartResearch,
   onCancelResearch,
   onNodeClick,
+  dependentsMap,
+  config,
 }: {
   category: ResearchCategory;
   nodes: ResearchNode[];
@@ -195,49 +250,52 @@ function CategoryFlowPanel({
   onStartResearch: (nodeId: string) => void;
   onCancelResearch?: (nodeId: string) => void;
   onNodeClick: (nodeId: string) => void;
+  dependentsMap: Record<string, string[]>;
+  config: typeof DISPLAY_CATEGORY_CONFIG[DisplayCategory];
 }) {
-  // Create flow nodes and edges
-  const flowNodes = useMemo(
-    () => {
-      const researched = new Set(Object.keys(nation.researched || {}));
-      return researchNodes.map((node) => {
-        const isResearched = researched.has(node.id);
-        const isResearching = currentResearch?.projectId === node.id;
-        const canResearchNode = canResearch(node.id, researched);
-        const canAfford =
-          nation.production >= (node.cost.production || 0) &&
-          nation.intel >= (node.cost.intel || 0) &&
-          nation.uranium >= (node.cost.uranium || 0);
+  const flowNodes = useMemo(() => {
+    const researched = new Set(Object.keys(nation.researched || {}));
 
-        return {
-          id: node.id,
-          type: 'researchNode',
-          position: { x: 0, y: 0 },
-          data: {
-            ...node,
-            researched: isResearched,
-            canResearch: canResearchNode,
-            canAfford,
-            isResearching,
-            researchProgress: isResearching ? currentResearch?.progress : undefined,
-            onStartResearch: () => onNodeClick(node.id),
-            onCancelResearch: onCancelResearch ? () => onCancelResearch(node.id) : undefined,
-            playerProduction: nation.production,
-            playerIntel: nation.intel,
-            playerUranium: nation.uranium,
-          },
-        };
-      });
-    },
-    [researchNodes, nation, currentResearch, onNodeClick, onCancelResearch]
-  );
+    return researchNodes.map((node) => {
+      const isResearched = researched.has(node.id);
+      const isResearching = currentResearch?.projectId === node.id;
+      const canResearchNode = canResearch(node.id, researched);
+      const canAfford =
+        nation.production >= (node.cost.production || 0) &&
+        nation.intel >= (node.cost.intel || 0) &&
+        nation.uranium >= (node.cost.uranium || 0);
+
+      const prerequisiteNames = (node.prerequisites || []).map((id) => RESEARCH_LOOKUP[id]?.name ?? id);
+      const leadsTo = (dependentsMap[node.id] || []).map((id) => RESEARCH_LOOKUP[id]?.name ?? id);
+
+      return {
+        id: node.id,
+        type: 'researchNode',
+        position: { x: 0, y: 0 },
+        data: {
+          ...node,
+          researched: isResearched,
+          canResearch: canResearchNode,
+          canAfford,
+          isResearching,
+          researchProgress: isResearching ? currentResearch?.progress : undefined,
+          onStartResearch: () => onNodeClick(node.id),
+          onCancelResearch: onCancelResearch ? () => onCancelResearch(node.id) : undefined,
+          playerProduction: nation.production,
+          playerIntel: nation.intel,
+          playerUranium: nation.uranium,
+          prerequisiteNames,
+          leadsTo,
+        },
+      } as Node<FlowNodeData>;
+    });
+  }, [researchNodes, nation, currentResearch, onNodeClick, onCancelResearch, dependentsMap]);
 
   const flowEdges = useMemo(
     () => createFlowEdges(researchNodes, nation, currentResearch),
     [researchNodes, nation, currentResearch]
   );
 
-  // Apply automatic layout
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
     () => getLayoutedElements(flowNodes, flowEdges, 'LR'),
     [flowNodes, flowEdges]
@@ -246,16 +304,31 @@ function CategoryFlowPanel({
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
 
-  // Update nodes when state changes
-  useMemo(() => {
+  useEffect(() => {
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
   }, [layoutedNodes, layoutedEdges, setNodes, setEdges]);
 
-  const categoryColor = CATEGORY_COLORS[category];
+  const stats = useMemo(() => {
+    const dataNodes = flowNodes.map((node) => node.data as FlowNodeData);
+    const totalCount = dataNodes.length;
+    const researchedCount = dataNodes.filter((n) => n.researched).length;
+    const availableCount = dataNodes.filter((n) => n.canResearch && !n.researched).length;
+    const inProgress = dataNodes.some((n) => n.isResearching);
+    return { totalCount, researchedCount, availableCount, inProgress };
+  }, [flowNodes]);
+
+  const categoryColor = config.color;
+  const Icon = config.icon;
 
   return (
-    <div className="w-full h-[700px] border border-cyan-500/30 rounded-lg overflow-hidden bg-gray-950/50">
+    <div
+      className="w-full h-[680px] border rounded-xl overflow-hidden shadow-[0_0_35px_rgba(8,145,178,0.1)]"
+      style={{
+        borderColor: categoryColor + '55',
+        background: 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(2,6,23,0.92) 100%)',
+      }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -265,34 +338,56 @@ function CategoryFlowPanel({
         connectionLineType={ConnectionLineType.SmoothStep}
         fitView
         fitViewOptions={{
-          padding: 0.2,
+          padding: 0.25,
           minZoom: 0.5,
           maxZoom: 1.5,
         }}
-        minZoom={0.3}
+        minZoom={0.35}
         maxZoom={2}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.85 }}
         proOptions={{ hideAttribution: true }}
       >
         <Background
-          color={categoryColor + '20'}
-          gap={20}
+          color={categoryColor + '25'}
+          gap={24}
           size={1}
-          className="bg-gray-950"
+          className="bg-slate-950"
         />
-        <Controls className="bg-gray-900 border-cyan-500/50" />
+        <Controls className="bg-slate-900/90 border border-cyan-500/40" />
         <MiniMap
           nodeColor={(node) => {
             if (node.data.researched) return categoryColor;
-            if (node.data.isResearching) return '#f59e0b'; // amber
+            if (node.data.isResearching) return '#f59e0b';
             if (node.data.canResearch && node.data.canAfford) return categoryColor + '88';
-            return '#4b5563';
+            return '#334155';
           }}
-          maskColor="rgba(0, 0, 0, 0.8)"
-          className="bg-gray-900 border border-cyan-500/50"
+          maskColor="rgba(2, 6, 23, 0.85)"
+          className="bg-slate-900/90 border border-cyan-500/40"
         />
-        <Panel position="top-right" className="bg-gray-900/90 p-2 rounded border border-cyan-500/30">
-          <div className="text-[10px] text-cyan-300 space-y-1">
+        <Panel position="top-left" className="bg-slate-900/90 p-3 rounded-lg border border-cyan-500/30 max-w-sm">
+          <div className="flex items-start gap-3">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full"
+              style={{ background: categoryColor + '22', border: `1px solid ${categoryColor}` }}
+            >
+              <Icon className="h-5 w-5" style={{ color: categoryColor }} />
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-bold uppercase tracking-wide text-cyan-200">
+                {config.label}
+              </div>
+              <p className="text-[10px] leading-snug text-slate-300">
+                {config.description}
+              </p>
+              <div className="text-[10px] text-cyan-300/80 font-semibold">
+                {stats.researchedCount}/{stats.totalCount} researched • {stats.availableCount} available
+                {stats.inProgress && <span className="text-amber-300"> • Research in progress</span>}
+              </div>
+            </div>
+          </div>
+        </Panel>
+        <Panel position="top-right" className="bg-slate-900/90 p-2 rounded-lg border border-cyan-500/30">
+          <div className="text-[10px] text-cyan-200 space-y-1">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded border-2" style={{ borderColor: categoryColor, background: categoryColor + '40' }} />
               <span>Researched</span>
@@ -302,7 +397,7 @@ function CategoryFlowPanel({
               <span>In Progress</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded border-2 border-gray-500 bg-gray-700" />
+              <div className="w-3 h-3 rounded border-2 border-gray-600 bg-slate-700" />
               <span>Locked</span>
             </div>
             <div className="flex items-center gap-2">
@@ -310,6 +405,9 @@ function CategoryFlowPanel({
               <span>Available</span>
             </div>
           </div>
+        </Panel>
+        <Panel position="bottom-left" className="bg-slate-900/85 px-3 py-1.5 rounded border border-cyan-500/30 text-[9px] text-cyan-200">
+          Hover any technology to preview its unlocks and downstream path.
         </Panel>
       </ReactFlow>
     </div>
@@ -321,30 +419,44 @@ export function ResearchTreeFlow({
   onStartResearch,
   onCancelResearch,
   currentResearch,
+  bioLabFacility,
+  onStartBioLabConstruction,
+  onCancelBioLabConstruction,
 }: ResearchTreeFlowProps) {
-  const [activeTab, setActiveTab] = useState<ResearchCategory>('nuclear');
+  const [activeTab, setActiveTab] = useState<DisplayCategory>('nuclear');
   const [selectedTech, setSelectedTech] = useState<string | null>(null);
 
-  // Categories to display (excluding empty ones)
-  const displayCategories: ResearchCategory[] = [
-    'nuclear',
-    'cyber',
-    'conventional',
-    'economy',
-    'culture',
-    'space',
-    'intelligence',
-  ];
+  const researchCategories = useMemo(() => BASE_CATEGORY_ORDER.filter((category) => CATEGORY_RESEARCH_MAP[category].length > 0), []);
 
-  // Calculate research counts per category
-  const researched = new Set(Object.keys(nation.researched || {}));
+  const displayCategories = useMemo(() => {
+    const categories: DisplayCategory[] = [...researchCategories];
+    if (bioLabFacility && onStartBioLabConstruction) {
+      categories.push('biolab');
+    }
+    return categories;
+  }, [researchCategories, bioLabFacility, onStartBioLabConstruction]);
 
-  const getCategoryStats = (category: ResearchCategory) => {
+  useEffect(() => {
+    if (displayCategories.length > 0 && !displayCategories.includes(activeTab)) {
+      setActiveTab(displayCategories[0]);
+    }
+  }, [displayCategories, activeTab]);
+
+  const researched = useMemo(() => new Set(Object.keys(nation.researched || {})), [nation.researched]);
+
+  const getCategoryStats = useCallback((category: DisplayCategory) => {
+    if (category === 'biolab') {
+      return {
+        researchedCount: bioLabFacility?.tier ?? 0,
+        totalCount: 4,
+      };
+    }
+
     const nodes = CATEGORY_RESEARCH_MAP[category];
     const researchedCount = nodes.filter((n) => researched.has(n.id)).length;
     const totalCount = nodes.length;
     return { researchedCount, totalCount };
-  };
+  }, [bioLabFacility?.tier, researched]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
     setSelectedTech(nodeId);
@@ -368,12 +480,11 @@ export function ResearchTreeFlow({
     }
   }, [selectedTech, onCancelResearch]);
 
-  // Get selected tech data
   const selectedTechNode = useMemo(() => {
     if (!selectedTech) return null;
-    
-    const allNodes = displayCategories.flatMap(cat => CATEGORY_RESEARCH_MAP[cat]);
-    const node = allNodes.find(n => n.id === selectedTech);
+
+    const allNodes = researchCategories.flatMap((cat) => CATEGORY_RESEARCH_MAP[cat]);
+    const node = allNodes.find((n) => n.id === selectedTech);
     if (!node) return null;
 
     const isResearched = researched.has(node.id);
@@ -395,37 +506,41 @@ export function ResearchTreeFlow({
       playerIntel: nation.intel,
       playerUranium: nation.uranium,
     };
-  }, [selectedTech, nation, currentResearch, researched, displayCategories]);
+  }, [selectedTech, researchCategories, researched, currentResearch, nation]);
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-3">
       <Tabs
         value={activeTab}
-        onValueChange={(v) => setActiveTab(v as ResearchCategory)}
+        onValueChange={(value) => setActiveTab(value as DisplayCategory)}
       >
-        <TabsList className="grid w-full grid-cols-7 bg-black/60 border border-cyan-500/30 h-auto p-1">
+        <TabsList
+          className="grid w-full bg-black/60 border border-cyan-500/30 h-auto p-1 rounded"
+          style={{ gridTemplateColumns: `repeat(${displayCategories.length}, minmax(0, 1fr))` }}
+        >
           {displayCategories.map((category) => {
-            const Icon = CATEGORY_ICONS[category];
+            const config = DISPLAY_CATEGORY_CONFIG[category];
+            const Icon = config.icon;
             const { researchedCount, totalCount } = getCategoryStats(category);
-            const color = CATEGORY_COLORS[category];
+            const isBioLab = category === 'biolab';
 
             return (
               <TabsTrigger
                 key={category}
                 value={category}
-                className="flex items-center justify-center gap-1.5 data-[state=active]:bg-cyan-500/20 data-[state=active]:border-cyan-400/60 px-2 py-1.5 h-auto"
+                className="flex items-center justify-center gap-1.5 px-2 py-1.5 h-auto data-[state=active]:bg-cyan-500/20 data-[state=active]:border-cyan-400/70 border border-transparent rounded"
               >
-                <Icon className="h-5 w-5 shrink-0" style={{ color }} />
+                <Icon className="h-5 w-5 shrink-0" style={{ color: config.color }} />
                 <div className="flex flex-col items-start min-w-0">
-                  <span className="uppercase tracking-wide text-[10px] font-bold leading-none truncate">
-                    {CATEGORY_NAMES[category].split(' ')[0]}
+                  <span className="uppercase tracking-wide text-[10px] font-bold leading-none truncate text-cyan-100">
+                    {config.label.split(' ')[0]}
                   </span>
-                  {researchedCount > 0 && (
+                  {totalCount > 0 && (
                     <span
                       className="text-[9px] leading-none mt-0.5"
-                      style={{ color: color }}
+                      style={{ color: config.color }}
                     >
-                      {researchedCount}/{totalCount}
+                      {isBioLab ? `Tier ${researchedCount}` : `${researchedCount}/${totalCount}`}
                     </span>
                   )}
                 </div>
@@ -435,21 +550,36 @@ export function ResearchTreeFlow({
         </TabsList>
 
         {displayCategories.map((category) => (
-          <TabsContent key={category} value={category} className="mt-2">
-            <CategoryFlowPanel
-              category={category}
-              nodes={CATEGORY_RESEARCH_MAP[category]}
-              nation={nation}
-              currentResearch={currentResearch}
-              onStartResearch={onStartResearch}
-              onCancelResearch={onCancelResearch}
-              onNodeClick={handleNodeClick}
-            />
+          <TabsContent key={category} value={category} className="mt-3">
+            {category === 'biolab' ? (
+              bioLabFacility && onStartBioLabConstruction ? (
+                <BioLabTreeFlow
+                  facility={bioLabFacility}
+                  playerProduction={nation.production}
+                  playerUranium={nation.uranium}
+                  onStartConstruction={onStartBioLabConstruction}
+                  onCancelConstruction={onCancelBioLabConstruction}
+                />
+              ) : (
+                <div className="text-sm text-gray-400">Bio-Lab program unavailable.</div>
+              )
+            ) : (
+              <CategoryFlowPanel
+                category={category}
+                nodes={CATEGORY_RESEARCH_MAP[category]}
+                nation={nation}
+                currentResearch={currentResearch}
+                onStartResearch={onStartResearch}
+                onCancelResearch={onCancelResearch}
+                onNodeClick={handleNodeClick}
+                dependentsMap={RESEARCH_DEPENDENTS}
+                config={DISPLAY_CATEGORY_CONFIG[category]}
+              />
+            )}
           </TabsContent>
         ))}
       </Tabs>
 
-      {/* Tech Details Dialog */}
       <TechDetailsDialog
         isOpen={selectedTech !== null}
         onClose={handleCloseDialog}

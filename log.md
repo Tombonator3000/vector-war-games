@@ -6,6 +6,11 @@
 **Status:** IN PROGRESS
 
 ---
+### 2025-11-06T11:57:39+00:00 - Civilization-style research flow overhaul
+- Refactored `ResearchTreeFlow` with category hero panels, tooltip-driven tech previews, and dynamic Dagre spacing to mirror Civilization-inspired layouts.
+- Added rich hover tooltips and cost badges to `ResearchFlowNode`, including downstream tech hints sourced from dependency maps.
+- Moved the Bio-Lab infrastructure progression into its own research tab and wired optional construction handlers through `CivilizationInfoPanel`.
+
 ### 2025-11-06T08:42:55Z - Vitest global import correction
 - Added explicit `vitest` imports to `src/lib/__tests__/electionSystem.test.ts` so `describe`/`it`/`expect` resolve without Jest globals.
 - Ran `npm run test`; suite still fails due to pre-existing issues in governance decay, conventional warfare, election opinion thresholds, migration counts, and Index co-op mock setup.
