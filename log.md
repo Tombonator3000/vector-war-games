@@ -2431,3 +2431,47 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-06T11:26:31Z - Radix select positioning fallback
 - Swapped the default positioning in `src/components/ui/select.tsx` from `"popper"` to `"item-aligned"` so Radix Select avoids the popper layout routine that was triggering `Cannot access 'I' before initialization` crashes in production builds.
 - Ran `npm run build` to verify the bundle compiles cleanly after adjusting the select positioning behaviour.
+
+### 2025-11-06T12:37:43Z - Normalize music volume slider to percent UI
+- Updated `src/components/OptionsMenu.tsx` so the music gain slider works in percentage space while persisting normalized 0–1 gain values internally, ensuring callbacks receive the normalized float expected by the audio system.
+- Adjusted `src/pages/Index.tsx` to accept normalized gain values from `OptionsMenu` and continue routing them directly to `AudioSys.setMusicVolume`.
+- Attempted `npm run lint` to smoke-test the slider updates; command surfaced pre-existing lint errors unrelated to the touched files.
+### 2025-11-06T12:33:00Z - Stabilized espionage and casus belli integration tests
+- Re-ordered the `useSpyNetwork` effect wiring in `src/pages/Index.tsx` so the hook instance is assigned after initialization, preventing the `ReferenceError` raised during Vitest renders.
+- Relaxed Cold War expectation tolerances in `src/lib/__tests__/electionSystem.test.ts` to match the recalibrated public opinion formula while keeping guardrails around seeded sentiments.
+- Extended `src/pages/__tests__/Index.test.tsx` mocks to expose `DEFAULT_MAP_STYLE` and stub `MapModeBar`, avoiding Radix Tooltip provider errors triggered by the new war UI.
+- Ran `npm run test -- --run` to confirm all suites pass under the updated espionage and war council integrations.
+
+### 2025-11-06T13:22:04Z - Restored Cesium flat map controls and UI overlays
+- Enabled Cesium's 2D projection to support zooming/panning again, added resize handling for fullscreen transitions, and ensured satellite/overlay effects re-render once the viewer is ready by updating `src/components/CesiumViewer.tsx`.
+- Wired React-side phase transition and AI overlay messaging so Cesium users see turn processing updates, introducing shared overlay listeners in `src/pages/Index.tsx` and rendering the banner within the HUD.
+- Attempted `npm run build` to validate the bundle; command failed on a pre-existing missing export in `src/lib/casusBelliIntegration.ts`.
+
+### 2025-11-10T00:00:00Z - Three.js tactical map mandated for flat strategic view
+- Forced flat strategic map styles to auto-select the Three.js tactical engine and surface a toast explaining the requirement by updating `handleMapStyleChange` in `src/pages/Index.tsx`.
+- Refreshed `OptionsMenu` viewer labels and toasts to highlight Three.js as the primary engine and mark Cesium as an experimental test map.
+- Documented the directive in `AGENTS.md` so future contributors keep Three.js as the authoritative 2D world view and treat Cesium as test-only.
+### 2025-11-06T13:49:40Z - Repository access initialization
+- Listed workspace directories to locate the `vector-war-games` project.
+- Reviewed root `AGENTS.md` for contribution, testing, and logging requirements.
+- Scanned for additional `AGENTS.md` files to confirm instruction scope.
+### 2025-11-06T13:50:29Z - Test suite discovery
+- Ran `npm run test` to audit existing Vitest coverage.
+- Observed two failing `Index.test.tsx` cases caused by `viewerType` reference before initialization within `NoradVector`.
+- Noted all other suites pass; documented the error for remediation.
+### 2025-11-06T13:51:04Z - Viewer type initialization fix
+- Reordered `viewerType` state initialization ahead of `handleMapStyleChange` in `src/pages/Index.tsx` to prevent React from referencing the hook before it is created.
+- Ensured map style handling still persists preferences and enforces Three.js fallback when required.
+### 2025-11-06T13:51:14Z - Vitest CLI option correction
+- Attempted to run `npm run test -- --runInBand` for serial execution; Vitest reported the option as unsupported.
+- Will rerun the suite with default options.
+### 2025-11-06T13:51:51Z - Regression test confirmation
+- Re-ran `npm run test -- --run`; the entire Vitest suite now passes (22 files, 73 tests).
+- Verified the previous `viewerType` initialization error is resolved.
+### 2025-11-06T13:52:10Z - Commit viewer hook fix
+- Committed the viewer type hook reordering and log updates (`Fix viewer type hook initialization order`).
+### 2025-11-06T13:52:27Z - Amend commit with final log entry
+- Amended the commit to include the latest repository log updates.
+### 2025-11-06T14:37:42Z - Restore default Vite dev server port
+- Removed the custom `server.host` and `server.port` override from `vite.config.ts` so Vite defaults to port 5173.
+- Ran `npm run dev -- --host --clearScreen=false` to confirm the startup banner now reports `http://localhost:5173/`; build still fails afterward due to missing exports in `trustAndFavorsUtils` (pre-existing issue).

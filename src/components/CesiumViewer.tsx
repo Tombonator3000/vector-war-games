@@ -1,4 +1,4 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle, useCallback, useMemo, useState } from 'react';
 import {
   Viewer,
   Ion,
@@ -130,6 +130,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
   const animationFrameRef = useRef<number>();
   const enableDayNightRef = useRef(enableDayNight);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const territoryClickRef = useRef(onTerritoryClick);
   const unitClickRef = useRef(onUnitClick);
   const baseLayerRef = useRef<ImageryLayer | null>(null);
@@ -139,6 +140,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   const flatRealisticLayerRef = useRef<ImageryLayer | null>(null);
   const cameraChangeCallbackRef = useRef<(() => void) | null>(null);
   const cameraHeightHelperRef = useRef<(() => number) | null>(null);
+  const [viewerReady, setViewerReady] = useState(false);
   const visualStyle = mapStyle.visual ?? DEFAULT_MAP_STYLE.visual;
 
   const maxIntelLevel = useMemo(() => {
@@ -205,7 +207,15 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
     const FLAT_REALISTIC_TRANSLATE_THRESHOLD = 4_500_000;
 
     detachCameraChangeListener();
+    controller.enableZoom = true;
     controller.enableTranslate = true;
+    const isFlatProjection = visual === 'flat' || visual === 'flat-realistic' || visual === 'flat-nightlights';
+    const allowRotation = !isFlatProjection;
+    controller.enableRotate = allowRotation;
+    controller.enableTilt = allowRotation;
+    controller.enableLook = allowRotation;
+    controller.minimumZoomDistance = isFlatProjection ? 500 : 300;
+    controller.maximumZoomDistance = isFlatProjection ? 60_000_000 : 200_000_000;
 
     let baseLayer = baseLayerRef.current;
     if (!baseLayer && imageryLayers.length > 0) {
@@ -243,7 +253,6 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       nightLayer.brightness = 1.2;
     }
 
-    const isFlatProjection = visual === 'flat' || visual === 'flat-realistic' || visual === 'flat-nightlights';
     if (isFlatProjection) {
       viewer.scene.morphTo2D(0);
       viewer.camera.setView({ destination: Rectangle.fromDegrees(-180, -90, 180, 90) });
@@ -687,6 +696,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         }, ScreenSpaceEventType.LEFT_CLICK);
 
         applyMapStyle(mapStyle);
+        setViewerReady(true);
 
       } catch (error) {
         console.error('Failed to initialize Cesium viewer:', error);
@@ -712,8 +722,13 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         viewer.destroy();
         viewerRef.current = null;
       }
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+      setViewerReady(false);
     };
-  }, [applyDayNightSettings, applyMapStyle, detachCameraChangeListener, enableDayNight, enableTerrain, visualStyle]);
+  }, [applyDayNightSettings, applyMapStyle, detachCameraChangeListener, enableDayNight, enableTerrain, visualStyle, mapStyle]);
 
   useEffect(() => {
     enableDayNightRef.current = enableDayNight;
@@ -736,13 +751,73 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
   }, [mapStyle, applyMapStyle]);
 
   useEffect(() => {
+    if (!viewerReady) {
+      return;
+    }
+
     updateMapModeOverlays(mapStyle.mode ?? 'standard', modeData);
-  }, [mapStyle.mode, modeData, updateMapModeOverlays]);
+  }, [mapStyle.mode, modeData, updateMapModeOverlays, viewerReady]);
+
+  useEffect(() => {
+    if (!viewerReady) {
+      return;
+    }
+
+    const viewer = viewerRef.current;
+    const container = containerRef.current;
+    if (!viewer || !container) {
+      return;
+    }
+
+    const handleResize = () => {
+      const anyViewer = viewer as unknown as { forceResize?: () => void; resize?: () => void };
+      if (typeof anyViewer.forceResize === 'function') {
+        anyViewer.forceResize();
+      } else if (typeof anyViewer.resize === 'function') {
+        anyViewer.resize();
+      }
+      viewer.scene.requestRender();
+    };
+
+    handleResize();
+
+    let fallbackResizeCleanup: (() => void) | null = null;
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => {
+        handleResize();
+      });
+      observer.observe(container);
+      resizeObserverRef.current = observer;
+    } else if (typeof window !== 'undefined') {
+      const resizeHandler = () => handleResize();
+      window.addEventListener('resize', resizeHandler);
+      fallbackResizeCleanup = () => {
+        window.removeEventListener('resize', resizeHandler);
+      };
+    }
+
+    const fullscreenHandler = () => {
+      handleResize();
+    };
+    document.addEventListener('fullscreenchange', fullscreenHandler);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', fullscreenHandler);
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+      if (fallbackResizeCleanup) {
+        fallbackResizeCleanup();
+      }
+    };
+  }, [viewerReady]);
 
 
   // Render territories with GeoJSON boundaries (Phase 2 improvement)
   useEffect(() => {
-    if (!viewerRef.current) return;
+    if (!viewerReady || !viewerRef.current) return;
 
     const viewer = viewerRef.current;
 
@@ -820,11 +895,11 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       const entity = viewer.entities.add(entityConfig);
       entitiesRef.current.set(`territory-${territory.id}`, entity);
     });
-  }, [territories, nations]);
+  }, [territories, nations, viewerReady]);
 
   // Render nation name labels
   useEffect(() => {
-    if (!viewerRef.current) return;
+    if (!viewerReady || !viewerRef.current) return;
 
     const viewer = viewerRef.current;
 
@@ -889,11 +964,11 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
       entitiesRef.current.set(`nation-label-${nation.id}`, nationLabelEntity);
     });
-  }, [nations, territories]);
+  }, [nations, territories, viewerReady]);
 
   // Render territory connections (neighbor borders)
   useEffect(() => {
-    if (!viewerRef.current || !territories || territories.length === 0) return;
+    if (!viewerReady || !viewerRef.current || !territories || territories.length === 0) return;
 
     const viewer = viewerRef.current;
 
@@ -984,11 +1059,11 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
         entitiesRef.current.set(`connection-${pairKey}`, connectionEntity);
       });
     });
-  }, [territories, nations]);
+  }, [territories, nations, viewerReady]);
 
   // Render military units with 3D models (Phase 2 improvement)
   useEffect(() => {
-    if (!viewerRef.current) return;
+    if (!viewerReady || !viewerRef.current) return;
 
     const viewer = viewerRef.current;
 
@@ -1099,11 +1174,11 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
       const entity = viewer.entities.add(entityConfig);
       entitiesRef.current.set(`unit-${unit.id}`, entity);
     });
-  }, [units, territories, nations, enable3DModels, enableTerrain]);
+  }, [units, territories, nations, enable3DModels, enableTerrain, viewerReady]);
 
   // Render infection heatmaps
   useEffect(() => {
-    if (!viewerRef.current || !showInfections) return;
+    if (!viewerReady || !viewerRef.current || !showInfections) return;
 
     const viewer = viewerRef.current;
 
@@ -1141,11 +1216,11 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
       entitiesRef.current.set(`infection-${territoryId}`, entity);
     });
-  }, [showInfections, infectionData, territories]);
+  }, [showInfections, infectionData, territories, viewerReady]);
 
   // Weather overlay visualization (Phase 2 feature)
   useEffect(() => {
-    if (!viewerRef.current || !enableWeather) return;
+    if (!viewerReady || !viewerRef.current || !enableWeather) return;
 
     const viewer = viewerRef.current;
 
@@ -1196,17 +1271,17 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
     const weatherInterval = setInterval(updateWeather, 10000);
 
     return () => clearInterval(weatherInterval);
-  }, [enableWeather]);
+  }, [enableWeather, viewerReady]);
 
   // Satellite orbital visualization (Phase 3 feature)
   useEffect(() => {
-    if (!viewerRef.current || !enableSatellites) return;
+    if (!viewerReady || !viewerRef.current || !enableSatellites) return;
 
     const viewer = viewerRef.current;
 
     // Clear old satellite entities
     entitiesRef.current.forEach((entity, key) => {
-      if (key.startsWith('satellite-')) {
+      if (key.startsWith('satellite-') || key.startsWith('satellite-orbit-')) {
         viewer.entities.remove(entity);
         entitiesRef.current.delete(key);
       }
@@ -1214,7 +1289,7 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
     // Add satellite orbits and entities
     SATELLITE_ORBITS.forEach(satellite => {
-      const color = Color.fromCssColorString(satellite.color);
+      const color = Color.fromCssColorString(satellite.color) ?? Color.CYAN;
 
       // Create orbital path
       const pathPositions: Cartesian3[] = [];
@@ -1275,7 +1350,8 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
 
       entitiesRef.current.set(`satellite-${satellite.id}`, satelliteEntity);
     });
-  }, [enableSatellites]);
+    viewer.scene.requestRender();
+  }, [enableSatellites, viewerReady]);
 
   // Expose methods via ref (Phase 2 & 3 enhanced API)
   useImperativeHandle(ref, () => ({

@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle, Target } from 'lucide-react';
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle, Target, UserSearch, Swords } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
@@ -89,6 +89,7 @@ import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotifi
 import { AIDiplomacyProposalModal } from '@/components/AIDiplomacyProposalModal';
 import { EndGameScreen } from '@/components/EndGameScreen';
 import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
+import type { WarState, PeaceOffer } from '@/types/casusBelli';
 // Removed - using unified diplomacy DiplomaticProposal instead
 import type { NegotiationState } from '@/types/negotiation';
 import { evaluateNegotiation } from '@/lib/aiNegotiationEvaluator';
@@ -121,6 +122,8 @@ import { makeAITurn as makeConventionalAITurn } from '@/lib/conventionalAI';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 import { UnifiedIntelOperationsPanel } from '@/components/UnifiedIntelOperationsPanel';
+import { SpyNetworkPanel } from '@/components/SpyNetworkPanel';
+import WarCouncilPanel from '@/components/WarCouncilPanel';
 import {
   executeSatelliteDeployment,
   executeSabotageOperation,
@@ -137,6 +140,7 @@ import { migrateGameDiplomacy, getRelationship } from '@/lib/unifiedDiplomacyMig
 import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from '@/lib/simplifiedBioWarfareLogic';
 import { launchPropagandaCampaign, buildWonder, applyImmigrationPolicy } from '@/lib/streamlinedCultureLogic';
 import { processImmigrationAndCultureTurn, initializeNationPopSystem } from '@/lib/immigrationCultureTurnProcessor';
+import { initializeSpyNetwork } from '@/lib/spyNetworkUtils';
 import {
   initializeIdeologySystem,
   processIdeologySystemTurn,
@@ -148,6 +152,7 @@ import {
   createDefaultNationCyberProfile,
   applyCyberResearchUnlock,
 } from '@/hooks/useCyberWarfare';
+import { useSpyNetwork } from '@/hooks/useSpyNetwork';
 import { GovernanceEventDialog } from '@/components/governance/GovernanceEventDialog';
 import { PoliticalStatusWidget } from '@/components/governance/PoliticalStatusWidget';
 import { GovernanceDetailPanel } from '@/components/governance/GovernanceDetailPanel';
@@ -197,6 +202,9 @@ import {
   aiAttemptDiplomacy,
   processAIProactiveDiplomacy,
 } from '@/lib/aiDiplomacyActions';
+import { updateCasusBelliForAllNations, processWarDeclaration } from '@/lib/casusBelliIntegration';
+import { createPeaceOffer, createWhitePeaceTerms } from '@/lib/peaceTermsUtils';
+import { endWar } from '@/lib/warDeclarationUtils';
 import {
   considerDiplomaticAction,
   applyRelationshipChange,
@@ -618,6 +626,43 @@ let nations: LocalNation[] = GameStateManager.getNations();
 let conventionalDeltas: ConventionalWarfareDelta[] = GameStateManager.getConventionalDeltas();
 let suppressMultiplayerBroadcast = false;
 let multiplayerPublisher: (() => void) | null = null;
+let spyNetworkApi: ReturnType<typeof useSpyNetwork> | null = null;
+let triggerNationsUpdate: (() => void) | null = null;
+
+type OverlayNotification = { text: string; expiresAt: number };
+type OverlayListener = (message: OverlayNotification | null) => void;
+let overlayListener: OverlayListener | null = null;
+let overlayTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function registerOverlayListener(listener: OverlayListener | null) {
+  overlayListener = listener;
+}
+
+function emitOverlayMessage(text: string, ttl: number) {
+  S.overlay = { text, ttl };
+
+  if (overlayTimeout) {
+    clearTimeout(overlayTimeout);
+    overlayTimeout = null;
+  }
+
+  overlayListener?.({ text, expiresAt: Date.now() + ttl });
+  overlayTimeout = setTimeout(() => {
+    overlayListener?.(null);
+    overlayTimeout = null;
+  }, ttl);
+}
+
+type PhaseTransitionListener = (active: boolean) => void;
+let phaseTransitionListener: PhaseTransitionListener | null = null;
+
+function registerPhaseTransitionListener(listener: PhaseTransitionListener | null) {
+  phaseTransitionListener = listener;
+}
+
+function notifyPhaseTransition(active: boolean) {
+  phaseTransitionListener?.(active);
+}
 
 const setMultiplayerPublisher = (publisher: (() => void) | null) => {
   multiplayerPublisher = publisher;
@@ -1933,6 +1978,10 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     conventional: createDefaultNationConventionalProfile('navy'),
     controlledTerritories: [],
     cyber: createDefaultNationCyberProfile(), // Minimal - no real cyber warfare in 1962
+    casusBelli: [],
+    activeWars: [],
+    peaceOffers: [],
+    spyNetwork: initializeSpyNetwork(),
   };
 
   if (isKennedy) {
@@ -1979,6 +2028,10 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     conventional: createDefaultNationConventionalProfile('army'),
     controlledTerritories: [],
     cyber: createDefaultNationCyberProfile(),
+    casusBelli: [],
+    activeWars: [],
+    peaceOffers: [],
+    spyNetwork: initializeSpyNetwork(),
   };
 
   if (isKhrushchev) {
@@ -2025,6 +2078,10 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     conventional: createDefaultNationConventionalProfile('army'),
     controlledTerritories: [],
     cyber: createDefaultNationCyberProfile(),
+    casusBelli: [],
+    activeWars: [],
+    peaceOffers: [],
+    spyNetwork: initializeSpyNetwork(),
   };
 
   if (isCastro) {
@@ -2158,6 +2215,13 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   S.diplomacy = createDefaultDiplomacyState();
   S.actionsRemaining = 2; // Crisis demands quick decisions
 
+  const casusReadyNations = updateCasusBelliForAllNations(nations, S.turn) as LocalNation[];
+  nations.length = 0;
+  nations.push(...casusReadyNations);
+  GameStateManager.setNations(casusReadyNations);
+  PlayerManager.setNations(casusReadyNations);
+  S.casusBelliState = { allWars: [], warHistory: [] };
+
   // Initialize Phase 3 state
   // @ts-expect-error - Legacy Phase 3 diplomacy
   if (!S.diplomacyPhase3) {
@@ -2263,7 +2327,11 @@ function initNations() {
       readiness: 70,
       offense: 60,
       detection: 38,
-    }
+    },
+    casusBelli: [],
+    activeWars: [],
+    peaceOffers: [],
+    spyNetwork: initializeSpyNetwork(),
   };
 
   // Apply doctrine bonuses
@@ -2342,7 +2410,11 @@ function initNations() {
         offense: 52 + Math.floor(Math.random() * 10),
         defense: 48 + Math.floor(Math.random() * 8),
         detection: 30 + Math.floor(Math.random() * 10),
-      }
+      },
+      casusBelli: [],
+      activeWars: [],
+      peaceOffers: [],
+      spyNetwork: initializeSpyNetwork(),
     };
 
     applyDoctrineEffects(nation, aiDoctrine);
@@ -2450,6 +2522,13 @@ function initNations() {
   S.gameOver = false;
   S.diplomacy = createDefaultDiplomacyState();
   S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+
+  const casusReadyNations = updateCasusBelliForAllNations(nations, S.turn) as LocalNation[];
+  nations.length = 0;
+  nations.push(...casusReadyNations);
+  GameStateManager.setNations(casusReadyNations);
+  PlayerManager.setNations(casusReadyNations);
+  S.casusBelliState = { allWars: [], warHistory: [] };
 
   // Initialize Phase 3 state
   // @ts-expect-error - Legacy Phase 3 diplomacy
@@ -4196,7 +4275,7 @@ function log(msg: string, type: string = 'normal') {
 
 // AI Turn - Complete strategic decision making
 function aiTurn(n: Nation) {
-  S.overlay = { text: 'AI: ' + (n.leader || n.name), ttl: 800 };
+  emitOverlayMessage('AI: ' + (n.leader || n.name), 800);
   if (n.population <= 0) return;
   
   maybeBanter(n, 0.3);
@@ -4696,6 +4775,7 @@ function endTurn() {
 
   // Set flag to prevent re-entry
   turnInProgress = true;
+  notifyPhaseTransition(true);
 
   // Safety timeout: auto-release lock after 30 seconds to prevent permanent lock
   const safetyTimeout = setTimeout(() => {
@@ -4707,6 +4787,7 @@ function endTurn() {
         S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
         updateDisplay();
       }
+      notifyPhaseTransition(false);
     }
   }, 30000);
 
@@ -4804,9 +4885,18 @@ function endTurn() {
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
 
+      // Update formal war state and espionage systems for the new turn
+      const casusUpdatedNations = updateCasusBelliForAllNations(nations, S.turn) as LocalNation[];
+      nations = casusUpdatedNations;
+      GameStateManager.setNations(casusUpdatedNations);
+      PlayerManager.setNations(casusUpdatedNations);
+      spyNetworkApi?.processTurnStart();
+      triggerNationsUpdate?.();
+
       // Release the turn lock and clear safety timeout
       turnInProgress = false;
       clearTimeout(safetyTimeout);
+      notifyPhaseTransition(false);
       console.log('[Turn Debug] Turn complete! New turn:', S.turn, 'Phase:', S.phase, 'Actions:', S.actionsRemaining, 'turn lock released');
 
       // Decrement intel operation cooldowns
@@ -5336,9 +5426,9 @@ function gameLoop() {
 function consumeAction() {
   S.actionsRemaining--;
   updateDisplay();
-  
+
   if (S.actionsRemaining <= 0) {
-    S.overlay = { text: 'NEXT ROUND', ttl: 1000 };
+    emitOverlayMessage('NEXT ROUND', 1000);
     setTimeout(endTurn, 500);
   }
 }
@@ -5352,6 +5442,7 @@ export default function NoradVector() {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const hasAutoplayedTurnOneMusicRef = useRef(false);
   const hasBootstrappedGameRef = useRef(false);
+  const [, setRenderTick] = useState(0);
 
   // Modal management - Extracted to useModalManager hook (Phase 7 refactoring)
   const { showModal, modalContent, openModal, closeModal } = useModalManager();
@@ -5387,7 +5478,48 @@ export default function NoradVector() {
   const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
   const [showEnhancedDiplomacy, setShowEnhancedDiplomacy] = useState(false);
 
+  const refreshGameState = useCallback((updatedNations: LocalNation[]) => {
+    nations = updatedNations;
+    GameStateManager.setNations(updatedNations);
+    PlayerManager.setNations(updatedNations);
+    setRenderTick((tick) => tick + 1);
+    updateDisplay();
+  }, []);
+
+  const applyNationUpdate = useCallback(
+    (nationId: string, updates: Partial<Nation>) => {
+      const current = GameStateManager.getNations();
+      const index = current.findIndex((nation) => nation.id === nationId);
+      if (index === -1) {
+        return;
+      }
+
+      const updated = [...current];
+      updated[index] = { ...updated[index], ...updates } as LocalNation;
+      refreshGameState(updated);
+    },
+    [refreshGameState]
+  );
+
+  const applyNationUpdatesMap = useCallback(
+    (updates: Map<string, Partial<Nation>>) => {
+      if (updates.size === 0) {
+        return;
+      }
+
+      const current = GameStateManager.getNations();
+      const updated = current.map((nation) => {
+        const patch = updates.get(nation.id);
+        return patch ? ({ ...nation, ...patch } as LocalNation) : nation;
+      });
+
+      refreshGameState(updated);
+    },
+    [refreshGameState]
+  );
+
   const playerNation = useMemo(() => nations.find(n => n.isPlayer), [nations]);
+  const enemyNations = useMemo(() => nations.filter(n => !n.isPlayer && !n.eliminated), [nations]);
   const playerDepletionWarnings = useMemo<DepletionWarning[]>(() => {
     if (!playerNation || !S.depletionWarnings || !S.conventional?.territories) {
       return [];
@@ -5428,6 +5560,13 @@ export default function NoradVector() {
       enqueueAIProposalRef = null;
     };
   }, [setPendingAIProposals]);
+
+  useEffect(() => {
+    triggerNationsUpdate = () => setRenderTick((tick) => tick + 1);
+    return () => {
+      triggerNationsUpdate = null;
+    };
+  }, []);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
     const storedVisual = Storage.getItem('map_style_visual') ?? Storage.getItem('map_style');
     const storedMode = Storage.getItem('map_mode');
@@ -5436,7 +5575,25 @@ export default function NoradVector() {
     return { visual, mode };
   });
 
+  // Globe viewer type - Three.js or Cesium
+  const [viewerType, setViewerType] = useState<'threejs' | 'cesium'>(() => {
+    const stored = Storage.getItem('viewer_type');
+    return stored === 'cesium' ? 'cesium' : 'threejs';
+  });
+
   const handleMapStyleChange = useCallback((style: MapVisualStyle) => {
+    const requiresThreeTacticalEngine =
+      style === 'flat' || style === 'flat-realistic' || style === 'flat-nightlights';
+
+    if (requiresThreeTacticalEngine && viewerType !== 'threejs') {
+      setViewerType('threejs');
+      Storage.setItem('viewer_type', 'threejs');
+      toast({
+        title: 'Three.js tactical map engaged',
+        description: 'Flat strategic views run on the primary Three.js engine.',
+      });
+    }
+
     setMapStyle(prev => {
       if (prev.visual === style) {
         return prev;
@@ -5456,7 +5613,7 @@ export default function NoradVector() {
 
       return { ...prev, visual: style };
     });
-  }, [toast]);
+  }, [toast, viewerType]);
 
   const handleMapModeChange = useCallback((mode: MapMode) => {
     setMapStyle(prev => {
@@ -5544,12 +5701,6 @@ export default function NoradVector() {
     setGamePhase('leader');
   }, [selectedScenarioId, setGamePhase]);
 
-  // Globe viewer type - Three.js or Cesium
-  const [viewerType, setViewerType] = useState<'threejs' | 'cesium'>(() => {
-    const stored = Storage.getItem('viewer_type');
-    return stored === 'cesium' ? 'cesium' : 'threejs';
-  });
-
   const handleViewerSelect = useCallback((nextType: 'threejs' | 'cesium') => {
     setViewerType(prev => {
       if (prev === nextType) {
@@ -5583,6 +5734,7 @@ export default function NoradVector() {
   // Tutorial and phase transition system
   const tutorialContext = useTutorialContext();
   const [isPhaseTransitioning, setIsPhaseTransitioning] = useState(false);
+  const [overlayBanner, setOverlayBanner] = useState<OverlayNotification | null>(null);
 
   // Era system state
   const [showEraTransition, setShowEraTransition] = useState(false);
@@ -5596,6 +5748,51 @@ export default function NoradVector() {
   // Consequence preview state
   const [consequencePreview, setConsequencePreview] = useState<ActionConsequences | null>(null);
   const [consequenceCallback, setConsequenceCallback] = useState<(() => void) | null>(null);
+
+  useEffect(() => {
+    const listener: PhaseTransitionListener = (active) => {
+      setIsPhaseTransitioning(active);
+    };
+    registerPhaseTransitionListener(listener);
+    return () => {
+      registerPhaseTransitionListener(null);
+    };
+  }, []);
+
+  useEffect(() => {
+    const listener: OverlayListener = (message) => {
+      setOverlayBanner(message);
+    };
+    registerOverlayListener(listener);
+    return () => {
+      registerOverlayListener(null);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!overlayBanner) {
+      return;
+    }
+
+    const remaining = overlayBanner.expiresAt - Date.now();
+    if (remaining <= 0) {
+      setOverlayBanner(null);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setOverlayBanner(prev => {
+        if (!prev) {
+          return null;
+        }
+        return prev.expiresAt <= Date.now() ? null : prev;
+      });
+    }, remaining);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [overlayBanner]);
 
   useEffect(() => {
     currentMapStyle = mapStyle.visual;
@@ -5692,6 +5889,8 @@ export default function NoradVector() {
   const [showPolicyPanel, setShowPolicyPanel] = useState(false);
   const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
   const [isIntelOperationsOpen, setIsIntelOperationsOpen] = useState(false);
+  const [isSpyPanelOpen, setIsSpyPanelOpen] = useState(false);
+  const [isWarCouncilOpen, setIsWarCouncilOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const lastTargetPingIdRef = useRef<string | null>(null);
   const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null);
@@ -6256,6 +6455,26 @@ export default function NoradVector() {
       }
     },
   });
+
+  const spyNetwork = useSpyNetwork({
+    currentTurn: S.turn,
+    getNation: (id: string) => GameStateManager.getNation(id),
+    getNations: () => GameStateManager.getNations(),
+    updateNation: applyNationUpdate,
+    updateNations: applyNationUpdatesMap,
+    getGameState: () => GameStateManager.getState(),
+    onLog: (message, tone) => log(message, tone),
+    onToast: (payload) => toast(payload),
+  });
+
+  useEffect(() => {
+    spyNetworkApi = spyNetwork;
+    return () => {
+      if (spyNetworkApi === spyNetwork) {
+        spyNetworkApi = null;
+      }
+    };
+  }, [spyNetwork]);
 
   const {
     getActionAvailability: getCyberActionAvailability,
@@ -7030,11 +7249,11 @@ export default function NoradVector() {
     setSfxEnabled(checked);
   }, []);
 
-  const handleMusicVolumeChange = useCallback((value: number[]) => {
-    const volume = Math.min(1, Math.max(0, value[0] ?? 0));
-    AudioSys.setMusicVolume(volume);
+  const handleMusicVolumeChange = useCallback((volume: number) => {
+    const normalizedVolume = Math.min(1, Math.max(0, volume));
+    AudioSys.setMusicVolume(normalizedVolume);
     // Don't save to storage - always reset to 30% on page load
-    setMusicVolume(volume);
+    setMusicVolume(normalizedVolume);
   }, []);
 
   const handleMusicTrackChange = useCallback((selection: string) => {
@@ -8607,6 +8826,258 @@ export default function NoradVector() {
   }, [nations, log, toast]);
 
   // ========== END SIMPLIFIED SYSTEM HANDLERS ==========
+
+  // Casus Belli & War Council Handlers
+  const handleDeclareWar = useCallback(
+    (targetNationId: string, casusBelliId: string) => {
+      const player = PlayerManager.get();
+      if (!player) {
+        toast({
+          title: 'Unable to declare war',
+          description: 'Player nation not found.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const defender = GameStateManager.getNation(targetNationId);
+      if (!defender) {
+        toast({
+          title: 'Unable to declare war',
+          description: 'Target nation not found.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const casusBelli = (player.casusBelli || []).find((cb) => cb.id === casusBelliId);
+      if (!casusBelli) {
+        toast({
+          title: 'Casus Belli unavailable',
+          description: 'Selected justification could not be found.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const result = processWarDeclaration(
+        player,
+        defender,
+        casusBelli,
+        GameStateManager.getNations(),
+        GameStateManager.getState(),
+        S.turn
+      );
+
+      if (!result.success || !result.warState) {
+        toast({
+          title: 'War declaration blocked',
+          description: result.message,
+          variant: 'destructive',
+        });
+        log(result.message, 'warning');
+        return;
+      }
+
+      const currentNations = GameStateManager.getNations();
+      const replacementMap = new Map<string, Nation>();
+      result.updatedNations.forEach((nation) => {
+        replacementMap.set(nation.id, nation);
+      });
+      replacementMap.set(result.updatedAttacker.id, result.updatedAttacker);
+      replacementMap.set(result.updatedDefender.id, result.updatedDefender);
+
+      const merged = currentNations.map((nation) => {
+        const update = replacementMap.get(nation.id);
+        return update ? ({ ...nation, ...update } as LocalNation) : nation;
+      });
+
+      refreshGameState(merged);
+
+      const casusState = S.casusBelliState ?? { allWars: [], warHistory: [] };
+      casusState.allWars = [
+        ...(casusState.allWars || []).filter((war) => war.id !== result.warState.id),
+        result.warState,
+      ];
+      casusState.warHistory = casusState.warHistory || [];
+      S.casusBelliState = casusState;
+
+      log(result.message, 'alert');
+      toast({ title: 'War Declared', description: result.message });
+      addNewsItem('military', result.message, 'critical');
+
+      if (result.councilResolution) {
+        const resolutionTitle = result.councilResolution.title ?? 'Council intervention triggered';
+        const resolutionDescription =
+          result.councilResolution.description ?? 'International Council responds to the conflict.';
+        addNewsItem('diplomacy', resolutionTitle, 'important');
+        toast({ title: 'Council Intervention', description: resolutionDescription });
+      }
+
+      triggerNationsUpdate?.();
+    },
+    [refreshGameState, toast, addNewsItem]
+  );
+
+  const handleOfferPeace = useCallback(
+    (warId: string) => {
+      const player = PlayerManager.get();
+      if (!player) {
+        toast({ title: 'Unable to offer peace', description: 'Player nation not found.', variant: 'destructive' });
+        return;
+      }
+
+      const warState = (player.activeWars || []).find((war) => war.id === warId);
+      if (!warState) {
+        toast({ title: 'Unable to offer peace', description: 'War state could not be located.', variant: 'destructive' });
+        return;
+      }
+
+      const opponentId =
+        warState.attackerNationId === player.id ? warState.defenderNationId : warState.attackerNationId;
+      const opponent = GameStateManager.getNation(opponentId);
+      if (!opponent) {
+        toast({ title: 'Unable to offer peace', description: 'Opponent nation not found.', variant: 'destructive' });
+        return;
+      }
+
+      const terms = createWhitePeaceTerms();
+      const offer = createPeaceOffer(player, opponent, warState, terms, S.turn);
+
+      const playerOffers: PeaceOffer[] = (player.peaceOffers || [])
+        .filter((existing) => existing.id !== offer.id && existing.warId !== warState.id)
+        .map((existing) => ({ ...existing }));
+      playerOffers.push(offer);
+
+      const opponentOffers: PeaceOffer[] = (opponent.peaceOffers || [])
+        .filter((existing) => existing.id !== offer.id)
+        .map((existing) => ({ ...existing }));
+      opponentOffers.push(offer);
+
+      const updates = new Map<string, Partial<Nation>>();
+      updates.set(player.id, { peaceOffers: playerOffers } as Partial<Nation>);
+      updates.set(opponent.id, { peaceOffers: opponentOffers } as Partial<Nation>);
+      applyNationUpdatesMap(updates);
+
+      toast({
+        title: 'Peace Offer Sent',
+        description: `White peace proposal sent to ${opponent.name}.`,
+      });
+      log(`Peace offer sent to ${opponent.name}`, 'diplomatic');
+      addNewsItem('diplomacy', `${player.name || player.id} proposes peace to ${opponent.name}`, 'important');
+      triggerNationsUpdate?.();
+    },
+    [applyNationUpdatesMap, toast, addNewsItem]
+  );
+
+  const handleAcceptPeace = useCallback(
+    (offerId: string) => {
+      const player = PlayerManager.get();
+      if (!player) {
+        toast({ title: 'Unable to process offer', description: 'Player nation not found.', variant: 'destructive' });
+        return;
+      }
+
+      const offer = (player.peaceOffers || []).find((po) => po.id === offerId);
+      if (!offer) {
+        toast({ title: 'Offer expired', description: 'Peace offer could not be found.', variant: 'destructive' });
+        return;
+      }
+
+      if (offer.toNationId !== player.id) {
+        toast({ title: 'Offer not addressed to player', description: 'Cannot accept outgoing offer.', variant: 'destructive' });
+        return;
+      }
+
+      const opponent = GameStateManager.getNation(offer.fromNationId);
+      if (!opponent) {
+        toast({ title: 'Unable to process offer', description: 'Opposing nation not found.', variant: 'destructive' });
+        return;
+      }
+
+      const warState = (player.activeWars || []).find((war) => war.id === offer.warId);
+      if (!warState) {
+        toast({ title: 'War not found', description: 'Conflict already ended or missing.', variant: 'destructive' });
+        return;
+      }
+
+      const status: WarState['status'] = offer.terms.type === 'white-peace'
+        ? 'white-peace'
+        : warState.attackerNationId === player.id
+          ? 'defender-victory'
+          : 'attacker-victory';
+      const resolvedWar = endWar(warState, status);
+
+      const updatedPlayerWars = (player.activeWars || []).filter((war) => war.id !== warState.id);
+      const updatedOpponentWars = (opponent.activeWars || []).filter((war) => war.id !== warState.id);
+      const updatedPlayerOffers: PeaceOffer[] = (player.peaceOffers || [])
+        .filter((po) => po.id !== offerId)
+        .map((existing) => ({ ...existing }));
+      const updatedOpponentOffers: PeaceOffer[] = (opponent.peaceOffers || [])
+        .filter((po) => po.id !== offerId)
+        .map((existing) => ({ ...existing }));
+
+      const updates = new Map<string, Partial<Nation>>();
+      updates.set(player.id, { activeWars: updatedPlayerWars, peaceOffers: updatedPlayerOffers } as Partial<Nation>);
+      updates.set(opponent.id, { activeWars: updatedOpponentWars, peaceOffers: updatedOpponentOffers } as Partial<Nation>);
+      applyNationUpdatesMap(updates);
+
+      const casusState = S.casusBelliState ?? { allWars: [], warHistory: [] };
+      casusState.allWars = (casusState.allWars || []).filter((war) => war.id !== warState.id);
+      casusState.warHistory = [...(casusState.warHistory || []), resolvedWar];
+      S.casusBelliState = casusState;
+
+      toast({ title: 'Peace Accepted', description: `Peace agreed with ${opponent.name}.` });
+      log(`Peace concluded with ${opponent.name}`, 'success');
+      addNewsItem('diplomacy', `${player.name || player.id} accepts peace with ${opponent.name}`, 'important');
+      triggerNationsUpdate?.();
+    },
+    [applyNationUpdatesMap, toast, addNewsItem]
+  );
+
+  const handleRejectPeace = useCallback(
+    (offerId: string) => {
+      const player = PlayerManager.get();
+      if (!player) {
+        toast({ title: 'Unable to process offer', description: 'Player nation not found.', variant: 'destructive' });
+        return;
+      }
+
+      const offer = (player.peaceOffers || []).find((po) => po.id === offerId);
+      if (!offer) {
+        toast({ title: 'Offer not found', description: 'The peace offer may have expired.', variant: 'destructive' });
+        return;
+      }
+
+      const opponentId = offer.fromNationId === player.id ? offer.toNationId : offer.fromNationId;
+      const opponent = GameStateManager.getNation(opponentId);
+
+      const updatedPlayerOffers: PeaceOffer[] = (player.peaceOffers || [])
+        .filter((po) => po.id !== offerId)
+        .map((existing) => ({ ...existing }));
+      const updates = new Map<string, Partial<Nation>>();
+      updates.set(player.id, { peaceOffers: updatedPlayerOffers } as Partial<Nation>);
+
+      if (opponent) {
+        const updatedOpponentOffers: PeaceOffer[] = (opponent.peaceOffers || [])
+          .filter((po) => po.id !== offerId)
+          .map((existing) => ({ ...existing }));
+        updates.set(opponent.id, { peaceOffers: updatedOpponentOffers } as Partial<Nation>);
+      }
+
+      applyNationUpdatesMap(updates);
+
+      toast({
+        title: 'Peace Offer Rejected',
+        description: `Peace offer from ${opponent?.name ?? 'opponent'} rejected.`,
+        variant: 'destructive',
+      });
+      log(`Peace offer rejected from ${opponent?.name ?? 'opponent'}`, 'warning');
+      addNewsItem('diplomacy', `${player.name || player.id} rejects peace from ${opponent?.name ?? 'opponent'}`, 'alert');
+      triggerNationsUpdate?.();
+    },
+    [applyNationUpdatesMap, toast, addNewsItem]
+  );
 
   const handleCulture = useCallback(async () => {
     const approved = await requestApproval('CULTURE', { description: 'Cultural operations briefing' });
@@ -11440,6 +11911,17 @@ export default function NoradVector() {
                   </Button>
 
                   <Button
+                    onClick={() => setIsSpyPanelOpen(true)}
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                    title="SPY - Operate spy networks and missions"
+                  >
+                    <UserSearch className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">SPY</span>
+                  </Button>
+
+                  <Button
                     onClick={handleBioWarfareLabToggle}
                     variant="ghost"
                     size="icon"
@@ -11512,11 +11994,22 @@ export default function NoradVector() {
                     data-role-locked={!diplomacyAllowed}
                     className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
                       diplomacyAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                  }`}
+                    }`}
                     title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
                   >
                     <Handshake className="h-5 w-5" />
                     <span className="text-[8px] font-mono">DIPLO</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => setIsWarCouncilOpen(true)}
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                    title="WAR - Manage Casus Belli, war goals, and peace deals"
+                  >
+                    <Swords className="h-5 w-5" />
+                    <span className="text-[8px] font-mono">WAR</span>
                   </Button>
 
                   <Button
@@ -11835,6 +12328,46 @@ export default function NoradVector() {
         );
       })()}
 
+      <Dialog open={isSpyPanelOpen} onOpenChange={setIsSpyPanelOpen}>
+        <DialogContent className="max-w-4xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
+            <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">
+              Spy Network Operations
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-400 mt-1">
+              Recruit agents, launch missions, and coordinate counter-intelligence efforts.
+            </DialogDescription>
+          </DialogHeader>
+          {playerNation ? (
+            <SpyNetworkPanel
+              player={playerNation}
+              enemies={enemyNations}
+              onRecruitSpy={(cover, targetNation, specialization) => {
+                spyNetwork.recruitSpy(playerNation.id, {
+                  cover,
+                  targetNation,
+                  specialization,
+                });
+              }}
+              onLaunchMission={(spyId, targetNationId, missionType) => {
+                spyNetwork.launchMission(playerNation.id, spyId, targetNationId, missionType);
+              }}
+              onLaunchCounterIntel={() => {
+                spyNetwork.launchCounterIntel(playerNation.id);
+              }}
+              calculateMissionSuccessChance={(spyId, targetNationId, missionType) =>
+                spyNetwork.calculateMissionSuccessChance(spyId, playerNation.id, targetNationId, missionType)
+              }
+              calculateDetectionRisk={(spyId, targetNationId, missionType) =>
+                spyNetwork.calculateDetectionRisk(spyId, playerNation.id, targetNationId, missionType)
+              }
+            />
+          ) : (
+            <div className="text-sm text-slate-400">Player nation not initialized.</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isIntelOperationsOpen} onOpenChange={setIsIntelOperationsOpen}>
         <DialogContent className="max-w-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
@@ -11853,6 +12386,32 @@ export default function NoradVector() {
             onCyberAttack={handleCyberAttackOperation}
             operationCooldowns={PlayerManager.get()?.intelOperationCooldowns}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isWarCouncilOpen} onOpenChange={setIsWarCouncilOpen}>
+        <DialogContent className="max-w-5xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
+            <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">
+              War Council
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-400 mt-1">
+              Manage Casus Belli, monitor war progress, and negotiate peace.
+            </DialogDescription>
+          </DialogHeader>
+          {playerNation ? (
+            <WarCouncilPanel
+              player={playerNation}
+              nations={nations}
+              currentTurn={S.turn}
+              onDeclareWar={handleDeclareWar}
+              onOfferPeace={handleOfferPeace}
+              onAcceptPeace={handleAcceptPeace}
+              onRejectPeace={handleRejectPeace}
+            />
+          ) : (
+            <div className="text-sm text-slate-400">Player nation not initialized.</div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -12238,6 +12797,14 @@ export default function NoradVector() {
           Storage.setItem('has_seen_tutorial', 'true');
         }} 
       />
+
+      {overlayBanner && overlayBanner.expiresAt > Date.now() && (
+        <div className="pointer-events-none fixed inset-0 z-[9997] flex items-center justify-center">
+          <div className="rounded-lg border border-cyan-500/70 bg-black/80 px-8 py-4 shadow-[0_0_28px_rgba(34,211,238,0.45)]">
+            <p className="font-mono text-xl tracking-[0.4em] text-cyan-100">{overlayBanner.text}</p>
+          </div>
+        </div>
+      )}
 
       {/* New Phase 1 Tutorial & Feedback Overlays */}
       <PhaseTransitionOverlay phase={S.phase} isTransitioning={isPhaseTransitioning} />
