@@ -2418,3 +2418,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-06T09:52:56Z - Resource trade pricing hotfix
 - Removed the direct `getResourceTradePrice` import in `src/lib/territorialResourcesSystem.ts` and inlined the simple price calculation (with a type guard) to break the circular dependency triggering the production ReferenceError.
 - Ran `npm run build` to confirm the production bundle compiles after the dependency fix.
+### 2025-11-06T10:34:42Z - Civilization info panel military power hook ordering
+- Moved the `calculateMilitaryPower` callback above its memoized usage in `src/components/CivilizationInfoPanel.tsx` to ensure the hook is defined before first reference and maintain stable dependencies.
+- Planned to run `npm run build` to confirm the panel renders without hook ordering runtime issues once the build completes successfully.
+- Executed `npm run build`; the Vite production build completed successfully, indicating no hook initialization runtime issues when toggling the panel during compilation checks.
