@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag, Smile, Meh, Frown, AlertTriangle, Trophy, Skull, Building2, Sparkles, Calendar, ThumbsUp, FlaskConical, BookOpen } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag, Smile, Meh, Frown, AlertTriangle, Trophy, Skull, Building2, Sparkles, Calendar, ThumbsUp, FlaskConical, BookOpen, Table } from 'lucide-react';
 import { GameDatabase } from './GameDatabase';
 import { Nation } from '../types/game';
 import type { GovernanceMetrics } from '@/hooks/useGovernance';
@@ -14,6 +14,7 @@ import { DoctrineStatusPanel } from './DoctrineStatusPanel';
 import type { DoctrineShiftState } from '@/types/doctrineIncidents';
 import { ResourceStockpileDisplay } from './ResourceStockpileDisplay';
 import { ResourceMarketPanel, MarketStatusBadge } from './ResourceMarketPanel';
+import { LedgerTable } from './LedgerTable';
 import { RESOURCE_INFO } from '@/types/territorialResources';
 import type { ResourceMarket } from '@/lib/resourceMarketSystem';
 import type { DepletionWarning } from '@/lib/resourceDepletionSystem';
@@ -36,7 +37,7 @@ interface CivilizationInfoPanelProps {
   depletionWarnings?: DepletionWarning[];
 }
 
-type TabType = 'own-status' | 'enemy-status' | 'diplomacy' | 'research';
+type TabType = 'own-status' | 'enemy-status' | 'ledger' | 'diplomacy' | 'research';
 
 export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   nations,
@@ -56,26 +57,78 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   depletionWarnings,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
+  const [selectedNationId, setSelectedNationId] = useState<string | null>(null);
   const [showNukaPedia, setShowNukaPedia] = useState(false);
 
   // Reset to default tab when panel opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       setActiveTab(defaultTab);
     }
   }, [isOpen, defaultTab]);
 
+  const player = useMemo(() => nations.find(n => n?.isPlayer) ?? null, [nations]);
+  const nonPlayerNations = useMemo(
+    () => nations.filter(n => n && !n.isPlayer),
+    [nations]
+  );
+  const enemies = useMemo(
+    () => nonPlayerNations.filter(n => n.population > 0),
+    [nonPlayerNations]
+  );
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedNationId(null);
+      return;
+    }
+
+    const selectedExists = selectedNationId
+      ? nations.some(nation => nation.id === selectedNationId)
+      : false;
+
+    if (!selectedExists) {
+      const fallback = enemies[0] ?? nonPlayerNations[0] ?? player;
+      setSelectedNationId(fallback ? fallback.id : null);
+    }
+  }, [isOpen, enemies, nonPlayerNations, player, nations, selectedNationId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 'l' && event.shiftKey) {
+        event.preventDefault();
+        setActiveTab('ledger');
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, [isOpen]);
+
+  const selectedNation = useMemo(
+    () => (selectedNationId ? nations.find(n => n.id === selectedNationId) ?? null : null),
+    [nations, selectedNationId]
+  );
+
+  const handleLedgerSelect = useCallback((nationId: string) => {
+    setSelectedNationId(nationId);
+  }, []);
+
   if (!isOpen) return null;
 
-  const player = nations.find(n => n?.isPlayer);
-  const enemies = nations.filter(n => n && !n.isPlayer && n.population > 0);
-
   if (!player) return null;
+
+  const playerMilitaryPower = useMemo(
+    () => calculateMilitaryPower(player),
+    [calculateMilitaryPower, player]
+  );
 
   // Victory progress now handled by VictoryPathsSection using streamlined victory conditions
 
   // Calculate total military power
-  const calculateMilitaryPower = (nation: Nation): number => {
+  const calculateMilitaryPower = useCallback((nation: Nation): number => {
     const missileValue = nation.missiles * 10;
     const bomberValue = nation.bombers * 8;
     const submarineValue = nation.submarines * 12;
@@ -83,7 +136,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
     const warheadCount = Object.values(nation.warheads || {}).reduce((sum, count) => sum + count, 0);
     const warheadValue = warheadCount * 15;
     return missileValue + bomberValue + submarineValue + defenseValue + warheadValue;
-  };
+  }, []);
 
   const renderResourceBar = (current: number, max: number, color: string) => (
     <div className="w-full bg-gray-700 rounded h-2 overflow-hidden">
@@ -539,221 +592,241 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   );
   };
 
-  const renderEnemyStatus = () => (
-    <div className="space-y-4">
-      <div className="text-sm text-gray-400 mb-4">
-        Monitoring {enemies.length} active nation{enemies.length !== 1 ? 's' : ''}
-      </div>
+  const renderEnemyStatus = (selectedEnemy: Nation | null) => {
+    if (!selectedEnemy) {
+      return (
+        <div className="flex h-full min-h-[240px] items-center justify-center rounded-lg border border-dashed border-gray-700 bg-gray-900/40 p-6 text-center text-sm text-gray-400">
+          Select a nation in the ledger to load intelligence details.
+        </div>
+      );
+    }
 
-      {enemies.map((enemy) => {
-        // Check if player has intel coverage on this enemy
-        const hasSatelliteCoverage = player.satellites?.[enemy.id] || false;
-        const hasDeepRecon = player.deepRecon?.[enemy.id] || false;
-        const hasIntelCoverage = hasSatelliteCoverage || hasDeepRecon;
+    const hasSatelliteCoverage = Boolean(player.satellites?.[selectedEnemy.id]);
+    const hasDeepRecon = Boolean(player.deepRecon?.[selectedEnemy.id]);
+    const hasIntelCoverage = hasSatelliteCoverage || hasDeepRecon;
 
-        const militaryPower = calculateMilitaryPower(enemy);
-        const playerMilitaryPower = calculateMilitaryPower(player);
-        const powerRatio = playerMilitaryPower > 0
-          ? (militaryPower / playerMilitaryPower) * 100
-          : 100;
+    const enemyMilitaryPower = calculateMilitaryPower(selectedEnemy);
+    const powerRatio = playerMilitaryPower > 0
+      ? (enemyMilitaryPower / playerMilitaryPower) * 100
+      : 100;
 
-        const hasAlliance = player.treaties?.[enemy.id]?.alliance;
-        const hasTruce = (player.treaties?.[enemy.id]?.truceTurns || 0) > 0;
-        const truceTurnsLeft = player.treaties?.[enemy.id]?.truceTurns || 0;
+    const hasAlliance = player.treaties?.[selectedEnemy.id]?.alliance;
+    const hasTruce = (player.treaties?.[selectedEnemy.id]?.truceTurns || 0) > 0;
+    const truceTurnsLeft = player.treaties?.[selectedEnemy.id]?.truceTurns || 0;
 
-        // Calculate enemy win condition progress using streamlined system
-        // For display purposes, show approximate progress without full victory analysis
-        const totalNations = nations.filter(n => n && !n.isPlayer).length;
-        const enemyEliminatedCount = nations.filter(n =>
-          n && n.id !== enemy.id && !n.isPlayer && n.population <= 0
-        ).length;
-        const enemyDominationProgress = totalNations > 0
-          ? (enemyEliminatedCount / totalNations) * 100
-          : 0;
-        const enemyEconomicProgress = Math.min(100, ((enemy.cities || 0) / 10) * 100);
-        const enemySurvivalProgress = Math.min(100, ((currentTurn / 50) * 50) + ((enemy.population >= 50 ? 1 : (enemy.population / 50)) * 50));
+    const totalNations = nonPlayerNations.length;
+    const enemyEliminatedCount = nonPlayerNations.filter(
+      nation => nation.id !== selectedEnemy.id && (nation.population ?? 0) <= 0
+    ).length;
+    const enemyDominationProgress = totalNations > 0
+      ? (enemyEliminatedCount / totalNations) * 100
+      : 0;
+    const enemyEconomicProgress = Math.min(100, ((selectedEnemy.cities || 0) / 10) * 100);
+    const enemySurvivalProgress = Math.min(
+      100,
+      ((currentTurn / 50) * 50) + ((selectedEnemy.population >= 50 ? 1 : (selectedEnemy.population / 50)) * 50)
+    );
 
-        const maxProgress = Math.max(
-          enemyDominationProgress,
-          enemyEconomicProgress,
-          enemySurvivalProgress
-        );
+    const maxProgress = Math.max(
+      enemyDominationProgress,
+      enemyEconomicProgress,
+      enemySurvivalProgress
+    );
 
-        return (
-          <div
-            key={enemy.id}
-            className="bg-gray-800/70 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors"
-          >
-            {/* Nation Header */}
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: enemy.color }}
-                  />
-                  <h4 className="text-white font-bold">{enemy.name}</h4>
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Led by {enemy.leader} • {enemy.doctrine}
-                </div>
+    return (
+      <div className="space-y-4">
+        <div className="text-sm text-gray-400 mb-2">
+          Monitoring {enemies.length} active nation{enemies.length !== 1 ? 's' : ''}
+        </div>
+
+        <div className="bg-gray-800/70 border border-gray-700 rounded-lg p-4">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: selectedEnemy.color }}
+                />
+                <h4 className="text-white font-bold">{selectedEnemy.name}</h4>
               </div>
-
-              <div className="text-right">
-                {hasAlliance && (
-                  <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
-                    Allied
-                  </div>
-                )}
-                {hasTruce && !hasAlliance && (
-                  <div className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">
-                    Truce ({truceTurnsLeft} turns)
-                  </div>
-                )}
-                {!hasAlliance && !hasTruce && (
-                  <div className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">
-                    Hostile
-                  </div>
-                )}
+              <div className="text-xs text-gray-400 mt-1">
+                Led by {selectedEnemy.leader} • {selectedEnemy.doctrine}
               </div>
             </div>
 
-            {/* Intel Coverage Status or Detailed Info */}
-            {!hasIntelCoverage ? (
-              <div className="bg-gray-900/70 border border-yellow-500/30 rounded p-6 text-center">
-                <Target className="w-12 h-12 text-yellow-400 mx-auto mb-3 opacity-50" />
-                <div className="text-yellow-400 font-bold mb-2">Intelligence Required</div>
-                <div className="text-gray-400 text-sm mb-3">
-                  Deploy satellites or conduct deep reconnaissance to gather intelligence on this nation
+            <div className="text-right">
+              {hasAlliance && (
+                <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
+                  Allied
                 </div>
-                <div className="text-xs text-gray-500">
-                  Use the Intel panel to unlock detailed military and economic data
+              )}
+              {hasTruce && !hasAlliance && (
+                <div className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">
+                  Truce ({truceTurnsLeft} turns)
+                </div>
+              )}
+              {!hasAlliance && !hasTruce && (
+                <div className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">
+                  Hostile
+                </div>
+              )}
+            </div>
+          </div>
+
+          {!hasIntelCoverage ? (
+            <div className="bg-gray-900/70 border border-yellow-500/30 rounded p-6 text-center">
+              <Target className="w-12 h-12 text-yellow-400 mx-auto mb-3 opacity-50" />
+              <div className="text-yellow-400 font-bold mb-2">Intelligence Required</div>
+              <div className="text-gray-400 text-sm mb-3">
+                Deploy satellites or conduct deep reconnaissance to gather intelligence on this nation
+              </div>
+              <div className="text-xs text-gray-500">
+                Use the Intel panel to unlock detailed military and economic data
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="mb-3 bg-blue-500/10 border border-blue-500/30 rounded p-2">
+                <div className="flex items-center justify-center gap-2 text-xs text-blue-300">
+                  <Target className="w-3 h-3" />
+                  <span>
+                    {hasSatelliteCoverage && 'Satellite Coverage Active'}
+                    {hasDeepRecon && hasSatelliteCoverage && ' + '}
+                    {hasDeepRecon && 'Deep Reconnaissance Active'}
+                  </span>
                 </div>
               </div>
-            ) : (
-              <>
-                {/* Intel Coverage Indicator */}
-                <div className="mb-3 bg-blue-500/10 border border-blue-500/30 rounded p-2">
-                  <div className="flex items-center justify-center gap-2 text-xs text-blue-300">
-                    <Target className="w-3 h-3" />
-                    <span>
-                      {hasSatelliteCoverage && 'Satellite Coverage Active'}
-                      {hasDeepRecon && hasSatelliteCoverage && ' + '}
-                      {hasDeepRecon && 'Deep Reconnaissance Active'}
-                    </span>
+
+              <div className="mb-3">
+                <div className="flex justify-between text-xs text-gray-400 mb-1">
+                  <span>Military Power vs You</span>
+                  <span className={powerRatio > 120 ? 'text-red-400' : powerRatio < 80 ? 'text-green-400' : 'text-yellow-400'}>
+                    {powerRatio.toFixed(0)}%
+                  </span>
+                </div>
+                {renderProgressBar(
+                  Math.min(100, powerRatio),
+                  powerRatio > 120 ? 'bg-red-500' : powerRatio < 80 ? 'bg-green-500' : 'bg-yellow-500'
+                )}
+              </div>
+
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                <div className="bg-gray-900/50 p-2 rounded text-center">
+                  <Target className="w-3 h-3 text-red-400 mx-auto mb-1" />
+                  <div className="text-xs text-gray-400">Missiles</div>
+                  <div className="text-white font-bold text-sm">{selectedEnemy.missiles}</div>
+                </div>
+
+                <div className="bg-gray-900/50 p-2 rounded text-center">
+                  <Plane className="w-3 h-3 text-blue-400 mx-auto mb-1" />
+                  <div className="text-xs text-gray-400">Bombers</div>
+                  <div className="text-white font-bold text-sm">{selectedEnemy.bombers}</div>
+                </div>
+
+                <div className="bg-gray-900/50 p-2 rounded text-center">
+                  <Anchor className="w-3 h-3 text-cyan-400 mx-auto mb-1" />
+                  <div className="text-xs text-gray-400">Subs</div>
+                  <div className="text-white font-bold text-sm">{selectedEnemy.submarines}</div>
+                </div>
+
+                <div className="bg-gray-900/50 p-2 rounded text-center">
+                  <Shield className="w-3 h-3 text-green-400 mx-auto mb-1" />
+                  <div className="text-xs text-gray-400">Defense</div>
+                  <div className="text-white font-bold text-sm">{selectedEnemy.defense}</div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-700 pt-3">
+                <div className="flex justify-between text-xs text-gray-400 mb-2">
+                  <span>Closest to Victory</span>
+                  <span className={maxProgress > 70 ? 'text-red-400 font-bold' : 'text-gray-300'}>
+                    {maxProgress.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-gray-500 w-16">Domination</div>
+                    <div className="flex-1">
+                      {renderProgressBar(enemyDominationProgress, 'bg-red-500')}
+                    </div>
+                    <div className="text-xs text-gray-400 w-12 text-right">
+                      {enemyDominationProgress.toFixed(0)}%
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-gray-500 w-16">Economic</div>
+                    <div className="flex-1">
+                      {renderProgressBar(enemyEconomicProgress, 'bg-yellow-500')}
+                    </div>
+                    <div className="text-xs text-gray-400 w-12 text-right">
+                      {enemyEconomicProgress.toFixed(0)}%
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-gray-500 w-16">Survival</div>
+                    <div className="flex-1">
+                      {renderProgressBar(enemySurvivalProgress, 'bg-green-500')}
+                    </div>
+                    <div className="text-xs text-gray-400 w-12 text-right">
+                      {enemySurvivalProgress.toFixed(0)}%
+                    </div>
                   </div>
                 </div>
 
-                {/* Military Comparison */}
-                <div className="mb-3">
-                  <div className="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>Military Power vs You</span>
-                    <span className={powerRatio > 120 ? 'text-red-400' : powerRatio < 80 ? 'text-green-400' : 'text-yellow-400'}>
-                      {powerRatio.toFixed(0)}%
-                    </span>
+                {maxProgress > 70 && (
+                  <div className="mt-2 text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded text-center">
+                    Warning: Close to victory!
                   </div>
-                  {renderProgressBar(
-                    Math.min(100, powerRatio),
-                    powerRatio > 120 ? 'bg-red-500' : powerRatio < 80 ? 'bg-green-500' : 'bg-yellow-500'
-                  )}
-                </div>
+                )}
+              </div>
 
-                {/* Resources Grid */}
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  <div className="bg-gray-900/50 p-2 rounded text-center">
-                    <Target className="w-3 h-3 text-red-400 mx-auto mb-1" />
-                    <div className="text-xs text-gray-400">Missiles</div>
-                    <div className="text-white font-bold text-sm">{enemy.missiles}</div>
-                  </div>
-
-                  <div className="bg-gray-900/50 p-2 rounded text-center">
-                    <Plane className="w-3 h-3 text-blue-400 mx-auto mb-1" />
-                    <div className="text-xs text-gray-400">Bombers</div>
-                    <div className="text-white font-bold text-sm">{enemy.bombers}</div>
-                  </div>
-
-                  <div className="bg-gray-900/50 p-2 rounded text-center">
-                    <Anchor className="w-3 h-3 text-cyan-400 mx-auto mb-1" />
-                    <div className="text-xs text-gray-400">Subs</div>
-                    <div className="text-white font-bold text-sm">{enemy.submarines}</div>
-                  </div>
-
-                  <div className="bg-gray-900/50 p-2 rounded text-center">
-                    <Shield className="w-3 h-3 text-green-400 mx-auto mb-1" />
-                    <div className="text-xs text-gray-400">Defense</div>
-                    <div className="text-white font-bold text-sm">{enemy.defense}</div>
+              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-700">
+                <div className="text-center">
+                  <div className="text-xs text-gray-500">Population</div>
+                  <div className="text-white text-sm font-bold">
+                    {(selectedEnemy.population / 1000000).toFixed(1)}M
                   </div>
                 </div>
-
-                {/* Victory Progress - Streamlined System */}
-                <div className="border-t border-gray-700 pt-3">
-                  <div className="flex justify-between text-xs text-gray-400 mb-2">
-                    <span>Closest to Victory</span>
-                    <span className={maxProgress > 70 ? 'text-red-400 font-bold' : 'text-gray-300'}>
-                      {maxProgress.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <div className="text-xs text-gray-500 w-16">Domination</div>
-                      <div className="flex-1">
-                        {renderProgressBar(enemyDominationProgress, 'bg-red-500')}
-                      </div>
-                      <div className="text-xs text-gray-400 w-12 text-right">
-                        {enemyDominationProgress.toFixed(0)}%
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-xs text-gray-500 w-16">Economic</div>
-                      <div className="flex-1">
-                        {renderProgressBar(enemyEconomicProgress, 'bg-yellow-500')}
-                      </div>
-                      <div className="text-xs text-gray-400 w-12 text-right">
-                        {enemyEconomicProgress.toFixed(0)}%
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-xs text-gray-500 w-16">Survival</div>
-                      <div className="flex-1">
-                        {renderProgressBar(enemySurvivalProgress, 'bg-green-500')}
-                      </div>
-                      <div className="text-xs text-gray-400 w-12 text-right">
-                        {enemySurvivalProgress.toFixed(0)}%
-                      </div>
-                    </div>
-                  </div>
-
-                  {maxProgress > 70 && (
-                    <div className="mt-2 text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded text-center">
-                      Warning: Close to victory!
-                    </div>
-                  )}
+                <div className="text-center">
+                  <div className="text-xs text-gray-500">Cities</div>
+                  <div className="text-white text-sm font-bold">{selectedEnemy.cities}</div>
                 </div>
-
-                {/* Additional Stats */}
-                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-700">
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500">Population</div>
-                    <div className="text-white text-sm font-bold">
-                      {(enemy.population / 1000000).toFixed(1)}M
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500">Cities</div>
-                    <div className="text-white text-sm font-bold">{enemy.cities}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500">Morale</div>
-                    <div className="text-white text-sm font-bold">
-                      {enemy.morale.toFixed(0)}%
-                    </div>
+                <div className="text-center">
+                  <div className="text-xs text-gray-500">Morale</div>
+                  <div className="text-white text-sm font-bold">
+                    {selectedEnemy.morale.toFixed(0)}%
                   </div>
                 </div>
-              </>
-            )}
-          </div>
-        );
-      })}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderLedger = () => (
+    <div className="space-y-6">
+      <div className="text-sm text-gray-400">
+        Compare global production, military power, and diplomatic alignments at a glance. Click any row to load the full
+        intelligence dossier.
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[2fr_3fr]">
+        <LedgerTable
+          nations={nations}
+          player={player}
+          selectedNationId={selectedNationId}
+          onSelectNation={handleLedgerSelect}
+          calculateMilitaryPower={calculateMilitaryPower}
+          playerMilitaryPower={playerMilitaryPower}
+        />
+        <div className="space-y-4">
+          {renderEnemyStatus(selectedNation)}
+        </div>
+      </div>
+      <div className="text-xs text-gray-500 text-center">
+        Tip: Press Shift + L to jump straight to this ledger.
+      </div>
     </div>
   );
 
@@ -877,6 +950,19 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
             </div>
           </button>
           <button
+            onClick={() => setActiveTab('ledger')}
+            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+              activeTab === 'ledger'
+                ? 'bg-gray-900 text-yellow-400 border-b-2 border-yellow-400'
+                : 'text-gray-400 hover:text-white hover:bg-gray-700'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Table className="w-4 h-4" />
+              Strategic Ledger
+            </div>
+          </button>
+          <button
             onClick={() => setActiveTab('research')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
               activeTab === 'research'
@@ -920,8 +1006,16 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'own-status' && renderOwnStatus()}
+          {activeTab === 'ledger' && renderLedger()}
           {activeTab === 'research' && renderResearch()}
-          {activeTab === 'enemy-status' && renderEnemyStatus()}
+          {activeTab === 'enemy-status' && (
+            <div className="space-y-4">
+              <div className="text-xs text-gray-500">
+                Use the Strategic Ledger (Shift + L) to switch focus instantly between rival nations.
+              </div>
+              {renderEnemyStatus(selectedNation)}
+            </div>
+          )}
           {activeTab === 'diplomacy' && renderDiplomacy()}
         </div>
 

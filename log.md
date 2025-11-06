@@ -2379,3 +2379,9 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Confirmed documentation touchpoints in `GameDatabase.tsx` and `TUTORIAL_SYSTEM.md` include outliner/macros guidance; no additional narrative changes required.
 - Logged this verification step; no extra code changes performed beyond repository audit.
 ---
+### 2025-11-06T07:45:27Z - Strategic ledger implementation pass
+- Added a "Strategic Ledger" tab to `CivilizationInfoPanel` with keyboard shortcut support and persisted selection state.
+- Built `LedgerTable` for sortable/filterable nation overviews and refactored enemy intelligence cards to load on row selection.
+- Documented the ledger workflow in `GameDatabase.tsx` and `TUTORIAL_SYSTEM.md` so players understand macro analysis tools.
+- Ran `npm run test -- --run`; suite still fails due to pre-existing issues in governance morale decay, conventional warfare queues, migration counts, Index co-op toggles, and legacy Jest-style election tests.
+
