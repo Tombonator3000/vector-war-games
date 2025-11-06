@@ -6,6 +6,10 @@
 **Status:** IN PROGRESS
 
 ---
+### 2025-11-06T08:42:55Z - Vitest global import correction
+- Added explicit `vitest` imports to `src/lib/__tests__/electionSystem.test.ts` so `describe`/`it`/`expect` resolve without Jest globals.
+- Ran `npm run test`; suite still fails due to pre-existing issues in governance decay, conventional warfare, election opinion thresholds, migration counts, and Index co-op mock setup.
+
 
 ### 2025-11-06T07:25:37Z - Strategic outliner integration
 - Implemented the neon-styled `StrategicOutliner` component to summarize flashpoints, pandemic activity, governance alerts, and macro availability, then mounted it beside the political widget in `Index.tsx` with hotkeys (O / Shift+O) for toggling.
