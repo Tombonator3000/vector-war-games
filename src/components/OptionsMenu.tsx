@@ -379,7 +379,8 @@ export function OptionsMenu({
   }, [isSfxControlled, onSfxToggle, onChange]);
 
   const handleMusicVolumeChange = useCallback((value: number[]) => {
-    const volume = Math.min(1, Math.max(0, value[0] ?? 0));
+    const rawValue = value[0] ?? 0;
+    const volume = Math.min(1, Math.max(0, rawValue / 100));
     if (!isVolumeControlled) {
       setMusicVolume(volume);
       // Don't save to storage - always reset to 30% on page load
@@ -680,10 +681,10 @@ export function OptionsMenu({
             <span>{Math.round(resolvedMusicVolume * 100)}%</span>
           </div>
           <Slider
-            value={[resolvedMusicVolume]}
+            value={[resolvedMusicVolume * 100]}
             min={0}
-            max={1}
-            step={0.05}
+            max={100}
+            step={5}
             onValueChange={handleMusicVolumeChange}
             disabled={!resolvedMusicEnabled}
             aria-label="Adjust music volume"
