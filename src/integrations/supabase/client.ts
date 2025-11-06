@@ -27,10 +27,20 @@ const storage: StorageLike | undefined =
     ? window.localStorage
     : createMemoryStorage();
 
-const env = typeof import.meta !== 'undefined' ? import.meta.env : ({} as Record<string, string>);
+const importMetaEnv = (() => {
+  try {
+    return new Function(
+      'return typeof import.meta !== "undefined" ? import.meta.env : undefined;',
+    )() as Record<string, string> | undefined;
+  } catch {
+    return undefined;
+  }
+})();
+const processEnv = typeof process !== 'undefined' ? process.env : undefined;
 
-const SUPABASE_URL = env.VITE_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_URL = importMetaEnv?.VITE_SUPABASE_URL ?? processEnv?.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY =
+  importMetaEnv?.VITE_SUPABASE_PUBLISHABLE_KEY ?? processEnv?.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
 

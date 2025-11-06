@@ -10,6 +10,8 @@ const originalEnv = {
   url: process.env.VITE_SUPABASE_URL,
   key: process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
 };
+const originalProcess = globalThis.process;
+const originalImportMetaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
 
 describe('MultiplayerProvider fallback', () => {
   beforeEach(() => {
@@ -19,6 +21,10 @@ describe('MultiplayerProvider fallback', () => {
   });
 
   afterEach(() => {
+    vi.stubGlobal('process', originalProcess);
+    if (typeof import.meta !== 'undefined') {
+      (import.meta as any).env = originalImportMetaEnv;
+    }
     vi.resetModules();
     if (originalEnv.url === undefined) {
       delete process.env.VITE_SUPABASE_URL;
@@ -33,6 +39,24 @@ describe('MultiplayerProvider fallback', () => {
   });
 
   it('renders without Supabase credentials', async () => {
+    const module = await import('@/contexts/MultiplayerProvider');
+    const { MultiplayerProvider } = module;
+
+    expect(() =>
+      render(
+        <MultiplayerProvider>
+          <div>test-child</div>
+        </MultiplayerProvider>,
+      ),
+    ).not.toThrow();
+  });
+
+  it('renders when environment globals are unavailable', async () => {
+    vi.stubGlobal('process', undefined as never);
+    if (typeof import.meta !== 'undefined') {
+      (import.meta as any).env = undefined;
+    }
+
     const module = await import('@/contexts/MultiplayerProvider');
     const { MultiplayerProvider } = module;
 
