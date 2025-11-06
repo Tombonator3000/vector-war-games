@@ -233,6 +233,134 @@ body.theme-retro80s {
 body.theme-wargames {
   background-color: #000000;
   color: #00ff00;
+  font-family: "Courier New", "Courier", monospace;
+  text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+
+/* WARGAMES 1980s retro computer styling */
+body.theme-wargames button,
+body.theme-wargames [role="button"],
+body.theme-wargames .command-button {
+  background: #000000;
+  color: #00ff00;
+  border: 2px solid #00ff00;
+  font-family: "Courier New", "Courier", monospace;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(0, 255, 0, 0.7);
+  box-shadow: 
+    0 0 10px rgba(0, 255, 0, 0.3),
+    inset 0 0 10px rgba(0, 255, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+body.theme-wargames button:hover,
+body.theme-wargames [role="button"]:hover,
+body.theme-wargames .command-button:hover {
+  background: #003300;
+  box-shadow: 
+    0 0 20px rgba(0, 255, 0, 0.5),
+    inset 0 0 15px rgba(0, 255, 0, 0.2);
+  text-shadow: 0 0 8px rgba(0, 255, 0, 1);
+}
+
+body.theme-wargames .hud-module,
+body.theme-wargames [data-ui-panel],
+body.theme-wargames .options-sheet {
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid #00ff00;
+  box-shadow: 
+    0 0 20px rgba(0, 255, 0, 0.3),
+    inset 0 0 20px rgba(0, 255, 0, 0.05);
+}
+
+body.theme-wargames input,
+body.theme-wargames textarea,
+body.theme-wargames select {
+  background: #000000;
+  color: #00ff00;
+  border: 1px solid #00ff00;
+  font-family: "Courier New", "Courier", monospace;
+  text-shadow: 0 0 3px rgba(0, 255, 0, 0.5);
+}
+
+body.theme-wargames input:focus,
+body.theme-wargames textarea:focus,
+body.theme-wargames select:focus {
+  outline: none;
+  border-color: #00ff00;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+body.theme-wargames .theme-chip,
+body.theme-wargames .layout-chip {
+  background: #000000;
+  border: 2px solid #00ff00;
+  color: #00ff00;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+}
+
+body.theme-wargames .theme-chip:hover,
+body.theme-wargames .layout-chip:hover {
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
+  background: #001a00;
+}
+
+body.theme-wargames .theme-chip.is-active,
+body.theme-wargames .layout-chip.is-active {
+  background: #003300;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+  text-shadow: 0 0 8px rgba(0, 255, 0, 1);
+}
+
+body.theme-wargames [data-ui-button]:not(.command-button) {
+  background: #000000;
+  border: 2px solid #00ff00;
+  color: #00ff00;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+body.theme-wargames [data-ui-button]:not(.command-button):hover {
+  background: #003300;
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+}
+
+body.theme-wargames .command-button--danger {
+  border-color: #ff0000;
+  color: #ff0000;
+  text-shadow: 0 0 5px rgba(255, 0, 0, 0.7);
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+}
+
+body.theme-wargames .command-button--danger:hover {
+  background: #330000;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+}
+
+/* Scanline effect for authentic CRT look */
+body.theme-wargames::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0) 1px,
+    rgba(0, 255, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0) 3px
+  );
+  z-index: 9999;
+  opacity: 0.3;
+}
+
+/* Flickering CRT effect */
+@keyframes wargames-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.97; }
+}
+
+body.theme-wargames {
+  animation: wargames-flicker 0.15s infinite;
 }
 
 body.theme-nightmode {

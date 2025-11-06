@@ -6937,7 +6937,12 @@ export default function NoradVector() {
     if (canvasRef.current) {
       canvasRef.current.style.imageRendering = theme === 'retro80s' || theme === 'wargames' ? 'pixelated' : 'auto';
     }
-  }, [theme]);
+    
+    // Auto-switch to wireframe map when wargames theme is selected
+    if (theme === 'wargames' && mapStyle !== 'wireframe') {
+      handleMapStyleChange('wireframe');
+    }
+  }, [theme, mapStyle, handleMapStyleChange]);
 
   useEffect(() => {
     uiUpdateCallback = () => setUiTick(prev => prev + 1);
