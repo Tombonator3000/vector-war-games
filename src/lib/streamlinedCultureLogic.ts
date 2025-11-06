@@ -173,7 +173,7 @@ export function applyImmigrationPolicy(
 
   return {
     ...nation,
-    population: nation.population + immigrationBonus * 1000000, // Convert millions to actual number
+    population: nation.population + immigrationBonus,
     instability: Math.max(0, Math.min(100, (nation.instability || 0) + policyDef.instabilityModifier)),
     immigrationPolicy: policy,
   };
@@ -327,7 +327,7 @@ export function getRecommendedImmigrationPolicy(nation: Nation): ImmigrationPoli
   }
 
   // If low population and low instability, recommend open borders
-  if (population < 50000000 && instability < 30) {
+  if (population < 50 && instability < 30) {
     return 'open';
   }
 

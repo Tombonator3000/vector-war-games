@@ -465,7 +465,7 @@ export function StreamlinedCulturePanel({
             <div className="space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-gray-500">Population:</span>
-                <span className="text-gray-300">{Math.round(player.population / 1000000)}M</span>
+                <span className="text-gray-300">{Math.round(player.population)}M</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Morale:</span>
