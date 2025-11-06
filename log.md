@@ -2494,6 +2494,8 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Updated `src/pages/Index.tsx` to collapse the governance stack, approval queue, strike planner, and command bar behind compact sheet toggles when the layout density is set to minimal while preserving their full presentation for expanded and compact modes.
 - Introduced floating quick-access buttons and a command action sheet so essential operations remain available after the HUD collapses, plus conditional sheet reuse for the strike planner.
 - Ran `npm run test` (after correcting an unsupported `--runInBand` flag) to smoke-test the density presets and verify the interface renders across configurations.
+### 2025-11-06T16:53:27Z - Preserve permanent decision cooldowns
+- Updated the political power generation hook to leave negative cooldown values untouched so once-per-game decisions remain locked after activation (`src/hooks/usePoliticalPower.ts`).
 ### 2025-11-06T16:54:45Z - Expand Cold War leader roster and data
 - Appended fifteen additional historical Cold War figures to the leader selection roster with AI profiles so they surface in setup (`src/pages/Index.tsx`).
 - Authored matching biography entries, strategy tips, and doctrine recommendations for each new leader (`src/data/leaderBiographies.ts`).

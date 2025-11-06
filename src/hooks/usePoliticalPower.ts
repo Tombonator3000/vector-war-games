@@ -142,9 +142,13 @@ export function usePoliticalPower({ currentTurn, nations }: UsePoliticalPowerOpt
         nationCooldowns.forEach((turnsRemaining, decisionId) => {
           if (turnsRemaining > 0) {
             updatedCooldowns.set(decisionId, turnsRemaining - 1);
-          } else {
+            return;
+          }
+
+          if (turnsRemaining === 0) {
             updatedCooldowns.delete(decisionId);
           }
+          // Permanent cooldowns (negative values) remain untouched to preserve one-time decisions
         });
 
         newCooldowns.set(nation.id, updatedCooldowns);
