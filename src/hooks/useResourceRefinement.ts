@@ -136,19 +136,26 @@ export function useResourceRefinement(
   }, []);
 
   const processTurn = useCallback(() => {
-    setOrders((current) =>
-      current
-        .map((order) => ({
-          ...order,
-          turnsRemaining: Math.max(0, order.turnsRemaining - 1),
-          outputProduced:
-            order.outputProduced +
-            mergedConversionRates[
-              refineries.find((refinery) => refinery.id === order.refineryId)?.type ?? "oil"
-            ].baseYield,
-        }))
-        .filter((order) => order.turnsRemaining > 0),
-    );
+    setOrders((current) => {
+      const refineryById = new Map(refineries.map((refinery) => [refinery.id, refinery]));
+
+      return current
+        .map((order) => {
+          const refinery = refineryById.get(order.refineryId);
+          if (!refinery) {
+            return null;
+          }
+
+          const conversion = mergedConversionRates[refinery.type];
+
+          return {
+            ...order,
+            turnsRemaining: Math.max(0, order.turnsRemaining - 1),
+            outputProduced: order.outputProduced + (conversion?.baseYield ?? 0),
+          };
+        })
+        .filter((order): order is RefinementOrder => order !== null && order.turnsRemaining > 0);
+    });
 
     setRefineries((current) =>
       current.map((refinery) => ({
