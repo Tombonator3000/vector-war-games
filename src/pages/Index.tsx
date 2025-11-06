@@ -10539,6 +10539,31 @@ export default function NoradVector() {
         cam.y = Math.min(Math.max(cam.y, minCamY), maxCamY);
       };
 
+      const clampPanBounds = () => {
+        clampLatitude();
+
+        if (currentMapStyle !== 'flat-realistic') {
+          return;
+        }
+
+        const width = W || canvas?.width || 0;
+        if (!width) {
+          return;
+        }
+
+        const zoomLevel = Math.max(0.5, Math.min(3, cam.targetZoom));
+        const scaledWidth = width * zoomLevel;
+
+        if (scaledWidth <= width) {
+          cam.x = (width - scaledWidth) / 2;
+          return;
+        }
+
+        const minX = width - scaledWidth;
+        const maxX = 0;
+        cam.x = Math.min(Math.max(cam.x, minX), maxX);
+      };
+
       let activePointerId: number | null = null;
 
       const handlePointerUp = (e: PointerEvent) => {
@@ -10727,11 +10752,6 @@ export default function NoradVector() {
           return;
         }
 
-        // Lock panning in flat-realistic mode when not zoomed in
-        if (currentMapStyle === 'flat-realistic' && cam.zoom <= 1.05) {
-          return;
-        }
-
         const dx = e.clientX - dragStart.x;
         const dy = e.clientY - dragStart.y;
         dragStart = { x: e.clientX, y: e.clientY };
@@ -10741,7 +10761,7 @@ export default function NoradVector() {
 
         cam.x -= dx * rotationFactor;
         cam.y -= dy * tiltFactor;
-        clampLatitude();
+        clampPanBounds();
       };
 
       const handlePointerCancel = (e: PointerEvent) => {
@@ -10784,8 +10804,8 @@ export default function NoradVector() {
           cam.x = focalX - (projectedX - cam.x) * zoomScale;
           cam.y = focalY - (projectedY - cam.y) * zoomScale;
         }
-        
-        clampLatitude();
+
+        clampPanBounds();
       };
 
       let touchStartTime = 0;
@@ -10844,23 +10864,18 @@ export default function NoradVector() {
               cam.x = midpointX - (projectedX - cam.x) * zoomScale;
               cam.y = midpointY - (projectedY - cam.y) * zoomScale;
             }
-            
+
             lastTouchDistance = newDistance;
-            clampLatitude();
+            clampPanBounds();
           }
         } else if(touching && e.touches.length === 1) {
           // Single finger pan
           e.preventDefault();
-          
-          // Lock panning in flat-realistic mode when not zoomed in
-          if (currentMapStyle === 'flat-realistic' && cam.zoom <= 1.05) {
-            return;
-          }
-          
-          const nx = e.touches[0].clientX, ny = e.touches[0].clientY; 
+
+          const nx = e.touches[0].clientX, ny = e.touches[0].clientY;
           const dx = nx - touchStart.x;
           const dy = ny - touchStart.y;
-          
+
           // Only pan if moved more than 5px (prevents accidental pan on tap)
           if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
             const rotationFactor = 0.85;
@@ -10868,7 +10883,7 @@ export default function NoradVector() {
 
             cam.x -= dx * rotationFactor;
             cam.y -= dy * tiltFactor;
-            clampLatitude();
+            clampPanBounds();
             touchStart = {x: nx, y: ny};
           }
         }
