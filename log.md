@@ -2509,3 +2509,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Added a leader portrait button to the political status widget so players can open their leader profile directly from the governance HUD (`src/components/governance/PoliticalStatusWidget.tsx`).
 - Introduced a combined leader profile dialog that surfaces biography details alongside the ability panel and wired it into the main game page (`src/components/LeaderProfileDialog.tsx`, `src/pages/Index.tsx`).
 - Attempted to run `npm run lint` but it failed due to long-standing lint violations unrelated to this change; no new lint errors introduced near the modified code paths.
+### 2025-11-06T18:35:44Z - Support flat nightlights tactical view
+- Added a dedicated flat nightlights texture loader and ensured map style switches preload and render the appropriate imagery while sharing viewport bounds with the day texture (`src/pages/Index.tsx`, `src/rendering/worldRenderer.ts`).
+- Updated flat map camera clamping and auto-centering logic so both flat day and night variants remain fully within the viewport during scroll, wheel, and pinch interactions (`src/pages/Index.tsx`).

@@ -31,6 +31,9 @@ import {
   type PandemicTurnContext
 } from '@/hooks/usePandemic';
 import { useBioWarfare } from '@/hooks/useBioWarfare';
+import { useEconomicDepth } from '@/hooks/useEconomicDepth';
+import { useMilitaryTemplates } from '@/hooks/useMilitaryTemplates';
+import { useSupplySystem } from '@/hooks/useSupplySystem';
 import { initializeAllAINations, processAllAINationsBioWarfare } from '@/lib/aiBioWarfareIntegration';
 import { DEPLOYMENT_METHODS } from '@/types/bioDeployment';
 import type { BioLabTier } from '@/types/bioLab';
@@ -627,6 +630,9 @@ let conventionalDeltas: ConventionalWarfareDelta[] = GameStateManager.getConvent
 let suppressMultiplayerBroadcast = false;
 let multiplayerPublisher: (() => void) | null = null;
 let spyNetworkApi: ReturnType<typeof useSpyNetwork> | null = null;
+let economicDepthApi: ReturnType<typeof useEconomicDepth> | null = null;
+let militaryTemplatesApi: ReturnType<typeof useMilitaryTemplates> | null = null;
+let supplySystemApi: ReturnType<typeof useSupplySystem> | null = null;
 let triggerNationsUpdate: (() => void) | null = null;
 
 type OverlayNotification = { text: string; expiresAt: number };
@@ -693,8 +699,11 @@ let worldCountries: any = null;
 // resolvePublicAssetPath moved to @/lib/renderingUtils
 
 const FLAT_REALISTIC_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day.jpg');
+const FLAT_NIGHTLIGHTS_TEXTURE_URL = resolvePublicAssetPath('textures/earth_nightlights.jpg');
 let flatRealisticTexture: HTMLImageElement | null = null;
 let flatRealisticTexturePromise: Promise<HTMLImageElement> | null = null;
+let flatNightlightsTexture: HTMLImageElement | null = null;
+let flatNightlightsTexturePromise: Promise<HTMLImageElement> | null = null;
 
 function preloadFlatRealisticTexture() {
   if (flatRealisticTexture) {
@@ -728,6 +737,41 @@ function preloadFlatRealisticTexture() {
 
   return flatRealisticTexturePromise.catch(error => {
     // Texture load failed - fallback to standard rendering
+    return null;
+  });
+}
+
+function preloadFlatNightlightsTexture() {
+  if (flatNightlightsTexture) {
+    return Promise.resolve(flatNightlightsTexture);
+  }
+
+  if (flatNightlightsTexturePromise) {
+    return flatNightlightsTexturePromise;
+  }
+
+  if (typeof window === 'undefined' || typeof Image === 'undefined') {
+    return Promise.resolve(null);
+  }
+
+  flatNightlightsTexturePromise = new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      flatNightlightsTexture = image;
+      resolve(image);
+    };
+    image.onerror = (event) => {
+      flatNightlightsTexturePromise = null;
+      reject(
+        event instanceof ErrorEvent
+          ? event.error ?? new Error('Failed to load flat nightlights texture')
+          : new Error('Failed to load flat nightlights texture'),
+      );
+    };
+    image.src = FLAT_NIGHTLIGHTS_TEXTURE_URL;
+  });
+
+  return flatNightlightsTexturePromise.catch(() => {
     return null;
   });
 }
@@ -2833,9 +2877,12 @@ function drawWorld(style: MapStyle) {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
+    flatNightlightsTexture,
+    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    preloadFlatNightlightsTexture,
     getPoliticalFill,
   };
   renderWorld(style, context);
@@ -2857,9 +2904,12 @@ function drawNations(style: MapStyle) {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
+    flatNightlightsTexture,
+    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    preloadFlatNightlightsTexture,
     getPoliticalFill,
     nations,
     S,
@@ -2881,9 +2931,12 @@ function drawTerritoriesWrapper() {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
+    flatNightlightsTexture,
+    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    preloadFlatNightlightsTexture,
     getPoliticalFill,
     territories: territoryList,
     playerId: player.id,
@@ -2943,7 +2996,7 @@ function drawSatellites(nowMs: number) {
 
   const activeOrbits: SatelliteOrbit[] = [];
   const player = PlayerManager.get();
-  const isFlatRealistic = currentMapStyle === 'flat-realistic';
+  const isFlatTexture = currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights';
 
   orbits.forEach(orbit => {
     const targetNation = nations.find(nation => nation.id === orbit.targetId);
@@ -2991,7 +3044,7 @@ function drawSatellites(nowMs: number) {
     ctx.stroke();
     ctx.restore();
 
-    if (isFlatRealistic) {
+    if (isFlatTexture) {
       ctx.save();
       ctx.globalCompositeOperation = 'screen';
       const gradient = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, 22);
@@ -3597,7 +3650,7 @@ function drawFX() {
     S.screenShake *= 0.9;
   }
 
-  if (currentMapStyle === 'flat-realistic') {
+  if (currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights') {
     drawFalloutMarks(deltaMs);
   }
 
@@ -4170,8 +4223,38 @@ function checkVictory() {
     return;
   }
   
-  if ((player.cities || 1) >= 10) {
-    endGame(true, 'ECONOMIC VICTORY - Industrial supremacy achieved!');
+  // Economic Victory - Enhanced with Phase 3 Economic Depth features
+  const cities = player.cities || 1;
+  let economicVictory = false;
+  let economicVictoryReason = '';
+
+  // Traditional path: 10 cities
+  if (cities >= 10) {
+    economicVictory = true;
+    economicVictoryReason = 'Industrial supremacy achieved through city development!';
+  }
+
+  // Phase 3 Economic Depth path: Trade + Refinement + Infrastructure dominance
+  if (economicDepthApi) {
+    const economicPower = economicDepthApi.calculateEconomicPower();
+    const playerEconomicPower = economicPower.get(player.id);
+
+    if (playerEconomicPower) {
+      // Victory through economic dominance: High economic score
+      if (playerEconomicPower.economicVictoryProgress >= 100) {
+        economicVictory = true;
+        economicVictoryReason = `Economic supremacy achieved! (Rank #${playerEconomicPower.globalRank}, Score: ${playerEconomicPower.totalScore})`;
+      }
+      // Alternative: Top economic power with significant lead
+      else if (playerEconomicPower.globalRank === 1 && playerEconomicPower.totalScore >= 500) {
+        economicVictory = true;
+        economicVictoryReason = `Global economic dominance! Trade, industry, and infrastructure unmatched!`;
+      }
+    }
+  }
+
+  if (economicVictory) {
+    endGame(true, `ECONOMIC VICTORY - ${economicVictoryReason}`);
     return;
   }
 
@@ -5643,6 +5726,8 @@ export default function NoradVector() {
       AudioSys.playSFX('click');
       if (style === 'flat-realistic') {
         void preloadFlatRealisticTexture();
+      } else if (style === 'flat-nightlights') {
+        void preloadFlatNightlightsTexture();
       }
       toast({
         title: 'Kartstil oppdatert',
@@ -5834,7 +5919,7 @@ export default function NoradVector() {
 
   useEffect(() => {
     currentMapStyle = mapStyle.visual;
-    if (mapStyle.visual === 'flat' || mapStyle.visual === 'flat-realistic') {
+    if (mapStyle.visual === 'flat' || mapStyle.visual === 'flat-realistic' || mapStyle.visual === 'flat-nightlights') {
       const expectedX = (W - W * cam.zoom) / 2;
       const expectedY = (H - H * cam.zoom) / 2;
       const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;
@@ -5846,10 +5931,13 @@ export default function NoradVector() {
   }, [cam.x, cam.y, cam.zoom, mapStyle.visual]);
   useEffect(() => {
     void preloadFlatRealisticTexture();
+    void preloadFlatNightlightsTexture();
   }, []);
   useEffect(() => {
     if (mapStyle.visual === 'flat-realistic') {
       void preloadFlatRealisticTexture();
+    } else if (mapStyle.visual === 'flat-nightlights') {
+      void preloadFlatNightlightsTexture();
     }
   }, [mapStyle.visual]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
@@ -6505,6 +6593,33 @@ export default function NoradVector() {
     onToast: (payload) => toast(payload),
   });
 
+  // Hearts of Iron Phase 3: Economic Depth System
+  const economicDepth = useEconomicDepth(
+    nations,
+    S.turn,
+    playerNationId
+  );
+
+  // Hearts of Iron Phase 2: Military Templates System
+  const militaryTemplates = useMilitaryTemplates({
+    currentTurn: S.turn,
+    nations: nations.map(n => ({ id: n.id, name: n.name })),
+  });
+
+  // Hearts of Iron Phase 2: Supply System
+  const supplySystem = useSupplySystem({
+    currentTurn: S.turn,
+    nations: nations.map(n => ({
+      id: n.id,
+      name: n.name,
+      territories: conventionalState?.territories
+        ? Object.keys(conventionalState.territories).filter(
+            tid => conventionalState.territories[tid]?.controllingNationId === n.id
+          )
+        : []
+    })),
+  });
+
   useEffect(() => {
     spyNetworkApi = spyNetwork;
     return () => {
@@ -6513,6 +6628,51 @@ export default function NoradVector() {
       }
     };
   }, [spyNetwork]);
+
+  useEffect(() => {
+    economicDepthApi = economicDepth;
+    if (typeof window !== 'undefined') {
+      (window as any).economicDepthApi = economicDepth;
+    }
+    return () => {
+      if (economicDepthApi === economicDepth) {
+        economicDepthApi = null;
+        if (typeof window !== 'undefined') {
+          (window as any).economicDepthApi = null;
+        }
+      }
+    };
+  }, [economicDepth]);
+
+  useEffect(() => {
+    militaryTemplatesApi = militaryTemplates;
+    if (typeof window !== 'undefined') {
+      (window as any).militaryTemplatesApi = militaryTemplates;
+    }
+    return () => {
+      if (militaryTemplatesApi === militaryTemplates) {
+        militaryTemplatesApi = null;
+        if (typeof window !== 'undefined') {
+          (window as any).militaryTemplatesApi = null;
+        }
+      }
+    };
+  }, [militaryTemplates]);
+
+  useEffect(() => {
+    supplySystemApi = supplySystem;
+    if (typeof window !== 'undefined') {
+      (window as any).supplySystemApi = supplySystem;
+    }
+    return () => {
+      if (supplySystemApi === supplySystem) {
+        supplySystemApi = null;
+        if (typeof window !== 'undefined') {
+          (window as any).supplySystemApi = null;
+        }
+      }
+    };
+  }, [supplySystem]);
 
   const {
     getActionAvailability: getCyberActionAvailability,
@@ -10577,10 +10737,13 @@ export default function NoradVector() {
         cam.y = Math.min(Math.max(cam.y, minCamY), maxCamY);
       };
 
+      const isBoundedFlatProjection = () =>
+        currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights';
+
       const clampPanBounds = () => {
         clampLatitude();
 
-        if (currentMapStyle !== 'flat-realistic') {
+        if (!isBoundedFlatProjection()) {
           return;
         }
 
@@ -10834,8 +10997,8 @@ export default function NoradVector() {
         cam.targetZoom = newZoom;
         cam.zoom = newZoom;
         
-        // Auto-center in flat-realistic mode when at default zoom
-        if (currentMapStyle === 'flat-realistic' && newZoom <= 1.05) {
+        // Auto-center in bounded flat projections when at default zoom
+        if (isBoundedFlatProjection() && newZoom <= 1.05) {
           cam.x = (W - W * cam.zoom) / 2;
           cam.y = (H - H * cam.zoom) / 2;
         } else {
@@ -10894,8 +11057,8 @@ export default function NoradVector() {
             cam.targetZoom = newZoom;
             cam.zoom = newZoom;
             
-            // Auto-center in flat-realistic mode when at default zoom
-            if (currentMapStyle === 'flat-realistic' && newZoom <= 1.05) {
+            // Auto-center in bounded flat projections when at default zoom
+            if (isBoundedFlatProjection() && newZoom <= 1.05) {
               cam.x = (W - W * cam.zoom) / 2;
               cam.y = (H - H * cam.zoom) / 2;
             } else {
