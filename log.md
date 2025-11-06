@@ -7,6 +7,18 @@
 
 ---
 
+### Session AG: 2025-11-06 01:40 UTC - Persist Election Drift Across Nation Replacements
+
+**Timestamp:** 2025-11-06 01:40:15 UTC
+
+**Branch:** `29769f6c0dcab4e99e4e8f333d39faf998edf7d5`
+
+**Summary:**
+
+- Replaced the WeakMap nation drift cache in `src/lib/electionSystem.ts` with a Map keyed by `nation.id` so opinion drift values survive when React rehydrates nations with new object references.
+- Updated the getter/setter logic in `calculatePublicOpinion` to use the string key, ensuring previously computed drifts remain stable across state replacements and prevent snowballing after object swaps.
+- Documented this follow-up in the implementation log for traceability.
+
 ### Session AF: 2025-11-06 01:15 UTC - Stabilize Election Opinion Drift
 
 **Timestamp:** 2025-11-06 01:15:41 UTC
