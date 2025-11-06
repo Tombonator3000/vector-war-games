@@ -63,6 +63,10 @@
   - Add new crisis templates or pandemic events by appending to existing constant arrays to reuse balancing logic.
   - When adding map layers or missions, implement dedicated components under `src/components/` and wire them into page containers with feature flags or tutorial updates to maintain narrative continuity.
 
+## Strategic Map Engine Directive
+- The strategic 2D world view must default to the Three.js tactical engine using the flat-realistic high-resolution satellite texture.
+- Cesium integrations are experimental test maps only; do not promote Cesium beyond optional/testing contexts.
+
 Adhere to this guide for all future contributions; update sections if gameplay pillars evolve.
 
 ## Logging Requirement

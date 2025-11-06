@@ -5576,6 +5576,18 @@ export default function NoradVector() {
   });
 
   const handleMapStyleChange = useCallback((style: MapVisualStyle) => {
+    const requiresThreeTacticalEngine =
+      style === 'flat' || style === 'flat-realistic' || style === 'flat-nightlights';
+
+    if (requiresThreeTacticalEngine && viewerType !== 'threejs') {
+      setViewerType('threejs');
+      Storage.setItem('viewer_type', 'threejs');
+      toast({
+        title: 'Three.js tactical map engaged',
+        description: 'Flat strategic views run on the primary Three.js engine.',
+      });
+    }
+
     setMapStyle(prev => {
       if (prev.visual === style) {
         return prev;
@@ -5595,7 +5607,7 @@ export default function NoradVector() {
 
       return { ...prev, visual: style };
     });
-  }, [toast]);
+  }, [toast, viewerType]);
 
   const handleMapModeChange = useCallback((mode: MapMode) => {
     setMapStyle(prev => {
