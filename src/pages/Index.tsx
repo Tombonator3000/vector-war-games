@@ -608,6 +608,8 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 
 let currentTheme: ThemeId = 'synthwave';
 let currentMapStyle: MapVisualStyle = 'flat-realistic';
+let currentMapMode: MapMode = 'standard';
+let currentMapModeData: MapModeOverlayData | null = null;
 let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
@@ -2894,7 +2896,7 @@ function drawWorldPath(coords: number[][]) {
 }
 
 // Nation rendering - wrapper function that delegates to extracted module
-function drawNations(style: MapStyle) {
+function drawNations(style: MapVisualStyle) {
   const context: NationRenderContext = {
     ctx,
     worldCountries,
@@ -2914,6 +2916,8 @@ function drawNations(style: MapStyle) {
     nations,
     S,
     selectedTargetRefId,
+    mapMode: currentMapMode,
+    modeData: currentMapModeData,
   };
   renderNations(style, context);
 }
@@ -5750,6 +5754,7 @@ export default function NoradVector() {
         description: MAP_MODE_DESCRIPTIONS[mode].description,
       });
 
+      currentMapMode = mode;
       return { ...prev, mode };
     });
   }, [toast]);
@@ -5928,6 +5933,9 @@ export default function NoradVector() {
       }
     }
   }, [cam.x, cam.y, cam.zoom, mapStyle.visual]);
+  useEffect(() => {
+    currentMapMode = mapStyle.mode;
+  }, [mapStyle.mode]);
   useEffect(() => {
     void preloadFlatRealisticTexture();
     void preloadFlatNightlightsTexture();
@@ -6768,6 +6776,10 @@ export default function NoradVector() {
 
     return { playerId, relationships, intelLevels, resourceTotals, unrest };
   }, [governance.metrics, nations]);
+
+  useEffect(() => {
+    currentMapModeData = mapModeData;
+  }, [mapModeData]);
 
   // Policy system for strategic national policies
   const player = nations.find(n => n.isPlayer);
