@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-10T00:00:00Z - Leader ability cooldown decrement hook-up
+- Called `updateLeaderAbilitiesPerTurn` during the end-of-turn sequence in `src/pages/Index.tsx` so leader ability cooldowns tick down properly.
+- Synced the mutated nation array back through `GameStateManager` and `PlayerManager` to ensure UI panels receive the refreshed availability state.
+- Ran `npm run test -- Index.test.tsx` to confirm the leader ability interaction test still passes.
+
 ### 2025-11-06T00:40:32Z - Leader ability panel verification
 - Reviewed the LeaderAbilityPanel integration in `src/pages/Index.tsx` and associated mocks in `src/pages/__tests__/Index.test.tsx`.
 - Ran `npm run test -- Index.test.tsx` to confirm the new interaction test passes.
