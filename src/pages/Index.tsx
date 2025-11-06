@@ -5471,12 +5471,23 @@ export default function NoradVector() {
     }
     return 'compact';
   });
+  const [showMinimalOutliner, setShowMinimalOutliner] = useState(false);
+  const [showMinimalApprovalQueue, setShowMinimalApprovalQueue] = useState(false);
+  const [showMinimalCommandSheet, setShowMinimalCommandSheet] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [civInfoPanelOpen, setCivInfoPanelOpen] = useState(false);
   const [civInfoDefaultTab, setCivInfoDefaultTab] = useState<'own-status' | 'enemy-status' | 'diplomacy' | 'research'>('own-status');
   const [activeDiplomacyProposal, setActiveDiplomacyProposal] = useState<DiplomacyProposal | null>(null);
   const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
   const [showEnhancedDiplomacy, setShowEnhancedDiplomacy] = useState(false);
+
+  useEffect(() => {
+    if (layoutDensity !== 'minimal') {
+      setShowMinimalOutliner(false);
+      setShowMinimalApprovalQueue(false);
+      setShowMinimalCommandSheet(false);
+    }
+  }, [layoutDensity]);
 
   const refreshGameState = useCallback((updatedNations: LocalNation[]) => {
     nations = updatedNations;
@@ -11521,6 +11532,82 @@ export default function NoradVector() {
   // Note: Doctrine selection phase removed - doctrine is now auto-assigned based on leader
   // See getLeaderDefaultDoctrine() in src/data/leaderDoctrines.ts
 
+  const strikePlannerPanel = (
+    <div className="rounded-lg border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-sm shadow-2xl">
+      <div className="flex items-center justify-between border-b border-cyan-500/30 bg-black/40 px-4 py-3">
+        <span className="text-sm font-mono font-semibold uppercase tracking-wider text-cyan-300">Strike Planner</span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`text-[10px] font-mono ${selectedTarget ? 'text-red-300' : 'text-cyan-300/70'}`}
+          >
+            {selectedTarget ? 'LOCKED' : 'STANDBY'}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsStrikePlannerOpen(false)}
+            className="text-gray-400 hover:text-white transition-colors"
+            aria-label="Close strike planner"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+      <div className="max-h-48 overflow-y-auto divide-y divide-cyan-500/10">
+        {attackableNations.length === 0 ? (
+          <div className="px-4 py-4 text-sm text-gray-400">
+            No hostile launch solutions available.
+          </div>
+        ) : (
+          attackableNations.map(nation => {
+            const isSelected = nation.id === selectedTargetId;
+            const population = Math.max(0, Math.round(nation.population ?? 0));
+            const defense = Math.max(0, Math.round(nation.defense ?? 0));
+            const missiles = Math.max(0, Math.round(Number(nation.missiles ?? 0)));
+            const instability = Math.max(0, Math.round(Number(nation.instability ?? 0)));
+
+            return (
+              <button
+                key={nation.id}
+                type="button"
+                onClick={() => handleTargetSelect(nation.id)}
+                className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm transition-colors ${
+                  isSelected
+                    ? 'bg-cyan-500/20 border-l-2 border-cyan-500/50 text-cyan-300'
+                    : 'bg-slate-800/50 hover:bg-slate-700/50 text-gray-300'
+                }`}
+              >
+                <span className="flex-1">
+                  <span className="block text-[12px] uppercase tracking-[0.25em]">{nation.name}</span>
+                  <span className="block text-[10px] text-cyan-300/70">
+                    POP {population}M • DEF {defense} • MISS {missiles}
+                  </span>
+                </span>
+                <span className={`text-[10px] ${isSelected ? 'text-red-100' : 'text-red-200/80'}`}>
+                  INSTAB {instability}
+                </span>
+              </button>
+            );
+          })
+        )}
+      </div>
+      <div className="px-4 py-3 text-sm text-gray-400">
+        {selectedTarget ? (
+          <div className="space-y-1">
+            <p>
+              Locked on <span className="text-cyan-300 font-semibold">{selectedTarget.name}</span>. Population&nbsp;
+              {Math.max(0, Math.round(selectedTarget.population ?? 0))}M, defense{' '}
+              {Math.max(0, Math.round(selectedTarget.defense ?? 0))}, missile capacity{' '}
+              {Math.max(0, Math.round(Number(selectedTarget.missiles ?? 0)))}.
+            </p>
+            <p className="text-gray-500 text-xs">Confirm launch with ATTACK once satisfied with this solution.</p>
+          </div>
+        ) : (
+          <p>Select a hostile nation to arm the ATTACK command.</p>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity}`}>
       <div className="command-interface__glow" aria-hidden="true" />
@@ -11759,313 +11846,581 @@ export default function NoradVector() {
           </div>
 
           {player && governance.metrics[player.id] ? (
-            <div
-              className="fixed left-3 pointer-events-auto touch-auto z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))] space-y-3"
-              style={{ top: 'var(--game-top-stack-offset)' }}
-            >
-              <PoliticalStatusWidget
-                metrics={governance.metrics[player.id]}
-                nationName={player.name}
-                instability={governance.metrics[player.id].instability || 0}
-                onOpenDetails={() => setShowGovernanceDetails(true)}
-                onOpenPolicyPanel={() => setShowPolicyPanel(true)}
-              />
-              <StrategicOutliner
-                ref={strategicOutlinerRef}
-                groups={strategicOutlinerGroups}
-                collapsed={isOutlinerCollapsed}
-                onToggleCollapse={handleOutlinerToggle}
-                hotkeys={strategicOutlinerHotkeys}
-                attentionPulse={outlinerAttentionTick}
-              />
-            </div>
+            layoutDensity === 'minimal' ? (
+              <>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="fixed left-3 pointer-events-auto touch-auto z-40 h-10 w-10 rounded-full border border-cyan-500/40 bg-black/70 text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20"
+                  style={{ top: 'calc(var(--game-top-stack-offset) + 0.5rem)' }}
+                  onClick={() => setShowMinimalOutliner(true)}
+                  aria-label="Open governance overview"
+                >
+                  <Users className="h-4 w-4" />
+                </Button>
+                <Sheet open={showMinimalOutliner} onOpenChange={setShowMinimalOutliner}>
+                  <SheetContent
+                    side="left"
+                    className="w-[min(22rem,90vw)] border-cyan-500/40 bg-gradient-to-br from-slate-950/95 to-slate-900/95 text-cyan-100"
+                  >
+                    <SheetHeader>
+                      <SheetTitle className="text-sm font-mono tracking-[0.3em] text-cyan-300">Command Overview</SheetTitle>
+                      <SheetDescription className="text-xs text-cyan-200/70">
+                        Governance and strategic alerts at a glance.
+                      </SheetDescription>
+                    </SheetHeader>
+                    <div className="mt-4 space-y-4">
+                      <PoliticalStatusWidget
+                        metrics={governance.metrics[player.id]}
+                        nationName={player.name}
+                        instability={governance.metrics[player.id].instability || 0}
+                        onOpenDetails={() => {
+                          setShowGovernanceDetails(true);
+                          setShowMinimalOutliner(false);
+                        }}
+                        onOpenPolicyPanel={() => {
+                          setShowPolicyPanel(true);
+                          setShowMinimalOutliner(false);
+                        }}
+                      />
+                      <StrategicOutliner
+                        ref={strategicOutlinerRef}
+                        groups={strategicOutlinerGroups}
+                        collapsed={isOutlinerCollapsed}
+                        onToggleCollapse={handleOutlinerToggle}
+                        hotkeys={strategicOutlinerHotkeys}
+                        attentionPulse={outlinerAttentionTick}
+                      />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </>
+            ) : (
+              <div
+                className="fixed left-3 pointer-events-auto touch-auto z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))] space-y-3"
+                style={{ top: 'var(--game-top-stack-offset)' }}
+              >
+                <PoliticalStatusWidget
+                  metrics={governance.metrics[player.id]}
+                  nationName={player.name}
+                  instability={governance.metrics[player.id].instability || 0}
+                  onOpenDetails={() => setShowGovernanceDetails(true)}
+                  onOpenPolicyPanel={() => setShowPolicyPanel(true)}
+                />
+                <StrategicOutliner
+                  ref={strategicOutlinerRef}
+                  groups={strategicOutlinerGroups}
+                  collapsed={isOutlinerCollapsed}
+                  onToggleCollapse={handleOutlinerToggle}
+                  hotkeys={strategicOutlinerHotkeys}
+                  attentionPulse={outlinerAttentionTick}
+                />
+              </div>
+            )
           ) : null}
 
           {coopEnabled ? (
-            <div
-              className="fixed right-3 pointer-events-auto touch-auto z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))]"
-              style={{ top: 'var(--game-top-stack-offset)' }}
-            >
-              <ApprovalQueue />
-            </div>
+            layoutDensity === 'minimal' ? (
+              <>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="fixed right-3 pointer-events-auto touch-auto z-40 h-10 w-10 rounded-full border border-cyan-500/40 bg-black/70 text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20"
+                  style={{ top: 'calc(var(--game-top-stack-offset) + 0.5rem)' }}
+                  onClick={() => setShowMinimalApprovalQueue(true)}
+                  aria-label="Open approval queue"
+                >
+                  <Handshake className="h-4 w-4" />
+                </Button>
+                <Sheet open={showMinimalApprovalQueue} onOpenChange={setShowMinimalApprovalQueue}>
+                  <SheetContent
+                    side="right"
+                    className="w-[min(22rem,90vw)] border-cyan-500/40 bg-gradient-to-br from-slate-950/95 to-slate-900/95 text-cyan-100"
+                  >
+                    <SheetHeader>
+                      <SheetTitle className="text-sm font-mono tracking-[0.3em] text-cyan-300">Approval Queue</SheetTitle>
+                      <SheetDescription className="text-xs text-cyan-200/70">
+                        Review and authorize cooperative operations.
+                      </SheetDescription>
+                    </SheetHeader>
+                    <div className="mt-4">
+                      <ApprovalQueue />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </>
+            ) : (
+              <div
+                className="fixed right-3 pointer-events-auto touch-auto z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))]"
+                style={{ top: 'var(--game-top-stack-offset)' }}
+              >
+                <ApprovalQueue />
+              </div>
+            )
           ) : null}
 
           <div className="pointer-events-auto touch-auto">
             <ConflictResolutionDialog />
           </div>
 
-          {isStrikePlannerOpen ? (
+          {layoutDensity !== 'minimal' && isStrikePlannerOpen ? (
             <div className="pointer-events-auto fixed bottom-24 right-3 z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))] max-h-[60vh]">
-              <div className="rounded-lg border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-sm shadow-2xl">
-                <div className="flex items-center justify-between border-b border-cyan-500/30 bg-black/40 px-4 py-3">
-                  <span className="text-sm font-mono font-semibold uppercase tracking-wider text-cyan-300">Strike Planner</span>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-[10px] font-mono ${selectedTarget ? 'text-red-300' : 'text-cyan-300/70'}`}
-                    >
-                      {selectedTarget ? 'LOCKED' : 'STANDBY'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setIsStrikePlannerOpen(false)}
-                      className="text-gray-400 hover:text-white transition-colors"
-                      aria-label="Close strike planner"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="max-h-48 overflow-y-auto divide-y divide-cyan-500/10">
-                  {attackableNations.length === 0 ? (
-                    <div className="px-4 py-4 text-sm text-gray-400">
-                      No hostile launch solutions available.
-                    </div>
-                  ) : (
-                    attackableNations.map(nation => {
-                      const isSelected = nation.id === selectedTargetId;
-                      const population = Math.max(0, Math.round(nation.population ?? 0));
-                      const defense = Math.max(0, Math.round(nation.defense ?? 0));
-                      const missiles = Math.max(0, Math.round(Number(nation.missiles ?? 0)));
-                      const instability = Math.max(0, Math.round(Number(nation.instability ?? 0)));
-
-                      return (
-                        <button
-                          key={nation.id}
-                          type="button"
-                          onClick={() => handleTargetSelect(nation.id)}
-                          className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm transition-colors ${
-                            isSelected
-                              ? 'bg-cyan-500/20 border-l-2 border-cyan-500/50 text-cyan-300'
-                              : 'bg-slate-800/50 hover:bg-slate-700/50 text-gray-300'
-                          }`}
-                        >
-                          <span className="flex-1">
-                            <span className="block text-[12px] uppercase tracking-[0.25em]">{nation.name}</span>
-                            <span className="block text-[10px] text-cyan-300/70">
-                              POP {population}M • DEF {defense} • MISS {missiles}
-                            </span>
-                          </span>
-                          <span className={`text-[10px] ${isSelected ? 'text-red-100' : 'text-red-200/80'}`}>
-                            INSTAB {instability}
-                          </span>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-                <div className="px-4 py-3 text-sm text-gray-400">
-                  {selectedTarget ? (
-                    <div className="space-y-1">
-                      <p>
-                        Locked on <span className="text-cyan-300 font-semibold">{selectedTarget.name}</span>. Population&nbsp;
-                        {Math.max(0, Math.round(selectedTarget.population ?? 0))}M, defense{' '}
-                        {Math.max(0, Math.round(selectedTarget.defense ?? 0))}, missile capacity{' '}
-                        {Math.max(0, Math.round(Number(selectedTarget.missiles ?? 0)))}.
-                      </p>
-                      <p className="text-gray-500 text-xs">Confirm launch with ATTACK once satisfied with this solution.</p>
-                    </div>
-                  ) : (
-                    <p>Select a hostile nation to arm the ATTACK command.</p>
-                  )}
-                </div>
-              </div>
+              {strikePlannerPanel}
             </div>
           ) : null}
 
-          {/* Minimal bottom utility stack - floating buttons */}
-          <div
-            className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50"
-            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-          >
-            <div className="flex flex-col gap-1">
-              <div className="h-16 sm:h-20 pointer-events-auto touch-auto">
-                <div className="h-full flex items-center justify-center gap-1 px-4">
-                  <Button
-                    onClick={handleBuild}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!buildAllowed}
-                    data-tutorial="build-button"
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      buildAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={buildAllowed ? 'BUILD - Production and construction' : 'Await strategist approval or request authorization'}
-                  >
-                    <Factory className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">BUILD</span>
-                  </Button>
+          {layoutDensity === 'minimal' ? (
+            <>
+              <Button
+                size="icon"
+                variant="ghost"
+                className={`fixed bottom-24 right-4 z-40 h-10 w-10 rounded-full border border-cyan-500/40 bg-black/70 text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20 ${
+                  isStrikePlannerOpen ? 'ring-2 ring-cyan-400/70' : ''
+                }`}
+                onClick={() => setIsStrikePlannerOpen(true)}
+                aria-label="Open strike planner"
+              >
+                <Target className="h-4 w-4" />
+              </Button>
+              <Sheet open={isStrikePlannerOpen} onOpenChange={setIsStrikePlannerOpen}>
+                <SheetContent
+                  side="right"
+                  className="w-[min(22rem,90vw)] border-cyan-500/40 bg-gradient-to-br from-slate-950/95 to-slate-900/95 text-cyan-100"
+                >
+                  {strikePlannerPanel}
+                </SheetContent>
+              </Sheet>
+            </>
+          ) : null}
 
-                  <Button
-                    onClick={handleResearch}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!researchAllowed}
-                    data-tutorial="research-button"
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      researchAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={researchAllowed ? 'RESEARCH - Technology advancement' : 'Strategist approval required to manage research'}
-                  >
-                    <Microscope className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">RESEARCH</span>
-                  </Button>
+          {/* Bottom command interface stack */}
+          {layoutDensity !== 'minimal' ? (
+            <div
+              className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50"
+              style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+            >
+              <div className="flex flex-col gap-1">
+                <div className="h-16 sm:h-20 pointer-events-auto touch-auto">
+                  <div className="h-full flex items-center justify-center gap-1 px-4">
+                    <Button
+                      onClick={handleBuild}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!buildAllowed}
+                      data-tutorial="build-button"
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        buildAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={buildAllowed ? 'BUILD - Production and construction' : 'Await strategist approval or request authorization'}
+                    >
+                      <Factory className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">BUILD</span>
+                    </Button>
 
-                  <Button
-                    onClick={handleIntelOperations}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!intelAllowed}
-                    data-tutorial="intel-button"
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      intelAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={intelAllowed ? 'INTEL - Intelligence operations (satellite, sabotage, cyber)' : 'Tactician authorization required to operate intel'}
-                  >
-                    <Target className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">INTEL</span>
-                  </Button>
+                    <Button
+                      onClick={handleResearch}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!researchAllowed}
+                      data-tutorial="research-button"
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        researchAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={researchAllowed ? 'RESEARCH - Technology advancement' : 'Strategist approval required to manage research'}
+                    >
+                      <Microscope className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">RESEARCH</span>
+                    </Button>
 
-                  <Button
-                    onClick={() => setIsSpyPanelOpen(true)}
-                    variant="ghost"
-                    size="icon"
-                    className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
-                    title="SPY - Operate spy networks and missions"
-                  >
-                    <UserSearch className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">SPY</span>
-                  </Button>
+                    <Button
+                      onClick={handleIntelOperations}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!intelAllowed}
+                      data-tutorial="intel-button"
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        intelAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={intelAllowed ? 'INTEL - Intelligence operations (satellite, sabotage, cyber)' : 'Tactician authorization required to operate intel'}
+                    >
+                      <Target className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">INTEL</span>
+                    </Button>
 
-                  <Button
-                    onClick={handleBioWarfareLabToggle}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!bioWarfareAllowed}
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      bioWarfareAllowed && bioWarfareAvailable
-                        ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10'
-                        : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={
-                      bioWarfareAllowed
-                        ? bioWarfareAvailable
-                          ? 'BIOFORGE - Pathogen warfare lab'
-                          : 'Enable pandemic integration and bio-weapon ops in options to access the lab'
-                        : 'Command authorization required to access the BioForge lab'
-                    }
-                  >
-                    <FlaskConical className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">BIO</span>
-                  </Button>
+                    <Button
+                      onClick={() => setIsSpyPanelOpen(true)}
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                      title="SPY - Operate spy networks and missions"
+                    >
+                      <UserSearch className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">SPY</span>
+                    </Button>
 
-                  <Button
-                    onClick={handleLabConstructionToggle}
-                    variant="ghost"
-                    size="icon"
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      labFacility.underConstruction
-                        ? 'text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10 animate-pulse'
-                        : 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10'
-                    }`}
-                    title={
-                      labFacility.underConstruction
-                        ? `Bio Lab Construction - ${labFacility.constructionProgress}/${labFacility.constructionTarget} turns`
-                        : `Bio Lab Construction - Current: Tier ${labFacility.tier}`
-                    }
-                  >
-                    <Microscope className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">LAB</span>
-                  </Button>
+                    <Button
+                      onClick={handleBioWarfareLabToggle}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!bioWarfareAllowed}
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        bioWarfareAllowed && bioWarfareAvailable
+                          ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10'
+                          : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={
+                        bioWarfareAllowed
+                          ? bioWarfareAvailable
+                            ? 'BIOFORGE - Pathogen warfare lab'
+                            : 'Enable pandemic integration and bio-weapon ops in options to access the lab'
+                          : 'Command authorization required to access the BioForge lab'
+                      }
+                    >
+                      <FlaskConical className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">BIO</span>
+                    </Button>
 
-                  <Button
-                    onClick={() => setIsCulturePanelOpen(!isCulturePanelOpen)}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!cultureAllowed}
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={cultureAllowed ? 'CULTURE - Cultural warfare (simplified)' : 'Requires co-commander approval to launch culture ops'}
-                  >
-                    <Radio className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">CULTURE</span>
-                  </Button>
+                    <Button
+                      onClick={handleLabConstructionToggle}
+                      variant="ghost"
+                      size="icon"
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        labFacility.underConstruction
+                          ? 'text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10 animate-pulse'
+                          : 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10'
+                      }`}
+                      title={
+                        labFacility.underConstruction
+                          ? `Bio Lab Construction - ${labFacility.constructionProgress}/${labFacility.constructionTarget} turns`
+                          : `Bio Lab Construction - Current: Tier ${labFacility.tier}`
+                      }
+                    >
+                      <Microscope className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">LAB</span>
+                    </Button>
 
-                  <Button
-                    onClick={() => setShowPolicyPanel(true)}
-                    variant="ghost"
-                    size="icon"
-                    className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
-                    title="POLICY - National strategic policies"
-                  >
-                    <Shield className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">POLICY</span>
-                  </Button>
+                    <Button
+                      onClick={() => setIsCulturePanelOpen(!isCulturePanelOpen)}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!cultureAllowed}
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={cultureAllowed ? 'CULTURE - Cultural warfare (simplified)' : 'Requires co-commander approval to launch culture ops'}
+                    >
+                      <Radio className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">CULTURE</span>
+                    </Button>
 
-                  <Button
-                    onClick={handleDiplomacy}
-                    variant="ghost"
-                    size="icon"
-                    data-role-locked={!diplomacyAllowed}
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                      diplomacyAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                    }`}
-                    title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
-                  >
-                    <Handshake className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">DIPLO</span>
-                  </Button>
+                    <Button
+                      onClick={() => setShowPolicyPanel(true)}
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                      title="POLICY - National strategic policies"
+                    >
+                      <Shield className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">POLICY</span>
+                    </Button>
 
-                  <Button
-                    onClick={() => setIsWarCouncilOpen(true)}
-                    variant="ghost"
-                    size="icon"
-                    className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
-                    title="WAR - Manage Casus Belli, war goals, and peace deals"
-                  >
-                    <Swords className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">WAR</span>
-                  </Button>
+                    <Button
+                      onClick={handleDiplomacy}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!diplomacyAllowed}
+                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        diplomacyAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
+                    >
+                      <Handshake className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">DIPLO</span>
+                    </Button>
 
-                  <Button
-                    onClick={handleMilitary}
-                    variant="ghost"
-                    size="icon"
-                    className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                    title="MILITARY - Conventional command"
-                  >
-                    <Shield className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">MIL</span>
-                  </Button>
+                    <Button
+                      onClick={() => setIsWarCouncilOpen(true)}
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                      title="WAR - Manage Casus Belli, war goals, and peace deals"
+                    >
+                      <Swords className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">WAR</span>
+                    </Button>
 
-                  <div className="w-px h-8 bg-cyan-500/30 mx-2" />
+                    <Button
+                      onClick={handleMilitary}
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                      title="MILITARY - Conventional command"
+                    >
+                      <Shield className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">MIL</span>
+                    </Button>
 
-                  <Button
-                    onClick={handleAttack}
-                    variant="ghost"
-                    size="icon"
-                    className="h-12 w-12 sm:h-14 sm:w-14 text-red-400 hover:text-red-300 hover:bg-red-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                    title="ATTACK - Launch nuclear strike (select target in Strike Planner)"
-                  >
-                    <Zap className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">ATTACK</span>
-                  </Button>
+                    <div className="w-px h-8 bg-cyan-500/30 mx-2" />
 
-                  <div className="w-px h-8 bg-cyan-500/30 mx-2" />
+                    <Button
+                      onClick={handleAttack}
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 sm:h-14 sm:w-14 text-red-400 hover:text-red-300 hover:bg-red-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                      title="ATTACK - Launch nuclear strike (select target in Strike Planner)"
+                    >
+                      <Zap className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">ATTACK</span>
+                    </Button>
 
-                  <Button
-                    onClick={handleEndTurn}
-                    variant="ghost"
-                    className="h-12 sm:h-14 px-4 sm:px-6 text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                    title="END TURN"
-                  >
-                    <ArrowRight className="h-5 w-5" />
-                    <span className="text-[8px] font-mono">END TURN</span>
-                  </Button>
+                    <div className="w-px h-8 bg-cyan-500/30 mx-2" />
+
+                    <Button
+                      onClick={handleEndTurn}
+                      variant="ghost"
+                      className="h-12 sm:h-14 px-4 sm:px-6 text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                      title="END TURN"
+                    >
+                      <ArrowRight className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">END TURN</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-full border border-cyan-500/40 bg-black/70 px-4 py-2 text-[11px] font-mono tracking-[0.3em] text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20"
+                onClick={() => setShowMinimalCommandSheet(true)}
+              >
+                <Menu className="mr-2 h-4 w-4" />
+                ACTIONS
+              </Button>
+              <Sheet open={showMinimalCommandSheet} onOpenChange={setShowMinimalCommandSheet}>
+                <SheetContent
+                  side="bottom"
+                  className="h-auto max-h-[80vh] overflow-y-auto border-t border-cyan-500/40 bg-gradient-to-t from-slate-950/95 to-slate-900/95 text-cyan-100"
+                >
+                  <SheetHeader>
+                    <SheetTitle className="text-sm font-mono tracking-[0.3em] text-cyan-300">Command Actions</SheetTitle>
+                    <SheetDescription className="text-xs text-cyan-200/70">
+                      Quick access to the full operations bar while in minimal HUD mode.
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="mt-4 grid grid-cols-3 gap-3">
+                    <Button
+                      onClick={() => {
+                        handleBuild();
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!buildAllowed}
+                      data-tutorial="build-button"
+                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
+                        buildAllowed ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={buildAllowed ? 'BUILD - Production and construction' : 'Await strategist approval or request authorization'}
+                    >
+                      <Factory className="h-5 w-5" />
+                      BUILD
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleResearch();
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!researchAllowed}
+                      data-tutorial="research-button"
+                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
+                        researchAllowed ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={researchAllowed ? 'RESEARCH - Technology advancement' : 'Strategist approval required to manage research'}
+                    >
+                      <Microscope className="h-5 w-5" />
+                      RESEARCH
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleIntelOperations();
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!intelAllowed}
+                      data-tutorial="intel-button"
+                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
+                        intelAllowed ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={intelAllowed ? 'INTEL - Intelligence operations (satellite, sabotage, cyber)' : 'Tactician authorization required to operate intel'}
+                    >
+                      <Target className="h-5 w-5" />
+                      INTEL
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsSpyPanelOpen(true);
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10"
+                      title="SPY - Operate spy networks and missions"
+                    >
+                      <UserSearch className="h-5 w-5" />
+                      SPY
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleBioWarfareLabToggle();
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!bioWarfareAllowed}
+                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
+                        bioWarfareAllowed && bioWarfareAvailable
+                          ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10'
+                          : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={
+                        bioWarfareAllowed
+                          ? bioWarfareAvailable
+                            ? 'BIOFORGE - Pathogen warfare lab'
+                            : 'Enable pandemic integration and bio-weapon ops in options to access the lab'
+                          : 'Command authorization required to access the BioForge lab'
+                      }
+                    >
+                      <FlaskConical className="h-5 w-5" />
+                      BIO
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleLabConstructionToggle();
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
+                        labFacility.underConstruction
+                          ? 'text-yellow-300 hover:text-yellow-200 hover:bg-yellow-500/10 animate-pulse'
+                          : 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10'
+                      }`}
+                      title={
+                        labFacility.underConstruction
+                          ? `Bio Lab Construction - ${labFacility.constructionProgress}/${labFacility.constructionTarget} turns`
+                          : `Bio Lab Construction - Current: Tier ${labFacility.tier}`
+                      }
+                    >
+                      <Microscope className="h-5 w-5" />
+                      LAB
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsCulturePanelOpen(!isCulturePanelOpen);
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!cultureAllowed}
+                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
+                        cultureAllowed ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={cultureAllowed ? 'CULTURE - Cultural warfare (simplified)' : 'Requires co-commander approval to launch culture ops'}
+                    >
+                      <Radio className="h-5 w-5" />
+                      CULTURE
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowPolicyPanel(true);
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10"
+                      title="POLICY - National strategic policies"
+                    >
+                      <Shield className="h-5 w-5" />
+                      POLICY
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleDiplomacy();
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      data-role-locked={!diplomacyAllowed}
+                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
+                        diplomacyAllowed ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                      }`}
+                      title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
+                    >
+                      <Handshake className="h-5 w-5" />
+                      DIPLO
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsWarCouncilOpen(true);
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10"
+                      title="WAR - Manage Casus Belli, war goals, and peace deals"
+                    >
+                      <Swords className="h-5 w-5" />
+                      WAR
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleMilitary();
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10"
+                      title="MILITARY - Conventional command"
+                    >
+                      <Shield className="h-5 w-5" />
+                      MIL
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleAttack();
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-red-500/40 bg-black/60 text-[10px] font-mono text-red-300 hover:text-red-200 hover:bg-red-500/10"
+                      title="ATTACK - Launch nuclear strike (select target in Strike Planner)"
+                    >
+                      <Zap className="h-5 w-5" />
+                      ATTACK
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleEndTurn();
+                        setShowMinimalCommandSheet(false);
+                      }}
+                      variant="ghost"
+                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10"
+                      title="END TURN"
+                    >
+                      <ArrowRight className="h-5 w-5" />
+                      END TURN
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </>
+          )}
 
           {/* Events log - minimal bottom left corner */}
           <div className="fixed bottom-20 left-4 w-80 max-h-32 bg-black/80 border border-cyan-500/30 backdrop-blur-sm pointer-events-auto rounded overflow-hidden">

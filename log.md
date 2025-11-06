@@ -2490,3 +2490,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Updated `updateProjector` in `src/components/GlobeScene.tsx` to prioritize the overlay canvas dimensions (falling back to the Three.js size only when unavailable) so projected coordinates match the 2D overlay on high-DPI displays.
 - Adjusted `updatePicker` to normalize pointer coordinates against the same overlay dimensions, keeping lon/lat conversions consistent across the flat map interaction layer.
 - Unable to manually validate the satellite deployment and explosion overlay alignment in-browser within the containerized environment; flagged for follow-up QA on a high-DPI device.
+### 2025-11-06T16:24:13Z - Add minimal layout quick-access HUD toggles
+- Updated `src/pages/Index.tsx` to collapse the governance stack, approval queue, strike planner, and command bar behind compact sheet toggles when the layout density is set to minimal while preserving their full presentation for expanded and compact modes.
+- Introduced floating quick-access buttons and a command action sheet so essential operations remain available after the HUD collapses, plus conditional sheet reuse for the strike planner.
+- Ran `npm run test` (after correcting an unsupported `--runInBand` flag) to smoke-test the density presets and verify the interface renders across configurations.
