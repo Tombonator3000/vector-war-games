@@ -2422,3 +2422,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Moved the `calculateMilitaryPower` callback above its memoized usage in `src/components/CivilizationInfoPanel.tsx` to ensure the hook is defined before first reference and maintain stable dependencies.
 - Planned to run `npm run build` to confirm the panel renders without hook ordering runtime issues once the build completes successfully.
 - Executed `npm run build`; the Vite production build completed successfully, indicating no hook initialization runtime issues when toggling the panel during compilation checks.
+
+### 2025-11-06T11:26:31Z - Radix select positioning fallback
+- Swapped the default positioning in `src/components/ui/select.tsx` from `"popper"` to `"item-aligned"` so Radix Select avoids the popper layout routine that was triggering `Cannot access 'I' before initialization` crashes in production builds.
+- Ran `npm run build` to verify the bundle compiles cleanly after adjusting the select positioning behaviour.
