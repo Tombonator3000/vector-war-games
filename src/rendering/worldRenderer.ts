@@ -5,8 +5,9 @@
  * Extracted from Index.tsx as part of refactoring effort.
  */
 
-import type { MapVisualStyle } from '@/components/GlobeScene';
+import type { MapMode, MapModeOverlayData, MapVisualStyle } from '@/components/GlobeScene';
 import type { Nation, GameState } from '@/types/game';
+import { Color, MathUtils } from 'three';
 
 export interface WorldRenderContext {
   ctx: CanvasRenderingContext2D | null;
@@ -30,6 +31,8 @@ export interface NationRenderContext extends WorldRenderContext {
   nations: Nation[];
   S: GameState;
   selectedTargetRefId: string | null;
+  mapMode: MapMode;
+  modeData?: MapModeOverlayData | null;
 }
 
 export interface TerritoryRenderContext extends WorldRenderContext {
@@ -225,19 +228,110 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
  * Render nation markers, labels, and cities
  */
 export function drawNations(style: MapVisualStyle, context: NationRenderContext): void {
-  const { ctx, nations, S, cam, projectLocal, selectedTargetRefId } = context;
+  const {
+    ctx,
+    nations,
+    S,
+    cam,
+    projectLocal,
+    selectedTargetRefId,
+    mapMode,
+    modeData,
+  } = context;
 
   if (!ctx || nations.length === 0) return;
 
   const isWireframeStyle = style === 'wireframe';
   const isNightStyle = style === 'night';
   const isPoliticalStyle = style === 'political';
+  const isFlatStyle = style === 'flat' || style === 'flat-realistic' || style === 'flat-nightlights';
+
+  const currentMode = mapMode ?? 'standard';
+  const overlayEnabled = isFlatStyle && modeData && currentMode !== 'standard';
+
+  const intelValues = modeData ? Object.values(modeData.intelLevels ?? {}) : [];
+  const resourceValues = modeData ? Object.values(modeData.resourceTotals ?? {}) : [];
+
+  const maxIntelLevel = intelValues.length
+    ? Math.max(1, ...intelValues.map(value => (Number.isFinite(value) ? Number(value) : 0)))
+    : 1;
+  const maxResourceTotal = resourceValues.length
+    ? Math.max(1, ...resourceValues.map(value => (Number.isFinite(value) ? Number(value) : 0)))
+    : 1;
 
   nations.forEach(n => {
     if (n.population <= 0) return;
 
     const [x, y] = projectLocal(n.lon, n.lat);
     if (isNaN(x) || isNaN(y)) return;
+
+    if (overlayEnabled) {
+      const overlayKey = n.id;
+      let overlayColor: string | null = null;
+      let overlayScale = 0;
+      let overlayOpacity = 0;
+
+      switch (currentMode) {
+        case 'diplomatic': {
+          if (modeData?.playerId && modeData.playerId !== overlayKey) {
+            const score = modeData.relationships?.[overlayKey] ?? 0;
+            overlayColor = computeDiplomaticColor(score);
+            overlayScale = 0.22 + Math.abs(score) / 500;
+            overlayOpacity = 0.4;
+          }
+          break;
+        }
+        case 'intel': {
+          const intelValue = modeData?.intelLevels?.[overlayKey] ?? 0;
+          if (intelValue > 0) {
+            const normalized = intelValue / (maxIntelLevel || 1);
+            overlayColor = computeIntelColor(normalized);
+            overlayScale = 0.18 + normalized * 0.35;
+            overlayOpacity = 0.45;
+          }
+          break;
+        }
+        case 'resources': {
+          const total = modeData?.resourceTotals?.[overlayKey] ?? 0;
+          if (total > 0) {
+            const normalized = total / (maxResourceTotal || 1);
+            overlayColor = computeResourceColor(normalized);
+            overlayScale = 0.2 + normalized * 0.4;
+            overlayOpacity = 0.42;
+          }
+          break;
+        }
+        case 'unrest': {
+          const unrestMetrics = modeData?.unrest?.[overlayKey];
+          if (unrestMetrics) {
+            const stability = (unrestMetrics.morale + unrestMetrics.publicOpinion) / 2 - unrestMetrics.instability * 0.35;
+            overlayColor = computeUnrestColor(stability);
+            overlayScale = 0.24 + MathUtils.clamp((70 - stability) / 200, 0, 0.3);
+            overlayOpacity = stability < 55 ? 0.5 : 0.35;
+          }
+          break;
+        }
+        default:
+          break;
+      }
+
+      if (overlayColor && overlayScale > 0) {
+        const overlayRadius = overlayScale * 180;
+        const innerRadius = Math.max(overlayRadius * 0.35, 1);
+        const gradient = ctx.createRadialGradient(x, y, innerRadius, x, y, overlayRadius);
+        gradient.addColorStop(0, colorToRgba(overlayColor, overlayOpacity));
+        gradient.addColorStop(0.7, colorToRgba(overlayColor, overlayOpacity * 0.4));
+        gradient.addColorStop(1, colorToRgba(overlayColor, 0));
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, overlayRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
 
     const isSelectedTarget = selectedTargetRefId === n.id;
     if (isSelectedTarget) {
@@ -388,6 +482,42 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       ctx.restore();
     }
   });
+}
+
+const INTEL_COLOR_START = new Color('#1d4ed8');
+const INTEL_COLOR_END = new Color('#38bdf8');
+const RESOURCE_COLOR_START = new Color('#f97316');
+const RESOURCE_COLOR_END = new Color('#facc15');
+
+function computeDiplomaticColor(score: number): string {
+  if (score >= 60) return '#4ade80';
+  if (score >= 20) return '#22d3ee';
+  if (score <= -40) return '#f87171';
+  return '#facc15';
+}
+
+function computeIntelColor(normalized: number): string {
+  const clamped = MathUtils.clamp(normalized, 0, 1);
+  return INTEL_COLOR_START.clone().lerp(INTEL_COLOR_END, clamped).getStyle();
+}
+
+function computeResourceColor(normalized: number): string {
+  const clamped = MathUtils.clamp(normalized, 0, 1);
+  return RESOURCE_COLOR_START.clone().lerp(RESOURCE_COLOR_END, clamped).getStyle();
+}
+
+function computeUnrestColor(stability: number): string {
+  if (stability >= 65) return '#22c55e';
+  if (stability >= 45) return '#facc15';
+  return '#f87171';
+}
+
+function colorToRgba(color: string, alpha: number): string {
+  const parsed = new Color(color);
+  const r = Math.round(parsed.r * 255);
+  const g = Math.round(parsed.g * 255);
+  const b = Math.round(parsed.b * 255);
+  return `rgba(${r}, ${g}, ${b}, ${MathUtils.clamp(alpha, 0, 1)})`;
 }
 
 /**

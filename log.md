@@ -38,6 +38,11 @@
 - Added `src/lib/__tests__/electionSystem.test.ts` covering USA and USSR first-turn opinions with Cold War seed data.
 - Ran `npm test` (fails locally: vitest binary unavailable in container).
 
+### 2025-11-06T18:51:33Z - Map mode overlay synchronization
+- Threaded `mapStyle.mode` and `modeData` through the 2D nation renderer context so flat-canvas draws share the Three.js metadata.
+- Mirrored the diplomatic/intel/resource/unrest glow sizing and colouring logic from `GlobeScene` onto the world canvas, using radial gradients for flat projections.
+- Synced global map mode state/data with projector consumers to keep tooltip and hit-test coordinates aligned; manual check: toggle each map mode in both globe and flat views (pending in headless env).
+
 ### 2025-11-06T00:29:34Z - Leader ability panel wiring
 - Imported the `LeaderAbilityPanel` into `src/pages/Index.tsx`, initialized leader ability state for each nation during setup, and exposed a helper to map ability categories to news feeds.
 - Added a dedicated handler that calls `useLeaderAbility`, syncs `GameStateManager`/`PlayerManager`, and emits toast and ticker updates when abilities fire.
