@@ -43,6 +43,21 @@ export const LEADER_DEFAULT_DOCTRINES: Record<string, DoctrineKey> = {
   'Gerald Ford': 'defense', // Continuity, defensive posture
   'Lyndon B. Johnson': 'mad', // Vietnam escalation, containment
   'Dwight D. Eisenhower': 'defense', // "New Look" policy, massive retaliation
+  'Winston Churchill': 'defense', // Island fortress, allied solidarity
+  'Harry S. Truman': 'mad', // Truman Doctrine containment
+  'Joseph Stalin': 'mad', // Hardline expansion and deterrence
+  'Pierre Trudeau': 'detente', // Peacekeeping and diplomacy
+  'Zhou Enlai': 'detente', // Master diplomat, non-aligned outreach
+  'Deng Xiaoping': 'defense', // Pragmatic modernization, patience
+  'Ho Chi Minh': 'firstStrike', // Guerrilla offensives and surprise
+  'Josip Broz Tito': 'detente', // Non-aligned balancing
+  'Gamal Abdel Nasser': 'firstStrike', // Preemptive regional gambits
+  'Jawaharlal Nehru': 'defense', // Non-aligned but vigilant borders
+  'Konrad Adenauer': 'defense', // NATO integration and security
+  'Willy Brandt': 'detente', // Ostpolitik rapprochement
+  'Helmut Kohl': 'defense', // Reunification under protective umbrella
+  'François Mitterrand': 'detente', // European integration diplomacy
+  'Sukarno': 'firstStrike', // Revolutionary offensives and brinkmanship
 
   // ============================================================================
   // ALTERNATIVE HISTORY / FICTIONAL

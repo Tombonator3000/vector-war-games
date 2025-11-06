@@ -2496,3 +2496,12 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Ran `npm run test` (after correcting an unsupported `--runInBand` flag) to smoke-test the density presets and verify the interface renders across configurations.
 ### 2025-11-06T16:53:27Z - Preserve permanent decision cooldowns
 - Updated the political power generation hook to leave negative cooldown values untouched so once-per-game decisions remain locked after activation (`src/hooks/usePoliticalPower.ts`).
+### 2025-11-06T16:54:45Z - Expand Cold War leader roster and data
+- Appended fifteen additional historical Cold War figures to the leader selection roster with AI profiles so they surface in setup (`src/pages/Index.tsx`).
+- Authored matching biography entries, strategy tips, and doctrine recommendations for each new leader (`src/data/leaderBiographies.ts`).
+- Provisioned provisional ability definitions and doctrine mappings to keep biographies, abilities, and doctrine defaults aligned for the expanded roster (`src/data/leaderAbilities.ts`, `src/data/leaderDoctrines.ts`).
+- Ran `npm run build` to confirm the project compiles after the roster expansion (emitted existing bundle-size warnings only).
+### 2025-11-06T17:11:57Z - Tag leader roster by scenario context
+- Introduced reusable scenario tags on the leader roster and updated filtering to respect the tags so Cuban Crisis, Great Old Ones, and default Cold War selections pull the correct commanders (`src/pages/Index.tsx`).
+- Added explicit scenario assignments for every historical, Lovecraftian, and parody leader entry to keep the setup UI aligned with the new filtering logic (`src/pages/Index.tsx`).
+- Ran `npm run build` to confirm the refactored leader filtering compiles without regressions (existing bundle-size warnings persist as expected).

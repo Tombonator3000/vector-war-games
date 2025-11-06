@@ -360,6 +360,246 @@ export const LEADER_BIOGRAPHIES: Record<string, LeaderBiography> = {
     difficulty: 'easy',
   },
 
+  'Winston Churchill': {
+    name: 'Winston Churchill',
+    title: 'Prime Minister of the United Kingdom',
+    biography:
+      'The bulldog of Britain who rallied the free world during World War II, Churchill returned to office in the early Cold War warning of an "Iron Curtain" descending across Europe. His leadership emphasized unshakable alliances, strategic deterrence, and inspiring rhetoric to keep Western democracies united against authoritarian expansion.',
+    strategyTips: [
+      'Forge strong alliances early—shared defense is your greatest asset',
+      'Maintain high morale with propaganda investments to weather crises',
+      'Focus on defensive research to make island strongholds impregnable',
+      'Use naval and air power to project influence without overextending',
+    ],
+    recommendedDoctrine: 'defense',
+    playstyle: 'defensive',
+    difficulty: 'medium',
+  },
+
+  'Harry S. Truman': {
+    name: 'Harry S. Truman',
+    title: '33rd President of the United States',
+    biography:
+      'Truman shepherded the United States through the dawn of the Cold War—launching the Marshall Plan, founding NATO, and articulating the Truman Doctrine to contain communism. His decisions in Korea and Berlin showcased a willingness to blend diplomacy with firm military resolve.',
+    strategyTips: [
+      'Balance aid spending with military readiness to keep allies loyal',
+      'Deploy rapid response forces to suppress crises before they escalate',
+      'Use airlift-style logistics boosts to sustain distant operations',
+      'Maintain a healthy intelligence network to anticipate surprise moves',
+    ],
+    recommendedDoctrine: 'mad',
+    playstyle: 'balanced',
+    difficulty: 'medium',
+  },
+
+  'Joseph Stalin': {
+    name: 'Joseph Stalin',
+    title: 'General Secretary of the Communist Party of the Soviet Union',
+    biography:
+      'Stalin emerged from World War II commanding a vast Eurasian empire, enforcing rigid control over Eastern Europe while accelerating nuclear and industrial programs. His regime wielded fear, purges, and aggressive expansion to secure Soviet dominance, making him the archetype of hardline Cold War confrontation.',
+    strategyTips: [
+      'Invest heavily in heavy industry to sustain massive military builds',
+      'Use intimidation tactics to keep neighbors in line and gain concessions',
+      'Maintain strict internal security to avoid morale shocks from dissent',
+      'Strike decisively when opponents show weakness—hesitation invites resistance',
+    ],
+    recommendedDoctrine: 'mad',
+    playstyle: 'aggressive',
+    difficulty: 'hard',
+  },
+
+  'Pierre Trudeau': {
+    name: 'Pierre Trudeau',
+    title: '15th Prime Minister of Canada',
+    biography:
+      'A charismatic intellectual, Trudeau steered Canada through constitutional reform, bilingual nation-building, and a nuanced posture between superpowers. Advocating a "Just Society," he favored diplomacy, peacekeeping, and domestic unity while quietly modernizing Canada\'s defenses.',
+    strategyTips: [
+      'Invest in culture and domestic policies to boost morale and stability',
+      'Play mediator between rivals to gain diplomatic favor and intel',
+      'Specialize in technology that enhances defensive capabilities',
+      'Use peacekeeping deployments to de-escalate hotspots and gain influence',
+    ],
+    recommendedDoctrine: 'detente',
+    playstyle: 'diplomatic',
+    difficulty: 'easy',
+  },
+
+  'Zhou Enlai': {
+    name: 'Zhou Enlai',
+    title: 'Premier of the People\'s Republic of China',
+    biography:
+      'Zhou served as the PRC\'s consummate diplomat, orchestrating revolutionary consolidation at home while opening channels abroad—from the Bandung Conference to the rapprochement with the United States. His subtle balancing of ideology and pragmatism stabilized China during turbulent decades.',
+    strategyTips: [
+      'Focus on diplomacy techs to unlock powerful negotiation leverage',
+      'Maintain a flexible military posture capable of both offense and defense',
+      'Use espionage to stay informed about rival blocs and exploit divisions',
+      'Build infrastructure to convert economic growth into strategic options',
+    ],
+    recommendedDoctrine: 'detente',
+    playstyle: 'balanced',
+    difficulty: 'medium',
+  },
+
+  'Deng Xiaoping': {
+    name: 'Deng Xiaoping',
+    title: 'Paramount Leader of China',
+    biography:
+      'Architect of China\'s Reform and Opening, Deng shifted the nation from Maoist mass campaigns to pragmatic modernization. He emphasized economic liberalization, technology acquisition, and a calm foreign policy that bought time for development while maintaining core security interests.',
+    strategyTips: [
+      'Prioritize economic reforms to turbocharge production and research',
+      'Use patient diplomacy to avoid overextension and lure investment',
+      'Invest in defensive systems while expanding technological capabilities',
+      'Time power plays after economic upgrades to maximize their impact',
+    ],
+    recommendedDoctrine: 'defense',
+    playstyle: 'balanced',
+    difficulty: 'medium',
+  },
+
+  'Ho Chi Minh': {
+    name: 'Ho Chi Minh',
+    title: 'President of the Democratic Republic of Vietnam',
+    biography:
+      'Founding father of modern Vietnam, Ho combined nationalism and communism to wage a decades-long struggle against colonialism and foreign intervention. Master of guerrilla warfare and political organization, he forged a resilient movement that endured immense pressure.',
+    strategyTips: [
+      'Exploit guerilla tactics to bleed stronger foes over time',
+      'Invest in morale and propaganda to keep population support unwavering',
+      'Use terrain advantages—jungles and mountains—to offset tech gaps',
+      'Engage in limited offensives to provoke negotiations on favorable terms',
+    ],
+    recommendedDoctrine: 'firstStrike',
+    playstyle: 'aggressive',
+    difficulty: 'hard',
+  },
+
+  'Josip Broz Tito': {
+    name: 'Josip Broz Tito',
+    title: 'President of Yugoslavia',
+    biography:
+      'Leader of the Non-Aligned Movement, Tito defied both superpowers while keeping a multiethnic federation unified. His brand of market-socialism, decentralized governance, and strategic balancing made Yugoslavia an independent power broker in the Cold War order.',
+    strategyTips: [
+      'Maintain non-aligned status to trade with both blocs and gather intel',
+      'Use diplomatic flexibility to mediate conflicts for strategic rewards',
+      'Balance military investments across services to stay adaptable',
+      'Quell internal unrest quickly to preserve federation stability',
+    ],
+    recommendedDoctrine: 'detente',
+    playstyle: 'balanced',
+    difficulty: 'medium',
+  },
+
+  'Gamal Abdel Nasser': {
+    name: 'Gamal Abdel Nasser',
+    title: 'President of the United Arab Republic (Egypt)',
+    biography:
+      'Champion of Arab nationalism, Nasser nationalized the Suez Canal, forged the United Arab Republic, and positioned Cairo as the voice of anti-colonialism. Balancing Soviet aid with regional ambitions, he pursued modernization and charismatic leadership to reshape the Middle East.',
+    strategyTips: [
+      'Control strategic waterways and chokepoints to project influence',
+      'Invest in infrastructure to support rapid mobilization in crises',
+      'Cultivate regional alliances to deter foreign intervention',
+      'Blend propaganda and reform to keep domestic factions aligned',
+    ],
+    recommendedDoctrine: 'firstStrike',
+    playstyle: 'balanced',
+    difficulty: 'medium',
+  },
+
+  'Jawaharlal Nehru': {
+    name: 'Jawaharlal Nehru',
+    title: 'Prime Minister of India',
+    biography:
+      'Nehru guided newly independent India with a vision of secular democracy, state-led development, and Non-Aligned leadership. While wary of militarism, he built a capable defense to guard against regional threats and championed peaceful coexistence on the world stage.',
+    strategyTips: [
+      'Invest in science and education to unlock long-term technological advantages',
+      'Use diplomatic conferences to expand soft power without provoking rivals',
+      'Maintain a strong defensive perimeter to deter incursions on multiple fronts',
+      'Balance domestic reforms with selective military modernization',
+    ],
+    recommendedDoctrine: 'defense',
+    playstyle: 'balanced',
+    difficulty: 'easy',
+  },
+
+  'Konrad Adenauer': {
+    name: 'Konrad Adenauer',
+    title: 'Chancellor of the Federal Republic of Germany',
+    biography:
+      'Adenauer rebuilt West Germany from the ruins of war, anchoring it firmly within the Western alliance while pursuing reconciliation with former enemies. His focus on economic revival and NATO integration created a stable bulwark against Soviet influence in Europe.',
+    strategyTips: [
+      'Prioritize economic recovery to unlock powerful industrial bonuses',
+      'Strengthen NATO ties for mutual defense and technology sharing',
+      'Deploy counterintelligence to guard against infiltration and subversion',
+      'Invest in missile defense to shield industrial heartlands',
+    ],
+    recommendedDoctrine: 'defense',
+    playstyle: 'defensive',
+    difficulty: 'easy',
+  },
+
+  'Willy Brandt': {
+    name: 'Willy Brandt',
+    title: 'Chancellor of the Federal Republic of Germany',
+    biography:
+      'Brandt\'s Ostpolitik thawed relations with Eastern Europe through treaties and human-centered diplomacy. While maintaining NATO commitments, he leveraged dialogue and economic engagement to ease Cold War tensions and open new avenues for reunification.',
+    strategyTips: [
+      'Use détente initiatives to lower threat levels and gain diplomatic capital',
+      'Invest in cultural exchanges to improve relationships with rivals',
+      'Maintain a credible defense to negotiate from a position of strength',
+      'Capitalize on reduced tensions to reallocate spending into tech and welfare',
+    ],
+    recommendedDoctrine: 'detente',
+    playstyle: 'diplomatic',
+    difficulty: 'medium',
+  },
+
+  'Helmut Kohl': {
+    name: 'Helmut Kohl',
+    title: 'Chancellor of reunified Germany',
+    biography:
+      'Kohl oversaw the peaceful reunification of East and West Germany, steering Europe through the end of the Cold War. His tenure emphasized fiscal discipline, deep NATO cooperation, and the creation of the European Union\'s single market.',
+    strategyTips: [
+      'Focus on economic integration policies to absorb new territories efficiently',
+      'Use strong alliances to back ambitious diplomatic initiatives',
+      'Invest in defensive technologies to protect reunified borders',
+      'Stagger modernization efforts to avoid overstretch during absorption phases',
+    ],
+    recommendedDoctrine: 'defense',
+    playstyle: 'balanced',
+    difficulty: 'medium',
+  },
+
+  'François Mitterrand': {
+    name: 'François Mitterrand',
+    title: 'President of the French Republic',
+    biography:
+      'Mitterrand blended socialist reforms with staunch European integration, co-leading the push for the euro and balancing France\'s independent deterrent. His diplomacy harmonized with Germany while asserting France\'s global voice from Africa to the Middle East.',
+    strategyTips: [
+      'Invest in culture and social programs to keep domestic stability high',
+      'Coordinate with allies to unlock joint research and defense projects',
+      'Maintain a strategic nuclear deterrent as bargaining leverage',
+      'Use intelligence assets to stay proactive in overseas operations',
+    ],
+    recommendedDoctrine: 'detente',
+    playstyle: 'balanced',
+    difficulty: 'medium',
+  },
+
+  'Sukarno': {
+    name: 'Sukarno',
+    title: 'President of Indonesia',
+    biography:
+      'Indonesia\'s founding president championed anti-colonial solidarity through guided democracy and bold regional maneuvers. Sukarno balanced superpower courtship with militant nationalism, seeking to forge a "Third World" axis while commanding vast archipelagic resources.',
+    strategyTips: [
+      'Control sea lanes and straits to tax trade and project power',
+      'Use revolutionary rhetoric to stir uprisings in rival colonies',
+      'Develop a mobile military capable of island-hopping operations',
+      'Invest in propaganda to offset instability from aggressive moves',
+    ],
+    recommendedDoctrine: 'firstStrike',
+    playstyle: 'aggressive',
+    difficulty: 'hard',
+  },
+
   // ============================================================================
   // PARODY LEADERS
   // ============================================================================
