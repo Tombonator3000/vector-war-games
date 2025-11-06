@@ -215,6 +215,359 @@ export const LEADER_ABILITIES: Record<string, LeaderAbility> = {
   },
 
   // ============================================================================
+  // COLD WAR ERA LEADERS (HISTORICAL EXPANSION)
+  // ============================================================================
+
+  'Winston Churchill': {
+    id: 'churchill_bulldog_defense',
+    name: '🛡️ Britain Stands Alone',
+    description: 'Activate integrated air defense network granting complete missile immunity for 2 turns and rallying morale.',
+    icon: '🛡️',
+    maxUses: 1,
+    usesRemaining: 1,
+    cooldownTurns: 0,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'missile-shield',
+      duration: 2,
+    },
+    targetType: 'self',
+    category: 'military',
+    requirements: [
+      {
+        type: 'min-turn',
+        value: 4,
+        description: 'Requires early warning networks to be established (turn 4+)',
+      },
+    ],
+  },
+
+  'Harry S. Truman': {
+    id: 'truman_containment_airlift',
+    name: '✈️ Berlin Airlift',
+    description: 'Mobilize a rapid logistics surge: gain 2 free missiles, +50 morale, and -25% unit costs for 4 turns.',
+    icon: '✈️',
+    maxUses: 1,
+    usesRemaining: 1,
+    cooldownTurns: 0,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'rapid-mobilization',
+      duration: 4,
+      value: 25,
+      metadata: { freeMissiles: 2 },
+    },
+    targetType: 'self',
+    category: 'military',
+    requirements: [],
+  },
+
+  'Joseph Stalin': {
+    id: 'stalin_iron_fist',
+    name: '🔨 Red Army Surge',
+    description: 'Launch an overwhelming first strike with +120% effectiveness and -50% enemy defense for the opening blow.',
+    icon: '🔨',
+    maxUses: 1,
+    usesRemaining: 1,
+    cooldownTurns: 0,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'first-strike',
+      duration: 1,
+      value: 120,
+      metadata: { defensePenalty: 0.5 },
+    },
+    targetType: 'single-nation',
+    category: 'military',
+    requirements: [],
+  },
+
+  'Pierre Trudeau': {
+    id: 'trudeau_peacekeeping',
+    name: '🕊️ Peacekeeping Mandate',
+    description: 'Deploy UN peacekeepers: improve relations with all nations by +25 and secure alliances with friendly states.',
+    icon: '🕊️',
+    maxUses: 1,
+    usesRemaining: 1,
+    cooldownTurns: 0,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'boost-relationships',
+      value: 25,
+    },
+    targetType: 'all-nations',
+    category: 'diplomatic',
+    requirements: [
+      {
+        type: 'at-peace',
+        value: 1,
+        description: 'Cannot be at war while dispatching peacekeepers',
+      },
+    ],
+  },
+
+  'Zhou Enlai': {
+    id: 'zhou_bandung_initiative',
+    name: '🤝 Bandung Initiative',
+    description: 'Lead a conference of the non-aligned: +20 relations globally and easier alliance formation for 2 attempts.',
+    icon: '🤝',
+    maxUses: 2,
+    usesRemaining: 2,
+    cooldownTurns: 8,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'boost-relationships',
+      value: 20,
+    },
+    targetType: 'all-nations',
+    category: 'diplomatic',
+    requirements: [
+      {
+        type: 'min-turn',
+        value: 6,
+        description: 'Requires diplomatic groundwork (turn 6+)',
+      },
+    ],
+  },
+
+  'Deng Xiaoping': {
+    id: 'deng_reform_and_opening',
+    name: '📈 Reform and Opening',
+    description: 'Trigger sweeping market reforms: +150% production for 4 turns and accelerate modernization programs.',
+    icon: '📈',
+    maxUses: 1,
+    usesRemaining: 1,
+    cooldownTurns: 0,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'economic-boom',
+      duration: 4,
+      value: 150,
+    },
+    targetType: 'self',
+    category: 'economic',
+    requirements: [
+      {
+        type: 'min-turn',
+        value: 8,
+        description: 'Reforms require mid-game setup (turn 8+)',
+      },
+    ],
+  },
+
+  'Ho Chi Minh': {
+    id: 'ho_jungle_networks',
+    name: '🌲 Jungle Networks',
+    description: 'Unleash coordinated propaganda and guerrilla operations: target loses 40 morale and global trust.',
+    icon: '🌲',
+    maxUses: 2,
+    usesRemaining: 2,
+    cooldownTurns: 7,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'propaganda-wave',
+      value: 40,
+    },
+    targetType: 'single-nation',
+    category: 'intelligence',
+    requirements: [
+      {
+        type: 'at-war',
+        value: 1,
+        description: 'Requires active conflict to mobilize guerrillas',
+      },
+    ],
+  },
+
+  'Josip Broz Tito': {
+    id: 'tito_non_aligned_pact',
+    name: '⚖️ Non-Aligned Charter',
+    description: 'Broker a non-aligned summit: +20 relations with all nations and temporary immunity from alliance pressure.',
+    icon: '⚖️',
+    maxUses: 2,
+    usesRemaining: 2,
+    cooldownTurns: 6,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'boost-relationships',
+      value: 20,
+    },
+    targetType: 'all-nations',
+    category: 'diplomatic',
+    requirements: [],
+  },
+
+  'Gamal Abdel Nasser': {
+    id: 'nasser_suez_crisis',
+    name: '🚢 Nationalize the Canal',
+    description: 'Seize strategic assets from a rival: steal up to 75 Intel and 100 Production while destabilizing their alliances.',
+    icon: '🚢',
+    maxUses: 1,
+    usesRemaining: 1,
+    cooldownTurns: 0,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'steal-resources',
+      value: 100,
+      metadata: { intelSteal: 75, productionSteal: 100 },
+    },
+    targetType: 'single-nation',
+    category: 'economic',
+    requirements: [
+      {
+        type: 'min-turn',
+        value: 5,
+        description: 'Canal nationalization requires buildup (turn 5+)',
+      },
+    ],
+  },
+
+  'Jawaharlal Nehru': {
+    id: 'nehru_five_year_plan',
+    name: '🏛️ Five-Year Plan',
+    description: 'Implement nationwide development drive: +100% production for 3 turns and stabilize domestic support.',
+    icon: '🏛️',
+    maxUses: 1,
+    usesRemaining: 1,
+    cooldownTurns: 0,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'economic-boom',
+      duration: 3,
+      value: 100,
+    },
+    targetType: 'self',
+    category: 'economic',
+    requirements: [],
+  },
+
+  'Konrad Adenauer': {
+    id: 'adenauer_wirtschaftswunder',
+    name: '💶 Wirtschaftswunder',
+    description: 'Kickstart the economic miracle: +125% production for 4 turns and attract foreign investment.',
+    icon: '💶',
+    maxUses: 1,
+    usesRemaining: 1,
+    cooldownTurns: 0,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'economic-boom',
+      duration: 4,
+      value: 125,
+    },
+    targetType: 'self',
+    category: 'economic',
+    requirements: [],
+  },
+
+  'Willy Brandt': {
+    id: 'brandt_ostpolitik',
+    name: '🌉 Ostpolitik',
+    description: 'Open Eastern channels: +35 relations with all nations and immediate alliance checks with neighbors.',
+    icon: '🌉',
+    maxUses: 1,
+    usesRemaining: 1,
+    cooldownTurns: 0,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'boost-relationships',
+      value: 35,
+    },
+    targetType: 'all-nations',
+    category: 'diplomatic',
+    requirements: [
+      {
+        type: 'at-peace',
+        value: 1,
+        description: 'Dialogue requires peace-time conditions',
+      },
+    ],
+  },
+
+  'Helmut Kohl': {
+    id: 'kohl_reunification',
+    name: '🕯️ Peaceful Revolution',
+    description: 'Freeze hostilities for 3 turns while reunification is secured, improving relations with former adversaries.',
+    icon: '🕯️',
+    maxUses: 1,
+    usesRemaining: 1,
+    cooldownTurns: 0,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'force-peace',
+      duration: 3,
+    },
+    targetType: 'all-enemies',
+    category: 'diplomatic',
+    requirements: [
+      {
+        type: 'min-turn',
+        value: 10,
+        description: 'Requires late-Cold War conditions (turn 10+)',
+      },
+    ],
+  },
+
+  'François Mitterrand': {
+    id: 'mitterrand_grand_projects',
+    name: '🏗️ Grand Projects',
+    description: 'Launch ambitious modernization drive: +120% production for 3 turns and unlock key strategic technologies.',
+    icon: '🏗️',
+    maxUses: 1,
+    usesRemaining: 1,
+    cooldownTurns: 0,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'economic-boom',
+      duration: 3,
+      value: 120,
+      metadata: { unlockAllTech: true },
+    },
+    targetType: 'self',
+    category: 'economic',
+    requirements: [],
+  },
+
+  'Sukarno': {
+    id: 'sukarno_guided_democracy',
+    name: '🔥 Guided Democracy',
+    description: 'Flood target with revolutionary propaganda: -35 relationship from all nations toward them and destabilize rule.',
+    icon: '🔥',
+    maxUses: 2,
+    usesRemaining: 2,
+    cooldownTurns: 6,
+    currentCooldown: 0,
+    lastUsedTurn: null,
+    effect: {
+      type: 'propaganda-wave',
+      value: 35,
+    },
+    targetType: 'single-nation',
+    category: 'intelligence',
+    requirements: [
+      {
+        type: 'min-turn',
+        value: 5,
+        description: 'Requires regional tensions to peak (turn 5+)',
+      },
+    ],
+  },
+
+  // ============================================================================
   // PARODY LEADERS
   // ============================================================================
 
