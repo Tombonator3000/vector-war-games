@@ -19,7 +19,7 @@ export interface WarSupportState {
   baseWarSupport: number; // Base value (default 50)
   ideologyModifier: number; // -20 to +20
   leaderModifier: number; // -10 to +10
-  eventModifiers: WarSupportModifier[]; // Temporary events
+  warSupportModifiers: WarSupportModifier[]; // Temporary war support events
   warStatusModifier: number; // From being at war, winning/losing
 
   // Stability (0-100%)
@@ -30,7 +30,7 @@ export interface WarSupportState {
   baseStability: number; // Base value (default 50)
   politicalModifier: number; // From decisions, focuses
   economicModifier: number; // From economy state
-  eventModifiers: StabilityModifier[]; // Temporary events
+  stabilityModifiers: StabilityModifier[]; // Temporary stability events
   occupationPenalty: number; // From occupied territories
 
   // Trends

@@ -57,6 +57,12 @@ export interface Territory {
 
   // Attrition
   attritionLevel: number; // 0-100%, damage to units without supply
+  stationedUnits: StationedUnitSummary[]; // Units currently drawing supply
+}
+
+export interface StationedUnitSummary {
+  id: string;
+  name: string;
 }
 
 export interface SupplyRoute {
