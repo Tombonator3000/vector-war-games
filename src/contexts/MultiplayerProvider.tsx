@@ -156,7 +156,7 @@ export const MultiplayerProvider = ({ children }: { children: React.ReactNode })
       return;
     }
     const subscription = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!session) {
+      if (!session && !supabaseAnonUnavailable) {
         try {
           await ensureAnonSession();
         } catch (error) {
