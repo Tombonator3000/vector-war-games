@@ -2482,3 +2482,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Updated `applyImmigrationPolicy` to add the calculated bonus directly in millions and adjusted the recommendation heuristic to use million-based thresholds (`src/lib/streamlinedCultureLogic.ts`).
 - Synced the Streamlined Culture panel display with the million-based population values so UI deltas remain realistic (`src/components/StreamlinedCulturePanel.tsx`).
 - Ran `npm run test -- src/lib/__tests__/unifiedGameMigration.test.ts`; confirmed the suite passes after correcting an earlier Vitest CLI flag.
+### 2025-11-06T15:49:56Z - Harden Supabase fallback detection
+- Swapped direct `process.env` reads in the Supabase client for a guarded `processEnv` helper (plus a runtime-safe `import.meta.env` lookup) so bundlers without `process` still fall back correctly (`src/integrations/supabase/client.ts`).
+- Expanded the multiplayer fallback spec with an env-absent regression test covering both `process` and `import.meta.env` being undefined (`src/contexts/__tests__/MultiplayerProvider.fallback.test.tsx`).
+- Ran `npm run test -- src/contexts/__tests__/MultiplayerProvider.fallback.test.tsx` and `npm run build` to confirm the new safeguards compile and execute cleanly.
