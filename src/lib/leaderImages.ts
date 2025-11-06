@@ -26,14 +26,8 @@ export const leaderImages: Record<string, string> = {
   'Shub-Niggurath': '/leaders/shub-niggurath.jpg',
   'Yog-Sothoth': '/leaders/yog-sothoth.jpg',
   
-  // Cold War Era Historical Leaders
+  // Cold War Era Historical Leaders - United States
   'Ronald Reagan': '/leaders/ronald-reagan.jpg',
-  'Mikhail Gorbachev': '/leaders/mikhail-gorbachev.jpg',
-  'Margaret Thatcher': '/leaders/margaret-thatcher.jpg',
-  'Mao Zedong': '/leaders/mao-zedong.jpg',
-  'Charles de Gaulle': '/leaders/charles-de-gaulle.jpg',
-  'Indira Gandhi': '/leaders/indira-gandhi.jpg',
-  'Leonid Brezhnev': '/leaders/leonid-brezhnev.jpg',
   'Richard Nixon': '/leaders/richard-nixon.jpg',
   'Jimmy Carter': '/leaders/jimmy-carter.jpg',
   'Dwight D. Eisenhower': '/leaders/dwight-eisenhower.jpg',
@@ -41,6 +35,49 @@ export const leaderImages: Record<string, string> = {
   'Lyndon B. Johnson': '/leaders/lyndon-johnson.jpg',
   'Lyndon Johnson': '/leaders/lyndon-johnson.jpg',
   'Gerald Ford': '/leaders/gerald-ford.jpg',
+  'Harry S. Truman': '/leaders/harry-truman.jpg',
+  'Harry Truman': '/leaders/harry-truman.jpg',
+  
+  // Soviet Union Leaders
+  'Mikhail Gorbachev': '/leaders/mikhail-gorbachev.jpg',
+  'Leonid Brezhnev': '/leaders/leonid-brezhnev.jpg',
+  'Joseph Stalin': '/leaders/joseph-stalin.jpg',
+  'Stalin': '/leaders/joseph-stalin.jpg',
+  
+  // British Leaders
+  'Margaret Thatcher': '/leaders/margaret-thatcher.jpg',
+  'Winston Churchill': '/leaders/winston-churchill.jpg',
+  'Churchill': '/leaders/winston-churchill.jpg',
+  
+  // French Leaders
+  'Charles de Gaulle': '/leaders/charles-de-gaulle.jpg',
+  'François Mitterrand': '/leaders/francois-mitterrand.jpg',
+  'Francois Mitterrand': '/leaders/francois-mitterrand.jpg',
+  'Mitterrand': '/leaders/francois-mitterrand.jpg',
+  
+  // Chinese Leaders
+  'Mao Zedong': '/leaders/mao-zedong.jpg',
+  'Zhou Enlai': '/leaders/zhou-enlai.jpg',
+  'Deng Xiaoping': '/leaders/deng-xiaoping.jpg',
+  
+  // Indian Leaders
+  'Indira Gandhi': '/leaders/indira-gandhi.jpg',
+  'Jawaharlal Nehru': '/leaders/jawaharlal-nehru.jpg',
+  'Nehru': '/leaders/jawaharlal-nehru.jpg',
+  
+  // German Leaders
+  'Konrad Adenauer': '/leaders/konrad-adenauer.jpg',
+  'Willy Brandt': '/leaders/willy-brandt.jpg',
+  'Helmut Kohl': '/leaders/helmut-kohl.jpg',
+  
+  // Other World Leaders
+  'Pierre Trudeau': '/leaders/pierre-trudeau.jpg',
+  'Ho Chi Minh': '/leaders/ho-chi-minh.jpg',
+  'Josip Broz Tito': '/leaders/josip-broz-tito.jpg',
+  'Tito': '/leaders/josip-broz-tito.jpg',
+  'Gamal Abdel Nasser': '/leaders/gamal-abdel-nasser.jpg',
+  'Nasser': '/leaders/gamal-abdel-nasser.jpg',
+  'Sukarno': '/leaders/sukarno.jpg',
   
   // Parody leaders
   'Ronnie Raygun': '/leaders/ronnie-raygun.jpg',
