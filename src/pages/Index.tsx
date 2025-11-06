@@ -629,6 +629,41 @@ let multiplayerPublisher: (() => void) | null = null;
 let spyNetworkApi: ReturnType<typeof useSpyNetwork> | null = null;
 let triggerNationsUpdate: (() => void) | null = null;
 
+type OverlayNotification = { text: string; expiresAt: number };
+type OverlayListener = (message: OverlayNotification | null) => void;
+let overlayListener: OverlayListener | null = null;
+let overlayTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function registerOverlayListener(listener: OverlayListener | null) {
+  overlayListener = listener;
+}
+
+function emitOverlayMessage(text: string, ttl: number) {
+  S.overlay = { text, ttl };
+
+  if (overlayTimeout) {
+    clearTimeout(overlayTimeout);
+    overlayTimeout = null;
+  }
+
+  overlayListener?.({ text, expiresAt: Date.now() + ttl });
+  overlayTimeout = setTimeout(() => {
+    overlayListener?.(null);
+    overlayTimeout = null;
+  }, ttl);
+}
+
+type PhaseTransitionListener = (active: boolean) => void;
+let phaseTransitionListener: PhaseTransitionListener | null = null;
+
+function registerPhaseTransitionListener(listener: PhaseTransitionListener | null) {
+  phaseTransitionListener = listener;
+}
+
+function notifyPhaseTransition(active: boolean) {
+  phaseTransitionListener?.(active);
+}
+
 const setMultiplayerPublisher = (publisher: (() => void) | null) => {
   multiplayerPublisher = publisher;
 };
@@ -4240,7 +4275,7 @@ function log(msg: string, type: string = 'normal') {
 
 // AI Turn - Complete strategic decision making
 function aiTurn(n: Nation) {
-  S.overlay = { text: 'AI: ' + (n.leader || n.name), ttl: 800 };
+  emitOverlayMessage('AI: ' + (n.leader || n.name), 800);
   if (n.population <= 0) return;
   
   maybeBanter(n, 0.3);
@@ -4740,6 +4775,7 @@ function endTurn() {
 
   // Set flag to prevent re-entry
   turnInProgress = true;
+  notifyPhaseTransition(true);
 
   // Safety timeout: auto-release lock after 30 seconds to prevent permanent lock
   const safetyTimeout = setTimeout(() => {
@@ -4751,6 +4787,7 @@ function endTurn() {
         S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
         updateDisplay();
       }
+      notifyPhaseTransition(false);
     }
   }, 30000);
 
@@ -4859,6 +4896,7 @@ function endTurn() {
       // Release the turn lock and clear safety timeout
       turnInProgress = false;
       clearTimeout(safetyTimeout);
+      notifyPhaseTransition(false);
       console.log('[Turn Debug] Turn complete! New turn:', S.turn, 'Phase:', S.phase, 'Actions:', S.actionsRemaining, 'turn lock released');
 
       // Decrement intel operation cooldowns
@@ -5388,9 +5426,9 @@ function gameLoop() {
 function consumeAction() {
   S.actionsRemaining--;
   updateDisplay();
-  
+
   if (S.actionsRemaining <= 0) {
-    S.overlay = { text: 'NEXT ROUND', ttl: 1000 };
+    emitOverlayMessage('NEXT ROUND', 1000);
     setTimeout(endTurn, 500);
   }
 }
@@ -5684,6 +5722,7 @@ export default function NoradVector() {
   // Tutorial and phase transition system
   const tutorialContext = useTutorialContext();
   const [isPhaseTransitioning, setIsPhaseTransitioning] = useState(false);
+  const [overlayBanner, setOverlayBanner] = useState<OverlayNotification | null>(null);
 
   // Era system state
   const [showEraTransition, setShowEraTransition] = useState(false);
@@ -5697,6 +5736,51 @@ export default function NoradVector() {
   // Consequence preview state
   const [consequencePreview, setConsequencePreview] = useState<ActionConsequences | null>(null);
   const [consequenceCallback, setConsequenceCallback] = useState<(() => void) | null>(null);
+
+  useEffect(() => {
+    const listener: PhaseTransitionListener = (active) => {
+      setIsPhaseTransitioning(active);
+    };
+    registerPhaseTransitionListener(listener);
+    return () => {
+      registerPhaseTransitionListener(null);
+    };
+  }, []);
+
+  useEffect(() => {
+    const listener: OverlayListener = (message) => {
+      setOverlayBanner(message);
+    };
+    registerOverlayListener(listener);
+    return () => {
+      registerOverlayListener(null);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!overlayBanner) {
+      return;
+    }
+
+    const remaining = overlayBanner.expiresAt - Date.now();
+    if (remaining <= 0) {
+      setOverlayBanner(null);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setOverlayBanner(prev => {
+        if (!prev) {
+          return null;
+        }
+        return prev.expiresAt <= Date.now() ? null : prev;
+      });
+    }, remaining);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [overlayBanner]);
 
   useEffect(() => {
     currentMapStyle = mapStyle.visual;
@@ -12701,6 +12785,14 @@ export default function NoradVector() {
           Storage.setItem('has_seen_tutorial', 'true');
         }} 
       />
+
+      {overlayBanner && overlayBanner.expiresAt > Date.now() && (
+        <div className="pointer-events-none fixed inset-0 z-[9997] flex items-center justify-center">
+          <div className="rounded-lg border border-cyan-500/70 bg-black/80 px-8 py-4 shadow-[0_0_28px_rgba(34,211,238,0.45)]">
+            <p className="font-mono text-xl tracking-[0.4em] text-cyan-100">{overlayBanner.text}</p>
+          </div>
+        </div>
+      )}
 
       {/* New Phase 1 Tutorial & Feedback Overlays */}
       <PhaseTransitionOverlay phase={S.phase} isTransitioning={isPhaseTransitioning} />

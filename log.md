@@ -2441,3 +2441,8 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Relaxed Cold War expectation tolerances in `src/lib/__tests__/electionSystem.test.ts` to match the recalibrated public opinion formula while keeping guardrails around seeded sentiments.
 - Extended `src/pages/__tests__/Index.test.tsx` mocks to expose `DEFAULT_MAP_STYLE` and stub `MapModeBar`, avoiding Radix Tooltip provider errors triggered by the new war UI.
 - Ran `npm run test -- --run` to confirm all suites pass under the updated espionage and war council integrations.
+
+### 2025-11-06T13:22:04Z - Restored Cesium flat map controls and UI overlays
+- Enabled Cesium's 2D projection to support zooming/panning again, added resize handling for fullscreen transitions, and ensured satellite/overlay effects re-render once the viewer is ready by updating `src/components/CesiumViewer.tsx`.
+- Wired React-side phase transition and AI overlay messaging so Cesium users see turn processing updates, introducing shared overlay listeners in `src/pages/Index.tsx` and rendering the banner within the HUD.
+- Attempted `npm run build` to validate the bundle; command failed on a pre-existing missing export in `src/lib/casusBelliIntegration.ts`.
