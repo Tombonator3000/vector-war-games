@@ -699,8 +699,11 @@ let worldCountries: any = null;
 // resolvePublicAssetPath moved to @/lib/renderingUtils
 
 const FLAT_REALISTIC_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day.jpg');
+const FLAT_NIGHTLIGHTS_TEXTURE_URL = resolvePublicAssetPath('textures/earth_nightlights.jpg');
 let flatRealisticTexture: HTMLImageElement | null = null;
 let flatRealisticTexturePromise: Promise<HTMLImageElement> | null = null;
+let flatNightlightsTexture: HTMLImageElement | null = null;
+let flatNightlightsTexturePromise: Promise<HTMLImageElement> | null = null;
 
 function preloadFlatRealisticTexture() {
   if (flatRealisticTexture) {
@@ -734,6 +737,41 @@ function preloadFlatRealisticTexture() {
 
   return flatRealisticTexturePromise.catch(error => {
     // Texture load failed - fallback to standard rendering
+    return null;
+  });
+}
+
+function preloadFlatNightlightsTexture() {
+  if (flatNightlightsTexture) {
+    return Promise.resolve(flatNightlightsTexture);
+  }
+
+  if (flatNightlightsTexturePromise) {
+    return flatNightlightsTexturePromise;
+  }
+
+  if (typeof window === 'undefined' || typeof Image === 'undefined') {
+    return Promise.resolve(null);
+  }
+
+  flatNightlightsTexturePromise = new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      flatNightlightsTexture = image;
+      resolve(image);
+    };
+    image.onerror = (event) => {
+      flatNightlightsTexturePromise = null;
+      reject(
+        event instanceof ErrorEvent
+          ? event.error ?? new Error('Failed to load flat nightlights texture')
+          : new Error('Failed to load flat nightlights texture'),
+      );
+    };
+    image.src = FLAT_NIGHTLIGHTS_TEXTURE_URL;
+  });
+
+  return flatNightlightsTexturePromise.catch(() => {
     return null;
   });
 }
@@ -2839,9 +2877,12 @@ function drawWorld(style: MapStyle) {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
+    flatNightlightsTexture,
+    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    preloadFlatNightlightsTexture,
     getPoliticalFill,
   };
   renderWorld(style, context);
@@ -2863,9 +2904,12 @@ function drawNations(style: MapStyle) {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
+    flatNightlightsTexture,
+    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    preloadFlatNightlightsTexture,
     getPoliticalFill,
     nations,
     S,
@@ -2887,9 +2931,12 @@ function drawTerritoriesWrapper() {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
+    flatNightlightsTexture,
+    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    preloadFlatNightlightsTexture,
     getPoliticalFill,
     territories: territoryList,
     playerId: player.id,
@@ -2949,7 +2996,7 @@ function drawSatellites(nowMs: number) {
 
   const activeOrbits: SatelliteOrbit[] = [];
   const player = PlayerManager.get();
-  const isFlatRealistic = currentMapStyle === 'flat-realistic';
+  const isFlatTexture = currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights';
 
   orbits.forEach(orbit => {
     const targetNation = nations.find(nation => nation.id === orbit.targetId);
@@ -2997,7 +3044,7 @@ function drawSatellites(nowMs: number) {
     ctx.stroke();
     ctx.restore();
 
-    if (isFlatRealistic) {
+    if (isFlatTexture) {
       ctx.save();
       ctx.globalCompositeOperation = 'screen';
       const gradient = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, 22);
@@ -3603,7 +3650,7 @@ function drawFX() {
     S.screenShake *= 0.9;
   }
 
-  if (currentMapStyle === 'flat-realistic') {
+  if (currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights') {
     drawFalloutMarks(deltaMs);
   }
 
@@ -5678,6 +5725,8 @@ export default function NoradVector() {
       AudioSys.playSFX('click');
       if (style === 'flat-realistic') {
         void preloadFlatRealisticTexture();
+      } else if (style === 'flat-nightlights') {
+        void preloadFlatNightlightsTexture();
       }
       toast({
         title: 'Kartstil oppdatert',
@@ -5869,7 +5918,7 @@ export default function NoradVector() {
 
   useEffect(() => {
     currentMapStyle = mapStyle.visual;
-    if (mapStyle.visual === 'flat' || mapStyle.visual === 'flat-realistic') {
+    if (mapStyle.visual === 'flat' || mapStyle.visual === 'flat-realistic' || mapStyle.visual === 'flat-nightlights') {
       const expectedX = (W - W * cam.zoom) / 2;
       const expectedY = (H - H * cam.zoom) / 2;
       const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;
@@ -5881,10 +5930,13 @@ export default function NoradVector() {
   }, [cam.x, cam.y, cam.zoom, mapStyle.visual]);
   useEffect(() => {
     void preloadFlatRealisticTexture();
+    void preloadFlatNightlightsTexture();
   }, []);
   useEffect(() => {
     if (mapStyle.visual === 'flat-realistic') {
       void preloadFlatRealisticTexture();
+    } else if (mapStyle.visual === 'flat-nightlights') {
+      void preloadFlatNightlightsTexture();
     }
   }, [mapStyle.visual]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
@@ -10684,10 +10736,13 @@ export default function NoradVector() {
         cam.y = Math.min(Math.max(cam.y, minCamY), maxCamY);
       };
 
+      const isBoundedFlatProjection = () =>
+        currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights';
+
       const clampPanBounds = () => {
         clampLatitude();
 
-        if (currentMapStyle !== 'flat-realistic') {
+        if (!isBoundedFlatProjection()) {
           return;
         }
 
@@ -10941,8 +10996,8 @@ export default function NoradVector() {
         cam.targetZoom = newZoom;
         cam.zoom = newZoom;
         
-        // Auto-center in flat-realistic mode when at default zoom
-        if (currentMapStyle === 'flat-realistic' && newZoom <= 1.05) {
+        // Auto-center in bounded flat projections when at default zoom
+        if (isBoundedFlatProjection() && newZoom <= 1.05) {
           cam.x = (W - W * cam.zoom) / 2;
           cam.y = (H - H * cam.zoom) / 2;
         } else {
@@ -11001,8 +11056,8 @@ export default function NoradVector() {
             cam.targetZoom = newZoom;
             cam.zoom = newZoom;
             
-            // Auto-center in flat-realistic mode when at default zoom
-            if (currentMapStyle === 'flat-realistic' && newZoom <= 1.05) {
+            // Auto-center in bounded flat projections when at default zoom
+            if (isBoundedFlatProjection() && newZoom <= 1.05) {
               cam.x = (W - W * cam.zoom) / 2;
               cam.y = (H - H * cam.zoom) / 2;
             } else {

@@ -2505,3 +2505,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Introduced reusable scenario tags on the leader roster and updated filtering to respect the tags so Cuban Crisis, Great Old Ones, and default Cold War selections pull the correct commanders (`src/pages/Index.tsx`).
 - Added explicit scenario assignments for every historical, Lovecraftian, and parody leader entry to keep the setup UI aligned with the new filtering logic (`src/pages/Index.tsx`).
 - Ran `npm run build` to confirm the refactored leader filtering compiles without regressions (existing bundle-size warnings persist as expected).
+### 2025-11-06T18:35:44Z - Support flat nightlights tactical view
+- Added a dedicated flat nightlights texture loader and ensured map style switches preload and render the appropriate imagery while sharing viewport bounds with the day texture (`src/pages/Index.tsx`, `src/rendering/worldRenderer.ts`).
+- Updated flat map camera clamping and auto-centering logic so both flat day and night variants remain fully within the viewport during scroll, wheel, and pinch interactions (`src/pages/Index.tsx`).
