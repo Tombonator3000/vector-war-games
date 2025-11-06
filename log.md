@@ -2501,6 +2501,11 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Authored matching biography entries, strategy tips, and doctrine recommendations for each new leader (`src/data/leaderBiographies.ts`).
 - Provisioned provisional ability definitions and doctrine mappings to keep biographies, abilities, and doctrine defaults aligned for the expanded roster (`src/data/leaderAbilities.ts`, `src/data/leaderDoctrines.ts`).
 - Ran `npm run build` to confirm the project compiles after the roster expansion (emitted existing bundle-size warnings only).
+### 2025-11-06T17:50:40Z - Implement economic depth scaffolding for Phase 3
+- Added comprehensive economic domain types and hook contracts to `src/types/economicDepth.ts` to model trade, refinement, and infrastructure systems.
+- Implemented new hooks (`useEnhancedTradeSystem`, `useResourceRefinement`, `useEconomicInfrastructure`, `useEconomicDepth`) to manage subsystem state, turn processing, and economic recommendations.
+- Built accompanying UI panels and a master dashboard (`src/components/EnhancedTradePanel.tsx`, `ResourceRefinementPanel.tsx`, `EconomicInfrastructurePanel.tsx`, `EconomicDashboard.tsx`) and rewrote `PHASE_3_IMPLEMENTATION.md` to document the delivered scope.
+- Pending follow-up: run the Vitest suite once additional economic integration tests are authored.
 ### 2025-11-06T17:11:57Z - Tag leader roster by scenario context
 - Introduced reusable scenario tags on the leader roster and updated filtering to respect the tags so Cuban Crisis, Great Old Ones, and default Cold War selections pull the correct commanders (`src/pages/Index.tsx`).
 - Added explicit scenario assignments for every historical, Lovecraftian, and parody leader entry to keep the setup UI aligned with the new filtering logic (`src/pages/Index.tsx`).
