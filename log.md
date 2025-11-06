@@ -2475,3 +2475,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-06T14:37:42Z - Restore default Vite dev server port
 - Removed the custom `server.host` and `server.port` override from `vite.config.ts` so Vite defaults to port 5173.
 - Ran `npm run dev -- --host --clearScreen=false` to confirm the startup banner now reports `http://localhost:5173/`; build still fails afterward due to missing exports in `trustAndFavorsUtils` (pre-existing issue).
+### 2025-11-06T15:10:47Z - Restore missing diplomacy utility exports
+- Added `updateTrustScore` and `adjustRelationshipScore` wrappers in `src/lib/trustAndFavorsUtils.ts`, delegating to the existing trust and relationship modifiers.
+- Updated `src/lib/casusBelliIntegration.ts` to provide the current turn when adjusting relationships so history tracking remains consistent.
