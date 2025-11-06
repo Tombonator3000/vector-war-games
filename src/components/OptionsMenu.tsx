@@ -13,7 +13,7 @@ import { toast } from "@/components/ui/use-toast";
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
 import { GameDatabase } from '@/components/GameDatabase';
 import { ComprehensiveTutorial } from '@/components/ComprehensiveTutorial';
-import type { MapStyle } from '@/components/GlobeScene';
+import type { MapStyle, MapVisualStyle } from '@/components/GlobeScene';
 import { BookOpen, GraduationCap } from 'lucide-react';
 
 // Storage wrapper for localStorage
@@ -58,7 +58,7 @@ const themeOptions: { id: ThemeId; label: string }[] = [
   { id: 'wargames', label: 'WARGAMES' }
 ];
 
-const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }[] = [
+const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
   { value: 'realistic', label: 'Realistic', description: 'Satellite imagery with terrain overlays.' },
   { value: 'wireframe', label: 'Wireframe', description: 'Vector borders and topography outlines.' },
   { value: 'night', label: 'Night Lights', description: 'City illumination against a dark globe.' },
@@ -155,7 +155,7 @@ export interface OptionsMenuProps {
 
   /** Controlled map style selection */
   mapStyle: MapStyle;
-  onMapStyleChange: (style: MapStyle) => void;
+  onMapStyleChange: (style: MapVisualStyle) => void;
 
   /** Controlled globe viewer selection */
   viewerType: 'threejs' | 'cesium';
@@ -204,15 +204,16 @@ export function OptionsMenu({
   }, [onThemeChange, onChange]);
 
   useEffect(() => {
-    Storage.setItem('map_style', mapStyle);
-  }, [mapStyle]);
+    Storage.setItem('map_style_visual', mapStyle.visual);
+    Storage.setItem('map_style', mapStyle.visual);
+  }, [mapStyle.visual]);
 
   useEffect(() => {
     Storage.setItem('viewer_type', viewerType);
   }, [viewerType]);
 
-  const handleMapStyleChange = useCallback((style: MapStyle) => {
-    if (mapStyle === style) {
+  const handleMapStyleChange = useCallback((style: MapVisualStyle) => {
+    if (mapStyle.visual === style) {
       return;
     }
 
@@ -228,7 +229,7 @@ export function OptionsMenu({
     if (onChange) {
       onChange();
     }
-  }, [mapStyle, onMapStyleChange, onChange]);
+  }, [mapStyle.visual, onMapStyleChange, onChange]);
 
   const handleViewerSelect = useCallback((nextType: 'threejs' | 'cesium') => {
     if (viewerType === nextType) {
@@ -467,7 +468,7 @@ export function OptionsMenu({
         <p className="options-section__subheading">Choose how the global map is rendered.</p>
         <div className="layout-grid">
           {MAP_STYLE_OPTIONS.map((option) => {
-            const isActive = mapStyle === option.value;
+            const isActive = mapStyle.visual === option.value;
             return (
               <button
                 key={option.value}

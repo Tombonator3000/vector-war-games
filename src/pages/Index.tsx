@@ -37,7 +37,17 @@ import type { BioLabTier } from '@/types/bioLab';
 import type { EvolutionNodeId } from '@/types/biowarfare';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import { FlashpointOutcomeModal } from '@/components/FlashpointOutcomeModal';
-import GlobeScene, { PickerFn, ProjectorFn, type MapStyle } from '@/components/GlobeScene';
+import GlobeScene, {
+  PickerFn,
+  ProjectorFn,
+  type MapStyle,
+  type MapVisualStyle,
+  type MapMode,
+  type MapModeOverlayData,
+  DEFAULT_MAP_STYLE,
+  MAP_VISUAL_STYLES,
+  MAP_MODES,
+} from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
 import {
   useGovernance,
@@ -143,6 +153,7 @@ import { PoliticalStatusWidget } from '@/components/governance/PoliticalStatusWi
 import { GovernanceDetailPanel } from '@/components/governance/GovernanceDetailPanel';
 import { PolicySelectionPanel } from '@/components/governance/PolicySelectionPanel';
 import { PoliticalStabilityOverlay } from '@/components/governance/PoliticalStabilityOverlay';
+import { MapModeBar } from '@/components/MapModeBar';
 import { usePolicySystem } from '@/hooks/usePolicySystem';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 import { getDefaultScenario, type ScenarioConfig, SCENARIOS } from '@/types/scenario';
@@ -310,7 +321,7 @@ interface PendingLaunchState {
   deliveryOptions: { id: DeliveryMethod; label: string; count: number }[];
 }
 
-const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }[] = [
+const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
   { value: 'realistic', label: 'Realistic', description: 'Satellite imagery with terrain overlays.' },
   { value: 'wireframe', label: 'Wireframe', description: 'Vector borders and topography outlines.' },
   { value: 'night', label: 'Night Lights', description: 'City illumination against a dark globe.' },
@@ -322,6 +333,43 @@ const MAP_STYLE_OPTIONS: { value: MapStyle; label: string; description: string }
     description: 'High-resolution satellite texture rendered on the flat map.',
   },
 ];
+
+const MAP_MODE_DESCRIPTIONS: Record<MapMode, { label: string; description: string }> = {
+  standard: {
+    label: 'Standard',
+    description: 'Classic strategic overlay with nation markers and DEFCON grid.',
+  },
+  diplomatic: {
+    label: 'Diplomatisk',
+    description: 'Fargekoder nasjoner basert på relasjon til din regjering.',
+  },
+  intel: {
+    label: 'Etterretning',
+    description: 'Visualiserer overvåkingsdekning og rekognoseringsnivå.',
+  },
+  resources: {
+    label: 'Ressurser',
+    description: 'Fremhever strategiske lagre og markedspress.',
+  },
+  unrest: {
+    label: 'Uro',
+    description: 'Avdekker politisk stabilitet, opinion og krisesoner.',
+  },
+};
+
+const MAP_MODE_HOTKEYS: Record<MapMode, string> = {
+  standard: 'Alt+1',
+  diplomatic: 'Alt+2',
+  intel: 'Alt+3',
+  resources: 'Alt+4',
+  unrest: 'Alt+5',
+};
+
+const isVisualStyleValue = (value: unknown): value is MapVisualStyle =>
+  typeof value === 'string' && MAP_VISUAL_STYLES.includes(value as MapVisualStyle);
+
+const isMapModeValue = (value: unknown): value is MapMode =>
+  typeof value === 'string' && MAP_MODES.includes(value as MapMode);
 
 const VIEWER_OPTIONS: { value: 'threejs' | 'cesium'; label: string; description: string }[] = [
   {
@@ -548,7 +596,7 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 ];
 
 let currentTheme: ThemeId = 'synthwave';
-let currentMapStyle: MapStyle = 'flat-realistic';
+let currentMapStyle: MapVisualStyle = 'flat-realistic';
 let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
@@ -5381,27 +5429,20 @@ export default function NoradVector() {
     };
   }, [setPendingAIProposals]);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
-    const stored = Storage.getItem('map_style');
-    if (
-      stored === 'realistic' ||
-      stored === 'wireframe' ||
-      stored === 'night' ||
-      stored === 'political' ||
-      stored === 'flat' ||
-      stored === 'flat-realistic'
-    ) {
-      return stored as MapStyle;
-    }
-
-    return 'flat-realistic';
+    const storedVisual = Storage.getItem('map_style_visual') ?? Storage.getItem('map_style');
+    const storedMode = Storage.getItem('map_mode');
+    const visual = isVisualStyleValue(storedVisual) ? storedVisual : DEFAULT_MAP_STYLE.visual;
+    const mode = isMapModeValue(storedMode) ? storedMode : DEFAULT_MAP_STYLE.mode;
+    return { visual, mode };
   });
 
-  const handleMapStyleChange = useCallback((style: MapStyle) => {
+  const handleMapStyleChange = useCallback((style: MapVisualStyle) => {
     setMapStyle(prev => {
-      if (prev === style) {
+      if (prev.visual === style) {
         return prev;
       }
 
+      Storage.setItem('map_style_visual', style);
       Storage.setItem('map_style', style);
       currentMapStyle = style;
       AudioSys.playSFX('click');
@@ -5409,11 +5450,28 @@ export default function NoradVector() {
         void preloadFlatRealisticTexture();
       }
       toast({
-        title: 'Map style updated',
-        description: `Display mode changed to ${style}`,
+        title: 'Kartstil oppdatert',
+        description: `Visuell stil satt til ${style}`,
       });
 
-      return style;
+      return { ...prev, visual: style };
+    });
+  }, [toast]);
+
+  const handleMapModeChange = useCallback((mode: MapMode) => {
+    setMapStyle(prev => {
+      if (prev.mode === mode) {
+        return prev;
+      }
+
+      Storage.setItem('map_mode', mode);
+      AudioSys.playSFX('click');
+      toast({
+        title: `Kartmodus: ${MAP_MODE_DESCRIPTIONS[mode].label}`,
+        description: MAP_MODE_DESCRIPTIONS[mode].description,
+      });
+
+      return { ...prev, mode };
     });
   }, [toast]);
 
@@ -5540,8 +5598,8 @@ export default function NoradVector() {
   const [consequenceCallback, setConsequenceCallback] = useState<(() => void) | null>(null);
 
   useEffect(() => {
-    currentMapStyle = mapStyle;
-    if (mapStyle === 'flat' || mapStyle === 'flat-realistic') {
+    currentMapStyle = mapStyle.visual;
+    if (mapStyle.visual === 'flat' || mapStyle.visual === 'flat-realistic') {
       const expectedX = (W - W * cam.zoom) / 2;
       const expectedY = (H - H * cam.zoom) / 2;
       const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;
@@ -5550,15 +5608,15 @@ export default function NoradVector() {
         cam.y = expectedY;
       }
     }
-  }, [mapStyle]);
+  }, [cam.x, cam.y, cam.zoom, mapStyle.visual]);
   useEffect(() => {
     void preloadFlatRealisticTexture();
   }, []);
   useEffect(() => {
-    if (mapStyle === 'flat-realistic') {
+    if (mapStyle.visual === 'flat-realistic') {
       void preloadFlatRealisticTexture();
     }
-  }, [mapStyle]);
+  }, [mapStyle.visual]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
   const initialMusicEnabled = storedMusicEnabled === 'true' ? true : storedMusicEnabled === 'false' ? false : AudioSys.musicEnabled;
   const storedSfxEnabled = Storage.getItem('audio_sfx_enabled');
@@ -5632,7 +5690,6 @@ export default function NoradVector() {
   const [isCulturePanelOpen, setIsCulturePanelOpen] = useState(false);
   const [showGovernanceDetails, setShowGovernanceDetails] = useState(false);
   const [showPolicyPanel, setShowPolicyPanel] = useState(false);
-  const [showStabilityOverlay, setShowStabilityOverlay] = useState(false);
   const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
   const [isIntelOperationsOpen, setIsIntelOperationsOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
@@ -6253,6 +6310,48 @@ export default function NoradVector() {
     onApplyDelta: handleGovernanceDelta,
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
   });
+
+  const mapModeData = useMemo<MapModeOverlayData>(() => {
+    const playerNation = nations.find(n => n.isPlayer) || null;
+    const playerId = playerNation?.id ?? null;
+    const relationships: Record<string, number> = {};
+    const intelLevels: Record<string, number> = {};
+    const resourceTotals: Record<string, number> = {};
+    const unrest: Record<string, { morale: number; publicOpinion: number; instability: number }> = {};
+
+    nations.forEach(nation => {
+      relationships[nation.id] = playerNation
+        ? playerNation.relationships?.[nation.id] ?? nation.relationships?.[playerNation.id] ?? (nation.isPlayer ? 100 : 0)
+        : 0;
+
+      intelLevels[nation.id] = nation.intel ?? 0;
+
+      if (nation.resourceStockpile) {
+        const { oil = 0, uranium = 0, rare_earths = 0, food = 0 } = nation.resourceStockpile;
+        resourceTotals[nation.id] = oil + uranium + rare_earths + food;
+      } else {
+        const production = nation.production ?? 0;
+        const uranium = nation.uranium ?? 0;
+        const intel = nation.intel ?? 0;
+        resourceTotals[nation.id] = production + uranium + intel;
+      }
+
+      const metrics = governance.metrics[nation.id];
+      unrest[nation.id] = metrics
+        ? {
+            morale: metrics.morale ?? nation.morale ?? 50,
+            publicOpinion: metrics.publicOpinion ?? nation.publicOpinion ?? 50,
+            instability: metrics.instability ?? nation.instability ?? 0,
+          }
+        : {
+            morale: nation.morale ?? 50,
+            publicOpinion: nation.publicOpinion ?? 50,
+            instability: nation.instability ?? 0,
+          };
+    });
+
+    return { playerId, relationships, intelLevels, resourceTotals, unrest };
+  }, [governance.metrics, nations]);
 
   // Policy system for strategic national policies
   const player = nations.find(n => n.isPlayer);
@@ -6999,10 +7098,10 @@ export default function NoradVector() {
     }
     
     // Auto-switch to wireframe map when wargames theme is selected
-    if (theme === 'wargames' && mapStyle !== 'wireframe') {
+    if (theme === 'wargames' && mapStyle.visual !== 'wireframe') {
       handleMapStyleChange('wireframe');
     }
-  }, [theme, mapStyle, handleMapStyleChange]);
+  }, [theme, mapStyle.visual, handleMapStyleChange]);
 
   useEffect(() => {
     uiUpdateCallback = () => setUiTick(prev => prev + 1);
@@ -10497,6 +10596,33 @@ export default function NoradVector() {
       const handleKeyDown = (e: KeyboardEvent) => {
         if(S.gameOver) return;
 
+        if (e.altKey) {
+          switch (e.key) {
+            case '1':
+              e.preventDefault();
+              handleMapModeChange('standard');
+              return;
+            case '2':
+              e.preventDefault();
+              handleMapModeChange('diplomatic');
+              return;
+            case '3':
+              e.preventDefault();
+              handleMapModeChange('intel');
+              return;
+            case '4':
+              e.preventDefault();
+              handleMapModeChange('resources');
+              return;
+            case '5':
+              e.preventDefault();
+              handleMapModeChange('unrest');
+              return;
+            default:
+              break;
+          }
+        }
+
         switch(e.key) {
           case '1': handleBuild(); break;
           case '2': handleResearch(); break;
@@ -10587,7 +10713,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted, viewerType, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleMilitary, handleOutlinerToggle, handlePauseToggle, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
+  }, [isGameStarted, viewerType, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleMilitary, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
 
 
   const strategicOutlinerGroups = useMemo<StrategicOutlinerGroup[]>(() => {
@@ -10916,6 +11042,7 @@ export default function NoradVector() {
             onProjectorReady={handleProjectorReady}
             onPickerReady={handlePickerReady}
             mapStyle={mapStyle}
+            modeData={mapModeData}
           />
         ) : (
           <CesiumViewer
@@ -10930,6 +11057,7 @@ export default function NoradVector() {
             }}
             enableDayNight={true}
             mapStyle={mapStyle}
+            modeData={mapModeData}
             className="w-full h-full"
           />
         )}
@@ -10952,20 +11080,20 @@ export default function NoradVector() {
           </div>
         )}
 
-        {canvasRef.current && showStabilityOverlay && (
+        {canvasRef.current && mapStyle.mode === 'unrest' && (
           <PoliticalStabilityOverlay
             nations={nations.map(n => ({
               id: n.id,
               name: n.name,
               lon: n.lon || 0,
               lat: n.lat || 0,
-              morale: governance.metrics[n.id]?.morale || 50,
-              publicOpinion: governance.metrics[n.id]?.publicOpinion || 50,
-              instability: governance.metrics[n.id]?.instability || 0
+              morale: mapModeData.unrest[n.id]?.morale ?? 50,
+              publicOpinion: mapModeData.unrest[n.id]?.publicOpinion ?? 50,
+              instability: mapModeData.unrest[n.id]?.instability ?? 0,
             }))}
             canvasWidth={canvasRef.current.width}
             canvasHeight={canvasRef.current.height}
-            visible={showStabilityOverlay}
+            visible={mapStyle.mode === 'unrest'}
           />
         )}
 
@@ -11043,22 +11171,12 @@ export default function NoradVector() {
                 EMPIRE INFO
               </Button>
 
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setShowStabilityOverlay(!showStabilityOverlay);
-                  AudioSys.playSFX('click');
-                }}
-                className={`h-6 px-2 text-[11px] ${
-                  showStabilityOverlay
-                    ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
-                    : 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10'
-                }`}
-                title="Toggle Political Stability Overlay"
-              >
-                {showStabilityOverlay ? '✓ ' : ''}STABILITY
-              </Button>
+              <MapModeBar
+                mode={mapStyle.mode}
+                onModeChange={handleMapModeChange}
+                descriptions={MAP_MODE_DESCRIPTIONS}
+                hotkeys={MAP_MODE_HOTKEYS}
+              />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

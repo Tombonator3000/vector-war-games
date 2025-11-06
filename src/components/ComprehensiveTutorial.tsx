@@ -131,6 +131,26 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
           'Sjekk alle systemer før du bekrefter',
           'Koordiner flere handlinger for maksimal effekt'
         ]
+      },
+      {
+        id: 'map-modes',
+        title: 'Kartmodus & Operasjonelle Overlays',
+        content: 'MapModeBar under topplinjen lar deg bytte mellom strategiske kartlag: Standard, Diplomatisk, Etterretning, Ressurser og Uro. Hver modus kombinerer samme estetiske kartstil med ulike datasett, slik at du kan analysere verden fra flere vinkler uten å åpne ekstra paneler.',
+        keyPoints: [
+          'Alt + 1–5 bytter direkte mellom kartmoduser (Standard, Diplomatisk, Etterretning, Ressurser, Uro)',
+          'Diplomatisk modus fargekoder nasjoner etter relasjon til din regjering; Etterretning viser overvåkings- og rekognoseringsnivå',
+          'Uro-modusen aktiverer Political Stability Overlay med morale, opinion og instabilitet fra governance-systemet',
+          'Kartmodus er uavhengig av visuell stil – du kan vise ressursmodusen i både Realistisk og Natt-stil uten å miste data'
+        ],
+        practiceTask: 'Hold Alt og trykk 1-5 i rekkefølge for å skanne alle moduser. Noter hvordan diplomati-, intel- og governanceverdier endres på kartet.',
+        warningTips: [
+          'Diplomatisk modus baserer seg på sist kjente relasjonsdata – bruk etterretning for å holde informasjonen fersk',
+          'Etterretningsoverlegget avslører bare områder du faktisk har dekning på; svarte soner krever satellitter eller spionasje'
+        ],
+        proTips: [
+          'Kombiner Ressurser-modusen med nattstilen for å se bylys mot industriklynger',
+          'Bruk Uro-modusen etter governance-beslutninger for å bekrefte at morale og opinion beveger seg riktig vei'
+        ]
       }
     ]
   },

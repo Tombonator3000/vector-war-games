@@ -5,7 +5,7 @@
  * Extracted from Index.tsx as part of refactoring effort.
  */
 
-import type { MapStyle } from '@/components/GlobeScene';
+import type { MapVisualStyle } from '@/components/GlobeScene';
 import type { Nation, GameState } from '@/types/game';
 
 export interface WorldRenderContext {
@@ -66,7 +66,7 @@ export function drawWorldPath(
 /**
  * Render the world map with various visual styles
  */
-export function drawWorld(style: MapStyle, context: WorldRenderContext): void {
+export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): void {
   const {
     ctx,
     worldCountries,
@@ -198,7 +198,7 @@ export function drawWorld(style: MapStyle, context: WorldRenderContext): void {
 /**
  * Render nation markers, labels, and cities
  */
-export function drawNations(style: MapStyle, context: NationRenderContext): void {
+export function drawNations(style: MapVisualStyle, context: NationRenderContext): void {
   const { ctx, nations, S, cam, projectLocal, selectedTargetRefId } = context;
 
   if (!ctx || nations.length === 0) return;

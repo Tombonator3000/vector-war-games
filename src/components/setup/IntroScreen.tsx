@@ -12,7 +12,7 @@ import { SpinningEarth } from '@/components/intro/SpinningEarth';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OptionsMenu } from '@/components/OptionsMenu';
-import type { MapStyle } from '@/components/GlobeScene';
+import type { MapStyle, MapVisualStyle } from '@/components/GlobeScene';
 import { CreditsDialog } from '@/components/setup/CreditsDialog';
 import type { ScenarioConfig } from '@/types/scenario';
 import { useState } from 'react';
@@ -45,7 +45,7 @@ export interface IntroScreenProps {
   /** Current map style */
   mapStyle: MapStyle;
   /** Change handler for map style */
-  onMapStyleChange: (style: MapStyle) => void;
+  onMapStyleChange: (style: MapVisualStyle) => void;
   /** Current viewer type */
   viewerType: 'threejs' | 'cesium';
   /** Change handler for viewer type */
