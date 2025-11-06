@@ -3,12 +3,13 @@
  * Strategic personalities and decision-making for immigration & culture warfare
  */
 
-import type { Nation } from '../types/game';
+import type { Nation, GameState } from '../types/game';
 import type { PropagandaCampaignType } from '../types/culturalWarfare';
 import type { ImmigrationPolicyType } from '../types/popSystem';
 import { CulturalWarfareManager } from './culturalWarfareManager';
 import { CulturalInfluenceManager } from './culturalInfluenceManager';
 import { PopSystemManager } from './popSystemManager';
+import { executeAdvancedPropagandaStrategy } from './aiAdvancedPropagandaStrategies';
 
 export type CulturalStrategyType =
   | 'hegemonic_assimilation'    // Aggressive cultural expansion
@@ -336,8 +337,11 @@ export function selectCulturalStrategy(nation: Nation): CulturalStrategy {
 
 /**
  * Execute AI cultural turn
+ * @param nation - The AI nation executing its turn
+ * @param allNations - All nations in the game
+ * @param gameState - Optional game state for advanced propaganda (backwards compatible)
  */
-export function executeAICulturalTurn(nation: Nation, allNations: Nation[]): void {
+export function executeAICulturalTurn(nation: Nation, allNations: Nation[], gameState?: GameState): void {
   if (nation.isPlayer || nation.eliminated) return;
 
   const strategy = selectCulturalStrategy(nation);
@@ -386,5 +390,13 @@ export function executeAICulturalTurn(nation: Nation, allNations: Nation[]): voi
     const wonderType = Math.random() < 0.5 ? 'cultural_academy' : 'world_heritage_sites';
     // This would require importing the wonder creation function
     // For now, just a placeholder
+  }
+
+  // 4. Execute advanced propaganda strategies (useful idiots, phobia campaigns, religious weapons)
+  if (gameState && gameState.advancedPropaganda) {
+    // AI decides on advanced propaganda occasionally (not every turn to limit spam)
+    if (Math.random() < 0.3) {
+      executeAdvancedPropagandaStrategy(nation, gameState, allNations);
+    }
   }
 }
