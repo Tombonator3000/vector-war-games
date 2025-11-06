@@ -2385,3 +2385,5 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Documented the ledger workflow in `GameDatabase.tsx` and `TUTORIAL_SYSTEM.md` so players understand macro analysis tools.
 - Ran `npm run test -- --run`; suite still fails due to pre-existing issues in governance morale decay, conventional warfare queues, migration counts, Index co-op toggles, and legacy Jest-style election tests.
 
+
+- [2025-11-06 08:24:41 UTC] Updated map rendering helpers to use MapVisualStyle so Index.tsx compiles with new MapStyle object split.

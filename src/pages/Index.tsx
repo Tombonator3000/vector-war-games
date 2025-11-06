@@ -1638,7 +1638,7 @@ const Atmosphere = {
     });
   },
   
-  draw(context: CanvasRenderingContext2D, style: MapStyle) {
+  draw(context: CanvasRenderingContext2D, style: MapVisualStyle) {
     if (!this.initialized) return;
 
     const palette = THEME_SETTINGS[currentTheme];
@@ -1686,7 +1686,7 @@ const Ocean = {
     // Waves naturally animate via sin functions
   },
   
-  draw(context: CanvasRenderingContext2D, style: MapStyle) {
+  draw(context: CanvasRenderingContext2D, style: MapVisualStyle) {
     // Ocean rendering intentionally disabled to remove sine-wave bands.
     this.waves = [];
     return;
@@ -1734,7 +1734,7 @@ const CityLights = {
     return destroyed;
   },
   
-  draw(context: CanvasRenderingContext2D, style: MapStyle) {
+  draw(context: CanvasRenderingContext2D, style: MapVisualStyle) {
     if (style === 'wireframe') {
       return;
     }
@@ -2718,7 +2718,7 @@ function toLonLatLocal(x: number, y: number): [number, number] {
 }
 
 // World rendering - wrapper function that delegates to extracted module
-function drawWorld(style: MapStyle) {
+function drawWorld(style: MapVisualStyle) {
   const context: WorldRenderContext = {
     ctx,
     worldCountries,
@@ -2742,7 +2742,7 @@ function drawWorldPath(coords: number[][]) {
 }
 
 // Nation rendering - wrapper function that delegates to extracted module
-function drawNations(style: MapStyle) {
+function drawNations(style: MapVisualStyle) {
   const context: NationRenderContext = {
     ctx,
     worldCountries,
