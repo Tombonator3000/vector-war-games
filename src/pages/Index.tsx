@@ -3496,7 +3496,10 @@ function drawParticles() {
 }
 
 function drawFalloutMarks(deltaMs: number) {
-  if (!ctx || currentMapStyle !== 'flat-realistic') {
+  const isFlatProjection =
+    currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights';
+
+  if (!ctx || !isFlatProjection) {
     return;
   }
 
