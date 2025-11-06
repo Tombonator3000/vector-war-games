@@ -6475,7 +6475,7 @@ export default function NoradVector() {
     const groups: StrategicOutlinerGroup[] = [];
 
     const productionItems: StrategicOutlinerGroup['items'] = [];
-    if (playerNation) {
+    if (player) {
       productionItems.push({
         id: 'production-capacity',
         label: 'Industriell Output',
@@ -6648,7 +6648,7 @@ export default function NoradVector() {
     pandemicState.stage,
     pendingFollowUps,
     playerMorale,
-    playerNation,
+    player,
     playerOpinion,
     playerProduction,
     reinforcementsAvailable,
