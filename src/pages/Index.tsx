@@ -6307,6 +6307,12 @@ export default function NoradVector() {
     },
   });
 
+  const cultureEnabled = gameEra.isFeatureUnlocked('propaganda_victory');
+  const cultureAllowed = useMemo(
+    () => cultureEnabled && (!coopEnabled || canExecute('CULTURE')),
+    [cultureEnabled, coopEnabled, canExecute],
+  );
+
   // Victory tracking system
   const victoryAnalysis = useVictoryTracking({
     nations,
@@ -6441,7 +6447,23 @@ export default function NoradVector() {
   const openPolicyPanel = useCallback(() => setShowPolicyPanel(true), []);
   const openGovernanceDetails = useCallback(() => setShowGovernanceDetails(true), []);
   const openStrikePlanner = useCallback(() => setIsStrikePlannerOpen(true), []);
-  const openCulturePanel = useCallback(() => setIsCulturePanelOpen(true), []);
+  const openCulturePanel = useCallback(() => {
+    if (!cultureEnabled) {
+      toast({
+        title: 'Culture Ops Locked',
+        description: 'Advance into the Propaganda Victory era to unlock cultural operations.',
+      });
+      return;
+    }
+    if (!cultureAllowed) {
+      toast({
+        title: 'Culture Ops Locked',
+        description: 'Requires co-commander approval to launch culture ops.',
+      });
+      return;
+    }
+    setIsCulturePanelOpen(true);
+  }, [cultureAllowed, cultureEnabled]);
   const openBioLab = useCallback(() => {
     if (!bioWarfareEnabled && !pandemicIntegrationEnabled) {
       return;
@@ -10898,7 +10920,6 @@ export default function NoradVector() {
   const researchAllowed = coopEnabled ? canExecute('RESEARCH') : true;
   const intelAllowed = coopEnabled ? canExecute('INTEL') : true;
   const bioWarfareAllowed = coopEnabled ? canExecute('BIOWARFARE') : true;
-  const cultureAllowed = coopEnabled ? canExecute('CULTURE') : true;
   const diplomacyAllowed = coopEnabled ? canExecute('DIPLOMACY') : true;
 
   return (
@@ -11371,14 +11392,31 @@ export default function NoradVector() {
                   </Button>
 
                   <Button
-                    onClick={() => setIsCulturePanelOpen(!isCulturePanelOpen)}
+                    onClick={() => {
+                      if (!cultureAllowed) {
+                        toast({
+                          title: 'Culture Ops Locked',
+                          description: !cultureEnabled
+                            ? 'Advance into the Propaganda Victory era to unlock cultural operations.'
+                            : 'Requires co-commander approval to launch culture ops.',
+                        });
+                        return;
+                      }
+                      setIsCulturePanelOpen(!isCulturePanelOpen);
+                    }}
                     variant="ghost"
                     size="icon"
                     data-role-locked={!cultureAllowed}
                     className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
                       cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                     }`}
-                    title={cultureAllowed ? 'CULTURE - Cultural warfare (simplified)' : 'Requires co-commander approval to launch culture ops'}
+                    title={
+                      cultureAllowed
+                        ? 'CULTURE - Cultural warfare (simplified)'
+                        : !cultureEnabled
+                        ? 'Unlock cultural operations by advancing to the Propaganda Victory era'
+                        : 'Requires co-commander approval to launch culture ops'
+                    }
                   >
                     <Radio className="h-5 w-5" />
                     <span className="text-[8px] font-mono">CULTURE</span>
