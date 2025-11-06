@@ -2517,3 +2517,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-06T18:35:44Z - Support flat nightlights tactical view
 - Added a dedicated flat nightlights texture loader and ensured map style switches preload and render the appropriate imagery while sharing viewport bounds with the day texture (`src/pages/Index.tsx`, `src/rendering/worldRenderer.ts`).
 - Updated flat map camera clamping and auto-centering logic so both flat day and night variants remain fully within the viewport during scroll, wheel, and pinch interactions (`src/pages/Index.tsx`).
+### 2025-11-06T19:03:04Z - Preserve refined output totals across completed orders
+- Audited `useResourceRefinement` to diagnose disappearing refined goods totals flagged in Codex review.
+- Added persistent completed output tracking so totals include production from finished orders and survive subsequent turns (`src/hooks/useResourceRefinement.ts`).
+- Deferred automated test runs for follow-up once broader economic depth coverage lands; change is a localized state management fix.
