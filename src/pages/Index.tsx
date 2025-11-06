@@ -10589,6 +10589,12 @@ export default function NoradVector() {
     }
   }, [isGameStarted, viewerType, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleMilitary, handleOutlinerToggle, handlePauseToggle, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
 
+  const buildAllowed = coopEnabled ? canExecute('BUILD') : true;
+  const researchAllowed = coopEnabled ? canExecute('RESEARCH') : true;
+  const intelAllowed = coopEnabled ? canExecute('INTEL') : true;
+  const bioWarfareAllowed = coopEnabled ? canExecute('BIOWARFARE') : true;
+  const cultureAllowed = coopEnabled ? canExecute('CULTURE') : true;
+  const diplomacyAllowed = coopEnabled ? canExecute('DIPLOMACY') : true;
 
   const strategicOutlinerGroups = useMemo<StrategicOutlinerGroup[]>(() => {
     const groups: StrategicOutlinerGroup[] = [];
@@ -10892,14 +10898,6 @@ export default function NoradVector() {
 
   // Note: Doctrine selection phase removed - doctrine is now auto-assigned based on leader
   // See getLeaderDefaultDoctrine() in src/data/leaderDoctrines.ts
-
-  const buildAllowed = coopEnabled ? canExecute('BUILD') : true;
-  const researchAllowed = coopEnabled ? canExecute('RESEARCH') : true;
-  const intelAllowed = coopEnabled ? canExecute('INTEL') : true;
-  const bioWarfareAllowed = coopEnabled ? canExecute('BIOWARFARE') : true;
-  const cultureAllowed = coopEnabled ? canExecute('CULTURE') : true;
-  const diplomacyAllowed = coopEnabled ? canExecute('DIPLOMACY') : true;
-
 
   return (
     <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity}`}>
