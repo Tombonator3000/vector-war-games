@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest';
+
 import { calculatePublicOpinion } from '../electionSystem';
 import type { Nation } from '../../types/game';
 import { SCENARIOS } from '../../types/scenario';

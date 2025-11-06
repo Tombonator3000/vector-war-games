@@ -27,6 +27,34 @@ export interface PublicOpinionFactors {
 /**
  * Calculate public opinion based on various factors
  */
+const weights = {
+  economicPerformance: 0.3,
+  militaryStrength: 0.15,
+  diplomaticSuccess: 0.2,
+  warStatus: 0.15,
+  stability: 0.15,
+  foreignInfluence: 0.05,
+} as const;
+
+const expectedMaximums = {
+  economicPerformance: 50,
+  militaryStrength: 40,
+  diplomaticSuccess: 35,
+  warStatus: 30,
+  stability: 40,
+  foreignInfluence: 15,
+} as const;
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+const computeWeightedScore = (factors: PublicOpinionFactors) =>
+  factors.economicPerformance * (weights.economicPerformance / expectedMaximums.economicPerformance) +
+  factors.militaryStrength * (weights.militaryStrength / expectedMaximums.militaryStrength) +
+  factors.diplomaticSuccess * (weights.diplomaticSuccess / expectedMaximums.diplomaticSuccess) +
+  factors.warStatus * (weights.warStatus / expectedMaximums.warStatus) +
+  factors.stability * (weights.stability / expectedMaximums.stability) +
+  factors.foreignInfluence * (weights.foreignInfluence / expectedMaximums.foreignInfluence);
+
 export function calculatePublicOpinion(
   nation: Nation,
   allNations: Nation[],
@@ -34,56 +62,29 @@ export function calculatePublicOpinion(
 ): number {
   const factors = getPublicOpinionFactors(nation, allNations, config);
 
-  const weights = {
-    economicPerformance: 0.3,
-    militaryStrength: 0.15,
-    diplomaticSuccess: 0.2,
-    warStatus: 0.15,
-    stability: 0.15,
-    foreignInfluence: 0.05,
-  } as const;
+  const weightedScore = computeWeightedScore(factors);
 
-  const expectedMaximums = {
-    economicPerformance: 50,
-    militaryStrength: 40,
-    diplomaticSuccess: 35,
-    warStatus: 30,
-    stability: 40,
-    foreignInfluence: 15,
-  } as const;
+  const weightedScores = allNations.map(currentNation =>
+    computeWeightedScore(getPublicOpinionFactors(currentNation, allNations, config))
+  );
+  const averageWeightedScore =
+    weightedScores.length > 0
+      ? weightedScores.reduce((total, score) => total + score, 0) / weightedScores.length
+      : 0;
 
-  const normalize = (value: number, max: number) => {
-    if (max === 0) return 0;
-    const normalized = value / max;
-    return Math.max(-1, Math.min(1, normalized));
-  };
+  const moraleValues = allNations.map(currentNation => currentNation.morale ?? 50);
+  const averageMorale =
+    moraleValues.length > 0
+      ? moraleValues.reduce((total, morale) => total + morale, 0) / moraleValues.length
+      : 50;
 
-  const normalizedScores = {
-    economicPerformance: normalize(factors.economicPerformance, expectedMaximums.economicPerformance),
-    militaryStrength: normalize(factors.militaryStrength, expectedMaximums.militaryStrength),
-    diplomaticSuccess: normalize(factors.diplomaticSuccess, expectedMaximums.diplomaticSuccess),
-    warStatus: normalize(factors.warStatus, expectedMaximums.warStatus),
-    stability: normalize(factors.stability, expectedMaximums.stability),
-    foreignInfluence: normalize(factors.foreignInfluence, expectedMaximums.foreignInfluence),
-  };
+  const baseOpinion = nation.publicOpinion ?? 50;
+  const weightedDelta = (weightedScore - averageWeightedScore) * 16 * (config.actionInfluenceMultiplier ?? 1);
+  const moraleDelta = ((nation.morale ?? 50) - averageMorale) * 0.035;
 
-  const weightedScore =
-    normalizedScores.economicPerformance * weights.economicPerformance +
-    normalizedScores.militaryStrength * weights.militaryStrength +
-    normalizedScores.diplomaticSuccess * weights.diplomaticSuccess +
-    normalizedScores.warStatus * weights.warStatus +
-    normalizedScores.stability * weights.stability +
-    normalizedScores.foreignInfluence * weights.foreignInfluence;
+  const finalOpinion = baseOpinion + weightedDelta + moraleDelta;
 
-  const baseline = 55;
-  const scaledScore = baseline + weightedScore * 45;
-
-  const moraleNormalized = Math.max(-1, Math.min(1, (nation.morale - 50) / 50));
-  const moraleInfluence = moraleNormalized * 12;
-
-  const finalOpinion = scaledScore + moraleInfluence;
-
-  return Math.max(0, Math.min(100, finalOpinion));
+  return clamp(finalOpinion, 0, 100);
 }
 
 /**
