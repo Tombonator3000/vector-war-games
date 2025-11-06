@@ -86,8 +86,8 @@ import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/Enha
 import { LeaderContactModal } from '@/components/LeaderContactModal';
 import { LeadersScreen } from '@/components/LeadersScreen';
 import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
-import { LeaderProfileDialog } from '@/components/LeaderProfileDialog';
-import { StrategicOutliner, type StrategicOutlinerGroup } from '@/components/StrategicOutliner';
+import { LeaderOverviewPanel } from '@/components/LeaderOverviewPanel';
+import type { StrategicOutlinerGroup } from '@/components/StrategicOutliner';
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { AIDiplomacyProposalModal } from '@/components/AIDiplomacyProposalModal';
 import { EndGameScreen } from '@/components/EndGameScreen';
@@ -5584,10 +5584,9 @@ export default function NoradVector() {
     }
     return 'compact';
   });
-  const [showMinimalOutliner, setShowMinimalOutliner] = useState(false);
   const [showMinimalApprovalQueue, setShowMinimalApprovalQueue] = useState(false);
   const [showMinimalCommandSheet, setShowMinimalCommandSheet] = useState(false);
-  const [isLeaderProfileOpen, setLeaderProfileOpen] = useState(false);
+  const [isLeaderOverviewOpen, setLeaderOverviewOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [civInfoPanelOpen, setCivInfoPanelOpen] = useState(false);
   const [civInfoDefaultTab, setCivInfoDefaultTab] = useState<'own-status' | 'enemy-status' | 'diplomacy' | 'research'>('own-status');
@@ -5597,7 +5596,6 @@ export default function NoradVector() {
 
   useEffect(() => {
     if (layoutDensity !== 'minimal') {
-      setShowMinimalOutliner(false);
       setShowMinimalApprovalQueue(false);
       setShowMinimalCommandSheet(false);
     }
@@ -12060,86 +12058,30 @@ export default function NoradVector() {
             </div>
           </div>
 
-          {player && governance.metrics[player.id] ? (
-            layoutDensity === 'minimal' ? (
-              <>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="fixed left-3 pointer-events-auto touch-auto z-40 h-10 w-10 rounded-full border border-cyan-500/40 bg-black/70 text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20"
-                  style={{ top: 'calc(var(--game-top-stack-offset) + 0.5rem)' }}
-                  onClick={() => setShowMinimalOutliner(true)}
-                  aria-label="Open governance overview"
-                >
-                  <Users className="h-4 w-4" />
-                </Button>
-                <Sheet open={showMinimalOutliner} onOpenChange={setShowMinimalOutliner}>
-                  <SheetContent
-                    side="left"
-                    className="w-[min(22rem,90vw)] border-cyan-500/40 bg-gradient-to-br from-slate-950/95 to-slate-900/95 text-cyan-100"
-                  >
-                    <SheetHeader>
-                      <SheetTitle className="text-sm font-mono tracking-[0.3em] text-cyan-300">Command Overview</SheetTitle>
-                      <SheetDescription className="text-xs text-cyan-200/70">
-                        Governance and strategic alerts at a glance.
-                      </SheetDescription>
-                    </SheetHeader>
-                    <div className="mt-4 space-y-4">
-                      <PoliticalStatusWidget
-                        metrics={governance.metrics[player.id]}
-                        nationName={player.name}
-                        instability={governance.metrics[player.id].instability || 0}
-                        onOpenDetails={() => {
-                          setShowGovernanceDetails(true);
-                          setShowMinimalOutliner(false);
-                        }}
-                        onOpenPolicyPanel={() => {
-                          setShowPolicyPanel(true);
-                          setShowMinimalOutliner(false);
-                        }}
-                        leaderName={player.leaderName || player.leader}
-                        onOpenLeaderProfile={() => {
-                          setLeaderProfileOpen(true);
-                          setShowMinimalOutliner(false);
-                        }}
-                      />
-                      <StrategicOutliner
-                        ref={strategicOutlinerRef}
-                        groups={strategicOutlinerGroups}
-                        collapsed={isOutlinerCollapsed}
-                        onToggleCollapse={handleOutlinerToggle}
-                        hotkeys={strategicOutlinerHotkeys}
-                        attentionPulse={outlinerAttentionTick}
-                      />
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              </>
-            ) : (
-              <div
-                className="fixed left-3 pointer-events-auto touch-auto z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))] space-y-3"
-                style={{ top: 'var(--game-top-stack-offset)' }}
-              >
+          {(() => {
+            const player = PlayerManager.get();
+            if (!player) {
+              return null;
+            }
+            const metrics = governance.metrics[player.id];
+            if (!metrics) {
+              return null;
+            }
+
+            return (
+              <div className="pointer-events-auto touch-auto mt-3 max-w-[min(22rem,90vw)]">
                 <PoliticalStatusWidget
-                  metrics={governance.metrics[player.id]}
+                  metrics={metrics}
                   nationName={player.name}
-                  instability={governance.metrics[player.id].instability || 0}
+                  instability={metrics.instability || 0}
                   onOpenDetails={() => setShowGovernanceDetails(true)}
                   onOpenPolicyPanel={() => setShowPolicyPanel(true)}
                   leaderName={player.leaderName || player.leader}
-                  onOpenLeaderProfile={() => setLeaderProfileOpen(true)}
-                />
-                <StrategicOutliner
-                  ref={strategicOutlinerRef}
-                  groups={strategicOutlinerGroups}
-                  collapsed={isOutlinerCollapsed}
-                  onToggleCollapse={handleOutlinerToggle}
-                  hotkeys={strategicOutlinerHotkeys}
-                  attentionPulse={outlinerAttentionTick}
+                  onOpenLeaderOverview={() => setLeaderOverviewOpen(true)}
                 />
               </div>
-            )
-          ) : null}
+            );
+          })()}
 
           {coopEnabled ? (
             layoutDensity === 'minimal' ? (
@@ -13045,19 +12987,36 @@ export default function NoradVector() {
           return null;
         }
 
+        const metrics = governance.metrics[player.id];
+        if (!metrics) {
+          return null;
+        }
+
         return (
-          <LeaderProfileDialog
-            open={isLeaderProfileOpen}
-            onOpenChange={setLeaderProfileOpen}
-            nation={player}
-            abilityState={player.leaderAbilityState}
-            allNations={nations}
-            currentTurn={S.turn}
-            onUseAbility={(targetId) => {
-              handleUseLeaderAbility(targetId);
-              setLeaderProfileOpen(false);
-            }}
-          />
+          <Dialog open={isLeaderOverviewOpen} onOpenChange={setLeaderOverviewOpen}>
+            <DialogContent className="max-w-5xl border-none bg-transparent p-0 shadow-none">
+              <LeaderOverviewPanel
+                nation={player}
+                abilityState={player.leaderAbilityState}
+                allNations={nations}
+                currentTurn={S.turn}
+                onUseAbility={(targetId) => {
+                  handleUseLeaderAbility(targetId);
+                  setLeaderOverviewOpen(false);
+                }}
+                governanceMetrics={metrics}
+                instability={metrics.instability || 0}
+                onOpenGovernanceDetails={() => setShowGovernanceDetails(true)}
+                onOpenPolicyPanel={() => setShowPolicyPanel(true)}
+                strategicOutlinerGroups={strategicOutlinerGroups}
+                isOutlinerCollapsed={isOutlinerCollapsed}
+                onOutlinerToggle={handleOutlinerToggle}
+                strategicOutlinerHotkeys={strategicOutlinerHotkeys}
+                outlinerAttentionTick={outlinerAttentionTick}
+                strategicOutlinerRef={strategicOutlinerRef}
+              />
+            </DialogContent>
+          </Dialog>
         );
       })()}
 

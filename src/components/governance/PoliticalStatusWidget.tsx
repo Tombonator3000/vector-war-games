@@ -14,7 +14,8 @@ interface PoliticalStatusWidgetProps {
   onOpenDetails?: () => void;
   onOpenPolicyPanel?: () => void;
   leaderName?: string;
-  onOpenLeaderProfile?: () => void;
+  onOpenLeaderOverview?: () => void;
+  showLeaderButton?: boolean;
 }
 
 export function PoliticalStatusWidget({
@@ -24,7 +25,8 @@ export function PoliticalStatusWidget({
   onOpenDetails,
   onOpenPolicyPanel,
   leaderName,
-  onOpenLeaderProfile,
+  onOpenLeaderOverview,
+  showLeaderButton = true,
 }: PoliticalStatusWidgetProps) {
   const stabilityLevel = getStabilityLevel(metrics.morale, metrics.publicOpinion, instability);
   const stabilityColor = getStabilityColor(stabilityLevel);
@@ -35,6 +37,7 @@ export function PoliticalStatusWidget({
 
   const leaderImage = leaderName ? getLeaderImage(leaderName) : undefined;
   const leaderInitials = leaderName ? getInitials(leaderName) : '?';
+  const shouldRenderLeaderButton = showLeaderButton && leaderName && onOpenLeaderOverview;
 
   return (
     <Card className="bg-slate-950/90 border-cyan-500/30 p-3">
@@ -44,11 +47,11 @@ export function PoliticalStatusWidget({
           <h3 className="text-sm font-semibold text-cyan-300">{nationName} Political Status</h3>
         </div>
         <div className="flex items-center gap-2">
-          {leaderName && onOpenLeaderProfile && (
+          {shouldRenderLeaderButton && (
             <Button
               variant="ghost"
               size="icon"
-              onClick={onOpenLeaderProfile}
+              onClick={onOpenLeaderOverview}
               className="h-9 w-9 rounded-full border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors"
               aria-label={`View ${leaderName} profile`}
             >
@@ -72,19 +75,19 @@ export function PoliticalStatusWidget({
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <MetricDisplay 
-          label="Morale" 
-          value={metrics.morale} 
+        <MetricDisplay
+          label="Morale"
+          value={metrics.morale}
           previousValue={metrics.morale}
         />
-        <MetricDisplay 
-          label="Public Opinion" 
-          value={metrics.publicOpinion} 
+        <MetricDisplay
+          label="Public Opinion"
+          value={metrics.publicOpinion}
           previousValue={metrics.publicOpinion}
         />
-        <MetricDisplay 
-          label="Cabinet Approval" 
-          value={metrics.cabinetApproval} 
+        <MetricDisplay
+          label="Cabinet Approval"
+          value={metrics.cabinetApproval}
           previousValue={metrics.cabinetApproval}
         />
         <div className="flex flex-col">
@@ -96,9 +99,9 @@ export function PoliticalStatusWidget({
       </div>
 
       {onOpenDetails && (
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           className="w-full mt-2 text-cyan-300 hover:bg-cyan-500/10"
           onClick={onOpenDetails}
         >
@@ -173,7 +176,7 @@ function MetricDisplay({ label, value, previousValue }: MetricDisplayProps) {
 function getStabilityLevel(morale: number, publicOpinion: number, instability: number): string {
   const isCrisis = morale < 30 || publicOpinion < 30 || instability > 75;
   const isUnstable = morale < 50 || publicOpinion < 45 || instability > 55;
-  
+
   if (isCrisis) return 'CRISIS';
   if (isUnstable) return 'UNSTABLE';
   return 'STABLE';
@@ -191,13 +194,13 @@ function getStabilityColor(level: string): string {
 function getStabilityIcon(level: string) {
   const className = "h-4 w-4";
   switch (level) {
-    case 'STABLE': 
+    case 'STABLE':
       return <Shield className={`${className} text-emerald-400`} />;
-    case 'UNSTABLE': 
+    case 'UNSTABLE':
       return <AlertTriangle className={`${className} text-yellow-400`} />;
-    case 'CRISIS': 
+    case 'CRISIS':
       return <AlertTriangle className={`${className} text-red-400 animate-pulse`} />;
-    default: 
+    default:
       return <Shield className={`${className} text-cyan-400`} />;
   }
 }
@@ -205,11 +208,11 @@ function getStabilityIcon(level: string) {
 function getTrendIcon(trend: 'up' | 'down' | 'stable') {
   const className = "h-3 w-3";
   switch (trend) {
-    case 'up': 
+    case 'up':
       return <TrendingUp className={`${className} text-emerald-400`} />;
-    case 'down': 
+    case 'down':
       return <TrendingDown className={`${className} text-red-400`} />;
-    case 'stable': 
+    case 'stable':
       return <Minus className={`${className} text-cyan-400`} />;
   }
 }

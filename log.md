@@ -2525,3 +2525,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-06T18:35:44Z - Support flat nightlights tactical view
 - Added a dedicated flat nightlights texture loader and ensured map style switches preload and render the appropriate imagery while sharing viewport bounds with the day texture (`src/pages/Index.tsx`, `src/rendering/worldRenderer.ts`).
 - Updated flat map camera clamping and auto-centering logic so both flat day and night variants remain fully within the viewport during scroll, wheel, and pinch interactions (`src/pages/Index.tsx`).
+### 2025-11-06T19:27:48Z - Consolidate leader overview hub
+- Reworked the leader profile module into a reusable overview panel that combines biography, political status, leader abilities, and the strategic outliner (`src/components/LeaderOverviewPanel.tsx`).
+- Added a `showLeaderButton` escape hatch and renamed the portrait callback for the political status widget so it can embed cleanly inside the overview without recursive toggles (`src/components/governance/PoliticalStatusWidget.tsx`).
+- Updated the main game page to use the new panel, removed the standalone governance/outliner overlays, and wired the HUD portrait button to open the dialog (`src/pages/Index.tsx`).
