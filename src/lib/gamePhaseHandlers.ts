@@ -428,7 +428,12 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
     // First process any active trades
     if (S.resourceTrades) {
-      S.resourceTrades = processResourceTrades(S.resourceTrades, nations, S.turn);
+      S.resourceTrades = processResourceTrades(
+        S.resourceTrades,
+        nations,
+        S.turn,
+        S.resourceMarket
+      );
     }
 
     // Then process each nation's resources

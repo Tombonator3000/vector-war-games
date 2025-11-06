@@ -66,6 +66,8 @@ import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { applyRemoteGameStateSync } from '@/lib/coopSync';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { ResourceStockpileDisplay } from '@/components/ResourceStockpileDisplay';
+import { MarketStatusBadge } from '@/components/ResourceMarketPanel';
+import type { DepletionWarning } from '@/lib/resourceDepletionSystem';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
 import { LeaderContactModal } from '@/components/LeaderContactModal';
@@ -5335,6 +5337,20 @@ export default function NoradVector() {
   const [activeDiplomacyProposal, setActiveDiplomacyProposal] = useState<DiplomacyProposal | null>(null);
   const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
   const [showEnhancedDiplomacy, setShowEnhancedDiplomacy] = useState(false);
+
+  const playerNation = useMemo(() => nations.find(n => n.isPlayer), [nations]);
+  const playerDepletionWarnings = useMemo<DepletionWarning[]>(() => {
+    if (!playerNation || !S.depletionWarnings || !S.conventional?.territories) {
+      return [];
+    }
+
+    const territories = S.conventional.territories;
+
+    return S.depletionWarnings.filter(warning => {
+      const territory = territories[warning.territoryId];
+      return territory?.controllingNationId === playerNation.id;
+    });
+  }, [playerNation, S.depletionWarnings, S.conventional?.territories]);
 
   // Leader Contact Modal state
   const [leaderContactModalOpen, setLeaderContactModalOpen] = useState(false);
@@ -10673,11 +10689,23 @@ export default function NoradVector() {
               {/* Strategic Resources Display */}
               {(() => {
                 const playerNation = nations.find(n => n.isPlayer);
-                return playerNation?.resourceStockpile ? (
-                  <div className="flex items-center gap-1.5 pl-3 ml-3 border-l border-cyan-500/30">
-                    <ResourceStockpileDisplay nation={playerNation} compact={true} />
+                const hasStockpile = !!playerNation?.resourceStockpile;
+                const hasMarket = !!S.resourceMarket;
+
+                if (!hasStockpile && !hasMarket) {
+                  return null;
+                }
+
+                return (
+                  <div className="flex items-center gap-3 pl-3 ml-3 border-l border-cyan-500/30">
+                    {hasStockpile && (
+                      <ResourceStockpileDisplay nation={playerNation!} compact={true} />
+                    )}
+                    {hasMarket && S.resourceMarket && (
+                      <MarketStatusBadge market={S.resourceMarket} />
+                    )}
                   </div>
-                ) : null;
+                );
               })()}
               </div>
 
@@ -11798,6 +11826,8 @@ export default function NoradVector() {
         onCancelBioLabConstruction={handleCancelLabConstruction}
         defaultTab={civInfoDefaultTab}
         doctrineShiftState={S.doctrineShiftState}
+        resourceMarket={S.resourceMarket}
+        depletionWarnings={playerDepletionWarnings}
       />
 
       <GameHelper

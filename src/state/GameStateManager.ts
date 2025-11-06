@@ -170,6 +170,10 @@ class GameStateManager {
       enemiesDestroyed: 0,
     },
     showEndGameScreen: false,
+    territoryResources: undefined,
+    resourceTrades: [],
+    resourceMarket: undefined,
+    depletionWarnings: [],
     nations: [] as LocalNation[],
   };
 
@@ -705,6 +709,10 @@ class GameStateManager {
         enemiesDestroyed: 0,
       },
       showEndGameScreen: false,
+      territoryResources: undefined,
+      resourceTrades: [],
+      resourceMarket: undefined,
+      depletionWarnings: [],
       nations: [] as LocalNation[],
     };
     this._nations = [];

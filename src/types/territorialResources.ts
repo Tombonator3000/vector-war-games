@@ -124,7 +124,10 @@ export function calculateTerritoryResourceGeneration(
     if (deposit.depleted) return;
 
     const baseAmount = deposit.amount * deposit.richness * productionPenalty;
-    generation[deposit.type] += Math.floor(baseAmount);
+    const depletionModifier = Math.max(0, deposit.depletionRate ?? 1);
+    const adjustedAmount = baseAmount * depletionModifier;
+
+    generation[deposit.type] += Math.floor(adjustedAmount);
   });
 
   return generation;
