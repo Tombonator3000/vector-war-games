@@ -115,8 +115,6 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
     setSelectedNationId(nationId);
   }, []);
 
-  if (!isOpen) return null;
-
   const calculateMilitaryPower = useCallback((nation: Nation): number => {
     const missileValue = nation.missiles * 10;
     const bomberValue = nation.bombers * 8;
@@ -127,12 +125,13 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
     return missileValue + bomberValue + submarineValue + defenseValue + warheadValue;
   }, []);
 
-  if (!player) return null;
-
   const playerMilitaryPower = useMemo(
-    () => calculateMilitaryPower(player),
+    () => player ? calculateMilitaryPower(player) : 0,
     [calculateMilitaryPower, player]
   );
+
+  if (!isOpen) return null;
+  if (!player) return null;
 
   // Victory progress now handled by VictoryPathsSection using streamlined victory conditions
 
