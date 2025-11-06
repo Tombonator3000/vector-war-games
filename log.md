@@ -2505,3 +2505,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Introduced reusable scenario tags on the leader roster and updated filtering to respect the tags so Cuban Crisis, Great Old Ones, and default Cold War selections pull the correct commanders (`src/pages/Index.tsx`).
 - Added explicit scenario assignments for every historical, Lovecraftian, and parody leader entry to keep the setup UI aligned with the new filtering logic (`src/pages/Index.tsx`).
 - Ran `npm run build` to confirm the refactored leader filtering compiles without regressions (existing bundle-size warnings persist as expected).
+### 2025-11-06T18:11:58Z - Link leader profile dialog to political status widget
+- Added a leader portrait button to the political status widget so players can open their leader profile directly from the governance HUD (`src/components/governance/PoliticalStatusWidget.tsx`).
+- Introduced a combined leader profile dialog that surfaces biography details alongside the ability panel and wired it into the main game page (`src/components/LeaderProfileDialog.tsx`, `src/pages/Index.tsx`).
+- Attempted to run `npm run lint` but it failed due to long-standing lint violations unrelated to this change; no new lint errors introduced near the modified code paths.
