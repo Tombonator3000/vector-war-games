@@ -2486,3 +2486,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Swapped direct `process.env` reads in the Supabase client for a guarded `processEnv` helper (plus a runtime-safe `import.meta.env` lookup) so bundlers without `process` still fall back correctly (`src/integrations/supabase/client.ts`).
 - Expanded the multiplayer fallback spec with an env-absent regression test covering both `process` and `import.meta.env` being undefined (`src/contexts/__tests__/MultiplayerProvider.fallback.test.tsx`).
 - Ran `npm run test -- src/contexts/__tests__/MultiplayerProvider.fallback.test.tsx` and `npm run build` to confirm the new safeguards compile and execute cleanly.
+### 2025-11-06T16:10:10Z - Align globe overlay scaling with canvas dimensions
+- Updated `updateProjector` in `src/components/GlobeScene.tsx` to prioritize the overlay canvas dimensions (falling back to the Three.js size only when unavailable) so projected coordinates match the 2D overlay on high-DPI displays.
+- Adjusted `updatePicker` to normalize pointer coordinates against the same overlay dimensions, keeping lon/lat conversions consistent across the flat map interaction layer.
+- Unable to manually validate the satellite deployment and explosion overlay alignment in-browser within the containerized environment; flagged for follow-up QA on a high-DPI device.

@@ -802,13 +802,10 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       const isFlat =
         visualStyle === 'flat' || visualStyle === 'flat-realistic' || visualStyle === 'flat-nightlights';
 
-      // For flat maps, always use the actual overlay canvas dimensions
-      const width = isFlat && overlay
-        ? overlay.width
-        : size?.width ?? 1;
-      const height = isFlat && overlay
-        ? overlay.height
-        : size?.height ?? 1;
+      const overlayWidth = overlay && overlay.width > 0 ? overlay.width : undefined;
+      const overlayHeight = overlay && overlay.height > 0 ? overlay.height : undefined;
+      const width = overlayWidth ?? size?.width ?? 1;
+      const height = overlayHeight ?? size?.height ?? 1;
 
       const baseX = ((lon + 180) / 360) * width;
       const baseY = ((90 - lat) / 180) * height;
@@ -822,7 +819,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       }
 
       const camera = cameraRef.current;
-      if (!camera || !size) {
+      if (!camera) {
         return {
           x: baseX,
           y: baseY,
@@ -852,8 +849,11 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
         visualStyle === 'flat' || visualStyle === 'flat-realistic' || visualStyle === 'flat-nightlights';
       if (isFlat) {
         const rect = overlay?.getBoundingClientRect() ?? container.getBoundingClientRect();
-        const width = rect.width || 1;
-        const height = rect.height || 1;
+        const size = sizeRef.current;
+        const overlayWidth = overlay && overlay.width > 0 ? overlay.width : undefined;
+        const overlayHeight = overlay && overlay.height > 0 ? overlay.height : undefined;
+        const width = overlayWidth ?? size?.width ?? (rect.width || 1);
+        const height = overlayHeight ?? size?.height ?? (rect.height || 1);
         const adjustedX = (pointerX - cam.x) / cam.zoom;
         const adjustedY = (pointerY - cam.y) / cam.zoom;
         const lon = normalizeLon((adjustedX / width) * 360 - 180);
