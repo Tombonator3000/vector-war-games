@@ -2451,3 +2451,24 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Forced flat strategic map styles to auto-select the Three.js tactical engine and surface a toast explaining the requirement by updating `handleMapStyleChange` in `src/pages/Index.tsx`.
 - Refreshed `OptionsMenu` viewer labels and toasts to highlight Three.js as the primary engine and mark Cesium as an experimental test map.
 - Documented the directive in `AGENTS.md` so future contributors keep Three.js as the authoritative 2D world view and treat Cesium as test-only.
+### 2025-11-06T13:49:40Z - Repository access initialization
+- Listed workspace directories to locate the `vector-war-games` project.
+- Reviewed root `AGENTS.md` for contribution, testing, and logging requirements.
+- Scanned for additional `AGENTS.md` files to confirm instruction scope.
+### 2025-11-06T13:50:29Z - Test suite discovery
+- Ran `npm run test` to audit existing Vitest coverage.
+- Observed two failing `Index.test.tsx` cases caused by `viewerType` reference before initialization within `NoradVector`.
+- Noted all other suites pass; documented the error for remediation.
+### 2025-11-06T13:51:04Z - Viewer type initialization fix
+- Reordered `viewerType` state initialization ahead of `handleMapStyleChange` in `src/pages/Index.tsx` to prevent React from referencing the hook before it is created.
+- Ensured map style handling still persists preferences and enforces Three.js fallback when required.
+### 2025-11-06T13:51:14Z - Vitest CLI option correction
+- Attempted to run `npm run test -- --runInBand` for serial execution; Vitest reported the option as unsupported.
+- Will rerun the suite with default options.
+### 2025-11-06T13:51:51Z - Regression test confirmation
+- Re-ran `npm run test -- --run`; the entire Vitest suite now passes (22 files, 73 tests).
+- Verified the previous `viewerType` initialization error is resolved.
+### 2025-11-06T13:52:10Z - Commit viewer hook fix
+- Committed the viewer type hook reordering and log updates (`Fix viewer type hook initialization order`).
+### 2025-11-06T13:52:27Z - Amend commit with final log entry
+- Amended the commit to include the latest repository log updates.

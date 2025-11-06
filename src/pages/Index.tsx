@@ -5575,6 +5575,12 @@ export default function NoradVector() {
     return { visual, mode };
   });
 
+  // Globe viewer type - Three.js or Cesium
+  const [viewerType, setViewerType] = useState<'threejs' | 'cesium'>(() => {
+    const stored = Storage.getItem('viewer_type');
+    return stored === 'cesium' ? 'cesium' : 'threejs';
+  });
+
   const handleMapStyleChange = useCallback((style: MapVisualStyle) => {
     const requiresThreeTacticalEngine =
       style === 'flat' || style === 'flat-realistic' || style === 'flat-nightlights';
@@ -5694,12 +5700,6 @@ export default function NoradVector() {
     updateDisplay();
     setGamePhase('leader');
   }, [selectedScenarioId, setGamePhase]);
-
-  // Globe viewer type - Three.js or Cesium
-  const [viewerType, setViewerType] = useState<'threejs' | 'cesium'>(() => {
-    const stored = Storage.getItem('viewer_type');
-    return stored === 'cesium' ? 'cesium' : 'threejs';
-  });
 
   const handleViewerSelect = useCallback((nextType: 'threejs' | 'cesium') => {
     setViewerType(prev => {
