@@ -2395,3 +2395,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Reordered the co-op permission guards (`buildAllowed`, `bioWarfareAllowed`, etc.) ahead of the strategic outliner memo in `src/pages/Index.tsx` so they're defined before being captured in dependency arrays.
 - Verified the fix by executing `npx vitest --run src/pages/__tests__/Index.test.tsx`, which now passes both co-op toggle tests without the runtime ReferenceError.
 
+### 2025-11-06T08:53:30Z - Migration status test expectation fix
+- Updated `src/lib/__tests__/unifiedGameMigration.test.ts` so the diplomacy migration count aligns with the seeded nation data (only one nation lacks relationships).
+- Re-ran `npm run test -- unifiedGameMigration` to confirm the suite now passes.
