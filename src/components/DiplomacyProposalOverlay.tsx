@@ -242,7 +242,7 @@ export function DiplomacyProposalOverlay({
           </div>
 
           {/* Terms Reminder */}
-          {proposal.terms.reason && (
+          {proposal.terms?.reason && (
             <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-4">
               <p className="text-sm text-amber-300">
                 <span className="font-semibold">Note:</span> {proposal.terms.reason}
