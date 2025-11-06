@@ -75,6 +75,7 @@ export interface GameState {
   conventionalUnits?: unknown[];
   satelliteOrbits: SatelliteOrbit[];
   falloutMarks: FalloutMark[];
+  nations: Nation[];
   statistics?: {
     nukesLaunched: number;
     nukesReceived: number;
@@ -96,7 +97,8 @@ export interface GameState {
 /**
  * Local game state (includes conventional warfare)
  */
-export type LocalGameState = GameState & {
+export type LocalGameState = Omit<GameState, 'nations'> & {
+  nations: LocalNation[];
   conventional?: ConventionalState;
 };
 
@@ -168,6 +170,7 @@ class GameStateManager {
       enemiesDestroyed: 0,
     },
     showEndGameScreen: false,
+    nations: [] as LocalNation[],
   };
 
   /**
@@ -184,6 +187,7 @@ class GameStateManager {
    * Gets the raw state object (for backward compatibility)
    */
   static getState(): LocalGameState {
+    this._state.nations = this._nations;
     return this._state;
   }
 
@@ -191,7 +195,11 @@ class GameStateManager {
    * Sets the entire state object (use with caution)
    */
   static setState(state: LocalGameState): void {
+    if (Array.isArray(state.nations)) {
+      this._nations = state.nations as LocalNation[];
+    }
     this._state = state;
+    this._state.nations = this._nations;
   }
 
   /**
@@ -206,6 +214,7 @@ class GameStateManager {
    */
   static setNations(nations: LocalNation[]): void {
     this._nations = nations;
+    this._state.nations = nations;
   }
 
   /**
@@ -696,9 +705,11 @@ class GameStateManager {
         enemiesDestroyed: 0,
       },
       showEndGameScreen: false,
+      nations: [] as LocalNation[],
     };
     this._nations = [];
     this._conventionalDeltas = [];
+    this._state.nations = this._nations;
   }
 
   /**

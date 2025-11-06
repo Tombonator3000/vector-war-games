@@ -10,6 +10,7 @@ import type { LeaderAbilityState } from '@/types/leaderAbilities';
 import { updateAbilityPerTurn, initializeLeaderAbilityState } from '@/types/leaderAbilities';
 import { getLeaderAbility } from '@/data/leaderAbilities';
 import { executeLeaderAbility } from '@/lib/leaderAbilityExecutor';
+import PlayerManager from '@/state/PlayerManager';
 
 /**
  * Initialize leader ability for a nation
@@ -144,11 +145,19 @@ export function useLeaderAbility(
     // Update nation's ability state
     nation.leaderAbilityState = result.newState;
 
+    const nations = PlayerManager.getNations();
+    const targetNation = targetId ? nations.find(n => n.id === targetId) : undefined;
+    const effectMatch =
+      targetId && result.effects.length > 0
+        ? result.effects.find(effect => effect.targetId === targetId) ?? result.effects[0]
+        : result.effects[0];
+    const targetName = targetNation?.name ?? effectMatch?.targetName;
+
     // Add to history
     nation.leaderAbilityState.history.push({
       turn: gameState.turn,
       targetId,
-      targetName: targetId ? gameState.nations.find(n => n.id === targetId)?.name : undefined,
+      targetName,
       result: 'success',
       effectDescription: result.message,
     });

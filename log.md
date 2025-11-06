@@ -17,6 +17,11 @@
 - Added `src/lib/__tests__/electionSystem.test.ts` covering USA and USSR first-turn opinions with Cold War seed data.
 - Ran `npm test` (fails locally: vitest binary unavailable in container).
 
+### 2025-11-05T23:58:07Z - Leader ability history stabilization
+- Routed leader ability history target lookups through `PlayerManager` with effect-based fallbacks to avoid unsafe `gameState` access (`src/lib/leaderAbilityIntegration.ts`).
+- Extended the `GameState` contract with a `nations` collection and kept `GameStateManager` in sync so consumers receive a populated array (`src/types/game.ts`, `src/state/GameStateManager.ts`).
+- Added a regression test exercising `useLeaderAbility` with a missing target to confirm history updates without runtime errors (`src/lib/__tests__/leaderAbilityIntegration.test.ts`).
+
 ### 2025-11-05T21:02:00Z - Satellite coverage visual refresh
 - Added high-visibility satellite SVG icon for tactical map overlays.
 - Updated `src/pages/Index.tsx` to draw the new icon, pulse highlights on covered opponents, and adapt glow colors for enemy vs. allied satellites.

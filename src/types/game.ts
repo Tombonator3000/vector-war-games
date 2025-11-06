@@ -320,6 +320,7 @@ export interface GameState {
   diplomacy?: DiplomacyState;
   falloutMarks: FalloutMark[];
   satelliteOrbits: SatelliteOrbit[];
+  nations: Nation[];
 
   /** Great Old Ones campaign mode state */
   greatOldOnes?: GreatOldOnesState;
