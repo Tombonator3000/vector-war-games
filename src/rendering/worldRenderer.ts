@@ -287,62 +287,80 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       ctx.restore();
     }
 
-    // Nation labels
-    const displayName = n.isPlayer
-      ? (S.playerName || S.selectedLeader || 'PLAYER')
-      : (n.leader || n.name);
-    const nationName = n.name;
-
     const z = Math.max(0.9, Math.min(1.6, cam.zoom));
     const pad = 4 * z;
 
-    ctx.save();
-    ctx.textAlign = 'center';
+    const labelVisibilityThreshold = 1.2;
+    const labelFadeRange = 0.2;
+    const fadeStart = labelVisibilityThreshold - labelFadeRange;
+    const labelVisibility = cam.zoom <= fadeStart
+      ? 0
+      : Math.min(1, (cam.zoom - fadeStart) / labelFadeRange);
 
-    ctx.font = `bold ${Math.round(12 * z)}px monospace`;
-    const w1 = ctx.measureText(displayName).width;
+    if (labelVisibility > 0) {
+      // Nation labels
+      const displayName = n.isPlayer
+        ? (S.playerName || S.selectedLeader || 'PLAYER')
+        : (n.leader || n.name);
+      const nationName = n.name;
 
-    ctx.font = `${Math.round(11 * z)}px monospace`;
-    const w2 = ctx.measureText(nationName).width;
+      ctx.save();
+      ctx.textAlign = 'center';
 
-    const bw = Math.max(w1, w2) + pad * 2;
-    const bh = (12 * z + 12 * z) + pad * 2;
-    const lx = x;
-    const lyTop = (y - 36 * z) - (bh - (12 * z));
+      ctx.font = `bold ${Math.round(12 * z)}px monospace`;
+      const w1 = ctx.measureText(displayName).width;
 
-    const frameFill = isWireframeStyle
-      ? 'rgba(0,0,0,0.7)'
-      : isNightStyle
-        ? 'rgba(0,0,0,0.6)'
-        : 'rgba(0,0,0,0.45)';
-    ctx.fillStyle = frameFill;
-    ctx.fillRect(lx - bw / 2, lyTop, bw, bh);
+      ctx.font = `${Math.round(11 * z)}px monospace`;
+      const w2 = ctx.measureText(nationName).width;
 
-    ctx.globalAlpha = isWireframeStyle ? 0.65 : 0.4;
-    ctx.strokeStyle = isWireframeStyle ? '#4ef6ff' : n.color;
-    ctx.strokeRect(lx - bw / 2, lyTop, bw, bh);
-    ctx.globalAlpha = 1;
+      const bw = Math.max(w1, w2) + pad * 2;
+      const bh = (12 * z + 12 * z) + pad * 2;
+      const lx = x;
+      const lyTop = (y - 36 * z) - (bh - (12 * z));
 
-    ctx.font = `bold ${Math.round(12 * z)}px monospace`;
-    ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : n.color;
-    ctx.shadowColor = isNightStyle ? '#ffe066' : n.color;
-    ctx.shadowBlur = isNightStyle ? 10 : 6;
-    ctx.fillText(displayName, lx, lyTop + pad + 12 * z);
-    ctx.shadowBlur = 0;
+      const frameFill = isWireframeStyle
+        ? 'rgba(0,0,0,0.7)'
+        : isNightStyle
+          ? 'rgba(0,0,0,0.6)'
+          : 'rgba(0,0,0,0.45)';
 
-    ctx.font = `${Math.round(11 * z)}px monospace`;
-    ctx.fillStyle = isPoliticalStyle ? '#ffecd1' : '#ffffff';
-    ctx.fillText(nationName, lx, lyTop + pad + 12 * z + 12 * z);
+      ctx.save();
+      ctx.globalAlpha = labelVisibility;
+      ctx.fillStyle = frameFill;
+      ctx.fillRect(lx - bw / 2, lyTop, bw, bh);
+      ctx.restore();
 
-    ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = labelVisibility * (isWireframeStyle ? 0.65 : 0.4);
+      ctx.strokeStyle = isWireframeStyle ? '#4ef6ff' : n.color;
+      ctx.strokeRect(lx - bw / 2, lyTop, bw, bh);
+      ctx.restore();
 
-    // Population display
-    ctx.save();
-    ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : isPoliticalStyle ? '#ffd166' : '#00ff00';
-    ctx.font = `${Math.round(10 * z)}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.fillText(`${Math.floor(n.population)}M`, x, y + 30 * z);
-    ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = labelVisibility;
+      ctx.font = `bold ${Math.round(12 * z)}px monospace`;
+      ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : n.color;
+      ctx.shadowColor = isNightStyle ? '#ffe066' : n.color;
+      ctx.shadowBlur = isNightStyle ? 10 : 6;
+      ctx.fillText(displayName, lx, lyTop + pad + 12 * z);
+      ctx.shadowBlur = 0;
+
+      ctx.font = `${Math.round(11 * z)}px monospace`;
+      ctx.fillStyle = isPoliticalStyle ? '#ffecd1' : '#ffffff';
+      ctx.fillText(nationName, lx, lyTop + pad + 12 * z + 12 * z);
+      ctx.restore();
+
+      ctx.restore();
+
+      // Population display
+      ctx.save();
+      ctx.globalAlpha = labelVisibility;
+      ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : isPoliticalStyle ? '#ffd166' : '#00ff00';
+      ctx.font = `${Math.round(10 * z)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(`${Math.floor(n.population)}M`, x, y + 30 * z);
+      ctx.restore();
+    }
   });
 }
 
