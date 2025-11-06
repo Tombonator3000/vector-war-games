@@ -86,7 +86,7 @@ import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/Enha
 import { LeaderContactModal } from '@/components/LeaderContactModal';
 import { LeadersScreen } from '@/components/LeadersScreen';
 import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
-import { LeaderAbilityPanel } from '@/components/LeaderAbilityPanel';
+import { LeaderProfileDialog } from '@/components/LeaderProfileDialog';
 import { StrategicOutliner, type StrategicOutlinerGroup } from '@/components/StrategicOutliner';
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { AIDiplomacyProposalModal } from '@/components/AIDiplomacyProposalModal';
@@ -5583,6 +5583,7 @@ export default function NoradVector() {
   const [showMinimalOutliner, setShowMinimalOutliner] = useState(false);
   const [showMinimalApprovalQueue, setShowMinimalApprovalQueue] = useState(false);
   const [showMinimalCommandSheet, setShowMinimalCommandSheet] = useState(false);
+  const [isLeaderProfileOpen, setLeaderProfileOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [civInfoPanelOpen, setCivInfoPanelOpen] = useState(false);
   const [civInfoDefaultTab, setCivInfoDefaultTab] = useState<'own-status' | 'enemy-status' | 'diplomacy' | 'research'>('own-status');
@@ -12084,6 +12085,11 @@ export default function NoradVector() {
                           setShowPolicyPanel(true);
                           setShowMinimalOutliner(false);
                         }}
+                        leaderName={player.leaderName || player.leader}
+                        onOpenLeaderProfile={() => {
+                          setLeaderProfileOpen(true);
+                          setShowMinimalOutliner(false);
+                        }}
                       />
                       <StrategicOutliner
                         ref={strategicOutlinerRef}
@@ -12108,6 +12114,8 @@ export default function NoradVector() {
                   instability={governance.metrics[player.id].instability || 0}
                   onOpenDetails={() => setShowGovernanceDetails(true)}
                   onOpenPolicyPanel={() => setShowPolicyPanel(true)}
+                  leaderName={player.leaderName || player.leader}
+                  onOpenLeaderProfile={() => setLeaderProfileOpen(true)}
                 />
                 <StrategicOutliner
                   ref={strategicOutlinerRef}
@@ -13025,19 +13033,19 @@ export default function NoradVector() {
           return null;
         }
 
-        const abilityLocked = !player.leaderAbilityState.isAvailable;
-
         return (
-          <div className="fixed top-20 right-4 z-40 w-80 max-w-sm">
-            <LeaderAbilityPanel
-              nation={player}
-              abilityState={player.leaderAbilityState}
-              allNations={nations}
-              currentTurn={S.turn}
-              onUseAbility={handleUseLeaderAbility}
-              className={`bg-slate-900/80 border-cyan-500/40 shadow-lg ${abilityLocked ? 'opacity-60 pointer-events-none' : ''}`}
-            />
-          </div>
+          <LeaderProfileDialog
+            open={isLeaderProfileOpen}
+            onOpenChange={setLeaderProfileOpen}
+            nation={player}
+            abilityState={player.leaderAbilityState}
+            allNations={nations}
+            currentTurn={S.turn}
+            onUseAbility={(targetId) => {
+              handleUseLeaderAbility(targetId);
+              setLeaderProfileOpen(false);
+            }}
+          />
         );
       })()}
 

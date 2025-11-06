@@ -3,6 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, Shield } from 'lucide-react';
 import type { GovernanceMetrics } from '@/hooks/useGovernance';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getLeaderImage } from '@/lib/leaderImages';
+import { cn } from '@/lib/utils';
 
 interface PoliticalStatusWidgetProps {
   metrics: GovernanceMetrics;
@@ -10,6 +13,8 @@ interface PoliticalStatusWidgetProps {
   instability: number;
   onOpenDetails?: () => void;
   onOpenPolicyPanel?: () => void;
+  leaderName?: string;
+  onOpenLeaderProfile?: () => void;
 }
 
 export function PoliticalStatusWidget({
@@ -17,7 +22,9 @@ export function PoliticalStatusWidget({
   nationName,
   instability,
   onOpenDetails,
-  onOpenPolicyPanel
+  onOpenPolicyPanel,
+  leaderName,
+  onOpenLeaderProfile,
 }: PoliticalStatusWidgetProps) {
   const stabilityLevel = getStabilityLevel(metrics.morale, metrics.publicOpinion, instability);
   const stabilityColor = getStabilityColor(stabilityLevel);
@@ -26,6 +33,9 @@ export function PoliticalStatusWidget({
   const crisisReasons = getCrisisReasons(metrics.morale, metrics.publicOpinion, instability);
   const recoveryActions = getRecoveryActions(metrics.morale, metrics.publicOpinion, metrics.cabinetApproval);
 
+  const leaderImage = leaderName ? getLeaderImage(leaderName) : undefined;
+  const leaderInitials = leaderName ? getInitials(leaderName) : '?';
+
   return (
     <Card className="bg-slate-950/90 border-cyan-500/30 p-3">
       <div className="flex items-center justify-between mb-2">
@@ -33,12 +43,32 @@ export function PoliticalStatusWidget({
           {stabilityIcon}
           <h3 className="text-sm font-semibold text-cyan-300">{nationName} Political Status</h3>
         </div>
-        <Badge 
-          variant="outline" 
-          className={`${stabilityColor} border-current`}
-        >
-          {stabilityLevel}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {leaderName && onOpenLeaderProfile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onOpenLeaderProfile}
+              className="h-9 w-9 rounded-full border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors"
+              aria-label={`View ${leaderName} profile`}
+            >
+              <Avatar className={cn('h-8 w-8 border border-cyan-400/40 shadow-inner', leaderImage ? 'bg-slate-900' : 'bg-cyan-500/20')}>
+                {leaderImage ? (
+                  <AvatarImage src={leaderImage} alt={leaderName} className="object-cover" />
+                ) : null}
+                <AvatarFallback className="text-[0.6rem] uppercase tracking-wide text-cyan-100 bg-cyan-500/20">
+                  {leaderInitials}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          )}
+          <Badge
+            variant="outline"
+            className={`${stabilityColor} border-current`}
+          >
+            {stabilityLevel}
+          </Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -189,6 +219,13 @@ function getMetricColor(value: number): string {
   if (value >= 50) return 'text-cyan-100';
   if (value >= 30) return 'text-yellow-300';
   return 'text-red-300';
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(' ').filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
+  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
 }
 
 function getCrisisReasons(morale: number, publicOpinion: number, instability: number): string {
