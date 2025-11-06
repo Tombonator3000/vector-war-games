@@ -68,6 +68,7 @@ export function useResourceRefinement(
 
   const [refineries, setRefineries] = useState<Refinery[]>(initialRefineries);
   const [orders, setOrders] = useState<RefinementOrder[]>(initialOrders);
+  const [completedOutput, setCompletedOutput] = useState(0);
 
   const mergedConversionRates = useMemo(() => {
     return {
@@ -77,8 +78,12 @@ export function useResourceRefinement(
   }, [conversionRates]);
 
   const totalOutput = useMemo(
-    () => orders.reduce((total, order) => total + order.outputProduced, 0),
-    [orders],
+    () =>
+      orders.reduce(
+        (total, order) => total + order.outputProduced,
+        completedOutput,
+      ),
+    [completedOutput, orders],
   );
 
   const addRefinery = useCallback((refinery: Refinery) => {
@@ -136,19 +141,37 @@ export function useResourceRefinement(
   }, []);
 
   const processTurn = useCallback(() => {
-    setOrders((current) =>
-      current
-        .map((order) => ({
-          ...order,
-          turnsRemaining: Math.max(0, order.turnsRemaining - 1),
-          outputProduced:
-            order.outputProduced +
-            mergedConversionRates[
-              refineries.find((refinery) => refinery.id === order.refineryId)?.type ?? "oil"
-            ].baseYield,
-        }))
-        .filter((order) => order.turnsRemaining > 0),
-    );
+    setOrders((current) => {
+      let newlyCompletedOutput = 0;
+
+      const processedOrders = current
+        .map((order) => {
+          const refineryType =
+            refineries.find((refinery) => refinery.id === order.refineryId)?.type ??
+            "oil";
+
+          const updatedOrder: RefinementOrder = {
+            ...order,
+            turnsRemaining: Math.max(0, order.turnsRemaining - 1),
+            outputProduced:
+              order.outputProduced +
+              mergedConversionRates[refineryType].baseYield,
+          };
+
+          if (updatedOrder.turnsRemaining === 0) {
+            newlyCompletedOutput += updatedOrder.outputProduced;
+          }
+
+          return updatedOrder;
+        })
+        .filter((order) => order.turnsRemaining > 0);
+
+      if (newlyCompletedOutput > 0) {
+        setCompletedOutput((currentCompleted) => currentCompleted + newlyCompletedOutput);
+      }
+
+      return processedOrders;
+    });
 
     setRefineries((current) =>
       current.map((refinery) => ({
