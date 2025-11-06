@@ -7,11 +7,6 @@
 
 ---
 
-### 2025-11-06T01:51:58Z - Strategic outliner integration
-- Implemented `StrategicOutliner` neon HUD component with grouped alerts, blinking critical indicators, and macro action buttons.
-- Memoised flashpoint/pandemic/governance/conventional selectors in `Index.tsx`, wired ALT+O hotkeys, and mounted the outliner beside the political widget.
-- Updated `GameDatabase` and tutorial guide to document the outliner workflow and macro-handlingsknapper.
-
 ### 2025-11-06T00:40:32Z - Leader ability panel verification
 - Reviewed the LeaderAbilityPanel integration in `src/pages/Index.tsx` and associated mocks in `src/pages/__tests__/Index.test.tsx`.
 - Ran `npm run test -- Index.test.tsx` to confirm the new interaction test passes.

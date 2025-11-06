@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Factory, Microscope, Satellite, Radio, Radar, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, Biohazard, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle, Target } from 'lucide-react';
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle, Target } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
@@ -95,7 +95,6 @@ import {
 import { generateTurnNews } from '@/lib/politicalNews';
 import { SyncStatusBadge } from '@/components/coop/SyncStatusBadge';
 import { ApprovalQueue } from '@/components/coop/ApprovalQueue';
-import { StrategicOutliner, type StrategicOutlinerGroup, type StrategicMacroAction, type StrategicOutlinerSeverity } from '@/components/StrategicOutliner';
 import { ConflictResolutionDialog } from '@/components/coop/ConflictResolutionDialog';
 import {
   useConventionalWarfare,
@@ -5632,8 +5631,6 @@ export default function NoradVector() {
   const [isCulturePanelOpen, setIsCulturePanelOpen] = useState(false);
   const [showGovernanceDetails, setShowGovernanceDetails] = useState(false);
   const [showPolicyPanel, setShowPolicyPanel] = useState(false);
-  const [isOutlinerVisible, setIsOutlinerVisible] = useState(true);
-  const [isOutlinerCollapsed, setIsOutlinerCollapsed] = useState(false);
   const [showStabilityOverlay, setShowStabilityOverlay] = useState(false);
   const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
   const [isIntelOperationsOpen, setIsIntelOperationsOpen] = useState(false);
@@ -5999,30 +5996,11 @@ export default function NoradVector() {
     };
   }, []);
 
-  useEffect(() => {
-    const handleOutlinerHotkeys = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey) {
-        return;
-      }
-      if (event.altKey && event.key.toLowerCase() === 'o') {
-        event.preventDefault();
-        if (event.shiftKey) {
-          setIsOutlinerCollapsed(prev => !prev);
-        } else {
-          setIsOutlinerVisible(prev => !prev);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleOutlinerHotkeys);
-    return () => window.removeEventListener('keydown', handleOutlinerHotkeys);
-  }, []);
-
   // News ticker and flashpoints
   // News management - Extracted to useNewsManager hook (Phase 7 refactoring)
   const { newsItems, addNewsItem } = useNewsManager();
   const [currentFlashpointOutcome, setCurrentFlashpointOutcome] = useState<FlashpointOutcome | null>(null);
-  const { activeFlashpoint, pendingFollowUps, triggerRandomFlashpoint, resolveFlashpoint, dismissFlashpoint } = useFlashpoints();
+  const { activeFlashpoint, triggerRandomFlashpoint, resolveFlashpoint, dismissFlashpoint } = useFlashpoints();
   const { distortNationIntel, generateFalseIntel } = useFogOfWar();
 
 
@@ -6394,300 +6372,6 @@ export default function NoradVector() {
     placeReinforcements: placeConventionalReinforcements,
     getReinforcements: getConventionalReinforcements,
   } = conventional;
-
-  const reinforcementsAvailable = useMemo(() => {
-    if (!playerNationId) {
-      return 0;
-    }
-    return getConventionalReinforcements(playerNationId);
-  }, [getConventionalReinforcements, playerNationId]);
-
-  const contestedTerritories = useMemo(() => {
-    if (!conventionalTerritories) {
-      return [] as TerritoryState[];
-    }
-    return Object.values(conventionalTerritories).filter(
-      (territory) => Array.isArray(territory.contestedBy) && territory.contestedBy.length > 0,
-    );
-  }, [conventionalTerritories]);
-
-  const latestEngagement = useMemo(() => {
-    if (!conventionalLogs || conventionalLogs.length === 0) {
-      return null;
-    }
-    return conventionalLogs[conventionalLogs.length - 1];
-  }, [conventionalLogs]);
-
-  const severeOutbreaks = useMemo(
-    () => pandemicState.outbreaks.filter((outbreak) => outbreak.infection >= 60 || outbreak.heat >= 60),
-    [pandemicState.outbreaks],
-  );
-
-  const nextFollowUpTurn = useMemo(() => {
-    if (!pendingFollowUps || pendingFollowUps.length === 0) {
-      return null;
-    }
-    return pendingFollowUps.reduce((nextTurn, followUp) => {
-      return followUp.triggerAtTurn < nextTurn ? followUp.triggerAtTurn : nextTurn;
-    }, pendingFollowUps[0].triggerAtTurn);
-  }, [pendingFollowUps]);
-
-  const playerNation = player;
-  const playerMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;
-  const playerProduction = playerNation?.production ?? 0;
-  const playerMorale = playerMetrics?.morale ?? 0;
-  const playerOpinion = playerMetrics?.publicOpinion ?? 0;
-  const electionTimer = playerMetrics?.electionTimer ?? 0;
-
-  const openPolicyPanel = useCallback(() => setShowPolicyPanel(true), []);
-  const openGovernanceDetails = useCallback(() => setShowGovernanceDetails(true), []);
-  const openStrikePlanner = useCallback(() => setIsStrikePlannerOpen(true), []);
-  const openCulturePanel = useCallback(() => setIsCulturePanelOpen(true), []);
-  const openBioLab = useCallback(() => {
-    if (!bioWarfareEnabled && !pandemicIntegrationEnabled) {
-      return;
-    }
-    setIsBioWarfareOpen(true);
-  }, [bioWarfareEnabled, pandemicIntegrationEnabled]);
-
-  const strategicOutlinerGroups = useMemo<StrategicOutlinerGroup[]>(() => {
-    const groups: StrategicOutlinerGroup[] = [];
-
-    const productionItems: StrategicOutlinerGroup['items'] = [];
-    if (playerNation) {
-      productionItems.push({
-        id: 'production-capacity',
-        label: 'Industriell Output',
-        value: Math.round(playerProduction).toLocaleString(),
-        detail: 'Tilgjengelig produksjonskapasitet for nye enheter og prosjekter.',
-        icon: Factory,
-        severity: playerProduction < 50 ? 'warning' : 'info',
-      });
-    }
-
-    productionItems.push({
-      id: 'reinforcements-ready',
-      label: 'Reinforcements',
-      value: reinforcementsAvailable.toString(),
-      detail:
-        contestedTerritories.length > 0
-          ? `Kontroller ${reinforcementsAvailable} tilgjengelige armeer før ${contestedTerritories.length} aktive fronter kollapser.`
-          : 'Risikovurdering oppdatert – forsterk dine strategiske soner.',
-      icon: Shield,
-      severity:
-        contestedTerritories.length > 0 && reinforcementsAvailable < 5
-          ? 'critical'
-          : contestedTerritories.length > 0
-          ? 'warning'
-          : 'info',
-      onSelect: contestedTerritories.length > 0 ? openStrikePlanner : undefined,
-    });
-
-    if (latestEngagement) {
-      const playerImpact = playerNationId ? latestEngagement.productionDelta?.[playerNationId] ?? 0 : 0;
-      productionItems.push({
-        id: 'latest-engagement',
-        label: 'Siste Konflikt',
-        value: `T${latestEngagement.turn}`,
-        detail: latestEngagement.summary,
-        icon: Target,
-        severity: playerImpact < 0 ? 'warning' : 'info',
-      });
-    }
-
-    if (productionItems.length > 0) {
-      groups.push({
-        id: 'production',
-        title: 'Produksjon & Styrker',
-        icon: Factory,
-        items: productionItems,
-      });
-    }
-
-    const diplomacyItems: StrategicOutlinerGroup['items'] = [];
-    if (activeFlashpoint) {
-      const severity: StrategicOutlinerSeverity =
-        activeFlashpoint.severity === 'critical' || activeFlashpoint.severity === 'catastrophic'
-          ? 'critical'
-          : 'warning';
-      diplomacyItems.push({
-        id: 'active-flashpoint',
-        label: activeFlashpoint.title,
-        value: activeFlashpoint.severity.toUpperCase(),
-        detail: activeFlashpoint.description,
-        icon: Handshake,
-        severity,
-      });
-    }
-
-    if (pendingFollowUps?.length) {
-      diplomacyItems.push({
-        id: 'follow-up-queue',
-        label: 'Varslede etterspill',
-        value: pendingFollowUps.length.toString(),
-        detail:
-          nextFollowUpTurn !== null
-            ? `Neste hendelse forventes rundt runde ${nextFollowUpTurn}.`
-            : 'Flere etterspill ligger i kø og krever overvåkning.',
-        icon: AlertTriangle,
-        severity: pendingFollowUps.length > 2 ? 'warning' : 'info',
-      });
-    }
-
-    if (governance.activeEvent) {
-      diplomacyItems.push({
-        id: 'governance-event',
-        label: 'Innenrikskrise',
-        value: `Valg ${Math.max(0, electionTimer)}`,
-        detail: governance.activeEvent.definition.title,
-        icon: Users,
-        severity: playerOpinion < 40 || playerMorale < 40 ? 'warning' : 'info',
-        onSelect: openGovernanceDetails,
-      });
-    }
-
-    if (diplomacyItems.length > 0) {
-      groups.push({
-        id: 'diplomacy',
-        title: 'Diplomati & Styresett',
-        icon: Handshake,
-        items: diplomacyItems,
-      });
-    }
-
-    const intelligenceItems: StrategicOutlinerGroup['items'] = [];
-    const pandemicSeverity: StrategicOutlinerSeverity =
-      pandemicState.stage === 'pandemic'
-        ? 'critical'
-        : pandemicState.stage === 'epidemic' || severeOutbreaks.length > 0
-        ? 'warning'
-        : 'info';
-
-    intelligenceItems.push({
-      id: 'pandemic-status',
-      label: 'Pandemic Status',
-      value: pandemicState.stage.toUpperCase(),
-      detail: `Global infeksjon ${Math.round(pandemicState.globalInfection)}% • Mutasjon ${pandemicState.mutationLevel}`,
-      icon: Biohazard,
-      severity: pandemicSeverity,
-      onSelect: pandemicIntegrationEnabled ? openBioLab : undefined,
-    });
-
-    if (severeOutbreaks.length > 0) {
-      intelligenceItems.push({
-        id: 'outbreak-hotspots',
-        label: 'Hotspots',
-        value: severeOutbreaks.length.toString(),
-        detail: severeOutbreaks
-          .map((outbreak) => `${outbreak.region}: ${Math.round(outbreak.infection)}%`)
-          .slice(0, 3)
-          .join(' • '),
-        icon: AlertTriangle,
-        severity: 'warning',
-        onSelect: pandemicIntegrationEnabled ? openBioLab : undefined,
-      });
-    }
-
-    if (contestedTerritories.length > 0) {
-      intelligenceItems.push({
-        id: 'border-alerts',
-        label: 'Border Alerts',
-        value: contestedTerritories.length.toString(),
-        detail: contestedTerritories
-          .map((territory) => territory.name)
-          .slice(0, 3)
-          .join(' • '),
-        icon: Radar,
-        severity: contestedTerritories.length > 2 ? 'critical' : 'warning',
-        onSelect: openStrikePlanner,
-      });
-    }
-
-    if (intelligenceItems.length > 0) {
-      groups.push({
-        id: 'intelligence',
-        title: 'Etterretning & Varsler',
-        icon: Radar,
-        items: intelligenceItems,
-      });
-    }
-
-    return groups;
-  }, [
-    activeFlashpoint,
-    contestedTerritories,
-    electionTimer,
-    governance.activeEvent,
-    openBioLab,
-    openGovernanceDetails,
-    openStrikePlanner,
-    pandemicIntegrationEnabled,
-    pandemicState.globalInfection,
-    pandemicState.mutationLevel,
-    pandemicState.stage,
-    pendingFollowUps,
-    playerMorale,
-    playerNation,
-    playerOpinion,
-    playerProduction,
-    reinforcementsAvailable,
-    severeOutbreaks,
-    nextFollowUpTurn,
-    latestEngagement,
-    playerNationId,
-  ]);
-
-  const strategicMacroActions = useMemo<StrategicMacroAction[]>(() => {
-    const actions: StrategicMacroAction[] = [
-      {
-        id: 'intel-ops',
-        label: 'Intel Ops',
-        icon: Radar,
-        onExecute: handleIntelOperations,
-      },
-      {
-        id: 'policy',
-        label: 'Policies',
-        icon: Settings,
-        onExecute: openPolicyPanel,
-      },
-      {
-        id: 'strike',
-        label: 'Strike Plan',
-        icon: Target,
-        onExecute: openStrikePlanner,
-      },
-    ];
-
-    if (cultureEnabled) {
-      actions.push({
-        id: 'culture',
-        label: 'Culture Ops',
-        icon: Users,
-        onExecute: openCulturePanel,
-      });
-    }
-
-    if (bioWarfareEnabled || pandemicIntegrationEnabled) {
-      actions.push({
-        id: 'bio-lab',
-        label: 'Bio Lab',
-        icon: FlaskConical,
-        onExecute: openBioLab,
-      });
-    }
-
-    return actions;
-  }, [
-    bioWarfareEnabled,
-    cultureEnabled,
-    handleIntelOperations,
-    openBioLab,
-    openCulturePanel,
-    openPolicyPanel,
-    openStrikePlanner,
-    pandemicIntegrationEnabled,
-  ]);
 
   const moveArmiesRef = useRef(moveConventionalArmies);
   useEffect(() => {
@@ -11149,40 +10833,16 @@ export default function NoradVector() {
 
           {player && governance.metrics[player.id] ? (
             <div
-              className="fixed left-3 pointer-events-auto touch-auto z-40 flex w-[calc(100%-2rem)] max-w-[calc(100%-1.5rem)] flex-col gap-3 sm:w-auto sm:flex-row"
+              className="fixed left-3 pointer-events-auto touch-auto z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))]"
               style={{ top: 'var(--game-top-stack-offset)' }}
             >
-              <div className="sm:w-80 w-full max-w-[min(20rem,100%)]">
-                <PoliticalStatusWidget
-                  metrics={governance.metrics[player.id]}
-                  nationName={player.name}
-                  instability={governance.metrics[player.id].instability || 0}
-                  onOpenDetails={() => setShowGovernanceDetails(true)}
-                  onOpenPolicyPanel={() => setShowPolicyPanel(true)}
-                />
-              </div>
-              {isOutlinerVisible ? (
-                <StrategicOutliner
-                  groups={strategicOutlinerGroups}
-                  macroActions={strategicMacroActions}
-                  isCollapsed={isOutlinerCollapsed}
-                  onToggleCollapse={() => setIsOutlinerCollapsed(prev => !prev)}
-                  onRequestClose={() => setIsOutlinerVisible(false)}
-                  keyboardHint="ALT+O • ⇧ALT+O"
-                  className="w-full sm:w-80 max-w-[min(22rem,100%)]"
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOutlinerVisible(true);
-                    setIsOutlinerCollapsed(false);
-                  }}
-                  className="flex h-full min-h-[3.5rem] items-center justify-center rounded-xl border border-cyan-500/40 bg-slate-950/70 px-4 text-[11px] font-mono uppercase tracking-[0.3em] text-cyan-300 transition hover:border-cyan-200 hover:text-cyan-100"
-                >
-                  Show Outliner
-                </button>
-              )}
+              <PoliticalStatusWidget
+                metrics={governance.metrics[player.id]}
+                nationName={player.name}
+                instability={governance.metrics[player.id].instability || 0}
+                onOpenDetails={() => setShowGovernanceDetails(true)}
+                onOpenPolicyPanel={() => setShowPolicyPanel(true)}
+              />
             </div>
           ) : null}
 

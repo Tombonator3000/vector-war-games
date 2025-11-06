@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, X, Target, Shield, Zap, Users, Radio, Factory, Radar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Target, Shield, Zap, Users, Radio, Factory } from 'lucide-react';
 
 interface TutorialStep {
   title: string;
@@ -64,17 +64,6 @@ const tutorialSteps: TutorialStep[] = [
       'Bygg allianser gjennom traktater',
       'Sabotér fiendtlig produksjon',
       'Vær obs på DEFCON - lav = høy spenning'
-    ]
-  },
-  {
-    title: 'Strategisk Outliner',
-    description: 'Det neonfargede panelet ved kommandolinjen viser pågående kriser og gir snarveier til makro-handlinger.',
-    icon: <Radar className="h-12 w-12" />,
-    tips: [
-      'Trykk ALT+O for å vise eller skjule outlineren under spillets gang',
-      'SHIFT + ALT + O komprimerer panelet til en kort situasjonsrapport',
-      'Makro-knappene åpner Intel Ops, Policy Board, Strike Planner og Bio Lab direkte',
-      'Blinkende varsler markerer kritiske pandemier eller frontlinjer som krever respons'
     ]
   },
   {
