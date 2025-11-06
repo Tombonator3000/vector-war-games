@@ -2414,3 +2414,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Updated `src/components/OptionsMenu.tsx` to accept controlled audio props, forward toggle and slider changes to parent callbacks, and surface external track metadata for display.
 - Passed shared audio state and handlers from `src/pages/Index.tsx` through `IntroScreen` so the in-game sheet and intro dialog both manipulate `AudioSys` in real time.
 - Ran `npm run lint` to spot regressions; build halted by pre-existing lint violations outside the touched files.
+
+### 2025-11-06T09:32:28Z - Normalize music volume handler input
+- Updated `src/pages/Index.tsx` to accept either scalar or array slider values so audio volume clamps correctly when driven from the new options menu callback signature.
+- Left existing audio wiring intact while ensuring the normalized value persists into `AudioSys.setMusicVolume`.
