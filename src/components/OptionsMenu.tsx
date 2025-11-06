@@ -77,13 +77,13 @@ const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: st
 const VIEWER_OPTIONS: { value: 'threejs' | 'cesium'; label: string; description: string }[] = [
   {
     value: 'threejs',
-    label: 'Classic',
-    description: 'Three.js tactical globe with retro vector styling.',
+    label: 'Three.js Tactical (Primary)',
+    description: 'Primary Three.js engine with flat high-resolution satellite map.',
   },
   {
     value: 'cesium',
-    label: 'Cesium',
-    description: 'Photorealistic Cesium globe with geospatial overlays.',
+    label: 'Cesium (Test Map)',
+    description: 'Experimental Cesium test map with limited support.',
   },
 ];
 
@@ -262,7 +262,7 @@ export function OptionsMenu({
 
     const selectedOption = VIEWER_OPTIONS.find(opt => opt.value === nextType);
     toast({
-      title: nextType === 'cesium' ? 'Switched to Cesium' : 'Switched to Three.js',
+      title: nextType === 'cesium' ? 'Cesium test map enabled' : 'Three.js tactical map enabled',
       description: selectedOption?.description ?? undefined,
     });
 

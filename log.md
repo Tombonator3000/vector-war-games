@@ -2446,3 +2446,8 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Enabled Cesium's 2D projection to support zooming/panning again, added resize handling for fullscreen transitions, and ensured satellite/overlay effects re-render once the viewer is ready by updating `src/components/CesiumViewer.tsx`.
 - Wired React-side phase transition and AI overlay messaging so Cesium users see turn processing updates, introducing shared overlay listeners in `src/pages/Index.tsx` and rendering the banner within the HUD.
 - Attempted `npm run build` to validate the bundle; command failed on a pre-existing missing export in `src/lib/casusBelliIntegration.ts`.
+
+### 2025-11-10T00:00:00Z - Three.js tactical map mandated for flat strategic view
+- Forced flat strategic map styles to auto-select the Three.js tactical engine and surface a toast explaining the requirement by updating `handleMapStyleChange` in `src/pages/Index.tsx`.
+- Refreshed `OptionsMenu` viewer labels and toasts to highlight Three.js as the primary engine and mark Cesium as an experimental test map.
+- Documented the directive in `AGENTS.md` so future contributors keep Three.js as the authoritative 2D world view and treat Cesium as test-only.
