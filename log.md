@@ -2475,3 +2475,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-06T14:37:42Z - Restore default Vite dev server port
 - Removed the custom `server.host` and `server.port` override from `vite.config.ts` so Vite defaults to port 5173.
 - Ran `npm run dev -- --host --clearScreen=false` to confirm the startup banner now reports `http://localhost:5173/`; build still fails afterward due to missing exports in `trustAndFavorsUtils` (pre-existing issue).
+### 2025-11-06T15:08:11Z - Align immigration population units
+- Updated `applyImmigrationPolicy` to add the calculated bonus directly in millions and adjusted the recommendation heuristic to use million-based thresholds (`src/lib/streamlinedCultureLogic.ts`).
+- Synced the Streamlined Culture panel display with the million-based population values so UI deltas remain realistic (`src/components/StreamlinedCulturePanel.tsx`).
+- Ran `npm run test -- src/lib/__tests__/unifiedGameMigration.test.ts`; confirmed the suite passes after correcting an earlier Vitest CLI flag.
