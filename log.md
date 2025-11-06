@@ -2451,3 +2451,5 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Forced flat strategic map styles to auto-select the Three.js tactical engine and surface a toast explaining the requirement by updating `handleMapStyleChange` in `src/pages/Index.tsx`.
 - Refreshed `OptionsMenu` viewer labels and toasts to highlight Three.js as the primary engine and mark Cesium as an experimental test map.
 - Documented the directive in `AGENTS.md` so future contributors keep Three.js as the authoritative 2D world view and treat Cesium as test-only.
+### 2025-11-06T13:55:50Z - Repaired viewer type initialization order
+- Moved the `viewerType` state declaration above the `handleMapStyleChange` callback in `src/pages/Index.tsx` to prevent `ReferenceError` during initial render.
