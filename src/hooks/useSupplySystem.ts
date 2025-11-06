@@ -16,6 +16,7 @@ import {
   InfrastructureProject,
   AttritionEffect,
   InfrastructureLevel,
+  StationedUnitSummary,
 } from '../types/supplySystem';
 
 interface UseSupplySystemOptions {
@@ -76,6 +77,7 @@ export function useSupplySystem({ currentTurn, nations }: UseSupplySystemOptions
             connectedSupplySources: index === 0 ? [capitalSource.id] : [],
             supplyDistance: index,
             attritionLevel: 0,
+            stationedUnits: [],
           };
           newTerritories.set(territoryId, territory);
         });
@@ -258,27 +260,34 @@ export function useSupplySystem({ currentTurn, nations }: UseSupplySystemOptions
   /**
    * Update territory supply demand (from stationed units)
    */
-  const updateSupplyDemand = useCallback((territoryId: string, demand: number) => {
-    setTerritories((prev) => {
-      const newTerritories = new Map(prev);
-      const territory = newTerritories.get(territoryId);
+  const updateSupplyDemand = useCallback(
+    (territoryId: string, demand: number, stationedUnits?: StationedUnitSummary[]) => {
+      setTerritories((prev) => {
+        const newTerritories = new Map(prev);
+        const territory = newTerritories.get(territoryId);
 
-      if (!territory) return prev;
+        if (!territory) return prev;
 
-      const updatedTerritory = { ...territory, supplyDemand: demand };
+        const updatedTerritory = {
+          ...territory,
+          supplyDemand: demand,
+          stationedUnits: stationedUnits ?? territory.stationedUnits,
+        };
 
-      // Update supply status
-      const supplyRatio = updatedTerritory.currentSupply / Math.max(1, demand);
-      if (supplyRatio >= 1.2) updatedTerritory.supplyStatus = 'oversupplied';
-      else if (supplyRatio >= 0.8) updatedTerritory.supplyStatus = 'adequate';
-      else if (supplyRatio >= 0.5) updatedTerritory.supplyStatus = 'low';
-      else if (supplyRatio > 0) updatedTerritory.supplyStatus = 'critical';
-      else updatedTerritory.supplyStatus = 'none';
+        // Update supply status
+        const supplyRatio = updatedTerritory.currentSupply / Math.max(1, demand);
+        if (supplyRatio >= 1.2) updatedTerritory.supplyStatus = 'oversupplied';
+        else if (supplyRatio >= 0.8) updatedTerritory.supplyStatus = 'adequate';
+        else if (supplyRatio >= 0.5) updatedTerritory.supplyStatus = 'low';
+        else if (supplyRatio > 0) updatedTerritory.supplyStatus = 'critical';
+        else updatedTerritory.supplyStatus = 'none';
 
-      newTerritories.set(territoryId, updatedTerritory);
-      return newTerritories;
-    });
-  }, []);
+        newTerritories.set(territoryId, updatedTerritory);
+        return newTerritories;
+      });
+    },
+    []
+  );
 
   /**
    * Process supply distribution each turn
@@ -286,13 +295,21 @@ export function useSupplySystem({ currentTurn, nations }: UseSupplySystemOptions
   const processTurnSupply = useCallback(() => {
     // Calculate supply flow from sources to territories
     const newAttritionEffects: AttritionEffect[] = [];
+    const previousAttritionByUnit = new Map(
+      attritionEffects.map((effect) => [`${effect.unitId}:${effect.territoryId}`, effect.totalTurnsInAttrition])
+    );
 
     setTerritories((prev) => {
       const newTerritories = new Map(prev);
 
       // Reset current supply
       for (const [id, territory] of newTerritories) {
-        territory.currentSupply = 0;
+        const resetTerritory = {
+          ...territory,
+          currentSupply: 0,
+          connectedSupplySources: [],
+        };
+        newTerritories.set(id, resetTerritory);
       }
 
       // Distribute supply from each source
@@ -332,15 +349,39 @@ export function useSupplySystem({ currentTurn, nations }: UseSupplySystemOptions
 
           // Log attrition (would be used to damage units)
           if (attrition > 1) {
-            newAttritionEffects.push({
-              unitId: 'unknown', // Would need unit IDs
-              unitName: `Units in ${territoryId}`,
-              territoryId,
-              attritionType: 'supply',
-              damagePerTurn: attrition,
-              organizationLoss: attrition * 2,
-              totalTurnsInAttrition: 1,
-            });
+            if (territory.stationedUnits.length > 0) {
+              territory.stationedUnits.forEach((unit) => {
+                const key = `${unit.id}:${territoryId}`;
+                const previousTurns = previousAttritionByUnit.get(key) ?? 0;
+
+                newAttritionEffects.push({
+                  unitId: unit.id,
+                  unitName: unit.name || `Unit ${unit.id}`,
+                  territoryId,
+                  attritionType: 'supply',
+                  damagePerTurn: attrition,
+                  organizationLoss: attrition * 2,
+                  totalTurnsInAttrition: previousTurns + 1,
+                });
+
+                previousAttritionByUnit.set(key, previousTurns + 1);
+              });
+            } else {
+              const fallbackKey = `territory:${territoryId}`;
+              const previousTurns = previousAttritionByUnit.get(fallbackKey) ?? 0;
+
+              newAttritionEffects.push({
+                unitId: `${territoryId}-unknown`,
+                unitName: `Units in ${territoryId}`,
+                territoryId,
+                attritionType: 'supply',
+                damagePerTurn: attrition,
+                organizationLoss: attrition * 2,
+                totalTurnsInAttrition: previousTurns + 1,
+              });
+
+              previousAttritionByUnit.set(fallbackKey, previousTurns + 1);
+            }
           }
         } else {
           territory.attritionLevel = 0;
@@ -378,7 +419,7 @@ export function useSupplySystem({ currentTurn, nations }: UseSupplySystemOptions
     );
 
     setAttritionEffects(newAttritionEffects);
-  }, [sources]);
+  }, [attritionEffects, sources]);
 
   /**
    * Get territory supply status
