@@ -7,6 +7,12 @@
 
 ---
 
+### 2025-11-06T02:17:08Z - Civilization ledger integration
+- Added a dedicated Ledger tab to `CivilizationInfoPanel` with memoised row assembly, keyboard shortcut (Alt+L), and refactored enemy dossiers to trigger from table selections.
+- Implemented `LedgerTable` component with sort toggles, filter chips (allies, rivals, top 5 power, intel gaps, high trust), and intel coverage indicators.
+- Documented the ledger in `GameDatabase` and `TUTORIAL_SYSTEM.md` so players learn how to analyse macro data.
+- Ran `npm run test` (fails on existing governance and migration suites plus Index syntax regression).【20904f†L1-L86】
+
 ### 2025-11-06T01:51:58Z - Strategic outliner integration
 - Implemented `StrategicOutliner` neon HUD component with grouped alerts, blinking critical indicators, and macro action buttons.
 - Memoised flashpoint/pandemic/governance/conventional selectors in `Index.tsx`, wired ALT+O hotkeys, and mounted the outliner beside the political widget.
