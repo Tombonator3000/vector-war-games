@@ -2414,3 +2414,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Updated `src/components/OptionsMenu.tsx` to accept controlled audio props, forward toggle and slider changes to parent callbacks, and surface external track metadata for display.
 - Passed shared audio state and handlers from `src/pages/Index.tsx` through `IntroScreen` so the in-game sheet and intro dialog both manipulate `AudioSys` in real time.
 - Ran `npm run lint` to spot regressions; build halted by pre-existing lint violations outside the touched files.
+
+### 2025-11-06T09:52:56Z - Resource trade pricing hotfix
+- Removed the direct `getResourceTradePrice` import in `src/lib/territorialResourcesSystem.ts` and inlined the simple price calculation (with a type guard) to break the circular dependency triggering the production ReferenceError.
+- Ran `npm run build` to confirm the production bundle compiles after the dependency fix.

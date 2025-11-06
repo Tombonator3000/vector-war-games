@@ -25,7 +25,6 @@ import {
   RESOURCE_DEPOSIT_TEMPLATES,
 } from '@/types/territorialResources';
 import type { ResourceMarket } from '@/lib/resourceMarketSystem';
-import { getResourceTradePrice } from '@/lib/resourceMarketSystem';
 
 /**
  * Initialize resource stockpile for a nation
@@ -325,9 +324,13 @@ export function processResourceTrades(
       return;
     }
 
-    const dynamicPrice = market
-      ? getResourceTradePrice(trade.resource, trade.amountPerTurn, market)
-      : undefined;
+    let dynamicPrice: number | undefined;
+    if (market) {
+      const pricePerUnit = market.prices[trade.resource];
+      if (typeof pricePerUnit === 'number') {
+        dynamicPrice = Math.ceil(pricePerUnit * trade.amountPerTurn);
+      }
+    }
     const pricePerTurn = dynamicPrice ?? trade.pricePerTurn;
 
     // Deduct from sender (handled in processNationResources for receiver)
