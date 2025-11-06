@@ -116,6 +116,16 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
     setSelectedNationId(nationId);
   }, []);
 
+  const calculateMilitaryPower = useCallback((nation: Nation): number => {
+    const missileValue = nation.missiles * 10;
+    const bomberValue = nation.bombers * 8;
+    const submarineValue = nation.submarines * 12;
+    const defenseValue = nation.defense * 5;
+    const warheadCount = Object.values(nation.warheads || {}).reduce((sum, count) => sum + count, 0);
+    const warheadValue = warheadCount * 15;
+    return missileValue + bomberValue + submarineValue + defenseValue + warheadValue;
+  }, []);
+
   if (!isOpen) return null;
 
   if (!player) return null;
@@ -126,17 +136,6 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   );
 
   // Victory progress now handled by VictoryPathsSection using streamlined victory conditions
-
-  // Calculate total military power
-  const calculateMilitaryPower = useCallback((nation: Nation): number => {
-    const missileValue = nation.missiles * 10;
-    const bomberValue = nation.bombers * 8;
-    const submarineValue = nation.submarines * 12;
-    const defenseValue = nation.defense * 5;
-    const warheadCount = Object.values(nation.warheads || {}).reduce((sum, count) => sum + count, 0);
-    const warheadValue = warheadCount * 15;
-    return missileValue + bomberValue + submarineValue + defenseValue + warheadValue;
-  }, []);
 
   const renderResourceBar = (current: number, max: number, color: string) => (
     <div className="w-full bg-gray-700 rounded h-2 overflow-hidden">
