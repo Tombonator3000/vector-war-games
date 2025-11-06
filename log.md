@@ -2385,3 +2385,9 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Documented the ledger workflow in `GameDatabase.tsx` and `TUTORIAL_SYSTEM.md` so players understand macro analysis tools.
 - Ran `npm run test -- --run`; suite still fails due to pre-existing issues in governance morale decay, conventional warfare queues, migration counts, Index co-op toggles, and legacy Jest-style election tests.
 
+---
+### 2025-11-07T08:03:10Z - Co-op permissions ordering fix
+- Investigated startup blue screen by running `npm run build` and `npm run test -- --run --reporter=verbose`; observed `ReferenceError: Cannot access 'bioWarfareAllowed' before initialization` thrown from `NoradVector`.
+- Reordered the co-op permission guards (`buildAllowed`, `bioWarfareAllowed`, etc.) ahead of the strategic outliner memo in `src/pages/Index.tsx` so they're defined before being captured in dependency arrays.
+- Verified the fix by executing `npx vitest --run src/pages/__tests__/Index.test.tsx`, which now passes both co-op toggle tests without the runtime ReferenceError.
+
