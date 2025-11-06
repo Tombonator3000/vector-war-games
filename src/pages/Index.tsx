@@ -31,6 +31,9 @@ import {
   type PandemicTurnContext
 } from '@/hooks/usePandemic';
 import { useBioWarfare } from '@/hooks/useBioWarfare';
+import { useEconomicDepth } from '@/hooks/useEconomicDepth';
+import { useMilitaryTemplates } from '@/hooks/useMilitaryTemplates';
+import { useSupplySystem } from '@/hooks/useSupplySystem';
 import { initializeAllAINations, processAllAINationsBioWarfare } from '@/lib/aiBioWarfareIntegration';
 import { DEPLOYMENT_METHODS } from '@/types/bioDeployment';
 import type { BioLabTier } from '@/types/bioLab';
@@ -627,6 +630,9 @@ let conventionalDeltas: ConventionalWarfareDelta[] = GameStateManager.getConvent
 let suppressMultiplayerBroadcast = false;
 let multiplayerPublisher: (() => void) | null = null;
 let spyNetworkApi: ReturnType<typeof useSpyNetwork> | null = null;
+let economicDepthApi: ReturnType<typeof useEconomicDepth> | null = null;
+let militaryTemplatesApi: ReturnType<typeof useMilitaryTemplates> | null = null;
+let supplySystemApi: ReturnType<typeof useSupplySystem> | null = null;
 let triggerNationsUpdate: (() => void) | null = null;
 
 type OverlayNotification = { text: string; expiresAt: number };
@@ -4170,8 +4176,38 @@ function checkVictory() {
     return;
   }
   
-  if ((player.cities || 1) >= 10) {
-    endGame(true, 'ECONOMIC VICTORY - Industrial supremacy achieved!');
+  // Economic Victory - Enhanced with Phase 3 Economic Depth features
+  const cities = player.cities || 1;
+  let economicVictory = false;
+  let economicVictoryReason = '';
+
+  // Traditional path: 10 cities
+  if (cities >= 10) {
+    economicVictory = true;
+    economicVictoryReason = 'Industrial supremacy achieved through city development!';
+  }
+
+  // Phase 3 Economic Depth path: Trade + Refinement + Infrastructure dominance
+  if (economicDepthApi) {
+    const economicPower = economicDepthApi.calculateEconomicPower();
+    const playerEconomicPower = economicPower.get(player.id);
+
+    if (playerEconomicPower) {
+      // Victory through economic dominance: High economic score
+      if (playerEconomicPower.economicVictoryProgress >= 100) {
+        economicVictory = true;
+        economicVictoryReason = `Economic supremacy achieved! (Rank #${playerEconomicPower.globalRank}, Score: ${playerEconomicPower.totalScore})`;
+      }
+      // Alternative: Top economic power with significant lead
+      else if (playerEconomicPower.globalRank === 1 && playerEconomicPower.totalScore >= 500) {
+        economicVictory = true;
+        economicVictoryReason = `Global economic dominance! Trade, industry, and infrastructure unmatched!`;
+      }
+    }
+  }
+
+  if (economicVictory) {
+    endGame(true, `ECONOMIC VICTORY - ${economicVictoryReason}`);
     return;
   }
 
@@ -6504,6 +6540,33 @@ export default function NoradVector() {
     onToast: (payload) => toast(payload),
   });
 
+  // Hearts of Iron Phase 3: Economic Depth System
+  const economicDepth = useEconomicDepth(
+    nations,
+    S.turn,
+    playerNationId
+  );
+
+  // Hearts of Iron Phase 2: Military Templates System
+  const militaryTemplates = useMilitaryTemplates({
+    currentTurn: S.turn,
+    nations: nations.map(n => ({ id: n.id, name: n.name })),
+  });
+
+  // Hearts of Iron Phase 2: Supply System
+  const supplySystem = useSupplySystem({
+    currentTurn: S.turn,
+    nations: nations.map(n => ({
+      id: n.id,
+      name: n.name,
+      territories: conventionalState?.territories
+        ? Object.keys(conventionalState.territories).filter(
+            tid => conventionalState.territories[tid]?.controllingNationId === n.id
+          )
+        : []
+    })),
+  });
+
   useEffect(() => {
     spyNetworkApi = spyNetwork;
     return () => {
@@ -6512,6 +6575,51 @@ export default function NoradVector() {
       }
     };
   }, [spyNetwork]);
+
+  useEffect(() => {
+    economicDepthApi = economicDepth;
+    if (typeof window !== 'undefined') {
+      (window as any).economicDepthApi = economicDepth;
+    }
+    return () => {
+      if (economicDepthApi === economicDepth) {
+        economicDepthApi = null;
+        if (typeof window !== 'undefined') {
+          (window as any).economicDepthApi = null;
+        }
+      }
+    };
+  }, [economicDepth]);
+
+  useEffect(() => {
+    militaryTemplatesApi = militaryTemplates;
+    if (typeof window !== 'undefined') {
+      (window as any).militaryTemplatesApi = militaryTemplates;
+    }
+    return () => {
+      if (militaryTemplatesApi === militaryTemplates) {
+        militaryTemplatesApi = null;
+        if (typeof window !== 'undefined') {
+          (window as any).militaryTemplatesApi = null;
+        }
+      }
+    };
+  }, [militaryTemplates]);
+
+  useEffect(() => {
+    supplySystemApi = supplySystem;
+    if (typeof window !== 'undefined') {
+      (window as any).supplySystemApi = supplySystem;
+    }
+    return () => {
+      if (supplySystemApi === supplySystem) {
+        supplySystemApi = null;
+        if (typeof window !== 'undefined') {
+          (window as any).supplySystemApi = null;
+        }
+      }
+    };
+  }, [supplySystem]);
 
   const {
     getActionAvailability: getCyberActionAvailability,
