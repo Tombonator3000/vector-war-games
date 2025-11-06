@@ -42,14 +42,14 @@ export function useWarSupport({ currentTurn, nations }: UseWarSupportOptions) {
         baseWarSupport: 50,
         ideologyModifier: 0,
         leaderModifier: 0,
-        eventModifiers: [],
+        warSupportModifiers: [],
         warStatusModifier: 0,
         stability: 50,
         stabilityLevel: 'stable',
         baseStability: 50,
         politicalModifier: 0,
         economicModifier: 0,
-        eventModifiers: [],
+        stabilityModifiers: [],
         occupationPenalty: 0,
         warSupportTrend: 'stable',
         stabilityTrend: 'stable',
@@ -135,11 +135,15 @@ export function useWarSupport({ currentTurn, nations }: UseWarSupportOptions) {
           appliedTurn: currentTurn,
         };
 
-        state.eventModifiers.push(modifier);
-        state.warSupport = Math.max(0, Math.min(100, state.warSupport + amount));
-        state.warSupportLevel = calculateWarSupportLevel(state.warSupport);
+        const updatedState = {
+          ...state,
+          warSupportModifiers: [...state.warSupportModifiers, modifier],
+        };
 
-        newStates.set(nationId, { ...state });
+        updatedState.warSupport = Math.max(0, Math.min(100, state.warSupport + amount));
+        updatedState.warSupportLevel = calculateWarSupportLevel(updatedState.warSupport);
+
+        newStates.set(nationId, updatedState);
         return newStates;
       });
     },
@@ -174,11 +178,15 @@ export function useWarSupport({ currentTurn, nations }: UseWarSupportOptions) {
           appliedTurn: currentTurn,
         };
 
-        state.eventModifiers.push(modifier);
-        state.stability = Math.max(0, Math.min(100, state.stability + amount));
-        state.stabilityLevel = calculateStabilityLevel(state.stability);
+        const updatedState = {
+          ...state,
+          stabilityModifiers: [...state.stabilityModifiers, modifier],
+        };
 
-        newStates.set(nationId, { ...state });
+        updatedState.stability = Math.max(0, Math.min(100, state.stability + amount));
+        updatedState.stabilityLevel = calculateStabilityLevel(updatedState.stability);
+
+        newStates.set(nationId, updatedState);
         return newStates;
       });
     },
@@ -335,14 +343,19 @@ export function useWarSupport({ currentTurn, nations }: UseWarSupportOptions) {
         const updated = { ...state };
 
         // Decay temporary modifiers
-        updated.eventModifiers = state.eventModifiers
+        const updatedWarSupportModifiers = state.warSupportModifiers
           .map((mod) => ({ ...mod, duration: mod.duration > 0 ? mod.duration - 1 : mod.duration }))
           .filter((mod) => mod.duration !== 0);
 
+        const updatedStabilityModifiers = state.stabilityModifiers
+          .map((mod) => ({ ...mod, duration: mod.duration > 0 ? mod.duration - 1 : mod.duration }))
+          .filter((mod) => mod.duration !== 0);
+
+        updated.warSupportModifiers = updatedWarSupportModifiers;
+        updated.stabilityModifiers = updatedStabilityModifiers;
+
         // Calculate total war support
-        const wsModifierSum = updated.eventModifiers
-          .filter((m): m is WarSupportModifier => 'warSupport' in updated)
-          .reduce((sum, m) => sum + m.amount, 0);
+        const wsModifierSum = updatedWarSupportModifiers.reduce((sum, m) => sum + m.amount, 0);
 
         updated.warSupport = Math.max(
           0,
@@ -358,9 +371,7 @@ export function useWarSupport({ currentTurn, nations }: UseWarSupportOptions) {
         updated.warSupportLevel = calculateWarSupportLevel(updated.warSupport);
 
         // Calculate total stability
-        const stabModifierSum = updated.eventModifiers
-          .filter((m): m is StabilityModifier => 'stability' in updated)
-          .reduce((sum, m) => sum + m.amount, 0);
+        const stabModifierSum = updatedStabilityModifiers.reduce((sum, m) => sum + m.amount, 0);
 
         updated.stability = Math.max(
           0,

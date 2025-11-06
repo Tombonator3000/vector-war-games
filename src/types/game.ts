@@ -13,6 +13,7 @@ import type { IdeologyState, RevolutionState } from './ideology';
 import type { ResourceStockpile, ResourceTrade, TerritoryResources } from './territorialResources';
 import type { ResourceMarket } from '@/lib/resourceMarketSystem';
 import type { DepletionWarning } from '@/lib/resourceDepletionSystem';
+import type { AdvancedPropagandaState } from './advancedPropaganda';
 
 export interface FalloutMark {
   id: string;
@@ -348,6 +349,9 @@ export interface GameState {
   resourceTrades?: ResourceTrade[];                         // Active resource trade agreements
   resourceMarket?: ResourceMarket;                          // Resource market with dynamic pricing
   depletionWarnings?: DepletionWarning[];                   // Active depletion warnings
+
+  /** Advanced Propaganda System */
+  advancedPropaganda?: AdvancedPropagandaState;            // Useful idiots, phobia campaigns, religious weapons
 }
 
 export interface ConventionalWarfareDelta {

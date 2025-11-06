@@ -12,6 +12,8 @@ import {
   StabilityEffects,
   WarSupportEffects,
   NationalCrisis,
+  WarSupportModifier,
+  StabilityModifier,
 } from '@/types/warSupport';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Users, Shield } from 'lucide-react';
 
@@ -36,6 +38,10 @@ export function WarSupportDashboard({
   onExecuteAction,
   onResolveCrisis,
 }: WarSupportDashboardProps) {
+  type ActiveModifier = (WarSupportModifier | StabilityModifier) & {
+    scope: 'War Support' | 'Stability';
+  };
+
   const warSupportColor = useMemo(() => {
     if (warSupportState.warSupport >= 80) return 'green';
     if (warSupportState.warSupport >= 60) return 'cyan';
@@ -51,6 +57,20 @@ export function WarSupportDashboard({
     if (warSupportState.stability >= 20) return 'orange';
     return 'red';
   }, [warSupportState.stability]);
+
+  const activeModifiers = useMemo(() => {
+    const warSupport: ActiveModifier[] = warSupportState.warSupportModifiers.map((modifier) => ({
+      ...modifier,
+      scope: 'War Support' as const,
+    }));
+
+    const stability: ActiveModifier[] = warSupportState.stabilityModifiers.map((modifier) => ({
+      ...modifier,
+      scope: 'Stability' as const,
+    }));
+
+    return [...warSupport, ...stability].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+  }, [warSupportState.stabilityModifiers, warSupportState.warSupportModifiers]);
 
   const getTrendIcon = (trend: 'increasing' | 'stable' | 'decreasing') => {
     if (trend === 'increasing') return <TrendingUp className="h-4 w-4 text-green-400" />;
@@ -342,18 +362,21 @@ export function WarSupportDashboard({
       </section>
 
       {/* Active Modifiers */}
-      {(warSupportState.eventModifiers.length > 0 || warSupportState.eventModifiers.length > 0) && (
+      {activeModifiers.length > 0 && (
         <section className="rounded border border-cyan-500/40 bg-black/50 p-4 shadow-lg shadow-cyan-500/10">
           <h3 className="mb-4 text-lg font-semibold tracking-wide text-cyan-300">Active Modifiers</h3>
           <div className="grid gap-2">
-            {[...warSupportState.eventModifiers].slice(0, 5).map((modifier, idx) => (
+            {activeModifiers.slice(0, 5).map((modifier) => (
               <div
-                key={idx}
+                key={modifier.id}
                 className="flex items-center justify-between rounded border border-cyan-500/20 bg-black/40 p-2 text-xs"
               >
                 <div>
                   <span className="font-semibold text-cyan-200">{modifier.name}</span>
                   <span className="ml-2 text-cyan-400/60">{modifier.description}</span>
+                  <span className="ml-3 rounded bg-cyan-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-300">
+                    {modifier.scope}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={modifier.amount > 0 ? 'text-green-300' : 'text-red-300'}>

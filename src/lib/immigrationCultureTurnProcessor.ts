@@ -8,6 +8,10 @@ import { PopSystemManager } from './popSystemManager';
 import { CulturalInfluenceManager } from './culturalInfluenceManager';
 import { CulturalWarfareManager } from './culturalWarfareManager';
 import { IMMIGRATION_POLICIES, applyImmigrationPolicyEffects } from '../types/streamlinedCulture';
+import {
+  processAdvancedPropaganda,
+  initializeAdvancedPropagandaState,
+} from './advancedPropagandaManager';
 
 /**
  * Initialize nation with pop system (one-time migration from old system)
@@ -84,6 +88,23 @@ export function processImmigrationAndCultureTurn(
     if (!nation.eliminated) {
       initializeNationPopSystem(nation);
     }
+  }
+
+  // Initialize advanced propaganda system if needed
+  if (!gameState.advancedPropaganda) {
+    gameState.advancedPropaganda = initializeAdvancedPropagandaState();
+  }
+
+  // Process advanced propaganda operations (useful idiots, phobia campaigns, religious weapons)
+  const { narratives, state } = processAdvancedPropaganda(
+    gameState,
+    gameState.advancedPropaganda
+  );
+  gameState.advancedPropaganda = state;
+
+  // Log narratives for player visibility
+  for (const narrative of narratives) {
+    console.log(`[Advanced Propaganda] ${narrative}`);
   }
 
   // Process each nation

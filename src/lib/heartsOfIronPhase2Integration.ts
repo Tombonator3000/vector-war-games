@@ -190,7 +190,12 @@ export function calculateSupplyDemand(
     totalDemand += 50;
   });
 
-  supplySystemHook.updateSupplyDemand(territoryId, totalDemand);
+  const stationedUnits = unitsInTerritory.map((unit) => ({
+    id: unit.id,
+    name: unit.name ?? unit.templateId ?? 'Unknown Unit',
+  }));
+
+  supplySystemHook.updateSupplyDemand(territoryId, totalDemand, stationedUnits);
 }
 
 /**
