@@ -55,6 +55,8 @@ const computeWeightedScore = (factors: PublicOpinionFactors) =>
   factors.stability * (weights.stability / expectedMaximums.stability) +
   factors.foreignInfluence * (weights.foreignInfluence / expectedMaximums.foreignInfluence);
 
+const publicOpinionDriftMap = new WeakMap<Nation, number>();
+
 export function calculatePublicOpinion(
   nation: Nation,
   allNations: Nation[],
@@ -78,13 +80,18 @@ export function calculatePublicOpinion(
       ? moraleValues.reduce((total, morale) => total + morale, 0) / moraleValues.length
       : 50;
 
-  const baseOpinion = nation.publicOpinion ?? 50;
   const weightedDelta = (weightedScore - averageWeightedScore) * 16 * (config.actionInfluenceMultiplier ?? 1);
   const moraleDelta = ((nation.morale ?? 50) - averageMorale) * 0.035;
+  const storedOpinion = nation.publicOpinion ?? 50;
+  const previousDrift = publicOpinionDriftMap.get(nation) ?? 0;
+  const baseOpinion = storedOpinion - previousDrift;
+  const nextDrift = weightedDelta + moraleDelta;
 
-  const finalOpinion = baseOpinion + weightedDelta + moraleDelta;
+  const finalOpinion = clamp(baseOpinion + nextDrift, 0, 100);
 
-  return clamp(finalOpinion, 0, 100);
+  publicOpinionDriftMap.set(nation, nextDrift);
+
+  return finalOpinion;
 }
 
 /**

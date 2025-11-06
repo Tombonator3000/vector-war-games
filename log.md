@@ -7,6 +7,24 @@
 
 ---
 
+### Session AF: 2025-11-06 01:15 UTC - Stabilize Election Opinion Drift
+
+**Timestamp:** 2025-11-06 01:15:41 UTC
+
+**Branch:** `17b661f274962d7bdc362643411585a0e29cf211`
+
+**Summary:**
+
+- Added a WeakMap-backed tracker in `src/lib/electionSystem.ts` to remember the last computed opinion drift per nation.
+- Reworked `calculatePublicOpinion` to subtract the previous drift before applying new factor deltas, preventing turn-over-turn snowballing when the inputs remain constant.
+- Confirmed the Cold War regression tests still pass via Vitest.
+
+**Testing:**
+
+- ✅ `npx vitest run src/lib/__tests__/electionSystem.test.ts`
+
+**Notes:** The stored drift adjusts automatically if outside events modify `nation.publicOpinion`, keeping the recalculation stable on subsequent turns.
+
 ### 2025-11-06T00:55:46Z - Codex follow-up adjustments
 
 - Added missing Vitest global imports to `src/lib/__tests__/electionSystem.test.ts` so the suite executes under non-global test runners.
