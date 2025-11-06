@@ -7,6 +7,13 @@
 
 ---
 
+### 2025-11-06T02:51:15Z - Stabilized streamlined culture feature flagging
+- Fixed `NoradVector` runtime error by deriving `cultureEnabled` from the era progression system and memoizing `cultureAllowed` with co-op permissions.
+- Prevented culture dialogs from opening before the Propaganda Victory unlock or without co-commander approval, and added player-facing toasts for locked states.
+- Ran `npm run build` to verify the Vite production build still succeeds (noted existing bundle size warnings).
+
+---
+
 ### 2025-11-06T01:51:58Z - Strategic outliner integration
 - Implemented `StrategicOutliner` neon HUD component with grouped alerts, blinking critical indicators, and macro action buttons.
 - Memoised flashpoint/pandemic/governance/conventional selectors in `Index.tsx`, wired ALT+O hotkeys, and mounted the outliner beside the political widget.
