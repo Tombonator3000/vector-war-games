@@ -2472,3 +2472,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Committed the viewer type hook reordering and log updates (`Fix viewer type hook initialization order`).
 ### 2025-11-06T13:52:27Z - Amend commit with final log entry
 - Amended the commit to include the latest repository log updates.
+### 2025-11-06T14:37:42Z - Restore default Vite dev server port
+- Removed the custom `server.host` and `server.port` override from `vite.config.ts` so Vite defaults to port 5173.
+- Ran `npm run dev -- --host --clearScreen=false` to confirm the startup banner now reports `http://localhost:5173/`; build still fails afterward due to missing exports in `trustAndFavorsUtils` (pre-existing issue).
