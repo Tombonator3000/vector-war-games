@@ -12,6 +12,7 @@ import { SpinningEarth } from '@/components/intro/SpinningEarth';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OptionsMenu } from '@/components/OptionsMenu';
+import type { MusicTrack } from '@/components/OptionsMenu';
 import type { MapStyle, MapVisualStyle } from '@/components/GlobeScene';
 import { CreditsDialog } from '@/components/setup/CreditsDialog';
 import type { ScenarioConfig } from '@/types/scenario';
@@ -50,6 +51,18 @@ export interface IntroScreenProps {
   viewerType: 'threejs' | 'cesium';
   /** Change handler for viewer type */
   onViewerTypeChange: (type: 'threejs' | 'cesium') => void;
+
+  musicEnabled?: boolean;
+  onMusicToggle?: (enabled: boolean) => void;
+  sfxEnabled?: boolean;
+  onSfxToggle?: (enabled: boolean) => void;
+  musicVolume?: number;
+  onMusicVolumeChange?: (volume: number) => void;
+  musicSelection?: string;
+  onMusicTrackChange?: (selection: string) => void;
+  onNextTrack?: () => void;
+  activeTrackMessage?: string;
+  musicTracks?: MusicTrack[];
 }
 
 export function IntroScreen({
@@ -66,6 +79,17 @@ export function IntroScreen({
   onMapStyleChange,
   viewerType,
   onViewerTypeChange,
+  musicEnabled,
+  onMusicToggle,
+  sfxEnabled,
+  onSfxToggle,
+  musicVolume,
+  onMusicVolumeChange,
+  musicSelection,
+  onMusicTrackChange,
+  onNextTrack,
+  activeTrackMessage,
+  musicTracks,
 }: IntroScreenProps) {
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [isCreditsOpen, setIsCreditsOpen] = useState(false);
@@ -93,6 +117,17 @@ export function IntroScreen({
             onMapStyleChange={onMapStyleChange}
             viewerType={viewerType}
             onViewerTypeChange={onViewerTypeChange}
+            musicEnabled={musicEnabled}
+            onMusicToggle={onMusicToggle}
+            sfxEnabled={sfxEnabled}
+            onSfxToggle={onSfxToggle}
+            musicVolume={musicVolume}
+            onMusicVolumeChange={onMusicVolumeChange}
+            musicSelection={musicSelection}
+            onMusicTrackChange={onMusicTrackChange}
+            onNextTrack={onNextTrack}
+            activeTrackMessage={activeTrackMessage}
+            musicTracks={musicTracks}
           />
         </DialogContent>
       </Dialog>

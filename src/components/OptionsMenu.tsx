@@ -5,7 +5,7 @@
  * Manages its own state via localStorage to stay in sync across contexts.
  */
 
-import { useState, useEffect, useCallback, useMemo, ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -50,8 +50,8 @@ const MUSIC_TRACKS = [
   { id: 'cthulhu-2', title: 'Church of Cthulhu II', file: '/Muzak/Church of Cthulhu 2.mp3' }
 ] as const;
 
-type MusicTrack = (typeof MUSIC_TRACKS)[number];
-type MusicTrackId = MusicTrack['id'];
+export type MusicTrack = (typeof MUSIC_TRACKS)[number];
+export type MusicTrackId = MusicTrack['id'];
 
 const themeOptions: { id: ThemeId; label: string }[] = [
   { id: 'synthwave', label: 'Synthwave' },
@@ -169,6 +169,19 @@ export interface OptionsMenuProps {
 
   /** Current game turn for database feature unlocking */
   currentTurn?: number;
+
+  /** Controlled audio state */
+  musicEnabled?: boolean;
+  onMusicToggle?: (enabled: boolean) => void;
+  sfxEnabled?: boolean;
+  onSfxToggle?: (enabled: boolean) => void;
+  musicVolume?: number;
+  onMusicVolumeChange?: (volume: number) => void;
+  musicSelection?: string;
+  onMusicTrackChange?: (selection: string) => void;
+  onNextTrack?: () => void;
+  activeTrackMessage?: string;
+  musicTracks?: MusicTrack[];
 }
 
 export function OptionsMenu({
@@ -181,6 +194,17 @@ export function OptionsMenu({
   showInGameFeatures = true,
   onChange,
   currentTurn = 1,
+  musicEnabled: controlledMusicEnabled,
+  onMusicToggle,
+  sfxEnabled: controlledSfxEnabled,
+  onSfxToggle,
+  musicVolume: controlledMusicVolume,
+  onMusicVolumeChange,
+  musicSelection: controlledMusicSelection,
+  onMusicTrackChange,
+  onNextTrack,
+  activeTrackMessage: externalActiveTrackMessage,
+  musicTracks,
 }: OptionsMenuProps) {
   // Theme state
   const [theme, setThemeState] = useState<ThemeId>(() => {
@@ -311,51 +335,84 @@ export function OptionsMenu({
     return stored || 'random';
   });
 
+  const isMusicControlled = typeof controlledMusicEnabled === 'boolean';
+  const isSfxControlled = typeof controlledSfxEnabled === 'boolean';
+  const isVolumeControlled = typeof controlledMusicVolume === 'number';
+  const isSelectionControlled = typeof controlledMusicSelection === 'string';
+
+  const resolvedMusicEnabled = isMusicControlled ? controlledMusicEnabled : musicEnabled;
+  const resolvedSfxEnabled = isSfxControlled ? controlledSfxEnabled : sfxEnabled;
+  const resolvedMusicVolume = isVolumeControlled ? controlledMusicVolume : musicVolume;
+  const resolvedMusicSelection = isSelectionControlled ? controlledMusicSelection : musicSelection;
+  const availableMusicTracks = musicTracks ?? MUSIC_TRACKS;
+
   const handleMusicToggle = useCallback((checked: boolean) => {
-    setMusicEnabled(checked);
-    Storage.setItem('audio_music_enabled', String(checked));
+    if (!isMusicControlled) {
+      setMusicEnabled(checked);
+      Storage.setItem('audio_music_enabled', String(checked));
+    }
     toast({
       title: checked ? 'Music enabled' : 'Music disabled',
     });
+    if (onMusicToggle) {
+      onMusicToggle(checked);
+    }
     if (onChange) {
       onChange();
     }
-  }, [onChange]);
+  }, [isMusicControlled, onMusicToggle, onChange]);
 
   const handleSfxToggle = useCallback((checked: boolean) => {
-    setSfxEnabled(checked);
-    Storage.setItem('audio_sfx_enabled', String(checked));
+    if (!isSfxControlled) {
+      setSfxEnabled(checked);
+      Storage.setItem('audio_sfx_enabled', String(checked));
+    }
     toast({
       title: checked ? 'Sound FX enabled' : 'Sound FX disabled',
     });
+    if (onSfxToggle) {
+      onSfxToggle(checked);
+    }
     if (onChange) {
       onChange();
     }
-  }, [onChange]);
+  }, [isSfxControlled, onSfxToggle, onChange]);
 
   const handleMusicVolumeChange = useCallback((value: number[]) => {
     const volume = Math.min(1, Math.max(0, value[0] ?? 0));
-    setMusicVolume(volume);
-    // Don't save to storage - always reset to 30% on page load
+    if (!isVolumeControlled) {
+      setMusicVolume(volume);
+      // Don't save to storage - always reset to 30% on page load
+    }
+    if (onMusicVolumeChange) {
+      onMusicVolumeChange(volume);
+    }
     if (onChange) {
       onChange();
     }
-  }, [onChange]);
+  }, [isVolumeControlled, onMusicVolumeChange, onChange]);
 
-  const handleMusicTrackChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
-    const value = event.target.value;
-    setMusicSelection(value);
-    Storage.setItem('audio_music_track', value);
+  const handleMusicTrackChange = useCallback((value: string) => {
+    if (!isSelectionControlled) {
+      setMusicSelection(value);
+      Storage.setItem('audio_music_track', value);
+    }
     toast({
       title: 'Soundtrack changed',
-      description: value === 'random' ? 'Random rotation' : MUSIC_TRACKS.find(t => t.id === value)?.title,
+      description: value === 'random' ? 'Random rotation' : availableMusicTracks.find(t => t.id === value)?.title,
     });
+    if (onMusicTrackChange) {
+      onMusicTrackChange(value);
+    }
     if (onChange) {
       onChange();
     }
-  }, [onChange]);
+  }, [availableMusicTracks, isSelectionControlled, onMusicTrackChange, onChange]);
 
   const handleNextTrack = useCallback(() => {
+    if (onNextTrack) {
+      onNextTrack();
+    }
     toast({
       title: 'Track advanced',
       description: 'Skipping to next track',
@@ -363,7 +420,7 @@ export function OptionsMenu({
     if (onChange) {
       onChange();
     }
-  }, [onChange]);
+  }, [onNextTrack, onChange]);
 
   // Co-op state
   const [coopEnabled, setCoopEnabled] = useState(() => {
@@ -428,16 +485,18 @@ export function OptionsMenu({
   const [databaseOpen, setDatabaseOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
 
-  const activeTrackMessage = useMemo(() => {
-    if (!musicEnabled) {
+  const fallbackActiveTrackMessage = useMemo(() => {
+    if (!resolvedMusicEnabled) {
       return 'Music disabled';
     }
-    const track = MUSIC_TRACKS.find(t => t.id === musicSelection);
-    if (track && musicSelection !== 'random') {
+    const track = availableMusicTracks.find(t => t.id === resolvedMusicSelection);
+    if (track && resolvedMusicSelection !== 'random') {
       return `Selected: ${track.title}`;
     }
     return 'Random rotation';
-  }, [musicEnabled, musicSelection]);
+  }, [availableMusicTracks, resolvedMusicEnabled, resolvedMusicSelection]);
+
+  const activeTrackMessage = externalActiveTrackMessage ?? fallbackActiveTrackMessage;
 
   return (
     <div className="options-sheet__decor">
@@ -609,24 +668,24 @@ export function OptionsMenu({
         <p className="options-section__subheading">Manage strategic alert audio and briefing ambience.</p>
         <div className="options-toggle">
           <span>MUSIC</span>
-          <Switch checked={musicEnabled} onCheckedChange={handleMusicToggle} aria-label="Toggle music" />
+          <Switch checked={resolvedMusicEnabled} onCheckedChange={handleMusicToggle} aria-label="Toggle music" />
         </div>
         <div className="options-toggle">
           <span>SOUND FX</span>
-          <Switch checked={sfxEnabled} onCheckedChange={handleSfxToggle} aria-label="Toggle sound effects" />
+          <Switch checked={resolvedSfxEnabled} onCheckedChange={handleSfxToggle} aria-label="Toggle sound effects" />
         </div>
         <div className="options-slider">
           <div className="options-slider__label">
             <span>MUSIC GAIN</span>
-            <span>{Math.round(musicVolume * 100)}%</span>
+            <span>{Math.round(resolvedMusicVolume * 100)}%</span>
           </div>
           <Slider
-            value={[musicVolume]}
+            value={[resolvedMusicVolume]}
             min={0}
             max={1}
             step={0.05}
             onValueChange={handleMusicVolumeChange}
-            disabled={!musicEnabled}
+            disabled={!resolvedMusicEnabled}
             aria-label="Adjust music volume"
           />
         </div>
@@ -638,13 +697,13 @@ export function OptionsMenu({
           <div className="flex flex-col gap-2 sm:flex-row">
             <select
               className="bg-black/60 border border-cyan-700 text-cyan-100 text-sm rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 disabled:opacity-50 disabled:cursor-not-allowed"
-              value={musicSelection}
-              onChange={handleMusicTrackChange}
-              disabled={!musicEnabled}
+              value={resolvedMusicSelection}
+              onChange={(event) => handleMusicTrackChange(event.target.value)}
+              disabled={!resolvedMusicEnabled}
               aria-label="Select soundtrack"
             >
               <option value="random">Random Rotation</option>
-              {MUSIC_TRACKS.map(track => (
+              {availableMusicTracks.map(track => (
                 <option key={track.id} value={track.id}>
                   {track.title}
                 </option>
@@ -654,7 +713,7 @@ export function OptionsMenu({
               type="button"
               className="bg-cyan-900/40 border border-cyan-700/60 text-cyan-200 hover:bg-cyan-800/60 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleNextTrack}
-              disabled={!musicEnabled}
+              disabled={!resolvedMusicEnabled}
             >
               Advance Track
             </Button>

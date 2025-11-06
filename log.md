@@ -2410,3 +2410,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Swapped Training button queries to accessible role-based selectors and aligned spy assertions with optional territory arguments.
 - Refined the advanced formation prerequisite test to ensure no side effects occur when research is missing.
 - Ran `npm run test -- --run useConventionalWarfare` to verify the hook and panel suites now pass under the seeded RNG spy.
+### 2025-11-06T09:24:30Z - Options menu audio controls wired to AudioSys
+- Updated `src/components/OptionsMenu.tsx` to accept controlled audio props, forward toggle and slider changes to parent callbacks, and surface external track metadata for display.
+- Passed shared audio state and handlers from `src/pages/Index.tsx` through `IntroScreen` so the in-game sheet and intro dialog both manipulate `AudioSys` in real time.
+- Ran `npm run lint` to spot regressions; build halted by pre-existing lint violations outside the touched files.

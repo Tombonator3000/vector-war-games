@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo, ReactNode, ChangeEvent } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
@@ -7037,15 +7037,14 @@ export default function NoradVector() {
     setMusicVolume(volume);
   }, []);
 
-  const handleMusicTrackChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
-    const value = event.target.value;
-    setMusicSelection(value);
-    if (value === 'random') {
+  const handleMusicTrackChange = useCallback((selection: string) => {
+    setMusicSelection(selection);
+    if (selection === 'random') {
       AudioSys.setPreferredTrack(null);
       Storage.setItem('audio_music_track', 'random');
     } else {
-      AudioSys.setPreferredTrack(value as MusicTrackId);
-      Storage.setItem('audio_music_track', value);
+      AudioSys.setPreferredTrack(selection as MusicTrackId);
+      Storage.setItem('audio_music_track', selection);
     }
   }, []);
 
@@ -10979,6 +10978,17 @@ export default function NoradVector() {
         onMapStyleChange={handleMapStyleChange}
         viewerType={viewerType}
         onViewerTypeChange={handleViewerSelect}
+        musicEnabled={musicEnabled}
+        onMusicToggle={handleMusicToggle}
+        sfxEnabled={sfxEnabled}
+        onSfxToggle={handleSfxToggle}
+        musicVolume={musicVolume}
+        onMusicVolumeChange={handleMusicVolumeChange}
+        musicSelection={musicSelection}
+        onMusicTrackChange={handleMusicTrackChange}
+        onNextTrack={handleNextTrack}
+        activeTrackMessage={activeTrackMessage}
+        musicTracks={musicTracks}
       />
     );
   };
@@ -11582,6 +11592,17 @@ export default function NoradVector() {
             showInGameFeatures={true}
             onChange={updateDisplay}
             currentTurn={S.turn}
+            musicEnabled={musicEnabled}
+            onMusicToggle={handleMusicToggle}
+            sfxEnabled={sfxEnabled}
+            onSfxToggle={handleSfxToggle}
+            musicVolume={musicVolume}
+            onMusicVolumeChange={handleMusicVolumeChange}
+            musicSelection={musicSelection}
+            onMusicTrackChange={handleMusicTrackChange}
+            onNextTrack={handleNextTrack}
+            activeTrackMessage={activeTrackMessage}
+            musicTracks={musicTracks}
           />
         </SheetContent>
       </Sheet>
