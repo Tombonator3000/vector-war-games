@@ -97,7 +97,8 @@ export function applyWarDiplomaticPenalties(
       updatedAttacker,
       defender.id,
       validation.diplomaticPenalty,
-      `Unjustified war declaration`
+      `Unjustified war declaration`,
+      currentTurn
     );
   }
 
@@ -132,7 +133,8 @@ export function applyWarDiplomaticPenalties(
         updatedNation,
         attacker.id,
         Math.floor(-15 * penaltyModifier),
-        `Unjustified aggression against ${defender.name}`
+        `Unjustified aggression against ${defender.name}`,
+        currentTurn
       );
 
       updatedNation = updateTrustScore(
@@ -148,7 +150,8 @@ export function applyWarDiplomaticPenalties(
         updatedNation,
         attacker.id,
         -5,
-        `Questionable war against ${defender.name}`
+        `Questionable war against ${defender.name}`,
+        currentTurn
       );
     }
 

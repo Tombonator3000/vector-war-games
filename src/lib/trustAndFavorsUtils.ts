@@ -23,6 +23,7 @@ import {
   getFavors,
   calculateTrustDecay,
 } from '@/types/trustAndFavors';
+import { modifyRelationship } from './relationshipUtils';
 
 const MAX_TRUST_HISTORY = 20;
 const MAX_FAVOR_HISTORY = 20;
@@ -117,6 +118,32 @@ export function modifyTrust(
       },
     },
   };
+}
+
+/**
+ * Convenience wrapper around modifyTrust for compatibility with diplomacy systems
+ */
+export function updateTrustScore(
+  nation: Nation,
+  targetNationId: string,
+  delta: number,
+  reason: string,
+  currentTurn: number
+): Nation {
+  return modifyTrust(nation, targetNationId, delta, reason, currentTurn);
+}
+
+/**
+ * Adjust the high-level relationship score while preserving history tracking
+ */
+export function adjustRelationshipScore(
+  nation: Nation,
+  targetNationId: string,
+  delta: number,
+  reason: string,
+  currentTurn: number
+): Nation {
+  return modifyRelationship(nation, targetNationId, delta, reason, currentTurn);
 }
 
 /**
