@@ -163,7 +163,11 @@ import { project, toLonLat, getPoliticalFill, resolvePublicAssetPath, POLITICAL_
 import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, type LocalNation, createDefaultDiplomacyState } from '@/state';
 import type { GreatOldOnesState } from '@/types/greatOldOnes';
 import { initializeGreatOldOnesState } from '@/lib/greatOldOnesHelpers';
-import { initializeNationLeaderAbility, useLeaderAbility } from '@/lib/leaderAbilityIntegration';
+import {
+  initializeNationLeaderAbility,
+  updateLeaderAbilitiesPerTurn,
+  useLeaderAbility,
+} from '@/lib/leaderAbilityIntegration';
 import { initializeWeek3State, updateWeek3Systems, type Week3ExtendedState } from '@/lib/greatOldOnesWeek3Integration';
 import { initializePhase2State, updatePhase2Systems, checkPhase2UnlockConditions, type Phase2State } from '@/lib/phase2Integration';
 import { initializePhase3State, updatePhase3Systems, checkPhase3UnlockConditions } from '@/lib/phase3Integration';
@@ -4750,6 +4754,11 @@ function endTurn() {
       */
 
       S.turn++;
+
+      updateLeaderAbilitiesPerTurn(nations);
+      GameStateManager.setNations(nations);
+      PlayerManager.setNations(nations);
+
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
 
