@@ -1,8 +1,8 @@
 import dagre from 'dagre';
 import { Node, Edge, Position } from 'reactflow';
 
-const nodeWidth = 240;
-const nodeHeight = 180;
+const nodeWidth = 220;
+const nodeHeight = 160;
 
 /**
  * Automatically layout nodes using dagre algorithm
@@ -19,8 +19,8 @@ export function getLayoutedElements(
   const isHorizontal = direction === 'LR';
   dagreGraph.setGraph({
     rankdir: direction,
-    nodesep: 100, // Horizontal spacing between nodes
-    ranksep: 150, // Vertical spacing between ranks (levels)
+    nodesep: 120, // Horizontal spacing between nodes
+    ranksep: 190, // Vertical spacing between ranks (levels)
     edgesep: 50,
     marginx: 50,
     marginy: 50,

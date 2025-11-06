@@ -7,7 +7,6 @@ import type { VictoryAnalysis } from '@/types/victory';
 import type { BioLabFacility, BioLabTier } from '@/types/bioLab';
 import { VictoryPathsSection } from './VictoryPathsSection';
 import { ResearchTreeFlow } from './ResearchTreeFlow';
-import { BioLabTreeFlow } from './BioLabTreeFlow';
 import { UnifiedDiplomacyPanel } from './UnifiedDiplomacyPanel';
 import { motion } from 'framer-motion';
 import { DoctrineStatusPanel } from './DoctrineStatusPanel';
@@ -856,19 +855,9 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
               onStartResearch={onStartResearch}
               onCancelResearch={onCancelResearch}
               currentResearch={currentResearch}
-            />
-          </div>
-        )}
-
-        {/* Bio-Lab Infrastructure Tree */}
-        {bioLabFacility && onStartBioLabConstruction && (
-          <div className="mt-8">
-            <BioLabTreeFlow
-              facility={bioLabFacility}
-              playerProduction={player.production}
-              playerUranium={player.uranium}
-              onStartConstruction={onStartBioLabConstruction}
-              onCancelConstruction={onCancelBioLabConstruction}
+              bioLabFacility={bioLabFacility}
+              onStartBioLabConstruction={onStartBioLabConstruction}
+              onCancelBioLabConstruction={onCancelBioLabConstruction}
             />
           </div>
         )}
