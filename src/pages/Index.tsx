@@ -31,6 +31,9 @@ import {
   type PandemicTurnContext
 } from '@/hooks/usePandemic';
 import { useBioWarfare } from '@/hooks/useBioWarfare';
+import { useEconomicDepth } from '@/hooks/useEconomicDepth';
+import { useMilitaryTemplates } from '@/hooks/useMilitaryTemplates';
+import { useSupplySystem } from '@/hooks/useSupplySystem';
 import { initializeAllAINations, processAllAINationsBioWarfare } from '@/lib/aiBioWarfareIntegration';
 import { DEPLOYMENT_METHODS } from '@/types/bioDeployment';
 import type { BioLabTier } from '@/types/bioLab';
@@ -83,7 +86,7 @@ import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/Enha
 import { LeaderContactModal } from '@/components/LeaderContactModal';
 import { LeadersScreen } from '@/components/LeadersScreen';
 import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
-import { LeaderAbilityPanel } from '@/components/LeaderAbilityPanel';
+import { LeaderProfileDialog } from '@/components/LeaderProfileDialog';
 import { StrategicOutliner, type StrategicOutlinerGroup } from '@/components/StrategicOutliner';
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { AIDiplomacyProposalModal } from '@/components/AIDiplomacyProposalModal';
@@ -627,6 +630,9 @@ let conventionalDeltas: ConventionalWarfareDelta[] = GameStateManager.getConvent
 let suppressMultiplayerBroadcast = false;
 let multiplayerPublisher: (() => void) | null = null;
 let spyNetworkApi: ReturnType<typeof useSpyNetwork> | null = null;
+let economicDepthApi: ReturnType<typeof useEconomicDepth> | null = null;
+let militaryTemplatesApi: ReturnType<typeof useMilitaryTemplates> | null = null;
+let supplySystemApi: ReturnType<typeof useSupplySystem> | null = null;
 let triggerNationsUpdate: (() => void) | null = null;
 
 type OverlayNotification = { text: string; expiresAt: number };
@@ -693,8 +699,11 @@ let worldCountries: any = null;
 // resolvePublicAssetPath moved to @/lib/renderingUtils
 
 const FLAT_REALISTIC_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day.jpg');
+const FLAT_NIGHTLIGHTS_TEXTURE_URL = resolvePublicAssetPath('textures/earth_nightlights.jpg');
 let flatRealisticTexture: HTMLImageElement | null = null;
 let flatRealisticTexturePromise: Promise<HTMLImageElement> | null = null;
+let flatNightlightsTexture: HTMLImageElement | null = null;
+let flatNightlightsTexturePromise: Promise<HTMLImageElement> | null = null;
 
 function preloadFlatRealisticTexture() {
   if (flatRealisticTexture) {
@@ -732,61 +741,107 @@ function preloadFlatRealisticTexture() {
   });
 }
 
+function preloadFlatNightlightsTexture() {
+  if (flatNightlightsTexture) {
+    return Promise.resolve(flatNightlightsTexture);
+  }
+
+  if (flatNightlightsTexturePromise) {
+    return flatNightlightsTexturePromise;
+  }
+
+  if (typeof window === 'undefined' || typeof Image === 'undefined') {
+    return Promise.resolve(null);
+  }
+
+  flatNightlightsTexturePromise = new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      flatNightlightsTexture = image;
+      resolve(image);
+    };
+    image.onerror = (event) => {
+      flatNightlightsTexturePromise = null;
+      reject(
+        event instanceof ErrorEvent
+          ? event.error ?? new Error('Failed to load flat nightlights texture')
+          : new Error('Failed to load flat nightlights texture'),
+      );
+    };
+    image.src = FLAT_NIGHTLIGHTS_TEXTURE_URL;
+  });
+
+  return flatNightlightsTexturePromise.catch(() => {
+    return null;
+  });
+}
+
 // Leaders configuration
-const leaders: { name: string; ai: string; color: string; isHistoricalCubanCrisis?: boolean; isLovecraftian?: boolean }[] = [
+type LeaderScenarioTag = 'default' | 'cubanCrisis' | 'greatOldOnes';
+
+interface LeaderDefinition {
+  name: string;
+  ai: string;
+  color: string;
+  isHistoricalCubanCrisis?: boolean;
+  isLovecraftian?: boolean;
+  scenarios?: LeaderScenarioTag[];
+}
+
+const leaders: LeaderDefinition[] = [
   // Historical leaders (for Cuban Crisis scenario)
-  { name: 'John F. Kennedy', ai: 'balanced', color: '#0047AB', isHistoricalCubanCrisis: true }, // US President, balanced approach during crisis
-  { name: 'Nikita Khrushchev', ai: 'aggressive', color: '#CC0000', isHistoricalCubanCrisis: true }, // Soviet Premier, aggressive but pragmatic
-  { name: 'Fidel Castro', ai: 'aggressive', color: '#CE1126', isHistoricalCubanCrisis: true }, // Cuban leader, revolutionary and aggressive
+  { name: 'John F. Kennedy', ai: 'balanced', color: '#0047AB', isHistoricalCubanCrisis: true, scenarios: ['cubanCrisis'] }, // US President, balanced approach during crisis
+  { name: 'Nikita Khrushchev', ai: 'aggressive', color: '#CC0000', isHistoricalCubanCrisis: true, scenarios: ['cubanCrisis'] }, // Soviet Premier, aggressive but pragmatic
+  { name: 'Fidel Castro', ai: 'aggressive', color: '#CE1126', isHistoricalCubanCrisis: true, scenarios: ['cubanCrisis'] }, // Cuban leader, revolutionary and aggressive
   
   // Cold War Historical Leaders
-  { name: 'Ronald Reagan', ai: 'aggressive', color: '#C8102E' }, // 40th US President, aggressive Cold Warrior
-  { name: 'Mikhail Gorbachev', ai: 'balanced', color: '#DA291C' }, // Soviet leader, reformist
-  { name: 'Margaret Thatcher', ai: 'defensive', color: '#0087DC' }, // UK Prime Minister, Iron Lady
-  { name: 'Mao Zedong', ai: 'aggressive', color: '#DE2910' }, // Chinese Communist leader
-  { name: 'Charles de Gaulle', ai: 'defensive', color: '#002395' }, // French President, nationalist
-  { name: 'Indira Gandhi', ai: 'balanced', color: '#FF9933' }, // Indian Prime Minister
-  { name: 'Leonid Brezhnev', ai: 'defensive', color: '#DA291C' }, // Soviet General Secretary
-  { name: 'Richard Nixon', ai: 'balanced', color: '#0047AB' }, // 37th US President
-  { name: 'Jimmy Carter', ai: 'balanced', color: '#0047AB' }, // 39th US President, peace-focused
-  { name: 'Dwight Eisenhower', ai: 'balanced', color: '#0047AB' }, // 34th US President, general
-  { name: 'Lyndon Johnson', ai: 'aggressive', color: '#0047AB' }, // 36th US President
-  { name: 'Gerald Ford', ai: 'balanced', color: '#0047AB' }, // 38th US President
-  { name: 'Winston Churchill', ai: 'defensive', color: '#00247D' }, // UK Prime Minister, steadfast defender
-  { name: 'Harry S. Truman', ai: 'balanced', color: '#3C3B6E' }, // US President, Truman Doctrine
-  { name: 'Joseph Stalin', ai: 'aggressive', color: '#CC0000' }, // Soviet Premier, hardline expansionist
-  { name: 'Pierre Trudeau', ai: 'balanced', color: '#FF0000' }, // Canadian Prime Minister, charismatic centrist
-  { name: 'Zhou Enlai', ai: 'balanced', color: '#DE2910' }, // Chinese Premier, master diplomat
-  { name: 'Deng Xiaoping', ai: 'defensive', color: '#D62828' }, // Chinese leader, pragmatic reformer
-  { name: 'Ho Chi Minh', ai: 'aggressive', color: '#DA251D' }, // Vietnamese revolutionary leader
-  { name: 'Josip Broz Tito', ai: 'balanced', color: '#0C4076' }, // Yugoslav president, non-aligned strategist
-  { name: 'Gamal Abdel Nasser', ai: 'balanced', color: '#CE1126' }, // Egyptian president, pan-Arab champion
-  { name: 'Jawaharlal Nehru', ai: 'defensive', color: '#FF9933' }, // Indian Prime Minister, non-aligned architect
-  { name: 'Konrad Adenauer', ai: 'defensive', color: '#000000' }, // West German chancellor, pro-West builder
-  { name: 'Willy Brandt', ai: 'balanced', color: '#00008B' }, // West German chancellor, Ostpolitik pioneer
-  { name: 'Helmut Kohl', ai: 'defensive', color: '#1C1C1C' }, // German chancellor, unification steward
-  { name: 'François Mitterrand', ai: 'balanced', color: '#0055A4' }, // French president, European integrationist
-  { name: 'Sukarno', ai: 'aggressive', color: '#E30A17' }, // Indonesian president, revolutionary nationalist
+  { name: 'Ronald Reagan', ai: 'aggressive', color: '#C8102E', scenarios: ['default'] }, // 40th US President, aggressive Cold Warrior
+  { name: 'Mikhail Gorbachev', ai: 'balanced', color: '#DA291C', scenarios: ['default'] }, // Soviet leader, reformist
+  { name: 'Margaret Thatcher', ai: 'defensive', color: '#0087DC', scenarios: ['default'] }, // UK Prime Minister, Iron Lady
+  { name: 'Mao Zedong', ai: 'aggressive', color: '#DE2910', scenarios: ['default'] }, // Chinese Communist leader
+  { name: 'Charles de Gaulle', ai: 'defensive', color: '#002395', scenarios: ['default'] }, // French President, nationalist
+  { name: 'Indira Gandhi', ai: 'balanced', color: '#FF9933', scenarios: ['default'] }, // Indian Prime Minister
+  { name: 'Leonid Brezhnev', ai: 'defensive', color: '#DA291C', scenarios: ['default'] }, // Soviet General Secretary
+  { name: 'Richard Nixon', ai: 'balanced', color: '#0047AB', scenarios: ['default'] }, // 37th US President
+  { name: 'Jimmy Carter', ai: 'balanced', color: '#0047AB', scenarios: ['default'] }, // 39th US President, peace-focused
+  { name: 'Dwight Eisenhower', ai: 'balanced', color: '#0047AB', scenarios: ['default'] }, // 34th US President, general
+  { name: 'Lyndon Johnson', ai: 'aggressive', color: '#0047AB', scenarios: ['default'] }, // 36th US President
+  { name: 'Gerald Ford', ai: 'balanced', color: '#0047AB', scenarios: ['default'] }, // 38th US President
+  { name: 'Winston Churchill', ai: 'defensive', color: '#00247D', scenarios: ['default'] }, // UK Prime Minister, steadfast defender
+  { name: 'Harry S. Truman', ai: 'balanced', color: '#3C3B6E', scenarios: ['default'] }, // US President, Truman Doctrine
+  { name: 'Joseph Stalin', ai: 'aggressive', color: '#CC0000', scenarios: ['default'] }, // Soviet Premier, hardline expansionist
+  { name: 'Pierre Trudeau', ai: 'balanced', color: '#FF0000', scenarios: ['default'] }, // Canadian Prime Minister, charismatic centrist
+  { name: 'Zhou Enlai', ai: 'balanced', color: '#DE2910', scenarios: ['default'] }, // Chinese Premier, master diplomat
+  { name: 'Deng Xiaoping', ai: 'defensive', color: '#D62828', scenarios: ['default'] }, // Chinese leader, pragmatic reformer
+  { name: 'Ho Chi Minh', ai: 'aggressive', color: '#DA251D', scenarios: ['default'] }, // Vietnamese revolutionary leader
+  { name: 'Josip Broz Tito', ai: 'balanced', color: '#0C4076', scenarios: ['default'] }, // Yugoslav president, non-aligned strategist
+  { name: 'Gamal Abdel Nasser', ai: 'balanced', color: '#CE1126', scenarios: ['default'] }, // Egyptian president, pan-Arab champion
+  { name: 'Jawaharlal Nehru', ai: 'defensive', color: '#FF9933', scenarios: ['default'] }, // Indian Prime Minister, non-aligned architect
+  { name: 'Konrad Adenauer', ai: 'defensive', color: '#000000', scenarios: ['default'] }, // West German chancellor, pro-West builder
+  { name: 'Willy Brandt', ai: 'balanced', color: '#00008B', scenarios: ['default'] }, // West German chancellor, Ostpolitik pioneer
+  { name: 'Helmut Kohl', ai: 'defensive', color: '#1C1C1C', scenarios: ['default'] }, // German chancellor, unification steward
+  { name: 'François Mitterrand', ai: 'balanced', color: '#0055A4', scenarios: ['default'] }, // French president, European integrationist
+  { name: 'Sukarno', ai: 'aggressive', color: '#E30A17', scenarios: ['default'] }, // Indonesian president, revolutionary nationalist
 
   // Lovecraftian leaders (for Great Old Ones scenario)
-  { name: 'Cthulhu', ai: 'aggressive', color: '#004d00', isLovecraftian: true }, // The Great Dreamer, aggressive domination
-  { name: 'Azathoth', ai: 'chaotic', color: '#1a0033', isLovecraftian: true }, // The Blind Idiot God, chaotic and unpredictable
-  { name: 'Nyarlathotep', ai: 'trickster', color: '#330033', isLovecraftian: true }, // The Crawling Chaos, deceptive and manipulative
-  { name: 'Hastur', ai: 'balanced', color: '#4d1a00', isLovecraftian: true }, // The Unspeakable One, balanced corruption
-  { name: 'Shub-Niggurath', ai: 'aggressive', color: '#003300', isLovecraftian: true }, // The Black Goat, aggressive expansion
-  { name: 'Yog-Sothoth', ai: 'defensive', color: '#1a1a33', isLovecraftian: true }, // The Gate and the Key, strategic defense
+  { name: 'Cthulhu', ai: 'aggressive', color: '#004d00', isLovecraftian: true, scenarios: ['greatOldOnes'] }, // The Great Dreamer, aggressive domination
+  { name: 'Azathoth', ai: 'chaotic', color: '#1a0033', isLovecraftian: true, scenarios: ['greatOldOnes'] }, // The Blind Idiot God, chaotic and unpredictable
+  { name: 'Nyarlathotep', ai: 'trickster', color: '#330033', isLovecraftian: true, scenarios: ['greatOldOnes'] }, // The Crawling Chaos, deceptive and manipulative
+  { name: 'Hastur', ai: 'balanced', color: '#4d1a00', isLovecraftian: true, scenarios: ['greatOldOnes'] }, // The Unspeakable One, balanced corruption
+  { name: 'Shub-Niggurath', ai: 'aggressive', color: '#003300', isLovecraftian: true, scenarios: ['greatOldOnes'] }, // The Black Goat, aggressive expansion
+  { name: 'Yog-Sothoth', ai: 'defensive', color: '#1a1a33', isLovecraftian: true, scenarios: ['greatOldOnes'] }, // The Gate and the Key, strategic defense
   
   // Parody leaders (for other scenarios)
-  { name: 'Ronnie Raygun', ai: 'aggressive', color: '#ff5555' },
-  { name: 'Tricky Dick', ai: 'defensive', color: '#5599ff' },
-  { name: 'Jimi Farmer', ai: 'balanced', color: '#55ff99' },
-  { name: 'E. Musk Rat', ai: 'chaotic', color: '#ff55ff' },
-  { name: 'Donnie Trumpf', ai: 'aggressive', color: '#ffaa55' },
-  { name: 'Atom Hus-Bomb', ai: 'aggressive', color: '#ff3333' },
-  { name: 'Krazy Re-Entry', ai: 'chaotic', color: '#cc44ff' },
-  { name: 'Odd\'n Wild Card', ai: 'trickster', color: '#44ffcc' },
-  { name: 'Oil-Stain Lint-Off', ai: 'balanced', color: '#88ff88' },
-  { name: 'Ruin Annihilator', ai: 'aggressive', color: '#ff6600' }
+  { name: 'Ronnie Raygun', ai: 'aggressive', color: '#ff5555', scenarios: ['default'] },
+  { name: 'Tricky Dick', ai: 'defensive', color: '#5599ff', scenarios: ['default'] },
+  { name: 'Jimi Farmer', ai: 'balanced', color: '#55ff99', scenarios: ['default'] },
+  { name: 'E. Musk Rat', ai: 'chaotic', color: '#ff55ff', scenarios: ['default'] },
+  { name: 'Donnie Trumpf', ai: 'aggressive', color: '#ffaa55', scenarios: ['default'] },
+  { name: 'Atom Hus-Bomb', ai: 'aggressive', color: '#ff3333', scenarios: ['default'] },
+  { name: 'Krazy Re-Entry', ai: 'chaotic', color: '#cc44ff', scenarios: ['default'] },
+  { name: 'Odd\'n Wild Card', ai: 'trickster', color: '#44ffcc', scenarios: ['default'] },
+  { name: 'Oil-Stain Lint-Off', ai: 'balanced', color: '#88ff88', scenarios: ['default'] },
+  { name: 'Ruin Annihilator', ai: 'aggressive', color: '#ff6600', scenarios: ['default']}
 ];
 
 // Leader-Specific Passive Bonuses (FASE 2.1)
@@ -2822,9 +2877,12 @@ function drawWorld(style: MapStyle) {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
+    flatNightlightsTexture,
+    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    preloadFlatNightlightsTexture,
     getPoliticalFill,
   };
   renderWorld(style, context);
@@ -2846,9 +2904,12 @@ function drawNations(style: MapStyle) {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
+    flatNightlightsTexture,
+    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    preloadFlatNightlightsTexture,
     getPoliticalFill,
     nations,
     S,
@@ -2870,9 +2931,12 @@ function drawTerritoriesWrapper() {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
+    flatNightlightsTexture,
+    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    preloadFlatNightlightsTexture,
     getPoliticalFill,
     territories: territoryList,
     playerId: player.id,
@@ -2932,7 +2996,7 @@ function drawSatellites(nowMs: number) {
 
   const activeOrbits: SatelliteOrbit[] = [];
   const player = PlayerManager.get();
-  const isFlatRealistic = currentMapStyle === 'flat-realistic';
+  const isFlatTexture = currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights';
 
   orbits.forEach(orbit => {
     const targetNation = nations.find(nation => nation.id === orbit.targetId);
@@ -2980,7 +3044,7 @@ function drawSatellites(nowMs: number) {
     ctx.stroke();
     ctx.restore();
 
-    if (isFlatRealistic) {
+    if (isFlatTexture) {
       ctx.save();
       ctx.globalCompositeOperation = 'screen';
       const gradient = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, 22);
@@ -3586,7 +3650,7 @@ function drawFX() {
     S.screenShake *= 0.9;
   }
 
-  if (currentMapStyle === 'flat-realistic') {
+  if (currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights') {
     drawFalloutMarks(deltaMs);
   }
 
@@ -4159,8 +4223,38 @@ function checkVictory() {
     return;
   }
   
-  if ((player.cities || 1) >= 10) {
-    endGame(true, 'ECONOMIC VICTORY - Industrial supremacy achieved!');
+  // Economic Victory - Enhanced with Phase 3 Economic Depth features
+  const cities = player.cities || 1;
+  let economicVictory = false;
+  let economicVictoryReason = '';
+
+  // Traditional path: 10 cities
+  if (cities >= 10) {
+    economicVictory = true;
+    economicVictoryReason = 'Industrial supremacy achieved through city development!';
+  }
+
+  // Phase 3 Economic Depth path: Trade + Refinement + Infrastructure dominance
+  if (economicDepthApi) {
+    const economicPower = economicDepthApi.calculateEconomicPower();
+    const playerEconomicPower = economicPower.get(player.id);
+
+    if (playerEconomicPower) {
+      // Victory through economic dominance: High economic score
+      if (playerEconomicPower.economicVictoryProgress >= 100) {
+        economicVictory = true;
+        economicVictoryReason = `Economic supremacy achieved! (Rank #${playerEconomicPower.globalRank}, Score: ${playerEconomicPower.totalScore})`;
+      }
+      // Alternative: Top economic power with significant lead
+      else if (playerEconomicPower.globalRank === 1 && playerEconomicPower.totalScore >= 500) {
+        economicVictory = true;
+        economicVictoryReason = `Global economic dominance! Trade, industry, and infrastructure unmatched!`;
+      }
+    }
+  }
+
+  if (economicVictory) {
+    endGame(true, `ECONOMIC VICTORY - ${economicVictoryReason}`);
     return;
   }
 
@@ -5489,6 +5583,7 @@ export default function NoradVector() {
   const [showMinimalOutliner, setShowMinimalOutliner] = useState(false);
   const [showMinimalApprovalQueue, setShowMinimalApprovalQueue] = useState(false);
   const [showMinimalCommandSheet, setShowMinimalCommandSheet] = useState(false);
+  const [isLeaderProfileOpen, setLeaderProfileOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [civInfoPanelOpen, setCivInfoPanelOpen] = useState(false);
   const [civInfoDefaultTab, setCivInfoDefaultTab] = useState<'own-status' | 'enemy-status' | 'diplomacy' | 'research'>('own-status');
@@ -5631,6 +5726,8 @@ export default function NoradVector() {
       AudioSys.playSFX('click');
       if (style === 'flat-realistic') {
         void preloadFlatRealisticTexture();
+      } else if (style === 'flat-nightlights') {
+        void preloadFlatNightlightsTexture();
       }
       toast({
         title: 'Kartstil oppdatert',
@@ -5822,7 +5919,7 @@ export default function NoradVector() {
 
   useEffect(() => {
     currentMapStyle = mapStyle.visual;
-    if (mapStyle.visual === 'flat' || mapStyle.visual === 'flat-realistic') {
+    if (mapStyle.visual === 'flat' || mapStyle.visual === 'flat-realistic' || mapStyle.visual === 'flat-nightlights') {
       const expectedX = (W - W * cam.zoom) / 2;
       const expectedY = (H - H * cam.zoom) / 2;
       const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;
@@ -5834,10 +5931,13 @@ export default function NoradVector() {
   }, [cam.x, cam.y, cam.zoom, mapStyle.visual]);
   useEffect(() => {
     void preloadFlatRealisticTexture();
+    void preloadFlatNightlightsTexture();
   }, []);
   useEffect(() => {
     if (mapStyle.visual === 'flat-realistic') {
       void preloadFlatRealisticTexture();
+    } else if (mapStyle.visual === 'flat-nightlights') {
+      void preloadFlatNightlightsTexture();
     }
   }, [mapStyle.visual]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
@@ -6493,6 +6593,33 @@ export default function NoradVector() {
     onToast: (payload) => toast(payload),
   });
 
+  // Hearts of Iron Phase 3: Economic Depth System
+  const economicDepth = useEconomicDepth(
+    nations,
+    S.turn,
+    playerNationId
+  );
+
+  // Hearts of Iron Phase 2: Military Templates System
+  const militaryTemplates = useMilitaryTemplates({
+    currentTurn: S.turn,
+    nations: nations.map(n => ({ id: n.id, name: n.name })),
+  });
+
+  // Hearts of Iron Phase 2: Supply System
+  const supplySystem = useSupplySystem({
+    currentTurn: S.turn,
+    nations: nations.map(n => ({
+      id: n.id,
+      name: n.name,
+      territories: conventionalState?.territories
+        ? Object.keys(conventionalState.territories).filter(
+            tid => conventionalState.territories[tid]?.controllingNationId === n.id
+          )
+        : []
+    })),
+  });
+
   useEffect(() => {
     spyNetworkApi = spyNetwork;
     return () => {
@@ -6501,6 +6628,51 @@ export default function NoradVector() {
       }
     };
   }, [spyNetwork]);
+
+  useEffect(() => {
+    economicDepthApi = economicDepth;
+    if (typeof window !== 'undefined') {
+      (window as any).economicDepthApi = economicDepth;
+    }
+    return () => {
+      if (economicDepthApi === economicDepth) {
+        economicDepthApi = null;
+        if (typeof window !== 'undefined') {
+          (window as any).economicDepthApi = null;
+        }
+      }
+    };
+  }, [economicDepth]);
+
+  useEffect(() => {
+    militaryTemplatesApi = militaryTemplates;
+    if (typeof window !== 'undefined') {
+      (window as any).militaryTemplatesApi = militaryTemplates;
+    }
+    return () => {
+      if (militaryTemplatesApi === militaryTemplates) {
+        militaryTemplatesApi = null;
+        if (typeof window !== 'undefined') {
+          (window as any).militaryTemplatesApi = null;
+        }
+      }
+    };
+  }, [militaryTemplates]);
+
+  useEffect(() => {
+    supplySystemApi = supplySystem;
+    if (typeof window !== 'undefined') {
+      (window as any).supplySystemApi = supplySystem;
+    }
+    return () => {
+      if (supplySystemApi === supplySystem) {
+        supplySystemApi = null;
+        if (typeof window !== 'undefined') {
+          (window as any).supplySystemApi = null;
+        }
+      }
+    };
+  }, [supplySystem]);
 
   const {
     getActionAvailability: getCyberActionAvailability,
@@ -10565,10 +10737,13 @@ export default function NoradVector() {
         cam.y = Math.min(Math.max(cam.y, minCamY), maxCamY);
       };
 
+      const isBoundedFlatProjection = () =>
+        currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights';
+
       const clampPanBounds = () => {
         clampLatitude();
 
-        if (currentMapStyle !== 'flat-realistic') {
+        if (!isBoundedFlatProjection()) {
           return;
         }
 
@@ -10822,8 +10997,8 @@ export default function NoradVector() {
         cam.targetZoom = newZoom;
         cam.zoom = newZoom;
         
-        // Auto-center in flat-realistic mode when at default zoom
-        if (currentMapStyle === 'flat-realistic' && newZoom <= 1.05) {
+        // Auto-center in bounded flat projections when at default zoom
+        if (isBoundedFlatProjection() && newZoom <= 1.05) {
           cam.x = (W - W * cam.zoom) / 2;
           cam.y = (H - H * cam.zoom) / 2;
         } else {
@@ -10882,8 +11057,8 @@ export default function NoradVector() {
             cam.targetZoom = newZoom;
             cam.zoom = newZoom;
             
-            // Auto-center in flat-realistic mode when at default zoom
-            if (currentMapStyle === 'flat-realistic' && newZoom <= 1.05) {
+            // Auto-center in bounded flat projections when at default zoom
+            if (isBoundedFlatProjection() && newZoom <= 1.05) {
               cam.x = (W - W * cam.zoom) / 2;
               cam.y = (H - H * cam.zoom) / 2;
             } else {
@@ -11509,11 +11684,24 @@ export default function NoradVector() {
     // Filter leaders based on scenario - only historical leaders for Cuban Crisis, only lovecraftian for Great Old Ones
     const isCubanCrisisScenario = S.scenario?.id === 'cubanCrisis';
     const isGreatOldOnesScenario = S.scenario?.id === 'greatOldOnes';
-    const availableLeaders = isCubanCrisisScenario
-      ? leaders.filter(l => l.isHistoricalCubanCrisis === true)
-      : isGreatOldOnesScenario
-        ? leaders.filter(l => l.isLovecraftian === true)
-        : leaders.filter(l => !l.isLovecraftian && !l.isHistoricalCubanCrisis);
+    const availableLeaders = leaders.filter((leader) => {
+      const tags = leader.scenarios
+        ?? (leader.isLovecraftian
+          ? ['greatOldOnes']
+          : leader.isHistoricalCubanCrisis
+            ? ['cubanCrisis']
+            : ['default']);
+
+      if (isCubanCrisisScenario) {
+        return tags.includes('cubanCrisis');
+      }
+
+      if (isGreatOldOnesScenario) {
+        return tags.includes('greatOldOnes');
+      }
+
+      return tags.includes('default');
+    });
 
     return (
       <LeaderSelectionScreen
@@ -11897,6 +12085,11 @@ export default function NoradVector() {
                           setShowPolicyPanel(true);
                           setShowMinimalOutliner(false);
                         }}
+                        leaderName={player.leaderName || player.leader}
+                        onOpenLeaderProfile={() => {
+                          setLeaderProfileOpen(true);
+                          setShowMinimalOutliner(false);
+                        }}
                       />
                       <StrategicOutliner
                         ref={strategicOutlinerRef}
@@ -11921,6 +12114,8 @@ export default function NoradVector() {
                   instability={governance.metrics[player.id].instability || 0}
                   onOpenDetails={() => setShowGovernanceDetails(true)}
                   onOpenPolicyPanel={() => setShowPolicyPanel(true)}
+                  leaderName={player.leaderName || player.leader}
+                  onOpenLeaderProfile={() => setLeaderProfileOpen(true)}
                 />
                 <StrategicOutliner
                   ref={strategicOutlinerRef}
@@ -12838,19 +13033,19 @@ export default function NoradVector() {
           return null;
         }
 
-        const abilityLocked = !player.leaderAbilityState.isAvailable;
-
         return (
-          <div className="fixed top-20 right-4 z-40 w-80 max-w-sm">
-            <LeaderAbilityPanel
-              nation={player}
-              abilityState={player.leaderAbilityState}
-              allNations={nations}
-              currentTurn={S.turn}
-              onUseAbility={handleUseLeaderAbility}
-              className={`bg-slate-900/80 border-cyan-500/40 shadow-lg ${abilityLocked ? 'opacity-60 pointer-events-none' : ''}`}
-            />
-          </div>
+          <LeaderProfileDialog
+            open={isLeaderProfileOpen}
+            onOpenChange={setLeaderProfileOpen}
+            nation={player}
+            abilityState={player.leaderAbilityState}
+            allNations={nations}
+            currentTurn={S.turn}
+            onUseAbility={(targetId) => {
+              handleUseLeaderAbility(targetId);
+              setLeaderProfileOpen(false);
+            }}
+          />
         );
       })()}
 

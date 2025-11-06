@@ -2494,6 +2494,8 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Updated `src/pages/Index.tsx` to collapse the governance stack, approval queue, strike planner, and command bar behind compact sheet toggles when the layout density is set to minimal while preserving their full presentation for expanded and compact modes.
 - Introduced floating quick-access buttons and a command action sheet so essential operations remain available after the HUD collapses, plus conditional sheet reuse for the strike planner.
 - Ran `npm run test` (after correcting an unsupported `--runInBand` flag) to smoke-test the density presets and verify the interface renders across configurations.
+### 2025-11-06T16:53:27Z - Preserve permanent decision cooldowns
+- Updated the political power generation hook to leave negative cooldown values untouched so once-per-game decisions remain locked after activation (`src/hooks/usePoliticalPower.ts`).
 ### 2025-11-06T16:54:45Z - Expand Cold War leader roster and data
 - Appended fifteen additional historical Cold War figures to the leader selection roster with AI profiles so they surface in setup (`src/pages/Index.tsx`).
 - Authored matching biography entries, strategy tips, and doctrine recommendations for each new leader (`src/data/leaderBiographies.ts`).
@@ -2504,3 +2506,14 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Implemented new hooks (`useEnhancedTradeSystem`, `useResourceRefinement`, `useEconomicInfrastructure`, `useEconomicDepth`) to manage subsystem state, turn processing, and economic recommendations.
 - Built accompanying UI panels and a master dashboard (`src/components/EnhancedTradePanel.tsx`, `ResourceRefinementPanel.tsx`, `EconomicInfrastructurePanel.tsx`, `EconomicDashboard.tsx`) and rewrote `PHASE_3_IMPLEMENTATION.md` to document the delivered scope.
 - Pending follow-up: run the Vitest suite once additional economic integration tests are authored.
+### 2025-11-06T17:11:57Z - Tag leader roster by scenario context
+- Introduced reusable scenario tags on the leader roster and updated filtering to respect the tags so Cuban Crisis, Great Old Ones, and default Cold War selections pull the correct commanders (`src/pages/Index.tsx`).
+- Added explicit scenario assignments for every historical, Lovecraftian, and parody leader entry to keep the setup UI aligned with the new filtering logic (`src/pages/Index.tsx`).
+- Ran `npm run build` to confirm the refactored leader filtering compiles without regressions (existing bundle-size warnings persist as expected).
+### 2025-11-06T18:11:58Z - Link leader profile dialog to political status widget
+- Added a leader portrait button to the political status widget so players can open their leader profile directly from the governance HUD (`src/components/governance/PoliticalStatusWidget.tsx`).
+- Introduced a combined leader profile dialog that surfaces biography details alongside the ability panel and wired it into the main game page (`src/components/LeaderProfileDialog.tsx`, `src/pages/Index.tsx`).
+- Attempted to run `npm run lint` but it failed due to long-standing lint violations unrelated to this change; no new lint errors introduced near the modified code paths.
+### 2025-11-06T18:35:44Z - Support flat nightlights tactical view
+- Added a dedicated flat nightlights texture loader and ensured map style switches preload and render the appropriate imagery while sharing viewport bounds with the day texture (`src/pages/Index.tsx`, `src/rendering/worldRenderer.ts`).
+- Updated flat map camera clamping and auto-centering logic so both flat day and night variants remain fully within the viewport during scroll, wheel, and pinch interactions (`src/pages/Index.tsx`).

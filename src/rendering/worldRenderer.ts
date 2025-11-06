@@ -17,9 +17,12 @@ export interface WorldRenderContext {
   currentTheme: string;
   flatRealisticTexture: HTMLImageElement | null;
   flatRealisticTexturePromise: Promise<HTMLImageElement> | null;
+  flatNightlightsTexture: HTMLImageElement | null;
+  flatNightlightsTexturePromise: Promise<HTMLImageElement> | null;
   THEME_SETTINGS: Record<string, unknown>;
   projectLocal: (lon: number, lat: number) => [number, number];
   preloadFlatRealisticTexture: () => void;
+  preloadFlatNightlightsTexture: () => void;
   getPoliticalFill: (index: number) => string;
 }
 
@@ -76,9 +79,12 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
+    flatNightlightsTexture,
+    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    preloadFlatNightlightsTexture,
     getPoliticalFill,
   } = context;
 
@@ -90,6 +96,7 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
   const isNight = style === 'night';
   const isWireframe = style === 'wireframe';
   const isFlatRealistic = style === 'flat-realistic';
+  const isFlatNightlights = style === 'flat-nightlights';
 
   if (isFlatRealistic) {
     if (!flatRealisticTexture && !flatRealisticTexturePromise) {
@@ -99,6 +106,18 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
       ctx.save();
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(flatRealisticTexture, cam.x, cam.y, W * cam.zoom, H * cam.zoom);
+      ctx.restore();
+    }
+  }
+
+  if (isFlatNightlights) {
+    if (!flatNightlightsTexture && !flatNightlightsTexturePromise) {
+      void preloadFlatNightlightsTexture();
+    }
+    if (flatNightlightsTexture) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(flatNightlightsTexture, cam.x, cam.y, W * cam.zoom, H * cam.zoom);
       ctx.restore();
     }
   }
@@ -135,6 +154,8 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
         ctx.strokeStyle = 'rgba(40,40,40,0.5)';
       } else if (isFlatRealistic) {
         ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      } else if (isFlatNightlights) {
+        ctx.strokeStyle = 'rgba(160,205,255,0.45)';
       } else {
         ctx.strokeStyle = palette.mapOutline;
       }
@@ -154,6 +175,9 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     } else if (isPolitical) {
       ctx.strokeStyle = 'rgba(255,255,255,0.25)';
       ctx.lineWidth = 0.5;
+    } else if (isFlatNightlights) {
+      ctx.strokeStyle = 'rgba(120,180,255,0.35)';
+      ctx.lineWidth = 0.6;
     } else {
       ctx.strokeStyle = palette.grid;
       ctx.lineWidth = 0.5;
@@ -186,6 +210,8 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     const scanY = (Date.now() / 30) % H;
     if (isNight) {
       ctx.fillStyle = 'rgba(80,160,255,0.08)';
+    } else if (isFlatNightlights) {
+      ctx.fillStyle = 'rgba(90,170,255,0.1)';
     } else if (isPolitical) {
       ctx.fillStyle = 'rgba(255,200,120,0.12)';
     } else {

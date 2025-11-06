@@ -38,6 +38,11 @@ import {
   processResourceDepletion,
   DEFAULT_DEPLETION_CONFIG
 } from '@/lib/resourceDepletionSystem';
+import {
+  createIntelligenceAgency,
+  progressIntelOperation,
+  calculateAgencyReputation,
+} from '@/lib/intelligenceAgencyUtils';
 
 // Types for dependencies that will be injected
 export interface LaunchDependencies {
@@ -628,4 +633,109 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
   nations.forEach(n => advanceResearch(n, 'PRODUCTION'));
   nations.forEach(n => advanceCityConstruction(n, 'PRODUCTION'));
+
+  // ============================================================================
+  // Hearts of Iron Integration: Process Phase 2-4 Systems
+  // ============================================================================
+
+  // Phase 4: Intelligence Agency Operations
+  nations.forEach(n => {
+    if (n.population <= 0) return;
+
+    // Initialize intelligence agency if not exists
+    if (!n.intelligenceAgency) {
+      n.intelligenceAgency = createIntelligenceAgency(n.id);
+    }
+
+    // Progress active operations
+    const agency = n.intelligenceAgency;
+    if (agency && agency.activeOperations.length > 0) {
+      agency.activeOperations = agency.activeOperations
+        .map(op => progressIntelOperation(op))
+        .filter(op => op.turnsRemaining > 0); // Remove completed operations
+
+      // Update reputation based on completed operations
+      agency.reputation = calculateAgencyReputation(agency);
+    }
+  });
+
+  // Phase 3: Economic Depth (Trade, Refinement, Infrastructure)
+  if (typeof window !== 'undefined' && (window as any).economicDepthApi) {
+    try {
+      const economicDepthApi = (window as any).economicDepthApi;
+
+      // Build stockpile map for resource refinement
+      const nationStockpiles = new Map<string, any>();
+      nations.forEach(n => {
+        if (n.resourceStockpile) {
+          nationStockpiles.set(n.id, n.resourceStockpile);
+        }
+      });
+
+      // Process economic turn (trade, refinement, infrastructure)
+      economicDepthApi.processEconomicTurn(nationStockpiles);
+
+      // Apply refined resource bonuses to nations
+      nations.forEach(n => {
+        const refineryStats = economicDepthApi.nationRefineryStats.get(n.id);
+        if (refineryStats && refineryStats.totalOutput) {
+          // Apply refined resource bonuses to production
+          const steelBonus = (refineryStats.totalOutput.steel || 0) * 0.1; // 10% production bonus per steel
+          const electronicsBonus = (refineryStats.totalOutput.electronics || 0) * 0.05; // 5% intel bonus per electronics
+
+          if (steelBonus > 0) {
+            n.production = Math.floor((n.production || 0) + steelBonus);
+          }
+          if (electronicsBonus > 0) {
+            n.intel = Math.floor((n.intel || 0) + electronicsBonus);
+          }
+        }
+      });
+
+      log('✅ Economic depth systems processed', 'success');
+    } catch (error) {
+      console.error('[Production Phase] Error processing economic depth:', error);
+    }
+  }
+
+  // Phase 2: Military Templates - Process unit maintenance
+  if (typeof window !== 'undefined' && (window as any).militaryTemplatesApi) {
+    try {
+      const militaryTemplatesApi = (window as any).militaryTemplatesApi;
+      militaryTemplatesApi.processTurnMaintenance();
+      log('✅ Military templates maintenance processed', 'success');
+    } catch (error) {
+      console.error('[Production Phase] Error processing military templates:', error);
+    }
+  }
+
+  // Phase 2: Supply System - Process supply distribution and attrition
+  if (typeof window !== 'undefined' && (window as any).supplySystemApi) {
+    try {
+      const supplySystemApi = (window as any).supplySystemApi;
+
+      // Update supply demand from conventional units
+      if (conventionalState?.territories) {
+        Object.values(conventionalState.territories).forEach((territory: any) => {
+          if (territory && territory.garrisonsPresent) {
+            const supplyDemand = territory.garrisonsPresent.length * 50; // Each unit needs 50 supply
+            supplySystemApi.updateSupplyDemand(territory.id, supplyDemand);
+          }
+        });
+      }
+
+      // Process supply distribution
+      supplySystemApi.processTurnSupply();
+
+      // Apply attrition to under-supplied units
+      const attritionEffects = supplySystemApi.getAttritionEffects();
+      if (attritionEffects.length > 0) {
+        log(`⚠️ ${attritionEffects.length} units suffering from supply attrition`, 'warning');
+      }
+
+      log('✅ Supply system and attrition processed', 'success');
+    } catch (error) {
+      console.error('[Production Phase] Error processing supply system:', error);
+    }
+  }
 }
