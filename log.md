@@ -7,6 +7,10 @@
 
 ---
 
+### 2025-11-06T00:40:32Z - Leader ability panel verification
+- Reviewed the LeaderAbilityPanel integration in `src/pages/Index.tsx` and associated mocks in `src/pages/__tests__/Index.test.tsx`.
+- Ran `npm run test -- Index.test.tsx` to confirm the new interaction test passes.
+
 ### 2025-11-09T00:00:00Z - Conventional token drag interactions
 - Refactored `src/pages/Index.tsx` pointer handling to support Risk-style unit dragging on the 2D map, including hover highlights, pointer mode tracking, and toast feedback for moves vs. attacks.
 - Added map overlay token render while dragging along with dynamic target labeling and enhanced highlight rendering in `src/rendering/worldRenderer.ts`.
@@ -16,6 +20,11 @@
 - Updated `src/lib/electionSystem.ts` to normalize opinion factors against scenario caps, reintroducing a 55 baseline and morale adjustment so Cold War starts retain 60-68% approval.
 - Added `src/lib/__tests__/electionSystem.test.ts` covering USA and USSR first-turn opinions with Cold War seed data.
 - Ran `npm test` (fails locally: vitest binary unavailable in container).
+
+### 2025-11-06T00:29:34Z - Leader ability panel wiring
+- Imported the `LeaderAbilityPanel` into `src/pages/Index.tsx`, initialized leader ability state for each nation during setup, and exposed a helper to map ability categories to news feeds.
+- Added a dedicated handler that calls `useLeaderAbility`, syncs `GameStateManager`/`PlayerManager`, and emits toast and ticker updates when abilities fire.
+- Rendered the panel with cooldown locking and created a React Testing Library interaction test that verifies activation updates the panel state.
 
 ### 2025-11-05T23:58:07Z - Leader ability history stabilization
 - Routed leader ability history target lookups through `PlayerManager` with effect-based fallbacks to avoid unsafe `gameState` access (`src/lib/leaderAbilityIntegration.ts`).

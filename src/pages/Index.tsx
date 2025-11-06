@@ -71,6 +71,7 @@ import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/Enha
 import { LeaderContactModal } from '@/components/LeaderContactModal';
 import { LeadersScreen } from '@/components/LeadersScreen';
 import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
+import { LeaderAbilityPanel } from '@/components/LeaderAbilityPanel';
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { AIDiplomacyProposalModal } from '@/components/AIDiplomacyProposalModal';
 import { EndGameScreen } from '@/components/EndGameScreen';
@@ -162,6 +163,7 @@ import { project, toLonLat, getPoliticalFill, resolvePublicAssetPath, POLITICAL_
 import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, type LocalNation, createDefaultDiplomacyState } from '@/state';
 import type { GreatOldOnesState } from '@/types/greatOldOnes';
 import { initializeGreatOldOnesState } from '@/lib/greatOldOnesHelpers';
+import { initializeNationLeaderAbility, useLeaderAbility } from '@/lib/leaderAbilityIntegration';
 import { initializeWeek3State, updateWeek3Systems, type Week3ExtendedState } from '@/lib/greatOldOnesWeek3Integration';
 import { initializePhase2State, updatePhase2Systems, checkPhase2UnlockConditions, type Phase2State } from '@/lib/phase2Integration';
 import { initializePhase3State, updatePhase3Systems, checkPhase3UnlockConditions } from '@/lib/phase3Integration';
@@ -1088,6 +1090,21 @@ function applyDoctrineEffects(nation: Nation, doctrineKey?: DoctrineKey) {
   }
 }
 
+function mapAbilityCategoryToNewsCategory(category: string): NewsItem['category'] {
+  switch (category) {
+    case 'diplomatic':
+      return 'diplomatic';
+    case 'military':
+      return 'military';
+    case 'economic':
+      return 'economic';
+    case 'intelligence':
+      return 'intel';
+    default:
+      return 'science';
+  }
+}
+
 // Game constants (COSTS, RESEARCH_TREE, RESEARCH_LOOKUP, WARHEAD_YIELD_TO_ID, etc.)
 // now imported from @/lib/gameConstants (Phase 7 refactoring)
 
@@ -1872,6 +1889,7 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   }
   // Apply leader bonuses to USA (FASE 2.1)
   applyLeaderBonuses(usaNation, 'John F. Kennedy');
+  initializeNationLeaderAbility(usaNation);
   nations.push(usaNation);
 
   // USSR (Khrushchev) - historically had fewer missiles but was building up
@@ -1917,6 +1935,7 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   }
   // Apply leader bonuses to USSR (FASE 2.1)
   applyLeaderBonuses(ussrNation, 'Nikita Khrushchev');
+  initializeNationLeaderAbility(ussrNation);
   nations.push(ussrNation);
 
   // Cuba (Castro) - revolutionary state with Soviet support
@@ -1962,6 +1981,7 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   }
   // Apply leader bonuses to Cuba (FASE 2.1)
   applyLeaderBonuses(cubaNation, 'Fidel Castro');
+  initializeNationLeaderAbility(cubaNation);
   nations.push(cubaNation);
 
   // Initialize threat levels (historically accurate tensions)
@@ -2200,6 +2220,7 @@ function initNations() {
 
   // Apply leader-specific bonuses (FASE 2.1)
   applyLeaderBonuses(playerNation, playerLeaderName);
+  initializeNationLeaderAbility(playerNation);
 
   nations.push(playerNation);
 
@@ -2277,6 +2298,7 @@ function initNations() {
 
     // Apply leader-specific bonuses to AI nations (FASE 2.1)
     applyLeaderBonuses(nation, leaderConfig?.name || `AI_${i}`);
+    initializeNationLeaderAbility(nation);
 
     // Initialize threat tracking for all nations
     nations.forEach(existingNation => {
@@ -6039,6 +6061,50 @@ export default function NoradVector() {
     availableNodes,
     calculateSpreadModifiers,
   } = useBioWarfare(addNewsItem);
+
+  const handleUseLeaderAbility = useCallback(
+    (targetId?: string) => {
+      const player = PlayerManager.get();
+      if (!player?.leaderAbilityState) {
+        toast({
+          title: 'Leader ability unavailable',
+          description: 'Your leader does not have an activatable ability.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { ability } = player.leaderAbilityState;
+      const abilityName = ability.name;
+      const abilityCategory = ability.category;
+      const result = useLeaderAbility(player, S, targetId);
+
+      if (result.success) {
+        toast({
+          title: `${abilityName} activated`,
+          description: result.message,
+        });
+        log(`${player.name} activates ${abilityName}: ${result.message}`, 'success');
+        const newsCategory = mapAbilityCategoryToNewsCategory(abilityCategory);
+        addNewsItem(newsCategory, `${player.name} activates ${abilityName}`, 'important');
+        result.effects.forEach(effect => {
+          addNewsItem(newsCategory, effect, 'important');
+        });
+      } else {
+        toast({
+          title: 'Unable to activate ability',
+          description: result.message,
+          variant: 'destructive',
+        });
+        log(`Leader ability failed: ${result.message}`, 'warning');
+      }
+
+      GameStateManager.setNations([...nations]);
+      PlayerManager.setNations([...nations]);
+      updateDisplay();
+    },
+    [addNewsItem]
+  );
 
   const playerNationId =
     PlayerManager.get()?.id ?? nations.find(nation => nation.isPlayer)?.id ?? 'player';
@@ -11333,6 +11399,28 @@ export default function NoradVector() {
           playerPopulation={PlayerManager.get()?.population}
         />
       )}
+
+      {(() => {
+        const player = PlayerManager.get();
+        if (!player?.leaderAbilityState) {
+          return null;
+        }
+
+        const abilityLocked = !player.leaderAbilityState.isAvailable;
+
+        return (
+          <div className="fixed top-20 right-4 z-40 w-80 max-w-sm">
+            <LeaderAbilityPanel
+              nation={player}
+              abilityState={player.leaderAbilityState}
+              allNations={nations}
+              currentTurn={S.turn}
+              onUseAbility={handleUseLeaderAbility}
+              className={`bg-slate-900/80 border-cyan-500/40 shadow-lg ${abilityLocked ? 'opacity-60 pointer-events-none' : ''}`}
+            />
+          </div>
+        );
+      })()}
 
       {/* Great Old Ones Campaign UI */}
       {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && (

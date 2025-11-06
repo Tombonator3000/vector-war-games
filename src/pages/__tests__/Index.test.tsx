@@ -1,11 +1,64 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import React from 'react';
 
 const ensureActionMock = vi.fn(async () => true);
 const registerStateListenerMock = vi.fn(() => vi.fn());
 const publishStateMock = vi.fn();
 const canExecuteMock = vi.fn(() => true);
+
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+
+class AudioContextMock {
+  createGain() {
+    return {
+      connect() {},
+      gain: { value: 1 },
+    };
+  }
+
+  createBufferSource() {
+    return {
+      connect() {},
+      start() {},
+      stop() {},
+      onended: null,
+    };
+  }
+
+  decodeAudioData() {
+    return Promise.resolve(null);
+  }
+
+  resume() {
+    return Promise.resolve();
+  }
+
+  suspend() {
+    return Promise.resolve();
+  }
+
+  close() {
+    return Promise.resolve();
+  }
+
+  get destination() {
+    return {};
+  }
+
+  addEventListener() {}
+
+  removeEventListener() {}
+}
+
+vi.stubGlobal('AudioContext', AudioContextMock);
+vi.stubGlobal('webkitAudioContext', AudioContextMock);
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
@@ -143,7 +196,7 @@ vi.mock('@/hooks/useConventionalWarfare', () => ({
     resolveProxyEngagement: vi.fn(),
     getUnitsForNation: vi.fn(() => []),
   }),
-  createDefaultConventionalState: () => ({}),
+  createDefaultConventionalState: () => ({ units: {}, territories: {} }),
   createDefaultNationConventionalProfile: () => ({}),
 }));
 
@@ -174,6 +227,8 @@ vi.mock('@/hooks/useGovernance', () => ({
     selectOption: vi.fn(),
     dismissEvent: vi.fn(),
   }),
+  calculateMoraleProductionMultiplier: () => 1,
+  calculateMoraleRecruitmentModifier: () => 0,
 }));
 
 vi.mock('@/hooks/useTutorial', () => ({
@@ -181,6 +236,32 @@ vi.mock('@/hooks/useTutorial', () => ({
     showTutorial: false,
     handleComplete: vi.fn(),
     handleSkip: vi.fn(),
+  }),
+}));
+
+vi.mock('@/components/setup/LeaderSelectionScreen', () => ({
+  LeaderSelectionScreen: ({ onSelectLeader }: { onSelectLeader: (name: string) => void }) => (
+    <div>
+      <button onClick={() => onSelectLeader('Ronnie Raygun')}>Ronnie Raygun</button>
+      <button onClick={() => onSelectLeader('Fidel Castro')}>Fidel Castro</button>
+    </div>
+  ),
+}));
+
+vi.mock('@/contexts/TutorialContext', () => ({
+  useTutorialContext: () => ({
+    showTutorial: false,
+    currentStep: null,
+    advanceStep: vi.fn(),
+    resetTutorial: vi.fn(),
+  }),
+}));
+
+vi.mock('@/contexts/RNGContext', () => ({
+  useRNG: () => ({
+    random: () => 0.5,
+    seed: 'test-seed',
+    reseed: vi.fn(),
   }),
 }));
 
@@ -211,7 +292,6 @@ describe('Index co-op toggle', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /start game/i }));
     fireEvent.click(await screen.findByText('Ronnie Raygun'));
-    fireEvent.click(await screen.findByText('MUTUAL ASSURED DESTRUCTION'));
 
     const buildButton = await screen.findByRole('button', { name: /^build$/i });
     fireEvent.click(buildButton);
@@ -219,5 +299,31 @@ describe('Index co-op toggle', () => {
     expect(ensureActionMock).not.toHaveBeenCalled();
     const modalHeading = await screen.findByText('STRATEGIC PRODUCTION');
     expect(modalHeading).toBeTruthy();
+  });
+
+  it('allows activating a leader ability and updates panel state', async () => {
+    window.localStorage.setItem('norad_option_coop_enabled', 'false');
+
+    render(<Index />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /start game/i }));
+    fireEvent.click(await screen.findByText('Fidel Castro'));
+
+    const activateButton = await screen.findByRole('button', { name: /activate ability/i });
+    expect((activateButton as HTMLButtonElement).disabled).toBe(false);
+    await screen.findByText(/2\s*\/\s*2/);
+
+    fireEvent.click(activateButton);
+
+    const dialog = await screen.findByRole('dialog');
+    const confirmButton = within(dialog).getByRole('button', { name: /^activate$/i });
+    fireEvent.click(confirmButton);
+
+    await screen.findByText(/1\s*\/\s*2/);
+    await screen.findAllByText(/10 turns/i);
+    await waitFor(() => {
+      const button = screen.getByRole('button', { name: /activate ability/i }) as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+    });
   });
 });
