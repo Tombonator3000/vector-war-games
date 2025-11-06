@@ -2404,3 +2404,9 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-06T09:02:40Z - Governance morale decay test verification
 - Advanced the `useGovernance` external delta test to turn 2 before asserting morale drift so expectations align with the new decay timing.
 - Ran `npm run test -- useGovernance` to confirm morale decay begins on turn 2 and all governance hook tests pass.
+
+### 2025-11-06T09:11:19Z - Conventional warfare randomness test adjustments
+- Updated `useConventionalWarfare` hook tests to spy on `SeededRandom.next` instead of `Math.random`, tightening expectations around deterministic RNG usage.
+- Swapped Training button queries to accessible role-based selectors and aligned spy assertions with optional territory arguments.
+- Refined the advanced formation prerequisite test to ensure no side effects occur when research is missing.
+- Ran `npm run test -- --run useConventionalWarfare` to verify the hook and panel suites now pass under the seeded RNG spy.

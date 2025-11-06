@@ -13,6 +13,7 @@ import {
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 import { RNGProvider } from '@/contexts/RNGContext';
+import { SeededRandom } from '@/lib/seededRandom';
 
 interface MockNation {
   id: string;
@@ -103,14 +104,14 @@ describe('useConventionalWarfare', () => {
       result.current.state.territories[playerTerritory].armies = 5;
     });
 
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.05);
+    const nextSpy = vi.spyOn(SeededRandom.prototype, 'next').mockReturnValue(0.05);
 
     let resolution;
     act(() => {
       resolution = result.current.resolveBorderConflict(playerTerritory, rivalTerritory, 3);
     });
 
-    expect(randomSpy).toHaveBeenCalled();
+    expect(nextSpy).toHaveBeenCalled();
     expect(resolution.success).toBe(true);
     expect(result.current.state.territories[rivalTerritory].controllingNationId).toBe(player.id);
     expect(consumeSpy).toHaveBeenCalled();
@@ -163,8 +164,8 @@ describe('useConventionalWarfare', () => {
     });
 
     expect(response.success).toBe(false);
-    expect(consumeSpy).toHaveBeenCalled();
-    expect(updateSpy).toHaveBeenCalled();
+    expect(consumeSpy).not.toHaveBeenCalled();
+    expect(updateSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -194,8 +195,8 @@ describe('Conventional warfare panels', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText(/Train/i));
-    expect(handleTrain).toHaveBeenCalledWith('armored_corps');
+    fireEvent.click(screen.getByRole('button', { name: /Train ARMY/i }));
+    expect(handleTrain).toHaveBeenCalledWith('armored_corps', undefined);
   });
 
   it('disables queue buttons when research prerequisites are unmet', () => {
@@ -224,7 +225,7 @@ describe('Conventional warfare panels', () => {
       />,
     );
 
-    const trainButtons = screen.queryAllByText(/Train/i);
+    const trainButtons = screen.queryAllByRole('button', { name: /Train NAVY/i });
     expect(trainButtons.length).toBeGreaterThan(0);
   });
 
