@@ -2478,3 +2478,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-06T15:10:47Z - Restore missing diplomacy utility exports
 - Added `updateTrustScore` and `adjustRelationshipScore` wrappers in `src/lib/trustAndFavorsUtils.ts`, delegating to the existing trust and relationship modifiers.
 - Updated `src/lib/casusBelliIntegration.ts` to provide the current turn when adjusting relationships so history tracking remains consistent.
+### 2025-11-06T15:08:11Z - Align immigration population units
+- Updated `applyImmigrationPolicy` to add the calculated bonus directly in millions and adjusted the recommendation heuristic to use million-based thresholds (`src/lib/streamlinedCultureLogic.ts`).
+- Synced the Streamlined Culture panel display with the million-based population values so UI deltas remain realistic (`src/components/StreamlinedCulturePanel.tsx`).
+- Ran `npm run test -- src/lib/__tests__/unifiedGameMigration.test.ts`; confirmed the suite passes after correcting an earlier Vitest CLI flag.
