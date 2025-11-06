@@ -7,6 +7,13 @@
 
 ---
 
+### 2025-11-06T00:55:46Z - Codex follow-up adjustments
+
+- Added missing Vitest global imports to `src/lib/__tests__/electionSystem.test.ts` so the suite executes under non-global test runners.
+- Reworked `calculatePublicOpinion` to anchor scoring around scenario averages, keeping Cold War seeds near their intended baselines while preserving drift from morale and weighted factors.
+
+---
+
 ### 2025-11-08T12:00:00Z - Public opinion normalization patch
 - Updated `src/lib/electionSystem.ts` to normalize opinion factors against scenario caps, reintroducing a 55 baseline and morale adjustment so Cold War starts retain 60-68% approval.
 - Added `src/lib/__tests__/electionSystem.test.ts` covering USA and USSR first-turn opinions with Cold War seed data.
