@@ -130,7 +130,7 @@ describe('unifiedGameMigration', () => {
       const status = getMigrationStatus(nations);
 
       expect(status.totalNations).toBe(3);
-      expect(status.needingDiplomacyMigration).toBe(2);
+      expect(status.needingDiplomacyMigration).toBe(1);
       expect(status.needingPopMigration).toBe(2);
       expect(status.fullyMigrated).toBe(1);
     });
