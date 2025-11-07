@@ -10764,13 +10764,16 @@ export default function NoradVector() {
         updateHover(null);
       };
 
+      const isBoundedFlatProjection = () => currentMapStyle === 'flat-realistic';
+      const minZoom = isBoundedFlatProjection() ? 1 : 0.5;
+
       const clampLatitude = () => {
         const maxLat = 85;
         const minLat = -85;
         const height = H || canvas.height || 0;
         if (!height) return;
 
-        const zoomLevel = Math.max(0.5, Math.min(3, cam.targetZoom));
+        const zoomLevel = Math.max(minZoom, Math.min(3, cam.targetZoom));
         const camYForLat = (lat: number) =>
           height / 2 - (height * zoomLevel * (90 - lat)) / 180;
 
@@ -10780,8 +10783,6 @@ export default function NoradVector() {
         const maxCamY = Math.max(northCamY, southCamY);
         cam.y = Math.min(Math.max(cam.y, minCamY), maxCamY);
       };
-
-      const isBoundedFlatProjection = () => currentMapStyle === 'flat-realistic';
 
       const clampPanBounds = () => {
         clampLatitude();
@@ -10795,7 +10796,7 @@ export default function NoradVector() {
           return;
         }
 
-        const zoomLevel = Math.max(0.5, Math.min(3, cam.targetZoom));
+        const zoomLevel = Math.max(minZoom, Math.min(3, cam.targetZoom));
         const scaledWidth = width * zoomLevel;
 
         if (scaledWidth <= width) {
@@ -11047,7 +11048,7 @@ export default function NoradVector() {
 
         const zoomIntensity = 0.0015;
         const delta = Math.exp(-e.deltaY * zoomIntensity);
-        const newZoom = Math.max(0.5, Math.min(3, cam.targetZoom * delta));
+        const newZoom = Math.max(minZoom, Math.min(3, cam.targetZoom * delta));
         const zoomScale = prevZoom > 0 ? newZoom / prevZoom : 1;
 
         cam.targetZoom = newZoom;
@@ -11111,7 +11112,7 @@ export default function NoradVector() {
               return;
             }
             const { x: projectedX, y: projectedY } = focalProjection;
-            const newZoom = Math.max(0.5, Math.min(3, initialPinchZoom * scaleFactor));
+            const newZoom = Math.max(minZoom, Math.min(3, initialPinchZoom * scaleFactor));
             const zoomScale = prevZoom > 0 ? newZoom / prevZoom : 1;
 
             cam.targetZoom = newZoom;
@@ -11468,7 +11469,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleMilitary, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
+  }, [currentMapStyle, isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleMilitary, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
 
   const buildAllowed = coopEnabled ? canExecute('BUILD') : true;
   const researchAllowed = coopEnabled ? canExecute('RESEARCH') : true;
