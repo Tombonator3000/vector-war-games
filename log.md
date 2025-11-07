@@ -2776,3 +2776,5 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T21:15:00Z - Preserve missile impact geometry through fade-out
 - Updated the missile animation completion branch to lock in the final point, sync the marker, and trigger material updates before fading (`src/lib/missileTrajectories.ts`).
 - Added a regression test to step a trajectory through completion and verify the last point persists at impact with materials flagged for redraw (`src/lib/__tests__/missileTrajectories.test.ts`).
+### 2025-11-07T22:05:00Z - Fix wireframe globe texture prop wiring
+- Renamed the `SceneContent` prop to `vectorTexture` and updated its invocation so the wireframe earth receives the loaded atlas without runtime errors (`src/components/GlobeScene.tsx`).
