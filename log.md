@@ -2762,3 +2762,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Added render invalidation hooks so imperative missile/explosion updates trigger React reconciliation and appear on the globe (`src/components/GlobeScene.tsx`).
 - Disposed missile trajectories, explosion groups, and atlas textures on cleanup to eliminate GPU leaks and keep flat map toggles stable (`src/components/GlobeScene.tsx`).
 - Tightened pointer typing for 3D unit selection and verified focused lint runs along with `npm run build` to confirm map rendering paths succeed (`src/components/GlobeScene.tsx`).
+### 2025-11-07T15:55:15Z - Restore GlobeScene missile lifecycle fixes
+- Passed through the renderer invalidation callback from the Three.js scene to the React host so missile/explosion updates and map texture swaps retrigger renders (`src/components/GlobeScene.tsx`).
+- Disposed atlas textures on dependency changes and ensured animation loops request new frames only while effects are active to prevent GPU leaks (`src/components/GlobeScene.tsx`).
+- Rebuilt the project and ran the focused ESLint check to confirm the scene compiles with only pre-existing fast-refresh warnings (`npm run build`, `npx eslint src/components/GlobeScene.tsx`).

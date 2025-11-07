@@ -118,6 +118,7 @@ interface SceneRegistration {
   size: { width: number; height: number };
   earth: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> | null;
   clock: THREE.Clock;
+  invalidate: () => void;
 }
 
 type ForwardedCanvas = HTMLCanvasElement | null;
@@ -685,6 +686,7 @@ function SceneContent({
   modeData,
   missilesRef,
   explosionsRef,
+  requestRender,
 }: {
   cam: GlobeSceneProps['cam'];
   texture: THREE.Texture | null;
@@ -701,8 +703,9 @@ function SceneContent({
   modeData?: MapModeOverlayData;
   missilesRef: React.MutableRefObject<Map<string, MissileTrajectoryInstance>>;
   explosionsRef: React.MutableRefObject<Map<string, { group: THREE.Group; startTime: number }>>;
+  requestRender: () => void;
 }) {
-  const { camera, size, clock } = useThree();
+  const { camera, size, clock, invalidate } = useThree();
   const earthRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>(null);
   const visualStyle = mapStyle?.visual ?? 'realistic';
   const currentMode = mapStyle?.mode ?? 'standard';
@@ -735,8 +738,9 @@ function SceneContent({
       size,
       earth: isFlat ? null : earthRef.current,
       clock,
+      invalidate,
     });
-  }, [camera, register, size, isFlat, clock]);
+  }, [camera, register, size, isFlat, clock, invalidate]);
 
   // Load and render territory boundaries
   useEffect(() => {
@@ -841,6 +845,10 @@ function SceneContent({
         explosionsRemoved = true;
       }
     });
+
+    if (missilesRef.current.size > 0 || explosionsRef.current.size > 0) {
+      invalidate();
+    }
 
     if (missilesRemoved || explosionsRemoved) {
       requestRender();
@@ -1032,6 +1040,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   const earthMeshRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> | null>(null);
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerVec = useRef(new THREE.Vector2());
+  const invalidateRef = useRef<(() => void) | null>(null);
   const visualStyle = mapStyle?.visual ?? DEFAULT_MAP_STYLE.visual;
   const [, triggerRender] = useReducer((value: number) => value + 1, 0);
   const isMountedRef = useRef(true);
@@ -1049,8 +1058,15 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      invalidateRef.current = null;
+    };
+  }, []);
+
   const requestRender = useCallback(() => {
     if (isMountedRef.current) {
+      invalidateRef.current?.();
       triggerRender();
     }
   }, [triggerRender]);
@@ -1072,6 +1088,16 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   }, [worldCountries]);
 
   useEffect(() => {
+    return () => {
+      texture?.dispose();
+    };
+  }, [texture]);
+
+  useEffect(() => {
+    requestRender();
+  }, [requestRender, texture]);
+
+  useEffect(() => {
     const missiles = missilesRef.current;
     const explosions = explosionsRef.current;
 
@@ -1083,16 +1109,6 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       explosions.clear();
     };
   }, []);
-
-  useEffect(() => {
-    if (!texture) {
-      return;
-    }
-
-    return () => {
-      texture.dispose();
-    };
-  }, [texture]);
 
   const updateProjector = useCallback(() => {
     if (!onProjectorReady) return;
@@ -1185,11 +1201,12 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   }, [cam.x, cam.y, cam.zoom, visualStyle, onPickerReady]);
 
   const handleRegister = useCallback(
-    ({ camera, size, earth, clock }: SceneRegistration) => {
+    ({ camera, size, earth, clock, invalidate }: SceneRegistration) => {
       cameraRef.current = camera;
       sizeRef.current = size;
       earthMeshRef.current = earth;
       clockRef.current = clock;
+      invalidateRef.current = invalidate;
       updateProjector();
       updatePicker();
     },
@@ -1288,6 +1305,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
           modeData={modeData}
           missilesRef={missilesRef}
           explosionsRef={explosionsRef}
+          requestRender={requestRender}
         />
       </Canvas>
       <canvas ref={overlayRef} className="globe-scene__overlay" />
