@@ -2786,3 +2786,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T22:34:26Z - Stabilize map viewport height units
 - Swapped `.map-shell` height declarations to prefer `100svh`/`100dvh` with a `100vh` fallback, matching the `.command-interface` safe viewport unit handling (`src/index.css`).
 - Mirrored the safe viewport overrides inside responsive media queries that restated the `.map-shell` height so mobile browsers keep the map full-screen (`src/index.css`).
+
+### 2025-11-07T22:56:54Z - Restore event handler effect dependencies
+- Ran `npm run build` to investigate the preview failure and captured the esbuild syntax error caused by duplicated dependency arrays (`src/pages/Index.tsx`).
+- Removed the redundant dependency wrapper, folding `currentMapStyle` into the existing effect dependency list so Vite compiles successfully (`src/pages/Index.tsx`).
