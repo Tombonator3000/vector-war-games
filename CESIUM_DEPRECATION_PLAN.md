@@ -1,7 +1,7 @@
 # Cesium Deprecation & Legacy Migration Plan
 **Prosjekt:** Vector War Games
 **Dato:** 2025-11-07
-**Status:** 🔴 Planlagt - Ikke startet
+**Status:** 🟡 I gang - Phase 3 fullført
 
 ---
 
@@ -1282,7 +1282,7 @@ Track these metrics before/after:
 | 0. Preparation | ½ day | ___ | ___ | Tech Lead | 🔴 Ikke startet |
 | 1. Extract Utils | 1-2 days | ___ | ___ | Dev | 🔴 Ikke startet |
 | 2. Port Features | 3-5 days | ___ | ___ | Dev | 🔴 Ikke startet |
-| 3. Deprecation | ½ day | ___ | ___ | Dev | 🔴 Ikke startet |
+| 3. Deprecation | ½ day | 2025-11-07 | 2025-11-07 | Dev | ✅ Fullført |
 | 4. Removal | 1 day | ___ | ___ | Dev | 🔴 Ikke startet |
 | 5. Testing | 1 day | ___ | ___ | QA | 🔴 Ikke startet |
 | 6. Documentation | ½ day | ___ | ___ | Dev | 🔴 Ikke startet |
@@ -1314,14 +1314,19 @@ Track these metrics before/after:
 
 ---
 
-**STATUS:** 🔴 Planlagt - Venter på godkjenning
+**STATUS:** 🟡 I gang - Phase 3 fullført
+
+**COMPLETED PHASES:**
+- ✅ **Phase 3: Deprecation Warnings** (2025-11-07)
+  - Added @deprecated JSDoc comments to CesiumViewer component
+  - Added console.warn deprecation message in development mode
+  - Updated OptionsMenu to mark Cesium as "DEPRECATED"
+  - Added toast warning when users switch to Cesium viewer
+  - Toast includes destructive variant and 5-second duration
 
 **NEXT STEPS:**
-1. Review denne planen med team
-2. Få stakeholder approval
-3. Schedule Phase 0 start date
-4. Create tracking GitHub issue with all subtasks
-5. Begynn Phase 0: Preparation
+1. Continue with Phase 4: Remove Cesium (planned)
+2. Or continue porting features in Phase 2 if needed first
 
 ---
 
