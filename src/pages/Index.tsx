@@ -8725,11 +8725,6 @@ export default function NoradVector() {
     setIsBioWarfareOpen(true);
   }, [bioWarfareAvailable, isBioWarfareOpen, requestApproval, pandemicIntegrationEnabled, bioWarfareEnabled]);
 
-  const handleLabConstructionToggle = useCallback(() => {
-    setCivInfoDefaultTab('research');
-    setCivInfoPanelOpen(true);
-  }, []);
-
   const handleStartLabConstruction = useCallback((tier: number) => {
     const player = getNationById(nations, playerNationId);
     if (!player) return;
@@ -12228,25 +12223,6 @@ export default function NoradVector() {
                     </Button>
 
                     <Button
-                      onClick={handleLabConstructionToggle}
-                      variant="ghost"
-                      size="icon"
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                        labFacility.underConstruction
-                          ? 'text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10 animate-pulse'
-                          : 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10'
-                      }`}
-                      title={
-                        labFacility.underConstruction
-                          ? `Bio Lab Construction - ${labFacility.constructionProgress}/${labFacility.constructionTarget} turns`
-                          : `Bio Lab Construction - Current: Tier ${labFacility.tier}`
-                      }
-                    >
-                      <Microscope className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">LAB</span>
-                    </Button>
-
-                    <Button
                       onClick={() => setIsCulturePanelOpen(!isCulturePanelOpen)}
                       variant="ghost"
                       size="icon"
@@ -12466,27 +12442,6 @@ export default function NoradVector() {
                     >
                       <FlaskConical className="h-5 w-5" />
                       BIO
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        handleLabConstructionToggle();
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
-                        labFacility.underConstruction
-                          ? 'text-yellow-300 hover:text-yellow-200 hover:bg-yellow-500/10 animate-pulse'
-                          : 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10'
-                      }`}
-                      title={
-                        labFacility.underConstruction
-                          ? `Bio Lab Construction - ${labFacility.constructionProgress}/${labFacility.constructionTarget} turns`
-                          : `Bio Lab Construction - Current: Tier ${labFacility.tier}`
-                      }
-                    >
-                      <Microscope className="h-5 w-5" />
-                      LAB
                     </Button>
                     <Button
                       onClick={() => {

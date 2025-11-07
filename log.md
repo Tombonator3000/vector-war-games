@@ -2745,3 +2745,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T13:02:44Z - Dispose globe overlay resources when toggled
 - Added a reusable Three.js disposal helper and wired it through the territory and unit overlay effects so geometries, materials, and textures are released whenever visibility or source data changes (`src/components/GlobeScene.tsx`).
 - Cleared overlay state via functional updates that dispose previous groups/meshes before replacement, then ran `npm run lint` (fails due to long-standing repository issues) to confirm no new regressions were introduced.
+### 2025-11-07T14:25:03Z - Remove duplicate lab construction shortcut
+- Deleted the redundant lab construction toggle handler and associated command buttons from the command interface (`src/pages/Index.tsx`).
+- Ran `npm run lint` (fails with pre-existing lint violations across multiple modules) and `npm run test -- --run` (aborted after observing known `mapColorUtils` failures).
