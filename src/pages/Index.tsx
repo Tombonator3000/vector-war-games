@@ -6767,11 +6767,6 @@ export default function NoradVector() {
   });
 
   const playerGovernanceMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;
-  const playerLeaderName = playerNation?.leaderName || playerNation?.leader;
-  const playerLeaderImage = useMemo(() => getLeaderImage(playerLeaderName), [playerLeaderName]);
-  const playerLeaderInitials = useMemo(() => getLeaderInitials(playerLeaderName), [playerLeaderName]);
-  // Must be declared after governance hook
-  const playerGovernanceMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;
 
   const mapModeData = useMemo<MapModeOverlayData>(() => {
     const playerNation = nations.find(n => n.isPlayer) || null;
