@@ -9,6 +9,7 @@
  */
 
 import type { Nation, GameState } from '@/types/game';
+import type { ProjectedPoint } from '@/lib/renderingUtils';
 import { calculateMoraleProductionMultiplier } from '@/hooks/useGovernance';
 import { getCityMaintenanceCosts } from '@/lib/gameUtils';
 import {
@@ -56,14 +57,14 @@ export interface LaunchDependencies {
   WARHEAD_YIELD_TO_ID: Map<number, string>;
   RESEARCH_LOOKUP: Record<string, any>;
   PlayerManager: any;
-  projectLocal: (lon: number, lat: number) => [number, number];
+  projectLocal: (lon: number, lat: number) => ProjectedPoint;
 }
 
 export interface ResolutionPhaseDependencies {
   S: GameState;
   nations: Nation[];
   log: (msg: string, type?: string) => void;
-  projectLocal: (lon: number, lat: number) => [number, number];
+  projectLocal: (lon: number, lat: number) => ProjectedPoint;
   explode: (x: number, y: number, target: Nation, yieldMT: number) => void;
   advanceResearch: (nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') => void;
   advanceCityConstruction: (nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') => void;
@@ -222,12 +223,11 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
   // Missile impacts and effects
   S.missiles.forEach((missile: any) => {
     if (missile.t >= 1) {
-      explode(
-        projectLocal(missile.toLon, missile.toLat)[0],
-        projectLocal(missile.toLon, missile.toLat)[1],
-        missile.target,
-        missile.yield
-      );
+      const { x, y, visible } = projectLocal(missile.toLon, missile.toLat);
+      if (!visible) {
+        return;
+      }
+      explode(x, y, missile.target, missile.yield);
     }
   });
 
@@ -243,7 +243,7 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
     zone.intensity *= 0.95;
 
     nations.forEach(n => {
-      const [x, y] = projectLocal(n.lon, n.lat);
+      const { x, y } = projectLocal(n.lon, n.lat);
       const dist = Math.hypot(x - zone.x, y - zone.y);
       if (dist < zone.radius) {
         const damage = zone.intensity * 3;

@@ -25,16 +25,22 @@ export interface ProjectionContext {
 /**
  * Project longitude/latitude coordinates to screen coordinates
  */
+export interface ProjectedPoint {
+  x: number;
+  y: number;
+  visible: boolean;
+}
+
 export function project(
   lon: number,
   lat: number,
   context: ProjectionContext
-): [number, number] {
+): [number, number] | ProjectedPoint {
   const { W, H, cam, globeProjector } = context;
 
   if (globeProjector) {
-    const { x, y } = globeProjector(lon, lat);
-    return [x, y];
+    const { x, y, visible } = globeProjector(lon, lat);
+    return { x, y, visible };
   }
 
   const x = ((lon + 180) / 360) * W * cam.zoom + cam.x;

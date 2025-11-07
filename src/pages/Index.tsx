@@ -183,7 +183,12 @@ import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen'
 import { canAfford, pay, getCityCost, getCityBuildTime, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
 import { modifyRelationship } from '@/lib/relationshipUtils';
-import { project, toLonLat, resolvePublicAssetPath, type ProjectionContext } from '@/lib/renderingUtils';
+import {
+  project,
+  toLonLat,
+  resolvePublicAssetPath,
+  type ProjectedPoint,
+} from '@/lib/renderingUtils';
 import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, type LocalNation, createDefaultDiplomacyState } from '@/state';
 import type { GreatOldOnesState } from '@/types/greatOldOnes';
 import { initializeGreatOldOnesState } from '@/lib/greatOldOnesHelpers';
@@ -1802,7 +1807,7 @@ const CityLights = {
   destroyNear(x: number, y: number, radius: number): number {
     let destroyed = 0;
     this.cities = this.cities.filter(city => {
-      const [cx, cy] = projectLocal(city.lon, city.lat);
+      const { x: cx, y: cy } = projectLocal(city.lon, city.lat);
       const dist = Math.hypot(cx - x, cy - y);
       if (dist < radius) {
         destroyed++;
@@ -1821,7 +1826,10 @@ const CityLights = {
 
     const time = Date.now();
     this.cities.forEach(city => {
-      const [x, y] = projectLocal(city.lon, city.lat);
+      const { x, y, visible } = projectLocal(city.lon, city.lat);
+      if (!visible) {
+        return;
+      }
 
       // Flickering light effect (satellite view)
       const flicker = 0.8 + Math.sin(time * 0.003 + city.lon + city.lat) * 0.2;
@@ -2813,8 +2821,13 @@ async function loadWorld() {
 // Drawing functions
 // Rendering utility functions - using extracted utilities from @/lib/renderingUtils
 // Wrapper functions that use the global rendering context
-function projectLocal(lon: number, lat: number): [number, number] {
-  return project(lon, lat, { W, H, cam, globeProjector, globePicker });
+function projectLocal(lon: number, lat: number): ProjectedPoint {
+  const projected = project(lon, lat, { W, H, cam, globeProjector, globePicker });
+  if (Array.isArray(projected)) {
+    const [x, y] = projected;
+    return { x, y, visible: true };
+  }
+  return projected;
 }
 
 function toLonLatLocal(x: number, y: number): [number, number] {
@@ -2965,8 +2978,8 @@ function drawSatellites(nowMs: number) {
 
     activeOrbits.push(orbit);
 
-    const [targetX, targetY] = projectLocal(targetNation.lon, targetNation.lat);
-    if (!Number.isFinite(targetX) || !Number.isFinite(targetY)) {
+    const { x: targetX, y: targetY, visible } = projectLocal(targetNation.lon, targetNation.lat);
+    if (!visible || !Number.isFinite(targetX) || !Number.isFinite(targetY)) {
       return;
     }
 
@@ -3090,8 +3103,13 @@ function drawMissiles() {
   S.missiles.forEach((m: any, i: number) => {
     m.t = Math.min(1, m.t + 0.016);
     
-    const [sx, sy] = projectLocal(m.fromLon, m.fromLat);
-    const [tx, ty] = projectLocal(m.toLon, m.toLat);
+    const startProjection = projectLocal(m.fromLon, m.fromLat);
+    const targetProjection = projectLocal(m.toLon, m.toLat);
+    if (!startProjection.visible || !targetProjection.visible) {
+      return;
+    }
+    const { x: sx, y: sy } = startProjection;
+    const { x: tx, y: ty } = targetProjection;
     
     const u = 1 - m.t;
     const cx = (sx + tx) / 2;
@@ -3298,8 +3316,13 @@ function drawConventionalForces() {
 
   movements.forEach((movement) => {
     const m = movement as ConventionalMovementMarker;
-    const [sx, sy] = projectLocal(m.startLon, m.startLat);
-    const [ex, ey] = projectLocal(m.endLon, m.endLat);
+    const startProjection = projectLocal(m.startLon, m.startLat);
+    const endProjection = projectLocal(m.endLon, m.endLat);
+    if (!startProjection.visible || !endProjection.visible) {
+      return;
+    }
+    const { x: sx, y: sy } = startProjection;
+    const { x: ex, y: ey } = endProjection;
     const dx = ex - sx;
     const dy = ey - sy;
     const distance = Math.hypot(dx, dy);
@@ -3352,7 +3375,10 @@ function drawConventionalForces() {
   const unitMarkers = S.conventionalUnits ?? [];
   unitMarkers.forEach((marker) => {
     const m = marker as ConventionalUnitMarker;
-    const [x, y] = projectLocal(m.lon, m.lat);
+    const { x, y, visible } = projectLocal(m.lon, m.lat);
+    if (!visible) {
+      return;
+    }
     const nation = getNationById(nations, m.ownerId);
     const color = nation?.color ?? '#22d3ee';
 
@@ -3480,7 +3506,10 @@ function drawFalloutMarks(deltaMs: number) {
     }
 
     next.updatedAt = now;
-    const [px, py] = projectLocal(next.lon, next.lat);
+    const { x: px, y: py, visible } = projectLocal(next.lon, next.lat);
+    if (!visible) {
+      continue;
+    }
     next.canvasX = px;
     next.canvasY = py;
 
@@ -3857,7 +3886,7 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
     });
     
     nations.forEach(n => {
-      const [nx, ny] = projectLocal(n.lon, n.lat);
+      const { x: nx, y: ny } = projectLocal(n.lon, n.lat);
       const dist = Math.hypot(nx - x, ny - y);
       if (dist < Math.sqrt(yieldMT) * 15) {
         n.defense = Math.max(0, n.defense - 3);
@@ -3903,8 +3932,8 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
 
 // Launch submarine
 function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
-  const [fx, fy] = projectLocal(from.lon, from.lat);
-  const [tx, ty] = projectLocal(to.lon, to.lat);
+  const { x: fx, y: fy } = projectLocal(from.lon, from.lat);
+  const { x: tx, y: ty } = projectLocal(to.lon, to.lat);
   S.submarines = S.submarines || [];
   S.submarines.push({
     x: fx + (Math.random() - 0.5) * 50,
@@ -3935,8 +3964,8 @@ function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
 
 // Launch bomber
 function launchBomber(from: Nation, to: Nation, payload: any) {
-  const [sx, sy] = projectLocal(from.lon, from.lat);
-  const [tx, ty] = projectLocal(to.lon, to.lat);
+  const { x: sx, y: sy } = projectLocal(from.lon, from.lat);
+  const { x: tx, y: ty } = projectLocal(to.lon, to.lat);
 
   S.bombers.push({
     from, to,
@@ -10836,7 +10865,10 @@ export default function NoradVector() {
           const my = e.clientY - rect.top;
 
           for (const territory of territories) {
-            const [tx, ty] = projectLocal(territory.anchorLon, territory.anchorLat);
+            const { x: tx, y: ty, visible } = projectLocal(territory.anchorLon, territory.anchorLat);
+            if (!visible) {
+              continue;
+            }
             const dist = Math.hypot(mx - tx, my - ty);
             if (dist < 25 && territory.controllingNationId === player.id && territory.armies > 1) {
               pointerMode = 'unit-drag';
@@ -10885,7 +10917,10 @@ export default function NoradVector() {
             const my = e.clientY - rect.top;
             let nextHover: string | null = null;
             for (const territory of getTerritories()) {
-              const [tx, ty] = projectLocal(territory.anchorLon, territory.anchorLat);
+              const { x: tx, y: ty, visible } = projectLocal(territory.anchorLon, territory.anchorLat);
+              if (!visible) {
+                continue;
+              }
               const dist = Math.hypot(mx - tx, my - ty);
               if (dist < 25) {
                 nextHover = territory.id;
@@ -10909,7 +10944,10 @@ export default function NoradVector() {
           if (source) {
             for (const territory of territories) {
               if (territory.id === source.id) continue;
-              const [tx, ty] = projectLocal(territory.anchorLon, territory.anchorLat);
+              const { x: tx, y: ty, visible } = projectLocal(territory.anchorLon, territory.anchorLat);
+              if (!visible) {
+                continue;
+              }
               const dist = Math.hypot(mx - tx, my - ty);
               if (dist < 28) {
                 nextTarget = territory.id;
@@ -10972,7 +11010,11 @@ export default function NoradVector() {
         const focalY = e.clientY - rect.top;
         const [focalLon, focalLat] = toLonLatLocal(focalX, focalY);
         const prevZoom = cam.zoom;
-        const [projectedX, projectedY] = projectLocal(focalLon, focalLat);
+        const focalProjection = projectLocal(focalLon, focalLat);
+        if (!focalProjection.visible) {
+          return;
+        }
+        const { x: projectedX, y: projectedY } = focalProjection;
 
         const zoomIntensity = 0.0015;
         const delta = Math.exp(-e.deltaY * zoomIntensity);
@@ -11035,7 +11077,11 @@ export default function NoradVector() {
             const midpointY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
             const [focalLon, focalLat] = toLonLatLocal(midpointX, midpointY);
             const prevZoom = cam.zoom;
-            const [projectedX, projectedY] = projectLocal(focalLon, focalLat);
+            const focalProjection = projectLocal(focalLon, focalLat);
+            if (!focalProjection.visible) {
+              return;
+            }
+            const { x: projectedX, y: projectedY } = focalProjection;
             const newZoom = Math.max(0.5, Math.min(3, initialPinchZoom * scaleFactor));
             const zoomScale = prevZoom > 0 ? newZoom / prevZoom : 1;
 
@@ -11093,7 +11139,10 @@ export default function NoradVector() {
                 if (n.isPlayer) continue;
                 if (!player.satellites[n.id]) continue;
                 if (n.population <= 0) continue;
-                const [nx, ny] = projectLocal(n.lon, n.lat);
+                const { x: nx, y: ny, visible } = projectLocal(n.lon, n.lat);
+                if (!visible) {
+                  continue;
+                }
                 const dist = Math.hypot(mx - nx, my - ny);
                 
                 if (dist < 30) { // Larger hit area for touch
@@ -11134,7 +11183,10 @@ export default function NoradVector() {
         const territories = territoryListRef.current ?? [];
         if (territories.length > 0) {
           for (const territory of territories) {
-            const [tx, ty] = projectLocal(territory.anchorLon, territory.anchorLat);
+            const { x: tx, y: ty, visible } = projectLocal(territory.anchorLon, territory.anchorLat);
+            if (!visible) {
+              continue;
+            }
             const dist = Math.hypot(mx - tx, my - ty);
             const hitRadius = 25;
 
@@ -11160,7 +11212,10 @@ export default function NoradVector() {
         for (const n of nations) {
           if (n.isPlayer) continue;
           if (n.population <= 0) continue;
-          const [nx, ny] = projectLocal(n.lon, n.lat);
+          const { x: nx, y: ny, visible } = projectLocal(n.lon, n.lat);
+          if (!visible) {
+            continue;
+          }
           const dist = Math.hypot(mx - nx, my - ny);
 
           if (dist < 20) {

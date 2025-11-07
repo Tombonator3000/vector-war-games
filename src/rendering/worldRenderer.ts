@@ -6,6 +6,7 @@
  */
 
 import type { MapMode, MapModeOverlayData, MapVisualStyle } from '@/components/GlobeScene';
+import type { ProjectedPoint } from '@/lib/renderingUtils';
 import type { Nation, GameState } from '@/types/game';
 import { Color, MathUtils } from 'three';
 import {
@@ -26,7 +27,7 @@ export interface WorldRenderContext {
   flatRealisticTexture: HTMLImageElement | null;
   flatRealisticTexturePromise: Promise<HTMLImageElement> | null;
   THEME_SETTINGS: Record<string, unknown>;
-  projectLocal: (lon: number, lat: number) => [number, number];
+  projectLocal: (lon: number, lat: number) => ProjectedPoint;
   preloadFlatRealisticTexture: () => void;
 }
 
@@ -63,13 +64,22 @@ export interface TerritoryRenderContext extends WorldRenderContext {
 export function drawWorldPath(
   coords: number[][],
   ctx: CanvasRenderingContext2D,
-  projectLocal: (lon: number, lat: number) => [number, number]
+  projectLocal: (lon: number, lat: number) => ProjectedPoint
 ): void {
-  coords.forEach((coord, i) => {
-    const [x, y] = projectLocal(coord[0], coord[1]);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
+  let started = false;
+  for (const coord of coords) {
+    const { x, y, visible } = projectLocal(coord[0], coord[1]);
+    if (!visible || Number.isNaN(x) || Number.isNaN(y)) {
+      started = false;
+      continue;
+    }
+    if (!started) {
+      ctx.moveTo(x, y);
+      started = true;
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
 }
 
 /**
@@ -151,22 +161,44 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
 
     for (let lon = -180; lon <= 180; lon += 30) {
       ctx.beginPath();
+      let started = false;
       for (let lat = -90; lat <= 90; lat += 5) {
-        const [x, y] = projectLocal(lon, lat);
-        if (lat === -90) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        const { x, y, visible } = projectLocal(lon, lat);
+        if (!visible || Number.isNaN(x) || Number.isNaN(y)) {
+          started = false;
+          continue;
+        }
+        if (!started) {
+          ctx.moveTo(x, y);
+          started = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
       }
-      ctx.stroke();
+      if (started) {
+        ctx.stroke();
+      }
     }
 
     for (let lat = -90; lat <= 90; lat += 30) {
       ctx.beginPath();
+      let started = false;
       for (let lon = -180; lon <= 180; lon += 5) {
-        const [x, y] = projectLocal(lon, lat);
-        if (lon === -180) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        const { x, y, visible } = projectLocal(lon, lat);
+        if (!visible || Number.isNaN(x) || Number.isNaN(y)) {
+          started = false;
+          continue;
+        }
+        if (!started) {
+          ctx.moveTo(x, y);
+          started = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
       }
-      ctx.stroke();
+      if (started) {
+        ctx.stroke();
+      }
     }
 
     ctx.restore();
@@ -216,8 +248,8 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
   nations.forEach(n => {
     if (n.population <= 0) return;
 
-    const [x, y] = projectLocal(n.lon, n.lat);
-    if (isNaN(x) || isNaN(y)) return;
+    const { x, y, visible } = projectLocal(n.lon, n.lat);
+    if (!visible || Number.isNaN(x) || Number.isNaN(y)) return;
 
     if (overlayEnabled) {
       const overlayKey = n.id;
@@ -483,8 +515,8 @@ export function drawTerritories(context: TerritoryRenderContext): void {
   const z = Math.max(0.8, Math.min(1.8, cam.zoom));
 
   territories.forEach(territory => {
-    const [x, y] = projectLocal(territory.anchorLon, territory.anchorLat);
-    if (isNaN(x) || isNaN(y)) return;
+    const { x, y, visible } = projectLocal(territory.anchorLon, territory.anchorLat);
+    if (!visible || Number.isNaN(x) || Number.isNaN(y)) return;
 
     const isPlayerOwned = territory.controllingNationId === playerId;
     const isSelected = territory.id === selectedTerritoryId;

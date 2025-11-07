@@ -2739,3 +2739,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T12:19:39Z - Synchronize missile timing with scene clock
 - Forwarded the @react-three/fiber clock through the scene registration so globe-level missile and explosion handlers reuse the same elapsed time reference (`src/components/GlobeScene.tsx`).
 - Replaced the ad-hoc THREE.Clock instance with shared elapsed time helpers to keep missile travel durations and explosion fades aligned with per-frame updates (`src/components/GlobeScene.tsx`).
+### 2025-11-07T12:55:29Z - Guard canvas projections against occluded globe points
+- Forwarded globe projector visibility flags through the shared projection helpers and updated map renderers to bail out when points fall behind the horizon (`src/lib/renderingUtils.ts`, `src/pages/Index.tsx`, `src/rendering/worldRenderer.ts`).
+- Updated missile, particle, and overlay routines to skip drawing hidden entities and verified vitest output (noting existing `mapColorUtils` failures) while leaving flat map behavior unchanged (`src/pages/Index.tsx`, `src/lib/gamePhaseHandlers.ts`).
