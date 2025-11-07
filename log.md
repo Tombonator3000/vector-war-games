@@ -2778,3 +2778,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Added a regression test to step a trajectory through completion and verify the last point persists at impact with materials flagged for redraw (`src/lib/__tests__/missileTrajectories.test.ts`).
 ### 2025-11-07T22:05:00Z - Fix wireframe globe texture prop wiring
 - Renamed the `SceneContent` prop to `vectorTexture` and updated its invocation so the wireframe earth receives the loaded atlas without runtime errors (`src/components/GlobeScene.tsx`).
+
+### 2025-11-07T23:40:00Z - Enforce flat-realistic minimum zoom level
+- Derived a dynamic `minZoom` for pointer and gesture handlers so the flat-realistic map clamps zooming to 1.0 while other styles retain the 0.5 floor (`src/pages/Index.tsx`).
+- Updated all zoom-related clamps to rely on the shared value and refreshed the event effect dependencies to respond to map style changes.
