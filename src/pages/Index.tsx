@@ -5644,9 +5644,9 @@ export default function NoradVector() {
   const playerNation = useMemo(() => nations.find(n => n.isPlayer), [nations]);
   const advancedGameState = GameStateManager.getState() as GameState;
   const enemyNations = useMemo(() => nations.filter(n => !n.isPlayer && !n.eliminated), [nations]);
-  const playerLeaderName = playerNation?.leaderName || playerNation?.leader;
-  const playerLeaderImage = useMemo(() => getLeaderImage(playerLeaderName), [playerLeaderName]);
-  const playerLeaderInitials = useMemo(() => getLeaderInitials(playerLeaderName), [playerLeaderName]);
+  const currentPlayerLeaderName = playerNation?.leaderName || playerNation?.leader;
+  const playerLeaderImage = useMemo(() => getLeaderImage(currentPlayerLeaderName), [currentPlayerLeaderName]);
+  const playerLeaderInitials = useMemo(() => getLeaderInitials(currentPlayerLeaderName), [currentPlayerLeaderName]);
   const playerDepletionWarnings = useMemo<DepletionWarning[]>(() => {
     if (!playerNation || !S.depletionWarnings || !S.conventional?.territories) {
       return [];
@@ -12345,7 +12345,7 @@ export default function NoradVector() {
                           {playerLeaderImage ? (
                             <AvatarImage
                               src={playerLeaderImage}
-                              alt={playerLeaderName ? `${playerLeaderName} portrait` : 'Leader portrait'}
+                              alt={currentPlayerLeaderName ? `${currentPlayerLeaderName} portrait` : 'Leader portrait'}
                             />
                           ) : null}
                           <AvatarFallback>{playerLeaderInitials}</AvatarFallback>
@@ -12600,7 +12600,7 @@ export default function NoradVector() {
                           {playerLeaderImage ? (
                             <AvatarImage
                               src={playerLeaderImage}
-                              alt={playerLeaderName ? `${playerLeaderName} portrait` : 'Leader portrait'}
+                              alt={currentPlayerLeaderName ? `${currentPlayerLeaderName} portrait` : 'Leader portrait'}
                             />
                           ) : null}
                           <AvatarFallback>{playerLeaderInitials}</AvatarFallback>
