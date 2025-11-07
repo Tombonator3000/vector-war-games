@@ -2725,3 +2725,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T09:42:41Z - Remove coop sync badge from main HUD
 - Deleted the SyncStatusBadge import and component usage from the main page HUD so the coop sync indicator no longer renders (`src/pages/Index.tsx`).
 - Dropped the obsolete SyncStatusBadge mock from the index page tests (`src/pages/__tests__/Index.test.tsx`).
+### 2025-11-07T10:27:12Z - Retire legacy map visual styles
+- Limited both the options menu and start screen map style selectors to the realistic, wireframe, and flat-realistic presets (`src/components/OptionsMenu.tsx`, `src/pages/Index.tsx`).
+- Removed deprecated style handling and loaders from the Three.js globe renderer, 2D renderer, and world renderer wrappers, deleting the unused nightlights texture asset (`src/components/GlobeScene.tsx`, `src/pages/Index.tsx`, `src/rendering/worldRenderer.ts`, `public/textures/earth_nightlights.jpg`).
+- Updated documentation to reflect the trimmed style set and marked the retired variants as deprecated in the Cesium migration notes (`MAP_AUDIT_REPORT.md`, `CESIUM_DEPRECATION_PLAN.md`).

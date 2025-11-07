@@ -724,8 +724,7 @@ const [viewerType, setViewerType] = useState<'threejs' | 'cesium'>(() => {
 **Remove forced switch logic (lines 5708-5716):**
 ```typescript
 // REMOVE THIS ENTIRE BLOCK:
-const requiresThreeTacticalEngine =
-  style === 'flat' || style === 'flat-realistic' || style === 'flat-nightlights';
+const requiresThreeTacticalEngine = style === 'flat-realistic';
 
 if (requiresThreeTacticalEngine && viewerType !== 'threejs') {
   setViewerType('threejs');
@@ -923,8 +922,8 @@ du -sh dist/
   - [ ] political
   - [ ] flat
   - [ ] flat-realistic
-  - [ ] nightlights
-  - [ ] flat-nightlights
+- [ ] nightlights *(deprecated)*
+- [ ] flat-nightlights *(deprecated)*
   - [ ] topo
 
 - [ ] **Map Modes:** Test all 5 map modes

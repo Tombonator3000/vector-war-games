@@ -60,15 +60,9 @@ const [viewerType, setViewerType] = useState<'threejs' | 'cesium'>(() => {
 |-------|-----------|--------------|------------------|---------|
 | `realistic` | ✅ | ✅ | ❌ | Satellittbilder med teksturer |
 | `wireframe` | ✅ | ✅ | ✅ | Cyan vektorlinjer |
-| `night` | ✅ | ✅ | ✅ | Mørk bakgrunn med bylys |
-| `political` | ✅ | ✅ | ✅ | Fargede landegrenser |
-| `flat` | ✅ | ✅ | ✅ | 2D flat projeksjon |
 | `flat-realistic` | ✅ | ✅ | ✅ | 2D med satellittbilder |
-| `nightlights` | ✅ | ✅ | ❌ | NASA Black Marble |
-| `flat-nightlights` | ✅ | ✅ | ✅ | 2D NASA nightlights |
-| `topo` | ✅ | ❌ | ❌ | Topografisk kart |
 
-**Problem:** 8/9 stiler er implementert i begge motorer → duplikasjon
+**Oppdatering:** Legacy-stiler er fjernet; kun tre kjernealternativer skal vedlikeholdes i begge motorer.
 
 ### 2.2 Map Modes (Overlay System)
 

@@ -42,28 +42,9 @@ export interface CityLight {
   nationId: string;
 }
 
-export type MapVisualStyle =
-  | 'realistic'
-  | 'wireframe'
-  | 'night'
-  | 'political'
-  | 'flat'
-  | 'flat-realistic'
-  | 'nightlights'
-  | 'flat-nightlights'
-  | 'topo';
+export type MapVisualStyle = 'realistic' | 'wireframe' | 'flat-realistic';
 
-export const MAP_VISUAL_STYLES: MapVisualStyle[] = [
-  'realistic',
-  'wireframe',
-  'night',
-  'political',
-  'flat',
-  'flat-realistic',
-  'nightlights',
-  'flat-nightlights',
-  'topo',
-];
+export const MAP_VISUAL_STYLES: MapVisualStyle[] = ['realistic', 'wireframe', 'flat-realistic'];
 
 export type MapMode = 'standard' | 'diplomatic' | 'intel' | 'resources' | 'unrest';
 
@@ -443,124 +424,6 @@ function EarthWireframe({
   );
 }
 
-function EarthNight({
-  earthRef,
-}: {
-  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
-}) {
-  return (
-    <mesh ref={earthRef}>
-      <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
-      <meshBasicMaterial 
-        color="#020912"
-        transparent
-        opacity={0.98}
-      />
-    </mesh>
-  );
-}
-
-function EarthNightlights({
-  earthRef,
-}: {
-  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
-}) {
-  const textureUrl = useMemo(() => {
-    const base = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
-    return `${base}textures/earth_nightlights.jpg`;
-  }, []);
-
-  const nightlightsMap = useLoader(THREE.TextureLoader, textureUrl);
-
-  useEffect(() => {
-    if (nightlightsMap) {
-      nightlightsMap.colorSpace = THREE.SRGBColorSpace;
-      nightlightsMap.anisotropy = 16;
-      nightlightsMap.generateMipmaps = true;
-      nightlightsMap.minFilter = THREE.LinearMipmapLinearFilter;
-      nightlightsMap.magFilter = THREE.LinearFilter;
-      nightlightsMap.needsUpdate = true;
-    }
-  }, [nightlightsMap]);
-
-  return (
-    <group>
-      <mesh ref={earthRef}>
-        <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
-        <meshBasicMaterial
-          map={nightlightsMap}
-          color="#ffffff"
-          transparent
-          opacity={1}
-        />
-      </mesh>
-      <Atmosphere />
-    </group>
-  );
-}
-
-function EarthTopo({
-  earthRef,
-}: {
-  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
-}) {
-  const textureUrl = useMemo(() => {
-    const base = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
-    return `${base}textures/earth_topo_bathy.jpg`;
-  }, []);
-
-  const topoMap = useLoader(THREE.TextureLoader, textureUrl);
-
-  useEffect(() => {
-    if (topoMap) {
-      topoMap.colorSpace = THREE.SRGBColorSpace;
-      topoMap.anisotropy = 16;
-      topoMap.generateMipmaps = true;
-      topoMap.minFilter = THREE.LinearMipmapLinearFilter;
-      topoMap.magFilter = THREE.LinearFilter;
-      topoMap.needsUpdate = true;
-    }
-  }, [topoMap]);
-
-  return (
-    <group>
-      <mesh ref={earthRef} castShadow receiveShadow>
-        <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
-        <meshStandardMaterial
-          map={topoMap}
-          roughness={0.8}
-          metalness={0.1}
-        />
-      </mesh>
-      <Atmosphere />
-    </group>
-  );
-}
-
-function EarthPolitical({
-  earthRef,
-  vectorTexture,
-}: {
-  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
-  vectorTexture: THREE.Texture | null;
-}) {
-  return (
-    <mesh ref={earthRef}>
-      <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
-      <meshStandardMaterial
-        map={vectorTexture}
-        color="#ffffff"
-        emissive={new THREE.Color('#070b12')}
-        emissiveIntensity={0.35}
-        roughness={0.9}
-        metalness={0.05}
-        transparent
-        opacity={0.96}
-      />
-    </mesh>
-  );
-}
-
 function SceneContent({
   cam,
   texture,
@@ -598,7 +461,7 @@ function SceneContent({
   const earthRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>(null);
   const visualStyle = mapStyle?.visual ?? 'realistic';
   const currentMode = mapStyle?.mode ?? 'standard';
-  const isFlat = visualStyle === 'flat' || visualStyle === 'flat-realistic' || visualStyle === 'flat-nightlights';
+  const isFlat = visualStyle === 'flat-realistic';
 
   // Territory boundaries state
   const [territoryGroups, setTerritoryGroups] = useState<THREE.Group[]>([]);
@@ -723,25 +586,7 @@ function SceneContent({
         );
       case 'wireframe':
         return <EarthWireframe earthRef={earthRef} vectorTexture={texture} />;
-      case 'night':
-        return <EarthNight earthRef={earthRef} />;
-      case 'nightlights':
-        return (
-          <Suspense fallback={fallback}>
-            <EarthNightlights earthRef={earthRef} />
-          </Suspense>
-        );
-      case 'topo':
-        return (
-          <Suspense fallback={fallback}>
-            <EarthTopo earthRef={earthRef} />
-          </Suspense>
-        );
-      case 'political':
-        return <EarthPolitical earthRef={earthRef} vectorTexture={texture} />;
-      case 'flat':
       case 'flat-realistic':
-      case 'flat-nightlights':
         return null;
       default:
         return fallback;
@@ -758,7 +603,7 @@ function SceneContent({
         </>
       )}
       {renderEarth()}
-      {(visualStyle === 'night' || visualStyle === 'realistic') && <CityLights nations={nations} />}
+      {visualStyle === 'realistic' && <CityLights nations={nations} />}
       {!isFlat && (
         <group>
           {nations.map(nation => {
@@ -928,8 +773,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     const projector: ProjectorFn = (lon, lat) => {
       const size = sizeRef.current;
       const overlay = overlayRef.current;
-      const isFlat =
-        visualStyle === 'flat' || visualStyle === 'flat-realistic' || visualStyle === 'flat-nightlights';
+      const isFlat = visualStyle === 'flat-realistic';
 
       const overlayWidth = overlay && overlay.width > 0 ? overlay.width : undefined;
       const overlayHeight = overlay && overlay.height > 0 ? overlay.height : undefined;
@@ -974,8 +818,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       const overlay = overlayRef.current;
       if (!container) return null;
 
-      const isFlat =
-        visualStyle === 'flat' || visualStyle === 'flat-realistic' || visualStyle === 'flat-nightlights';
+      const isFlat = visualStyle === 'flat-realistic';
       if (isFlat) {
         const rect = overlay?.getBoundingClientRect() ?? container.getBoundingClientRect();
         const size = sizeRef.current;
