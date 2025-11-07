@@ -2529,3 +2529,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Reworked the leader profile module into a reusable overview panel that combines biography, political status, leader abilities, and the strategic outliner (`src/components/LeaderOverviewPanel.tsx`).
 - Added a `showLeaderButton` escape hatch and renamed the portrait callback for the political status widget so it can embed cleanly inside the overview without recursive toggles (`src/components/governance/PoliticalStatusWidget.tsx`).
 - Updated the main game page to use the new panel, removed the standalone governance/outliner overlays, and wired the HUD portrait button to open the dialog (`src/pages/Index.tsx`).
+### 2025-11-07T06:37:22Z - Integrate advanced propaganda controls into culture dialog
+- Imported the advanced propaganda panel and shadcn tabs on the main page so the cultural modal can host multiple views (`src/pages/Index.tsx`).
+- Added a synchronized advanced propaganda update handler that refreshes GameStateManager, PlayerManager, and render ticks after panel edits (`src/pages/Index.tsx`).
+- Replaced the single streamlined view with a tabbed container that shows the advanced panel when initialized while preserving the original fallback, then ran `npm run lint` (fails on long-standing issues) and `npm run test` (vitest watcher passes before manual exit).
