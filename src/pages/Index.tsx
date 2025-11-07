@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, ReactNode } from 're
 import { useNavigate } from 'react-router-dom';
 import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -157,7 +158,6 @@ import {
 } from '@/hooks/useCyberWarfare';
 import { useSpyNetwork } from '@/hooks/useSpyNetwork';
 import { GovernanceEventDialog } from '@/components/governance/GovernanceEventDialog';
-import { PoliticalStatusWidget } from '@/components/governance/PoliticalStatusWidget';
 import { GovernanceDetailPanel } from '@/components/governance/GovernanceDetailPanel';
 import { PolicySelectionPanel } from '@/components/governance/PolicySelectionPanel';
 import { PoliticalStabilityOverlay } from '@/components/governance/PoliticalStabilityOverlay';
@@ -186,6 +186,7 @@ import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, ty
 import type { GreatOldOnesState } from '@/types/greatOldOnes';
 import { initializeGreatOldOnesState } from '@/lib/greatOldOnesHelpers';
 import { initializeNationLeaderAbility, useLeaderAbility } from '@/lib/leaderAbilityIntegration';
+import { getLeaderImage } from '@/lib/leaderImages';
 import { initializeWeek3State, updateWeek3Systems, type Week3ExtendedState } from '@/lib/greatOldOnesWeek3Integration';
 import { initializePhase2State, updatePhase2Systems, checkPhase2UnlockConditions, type Phase2State } from '@/lib/phase2Integration';
 import { initializePhase3State, updatePhase3Systems, checkPhase3UnlockConditions } from '@/lib/phase3Integration';
@@ -307,6 +308,22 @@ const Storage = {
       // Silent failure - localStorage may be disabled
     }
   }
+};
+
+const getLeaderInitials = (name?: string): string => {
+  if (!name) {
+    return '??';
+  }
+
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part.charAt(0))
+    .join('')
+    .toUpperCase();
+
+  return initials || '??';
 };
 
 // Game State Types - now imported from @/state module (Phase 6 refactoring)
@@ -5643,6 +5660,10 @@ export default function NoradVector() {
 
   const playerNation = useMemo(() => nations.find(n => n.isPlayer), [nations]);
   const enemyNations = useMemo(() => nations.filter(n => !n.isPlayer && !n.eliminated), [nations]);
+  const playerGovernanceMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;
+  const playerLeaderName = playerNation?.leaderName || playerNation?.leader;
+  const playerLeaderImage = useMemo(() => getLeaderImage(playerLeaderName), [playerLeaderName]);
+  const playerLeaderInitials = useMemo(() => getLeaderInitials(playerLeaderName), [playerLeaderName]);
   const playerDepletionWarnings = useMemo<DepletionWarning[]>(() => {
     if (!playerNation || !S.depletionWarnings || !S.conventional?.territories) {
       return [];
@@ -12058,31 +12079,6 @@ export default function NoradVector() {
             </div>
           </div>
 
-          {(() => {
-            const player = PlayerManager.get();
-            if (!player) {
-              return null;
-            }
-            const metrics = governance.metrics[player.id];
-            if (!metrics) {
-              return null;
-            }
-
-            return (
-              <div className="pointer-events-auto touch-auto mt-3 max-w-[min(22rem,90vw)]">
-                <PoliticalStatusWidget
-                  metrics={metrics}
-                  nationName={player.name}
-                  instability={metrics.instability || 0}
-                  onOpenDetails={() => setShowGovernanceDetails(true)}
-                  onOpenPolicyPanel={() => setShowPolicyPanel(true)}
-                  leaderName={player.leaderName || player.leader}
-                  onOpenLeaderOverview={() => setLeaderOverviewOpen(true)}
-                />
-              </div>
-            );
-          })()}
-
           {coopEnabled ? (
             layoutDensity === 'minimal' ? (
               <>
@@ -12324,6 +12320,27 @@ export default function NoradVector() {
                       <span className="text-[8px] font-mono">MIL</span>
                     </Button>
 
+                    {playerNation && playerGovernanceMetrics ? (
+                      <Button
+                        onClick={() => setLeaderOverviewOpen(true)}
+                        variant="ghost"
+                        size="icon"
+                        className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                        title="LEADER - Review biography and abilities"
+                      >
+                        <Avatar className="h-6 w-6 border border-cyan-500/40 bg-black/60 text-[10px]">
+                          {playerLeaderImage ? (
+                            <AvatarImage
+                              src={playerLeaderImage}
+                              alt={playerLeaderName ? `${playerLeaderName} portrait` : 'Leader portrait'}
+                            />
+                          ) : null}
+                          <AvatarFallback>{playerLeaderInitials}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-[8px] font-mono">LEADER</span>
+                      </Button>
+                    ) : null}
+
                     <div className="w-px h-8 bg-cyan-500/30 mx-2" />
 
                     <Button
@@ -12555,6 +12572,29 @@ export default function NoradVector() {
                       <Shield className="h-5 w-5" />
                       MIL
                     </Button>
+                    {playerNation && playerGovernanceMetrics ? (
+                      <Button
+                        onClick={() => {
+                          setLeaderOverviewOpen(true);
+                          setShowMinimalCommandSheet(false);
+                        }}
+                        variant="ghost"
+                        size="icon"
+                        className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10"
+                        title="LEADER - Review biography and abilities"
+                      >
+                        <Avatar className="h-10 w-10 border border-cyan-500/40 bg-black/60 text-[12px]">
+                          {playerLeaderImage ? (
+                            <AvatarImage
+                              src={playerLeaderImage}
+                              alt={playerLeaderName ? `${playerLeaderName} portrait` : 'Leader portrait'}
+                            />
+                          ) : null}
+                          <AvatarFallback>{playerLeaderInitials}</AvatarFallback>
+                        </Avatar>
+                        LEADER
+                      </Button>
+                    ) : null}
                     <Button
                       onClick={() => {
                         handleAttack();
