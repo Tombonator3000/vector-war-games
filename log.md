@@ -2720,3 +2720,5 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Removed the legacy Cesium viewer selection state and always render the Three.js GlobeScene on the main page, dropping the Cesium component imports (`src/pages/Index.tsx`).
 - Simplified the intro/options flows by removing viewer toggles so only the Three.js engine is configurable (`src/components/setup/IntroScreen.tsx`, `src/components/OptionsMenu.tsx`).
 - Deleted the obsolete Cesium viewer components and stripped Cesium dependencies and build plugins from the toolchain (`src/components/CesiumViewer.tsx`, `src/components/CesiumHeroGlobe.tsx`, `package.json`, `package-lock.json`, `vite.config.ts`).
+### 2025-11-07T09:18:22Z - Resolve duplicate player leader name declaration
+- Renamed the in-component `playerLeaderName` reference to `currentPlayerLeaderName` and updated dependent memoized selectors and avatar rendering to prevent runtime redeclaration errors during bundling (`src/pages/Index.tsx`).
