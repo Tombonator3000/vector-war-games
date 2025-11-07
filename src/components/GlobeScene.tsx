@@ -695,7 +695,7 @@ function FlatEarthBackdrop() {
   const meshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>>(null);
   const { camera } = useThree();
 
-  const textureUrl = useMemo(() => resolvePublicAssetPath('textures/earth_day.jpg'), []);
+  const textureUrl = useMemo(() => resolvePublicAssetPath('textures/earth_flat_custom.jpg'), []);
   const [satelliteTexture, setSatelliteTexture] = useState<THREE.Texture | null>(null);
   const satelliteTextureRef = useRef<THREE.Texture | null>(null);
 

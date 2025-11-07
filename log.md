@@ -2778,3 +2778,10 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Added a regression test to step a trajectory through completion and verify the last point persists at impact with materials flagged for redraw (`src/lib/__tests__/missileTrajectories.test.ts`).
 ### 2025-11-07T22:05:00Z - Fix wireframe globe texture prop wiring
 - Renamed the `SceneContent` prop to `vectorTexture` and updated its invocation so the wireframe earth receives the loaded atlas without runtime errors (`src/components/GlobeScene.tsx`).
+### 2025-11-07T23:30:00Z - Replace flat map backdrop texture
+- Added the new flat-earth satellite texture asset and wired it through the shared resolver (`public/textures/earth_flat_custom.jpg`).
+- Updated both the globe backdrop and page preloader to reference the new asset to keep rendering paths aligned (`src/components/GlobeScene.tsx`, `src/pages/Index.tsx`).
+- Removed the obsolete `earth_day.jpg` texture from the public bundle now that the custom map is in place.
+### 2025-11-07T23:45:00Z - Restore flat-earth satellite texture fidelity
+- Replaced the placeholder flat-earth map with the high-resolution satellite asset to eliminate load errors (`public/textures/earth_flat_custom.jpg`).
+- Verified the updated reference still aligns with the globe backdrop and preloader loaders.

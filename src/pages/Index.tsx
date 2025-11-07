@@ -712,7 +712,7 @@ let worldLoadPromise: Promise<void> | null = null;
 
 // resolvePublicAssetPath moved to @/lib/renderingUtils
 
-const FLAT_REALISTIC_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day.jpg');
+const FLAT_REALISTIC_TEXTURE_URL = resolvePublicAssetPath('textures/earth_flat_custom.jpg');
 let flatRealisticTexture: HTMLImageElement | null = null;
 let flatRealisticTexturePromise: Promise<HTMLImageElement> | null = null;
 
