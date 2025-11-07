@@ -127,10 +127,6 @@ vi.mock('@/components/coop/CoopStatusPanel', () => ({
   CoopStatusPanel: () => <div data-testid="coop-status" />,
 }));
 
-vi.mock('@/components/coop/SyncStatusBadge', () => ({
-  SyncStatusBadge: () => <div data-testid="sync-status" />,
-}));
-
 vi.mock('@/components/coop/ApprovalQueue', () => ({
   ApprovalQueue: () => <div data-testid="approval-queue" />,
 }));
