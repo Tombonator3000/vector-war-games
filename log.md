@@ -2782,3 +2782,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T23:40:00Z - Enforce flat-realistic minimum zoom level
 - Derived a dynamic `minZoom` for pointer and gesture handlers so the flat-realistic map clamps zooming to 1.0 while other styles retain the 0.5 floor (`src/pages/Index.tsx`).
 - Updated all zoom-related clamps to rely on the shared value and refreshed the event effect dependencies to respond to map style changes.
+
+### 2025-11-07T22:34:26Z - Stabilize map viewport height units
+- Swapped `.map-shell` height declarations to prefer `100svh`/`100dvh` with a `100vh` fallback, matching the `.command-interface` safe viewport unit handling (`src/index.css`).
+- Mirrored the safe viewport overrides inside responsive media queries that restated the `.map-shell` height so mobile browsers keep the map full-screen (`src/index.css`).
