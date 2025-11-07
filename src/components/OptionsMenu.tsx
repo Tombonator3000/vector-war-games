@@ -74,19 +74,6 @@ const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: st
   },
 ];
 
-const VIEWER_OPTIONS: { value: 'threejs' | 'cesium'; label: string; description: string }[] = [
-  {
-    value: 'threejs',
-    label: 'Three.js Tactical (Primary)',
-    description: 'Primary Three.js engine with flat high-resolution satellite map.',
-  },
-  {
-    value: 'cesium',
-    label: 'Cesium (DEPRECATED)',
-    description: '⚠️ DEPRECATED - Will be removed in v2.0. Use Three.js instead.',
-  },
-];
-
 const RESOLUTION_OPTIONS: { value: ScreenResolution; label: string; description: string; width?: number; height?: number }[] = [
   {
     value: 'auto',
@@ -157,10 +144,6 @@ export interface OptionsMenuProps {
   mapStyle: MapStyle;
   onMapStyleChange: (style: MapVisualStyle) => void;
 
-  /** Controlled globe viewer selection */
-  viewerType: 'threejs' | 'cesium';
-  onViewerTypeChange: (type: 'threejs' | 'cesium') => void;
-
   /** Whether to show in-game only features (like co-op, HUD layout) */
   showInGameFeatures?: boolean;
 
@@ -189,8 +172,6 @@ export function OptionsMenu({
   onThemeChange,
   mapStyle,
   onMapStyleChange,
-  viewerType,
-  onViewerTypeChange,
   showInGameFeatures = true,
   onChange,
   currentTurn = 1,
@@ -232,10 +213,6 @@ export function OptionsMenu({
     Storage.setItem('map_style', mapStyle.visual);
   }, [mapStyle.visual]);
 
-  useEffect(() => {
-    Storage.setItem('viewer_type', viewerType);
-  }, [viewerType]);
-
   const handleMapStyleChange = useCallback((style: MapVisualStyle) => {
     if (mapStyle.visual === style) {
       return;
@@ -254,34 +231,6 @@ export function OptionsMenu({
       onChange();
     }
   }, [mapStyle.visual, onMapStyleChange, onChange]);
-
-  const handleViewerSelect = useCallback((nextType: 'threejs' | 'cesium') => {
-    if (viewerType === nextType) {
-      return;
-    }
-
-    const selectedOption = VIEWER_OPTIONS.find(opt => opt.value === nextType);
-
-    if (nextType === 'cesium') {
-      // Show deprecation warning for Cesium
-      toast({
-        title: '⚠️ Cesium Deprecated',
-        description: 'Cesium viewer will be removed in v2.0. Please use Three.js for future compatibility.',
-        variant: 'destructive',
-        duration: 5000,
-      });
-    } else {
-      toast({
-        title: 'Three.js tactical map enabled',
-        description: selectedOption?.description ?? undefined,
-      });
-    }
-
-    onViewerTypeChange(nextType);
-    if (onChange) {
-      onChange();
-    }
-  }, [viewerType, onViewerTypeChange, onChange]);
 
   // Screen resolution state
   const [screenResolution, setScreenResolution] = useState<ScreenResolution>(() => {
@@ -545,29 +494,6 @@ export function OptionsMenu({
                 key={option.value}
                 type="button"
                 onClick={() => handleMapStyleChange(option.value)}
-                className={`layout-chip${isActive ? ' is-active' : ''}`}
-                aria-pressed={isActive}
-              >
-                <span className="layout-chip__label">{option.label}</span>
-                <span className="layout-chip__description">{option.description}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* GLOBE RENDERER */}
-      <div className="options-section">
-        <h3 className="options-section__heading">GLOBE RENDERER</h3>
-        <p className="options-section__subheading">Select the engine powering the strategic world view.</p>
-        <div className="layout-grid">
-          {VIEWER_OPTIONS.map((option) => {
-            const isActive = viewerType === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => handleViewerSelect(option.value)}
                 className={`layout-chip${isActive ? ' is-active' : ''}`}
                 aria-pressed={isActive}
               >
