@@ -801,7 +801,7 @@ function FlatEarthBackdrop() {
 
 function SceneContent({
   cam,
-  texture,
+  vectorTexture,
   nations,
   territories = [],
   units = [],
@@ -817,7 +817,7 @@ function SceneContent({
   explosionsRef,
 }: {
   cam: GlobeSceneProps['cam'];
-  texture: THREE.Texture | null;
+  vectorTexture: THREE.Texture | null;
   nations: GlobeSceneProps['nations'];
   territories?: TerritoryPolygon[];
   units?: Unit[];
@@ -1440,7 +1440,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       >
         <SceneContent
           cam={cam}
-          texture={vectorTexture}
+          vectorTexture={vectorTexture}
           nations={nations}
           territories={territories}
           units={units}
