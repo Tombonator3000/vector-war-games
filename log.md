@@ -2722,3 +2722,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Deleted the obsolete Cesium viewer components and stripped Cesium dependencies and build plugins from the toolchain (`src/components/CesiumViewer.tsx`, `src/components/CesiumHeroGlobe.tsx`, `package.json`, `package-lock.json`, `vite.config.ts`).
 ### 2025-11-07T09:18:22Z - Resolve duplicate player leader name declaration
 - Renamed the in-component `playerLeaderName` reference to `currentPlayerLeaderName` and updated dependent memoized selectors and avatar rendering to prevent runtime redeclaration errors during bundling (`src/pages/Index.tsx`).
+### 2025-11-07T09:42:41Z - Remove coop sync badge from main HUD
+- Deleted the SyncStatusBadge import and component usage from the main page HUD so the coop sync indicator no longer renders (`src/pages/Index.tsx`).
+- Dropped the obsolete SyncStatusBadge mock from the index page tests (`src/pages/__tests__/Index.test.tsx`).

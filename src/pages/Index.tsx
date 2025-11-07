@@ -109,7 +109,6 @@ import {
   type AIPersonality,
 } from '@/lib/regimeChange';
 import { generateTurnNews } from '@/lib/politicalNews';
-import { SyncStatusBadge } from '@/components/coop/SyncStatusBadge';
 import { ApprovalQueue } from '@/components/coop/ApprovalQueue';
 import { ConflictResolutionDialog } from '@/components/coop/ConflictResolutionDialog';
 import {
@@ -11981,46 +11980,45 @@ export default function NoradVector() {
               </div>
 
               <div className="game-top-bar__actions flex items-center gap-2.5">
-              <SyncStatusBadge />
-              <div className="text-[11px] font-mono text-neon-magenta mr-3">
-                <span className="text-cyan-300 tracking-wide">DOOMSDAY</span>{' '}
-                <span id="doomsdayTime" className="font-bold">7:00</span>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setCivInfoPanelOpen(true);
-                  AudioSys.playSFX('click');
-                }}
-                className="h-6 px-2 text-[11px] text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10"
-                title="Empire Status (Press I)"
-              >
-                EMPIRE INFO
-              </Button>
-
-              <MapModeBar
-                mode={mapStyle.mode}
-                onModeChange={handleMapModeChange}
-                descriptions={MAP_MODE_DESCRIPTIONS}
-                hotkeys={MAP_MODE_HOTKEYS}
-              />
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 px-2 text-[11px] text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
-                  >
-                    <Menu className="h-3.5 w-3.5 mr-1" />
-                    MENU
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                  align="end" 
-                  className="w-48 bg-black/95 border-cyan-500/50 backdrop-blur-sm z-50"
+                <div className="text-[11px] font-mono text-neon-magenta mr-3">
+                  <span className="text-cyan-300 tracking-wide">DOOMSDAY</span>{' '}
+                  <span id="doomsdayTime" className="font-bold">7:00</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setCivInfoPanelOpen(true);
+                    AudioSys.playSFX('click');
+                  }}
+                  className="h-6 px-2 text-[11px] text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10"
+                  title="Empire Status (Press I)"
                 >
+                  EMPIRE INFO
+                </Button>
+
+                <MapModeBar
+                  mode={mapStyle.mode}
+                  onModeChange={handleMapModeChange}
+                  descriptions={MAP_MODE_DESCRIPTIONS}
+                  hotkeys={MAP_MODE_HOTKEYS}
+                />
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-[11px] text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                    >
+                      <Menu className="h-3.5 w-3.5 mr-1" />
+                      MENU
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-48 bg-black/95 border-cyan-500/50 backdrop-blur-sm z-50"
+                  >
                   <DropdownMenuItem
                     onClick={() => {
                       setOptionsOpen(true);
