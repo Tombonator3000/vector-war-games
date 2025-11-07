@@ -128,6 +128,7 @@ import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 import { UnifiedIntelOperationsPanel } from '@/components/UnifiedIntelOperationsPanel';
 import { SpyNetworkPanel } from '@/components/SpyNetworkPanel';
 import WarCouncilPanel from '@/components/WarCouncilPanel';
+import { ConsolidatedWarModal } from '@/components/ConsolidatedWarModal';
 import {
   executeSatelliteDeployment,
   executeSabotageOperation,
@@ -7972,40 +7973,7 @@ export default function NoradVector() {
     }
   }, []);
 
-  // MilitaryModal - Extracted to src/components/game/MilitaryModal.tsx (Phase 7 refactoring)
-  const renderMilitaryModal = useCallback((): ReactNode => {
-    return (
-      <MilitaryModal
-        conventionalTerritories={conventionalTerritories}
-        conventionalTemplatesMap={conventionalTemplatesMap}
-        conventionalLogs={conventionalLogs}
-        trainConventionalUnit={trainConventionalUnit}
-        resolveConventionalAttack={resolveConventionalAttack}
-        moveConventionalArmies={moveConventionalArmiesWithAnimation}
-        resolveConventionalProxyEngagement={resolveConventionalProxyEngagement}
-        placeConventionalReinforcements={placeConventionalReinforcements}
-        getConventionalReinforcements={getConventionalReinforcements}
-        toast={toast}
-        addNewsItem={addNewsItem}
-      />
-    );
-  }, [
-    conventionalTerritories,
-    conventionalTemplatesMap,
-    conventionalLogs,
-    trainConventionalUnit,
-    resolveConventionalAttack,
-    moveConventionalArmiesWithAnimation,
-    resolveConventionalProxyEngagement,
-    placeConventionalReinforcements,
-    getConventionalReinforcements,
-    toast,
-    addNewsItem,
-  ]);
-
-  const handleMilitary = useCallback(() => {
-    openModal('CONVENTIONAL COMMAND', renderMilitaryModal);
-  }, [openModal, renderMilitaryModal]);
+  // MilitaryModal and War Council now consolidated into ConsolidatedWarModal via WAR button
 
   const handleIntelOperations = useCallback(() => {
     AudioSys.playSFX('click');
@@ -11469,6 +11437,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
+  }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
   }, [currentMapStyle, isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleMilitary, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
 
   const buildAllowed = coopEnabled ? canExecute('BUILD') : true;
@@ -12281,21 +12250,10 @@ export default function NoradVector() {
                       variant="ghost"
                       size="icon"
                       className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
-                      title="WAR - Manage Casus Belli, war goals, and peace deals"
+                      title="WAR - Unified warfare command: declarations, conventional forces, and peace"
                     >
                       <Swords className="h-5 w-5" />
                       <span className="text-[8px] font-mono">WAR</span>
-                    </Button>
-
-                    <Button
-                      onClick={handleMilitary}
-                      variant="ghost"
-                      size="icon"
-                      className="h-12 w-12 sm:h-14 sm:w-14 text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
-                      title="MILITARY - Conventional command"
-                    >
-                      <Shield className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">MIL</span>
                     </Button>
 
                     {playerNation && playerGovernanceMetrics ? (
@@ -12487,23 +12445,10 @@ export default function NoradVector() {
                       variant="ghost"
                       size="icon"
                       className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10"
-                      title="WAR - Manage Casus Belli, war goals, and peace deals"
+                      title="WAR - Unified warfare command: declarations, conventional forces, and peace"
                     >
                       <Swords className="h-5 w-5" />
                       WAR
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        handleMilitary();
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10"
-                      title="MILITARY - Conventional command"
-                    >
-                      <Shield className="h-5 w-5" />
-                      MIL
                     </Button>
                     {playerNation && playerGovernanceMetrics ? (
                       <Button
@@ -12895,17 +12840,17 @@ export default function NoradVector() {
       </Dialog>
 
       <Dialog open={isWarCouncilOpen} onOpenChange={setIsWarCouncilOpen}>
-        <DialogContent className="max-w-5xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
             <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">
-              War Council
+              Warfare Command
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-400 mt-1">
-              Manage Casus Belli, monitor war progress, and negotiate peace.
+              Manage declarations, conventional forces, and peace negotiations.
             </DialogDescription>
           </DialogHeader>
           {playerNation ? (
-            <WarCouncilPanel
+            <ConsolidatedWarModal
               player={playerNation}
               nations={nations}
               currentTurn={S.turn}
@@ -12913,6 +12858,17 @@ export default function NoradVector() {
               onOfferPeace={handleOfferPeace}
               onAcceptPeace={handleAcceptPeace}
               onRejectPeace={handleRejectPeace}
+              conventionalTerritories={conventionalTerritories}
+              conventionalTemplatesMap={conventionalTemplatesMap}
+              conventionalLogs={conventionalLogs}
+              trainConventionalUnit={trainConventionalUnit}
+              resolveConventionalAttack={resolveConventionalAttack}
+              moveConventionalArmies={moveConventionalArmiesWithAnimation}
+              resolveConventionalProxyEngagement={resolveConventionalProxyEngagement}
+              placeConventionalReinforcements={placeConventionalReinforcements}
+              getConventionalReinforcements={getConventionalReinforcements}
+              toast={toast}
+              addNewsItem={addNewsItem}
             />
           ) : (
             <div className="text-sm text-slate-400">Player nation not initialized.</div>
