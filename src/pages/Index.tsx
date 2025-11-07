@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle, Target, UserSearch, Swords } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
@@ -92,7 +93,7 @@ import type { StrategicOutlinerGroup } from '@/components/StrategicOutliner';
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { AIDiplomacyProposalModal } from '@/components/AIDiplomacyProposalModal';
 import { EndGameScreen } from '@/components/EndGameScreen';
-import type { Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
+import type { GameState, Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
 import type { WarState, PeaceOffer } from '@/types/casusBelli';
 // Removed - using unified diplomacy DiplomaticProposal instead
 import type { NegotiationState } from '@/types/negotiation';
@@ -137,6 +138,7 @@ import {
 } from '@/types/unifiedIntelOperations';
 import { UnifiedDiplomacyPanel } from '@/components/UnifiedDiplomacyPanel';
 import { SimplifiedBioWarfarePanel } from '@/components/SimplifiedBioWarfarePanel';
+import { AdvancedPropagandaPanel } from '@/components/AdvancedPropagandaPanel';
 import { StreamlinedCulturePanel } from '@/components/StreamlinedCulturePanel';
 import type { ProposalType, DiplomaticProposal } from '@/types/unifiedDiplomacy';
 import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/types/streamlinedCulture';
@@ -5659,6 +5661,7 @@ export default function NoradVector() {
   );
 
   const playerNation = useMemo(() => nations.find(n => n.isPlayer), [nations]);
+  const advancedGameState = GameStateManager.getState() as GameState;
   const enemyNations = useMemo(() => nations.filter(n => !n.isPlayer && !n.eliminated), [nations]);
   const playerGovernanceMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;
   const playerLeaderName = playerNation?.leaderName || playerNation?.leader;
@@ -8968,6 +8971,19 @@ export default function NoradVector() {
   }, [nations, S.turn, log, toast]);
 
   // Streamlined Culture Handlers
+  const handleAdvancedPropagandaUpdate = useCallback((updated: GameState) => {
+    const nextState = updated as LocalGameState;
+    GameStateManager.setState(nextState);
+    const nextNations = updated.nations as LocalNation[];
+    GameStateManager.setNations(nextNations);
+    PlayerManager.setNations(nextNations);
+    nations = nextNations;
+    S = GameStateManager.getState();
+    setRenderTick((t) => t + 1);
+    triggerNationsUpdate?.();
+    updateDisplay();
+  }, [setRenderTick]);
+
   const handleLaunchPropaganda = useCallback((type: PropagandaType, targetId: string) => {
     const player = PlayerManager.get();
     const target = getNationById(nations, targetId);
@@ -13000,15 +13016,44 @@ export default function NoradVector() {
               Launch propaganda campaigns, build cultural wonders, and set immigration policies
             </DialogDescription>
           </DialogHeader>
-          <StreamlinedCulturePanel
-            player={PlayerManager.get() || {} as Nation}
-            enemies={nations.filter(n => !n.eliminated && n.id !== (PlayerManager.get()?.id))}
-            onLaunchPropaganda={handleLaunchPropaganda}
-            onBuildWonder={handleBuildWonder}
-            onSetImmigrationPolicy={handleSetImmigrationPolicy}
-            currentImmigrationPolicy={(PlayerManager.get()?.immigrationPolicy as ImmigrationPolicy) || 'restricted'}
-            onClose={() => setIsCulturePanelOpen(false)}
-          />
+          {advancedGameState?.advancedPropaganda && playerNation ? (
+            <Tabs defaultValue="advanced" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="advanced">Advanced Propaganda</TabsTrigger>
+                <TabsTrigger value="streamlined">Core Culture & Immigration</TabsTrigger>
+              </TabsList>
+              <TabsContent value="advanced" className="mt-4">
+                <AdvancedPropagandaPanel
+                  gameState={advancedGameState}
+                  nation={playerNation}
+                  allNations={nations}
+                  onUpdate={handleAdvancedPropagandaUpdate}
+                  onLog={log}
+                />
+              </TabsContent>
+              <TabsContent value="streamlined" className="mt-4">
+                <StreamlinedCulturePanel
+                  player={PlayerManager.get() || {} as Nation}
+                  enemies={nations.filter(n => !n.eliminated && n.id !== (PlayerManager.get()?.id))}
+                  onLaunchPropaganda={handleLaunchPropaganda}
+                  onBuildWonder={handleBuildWonder}
+                  onSetImmigrationPolicy={handleSetImmigrationPolicy}
+                  currentImmigrationPolicy={(PlayerManager.get()?.immigrationPolicy as ImmigrationPolicy) || 'restricted'}
+                  onClose={() => setIsCulturePanelOpen(false)}
+                />
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <StreamlinedCulturePanel
+              player={PlayerManager.get() || {} as Nation}
+              enemies={nations.filter(n => !n.eliminated && n.id !== (PlayerManager.get()?.id))}
+              onLaunchPropaganda={handleLaunchPropaganda}
+              onBuildWonder={handleBuildWonder}
+              onSetImmigrationPolicy={handleSetImmigrationPolicy}
+              currentImmigrationPolicy={(PlayerManager.get()?.immigrationPolicy as ImmigrationPolicy) || 'restricted'}
+              onClose={() => setIsCulturePanelOpen(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
