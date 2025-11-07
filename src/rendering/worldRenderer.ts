@@ -8,6 +8,13 @@
 import type { MapMode, MapModeOverlayData, MapVisualStyle } from '@/components/GlobeScene';
 import type { Nation, GameState } from '@/types/game';
 import { Color, MathUtils } from 'three';
+import {
+  computeDiplomaticColor,
+  computeIntelColor,
+  computeResourceColor,
+  computeUnrestColor,
+  colorToRgba,
+} from '@/lib/mapColorUtils';
 
 export interface WorldRenderContext {
   ctx: CanvasRenderingContext2D | null;
@@ -484,41 +491,8 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
   });
 }
 
-const INTEL_COLOR_START = new Color('#1d4ed8');
-const INTEL_COLOR_END = new Color('#38bdf8');
-const RESOURCE_COLOR_START = new Color('#f97316');
-const RESOURCE_COLOR_END = new Color('#facc15');
-
-function computeDiplomaticColor(score: number): string {
-  if (score >= 60) return '#4ade80';
-  if (score >= 20) return '#22d3ee';
-  if (score <= -40) return '#f87171';
-  return '#facc15';
-}
-
-function computeIntelColor(normalized: number): string {
-  const clamped = MathUtils.clamp(normalized, 0, 1);
-  return INTEL_COLOR_START.clone().lerp(INTEL_COLOR_END, clamped).getStyle();
-}
-
-function computeResourceColor(normalized: number): string {
-  const clamped = MathUtils.clamp(normalized, 0, 1);
-  return RESOURCE_COLOR_START.clone().lerp(RESOURCE_COLOR_END, clamped).getStyle();
-}
-
-function computeUnrestColor(stability: number): string {
-  if (stability >= 65) return '#22c55e';
-  if (stability >= 45) return '#facc15';
-  return '#f87171';
-}
-
-function colorToRgba(color: string, alpha: number): string {
-  const parsed = new Color(color);
-  const r = Math.round(parsed.r * 255);
-  const g = Math.round(parsed.g * 255);
-  const b = Math.round(parsed.b * 255);
-  return `rgba(${r}, ${g}, ${b}, ${MathUtils.clamp(alpha, 0, 1)})`;
-}
+// Color computation functions now imported from @/lib/mapColorUtils
+// This eliminates duplication with GlobeScene.tsx
 
 /**
  * Render territory markers with army counts (Risk-style)

@@ -6,6 +6,183 @@
 **Status:** IN PROGRESS
 
 ---
+
+## 2025-11-07 - Cesium Deprecation Phase 2: Port Critical Features to Three.js
+
+**Branch:** `claude/port-cesium-phase-2-011CUt9LBDmdTG66hwrkjEmg`
+**Task:** Kart-audit - Port Cesium Features (Phase 2)
+**Status:** ✅ COMPLETED
+**Time:** ~4 hours
+
+### Summary
+Successfully completed Phase 2 of the Cesium deprecation plan. Ported three critical Cesium-exclusive features to Three.js: territory polygon rendering, missile trajectory animations, and 3D unit model support. All features are now available in the GlobeScene component without requiring Cesium.
+
+### Files Created
+
+#### 1. `src/lib/territoryPolygons.ts` (NEW - 271 lines)
+**Purpose:** Territory polygon rendering for Three.js
+
+**Key Functions:**
+- `createTerritoryBoundary()` - Creates THREE.Line for territory outlines
+- `createTerritoryBoundaries()` - Handles both Polygon and MultiPolygon geometries
+- `loadTerritoryData()` - Loads existing Cesium territory data
+- `createTerritoryFill()` - Creates filled polygon meshes for visualization
+- `getTerritoryCenter()` - Calculates territory centroid for labeling
+- `createTerritoryVisualization()` - Complete territory rendering with fill and outline
+
+**Features:**
+- Supports GeoJSON Polygon and MultiPolygon geometries
+- Configurable fill and outline rendering
+- Seamless integration with existing Cesium territory data
+- Handles both outer rings and holes in polygons
+
+#### 2. `src/lib/missileTrajectories.ts` (NEW - 394 lines)
+**Purpose:** Missile trajectory calculations and rendering for Three.js
+
+**Key Functions:**
+- `calculateBallisticArc()` - Quadratic Bezier curve for realistic ballistic paths
+- `calculateCruisePath()` - Low-altitude terrain-following trajectories
+- `calculateOrbitalPath()` - Elliptical orbital weapon trajectories
+- `createMissileTrajectory()` - Animated missile trajectory lines with trails
+- `updateMissileAnimation()` - Frame-by-frame animation with progressive drawing
+- `createExplosion()` - Impact explosion effects with flash and shockwave
+- `animateExplosion()` - Explosion animation with expansion and fade
+- `estimateFlightTime()` - Physics-based flight time estimation
+
+**Features:**
+- Three trajectory types: ballistic, cruise, orbital
+- Smooth animation with progressive line drawing
+- Glowing trail effects
+- Customizable colors and durations
+- Automatic cleanup after completion
+- Realistic physics-based arcs
+
+#### 3. `src/lib/unitModels.ts` (NEW - 340 lines)
+**Purpose:** 3D unit model loading and rendering for Three.js
+
+**Key Functions:**
+- `loadUnitModel()` - Async GLTF model loading with caching
+- `createUnitBillboard()` - 2D sprite icons for performance
+- `createUnit3DModel()` - Full 3D model visualization
+- `createUnitMarker()` - Simple sphere markers (fastest option)
+- `updateUnitPosition()` - Animated unit movement
+- `createUnitHighlight()` - Selection ring highlighting
+- `animateUnitHighlight()` - Pulsing selection effect
+- `createUnitVisualizations()` - Batch unit creation
+
+**Features:**
+- Three rendering modes: 3D models, billboards, markers
+- GLTF model caching for performance
+- Fallback geometric shapes if models fail to load
+- Unit type detection (tank, aircraft, ship, submarine, missile site)
+- Interactive selection highlighting
+- Billboard sprites for better performance with many units
+
+### Files Modified
+
+#### 4. `src/components/GlobeScene.tsx` (MODIFIED)
+**Changes:**
+- Added imports for new territory, missile, and unit modules
+- Created `GlobeSceneHandle` interface for imperative API
+- Extended `GlobeSceneProps` with new optional props:
+  - `territories?: TerritoryPolygon[]`
+  - `units?: Unit[]`
+  - `showTerritories?: boolean`
+  - `showUnits?: boolean`
+  - `onTerritoryClick?: (territoryId: string) => void`
+  - `onUnitClick?: (unitId: string) => void`
+
+**SceneContent Updates:**
+- Added territory and unit state management
+- Added useEffect hooks to load and render territories
+- Added useEffect hooks to load and render units
+- Enhanced useFrame hook with missile and explosion animations
+- Added JSX rendering for:
+  - Territory boundaries (lines)
+  - Unit visualizations (billboards/models)
+  - Active missile trajectories with trails
+  - Explosion effects
+
+**Main Component Updates:**
+- Added refs for missiles and explosions management
+- Added `missilesRef`, `explosionsRef`, `clockRef` for animation
+- Implemented imperative methods:
+  - `fireMissile(from, to, options)` - Launch animated missiles
+  - `addExplosion(lon, lat, radiusKm)` - Trigger explosion effects
+  - `clearMissiles()` - Remove all active missiles
+  - `clearExplosions()` - Remove all active explosions
+- Passed new props to SceneContent component
+
+### Technical Details
+
+**Territory Rendering:**
+- Uses THREE.Line for boundary outlines
+- Supports multi-ring polygons (with holes)
+- Color-coded by strategic theater
+- Opacity controls for visual clarity
+- Height offset to render above globe surface
+
+**Missile Trajectories:**
+- Quadratic Bezier curves for realistic arcs
+- Peak height calculation based on distance
+- Progressive line drawing animation (0-100%)
+- Glowing trail effect behind missile
+- Fade-out after impact
+- Configurable colors per trajectory
+- Support for multiple simultaneous missiles
+
+**Unit Models:**
+- Billboard sprites for optimal performance
+- Canvas-based icons for each unit type
+- Different icons: triangle (aircraft), pentagon (ship), square (tank)
+- Click handlers for unit selection
+- Position updates for animated movement
+- Ready for future 3D model integration
+
+**Animation System:**
+- Uses Three.js clock for timing
+- Frame-by-frame updates in useFrame hook
+- Automatic cleanup of completed effects
+- Ref-based storage for active animations
+- No re-renders during animation
+
+### Testing
+
+**TypeScript Compilation:**
+- ✅ All files pass TypeScript strict checks
+- ✅ No type errors in integration
+- ✅ Proper type definitions exported
+
+**Manual Testing Required:**
+- ⏳ Territory polygon rendering validation
+- ⏳ Missile trajectory animation testing
+- ⏳ Unit billboard rendering verification
+- ⏳ Performance testing with multiple active effects
+
+### Integration Notes
+
+**Backward Compatibility:**
+- All new props are optional
+- Existing GlobeScene usage continues to work
+- No breaking changes to current API
+- Canvas overlay ref forwarding preserved
+
+**Future Work (Phase 3+):**
+- Add deprecation warnings to Cesium components
+- Update OptionsMenu to mark Cesium as deprecated
+- Performance benchmarking vs Cesium
+- Bundle size analysis
+
+### Deliverables
+✅ Territory polygon module complete
+✅ Missile trajectory module complete
+✅ Unit model module complete
+✅ GlobeScene integration complete
+✅ TypeScript compilation passing
+✅ Documentation in code comments
+✅ Ready for Phase 3 (Deprecation Warnings)
+
+---
 ### 2025-11-06T11:57:39+00:00 - Civilization-style research flow overhaul
 - Refactored `ResearchTreeFlow` with category hero panels, tooltip-driven tech previews, and dynamic Dagre spacing to mirror Civilization-inspired layouts.
 - Added rich hover tooltips and cost badges to `ResearchFlowNode`, including downstream tech hints sourced from dependency maps.
@@ -2531,3 +2708,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Updated the main game page to use the new panel, removed the standalone governance/outliner overlays, and wired the HUD portrait button to open the dialog (`src/pages/Index.tsx`).
 ### 2025-11-07T06:49:44Z - Fix governance metrics initialization order
 - Moved the player governance metric, leader info, and depletion warning derivations below the `useGovernance` hook so React no longer reads the governance object before initialization (`src/pages/Index.tsx`).
+### 2025-11-07T06:37:22Z - Integrate advanced propaganda controls into culture dialog
+- Imported the advanced propaganda panel and shadcn tabs on the main page so the cultural modal can host multiple views (`src/pages/Index.tsx`).
+- Added a synchronized advanced propaganda update handler that refreshes GameStateManager, PlayerManager, and render ticks after panel edits (`src/pages/Index.tsx`).
+- Replaced the single streamlined view with a tabbed container that shows the advanced panel when initialized while preserving the original fallback, then ran `npm run lint` (fails on long-standing issues) and `npm run test` (vitest watcher passes before manual exit).

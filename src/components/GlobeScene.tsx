@@ -1,8 +1,32 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, Suspense } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, Suspense, useState } from 'react';
 import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
 
 import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson';
+import {
+  computeDiplomaticColor,
+  computeIntelColor,
+  computeResourceColor,
+  computeUnrestColor,
+} from '@/lib/mapColorUtils';
+import {
+  loadTerritoryData,
+  createTerritoryBoundaries,
+  type TerritoryPolygon,
+} from '@/lib/territoryPolygons';
+import {
+  createMissileTrajectory,
+  updateMissileAnimation,
+  createExplosion,
+  animateExplosion,
+  type MissileTrajectory,
+  type MissileTrajectoryInstance,
+} from '@/lib/missileTrajectories';
+import {
+  createUnitBillboard,
+  type Unit,
+  type UnitVisualization,
+} from '@/lib/unitModels';
 
 const EARTH_RADIUS = 1.8;
 const MARKER_OFFSET = 0.06;
@@ -60,19 +84,38 @@ export interface MapModeOverlayData {
 
 export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'realistic', mode: 'standard' };
 
+/**
+ * Handle interface for imperative GlobeScene methods
+ * Exposed via ref for controlling missiles, explosions, and other effects
+ */
+export interface GlobeSceneHandle {
+  projectLonLat: ProjectorFn;
+  pickLonLat: PickerFn;
+  fireMissile: (from: { lon: number; lat: number }, to: { lon: number; lat: number }, options?: { color?: string; type?: 'ballistic' | 'cruise' | 'orbital' }) => string;
+  addExplosion: (lon: number, lat: number, radiusKm?: number) => void;
+  clearMissiles: () => void;
+  clearExplosions: () => void;
+}
+
 export interface GlobeSceneProps {
   cam: { x: number; y: number; zoom: number };
-  nations: Array<{ 
-    id: string; 
-    lon: number; 
-    lat: number; 
-    color?: string; 
+  nations: Array<{
+    id: string;
+    lon: number;
+    lat: number;
+    color?: string;
     isPlayer?: boolean;
     population?: number;
     cities?: number;
   }>;
   worldCountries?: FeatureCollection<Polygon | MultiPolygon> | null;
+  territories?: TerritoryPolygon[];
+  units?: Unit[];
+  showTerritories?: boolean;
+  showUnits?: boolean;
   onNationClick?: (nationId: string) => void;
+  onTerritoryClick?: (territoryId: string) => void;
+  onUnitClick?: (unitId: string) => void;
   onProjectorReady?: (projector: ProjectorFn) => void;
   onPickerReady?: (picker: PickerFn) => void;
   mapStyle?: MapStyle;
@@ -522,24 +565,46 @@ function SceneContent({
   cam,
   texture,
   nations,
+  territories = [],
+  units = [],
+  showTerritories = false,
+  showUnits = false,
   onNationClick,
+  onTerritoryClick,
+  onUnitClick,
   register,
   mapStyle = DEFAULT_MAP_STYLE,
   modeData,
+  missilesRef,
+  explosionsRef,
 }: {
   cam: GlobeSceneProps['cam'];
   texture: THREE.Texture | null;
   nations: GlobeSceneProps['nations'];
+  territories?: TerritoryPolygon[];
+  units?: Unit[];
+  showTerritories?: boolean;
+  showUnits?: boolean;
   onNationClick?: GlobeSceneProps['onNationClick'];
+  onTerritoryClick?: GlobeSceneProps['onTerritoryClick'];
+  onUnitClick?: GlobeSceneProps['onUnitClick'];
   register: (registration: SceneRegistration) => void;
   mapStyle?: MapStyle;
   modeData?: MapModeOverlayData;
+  missilesRef: React.MutableRefObject<Map<string, MissileTrajectoryInstance>>;
+  explosionsRef: React.MutableRefObject<Map<string, { group: THREE.Group; startTime: number }>>;
 }) {
-  const { camera, size } = useThree();
+  const { camera, size, clock } = useThree();
   const earthRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>(null);
   const visualStyle = mapStyle?.visual ?? 'realistic';
   const currentMode = mapStyle?.mode ?? 'standard';
   const isFlat = visualStyle === 'flat' || visualStyle === 'flat-realistic' || visualStyle === 'flat-nightlights';
+
+  // Territory boundaries state
+  const [territoryGroups, setTerritoryGroups] = useState<THREE.Group[]>([]);
+
+  // Unit visualizations state
+  const [unitVisualizations, setUnitVisualizations] = useState<UnitVisualization[]>([]);
 
   const maxIntelLevel = useMemo(() => {
     if (!modeData) return 1;
@@ -553,32 +618,8 @@ function SceneContent({
     return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
   }, [modeData]);
 
-  const computeDiplomaticColor = useCallback((score: number) => {
-    if (score >= 60) return '#4ade80';
-    if (score >= 20) return '#22d3ee';
-    if (score <= -40) return '#f87171';
-    return '#facc15';
-  }, []);
-
-  const computeIntelColor = useCallback((normalized: number) => {
-    const clamped = THREE.MathUtils.clamp(normalized, 0, 1);
-    const start = new THREE.Color('#1d4ed8');
-    const end = new THREE.Color('#38bdf8');
-    return start.lerp(end, clamped).getStyle();
-  }, []);
-
-  const computeResourceColor = useCallback((normalized: number) => {
-    const clamped = THREE.MathUtils.clamp(normalized, 0, 1);
-    const start = new THREE.Color('#f97316');
-    const end = new THREE.Color('#facc15');
-    return start.lerp(end, clamped).getStyle();
-  }, []);
-
-  const computeUnrestColor = useCallback((stability: number) => {
-    if (stability >= 65) return '#22c55e';
-    if (stability >= 45) return '#facc15';
-    return '#f87171';
-  }, []);
+  // Color computation functions now imported from @/lib/mapColorUtils
+  // This eliminates duplication with worldRenderer.ts
 
   useEffect(() => {
     register({
@@ -587,6 +628,32 @@ function SceneContent({
       earth: isFlat ? null : earthRef.current,
     });
   }, [camera, register, size, isFlat]);
+
+  // Load and render territory boundaries
+  useEffect(() => {
+    if (!showTerritories || isFlat || territories.length === 0) {
+      setTerritoryGroups([]);
+      return;
+    }
+
+    const groups = territories.map(territory =>
+      createTerritoryBoundaries(territory, latLonToVector3, EARTH_RADIUS)
+    );
+    setTerritoryGroups(groups);
+  }, [territories, showTerritories, isFlat]);
+
+  // Load and render units
+  useEffect(() => {
+    if (!showUnits || isFlat || units.length === 0) {
+      setUnitVisualizations([]);
+      return;
+    }
+
+    const visualizations = units.map(unit =>
+      createUnitBillboard(unit, latLonToVector3, EARTH_RADIUS)
+    );
+    setUnitVisualizations(visualizations);
+  }, [units, showUnits, isFlat]);
 
   useEffect(() => {
     if (!isFlat) {
@@ -618,6 +685,25 @@ function SceneContent({
     (camera as THREE.PerspectiveCamera).position.lerp(desired, 0.12);
     (camera as THREE.PerspectiveCamera).lookAt(0, 0, 0);
     (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+
+    // Animate missiles
+    const currentTime = clock.getElapsedTime();
+    missilesRef.current.forEach((missile, id) => {
+      updateMissileAnimation(missile, currentTime);
+      // Remove completed missiles after fade out
+      if (missile.isComplete && currentTime - missile.startTime > missile.duration + 1.0) {
+        missilesRef.current.delete(id);
+      }
+    });
+
+    // Animate explosions
+    explosionsRef.current.forEach((explosion, id) => {
+      const elapsed = currentTime - explosion.startTime;
+      const isComplete = animateExplosion(explosion.group, elapsed, 2.0);
+      if (isComplete) {
+        explosionsRef.current.delete(id);
+      }
+    });
   });
 
   const renderEarth = () => {
@@ -761,6 +847,36 @@ function SceneContent({
               </group>
             );
           })}
+
+          {/* Territory boundaries */}
+          {territoryGroups.map((group, i) => (
+            <primitive key={`territory-${i}`} object={group} />
+          ))}
+
+          {/* Unit visualizations */}
+          {unitVisualizations.map(viz => (
+            <primitive
+              key={`unit-${viz.id}`}
+              object={viz.mesh}
+              onClick={(event: any) => {
+                event.stopPropagation();
+                onUnitClick?.(viz.id);
+              }}
+            />
+          ))}
+
+          {/* Active missile trajectories */}
+          {Array.from(missilesRef.current.values()).map(missile => (
+            <group key={`missile-${missile.id}`}>
+              <primitive object={missile.line} />
+              {missile.trail && <primitive object={missile.trail} />}
+            </group>
+          ))}
+
+          {/* Explosions */}
+          {Array.from(explosionsRef.current.values()).map((explosion, i) => (
+            <primitive key={`explosion-${i}`} object={explosion.group} />
+          ))}
         </group>
       )}
     </>
@@ -772,7 +888,13 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     cam,
     nations,
     worldCountries,
+    territories,
+    units,
+    showTerritories = false,
+    showUnits = false,
     onNationClick,
+    onTerritoryClick,
+    onUnitClick,
     onProjectorReady,
     onPickerReady,
     mapStyle = DEFAULT_MAP_STYLE,
@@ -788,6 +910,13 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerVec = useRef(new THREE.Vector2());
   const visualStyle = mapStyle?.visual ?? DEFAULT_MAP_STYLE.visual;
+
+  // Refs for missiles and explosions (for imperative API)
+  const missilesRef = useRef<Map<string, MissileTrajectoryInstance>>(new Map());
+  const explosionsRef = useRef<Map<string, { group: THREE.Group; startTime: number }>>(new Map());
+  const missileIdCounterRef = useRef(0);
+  const explosionIdCounterRef = useRef(0);
+  const clockRef = useRef<THREE.Clock | null>(null);
 
   const texture = useMemo(() => {
     if (typeof document === 'undefined') return null;
@@ -905,6 +1034,61 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     updatePicker();
   }, [updatePicker, cam]);
 
+  // Imperative methods for controlling missiles and explosions
+  const fireMissile = useCallback((
+    from: { lon: number; lat: number },
+    to: { lon: number; lat: number },
+    options?: { color?: string; type?: 'ballistic' | 'cruise' | 'orbital' }
+  ): string => {
+    const id = `missile-${++missileIdCounterRef.current}`;
+    const trajectory: MissileTrajectory = {
+      id,
+      from,
+      to,
+      duration: 5.0, // Default 5 seconds
+      color: options?.color || '#ff0000',
+      type: options?.type || 'ballistic'
+    };
+
+    const instance = createMissileTrajectory(trajectory, latLonToVector3, EARTH_RADIUS);
+    instance.startTime = clockRef.current?.getElapsedTime() || 0;
+    missilesRef.current.set(id, instance);
+
+    return id;
+  }, []);
+
+  const addExplosion = useCallback((
+    lon: number,
+    lat: number,
+    radiusKm: number = 50
+  ): void => {
+    const position = latLonToVector3(lon, lat, EARTH_RADIUS + 0.01);
+    const explosion = createExplosion(position, radiusKm);
+    const id = `explosion-${++explosionIdCounterRef.current}`;
+
+    explosionsRef.current.set(id, {
+      group: explosion,
+      startTime: clockRef.current?.getElapsedTime() || 0
+    });
+  }, []);
+
+  const clearMissiles = useCallback(() => {
+    missilesRef.current.clear();
+  }, []);
+
+  const clearExplosions = useCallback(() => {
+    explosionsRef.current.clear();
+  }, []);
+
+  // Store clock ref for missile timing
+  useEffect(() => {
+    const canvas = containerRef.current?.querySelector('canvas');
+    if (canvas) {
+      // Clock will be available from Three.js context
+      clockRef.current = new THREE.Clock();
+    }
+  }, []);
+
   useImperativeHandle(ref, () => overlayRef.current); // forward overlay canvas element
 
   return (
@@ -919,10 +1103,18 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
           cam={cam}
           texture={texture}
           nations={nations}
+          territories={territories}
+          units={units}
+          showTerritories={showTerritories}
+          showUnits={showUnits}
           onNationClick={onNationClick}
+          onTerritoryClick={onTerritoryClick}
+          onUnitClick={onUnitClick}
           register={handleRegister}
           mapStyle={mapStyle}
           modeData={modeData}
+          missilesRef={missilesRef}
+          explosionsRef={explosionsRef}
         />
       </Canvas>
       <canvas ref={overlayRef} className="globe-scene__overlay" />
