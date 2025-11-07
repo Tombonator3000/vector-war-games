@@ -1084,6 +1084,13 @@ body.theme-synthwave .command-interface__scanlines {
   margin: 0;
 }
 
+@supports (height: 100svh) {
+  .map-shell {
+    height: 100svh;
+    height: 100dvh;
+  }
+}
+
 .globe-scene {
   position: relative;
   flex: 1 1 auto;
@@ -2470,6 +2477,13 @@ body.theme-synthwave .command-button--neutral:hover {
     height: 100vh;
   }
 
+  @supports (height: 100svh) {
+    .map-shell {
+      height: 100svh;
+      height: 100dvh;
+    }
+  }
+
   .hud {
     gap: clamp(0.5rem, 1.1vh, 0.8rem);
   }
@@ -2478,6 +2492,13 @@ body.theme-synthwave .command-button--neutral:hover {
 @media (max-aspect-ratio: 16/9) {
   .map-shell {
     height: 100vh;
+  }
+
+  @supports (height: 100svh) {
+    .map-shell {
+      height: 100svh;
+      height: 100dvh;
+    }
   }
 }
 
