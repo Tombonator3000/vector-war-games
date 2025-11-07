@@ -2766,3 +2766,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T16:22:50Z - Ensure world renderer receives visual style strings
 - Updated the `drawWorld` helper to accept `MapVisualStyle` directly and forward it unchanged to the shared renderer so flat and wireframe backgrounds restore their intended textures (`src/pages/Index.tsx`).
 - Ran the production build to confirm the project compiles with the updated typing adjustments. (`npm run build`)
+## 2025-11-07T17:58:30Z - Globe wireframe texture lifecycle
+- Swapped atlas `useMemo` for `useState`/`useEffect` in `src/components/GlobeScene.tsx`, guarding for browser APIs and disposing textures on cleanup.
+- Added a procedural grid fallback generator to keep the wireframe visible when atlas creation fails.
+- Test run: `npm run test` (cancelled watch after completion).

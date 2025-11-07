@@ -340,6 +340,84 @@ function buildAtlasTexture(worldCountries?: FeatureCollection<Polygon | MultiPol
   return texture;
 }
 
+function createWireframeFallbackTexture(): THREE.Texture {
+  if (typeof document !== 'undefined') {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#020912';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = 'rgba(94, 255, 255, 0.35)';
+        ctx.lineWidth = 1;
+
+        const meridianStep = canvas.width / 24;
+        for (let x = 0; x <= canvas.width; x += meridianStep) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvas.height);
+          ctx.stroke();
+        }
+
+        const parallelStep = canvas.height / 12;
+        for (let y = 0; y <= canvas.height; y += parallelStep) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width, y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'rgba(94, 255, 255, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = 4;
+        texture.generateMipmaps = true;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.needsUpdate = true;
+        return texture;
+      }
+    } catch {
+      // Ignore canvas fallback failures and create a data texture instead.
+    }
+  }
+
+  const size = 8;
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const stride = (y * size + x) * 4;
+      const isMajorLine = x === 0 || y === 0;
+      const isMinorLine = x % 4 === 0 || y % 4 === 0 || x === size - 1 || y === size - 1;
+      const [r, g, b] = isMajorLine
+        ? [94, 255, 255]
+        : isMinorLine
+          ? [24, 128, 160]
+          : [2, 9, 18];
+      data[stride] = r;
+      data[stride + 1] = g;
+      data[stride + 2] = b;
+      data[stride + 3] = 255;
+    }
+  }
+
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(64, 32);
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 interface CityLightInstance {
   position: THREE.Vector3;
   innerColor: THREE.Color;
@@ -863,7 +941,7 @@ function SceneContent({
           </Suspense>
         );
       case 'wireframe':
-        return <EarthWireframe earthRef={earthRef} vectorTexture={texture} />;
+        return <EarthWireframe earthRef={earthRef} vectorTexture={vectorTexture} />;
       case 'flat-realistic':
         return <FlatEarthBackdrop />;
       default:
@@ -1066,9 +1144,32 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     return 0;
   }, []);
 
-  const texture = useMemo(() => {
-    if (typeof document === 'undefined') return null;
-    return buildAtlasTexture(worldCountries);
+  const [vectorTexture, setVectorTexture] = useState<THREE.Texture | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    let nextTexture: THREE.Texture | null = null;
+
+    try {
+      nextTexture = buildAtlasTexture(worldCountries);
+    } catch (error) {
+      console.warn('Failed to build globe atlas texture', error);
+    }
+
+    if (!nextTexture) {
+      nextTexture = createWireframeFallbackTexture();
+    }
+
+    setVectorTexture(nextTexture);
+
+    return () => {
+      if (nextTexture) {
+        nextTexture.dispose();
+      }
+    };
   }, [worldCountries]);
 
   useEffect(() => {
@@ -1083,16 +1184,6 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       explosions.clear();
     };
   }, []);
-
-  useEffect(() => {
-    if (!texture) {
-      return;
-    }
-
-    return () => {
-      texture.dispose();
-    };
-  }, [texture]);
 
   const updateProjector = useCallback(() => {
     if (!onProjectorReady) return;
