@@ -2725,3 +2725,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T09:42:41Z - Remove coop sync badge from main HUD
 - Deleted the SyncStatusBadge import and component usage from the main page HUD so the coop sync indicator no longer renders (`src/pages/Index.tsx`).
 - Dropped the obsolete SyncStatusBadge mock from the index page tests (`src/pages/__tests__/Index.test.tsx`).
+### 2025-11-07T10:51:16Z - Keep cyber readiness HUD reactive
+- Added an `onProfilesUpdated` callback to the cyber warfare hook so cyber operations notify the UI when readiness changes (`src/hooks/useCyberWarfare.ts`).
+- Wired the main page to resync the nations array through `refreshGameState` whenever the cyber hook reports profile updates, restoring HUD reactivity (`src/pages/Index.tsx`).

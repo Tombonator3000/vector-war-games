@@ -5601,6 +5601,14 @@ export default function NoradVector() {
     updateDisplay();
   }, []);
 
+  const syncCyberProfiles = useCallback((nationIds: string[]) => {
+    if (nationIds.length === 0) {
+      return;
+    }
+    const currentNations = GameStateManager.getNations() as LocalNation[];
+    refreshGameState([...currentNations]);
+  }, [refreshGameState]);
+
   const applyNationUpdate = useCallback(
     (nationId: string, updates: Partial<Nation>) => {
       const current = GameStateManager.getNations();
@@ -6610,6 +6618,7 @@ export default function NoradVector() {
         updateDisplay();
       }
     },
+    onProfilesUpdated: syncCyberProfiles,
   });
 
   const spyNetwork = useSpyNetwork({

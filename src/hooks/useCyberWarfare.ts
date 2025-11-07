@@ -59,6 +59,7 @@ export interface UseCyberWarfareOptions {
   onNews?: (category: CyberNewsCategory, text: string, priority: CyberNewsPriority) => void;
   onDefconShift?: (delta: number, reason: string) => void;
   rng?: () => number;
+  onProfilesUpdated?: (nationIds: string[]) => void;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -160,6 +161,7 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
     onToast,
     onNews,
     onDefconShift,
+    onProfilesUpdated,
   } = options;
 
   const rngRef = useRef<() => number>(options.rng ?? Math.random);
@@ -465,6 +467,12 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
       };
       pushLog(entry);
 
+      const updatedNationIds = new Set<string>([attacker.id, target.id]);
+      if (scapegoatId && falseFlagSuccess) {
+        updatedNationIds.add(scapegoatId);
+      }
+      onProfilesUpdated?.(Array.from(updatedNationIds));
+
       return {
         executed: true,
         success,
@@ -487,6 +495,7 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
       onDefconShift,
       onLog,
       onNews,
+      onProfilesUpdated,
       onToast,
       pushLog,
       setCooldown,
@@ -565,6 +574,7 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
         detected: false,
         summary,
       });
+      onProfilesUpdated?.([nation.id]);
       return {
         executed: true,
         success: true,
@@ -572,7 +582,17 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
         severity: 'minor',
       };
     },
-    [ensureProfile, getActionAvailability, getNation, onLog, onNews, onToast, pushLog, setCooldown],
+    [
+      ensureProfile,
+      getActionAvailability,
+      getNation,
+      onLog,
+      onNews,
+      onProfilesUpdated,
+      onToast,
+      pushLog,
+      setCooldown,
+    ],
   );
 
   const advanceTurn = useCallback(() => {
@@ -598,12 +618,14 @@ export function useCyberWarfare(options: UseCyberWarfareOptions) {
       return next;
     });
 
-    getNations().forEach(nation => {
+    const nationsList = getNations();
+    nationsList.forEach(nation => {
       const profile = ensureProfile(nation);
       const regen = 12 + (profile.research.firewalls ? 5 : 0) + (profile.research.intrusionDetection ? 3 : 0);
       profile.readiness = Math.min(profile.maxReadiness, profile.readiness + regen);
     });
-  }, [ensureProfile, getNations]);
+    onProfilesUpdated?.(nationsList.map(nation => nation.id));
+  }, [ensureProfile, getNations, onProfilesUpdated]);
 
   const runAiPlan = useCallback(
     (nationId: string): CyberOperationOutcome | null => {
