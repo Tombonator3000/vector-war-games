@@ -2790,3 +2790,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T22:56:54Z - Restore event handler effect dependencies
 - Ran `npm run build` to investigate the preview failure and captured the esbuild syntax error caused by duplicated dependency arrays (`src/pages/Index.tsx`).
 - Removed the redundant dependency wrapper, folding `currentMapStyle` into the existing effect dependency list so Vite compiles successfully (`src/pages/Index.tsx`).
+
+### 2025-11-07T23:21:45Z - Correct conventional forces panel wiring
+- Updated `ConsolidatedWarModal` to pass the full territory list, local player metadata, and research unlocks to `ConventionalForcesPanel` while aligning proxy engagement and reinforcement handlers with the latest panel APIs (`src/components/ConsolidatedWarModal.tsx`).
+- Ran `npm run build` to confirm the consolidated war modal renders without runtime type errors (see build output).

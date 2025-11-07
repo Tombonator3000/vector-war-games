@@ -146,8 +146,8 @@ export function ConsolidatedWarModal({
     moveConventionalArmies(fromTerritoryId, toTerritoryId, count);
   };
 
-  const handleProxyEngagement = (territoryId: string, sponsorId: string, opposingId: string) => {
-    resolveConventionalProxyEngagement(territoryId, sponsorId, opposingId);
+  const handleProxyEngagement = (territoryId: string, opposingId: string) => {
+    resolveConventionalProxyEngagement(territoryId, localPlayer.id, opposingId);
   };
 
   const handlePlaceReinforcements = (territoryId: string, count: number) => {
@@ -226,11 +226,13 @@ export function ConsolidatedWarModal({
 
           <ConventionalForcesPanel
             templates={templates}
+            territories={territoryList}
             profile={profile}
-            availableReinforcements={availableReinforcements}
-            playerTerritories={playerTerritories}
             onTrain={handleTrain}
-            onPlaceReinforcements={handlePlaceReinforcements}
+            researchUnlocks={localPlayer.researched}
+            playerPopulation={localPlayer.population}
+            availableReinforcements={availableReinforcements}
+            playerId={localPlayer.id}
           />
 
           <TerritoryMapPanel
@@ -238,8 +240,9 @@ export function ConsolidatedWarModal({
             onAttack={handleAttack}
             onMove={handleMove}
             onProxyEngagement={handleProxyEngagement}
-            playerNationId={localPlayer.id}
-            nations={nations}
+            availableReinforcements={availableReinforcements}
+            onPlaceReinforcements={handlePlaceReinforcements}
+            playerId={localPlayer.id}
           />
 
           {recentLogs.length > 0 && (
