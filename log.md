@@ -2733,3 +2733,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Set the globe renderer's default visual to the flat-realistic satellite texture to align with the strategic directive (`src/components/GlobeScene.tsx`).
 - Seeded a fresh session's stored map style preference with the flat-realistic preset to ensure the UI opens on the 2D satellite layer without prior user input (`src/pages/Index.tsx`).
 - Launched the Vite dev server and verified a new browser session records the flat-realistic selection in localStorage while capturing a smoke-test screenshot (`npm run dev`, Playwright capture).
+### 2025-11-07T11:52:54Z - Guard political label styling in 2D renderer
+- Defined an `isPoliticalStyle` flag derived from the active map mode and style booleans so label rendering no longer references an undefined variable (`src/rendering/worldRenderer.ts`).
+- Updated nation label and population color logic to switch on each supported visual style, preventing runtime errors when toggling overlays in flat and wireframe views (`src/rendering/worldRenderer.ts`).

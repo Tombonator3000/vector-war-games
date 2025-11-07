@@ -201,6 +201,7 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
 
   const currentMode = mapMode ?? 'standard';
   const overlayEnabled = isFlatStyle && modeData && currentMode !== 'standard';
+  const isPoliticalStyle = !isWireframeStyle && currentMode !== 'standard';
 
   const intelValues = modeData ? Object.values(modeData.intelLevels ?? {}) : [];
   const resourceValues = modeData ? Object.values(modeData.resourceTotals ?? {}) : [];
@@ -417,7 +418,18 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       ctx.shadowBlur = 0;
 
       ctx.font = `${Math.round(11 * z)}px monospace`;
-      ctx.fillStyle = isPoliticalStyle ? '#ffecd1' : '#ffffff';
+      const nationLabelColor = (() => {
+        switch (style) {
+          case 'wireframe':
+            return '#4ef6ff';
+          case 'flat-realistic':
+            return isPoliticalStyle ? '#ffecd1' : '#ffffff';
+          case 'realistic':
+          default:
+            return '#ffffff';
+        }
+      })();
+      ctx.fillStyle = nationLabelColor;
       ctx.fillText(nationName, lx, lyTop + pad + 12 * z + 12 * z);
       ctx.restore();
 
@@ -426,7 +438,18 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       // Population display
       ctx.save();
       ctx.globalAlpha = labelVisibility;
-      ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : isPoliticalStyle ? '#ffd166' : '#00ff00';
+      const populationFillColor = (() => {
+        switch (style) {
+          case 'wireframe':
+            return '#4ef6ff';
+          case 'flat-realistic':
+            return isPoliticalStyle ? '#ffd166' : '#00ff00';
+          case 'realistic':
+          default:
+            return '#00ff00';
+        }
+      })();
+      ctx.fillStyle = populationFillColor;
       ctx.font = `${Math.round(10 * z)}px monospace`;
       ctx.textAlign = 'center';
       ctx.fillText(`${Math.floor(n.population)}M`, x, y + 30 * z);
