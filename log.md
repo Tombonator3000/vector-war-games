@@ -2757,3 +2757,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T15:19:48Z - Retire redundant lab command shortcut
 - Removed the BioForge lab command button from both the full HUD bar and minimal sheet so research remains the single access point for lab management (`src/pages/Index.tsx`).
 - Deleted the unused BioForge toggle handler to prevent orphaned approval logic now that the UI shortcut is gone (`src/pages/Index.tsx`).
+### 2025-11-07T15:31:19Z - Restore BioForge access from research view
+- Added a BioForge operations card to the research tab so commanders can launch the lab directly from the research interface (`src/components/CivilizationInfoPanel.tsx`).
+- Gated the new entry point behind the existing feature flags and routed it through a dedicated handler that reopens the BioForge panel when pandemic and bio-warfare systems are enabled (`src/pages/Index.tsx`).
