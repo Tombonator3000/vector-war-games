@@ -82,8 +82,8 @@ const VIEWER_OPTIONS: { value: 'threejs' | 'cesium'; label: string; description:
   },
   {
     value: 'cesium',
-    label: 'Cesium (Test Map)',
-    description: 'Experimental Cesium test map with limited support.',
+    label: 'Cesium (DEPRECATED)',
+    description: '⚠️ DEPRECATED - Will be removed in v2.0. Use Three.js instead.',
   },
 ];
 
@@ -261,10 +261,21 @@ export function OptionsMenu({
     }
 
     const selectedOption = VIEWER_OPTIONS.find(opt => opt.value === nextType);
-    toast({
-      title: nextType === 'cesium' ? 'Cesium test map enabled' : 'Three.js tactical map enabled',
-      description: selectedOption?.description ?? undefined,
-    });
+
+    if (nextType === 'cesium') {
+      // Show deprecation warning for Cesium
+      toast({
+        title: '⚠️ Cesium Deprecated',
+        description: 'Cesium viewer will be removed in v2.0. Please use Three.js for future compatibility.',
+        variant: 'destructive',
+        duration: 5000,
+      });
+    } else {
+      toast({
+        title: 'Three.js tactical map enabled',
+        description: selectedOption?.description ?? undefined,
+      });
+    }
 
     onViewerTypeChange(nextType);
     if (onChange) {

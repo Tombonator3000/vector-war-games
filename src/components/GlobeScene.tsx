@@ -3,6 +3,12 @@ import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
 
 import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson';
+import {
+  computeDiplomaticColor,
+  computeIntelColor,
+  computeResourceColor,
+  computeUnrestColor,
+} from '@/lib/mapColorUtils';
 
 const EARTH_RADIUS = 1.8;
 const MARKER_OFFSET = 0.06;
@@ -553,32 +559,8 @@ function SceneContent({
     return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
   }, [modeData]);
 
-  const computeDiplomaticColor = useCallback((score: number) => {
-    if (score >= 60) return '#4ade80';
-    if (score >= 20) return '#22d3ee';
-    if (score <= -40) return '#f87171';
-    return '#facc15';
-  }, []);
-
-  const computeIntelColor = useCallback((normalized: number) => {
-    const clamped = THREE.MathUtils.clamp(normalized, 0, 1);
-    const start = new THREE.Color('#1d4ed8');
-    const end = new THREE.Color('#38bdf8');
-    return start.lerp(end, clamped).getStyle();
-  }, []);
-
-  const computeResourceColor = useCallback((normalized: number) => {
-    const clamped = THREE.MathUtils.clamp(normalized, 0, 1);
-    const start = new THREE.Color('#f97316');
-    const end = new THREE.Color('#facc15');
-    return start.lerp(end, clamped).getStyle();
-  }, []);
-
-  const computeUnrestColor = useCallback((stability: number) => {
-    if (stability >= 65) return '#22c55e';
-    if (stability >= 45) return '#facc15';
-    return '#f87171';
-  }, []);
+  // Color computation functions now imported from @/lib/mapColorUtils
+  // This eliminates duplication with worldRenderer.ts
 
   useEffect(() => {
     register({

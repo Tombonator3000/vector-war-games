@@ -95,6 +95,16 @@ export interface CesiumViewerProps {
   animateUnits?: boolean; // Smooth unit movement animations
 }
 
+/**
+ * @deprecated This component will be removed in v2.0
+ * Use GlobeScene with Three.js instead
+ *
+ * CesiumViewer is marked as experimental and will be consolidated
+ * into the primary Three.js engine to reduce code duplication
+ * and improve maintainability.
+ *
+ * See: CESIUM_DEPRECATION_PLAN.md for migration guide
+ */
 export interface CesiumViewerHandle {
   flyTo: (lon: number, lat: number, height?: number) => void;
   addMissileTrajectory: (from: { lon: number; lat: number }, to: { lon: number; lat: number }, animated?: boolean) => void;
@@ -105,7 +115,12 @@ export interface CesiumViewerHandle {
   addWeatherEvent: (lon: number, lat: number, type: 'storm' | 'clouds', intensity: number) => void;
 }
 
-const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({ 
+/**
+ * @deprecated This component will be removed in v2.0
+ * Use GlobeScene with Three.js instead
+ * See: CESIUM_DEPRECATION_PLAN.md
+ */
+const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(( 
   territories = [],
   units = [],
   nations = [],
@@ -154,6 +169,19 @@ const CesiumViewer = forwardRef<CesiumViewerHandle, CesiumViewerProps>(({
     const values = Object.values(modeData.resourceTotals ?? {});
     return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
   }, [modeData]);
+
+  // DEPRECATION WARNING
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.warn(
+        '%c[DEPRECATED] CesiumViewer',
+        'color: #f97316; font-weight: bold; font-size: 14px',
+        '\nCesiumViewer is deprecated and will be removed in v2.0.',
+        '\nPlease migrate to GlobeScene (Three.js).',
+        '\nSee: CESIUM_DEPRECATION_PLAN.md for migration guide'
+      );
+    }
+  }, []);
 
   const getCameraHeight = useCallback(() => {
     const viewer = viewerRef.current;
