@@ -2736,3 +2736,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T11:52:54Z - Guard political label styling in 2D renderer
 - Defined an `isPoliticalStyle` flag derived from the active map mode and style booleans so label rendering no longer references an undefined variable (`src/rendering/worldRenderer.ts`).
 - Updated nation label and population color logic to switch on each supported visual style, preventing runtime errors when toggling overlays in flat and wireframe views (`src/rendering/worldRenderer.ts`).
+### 2025-11-07T12:19:39Z - Synchronize missile timing with scene clock
+- Forwarded the @react-three/fiber clock through the scene registration so globe-level missile and explosion handlers reuse the same elapsed time reference (`src/components/GlobeScene.tsx`).
+- Replaced the ad-hoc THREE.Clock instance with shared elapsed time helpers to keep missile travel durations and explosion fades aligned with per-frame updates (`src/components/GlobeScene.tsx`).

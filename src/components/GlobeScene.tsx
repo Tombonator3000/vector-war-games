@@ -107,6 +107,7 @@ interface SceneRegistration {
   camera: THREE.PerspectiveCamera;
   size: { width: number; height: number };
   earth: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> | null;
+  clock: THREE.Clock;
 }
 
 type ForwardedCanvas = HTMLCanvasElement | null;
@@ -489,8 +490,9 @@ function SceneContent({
       camera: camera as THREE.PerspectiveCamera,
       size,
       earth: isFlat ? null : earthRef.current,
+      clock,
     });
-  }, [camera, register, size, isFlat]);
+  }, [camera, register, size, isFlat, clock]);
 
   // Load and render territory boundaries
   useEffect(() => {
@@ -763,6 +765,17 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   const explosionIdCounterRef = useRef(0);
   const clockRef = useRef<THREE.Clock | null>(null);
 
+  const getElapsedTime = useCallback(() => {
+    const clock = clockRef.current;
+    if (clock) {
+      return clock.getElapsedTime();
+    }
+    if (typeof performance !== 'undefined') {
+      return performance.now() / 1000;
+    }
+    return 0;
+  }, []);
+
   const texture = useMemo(() => {
     if (typeof document === 'undefined') return null;
     return buildAtlasTexture(worldCountries);
@@ -859,10 +872,11 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   }, [cam.x, cam.y, cam.zoom, visualStyle, onPickerReady]);
 
   const handleRegister = useCallback(
-    ({ camera, size, earth }: SceneRegistration) => {
+    ({ camera, size, earth, clock }: SceneRegistration) => {
       cameraRef.current = camera;
       sizeRef.current = size;
       earthMeshRef.current = earth;
+      clockRef.current = clock;
       updateProjector();
       updatePicker();
     },
@@ -894,11 +908,11 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     };
 
     const instance = createMissileTrajectory(trajectory, latLonToVector3, EARTH_RADIUS);
-    instance.startTime = clockRef.current?.getElapsedTime() || 0;
+    instance.startTime = getElapsedTime();
     missilesRef.current.set(id, instance);
 
     return id;
-  }, []);
+  }, [getElapsedTime]);
 
   const addExplosion = useCallback((
     lon: number,
@@ -911,9 +925,9 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
 
     explosionsRef.current.set(id, {
       group: explosion,
-      startTime: clockRef.current?.getElapsedTime() || 0
+      startTime: getElapsedTime()
     });
-  }, []);
+  }, [getElapsedTime]);
 
   const clearMissiles = useCallback(() => {
     missilesRef.current.clear();
@@ -921,15 +935,6 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
 
   const clearExplosions = useCallback(() => {
     explosionsRef.current.clear();
-  }, []);
-
-  // Store clock ref for missile timing
-  useEffect(() => {
-    const canvas = containerRef.current?.querySelector('canvas');
-    if (canvas) {
-      // Clock will be available from Three.js context
-      clockRef.current = new THREE.Clock();
-    }
   }, []);
 
   useImperativeHandle(ref, () => overlayRef.current); // forward overlay canvas element
