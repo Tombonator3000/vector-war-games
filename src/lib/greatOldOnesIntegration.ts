@@ -5,7 +5,7 @@
 
 import type { GreatOldOnesState } from '../types/greatOldOnes';
 import type { ActCampaignState, ManifestationEvent, CounterOperation } from '../types/actCampaign';
-import { updateActCampaignState, resolveActProgressionVote } from './actCampaignSystem';
+import { updateActCampaignState, resolveActProgressionVote, initializeActCampaignState, ACT_DEFINITIONS } from './actCampaignSystem';
 import { updateDoctrineDriftPerTurn } from './doctrineDriftIntegration';
 import {
   attemptInvestigatorSpawn,
@@ -118,10 +118,10 @@ export function updateGreatOldOnesCampaign(
 /**
  * Initialize extended Great Old Ones state with all new systems
  */
+/**
+ * Initialize extended Great Old Ones state with all new systems
+ */
 export function initializeExtendedState(baseState: GreatOldOnesState): ExtendedGreatOldOnesState {
-  // Import act campaign initialization
-  const { initializeActCampaignState } = require('./actCampaignSystem');
-
   return {
     ...baseState,
     actCampaignState: initializeActCampaignState(),
@@ -234,8 +234,6 @@ export function getCampaignProgressSummary(state: ExtendedGreatOldOnesState): {
   const { currentAct, completedStoryMissions, proceduralMissionsCompleted } =
     state.actCampaignState;
 
-  // Import ACT_DEFINITIONS
-  const { ACT_DEFINITIONS } = require('./actCampaignSystem');
   const currentActDef = ACT_DEFINITIONS[currentAct];
 
   const storyMissionsCompleted = completedStoryMissions.filter(id =>

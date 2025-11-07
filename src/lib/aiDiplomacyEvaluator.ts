@@ -21,6 +21,7 @@ import { getPromiseTrustworthiness } from '@/lib/promiseActions';
 import { getGrievanceDiplomacyPenalty, getClaimWarJustification } from '@/lib/grievancesAndClaimsUtils';
 import { getAllianceBetween } from '@/types/specializedAlliances';
 import { checkAllTriggers } from '@/lib/aiNegotiationTriggers';
+import { getDoctrineCompatibilityModifier } from '@/lib/doctrineDiplomacyUtils';
 
 /**
  * Evaluate whether AI should accept a player's diplomatic proposal
@@ -182,7 +183,6 @@ function calculateRelationshipScore(nation1: Nation, nation2: Nation): number {
   // Military doctrines affect diplomatic compatibility
   if (nation1.doctrine && nation2.doctrine) {
     try {
-      const { getDoctrineCompatibilityModifier } = require('@/lib/doctrineDiplomacyUtils');
       const doctrineModifier = getDoctrineCompatibilityModifier(
         nation1.doctrine as any,
         nation2.doctrine as any

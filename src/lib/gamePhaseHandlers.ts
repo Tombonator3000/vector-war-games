@@ -24,6 +24,7 @@ import { updateAlliancesPerTurn } from '@/lib/specializedAlliancesUtils';
 import { updatePhase2PerTurn } from '@/lib/diplomacyPhase2Integration';
 import { calculateDIPIncome } from '@/lib/diplomaticCurrencyUtils';
 import { applyIdeologyBonusesForProduction } from '@/lib/ideologyIntegration';
+import { updateDoctrineIncidentSystem } from '@/lib/doctrineIncidentSystem';
 import {
   processNationResources,
   processResourceTrades,
@@ -279,7 +280,6 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
   const playerNation = nations.find(n => n.isPlayer);
   if (playerNation && S.doctrineIncidentState) {
     try {
-      const { updateDoctrineIncidentSystem } = require('@/lib/doctrineIncidentSystem');
       S.doctrineIncidentState = updateDoctrineIncidentSystem(
         S,
         playerNation,

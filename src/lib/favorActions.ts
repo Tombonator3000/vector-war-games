@@ -6,7 +6,7 @@
 
 import type { Nation } from '@/types/game';
 import { FavorEarning, FavorCosts, getFavors } from '@/types/trustAndFavors';
-import { modifyFavors, spendFavors } from './trustAndFavorsUtils';
+import { modifyFavors, spendFavors, modifyTrust } from './trustAndFavorsUtils';
 import { modifyRelationship } from './relationshipUtils';
 
 /**
@@ -327,8 +327,7 @@ export function spendFavorsForTrust(
 
   if (!updatedSpender) return null;
 
-  // Import trust modification
-  const { modifyTrust } = require('./trustAndFavorsUtils');
+  // Apply trust modification
   updatedSpender = modifyTrust(
     updatedSpender,
     target.id,

@@ -146,6 +146,7 @@ import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from
 import { launchPropagandaCampaign, buildWonder, applyImmigrationPolicy } from '@/lib/streamlinedCultureLogic';
 import { processImmigrationAndCultureTurn, initializeNationPopSystem } from '@/lib/immigrationCultureTurnProcessor';
 import { initializeSpyNetwork } from '@/lib/spyNetworkUtils';
+import { getPolicyById } from '@/lib/policyData';
 import {
   initializeIdeologySystem,
   processIdeologySystemTurn,
@@ -2930,7 +2931,8 @@ function drawNations(style: MapVisualStyle) {
 
 // Territory rendering - wrapper function for Risk-style markers
 function drawTerritoriesWrapper() {
-  if (!territoryList.length) return;
+  const currentTerritories = territoryListRef.current ?? [];
+  if (!currentTerritories.length) return;
 
   const context: TerritoryRenderContext = {
     ctx,
@@ -2948,7 +2950,7 @@ function drawTerritoriesWrapper() {
     preloadFlatRealisticTexture,
     preloadFlatNightlightsTexture,
     getPoliticalFill,
-    territories: territoryList,
+    territories: currentTerritories,
     playerId: player.id,
     selectedTerritoryId,
     hoveredTerritoryId,
@@ -4247,19 +4249,11 @@ function checkVictory() {
   // Phase 3 Economic Depth path: Trade + Refinement + Infrastructure dominance
   if (economicDepthApi) {
     const economicPower = economicDepthApi.calculateEconomicPower();
-    const playerEconomicPower = economicPower.get(player.id);
-
-    if (playerEconomicPower) {
-      // Victory through economic dominance: High economic score
-      if (playerEconomicPower.economicVictoryProgress >= 100) {
-        economicVictory = true;
-        economicVictoryReason = `Economic supremacy achieved! (Rank #${playerEconomicPower.globalRank}, Score: ${playerEconomicPower.totalScore})`;
-      }
-      // Alternative: Top economic power with significant lead
-      else if (playerEconomicPower.globalRank === 1 && playerEconomicPower.totalScore >= 500) {
-        economicVictory = true;
-        economicVictoryReason = `Global economic dominance! Trade, industry, and infrastructure unmatched!`;
-      }
+    
+    // economicPower is a number representing total economic strength
+    if (typeof economicPower === 'number' && economicPower >= 1000) {
+      economicVictory = true;
+      economicVictoryReason = `Economic supremacy achieved! (Total Economic Power: ${Math.round(economicPower)})`;
     }
   }
 
@@ -4975,8 +4969,8 @@ function endTurn() {
         }
 
         // Apply maintenance costs for active policies
-        policySystem.activePolicies.forEach(activePolicy => {
-          const policy = require('@/lib/policyData').getPolicyById(activePolicy.policyId);
+        policySystem.activePolicies.forEach((activePolicy) => {
+          const policy = getPolicyById(activePolicy.policyId);
           if (policy?.maintenanceCost) {
             if (policy.maintenanceCost.gold) {
               player.gold = Math.max(0, (player.gold || 0) - policy.maintenanceCost.gold);
