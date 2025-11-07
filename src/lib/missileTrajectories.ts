@@ -201,13 +201,31 @@ export function updateMissileAnimation(
   instance.progress = progress;
 
   if (progress >= 1.0) {
+    const finalPoint = instance.allPoints[instance.allPoints.length - 1];
+
+    // Ensure final geometry state reflects the impact point before fading
+    instance.line.geometry.setFromPoints(instance.allPoints);
+
+    if (instance.trail) {
+      const trailSampleLength = Math.min(instance.allPoints.length, 11);
+      const trailPoints = instance.allPoints.slice(instance.allPoints.length - trailSampleLength);
+      instance.trail.geometry.setFromPoints(trailPoints);
+    }
+
+    instance.markerPosition.copy(finalPoint);
     instance.isComplete = true;
+
     // Fade out completed trajectory
+    const fadeElapsed = Math.max(0, elapsed - instance.duration);
     if (instance.line.material instanceof THREE.LineBasicMaterial) {
-      instance.line.material.opacity = Math.max(0, 1.0 - (elapsed - instance.duration));
+      const targetOpacity = Math.max(0, Math.min(0.8, 1.0 - fadeElapsed));
+      instance.line.material.opacity = targetOpacity;
+      instance.line.material.needsUpdate = true;
     }
     if (instance.trail?.material instanceof THREE.LineBasicMaterial) {
-      instance.trail.material.opacity = Math.max(0, 0.6 - (elapsed - instance.duration));
+      const targetTrailOpacity = Math.max(0, 0.6 - fadeElapsed);
+      instance.trail.material.opacity = targetTrailOpacity;
+      instance.trail.material.needsUpdate = true;
     }
     return;
   }
