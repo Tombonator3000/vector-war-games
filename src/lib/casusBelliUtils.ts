@@ -13,6 +13,8 @@ import type {
   CasusBelliValidity,
   WarValidation,
   JustificationFactors,
+} from '../types/casusBelli';
+import {
   WAR_JUSTIFICATION_THRESHOLDS,
   UNJUSTIFIED_WAR_PENALTIES,
 } from '../types/casusBelli';
