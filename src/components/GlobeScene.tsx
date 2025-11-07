@@ -1,5 +1,15 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, Suspense, useState } from 'react';
-import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useReducer,
+  useRef,
+  Suspense,
+  useState,
+} from 'react';
+import { Canvas, useFrame, useThree, useLoader, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 
 import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson';
@@ -195,6 +205,19 @@ function disposeObject(object?: THREE.Object3D | null) {
   });
 }
 
+function disposeMissileInstance(instance?: MissileTrajectoryInstance | null) {
+  if (!instance) return;
+  disposeObject(instance.line);
+  if (instance.trail) {
+    disposeObject(instance.trail);
+  }
+}
+
+function disposeExplosionGroup(group?: THREE.Group | null) {
+  if (!group) return;
+  disposeObject(group);
+}
+
 function buildAtlasTexture(worldCountries?: FeatureCollection<Polygon | MultiPolygon> | null) {
   const canvas = document.createElement('canvas');
   canvas.width = 2048;
@@ -380,7 +403,7 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
       return { ...entry, allocated: baseCount, fraction };
     });
 
-    let allocatedTotal = allocations.reduce((total, entry) => total + entry.allocated, 0);
+    const allocatedTotal = allocations.reduce((total, entry) => total + entry.allocated, 0);
     let remainder = Math.max(0, Math.min(MAX_CITY_LIGHT_INSTANCES - allocatedTotal, MAX_CITY_LIGHT_INSTANCES));
 
     const prioritized = [...allocations].sort((a, b) => b.fraction - a.fraction);
@@ -796,22 +819,32 @@ function SceneContent({
 
     // Animate missiles
     const currentTime = clock.getElapsedTime();
+    let missilesRemoved = false;
     missilesRef.current.forEach((missile, id) => {
       updateMissileAnimation(missile, currentTime);
       // Remove completed missiles after fade out
       if (missile.isComplete && currentTime - missile.startTime > missile.duration + 1.0) {
         missilesRef.current.delete(id);
+        disposeMissileInstance(missile);
+        missilesRemoved = true;
       }
     });
 
     // Animate explosions
+    let explosionsRemoved = false;
     explosionsRef.current.forEach((explosion, id) => {
       const elapsed = currentTime - explosion.startTime;
       const isComplete = animateExplosion(explosion.group, elapsed, 2.0);
       if (isComplete) {
         explosionsRef.current.delete(id);
+        disposeExplosionGroup(explosion.group);
+        explosionsRemoved = true;
       }
     });
+
+    if (missilesRemoved || explosionsRemoved) {
+      requestRender();
+    }
   });
 
   const renderEarth = () => {
@@ -917,7 +950,7 @@ function SceneContent({
               <group key={nation.id}>
                 <mesh
                   position={position.toArray() as [number, number, number]}
-                  onClick={(event) => {
+                  onClick={(event: ThreeEvent<PointerEvent>) => {
                     event.stopPropagation();
                     onNationClick?.(nation.id);
                   }}
@@ -948,7 +981,7 @@ function SceneContent({
             <primitive
               key={`unit-${viz.id}`}
               object={viz.mesh}
-              onClick={(event: any) => {
+              onClick={(event: ThreeEvent<PointerEvent>) => {
                 event.stopPropagation();
                 onUnitClick?.(viz.id);
               }}
@@ -1000,6 +1033,8 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerVec = useRef(new THREE.Vector2());
   const visualStyle = mapStyle?.visual ?? DEFAULT_MAP_STYLE.visual;
+  const [, triggerRender] = useReducer((value: number) => value + 1, 0);
+  const isMountedRef = useRef(true);
 
   // Refs for missiles and explosions (for imperative API)
   const missilesRef = useRef<Map<string, MissileTrajectoryInstance>>(new Map());
@@ -1007,6 +1042,18 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   const missileIdCounterRef = useRef(0);
   const explosionIdCounterRef = useRef(0);
   const clockRef = useRef<THREE.Clock | null>(null);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const requestRender = useCallback(() => {
+    if (isMountedRef.current) {
+      triggerRender();
+    }
+  }, [triggerRender]);
 
   const getElapsedTime = useCallback(() => {
     const clock = clockRef.current;
@@ -1023,6 +1070,29 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     if (typeof document === 'undefined') return null;
     return buildAtlasTexture(worldCountries);
   }, [worldCountries]);
+
+  useEffect(() => {
+    const missiles = missilesRef.current;
+    const explosions = explosionsRef.current;
+
+    return () => {
+      missiles.forEach(instance => disposeMissileInstance(instance));
+      missiles.clear();
+
+      explosions.forEach(entry => disposeExplosionGroup(entry.group));
+      explosions.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!texture) {
+      return;
+    }
+
+    return () => {
+      texture.dispose();
+    };
+  }, [texture]);
 
   const updateProjector = useCallback(() => {
     if (!onProjectorReady) return;
@@ -1135,50 +1205,62 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   }, [updatePicker, cam]);
 
   // Imperative methods for controlling missiles and explosions
-  const fireMissile = useCallback((
-    from: { lon: number; lat: number },
-    to: { lon: number; lat: number },
-    options?: { color?: string; type?: 'ballistic' | 'cruise' | 'orbital' }
-  ): string => {
-    const id = `missile-${++missileIdCounterRef.current}`;
-    const trajectory: MissileTrajectory = {
-      id,
-      from,
-      to,
-      duration: 5.0, // Default 5 seconds
-      color: options?.color || '#ff0000',
-      type: options?.type || 'ballistic'
-    };
+  const fireMissile = useCallback(
+    (
+      from: { lon: number; lat: number },
+      to: { lon: number; lat: number },
+      options?: { color?: string; type?: 'ballistic' | 'cruise' | 'orbital' }
+    ): string => {
+      const id = `missile-${++missileIdCounterRef.current}`;
+      const trajectory: MissileTrajectory = {
+        id,
+        from,
+        to,
+        duration: 5.0, // Default 5 seconds
+        color: options?.color || '#ff0000',
+        type: options?.type || 'ballistic'
+      };
 
-    const instance = createMissileTrajectory(trajectory, latLonToVector3, EARTH_RADIUS);
-    instance.startTime = getElapsedTime();
-    missilesRef.current.set(id, instance);
+      const instance = createMissileTrajectory(trajectory, latLonToVector3, EARTH_RADIUS);
+      instance.startTime = getElapsedTime();
+      missilesRef.current.set(id, instance);
+      requestRender();
 
-    return id;
-  }, [getElapsedTime]);
+      return id;
+    },
+    [getElapsedTime, requestRender],
+  );
 
-  const addExplosion = useCallback((
-    lon: number,
-    lat: number,
-    radiusKm: number = 50
-  ): void => {
-    const position = latLonToVector3(lon, lat, EARTH_RADIUS + 0.01);
-    const explosion = createExplosion(position, radiusKm);
-    const id = `explosion-${++explosionIdCounterRef.current}`;
+  const addExplosion = useCallback(
+    (
+      lon: number,
+      lat: number,
+      radiusKm: number = 50,
+    ): void => {
+      const position = latLonToVector3(lon, lat, EARTH_RADIUS + 0.01);
+      const explosion = createExplosion(position, radiusKm);
+      const id = `explosion-${++explosionIdCounterRef.current}`;
 
-    explosionsRef.current.set(id, {
-      group: explosion,
-      startTime: getElapsedTime()
-    });
-  }, [getElapsedTime]);
+      explosionsRef.current.set(id, {
+        group: explosion,
+        startTime: getElapsedTime(),
+      });
+      requestRender();
+    },
+    [getElapsedTime, requestRender],
+  );
 
   const clearMissiles = useCallback(() => {
+    missilesRef.current.forEach(instance => disposeMissileInstance(instance));
     missilesRef.current.clear();
-  }, []);
+    requestRender();
+  }, [requestRender]);
 
   const clearExplosions = useCallback(() => {
+    explosionsRef.current.forEach(entry => disposeExplosionGroup(entry.group));
     explosionsRef.current.clear();
-  }, []);
+    requestRender();
+  }, [requestRender]);
 
   useImperativeHandle(ref, () => overlayRef.current); // forward overlay canvas element
 
