@@ -2773,3 +2773,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Swapped atlas `useMemo` for `useState`/`useEffect` in `src/components/GlobeScene.tsx`, guarding for browser APIs and disposing textures on cleanup.
 - Added a procedural grid fallback generator to keep the wireframe visible when atlas creation fails.
 - Test run: `npm run test` (cancelled watch after completion).
+### 2025-11-07T21:15:00Z - Preserve missile impact geometry through fade-out
+- Updated the missile animation completion branch to lock in the final point, sync the marker, and trigger material updates before fading (`src/lib/missileTrajectories.ts`).
+- Added a regression test to step a trajectory through completion and verify the last point persists at impact with materials flagged for redraw (`src/lib/__tests__/missileTrajectories.test.ts`).
