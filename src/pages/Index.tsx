@@ -79,6 +79,7 @@ import { FEATURE_UNLOCK_INFO } from '@/types/era';
 import type { ActionConsequences } from '@/types/consequences';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { applyRemoteGameStateSync } from '@/lib/coopSync';
+import { loadTerritoryData, type TerritoryPolygon } from '@/lib/territoryPolygons';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { ResourceStockpileDisplay } from '@/components/ResourceStockpileDisplay';
 import { MarketStatusBadge } from '@/components/ResourceMarketPanel';
@@ -166,6 +167,7 @@ import { PoliticalStabilityOverlay } from '@/components/governance/PoliticalStab
 import { MapModeBar } from '@/components/MapModeBar';
 import { usePolicySystem } from '@/hooks/usePolicySystem';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
+import type { Unit } from '@/lib/unitModels';
 import { getDefaultScenario, type ScenarioConfig, SCENARIOS } from '@/types/scenario';
 import { getGameTimestamp, turnsUntilEvent, isEventTurn } from '@/lib/timeSystem';
 import {
@@ -6109,6 +6111,26 @@ export default function NoradVector() {
     return territoryMap.get(dragTargetTerritoryId)?.name ?? null;
   }, [dragTargetTerritoryId, territoryMap]);
 
+  const [territoryPolygons, setTerritoryPolygons] = useState<TerritoryPolygon[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    loadTerritoryData()
+      .then((data) => {
+        if (isMounted) {
+          setTerritoryPolygons(data);
+        }
+      })
+      .catch((error) => {
+        console.error('[Index] Failed to load territory polygons', error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const selectedLeaderGlobal = S.selectedLeader;
   const selectedDoctrineGlobal = S.selectedDoctrine;
   const playerNameGlobal = S.playerName;
@@ -6592,6 +6614,43 @@ export default function NoradVector() {
     },
   });
 
+  const [globeUnits, setGlobeUnits] = useState<Unit[]>([]);
+
+  const conventionalUnitsState = conventional.state?.units;
+  const conventionalTemplatesState = conventional.state?.templates;
+
+  useEffect(() => {
+    if (!conventionalUnitsState) {
+      setGlobeUnits([]);
+      return;
+    }
+
+    const mappedUnits: Unit[] = [];
+
+    Object.values(conventionalUnitsState).forEach((unit) => {
+      if (unit.status !== 'deployed' || !unit.locationId) {
+        return;
+      }
+
+      const territory = territoryMap.get(unit.locationId);
+      if (!territory) {
+        return;
+      }
+
+      const template = conventionalTemplatesState?.[unit.templateId];
+      const unitType = template?.id ?? unit.templateId;
+
+      mappedUnits.push({
+        id: unit.id,
+        lon: territory.anchorLon,
+        lat: territory.anchorLat,
+        type: unitType,
+      });
+    });
+
+    setGlobeUnits(mappedUnits);
+  }, [conventionalUnitsState, conventionalTemplatesState, territoryMap]);
+
   const cyber = useCyberWarfare({
     currentTurn: S.turn,
     getNation: getNationById,
@@ -6809,6 +6868,9 @@ export default function NoradVector() {
   useEffect(() => {
     currentMapModeData = mapModeData;
   }, [mapModeData]);
+
+  const showTerritories = territoryPolygons.length > 0;
+  const showUnits = globeUnits.length > 0;
 
   // Policy system for strategic national policies
   const player = nations.find(n => n.isPlayer);
@@ -11876,10 +11938,14 @@ export default function NoradVector() {
             cam={cam}
             nations={nations}
             worldCountries={worldCountries}
+            territories={territoryPolygons}
+            units={globeUnits}
             onProjectorReady={handleProjectorReady}
             onPickerReady={handlePickerReady}
             mapStyle={mapStyle}
             modeData={mapModeData}
+            showTerritories={showTerritories}
+            showUnits={showUnits}
           />
         ) : (
           <CesiumViewer

@@ -2712,3 +2712,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Imported the advanced propaganda panel and shadcn tabs on the main page so the cultural modal can host multiple views (`src/pages/Index.tsx`).
 - Added a synchronized advanced propaganda update handler that refreshes GameStateManager, PlayerManager, and render ticks after panel edits (`src/pages/Index.tsx`).
 - Replaced the single streamlined view with a tabbed container that shows the advanced panel when initialized while preserving the original fallback, then ran `npm run lint` (fails on long-standing issues) and `npm run test` (vitest watcher passes before manual exit).
+### 2025-11-07T08:01:22Z - Wire strategic overlays into Three.js viewer
+- Cached Cesium-derived territory polygon data on the main page so the GlobeScene can render territorial outlines without reloading the Cesium utilities each frame (`src/pages/Index.tsx`).
+- Derived Three.js unit markers from the conventional warfare state using territory anchors and forwarded them alongside visibility toggles to the GlobeScene component (`src/pages/Index.tsx`).
+- Passed the new territory and unit props through the map-shell render branch to keep the Three.js tactical viewer in sync with the existing Cesium overlays (`src/pages/Index.tsx`).
