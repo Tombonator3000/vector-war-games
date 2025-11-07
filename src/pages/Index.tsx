@@ -621,6 +621,8 @@ let currentMapModeData: MapModeOverlayData | null = null;
 let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
+let isGameplayLoopEnabled = false;
+let isAttractModeActive = false;
 
 // Global game state - now managed by GameStateManager (Phase 6 refactoring)
 // Initialize GameStateManager (it has default state already)
@@ -5473,14 +5475,34 @@ function updateScoreboard() {
 
 // Game loop
 function gameLoop() {
-  if (S.paused || S.gameOver || !ctx) {
-    requestAnimationFrame(gameLoop);
+  requestAnimationFrame(gameLoop);
+
+  if (!ctx) {
     return;
   }
 
-  const nowMs = Date.now();
+  const applyCanvasDefaults = () => {
+    ctx.imageSmoothingEnabled = !(currentTheme === 'retro80s' || currentTheme === 'wargames');
+  };
 
-  ctx.imageSmoothingEnabled = !(currentTheme === 'retro80s' || currentTheme === 'wargames');
+  if (!isGameplayLoopEnabled) {
+    if (!isAttractModeActive) {
+      return;
+    }
+
+    applyCanvasDefaults();
+    ctx.clearRect(0, 0, W, H);
+    drawWorld(currentMapStyle);
+    return;
+  }
+
+  if (S.paused || S.gameOver) {
+    return;
+  }
+
+  applyCanvasDefaults();
+
+  const nowMs = Date.now();
 
   ctx.clearRect(0, 0, W, H);
 
@@ -5503,8 +5525,6 @@ function gameLoop() {
   drawConventionalForces();
   drawParticles();
   drawFX();
-  
-  requestAnimationFrame(gameLoop);
 }
 
 // Consume action
@@ -6119,7 +6139,17 @@ export default function NoradVector() {
       return;
     }
 
+    const canvasElement = canvasRef.current;
+    if (!canvasElement) {
+      return;
+    }
+
+    canvas = canvasElement;
+    ctx = canvasElement.getContext('2d')!;
+
     if (hasBootstrappedGameRef.current) {
+      isGameplayLoopEnabled = true;
+      isAttractModeActive = false;
       return;
     }
 
@@ -6156,12 +6186,8 @@ export default function NoradVector() {
       log('Simplified gameplay systems initialized', 'system');
     }
 
-    if (!gameLoopRunning) {
-      gameLoopRunning = true;
-      loadWorld().then(() => {
-        requestAnimationFrame(gameLoop);
-      });
-    }
+    isGameplayLoopEnabled = true;
+    isAttractModeActive = false;
   }, [isGameStarted, setConventionalState]);
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -7413,6 +7439,27 @@ export default function NoradVector() {
       H = element.height;
     }
   }, [screenResolution]);
+
+  useEffect(() => {
+    const element = canvasRef.current;
+    if (!element) {
+      return;
+    }
+
+    canvas = element;
+    ctx = element.getContext('2d')!;
+
+    resizeCanvas();
+
+    if (!isGameplayLoopEnabled) {
+      isAttractModeActive = true;
+    }
+
+    if (!gameLoopRunning) {
+      gameLoopRunning = true;
+      requestAnimationFrame(gameLoop);
+    }
+  }, [resizeCanvas]);
 
   const toggleFullscreen = useCallback(() => {
     AudioSys.playSFX('click');
