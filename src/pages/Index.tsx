@@ -11437,8 +11437,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
-  }, [currentMapStyle, isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleMilitary, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
+  }, [currentMapStyle, isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
 
   const buildAllowed = coopEnabled ? canExecute('BUILD') : true;
   const researchAllowed = coopEnabled ? canExecute('RESEARCH') : true;
