@@ -573,11 +573,74 @@ function EarthWireframe({
   return (
     <mesh ref={earthRef}>
       <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
-      <meshBasicMaterial 
-        map={vectorTexture} 
+      <meshBasicMaterial
+        map={vectorTexture}
         color="#0a1929"
         transparent
         opacity={0.95}
+      />
+    </mesh>
+  );
+}
+
+function FlatEarthBackdrop() {
+  const meshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>>(null);
+  const { camera } = useThree();
+
+  const fallbackTexture = useMemo(() => {
+    if (typeof document === 'undefined') {
+      return null;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return null;
+    }
+
+    const gradient = context.createRadialGradient(256, 256, 48, 256, 256, 256);
+    gradient.addColorStop(0, '#10243e');
+    gradient.addColorStop(1, '#020617');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.strokeStyle = 'rgba(12, 74, 110, 0.45)';
+    context.lineWidth = 2;
+    for (let ring = 1; ring <= 4; ring += 1) {
+      const radius = (canvas.width / 2) * (ring / 4);
+      context.beginPath();
+      context.arc(canvas.width / 2, canvas.height / 2, radius, 0, Math.PI * 2);
+      context.stroke();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+    return texture;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      fallbackTexture?.dispose();
+    };
+  }, [fallbackTexture]);
+
+  useFrame(() => {
+    if (!meshRef.current) return;
+    meshRef.current.quaternion.copy(camera.quaternion);
+  });
+
+  const planeSize = EARTH_RADIUS * 3.4;
+
+  return (
+    <mesh ref={meshRef} position={[0, 0, -0.02]} renderOrder={-20} frustumCulled={false}>
+      <planeGeometry args={[planeSize, planeSize]} />
+      <meshBasicMaterial
+        map={fallbackTexture}
+        color={fallbackTexture ? undefined : '#071426'}
+        side={THREE.DoubleSide}
       />
     </mesh>
   );
@@ -769,7 +832,7 @@ function SceneContent({
       case 'wireframe':
         return <EarthWireframe earthRef={earthRef} vectorTexture={texture} />;
       case 'flat-realistic':
-        return null;
+        return <FlatEarthBackdrop />;
       default:
         return fallback;
     }

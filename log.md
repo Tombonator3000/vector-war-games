@@ -2751,3 +2751,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T15:12:18Z - Preload world topology for GlobeScene atlas rendering
 - Cached the world map load routine behind a shared promise and invoked it on page mount so `worldCountries` is ready before the campaign begins (`src/pages/Index.tsx`).
 - Updated the game start hook to reuse the preloaded dataset, letting the wireframe atlas texture render immediately without re-fetching (`src/pages/Index.tsx`).
+### 2025-11-07T16:44:03Z - Keep flat-realistic map visible before launch
+- Added a textured billboard fallback so the flat-realistic style always shows a world silhouette even before the 2D renderer activates (`src/components/GlobeScene.tsx`).
+- Bootstrapped a lightweight attract-mode loop that paints the flat texture prior to gameplay while keeping full simulations gated behind the standard start flow (`src/pages/Index.tsx`).
