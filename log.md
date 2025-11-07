@@ -2729,3 +2729,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Limited both the options menu and start screen map style selectors to the realistic, wireframe, and flat-realistic presets (`src/components/OptionsMenu.tsx`, `src/pages/Index.tsx`).
 - Removed deprecated style handling and loaders from the Three.js globe renderer, 2D renderer, and world renderer wrappers, deleting the unused nightlights texture asset (`src/components/GlobeScene.tsx`, `src/pages/Index.tsx`, `src/rendering/worldRenderer.ts`, `public/textures/earth_nightlights.jpg`).
 - Updated documentation to reflect the trimmed style set and marked the retired variants as deprecated in the Cesium migration notes (`MAP_AUDIT_REPORT.md`, `CESIUM_DEPRECATION_PLAN.md`).
+### 2025-11-07T10:44:50Z - Default to flat-realistic tactical map
+- Set the globe renderer's default visual to the flat-realistic satellite texture to align with the strategic directive (`src/components/GlobeScene.tsx`).
+- Seeded a fresh session's stored map style preference with the flat-realistic preset to ensure the UI opens on the 2D satellite layer without prior user input (`src/pages/Index.tsx`).
+- Launched the Vite dev server and verified a new browser session records the flat-realistic selection in localStorage while capturing a smoke-test screenshot (`npm run dev`, Playwright capture).

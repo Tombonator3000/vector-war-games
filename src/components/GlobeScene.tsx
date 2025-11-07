@@ -63,7 +63,7 @@ export interface MapModeOverlayData {
   unrest: Record<string, { morale: number; publicOpinion: number; instability: number }>;
 }
 
-export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'realistic', mode: 'standard' };
+export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'flat-realistic', mode: 'standard' };
 
 /**
  * Handle interface for imperative GlobeScene methods

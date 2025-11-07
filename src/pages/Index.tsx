@@ -5624,7 +5624,11 @@ export default function NoradVector() {
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
     const storedVisual = Storage.getItem('map_style_visual') ?? Storage.getItem('map_style');
     const storedMode = Storage.getItem('map_mode');
-    const visual = isVisualStyleValue(storedVisual) ? storedVisual : DEFAULT_MAP_STYLE.visual;
+    const visual = isVisualStyleValue(storedVisual) ? storedVisual : (() => {
+      Storage.setItem('map_style_visual', DEFAULT_MAP_STYLE.visual);
+      Storage.setItem('map_style', DEFAULT_MAP_STYLE.visual);
+      return DEFAULT_MAP_STYLE.visual;
+    })();
     const mode = isMapModeValue(storedMode) ? storedMode : DEFAULT_MAP_STYLE.mode;
     return { visual, mode };
   });
