@@ -8906,6 +8906,29 @@ export default function NoradVector() {
     });
   }, [log, toast]);
 
+  const handleOpenBioWarfarePanel = useCallback(() => {
+    if (!pandemicIntegrationEnabled) {
+      toast({
+        title: 'Pandemic systems offline',
+        description: 'Enable pandemic integration to access BioForge operations.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!bioWarfareEnabled) {
+      toast({
+        title: 'Bio-warfare disabled',
+        description: 'Activate bio-warfare conquest options in settings to open the BioForge lab.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    AudioSys.playSFX('click');
+    setIsBioWarfareOpen(true);
+  }, [pandemicIntegrationEnabled, bioWarfareEnabled, toast]);
+
   const handleBioDefenseUpgrade = useCallback(() => {
     const player = PlayerManager.get();
     if (!player) return;
@@ -13400,6 +13423,7 @@ export default function NoradVector() {
         doctrineShiftState={S.doctrineShiftState}
         resourceMarket={S.resourceMarket}
         depletionWarnings={playerDepletionWarnings}
+        onOpenBioWarfarePanel={handleOpenBioWarfarePanel}
       />
 
       <GameHelper

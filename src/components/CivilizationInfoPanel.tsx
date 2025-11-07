@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { X, TrendingUp, Users, Award, Shield, Zap, Radio, Plane, Anchor, Target, Beaker, Heart, Factory, Flag, Smile, Meh, Frown, AlertTriangle, Trophy, Skull, Building2, Sparkles, Calendar, ThumbsUp, FlaskConical, BookOpen, Table } from 'lucide-react';
 import { GameDatabase } from './GameDatabase';
+import { Button } from '@/components/ui/button';
 import { Nation } from '../types/game';
 import type { GovernanceMetrics } from '@/hooks/useGovernance';
 import type { VictoryAnalysis } from '@/types/victory';
@@ -34,6 +35,7 @@ interface CivilizationInfoPanelProps {
   doctrineShiftState?: DoctrineShiftState;
   resourceMarket?: ResourceMarket;
   depletionWarnings?: DepletionWarning[];
+  onOpenBioWarfarePanel?: () => void;
 }
 
 type TabType = 'own-status' | 'enemy-status' | 'ledger' | 'diplomacy' | 'research';
@@ -54,6 +56,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   doctrineShiftState,
   resourceMarket,
   depletionWarnings,
+  onOpenBioWarfarePanel,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
   const [selectedNationId, setSelectedNationId] = useState<string | null>(null);
@@ -890,6 +893,29 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
             )}
           </div>
         </div>
+
+        {onOpenBioWarfarePanel && (
+          <div className="bg-gray-900/60 border border-purple-500/30 rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-bold text-purple-300">
+              <FlaskConical className="h-4 w-4" />
+              <span>BioForge Operations</span>
+            </div>
+            <p className="text-xs text-gray-400">
+              Open the BioForge lab to manage bio-weapon research, defensive upgrades, and deployment readiness.
+            </p>
+            <Button
+              onClick={onOpenBioWarfarePanel}
+              className="w-full bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200"
+            >
+              Open BioForge Lab
+            </Button>
+            {((player.bioLab?.tier ?? 0) < 1) && (
+              <p className="text-[11px] text-gray-500">
+                Construct your first bio-lab to unlock advanced bio-warfare options.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     );
   };
