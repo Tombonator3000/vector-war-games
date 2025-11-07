@@ -37,6 +37,7 @@ import {
   type Unit,
   type UnitVisualization,
 } from '@/lib/unitModels';
+import { resolvePublicAssetPath } from '@/lib/renderingUtils';
 
 const EARTH_RADIUS = 1.8;
 const MARKER_OFFSET = 0.06;
@@ -688,7 +689,11 @@ function FlatEarthBackdrop() {
   const meshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>>(null);
   const { camera } = useThree();
 
-  const fallbackTexture = useMemo(() => {
+  const textureUrl = useMemo(() => resolvePublicAssetPath('textures/earth_day.jpg'), []);
+  const [satelliteTexture, setSatelliteTexture] = useState<THREE.Texture | null>(null);
+  const satelliteTextureRef = useRef<THREE.Texture | null>(null);
+
+  const gradientTexture = useMemo(() => {
     if (typeof document === 'undefined') {
       return null;
     }
@@ -723,10 +728,51 @@ function FlatEarthBackdrop() {
   }, []);
 
   useEffect(() => {
+    const loader = new THREE.TextureLoader();
+    let isMounted = true;
+
+    loader.load(
+      textureUrl,
+      loadedTexture => {
+        if (!isMounted) {
+          loadedTexture.dispose();
+          return;
+        }
+
+        loadedTexture.colorSpace = THREE.SRGBColorSpace;
+        loadedTexture.generateMipmaps = true;
+        loadedTexture.minFilter = THREE.LinearMipmapLinearFilter;
+        loadedTexture.magFilter = THREE.LinearFilter;
+        loadedTexture.needsUpdate = true;
+
+        satelliteTextureRef.current?.dispose();
+        satelliteTextureRef.current = loadedTexture;
+        setSatelliteTexture(loadedTexture);
+      },
+      undefined,
+      () => {
+        if (!isMounted) {
+          return;
+        }
+
+        satelliteTextureRef.current?.dispose();
+        satelliteTextureRef.current = null;
+        setSatelliteTexture(null);
+      }
+    );
+
     return () => {
-      fallbackTexture?.dispose();
+      isMounted = false;
+      satelliteTextureRef.current?.dispose();
+      satelliteTextureRef.current = null;
     };
-  }, [fallbackTexture]);
+  }, [textureUrl]);
+
+  useEffect(() => {
+    return () => {
+      gradientTexture?.dispose();
+    };
+  }, [gradientTexture]);
 
   useFrame(() => {
     if (!meshRef.current) return;
@@ -739,8 +785,8 @@ function FlatEarthBackdrop() {
     <mesh ref={meshRef} position={[0, 0, -0.02]} renderOrder={-20} frustumCulled={false}>
       <planeGeometry args={[planeSize, planeSize]} />
       <meshBasicMaterial
-        map={fallbackTexture}
-        color={fallbackTexture ? undefined : '#071426'}
+        map={satelliteTexture ?? gradientTexture}
+        color={satelliteTexture || gradientTexture ? undefined : '#071426'}
         side={THREE.DoubleSide}
       />
     </mesh>
