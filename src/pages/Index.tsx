@@ -6757,6 +6757,10 @@ export default function NoradVector() {
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
   });
 
+  const playerGovernanceMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;
+  const playerLeaderName = playerNation?.leaderName || playerNation?.leader;
+  const playerLeaderImage = useMemo(() => getLeaderImage(playerLeaderName), [playerLeaderName]);
+  const playerLeaderInitials = useMemo(() => getLeaderInitials(playerLeaderName), [playerLeaderName]);
   // Must be declared after governance hook
   const playerGovernanceMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;
 
