@@ -2716,3 +2716,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Cached Cesium-derived territory polygon data on the main page so the GlobeScene can render territorial outlines without reloading the Cesium utilities each frame (`src/pages/Index.tsx`).
 - Derived Three.js unit markers from the conventional warfare state using territory anchors and forwarded them alongside visibility toggles to the GlobeScene component (`src/pages/Index.tsx`).
 - Passed the new territory and unit props through the map-shell render branch to keep the Three.js tactical viewer in sync with the existing Cesium overlays (`src/pages/Index.tsx`).
+### 2025-11-07T08:16:48Z - Retire Cesium viewer path and consolidate map shell
+- Removed the legacy Cesium viewer selection state and always render the Three.js GlobeScene on the main page, dropping the Cesium component imports (`src/pages/Index.tsx`).
+- Simplified the intro/options flows by removing viewer toggles so only the Three.js engine is configurable (`src/components/setup/IntroScreen.tsx`, `src/components/OptionsMenu.tsx`).
+- Deleted the obsolete Cesium viewer components and stripped Cesium dependencies and build plugins from the toolchain (`src/components/CesiumViewer.tsx`, `src/components/CesiumHeroGlobe.tsx`, `package.json`, `package-lock.json`, `vite.config.ts`).

@@ -23,8 +23,6 @@ import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRigh
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
-import CesiumHeroGlobe from '@/components/CesiumHeroGlobe';
-import CesiumViewer from '@/components/CesiumViewer';
 import { useFlashpoints, type FlashpointOutcome } from '@/hooks/useFlashpoints';
 import {
   usePandemic,
@@ -402,19 +400,6 @@ const isVisualStyleValue = (value: unknown): value is MapVisualStyle =>
 
 const isMapModeValue = (value: unknown): value is MapMode =>
   typeof value === 'string' && MAP_MODES.includes(value as MapMode);
-
-const VIEWER_OPTIONS: { value: 'threejs' | 'cesium'; label: string; description: string }[] = [
-  {
-    value: 'threejs',
-    label: 'Classic',
-    description: 'Three.js tactical globe with retro vector styling.',
-  },
-  {
-    value: 'cesium',
-    label: 'Cesium',
-    description: 'Photorealistic Cesium globe with geospatial overlays.',
-  },
-];
 
 type ScreenResolution = 'auto' | '1280x720' | '1600x900' | '1920x1080' | '2560x1440' | '3840x2160';
 
@@ -5723,25 +5708,7 @@ export default function NoradVector() {
     return { visual, mode };
   });
 
-  // Globe viewer type - Three.js or Cesium
-  const [viewerType, setViewerType] = useState<'threejs' | 'cesium'>(() => {
-    const stored = Storage.getItem('viewer_type');
-    return stored === 'cesium' ? 'cesium' : 'threejs';
-  });
-
   const handleMapStyleChange = useCallback((style: MapVisualStyle) => {
-    const requiresThreeTacticalEngine =
-      style === 'flat' || style === 'flat-realistic' || style === 'flat-nightlights';
-
-    if (requiresThreeTacticalEngine && viewerType !== 'threejs') {
-      setViewerType('threejs');
-      Storage.setItem('viewer_type', 'threejs');
-      toast({
-        title: 'Three.js tactical map engaged',
-        description: 'Flat strategic views run on the primary Three.js engine.',
-      });
-    }
-
     setMapStyle(prev => {
       if (prev.visual === style) {
         return prev;
@@ -5763,7 +5730,7 @@ export default function NoradVector() {
 
       return { ...prev, visual: style };
     });
-  }, [toast, viewerType]);
+  }, [toast]);
 
   const handleMapModeChange = useCallback((mode: MapMode) => {
     setMapStyle(prev => {
@@ -5851,17 +5818,6 @@ export default function NoradVector() {
     updateDisplay();
     setGamePhase('leader');
   }, [selectedScenarioId, setGamePhase]);
-
-  const handleViewerSelect = useCallback((nextType: 'threejs' | 'cesium') => {
-    setViewerType(prev => {
-      if (prev === nextType) {
-        return prev;
-      }
-
-      Storage.setItem('viewer_type', nextType);
-      return nextType;
-    });
-  }, []);
 
   // Screen resolution preference
   const [screenResolution, setScreenResolution] = useState<ScreenResolution>(() => {
@@ -10783,7 +10739,7 @@ export default function NoradVector() {
   }, []);
 
   useEffect(() => {
-    if (!isGameStarted || viewerType !== 'threejs') {
+    if (!isGameStarted) {
       return;
     }
 
@@ -11514,7 +11470,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isGameStarted, viewerType, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleMilitary, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
+  }, [isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleMilitary, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
 
   const buildAllowed = coopEnabled ? canExecute('BUILD') : true;
   const researchAllowed = coopEnabled ? canExecute('RESEARCH') : true;
@@ -11778,8 +11734,6 @@ export default function NoradVector() {
         onCloseScenarioPanel={setIsScenarioPanelOpen}
         mapStyle={mapStyle}
         onMapStyleChange={handleMapStyleChange}
-        viewerType={viewerType}
-        onViewerTypeChange={handleViewerSelect}
         musicEnabled={musicEnabled}
         onMusicToggle={handleMusicToggle}
         sfxEnabled={sfxEnabled}
@@ -11932,38 +11886,20 @@ export default function NoradVector() {
       <div className="command-interface__scanlines" aria-hidden="true" />
 
       <div className="map-shell">
-        {viewerType === 'threejs' ? (
-          <GlobeScene
-            ref={canvasRef}
-            cam={cam}
-            nations={nations}
-            worldCountries={worldCountries}
-            territories={territoryPolygons}
-            units={globeUnits}
-            onProjectorReady={handleProjectorReady}
-            onPickerReady={handlePickerReady}
-            mapStyle={mapStyle}
-            modeData={mapModeData}
-            showTerritories={showTerritories}
-            showUnits={showUnits}
-          />
-        ) : (
-          <CesiumViewer
-            territories={Object.values(conventional.state.territories)}
-            units={Object.values(conventional.state.units)}
-            nations={nations}
-            onTerritoryClick={(territoryId) => {
-              // Territory click handler - reserved for future interaction
-            }}
-            onUnitClick={(unitId) => {
-              // Unit click handler - reserved for future interaction
-            }}
-            enableDayNight={true}
-            mapStyle={mapStyle}
-            modeData={mapModeData}
-            className="w-full h-full"
-          />
-        )}
+        <GlobeScene
+          ref={canvasRef}
+          cam={cam}
+          nations={nations}
+          worldCountries={worldCountries}
+          territories={territoryPolygons}
+          units={globeUnits}
+          onProjectorReady={handleProjectorReady}
+          onPickerReady={handlePickerReady}
+          mapStyle={mapStyle}
+          modeData={mapModeData}
+          showTerritories={showTerritories}
+          showUnits={showUnits}
+        />
 
         {draggingArmy && draggingArmyPosition && (
           <div className="pointer-events-none absolute inset-0 z-30">
@@ -12742,8 +12678,6 @@ export default function NoradVector() {
             onThemeChange={setTheme}
             mapStyle={mapStyle}
             onMapStyleChange={handleMapStyleChange}
-            viewerType={viewerType}
-            onViewerTypeChange={handleViewerSelect}
             showInGameFeatures={true}
             onChange={updateDisplay}
             currentTurn={S.turn}

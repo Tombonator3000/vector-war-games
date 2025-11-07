@@ -47,11 +47,6 @@ export interface IntroScreenProps {
   mapStyle: MapStyle;
   /** Change handler for map style */
   onMapStyleChange: (style: MapVisualStyle) => void;
-  /** Current viewer type */
-  viewerType: 'threejs' | 'cesium';
-  /** Change handler for viewer type */
-  onViewerTypeChange: (type: 'threejs' | 'cesium') => void;
-
   musicEnabled?: boolean;
   onMusicToggle?: (enabled: boolean) => void;
   sfxEnabled?: boolean;
@@ -77,8 +72,6 @@ export function IntroScreen({
   onCloseScenarioPanel,
   mapStyle,
   onMapStyleChange,
-  viewerType,
-  onViewerTypeChange,
   musicEnabled,
   onMusicToggle,
   sfxEnabled,
@@ -115,8 +108,6 @@ export function IntroScreen({
             showInGameFeatures={false}
             mapStyle={mapStyle}
             onMapStyleChange={onMapStyleChange}
-            viewerType={viewerType}
-            onViewerTypeChange={onViewerTypeChange}
             musicEnabled={musicEnabled}
             onMusicToggle={onMusicToggle}
             sfxEnabled={sfxEnabled}
