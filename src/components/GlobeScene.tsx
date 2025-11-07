@@ -50,6 +50,9 @@ const CITY_LIGHT_ALTITUDE = EARTH_RADIUS + 0.012;
 const WHITE_COLOR = new THREE.Color('#ffffff');
 const FALLBACK_CITY_COLOR = new THREE.Color('#ffdd00');
 
+const NOOP_PROJECTOR: ProjectorFn = () => ({ x: 0, y: 0, visible: false });
+const NOOP_PICKER: PickerFn = () => null;
+
 export type ProjectorFn = (lon: number, lat: number) => { x: number; y: number; visible: boolean };
 export type PickerFn = (x: number, y: number) => { lon: number; lat: number } | null;
 
@@ -81,9 +84,14 @@ export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'flat-realistic', mode: 'st
  * Exposed via ref for controlling missiles, explosions, and other effects
  */
 export interface GlobeSceneHandle {
+  overlayCanvas: HTMLCanvasElement | null;
   projectLonLat: ProjectorFn;
   pickLonLat: PickerFn;
-  fireMissile: (from: { lon: number; lat: number }, to: { lon: number; lat: number }, options?: { color?: string; type?: 'ballistic' | 'cruise' | 'orbital' }) => string;
+  fireMissile: (
+    from: { lon: number; lat: number },
+    to: { lon: number; lat: number },
+    options?: { color?: string; type?: 'ballistic' | 'cruise' | 'orbital' }
+  ) => string;
   addExplosion: (lon: number, lat: number, radiusKm?: number) => void;
   clearMissiles: () => void;
   clearExplosions: () => void;
@@ -120,8 +128,6 @@ interface SceneRegistration {
   earth: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> | null;
   clock: THREE.Clock;
 }
-
-type ForwardedCanvas = HTMLCanvasElement | null;
 
 type WorldFeature = FeatureCollection<Polygon | MultiPolygon>['features'][number];
 
@@ -1130,7 +1136,7 @@ function SceneContent({
   );
 }
 
-export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function GlobeScene(
+export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function GlobeScene(
   {
     cam,
     nations,
@@ -1156,6 +1162,8 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   const earthMeshRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> | null>(null);
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerVec = useRef(new THREE.Vector2());
+  const projectorRef = useRef<ProjectorFn>(NOOP_PROJECTOR);
+  const pickerRef = useRef<PickerFn>(NOOP_PICKER);
   const visualStyle = mapStyle?.visual ?? DEFAULT_MAP_STYLE.visual;
   const [, triggerRender] = useReducer((value: number) => value + 1, 0);
   const isMountedRef = useRef(true);
@@ -1232,7 +1240,6 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
   }, []);
 
   const updateProjector = useCallback(() => {
-    if (!onProjectorReady) return;
     const projector: ProjectorFn = (lon, lat) => {
       const size = sizeRef.current;
       const overlay = overlayRef.current;
@@ -1271,11 +1278,13 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
         visible: vector.z < 1,
       };
     };
-    onProjectorReady(projector);
+    projectorRef.current = projector;
+    if (onProjectorReady) {
+      onProjectorReady(projector);
+    }
   }, [cam.x, cam.y, cam.zoom, visualStyle, onProjectorReady]);
 
   const updatePicker = useCallback(() => {
-    if (!onPickerReady) return;
     const picker: PickerFn = (pointerX, pointerY) => {
       const container = containerRef.current;
       const overlay = overlayRef.current;
@@ -1318,7 +1327,10 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       const lon = normalizeLon(THREE.MathUtils.radToDeg(theta) - 180);
       return { lon, lat };
     };
-    onPickerReady(picker);
+    pickerRef.current = picker;
+    if (onPickerReady) {
+      onPickerReady(picker);
+    }
   }, [cam.x, cam.y, cam.zoom, visualStyle, onPickerReady]);
 
   const handleRegister = useCallback(
@@ -1399,7 +1411,24 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
     requestRender();
   }, [requestRender]);
 
-  useImperativeHandle(ref, () => overlayRef.current); // forward overlay canvas element
+  const projectLonLat = useCallback<ProjectorFn>((lon, lat) => projectorRef.current(lon, lat), []);
+  const pickLonLat = useCallback<PickerFn>((x, y) => pickerRef.current(x, y), []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      get overlayCanvas() {
+        return overlayRef.current;
+      },
+      projectLonLat,
+      pickLonLat,
+      fireMissile,
+      addExplosion,
+      clearMissiles,
+      clearExplosions,
+    }),
+    [projectLonLat, pickLonLat, fireMissile, addExplosion, clearMissiles, clearExplosions],
+  );
 
   return (
     <div ref={containerRef} className="globe-scene">
@@ -1411,7 +1440,7 @@ export const GlobeScene = forwardRef<ForwardedCanvas, GlobeSceneProps>(function 
       >
         <SceneContent
           cam={cam}
-          texture={texture}
+          texture={vectorTexture}
           nations={nations}
           territories={territories}
           units={units}

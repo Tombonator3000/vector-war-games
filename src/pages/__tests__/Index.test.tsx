@@ -84,20 +84,36 @@ vi.mock('@/components/FlashpointModal', () => ({
 
 vi.mock('@/components/GlobeScene', async () => {
   const ReactActual = await vi.importActual<typeof React>('react');
-  const GlobeScene = ReactActual.forwardRef<HTMLDivElement, any>((props, ref) => {
+  const GlobeScene = ReactActual.forwardRef<any, any>((props, ref) => {
     ReactActual.useEffect(() => {
       if (typeof props.onPickerReady === 'function') {
         props.onPickerReady(() => null);
       }
       if (typeof props.onProjectorReady === 'function') {
-        props.onProjectorReady(() => null);
+        props.onProjectorReady(() => ({ x: 0, y: 0, visible: true }));
       }
     }, [props.onPickerReady, props.onProjectorReady]);
 
     if (typeof ref === 'function') {
-      ref(null);
+      ref({
+        overlayCanvas: document.createElement('canvas'),
+        projectLonLat: () => ({ x: 0, y: 0, visible: true }),
+        pickLonLat: () => null,
+        fireMissile: vi.fn(() => 'mock-missile'),
+        addExplosion: vi.fn(),
+        clearMissiles: vi.fn(),
+        clearExplosions: vi.fn(),
+      });
     } else if (ref) {
-      (ref as React.MutableRefObject<null>).current = null;
+      (ref as React.MutableRefObject<any>).current = {
+        overlayCanvas: document.createElement('canvas'),
+        projectLonLat: () => ({ x: 0, y: 0, visible: true }),
+        pickLonLat: () => null,
+        fireMissile: vi.fn(() => 'mock-missile'),
+        addExplosion: vi.fn(),
+        clearMissiles: vi.fn(),
+        clearExplosions: vi.fn(),
+      };
     }
 
     return <div data-testid="globe" />;
