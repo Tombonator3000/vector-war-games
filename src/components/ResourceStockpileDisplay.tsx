@@ -8,6 +8,13 @@ import React from 'react';
 import type { Nation } from '@/types/game';
 import { RESOURCE_INFO, type StrategyResourceType } from '@/types/territorialResources';
 
+const CYBER_INFO = {
+  name: 'Cyber Readiness',
+  icon: '🖥️',
+  description: 'Operational readiness of national cyber forces',
+  color: '#38bdf8',
+};
+
 interface ResourceStockpileDisplayProps {
   nation: Nation;
   compact?: boolean;
@@ -19,6 +26,10 @@ export function ResourceStockpileDisplay({ nation, compact = false }: ResourceSt
   }
 
   const resources: StrategyResourceType[] = ['oil', 'uranium', 'rare_earths', 'food'];
+
+  const readiness = Math.round(nation.cyber?.readiness ?? 0);
+  const maxReadiness = Math.round(nation.cyber?.maxReadiness ?? 100);
+  const readinessPercentage = maxReadiness > 0 ? Math.min(100, (readiness / maxReadiness) * 100) : 0;
 
   if (compact) {
     return (
@@ -40,6 +51,12 @@ export function ResourceStockpileDisplay({ nation, compact = false }: ResourceSt
             </div>
           );
         })}
+        {nation.cyber && (
+          <div className="flex items-center gap-1" title={CYBER_INFO.description}>
+            <span>{CYBER_INFO.icon}</span>
+            <span className="font-mono font-semibold">{readiness}/{maxReadiness}</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -82,6 +99,28 @@ export function ResourceStockpileDisplay({ nation, compact = false }: ResourceSt
           </div>
         );
       })}
+      {nation.cyber && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1">
+              <span>{CYBER_INFO.icon}</span>
+              <span className="font-semibold">{CYBER_INFO.name}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono">{readiness} / {maxReadiness}</span>
+            </div>
+          </div>
+          <div className="h-2 bg-gray-800 rounded-full overflow-hidden" title={CYBER_INFO.description}>
+            <div
+              className="h-full transition-all duration-300"
+              style={{
+                width: `${readinessPercentage}%`,
+                backgroundColor: CYBER_INFO.color,
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

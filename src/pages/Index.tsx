@@ -5437,13 +5437,6 @@ function updateDisplay() {
   const intelEl = document.getElementById('intelDisplay');
   if (intelEl) intelEl.textContent = (player.intel || 0).toString();
 
-  const cyberEl = document.getElementById('cyberDisplay');
-  if (cyberEl) {
-    const readiness = Math.round(player.cyber?.readiness ?? 0);
-    const max = Math.round(player.cyber?.maxReadiness ?? 100);
-    cyberEl.textContent = `${readiness}/${max}`;
-  }
-  
   const citiesEl = document.getElementById('citiesDisplay');
   if (citiesEl) citiesEl.textContent = (player.cities || 1).toString();
   
@@ -11951,11 +11944,6 @@ export default function NoradVector() {
                 <span className="text-cyan-300 text-[11px] tracking-wide">DATE</span>
                 <span className="text-neon-green font-semibold text-sm" id="gameTimeDisplay">—</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-cyan-300 text-[11px] tracking-wide">CYBER</span>
-                <span className="text-neon-green font-semibold text-sm" id="cyberDisplay">60/100</span>
-              </div>
-
               {/* Strategic Resources Display */}
               {(() => {
                 const playerNation = nations.find(n => n.isPlayer);
