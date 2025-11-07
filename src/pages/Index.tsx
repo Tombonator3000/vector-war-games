@@ -5663,7 +5663,6 @@ export default function NoradVector() {
   const playerNation = useMemo(() => nations.find(n => n.isPlayer), [nations]);
   const advancedGameState = GameStateManager.getState() as GameState;
   const enemyNations = useMemo(() => nations.filter(n => !n.isPlayer && !n.eliminated), [nations]);
-  const playerGovernanceMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;
   const playerLeaderName = playerNation?.leaderName || playerNation?.leader;
   const playerLeaderImage = useMemo(() => getLeaderImage(playerLeaderName), [playerLeaderName]);
   const playerLeaderInitials = useMemo(() => getLeaderInitials(playerLeaderName), [playerLeaderName]);
@@ -6757,6 +6756,9 @@ export default function NoradVector() {
     onApplyDelta: handleGovernanceDelta,
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
   });
+
+  // Must be declared after governance hook
+  const playerGovernanceMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;
 
   const mapModeData = useMemo<MapModeOverlayData>(() => {
     const playerNation = nations.find(n => n.isPlayer) || null;
