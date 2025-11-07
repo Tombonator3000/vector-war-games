@@ -183,7 +183,7 @@ import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen'
 import { canAfford, pay, getCityCost, getCityBuildTime, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
 import { modifyRelationship } from '@/lib/relationshipUtils';
-import { project, toLonLat, getPoliticalFill, resolvePublicAssetPath, POLITICAL_COLOR_PALETTE, type ProjectionContext } from '@/lib/renderingUtils';
+import { project, toLonLat, resolvePublicAssetPath, type ProjectionContext } from '@/lib/renderingUtils';
 import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, type LocalNation, createDefaultDiplomacyState } from '@/state';
 import type { GreatOldOnesState } from '@/types/greatOldOnes';
 import { initializeGreatOldOnesState } from '@/lib/greatOldOnesHelpers';
@@ -354,9 +354,6 @@ interface PendingLaunchState {
 const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
   { value: 'realistic', label: 'Realistic', description: 'Satellite imagery with terrain overlays.' },
   { value: 'wireframe', label: 'Wireframe', description: 'Vector borders and topography outlines.' },
-  { value: 'night', label: 'Night Lights', description: 'City illumination against a dark globe.' },
-  { value: 'political', label: 'Political', description: 'Colored territorial boundaries and claims.' },
-  { value: 'flat', label: 'Flat', description: 'Orthographic projection with a 2D world canvas.' },
   {
     value: 'flat-realistic',
     label: 'Flat Realistic',
@@ -613,7 +610,7 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 ];
 
 let currentTheme: ThemeId = 'synthwave';
-let currentMapStyle: MapVisualStyle = 'flat-realistic';
+let currentMapStyle: MapVisualStyle = 'realistic';
 let currentMapMode: MapMode = 'standard';
 let currentMapModeData: MapModeOverlayData | null = null;
 let selectedTargetRefId: string | null = null;
@@ -707,11 +704,8 @@ let worldCountries: any = null;
 // resolvePublicAssetPath moved to @/lib/renderingUtils
 
 const FLAT_REALISTIC_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day.jpg');
-const FLAT_NIGHTLIGHTS_TEXTURE_URL = resolvePublicAssetPath('textures/earth_nightlights.jpg');
 let flatRealisticTexture: HTMLImageElement | null = null;
 let flatRealisticTexturePromise: Promise<HTMLImageElement> | null = null;
-let flatNightlightsTexture: HTMLImageElement | null = null;
-let flatNightlightsTexturePromise: Promise<HTMLImageElement> | null = null;
 
 function preloadFlatRealisticTexture() {
   if (flatRealisticTexture) {
@@ -745,41 +739,6 @@ function preloadFlatRealisticTexture() {
 
   return flatRealisticTexturePromise.catch(error => {
     // Texture load failed - fallback to standard rendering
-    return null;
-  });
-}
-
-function preloadFlatNightlightsTexture() {
-  if (flatNightlightsTexture) {
-    return Promise.resolve(flatNightlightsTexture);
-  }
-
-  if (flatNightlightsTexturePromise) {
-    return flatNightlightsTexturePromise;
-  }
-
-  if (typeof window === 'undefined' || typeof Image === 'undefined') {
-    return Promise.resolve(null);
-  }
-
-  flatNightlightsTexturePromise = new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => {
-      flatNightlightsTexture = image;
-      resolve(image);
-    };
-    image.onerror = (event) => {
-      flatNightlightsTexturePromise = null;
-      reject(
-        event instanceof ErrorEvent
-          ? event.error ?? new Error('Failed to load flat nightlights texture')
-          : new Error('Failed to load flat nightlights texture'),
-      );
-    };
-    image.src = FLAT_NIGHTLIGHTS_TEXTURE_URL;
-  });
-
-  return flatNightlightsTexturePromise.catch(() => {
     return null;
   });
 }
@@ -1765,11 +1724,12 @@ const Atmosphere = {
     if (!this.initialized) return;
 
     const palette = THEME_SETTINGS[currentTheme];
-    const isNight = style === 'night';
-    const isWireframe = style === 'wireframe';
+    const visualStyle = typeof style === 'string' ? style : style.visual;
+    const isWireframe = visualStyle === 'wireframe';
+    const isFlatRealistic = visualStyle === 'flat-realistic';
 
-    context.fillStyle = isNight ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.25)';
-    const starAlpha = isWireframe ? 0.45 : isNight ? 0.65 : 0.4;
+    context.fillStyle = 'rgba(255,255,255,0.25)';
+    const starAlpha = isWireframe ? 0.45 : 0.4;
     this.stars.forEach(star => {
       context.globalAlpha = star.brightness * starAlpha;
       context.fillRect(star.x, star.y, 1, 1);
@@ -1780,15 +1740,11 @@ const Atmosphere = {
       return;
     }
 
-    const cloudAlpha = isNight ? 0.05 : style === 'political' ? 0.12 : 0.08;
+    const cloudAlpha = isFlatRealistic ? 0.05 : 0.08;
     this.clouds.forEach(cloud => {
       context.save();
       context.globalAlpha = cloudAlpha;
-      if (style === 'political') {
-        context.fillStyle = 'rgba(255,180,120,0.45)';
-      } else {
-        context.fillStyle = palette.cloud;
-      }
+      context.fillStyle = palette.cloud;
       context.beginPath();
       context.ellipse(cloud.x, cloud.y, cloud.sizeX, cloud.sizeY, 0, 0, Math.PI * 2);
       context.fill();
@@ -1858,7 +1814,8 @@ const CityLights = {
   },
   
   draw(context: CanvasRenderingContext2D, style: MapStyle) {
-    if (style === 'wireframe') {
+    const visualStyle = typeof style === 'string' ? style : style.visual;
+    if (visualStyle === 'wireframe') {
       return;
     }
 
@@ -1872,19 +1829,9 @@ const CityLights = {
 
       // Glow effect
       context.save();
-      if (style === 'night') {
-        context.shadowColor = 'rgba(255,220,140,0.9)';
-        context.shadowBlur = 4;
-        context.fillStyle = `rgba(255,210,120,${brightness})`;
-      } else if (style === 'political') {
-        context.shadowColor = 'rgba(255,200,80,0.75)';
-        context.shadowBlur = 3;
-        context.fillStyle = `rgba(255,200,80,${brightness * 0.7})`;
-      } else {
-        context.shadowColor = 'rgba(255,255,150,0.8)';
-        context.shadowBlur = 3;
-        context.fillStyle = `rgba(255,255,100,${brightness * 0.6})`;
-      }
+      context.shadowColor = 'rgba(255,255,150,0.8)';
+      context.shadowBlur = visualStyle === 'flat-realistic' ? 2 : 3;
+      context.fillStyle = `rgba(255,255,100,${brightness * 0.6})`;
       context.fillRect(x - 0.8, y - 0.8, 1.6, 1.6);
       context.restore();
     });
@@ -2885,13 +2832,9 @@ function drawWorld(style: MapStyle) {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
-    flatNightlightsTexture,
-    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
-    preloadFlatNightlightsTexture,
-    getPoliticalFill,
   };
   renderWorld(style, context);
 }
@@ -2912,13 +2855,9 @@ function drawNations(style: MapVisualStyle) {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
-    flatNightlightsTexture,
-    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
-    preloadFlatNightlightsTexture,
-    getPoliticalFill,
     nations,
     S,
     selectedTargetRefId,
@@ -2942,13 +2881,9 @@ function drawTerritoriesWrapper() {
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
-    flatNightlightsTexture,
-    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
-    preloadFlatNightlightsTexture,
-    getPoliticalFill,
     territories: currentTerritories,
     playerId: player.id,
     selectedTerritoryId,
@@ -3007,7 +2942,7 @@ function drawSatellites(nowMs: number) {
 
   const activeOrbits: SatelliteOrbit[] = [];
   const player = PlayerManager.get();
-  const isFlatTexture = currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights';
+  const isFlatTexture = currentMapStyle === 'flat-realistic';
 
   orbits.forEach(orbit => {
     const targetNation = nations.find(nation => nation.id === orbit.targetId);
@@ -3661,7 +3596,7 @@ function drawFX() {
     S.screenShake *= 0.9;
   }
 
-  if (currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights') {
+  if (currentMapStyle === 'flat-realistic') {
     drawFalloutMarks(deltaMs);
   }
 
@@ -5706,8 +5641,6 @@ export default function NoradVector() {
       AudioSys.playSFX('click');
       if (style === 'flat-realistic') {
         void preloadFlatRealisticTexture();
-      } else if (style === 'flat-nightlights') {
-        void preloadFlatNightlightsTexture();
       }
       toast({
         title: 'Kartstil oppdatert',
@@ -5889,7 +5822,7 @@ export default function NoradVector() {
 
   useEffect(() => {
     currentMapStyle = mapStyle.visual;
-    if (mapStyle.visual === 'flat' || mapStyle.visual === 'flat-realistic' || mapStyle.visual === 'flat-nightlights') {
+    if (mapStyle.visual === 'flat-realistic') {
       const expectedX = (W - W * cam.zoom) / 2;
       const expectedY = (H - H * cam.zoom) / 2;
       const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;
@@ -5904,13 +5837,10 @@ export default function NoradVector() {
   }, [mapStyle.mode]);
   useEffect(() => {
     void preloadFlatRealisticTexture();
-    void preloadFlatNightlightsTexture();
   }, []);
   useEffect(() => {
     if (mapStyle.visual === 'flat-realistic') {
       void preloadFlatRealisticTexture();
-    } else if (mapStyle.visual === 'flat-nightlights') {
-      void preloadFlatNightlightsTexture();
     }
   }, [mapStyle.visual]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
@@ -10789,8 +10719,7 @@ export default function NoradVector() {
         cam.y = Math.min(Math.max(cam.y, minCamY), maxCamY);
       };
 
-      const isBoundedFlatProjection = () =>
-        currentMapStyle === 'flat-realistic' || currentMapStyle === 'flat-nightlights';
+      const isBoundedFlatProjection = () => currentMapStyle === 'flat-realistic';
 
       const clampPanBounds = () => {
         clampLatitude();

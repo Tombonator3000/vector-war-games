@@ -25,13 +25,9 @@ export interface WorldRenderContext {
   currentTheme: string;
   flatRealisticTexture: HTMLImageElement | null;
   flatRealisticTexturePromise: Promise<HTMLImageElement> | null;
-  flatNightlightsTexture: HTMLImageElement | null;
-  flatNightlightsTexturePromise: Promise<HTMLImageElement> | null;
   THEME_SETTINGS: Record<string, unknown>;
   projectLocal: (lon: number, lat: number) => [number, number];
   preloadFlatRealisticTexture: () => void;
-  preloadFlatNightlightsTexture: () => void;
-  getPoliticalFill: (index: number) => string;
 }
 
 export interface NationRenderContext extends WorldRenderContext {
@@ -89,24 +85,17 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     currentTheme,
     flatRealisticTexture,
     flatRealisticTexturePromise,
-    flatNightlightsTexture,
-    flatNightlightsTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
-    preloadFlatNightlightsTexture,
-    getPoliticalFill,
   } = context;
 
   if (!ctx) return;
 
   const palette = THEME_SETTINGS[currentTheme];
 
-  const isPolitical = style === 'political';
-  const isNight = style === 'night';
   const isWireframe = style === 'wireframe';
   const isFlatRealistic = style === 'flat-realistic';
-  const isFlatNightlights = style === 'flat-nightlights';
 
   if (isFlatRealistic) {
     if (!flatRealisticTexture && !flatRealisticTexturePromise) {
@@ -116,18 +105,6 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
       ctx.save();
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(flatRealisticTexture, cam.x, cam.y, W * cam.zoom, H * cam.zoom);
-      ctx.restore();
-    }
-  }
-
-  if (isFlatNightlights) {
-    if (!flatNightlightsTexture && !flatNightlightsTexturePromise) {
-      void preloadFlatNightlightsTexture();
-    }
-    if (flatNightlightsTexture) {
-      ctx.save();
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(flatNightlightsTexture, cam.x, cam.y, W * cam.zoom, H * cam.zoom);
       ctx.restore();
     }
   }
@@ -147,25 +124,10 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
       } else if (feature.geometry.type === 'MultiPolygon') {
         coords.forEach((poly: number[][]) => drawWorldPath(poly[0], ctx, projectLocal));
       }
-
-      if (isPolitical) {
-        ctx.save();
-        ctx.globalAlpha = 0.35;
-        ctx.fillStyle = getPoliticalFill(index);
-        ctx.fill();
-        ctx.restore();
-      }
-
-      if (isNight) {
-        ctx.strokeStyle = 'rgba(170,210,255,0.35)';
-      } else if (isWireframe) {
+      if (isWireframe) {
         ctx.strokeStyle = 'rgba(80,240,255,0.75)';
-      } else if (isPolitical) {
-        ctx.strokeStyle = 'rgba(40,40,40,0.5)';
       } else if (isFlatRealistic) {
         ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-      } else if (isFlatNightlights) {
-        ctx.strokeStyle = 'rgba(160,205,255,0.45)';
       } else {
         ctx.strokeStyle = palette.mapOutline;
       }
@@ -176,18 +138,12 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     ctx.restore();
   }
 
-  const shouldDrawGrid = style !== 'realistic' && style !== 'night';
+  const shouldDrawGrid = style !== 'realistic';
   if (shouldDrawGrid) {
     ctx.save();
     if (isWireframe) {
       ctx.strokeStyle = 'rgba(80,240,255,0.35)';
       ctx.lineWidth = 0.7;
-    } else if (isPolitical) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-      ctx.lineWidth = 0.5;
-    } else if (isFlatNightlights) {
-      ctx.strokeStyle = 'rgba(120,180,255,0.35)';
-      ctx.lineWidth = 0.6;
     } else {
       ctx.strokeStyle = palette.grid;
       ctx.lineWidth = 0.5;
@@ -218,15 +174,7 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
 
   if (style !== 'wireframe') {
     const scanY = (Date.now() / 30) % H;
-    if (isNight) {
-      ctx.fillStyle = 'rgba(80,160,255,0.08)';
-    } else if (isFlatNightlights) {
-      ctx.fillStyle = 'rgba(90,170,255,0.1)';
-    } else if (isPolitical) {
-      ctx.fillStyle = 'rgba(255,200,120,0.12)';
-    } else {
-      ctx.fillStyle = palette.radar;
-    }
+    ctx.fillStyle = palette.radar;
     ctx.fillRect(0, scanY, W, 2);
   }
 }
@@ -249,9 +197,7 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
   if (!ctx || nations.length === 0) return;
 
   const isWireframeStyle = style === 'wireframe';
-  const isNightStyle = style === 'night';
-  const isPoliticalStyle = style === 'political';
-  const isFlatStyle = style === 'flat' || style === 'flat-realistic' || style === 'flat-nightlights';
+  const isFlatStyle = style === 'flat-realistic';
 
   const currentMode = mapMode ?? 'standard';
   const overlayEnabled = isFlatStyle && modeData && currentMode !== 'standard';
@@ -377,15 +323,15 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       ctx.stroke();
     } else {
       ctx.fillStyle = n.color;
-      ctx.shadowColor = isNightStyle ? '#ffe066' : n.color;
-      ctx.shadowBlur = isNightStyle ? 25 : 20;
+      ctx.shadowColor = n.color;
+      ctx.shadowBlur = 20;
       ctx.beginPath();
       ctx.moveTo(x, y - 20);
       ctx.lineTo(x - 15, y + 12);
       ctx.lineTo(x + 15, y + 12);
       ctx.closePath();
       ctx.stroke();
-      ctx.globalAlpha = isPoliticalStyle ? 0.4 : 0.3;
+      ctx.globalAlpha = 0.3;
       ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -407,7 +353,7 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
           ctx.strokeRect(cx - 5, cy - 5, 10, 10);
         } else {
           ctx.fillStyle = n.color;
-          ctx.globalAlpha = isNightStyle ? 0.5 : 0.3;
+          ctx.globalAlpha = 0.3;
           ctx.fillRect(cx - 6, cy - 6, 12, 12);
         }
       }
@@ -447,9 +393,7 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
 
       const frameFill = isWireframeStyle
         ? 'rgba(0,0,0,0.7)'
-        : isNightStyle
-          ? 'rgba(0,0,0,0.6)'
-          : 'rgba(0,0,0,0.45)';
+        : 'rgba(0,0,0,0.45)';
 
       ctx.save();
       ctx.globalAlpha = labelVisibility;
@@ -467,8 +411,8 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       ctx.globalAlpha = labelVisibility;
       ctx.font = `bold ${Math.round(12 * z)}px monospace`;
       ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : n.color;
-      ctx.shadowColor = isNightStyle ? '#ffe066' : n.color;
-      ctx.shadowBlur = isNightStyle ? 10 : 6;
+      ctx.shadowColor = n.color;
+      ctx.shadowBlur = 6;
       ctx.fillText(displayName, lx, lyTop + pad + 12 * z);
       ctx.shadowBlur = 0;
 
