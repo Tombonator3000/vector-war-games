@@ -16,7 +16,7 @@ function Earth() {
     const baseUrl = import.meta.env.BASE_URL;
     const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
     return [
-      `${normalizedBase}textures/earth_day.jpg`,
+      `${normalizedBase}textures/earth_flat_custom.jpg`,
       `${normalizedBase}textures/earth_normal.jpg`,
       `${normalizedBase}textures/earth_specular.jpg`,
     ];

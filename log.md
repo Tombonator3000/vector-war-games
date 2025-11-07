@@ -2785,3 +2785,5 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T23:45:00Z - Restore flat-earth satellite texture fidelity
 - Replaced the placeholder flat-earth map with the high-resolution satellite asset to eliminate load errors (`public/textures/earth_flat_custom.jpg`).
 - Verified the updated reference still aligns with the globe backdrop and preloader loaders.
+### 2025-11-08T00:20:00Z - Repoint intro globe day texture asset
+- Updated the intro Globe3D loader to fetch the restored flat-earth satellite texture under its new filename so the spinning earth regains its diffuse map (`src/components/Globe3D.tsx`).
