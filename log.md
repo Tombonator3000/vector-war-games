@@ -2748,3 +2748,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T14:25:03Z - Remove duplicate lab construction shortcut
 - Deleted the redundant lab construction toggle handler and associated command buttons from the command interface (`src/pages/Index.tsx`).
 - Ran `npm run lint` (fails with pre-existing lint violations across multiple modules) and `npm run test -- --run` (aborted after observing known `mapColorUtils` failures).
+### 2025-11-07T15:12:18Z - Preload world topology for GlobeScene atlas rendering
+- Cached the world map load routine behind a shared promise and invoked it on page mount so `worldCountries` is ready before the campaign begins (`src/pages/Index.tsx`).
+- Updated the game start hook to reuse the preloaded dataset, letting the wireframe atlas texture render immediately without re-fetching (`src/pages/Index.tsx`).

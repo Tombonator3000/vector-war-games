@@ -705,6 +705,7 @@ const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
 // World data
 let worldData: any = null;
 let worldCountries: any = null;
+let worldLoadPromise: Promise<void> | null = null;
 
 // resolvePublicAssetPath moved to @/lib/renderingUtils
 
@@ -2735,87 +2736,102 @@ function productionPhase() {
 }
 
 // World map loading
-async function loadWorld() {
-  const CACHE_NAME = 'offlineTopo110m';
-  
-  try {
-    const cached = Storage.getItem(CACHE_NAME);
-    if (cached) {
-      const data = JSON.parse(cached);
-      if (data.type === 'Topology' && data.objects) {
-        worldData = data;
-        worldCountries = feature(data, data.objects.countries || data.objects.land);
-        log('World map loaded from cache');
-        if (uiUpdateCallback) uiUpdateCallback();
-        return;
-      } else if (data.type === 'FeatureCollection') {
-        worldCountries = data;
-        log('World map loaded from cache (GeoJSON)');
-        if (uiUpdateCallback) uiUpdateCallback();
-        return;
-      }
-    }
-  } catch (e) {
-    // Cache load failed - fallback to CDN fetch
+function loadWorld(): Promise<void> {
+  if (worldCountries) {
+    return Promise.resolve();
   }
 
-  try {
-    log('Fetching world map from CDN...');
-    const response = await fetch('https://unpkg.com/world-atlas@2/countries-110m.json');
-    if (response.ok) {
-      const topo = await response.json();
-
-      try {
-        Storage.setItem(CACHE_NAME, JSON.stringify(topo));
-      } catch (e) {
-        // Could not cache - not critical, continue without cache
-      }
-
-      if (topo.objects) {
-        worldData = topo;
-        worldCountries = feature(topo, topo.objects.countries || topo.objects.land);
-        log('World map loaded from CDN');
-        if (uiUpdateCallback) uiUpdateCallback();
-        return;
-      }
-    }
-  } catch (e) {
-    // CDN fetch failed - fallback to embedded data
+  if (worldLoadPromise) {
+    return worldLoadPromise;
   }
 
-  // Fallback world data
-  worldCountries = {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: { name: "Americas" },
-        geometry: {
-          type: "Polygon",
-          coordinates: [[
-            [-170, 70], [-100, 71], [-80, 50], [-75, 25], [-80, 10], [-85, -10],
-            [-75, -30], [-70, -55], [-75, -55], [-80, -30], [-85, -10], [-95, 0],
-            [-105, 20], [-120, 35], [-130, 40], [-140, 50], [-160, 60], [-170, 70]
-          ]]
-        }
-      },
-      {
-        type: "Feature",
-        properties: { name: "Eurasia" },
-        geometry: {
-          type: "Polygon",
-          coordinates: [[
-            [-10, 35], [0, 40], [10, 45], [30, 50], [50, 55], [80, 60], [120, 65],
-            [140, 60], [160, 55], [170, 60], [180, 65], [180, 70], [140, 75],
-            [80, 75], [20, 70], [-10, 60], [-10, 35]
-          ]]
+  worldLoadPromise = (async () => {
+    const CACHE_NAME = 'offlineTopo110m';
+
+    try {
+      const cached = Storage.getItem(CACHE_NAME);
+      if (cached) {
+        const data = JSON.parse(cached);
+        if (data.type === 'Topology' && data.objects) {
+          worldData = data;
+          worldCountries = feature(data, data.objects.countries || data.objects.land);
+          log('World map loaded from cache');
+          if (uiUpdateCallback) uiUpdateCallback();
+          return;
+        } else if (data.type === 'FeatureCollection') {
+          worldCountries = data;
+          log('World map loaded from cache (GeoJSON)');
+          if (uiUpdateCallback) uiUpdateCallback();
+          return;
         }
       }
-    ]
-  };
+    } catch (e) {
+      // Cache load failed - fallback to CDN fetch
+    }
 
-  log('Using fallback continent outlines');
-  if (uiUpdateCallback) uiUpdateCallback();
+    try {
+      log('Fetching world map from CDN...');
+      const response = await fetch('https://unpkg.com/world-atlas@2/countries-110m.json');
+      if (response.ok) {
+        const topo = await response.json();
+
+        try {
+          Storage.setItem(CACHE_NAME, JSON.stringify(topo));
+        } catch (e) {
+          // Could not cache - not critical, continue without cache
+        }
+
+        if (topo.objects) {
+          worldData = topo;
+          worldCountries = feature(topo, topo.objects.countries || topo.objects.land);
+          log('World map loaded from CDN');
+          if (uiUpdateCallback) uiUpdateCallback();
+          return;
+        }
+      }
+    } catch (e) {
+      // CDN fetch failed - fallback to embedded data
+    }
+
+    // Fallback world data
+    worldCountries = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: { name: "Americas" },
+          geometry: {
+            type: "Polygon",
+            coordinates: [[
+              [-170, 70], [-100, 71], [-80, 50], [-75, 25], [-80, 10], [-85, -10],
+              [-75, -30], [-70, -55], [-75, -55], [-80, -30], [-85, -10], [-95, 0],
+              [-105, 20], [-120, 35], [-130, 40], [-140, 50], [-160, 60], [-170, 70]
+            ]]
+          }
+        },
+        {
+          type: "Feature",
+          properties: { name: "Eurasia" },
+          geometry: {
+            type: "Polygon",
+            coordinates: [[
+              [-10, 35], [0, 40], [10, 45], [30, 50], [50, 55], [80, 60], [120, 65],
+              [140, 60], [160, 55], [170, 60], [180, 65], [180, 70], [140, 75],
+              [80, 75], [20, 70], [-10, 60], [-10, 35]
+            ]]
+          }
+        }
+      ]
+    };
+
+    log('Using fallback continent outlines');
+    if (uiUpdateCallback) uiUpdateCallback();
+  })().catch(error => {
+    worldLoadPromise = null;
+    throw error;
+  });
+
+  return worldLoadPromise;
 }
 
 // Drawing functions
@@ -5870,6 +5886,9 @@ export default function NoradVector() {
   }, [mapStyle.mode]);
   useEffect(() => {
     void preloadFlatRealisticTexture();
+  }, []);
+  useEffect(() => {
+    void loadWorld();
   }, []);
   useEffect(() => {
     if (mapStyle.visual === 'flat-realistic') {
