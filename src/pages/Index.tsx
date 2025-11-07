@@ -5477,8 +5477,18 @@ function updateScoreboard() {
 function gameLoop() {
   requestAnimationFrame(gameLoop);
 
-  if (!ctx) {
-    return;
+  // Wait for canvas context to be ready
+  if (!ctx || !canvas) {
+    // Try to initialize if canvas ref is available
+    const element = canvasRef.current;
+    if (element && (!canvas || !ctx)) {
+      canvas = element;
+      ctx = element.getContext('2d');
+    }
+    // Still not ready, skip this frame
+    if (!ctx || !canvas) {
+      return;
+    }
   }
 
   const applyCanvasDefaults = () => {
@@ -6144,8 +6154,16 @@ export default function NoradVector() {
       return;
     }
 
-    canvas = canvasElement;
-    ctx = canvasElement.getContext('2d')!;
+    // Initialize canvas and context
+    if (!canvas || canvas !== canvasElement) {
+      canvas = canvasElement;
+      ctx = canvasElement.getContext('2d');
+
+      if (!ctx) {
+        console.error('Failed to get 2D context from canvas');
+        return;
+      }
+    }
 
     if (hasBootstrappedGameRef.current) {
       isGameplayLoopEnabled = true;
@@ -7442,11 +7460,25 @@ export default function NoradVector() {
   useEffect(() => {
     const element = canvasRef.current;
     if (!element) {
+      // Canvas not ready yet, but game loop might already be running
+      // Check again on next frame
+      if (!gameLoopRunning) {
+        gameLoopRunning = true;
+        requestAnimationFrame(gameLoop);
+      }
       return;
     }
 
-    canvas = element;
-    ctx = element.getContext('2d')!;
+    // Initialize canvas and context only once
+    if (!canvas || canvas !== element) {
+      canvas = element;
+      ctx = element.getContext('2d');
+
+      if (!ctx) {
+        console.error('Failed to get 2D context from canvas');
+        return;
+      }
+    }
 
     resizeCanvas();
 
