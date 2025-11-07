@@ -2853,7 +2853,7 @@ function toLonLatLocal(x: number, y: number): [number, number] {
 }
 
 // World rendering - wrapper function that delegates to extracted module
-function drawWorld(style: MapStyle) {
+function drawWorld(style: MapVisualStyle) {
   const context: WorldRenderContext = {
     ctx,
     worldCountries,

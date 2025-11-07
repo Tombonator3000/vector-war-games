@@ -2762,3 +2762,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Added render invalidation hooks so imperative missile/explosion updates trigger React reconciliation and appear on the globe (`src/components/GlobeScene.tsx`).
 - Disposed missile trajectories, explosion groups, and atlas textures on cleanup to eliminate GPU leaks and keep flat map toggles stable (`src/components/GlobeScene.tsx`).
 - Tightened pointer typing for 3D unit selection and verified focused lint runs along with `npm run build` to confirm map rendering paths succeed (`src/components/GlobeScene.tsx`).
+
+### 2025-11-07T16:22:50Z - Ensure world renderer receives visual style strings
+- Updated the `drawWorld` helper to accept `MapVisualStyle` directly and forward it unchanged to the shared renderer so flat and wireframe backgrounds restore their intended textures (`src/pages/Index.tsx`).
+- Ran the production build to confirm the project compiles with the updated typing adjustments. (`npm run build`)
