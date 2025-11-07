@@ -2742,3 +2742,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T12:55:29Z - Guard canvas projections against occluded globe points
 - Forwarded globe projector visibility flags through the shared projection helpers and updated map renderers to bail out when points fall behind the horizon (`src/lib/renderingUtils.ts`, `src/pages/Index.tsx`, `src/rendering/worldRenderer.ts`).
 - Updated missile, particle, and overlay routines to skip drawing hidden entities and verified vitest output (noting existing `mapColorUtils` failures) while leaving flat map behavior unchanged (`src/pages/Index.tsx`, `src/lib/gamePhaseHandlers.ts`).
+### 2025-11-07T13:02:44Z - Dispose globe overlay resources when toggled
+- Added a reusable Three.js disposal helper and wired it through the territory and unit overlay effects so geometries, materials, and textures are released whenever visibility or source data changes (`src/components/GlobeScene.tsx`).
+- Cleared overlay state via functional updates that dispose previous groups/meshes before replacement, then ran `npm run lint` (fails due to long-standing repository issues) to confirm no new regressions were introduced.

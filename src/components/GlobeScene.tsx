@@ -132,6 +132,62 @@ function normalizeLon(lon: number) {
   return result;
 }
 
+const MATERIAL_TEXTURE_KEYS = [
+  'map',
+  'alphaMap',
+  'aoMap',
+  'envMap',
+  'lightMap',
+  'bumpMap',
+  'normalMap',
+  'displacementMap',
+  'roughnessMap',
+  'metalnessMap',
+  'emissiveMap',
+  'specularMap',
+  'gradientMap',
+] as const;
+
+function disposeMaterial(material?: THREE.Material | THREE.Material[]) {
+  if (!material) return;
+
+  if (Array.isArray(material)) {
+    material.forEach(disposeMaterial);
+    return;
+  }
+
+  MATERIAL_TEXTURE_KEYS.forEach(key => {
+    const value = (material as unknown as Record<string, unknown>)[key];
+    if (value instanceof THREE.Texture) {
+      value.dispose();
+    }
+  });
+
+  material.dispose();
+}
+
+function disposeObject(object?: THREE.Object3D | null) {
+  if (!object) return;
+
+  object.traverse(child => {
+    if (child instanceof THREE.Mesh || child instanceof THREE.Line || child instanceof THREE.Points) {
+      const geometry = (child as THREE.Mesh).geometry;
+      if (geometry instanceof THREE.BufferGeometry) {
+        geometry.dispose();
+      }
+    }
+
+    if (
+      child instanceof THREE.Mesh ||
+      child instanceof THREE.Line ||
+      child instanceof THREE.Points ||
+      child instanceof THREE.Sprite
+    ) {
+      disposeMaterial((child as { material?: THREE.Material | THREE.Material[] }).material);
+    }
+  });
+}
+
 function buildAtlasTexture(worldCountries?: FeatureCollection<Polygon | MultiPolygon> | null) {
   const canvas = document.createElement('canvas');
   canvas.width = 2048;
@@ -497,27 +553,49 @@ function SceneContent({
   // Load and render territory boundaries
   useEffect(() => {
     if (!showTerritories || isFlat || territories.length === 0) {
-      setTerritoryGroups([]);
+      setTerritoryGroups(prevGroups => {
+        prevGroups.forEach(group => disposeObject(group));
+        return [];
+      });
       return;
     }
 
     const groups = territories.map(territory =>
       createTerritoryBoundaries(territory, latLonToVector3, EARTH_RADIUS)
     );
-    setTerritoryGroups(groups);
+
+    setTerritoryGroups(prevGroups => {
+      prevGroups.forEach(group => disposeObject(group));
+      return groups;
+    });
+
+    return () => {
+      groups.forEach(group => disposeObject(group));
+    };
   }, [territories, showTerritories, isFlat]);
 
   // Load and render units
   useEffect(() => {
     if (!showUnits || isFlat || units.length === 0) {
-      setUnitVisualizations([]);
+      setUnitVisualizations(prevVisualizations => {
+        prevVisualizations.forEach(viz => disposeObject(viz.mesh));
+        return [];
+      });
       return;
     }
 
     const visualizations = units.map(unit =>
       createUnitBillboard(unit, latLonToVector3, EARTH_RADIUS)
     );
-    setUnitVisualizations(visualizations);
+
+    setUnitVisualizations(prevVisualizations => {
+      prevVisualizations.forEach(viz => disposeObject(viz.mesh));
+      return visualizations;
+    });
+
+    return () => {
+      visualizations.forEach(viz => disposeObject(viz.mesh));
+    };
   }, [units, showUnits, isFlat]);
 
   useEffect(() => {
