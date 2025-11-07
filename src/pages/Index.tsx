@@ -41,6 +41,7 @@ import type { EvolutionNodeId } from '@/types/biowarfare';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import { FlashpointOutcomeModal } from '@/components/FlashpointOutcomeModal';
 import GlobeScene, {
+  type GlobeSceneHandle,
   PickerFn,
   ProjectorFn,
   type MapStyle,
@@ -5542,7 +5543,7 @@ function consumeAction() {
 export default function NoradVector() {
   const navigate = useNavigate();
   const interfaceRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const globeSceneRef = useRef<GlobeSceneHandle | null>(null);
   const [gamePhase, setGamePhase] = useState('intro');
   const [isGameStarted, setIsGameStarted] = useState(false);
   const hasAutoplayedTurnOneMusicRef = useRef(false);
@@ -6139,7 +6140,7 @@ export default function NoradVector() {
       return;
     }
 
-    const canvasElement = canvasRef.current;
+    const canvasElement = globeSceneRef.current?.overlayCanvas ?? null;
     if (!canvasElement) {
       return;
     }
@@ -7387,7 +7388,7 @@ export default function NoradVector() {
   }, []);
 
   const resizeCanvas = useCallback(() => {
-    const element = canvasRef.current;
+    const element = globeSceneRef.current?.overlayCanvas ?? null;
     if (!element) return;
 
     const parent = element.parentElement;
@@ -7440,7 +7441,7 @@ export default function NoradVector() {
   }, [screenResolution]);
 
   useEffect(() => {
-    const element = canvasRef.current;
+    const element = globeSceneRef.current?.overlayCanvas ?? null;
     if (!element) {
       return;
     }
@@ -7576,8 +7577,9 @@ export default function NoradVector() {
       document.body.classList.add(`theme-${theme}`);
     }
     Storage.setItem('theme', theme);
-    if (canvasRef.current) {
-      canvasRef.current.style.imageRendering = theme === 'retro80s' || theme === 'wargames' ? 'pixelated' : 'auto';
+    const overlayCanvas = globeSceneRef.current?.overlayCanvas;
+    if (overlayCanvas) {
+      overlayCanvas.style.imageRendering = theme === 'retro80s' || theme === 'wargames' ? 'pixelated' : 'auto';
     }
     
     // Auto-switch to wireframe map when wargames theme is selected
@@ -10713,8 +10715,9 @@ export default function NoradVector() {
       return;
     }
 
-    if (canvasRef.current) {
-      canvas = canvasRef.current;
+    const overlayCanvas = globeSceneRef.current?.overlayCanvas;
+    if (overlayCanvas) {
+      canvas = overlayCanvas;
       ctx = canvas.getContext('2d')!;
 
       resizeCanvas();
@@ -11875,6 +11878,8 @@ export default function NoradVector() {
     </div>
   );
 
+  const overlayCanvas = globeSceneRef.current?.overlayCanvas ?? null;
+
   return (
     <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity}`}>
       <div className="command-interface__glow" aria-hidden="true" />
@@ -11882,7 +11887,7 @@ export default function NoradVector() {
 
       <div className="map-shell">
         <GlobeScene
-          ref={canvasRef}
+          ref={globeSceneRef}
           cam={cam}
           nations={nations}
           worldCountries={worldCountries}
@@ -11914,7 +11919,7 @@ export default function NoradVector() {
           </div>
         )}
 
-        {canvasRef.current && mapStyle.mode === 'unrest' && (
+        {overlayCanvas && mapStyle.mode === 'unrest' && (
           <PoliticalStabilityOverlay
             nations={nations.map(n => ({
               id: n.id,
@@ -11925,8 +11930,8 @@ export default function NoradVector() {
               publicOpinion: mapModeData.unrest[n.id]?.publicOpinion ?? 50,
               instability: mapModeData.unrest[n.id]?.instability ?? 0,
             }))}
-            canvasWidth={canvasRef.current.width}
-            canvasHeight={canvasRef.current.height}
+            canvasWidth={overlayCanvas.width}
+            canvasHeight={overlayCanvas.height}
             visible={mapStyle.mode === 'unrest'}
           />
         )}
