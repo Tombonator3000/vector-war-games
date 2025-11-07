@@ -30,17 +30,17 @@ import {
 
 const EARTH_RADIUS = 1.8;
 const MARKER_OFFSET = 0.06;
+const MAX_CITY_LIGHT_INSTANCES = 4500;
+const CITY_LIGHT_CORE_BASE_RADIUS = 0.035;
+const CITY_LIGHT_GLOW_SCALE = 1.6;
+const CITY_LIGHT_MIN_SCALE = 0.8;
+const CITY_LIGHT_MAX_SCALE = 1.35;
+const CITY_LIGHT_ALTITUDE = EARTH_RADIUS + 0.012;
+const WHITE_COLOR = new THREE.Color('#ffffff');
+const FALLBACK_CITY_COLOR = new THREE.Color('#ffdd00');
 
 export type ProjectorFn = (lon: number, lat: number) => { x: number; y: number; visible: boolean };
 export type PickerFn = (x: number, y: number) => { lon: number; lat: number } | null;
-
-export interface CityLight {
-  id: string;
-  lon: number;
-  lat: number;
-  brightness: number;
-  nationId: string;
-}
 
 export type MapVisualStyle = 'realistic' | 'wireframe' | 'flat-realistic';
 
@@ -130,6 +130,13 @@ function normalizeLon(lon: number) {
   while (result < -180) result += 360;
   while (result > 180) result -= 360;
   return result;
+}
+
+function clampColorIntensity(color: THREE.Color) {
+  color.r = Math.min(color.r, 1);
+  color.g = Math.min(color.g, 1);
+  color.b = Math.min(color.b, 1);
+  return color;
 }
 
 const MATERIAL_TEXTURE_KEYS = [
@@ -310,74 +317,169 @@ function buildAtlasTexture(worldCountries?: FeatureCollection<Polygon | MultiPol
   return texture;
 }
 
+interface CityLightInstance {
+  position: THREE.Vector3;
+  innerColor: THREE.Color;
+  outerColor: THREE.Color;
+  brightness: number;
+}
+
 function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
+  const innerMeshRef = useRef<THREE.InstancedMesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>>(null);
+  const glowMeshRef = useRef<THREE.InstancedMesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>>(null);
+
+  const baseGeometry = useMemo(() => new THREE.SphereGeometry(1, 8, 8), []);
+  const coreMaterial = useMemo(() => {
+    const material = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.95, toneMapped: false });
+    material.vertexColors = true;
+    return material;
+  }, []);
+  const glowMaterial = useMemo(() => {
+    const material = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.25, toneMapped: false });
+    material.vertexColors = true;
+    return material;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      baseGeometry.dispose();
+      coreMaterial.dispose();
+      glowMaterial.dispose();
+    };
+  }, [baseGeometry, coreMaterial, glowMaterial]);
+
   const cityLights = useMemo(() => {
-    const lights: CityLight[] = [];
-    nations.forEach(nation => {
+    if (!nations.length) {
+      return [] as CityLightInstance[];
+    }
+
+    const desiredLights = nations.map(nation => {
       const population = nation.population || 0;
       const cities = nation.cities || 1;
-      
-      // Realistic satellite map lighting - thousands of lights like real cities
-      const baseMinimum = 800; // Every nation starts with 800+ lights (like real satellite maps)
-      const populationBonus = Math.floor(population * 8); // 8 lights per population point
-      const cityBonus = cities * 150; // 150 lights per city infrastructure
+
+      const baseMinimum = 800;
+      const populationBonus = Math.floor(population * 8);
+      const cityBonus = cities * 150;
       const cityCount = Math.max(baseMinimum, populationBonus + cityBonus);
-      
-      // Health factor: war damage reduces lights dramatically
       const healthFactor = Math.max(0.15, Math.min(1, population / 100));
-      
-      for (let i = 0; i < cityCount; i++) {
-        // Dense clustering like real cities - multiple bright zones
+
+      return { nation, cityCount, healthFactor };
+    });
+
+    const totalDesired = desiredLights.reduce((total, entry) => total + entry.cityCount, 0);
+    if (totalDesired === 0) {
+      return [] as CityLightInstance[];
+    }
+
+    const scale = Math.min(1, MAX_CITY_LIGHT_INSTANCES / totalDesired);
+
+    const allocations = desiredLights.map(entry => {
+      const scaled = entry.cityCount * scale;
+      const baseCount = Math.floor(scaled);
+      const fraction = scaled - baseCount;
+      return { ...entry, allocated: baseCount, fraction };
+    });
+
+    let allocatedTotal = allocations.reduce((total, entry) => total + entry.allocated, 0);
+    let remainder = Math.max(0, Math.min(MAX_CITY_LIGHT_INSTANCES - allocatedTotal, MAX_CITY_LIGHT_INSTANCES));
+
+    const prioritized = [...allocations].sort((a, b) => b.fraction - a.fraction);
+    for (const entry of prioritized) {
+      if (remainder <= 0) break;
+      entry.allocated += 1;
+      remainder -= 1;
+    }
+
+    const lights: CityLightInstance[] = [];
+    allocations.forEach(entry => {
+      const { nation, allocated, healthFactor } = entry;
+      if (allocated <= 0) return;
+
+      const baseColor = nation.color ? new THREE.Color(nation.color) : FALLBACK_CITY_COLOR.clone();
+
+      for (let i = 0; i < allocated; i++) {
         const clusterRadius = 6 + Math.random() * 4;
         const angle = Math.random() * Math.PI * 2;
-        const dist = Math.pow(Math.random(), 0.7) * clusterRadius; // Denser in center
-        
+        const dist = Math.pow(Math.random(), 0.7) * clusterRadius;
+
+        const lat = nation.lat + Math.sin(angle) * dist;
+        const lon = nation.lon + Math.cos(angle) * dist;
         const brightness = (0.9 + Math.random() * 0.1) * healthFactor;
-        
+
+        const intensity = THREE.MathUtils.clamp(brightness, 0.15, 1);
+        const innerColor = clampColorIntensity(baseColor.clone().multiplyScalar(THREE.MathUtils.lerp(0.55, 1, intensity)));
+        const outerColor = clampColorIntensity(
+          baseColor
+            .clone()
+            .lerp(WHITE_COLOR, 0.35)
+            .multiplyScalar(THREE.MathUtils.lerp(0.2, 0.45, intensity)),
+        );
+
         lights.push({
-          id: `${nation.id}-city-${i}`,
-          lat: nation.lat + Math.sin(angle) * dist,
-          lon: nation.lon + Math.cos(angle) * dist,
-          brightness,
-          nationId: nation.id,
+          position: latLonToVector3(lon, lat, CITY_LIGHT_ALTITUDE),
+          innerColor,
+          outerColor,
+          brightness: intensity,
         });
       }
     });
+
     return lights;
   }, [nations]);
 
+  useEffect(() => {
+    const innerMesh = innerMeshRef.current;
+    const glowMesh = glowMeshRef.current;
+
+    if (!innerMesh || !glowMesh) {
+      return;
+    }
+
+    const dummy = new THREE.Object3D();
+
+    innerMesh.count = cityLights.length;
+    glowMesh.count = cityLights.length;
+
+    cityLights.forEach((light, index) => {
+      dummy.position.copy(light.position);
+
+      const scale = CITY_LIGHT_CORE_BASE_RADIUS * THREE.MathUtils.lerp(CITY_LIGHT_MIN_SCALE, CITY_LIGHT_MAX_SCALE, light.brightness);
+      const glowScale = scale * CITY_LIGHT_GLOW_SCALE;
+
+      dummy.scale.setScalar(scale);
+      dummy.updateMatrix();
+      innerMesh.setMatrixAt(index, dummy.matrix);
+      innerMesh.setColorAt(index, light.innerColor);
+
+      dummy.scale.setScalar(glowScale);
+      dummy.updateMatrix();
+      glowMesh.setMatrixAt(index, dummy.matrix);
+      glowMesh.setColorAt(index, light.outerColor);
+    });
+
+    innerMesh.instanceMatrix.needsUpdate = true;
+    glowMesh.instanceMatrix.needsUpdate = true;
+
+    if (innerMesh.instanceColor) {
+      innerMesh.instanceColor.needsUpdate = true;
+    }
+    if (glowMesh.instanceColor) {
+      glowMesh.instanceColor.needsUpdate = true;
+    }
+  }, [cityLights]);
+
   return (
     <group>
-      {cityLights.map(light => {
-        const position = latLonToVector3(light.lon, light.lat, EARTH_RADIUS + 0.012);
-        const nation = nations.find(n => n.id === light.nationId);
-        const color = nation?.color || '#ffdd00';
-
-        return (
-          <group key={light.id} position={position.toArray() as [number, number, number]}>
-            {/* Main bright core */}
-            <mesh>
-              <sphereGeometry args={[0.035, 8, 8]} />
-              <meshBasicMaterial
-                color={color}
-                transparent
-                opacity={light.brightness * 0.95}
-                toneMapped={false}
-              />
-            </mesh>
-            {/* Outer glow for bloom effect */}
-            <mesh>
-              <sphereGeometry args={[0.055, 8, 8]} />
-              <meshBasicMaterial
-                color={color}
-                transparent
-                opacity={light.brightness * 0.25}
-                toneMapped={false}
-              />
-            </mesh>
-          </group>
-        );
-      })}
+      <instancedMesh
+        ref={innerMeshRef}
+        args={[baseGeometry, coreMaterial, MAX_CITY_LIGHT_INSTANCES]}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        ref={glowMeshRef}
+        args={[baseGeometry, glowMaterial, MAX_CITY_LIGHT_INSTANCES]}
+        frustumCulled={false}
+      />
     </group>
   );
 }
