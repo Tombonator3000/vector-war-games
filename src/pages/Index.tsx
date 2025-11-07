@@ -6276,7 +6276,6 @@ export default function NoradVector() {
       setIsBioWarfareOpen(false);
     }
   }, [pandemicIntegrationEnabled, bioWarfareEnabled]);
-  const bioWarfareAvailable = pandemicIntegrationEnabled && bioWarfareEnabled;
   const handleAttackRef = useRef<() => void>(() => {});
   const handleProjectorReady = useCallback((projector: ProjectorFn) => {
     globeProjector = projector;
@@ -8756,40 +8755,6 @@ export default function NoradVector() {
       />
     );
   }, [closeModal, getBuildContext, openModal, targetableNations, nations, requestApproval, getCyberActionAvailability, launchCyberAttack, hardenCyberNetworks, launchCyberFalseFlag, log, registerSatelliteOrbit, adjustThreat, updateDisplay, consumeAction]);
-
-  const handleBioWarfareLabToggle = useCallback(async () => {
-    if (!bioWarfareAvailable) {
-      // Auto-enable settings if both are disabled
-      if (!pandemicIntegrationEnabled) {
-        setPandemicIntegrationEnabled(true);
-      }
-      if (!bioWarfareEnabled) {
-        setBioWarfareEnabled(true);
-      }
-
-      toast({
-        title: 'BioForge Initialized',
-        description: 'Pandemic integration and bio-weapon systems activated. Opening lab...',
-        duration: 2000,
-      });
-
-      // Open lab after short delay to show the toast
-      setTimeout(() => {
-        setIsBioWarfareOpen(true);
-      }, 500);
-      return;
-    }
-
-    if (isBioWarfareOpen) {
-      setIsBioWarfareOpen(false);
-      return;
-    }
-
-    const approved = await requestApproval('BIOWARFARE', { description: 'BioForge lab access' });
-    if (!approved) return;
-    AudioSys.playSFX('click');
-    setIsBioWarfareOpen(true);
-  }, [bioWarfareAvailable, isBioWarfareOpen, requestApproval, pandemicIntegrationEnabled, bioWarfareEnabled]);
 
   const handleStartLabConstruction = useCallback((tier: number) => {
     const player = getNationById(nations, playerNationId);
@@ -12267,28 +12232,6 @@ export default function NoradVector() {
                     </Button>
 
                     <Button
-                      onClick={handleBioWarfareLabToggle}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!bioWarfareAllowed}
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
-                        bioWarfareAllowed && bioWarfareAvailable
-                          ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10'
-                          : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={
-                        bioWarfareAllowed
-                          ? bioWarfareAvailable
-                            ? 'BIOFORGE - Pathogen warfare lab'
-                            : 'Enable pandemic integration and bio-weapon ops in options to access the lab'
-                          : 'Command authorization required to access the BioForge lab'
-                      }
-                    >
-                      <FlaskConical className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">BIO</span>
-                    </Button>
-
-                    <Button
                       onClick={() => setIsCulturePanelOpen(!isCulturePanelOpen)}
                       variant="ghost"
                       size="icon"
@@ -12484,30 +12427,6 @@ export default function NoradVector() {
                     >
                       <UserSearch className="h-5 w-5" />
                       SPY
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        handleBioWarfareLabToggle();
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!bioWarfareAllowed}
-                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
-                        bioWarfareAllowed && bioWarfareAvailable
-                          ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10'
-                          : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={
-                        bioWarfareAllowed
-                          ? bioWarfareAvailable
-                            ? 'BIOFORGE - Pathogen warfare lab'
-                            : 'Enable pandemic integration and bio-weapon ops in options to access the lab'
-                          : 'Command authorization required to access the BioForge lab'
-                      }
-                    >
-                      <FlaskConical className="h-5 w-5" />
-                      BIO
                     </Button>
                     <Button
                       onClick={() => {

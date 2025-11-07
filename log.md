@@ -2754,3 +2754,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T16:44:03Z - Keep flat-realistic map visible before launch
 - Added a textured billboard fallback so the flat-realistic style always shows a world silhouette even before the 2D renderer activates (`src/components/GlobeScene.tsx`).
 - Bootstrapped a lightweight attract-mode loop that paints the flat texture prior to gameplay while keeping full simulations gated behind the standard start flow (`src/pages/Index.tsx`).
+### 2025-11-07T15:19:48Z - Retire redundant lab command shortcut
+- Removed the BioForge lab command button from both the full HUD bar and minimal sheet so research remains the single access point for lab management (`src/pages/Index.tsx`).
+- Deleted the unused BioForge toggle handler to prevent orphaned approval logic now that the UI shortcut is gone (`src/pages/Index.tsx`).
