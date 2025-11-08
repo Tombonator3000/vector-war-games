@@ -37,7 +37,7 @@ import {
   RELATIONSHIP_NEUTRAL,
   RELATIONSHIP_UNFRIENDLY,
   RELATIONSHIP_HOSTILE,
-} from '@/types/unifiedDiplomacy';
+} from '@/lib/relationshipUtils';
 import { getRelationship } from '@/lib/unifiedDiplomacyMigration';
 import { getGrievanceSeverityColor } from '@/types/grievancesAndClaims';
 

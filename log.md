@@ -2797,3 +2797,12 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-08T00:18:40Z - Add theme fill colors and overlay-aware world fill
 - Extended `THEME_SETTINGS` with `mapFill` and optional wireframe fill variants and threaded the active palette through the canvas render contexts (`src/pages/Index.tsx`).
 - Updated the world renderer to carry typed theme palettes, compute overlay-driven fill overrides, and fill each landmass before stroking borders in non-wireframe styles (`src/rendering/worldRenderer.ts`).
+### 2025-11-08T07:04:55Z - Repair conventional warfare relationship hooks
+- Expanded the `useConventionalWarfare` relationship callback to supply a reason string and turn index alongside the delta so callers can persist history (`src/hooks/useConventionalWarfare.ts`).
+- Patched `Index.tsx` to update both nations returned by `modifyRelationship`, refresh the shared nation cache, and surface diplomacy logs for large swings (`src/pages/Index.tsx`).
+### 2025-11-08T07:08:58Z - Consolidate diplomacy systems
+- Promoted `relationshipUtils` as the single diplomacy authority, aligning thresholds, decay, acceptance modifiers, and RelationshipDeltas with the unified design while updating AI and UI imports (`src/lib/relationshipUtils.ts`, `src/types/unifiedDiplomacy.ts`, `src/lib/aiUnifiedDiplomacy.ts`, `src/components/UnifiedDiplomacyPanel.tsx`, `src/lib/unifiedDiplomacyMigration.ts`, `src/pages/Index.tsx`).
+### 2025-11-08T07:11:26Z - Enforce diplomatic proposal expiration
+- Added a 10-turn expiry window when AI proposals are enqueued and pruned the queue each turn, surfacing a toast if an active proposal ages out (`src/pages/Index.tsx`).
+### 2025-11-08T07:11:41Z - Document unified diplomacy architecture
+- Authored a reference guide detailing the canonical relationship helpers, phase integration strategy, proposal lifecycle, and alliance rules for maintainers (`docs/diplomacy-system-architecture.md`).

@@ -125,7 +125,13 @@ interface UseConventionalWarfareOptions {
   onConsumeAction?: () => void;
   onUpdateDisplay?: () => void;
   onDefconChange?: (delta: number) => void;
-  onRelationshipChange?: (nationId1: string, nationId2: string, delta: number) => void;
+  onRelationshipChange?: (
+    nationId1: string,
+    nationId2: string,
+    delta: number,
+    reason: string,
+    currentTurn: number
+  ) => void;
 }
 
 // Unit to armies conversion (Risk-style)
@@ -932,12 +938,24 @@ export function useConventionalWarfare({
 
       // Diplomatic Relations Impact
       const TERRITORIAL_ATTACK_PENALTY = -25;
-      onRelationshipChange?.(attackerId, defenderId, TERRITORIAL_ATTACK_PENALTY);
+      onRelationshipChange?.(
+        attackerId,
+        defenderId,
+        TERRITORIAL_ATTACK_PENALTY,
+        'Conventional warfare territorial assault',
+        options.currentTurn
+      );
 
       // Allies of defender get upset
       defenderNation?.alliances?.forEach(allyId => {
         if (allyId !== attackerId) {
-          onRelationshipChange?.(attackerId, allyId, -15);
+          onRelationshipChange?.(
+            attackerId,
+            allyId,
+            -15,
+            `Failure to honour alliance with ${defenderNation?.name ?? 'ally'}`,
+            options.currentTurn
+          );
         }
       });
 

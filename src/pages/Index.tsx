@@ -184,7 +184,7 @@ import { IntroScreen } from '@/components/setup/IntroScreen';
 import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen';
 import { canAfford, pay, getCityCost, getCityBuildTime, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
-import { modifyRelationship } from '@/lib/relationshipUtils';
+import { modifyRelationship, canFormAlliance, RELATIONSHIP_ALLIED } from '@/lib/relationshipUtils';
 import {
   project,
   toLonLat,
@@ -339,6 +339,12 @@ const getLeaderInitials = (name?: string): string => {
 // Game State Types - now imported from @/state module (Phase 6 refactoring)
 let governanceApiRef: UseGovernanceReturn | null = null;
 let enqueueAIProposalRef: ((proposal: DiplomaticProposal) => void) | null = null;
+
+const PROPOSAL_MAX_AGE = 10;
+
+const isProposalExpired = (proposal: DiplomaticProposal, currentTurn: number): boolean => {
+  return currentTurn - proposal.turn > PROPOSAL_MAX_AGE;
+};
 
 type ThemeId =
   | 'synthwave'
@@ -5722,12 +5728,38 @@ export default function NoradVector() {
 
   useEffect(() => {
     enqueueAIProposalRef = (proposal) => {
-      setPendingAIProposals(prev => [...prev, proposal]);
+      setPendingAIProposals(prev => {
+        const activeTurn = S.turn;
+        const filtered = prev.filter(item => !isProposalExpired(item, activeTurn));
+        if (isProposalExpired(proposal, activeTurn)) {
+          console.info('[diplomacy] Dropped expired proposal', proposal);
+          return filtered;
+        }
+        return [...filtered, proposal];
+      });
     };
     return () => {
       enqueueAIProposalRef = null;
     };
   }, [setPendingAIProposals]);
+
+  useEffect(() => {
+    const activeTurn = S.turn;
+    setPendingAIProposals(prev => {
+      const filtered = prev.filter(item => !isProposalExpired(item, activeTurn));
+      return filtered.length === prev.length ? prev : filtered;
+    });
+
+    if (activeDiplomacyProposal && isProposalExpired(activeDiplomacyProposal, activeTurn)) {
+      const proposer = getNationById(nations, activeDiplomacyProposal.proposerId);
+      const target = getNationById(nations, activeDiplomacyProposal.targetId);
+      toast({
+        title: 'Diplomatic proposal expired',
+        description: `${proposer?.name ?? 'A nation'}'s ${activeDiplomacyProposal.type} proposal to ${target?.name ?? 'its counterpart'} expired after ${PROPOSAL_MAX_AGE} turns.`,
+      });
+      setActiveDiplomacyProposal(null);
+    }
+  }, [S.turn, activeDiplomacyProposal, nations, setPendingAIProposals, getNationById]);
 
   useEffect(() => {
     triggerNationsUpdate = () => setRenderTick((tick) => tick + 1);
@@ -6646,11 +6678,28 @@ export default function NoradVector() {
         updateDisplay();
       }
     },
-    onRelationshipChange: (nationId1, nationId2, delta) => {
-      modifyRelationship(nations, nationId1, nationId2, delta);
-      const nation1 = getNationById(nations, nationId1);
-      const nation2 = getNationById(nations, nationId2);
-      if (nation1 && nation2 && Math.abs(delta) >= 10) {
+    onRelationshipChange: (nationId1, nationId2, delta, reason, currentTurn) => {
+      const index1 = nations.findIndex(nation => nation.id === nationId1);
+      const index2 = nations.findIndex(nation => nation.id === nationId2);
+
+      if (index1 === -1 || index2 === -1) {
+        return;
+      }
+
+      const nation1 = nations[index1];
+      const nation2 = nations[index2];
+
+      const updatedNation1 = modifyRelationship(nation1, nationId2, delta, reason, currentTurn);
+      const updatedNation2 = modifyRelationship(nation2, nationId1, delta, reason, currentTurn);
+
+      const updatedNations = [...nations];
+      updatedNations[index1] = updatedNation1 as LocalNation;
+      updatedNations[index2] = updatedNation2 as LocalNation;
+      nations = updatedNations;
+      GameStateManager.setNations(updatedNations);
+      PlayerManager.setNations(updatedNations);
+
+      if (Math.abs(delta) >= 10) {
         const message = delta < 0
           ? `${nation1.name} ↔ ${nation2.name} relations deteriorate (${delta})`
           : `${nation1.name} ↔ ${nation2.name} relations improve (+${delta})`;
@@ -8925,10 +8974,10 @@ export default function NoradVector() {
     } else if (type === 'alliance') {
       // Check if relationship is high enough
       const relationship = getRelationship(player, targetId, nations);
-      if (relationship < 60) {
+      if (!canFormAlliance(relationship)) {
         toast({
           title: 'Alliance Rejected',
-          description: `${target.name} requires a relationship of at least +60. Current: ${relationship}`,
+          description: `${target.name} requires a relationship of at least +${RELATIONSHIP_ALLIED}. Current: ${relationship}`,
           variant: 'destructive',
         });
         return;
