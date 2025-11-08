@@ -2869,3 +2869,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Replaced the wireframe sphere with a camera-facing plane that reuses the vector texture, ensuring pan/zoom offsets stay in sync with the UI camera (`src/components/GlobeScene.tsx`).
 - Applied the flat-projection math to the wireframe style so markers, projectors, and pickers align with lon/lat coordinates on the new plane (`src/components/GlobeScene.tsx`).
 - Synced the main page camera recenter logic with the wireframe style to keep the flat map centered when the WARGAMES theme auto-selects it (`src/pages/Index.tsx`).
+
+### 2025-11-08T17:45:00Z - Normalize flat map pan/zoom math to CSS pixels
+- Derived CSS pixel dimensions from the renderer for wireframe/flat projections to keep texture pan/zoom aligned with overlay math on high-DPI displays (`src/components/GlobeScene.tsx`).
+- Reworked the flat-position projector to use CSS-sized viewport data and propagate those measurements into the scene registration flow (`src/components/GlobeScene.tsx`).
