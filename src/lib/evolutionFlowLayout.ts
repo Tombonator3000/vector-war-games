@@ -19,11 +19,11 @@ export function getLayoutedElements(
   const isHorizontal = direction === 'LR';
   dagreGraph.setGraph({
     rankdir: direction,
-    nodesep: 120, // Horizontal spacing between nodes
-    ranksep: 190, // Vertical spacing between ranks (levels)
-    edgesep: 50,
-    marginx: 50,
-    marginy: 50,
+    nodesep: 150, // Horizontal spacing between nodes (increased for better spread)
+    ranksep: 250, // Vertical spacing between ranks/levels (increased for horizontal layout)
+    edgesep: 60,
+    marginx: 80,
+    marginy: 60,
   });
 
   nodes.forEach((node) => {

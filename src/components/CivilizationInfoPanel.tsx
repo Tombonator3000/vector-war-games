@@ -36,7 +36,7 @@ interface CivilizationInfoPanelProps {
   depletionWarnings?: DepletionWarning[];
 }
 
-type TabType = 'own-status' | 'enemy-status' | 'ledger' | 'diplomacy' | 'research';
+type TabType = 'own-status' | 'ledger' | 'diplomacy' | 'research';
 
 export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   nations,
@@ -92,19 +92,42 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
     }
   }, [isOpen, enemies, nonPlayerNations, player, nations, selectedNationId]);
 
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+
   useEffect(() => {
     if (!isOpen) return;
 
     const handleShortcut = (event: KeyboardEvent) => {
+      // Shift + L = Strategic Ledger
       if (event.key.toLowerCase() === 'l' && event.shiftKey) {
         event.preventDefault();
         setActiveTab('ledger');
+      }
+      // Shift + R = Research
+      else if (event.key.toLowerCase() === 'r' && event.shiftKey) {
+        event.preventDefault();
+        setActiveTab('research');
+      }
+      // Shift + E = Your Empire
+      else if (event.key.toLowerCase() === 'e' && event.shiftKey) {
+        event.preventDefault();
+        setActiveTab('own-status');
+      }
+      // Shift + D = Diplomacy
+      else if (event.key.toLowerCase() === 'd' && event.shiftKey) {
+        event.preventDefault();
+        setActiveTab('diplomacy');
+      }
+      // Shift + ? = Show keyboard shortcuts
+      else if (event.key === '?' && event.shiftKey) {
+        event.preventDefault();
+        setShowShortcutsHelp(!showShortcutsHelp);
       }
     };
 
     window.addEventListener('keydown', handleShortcut);
     return () => window.removeEventListener('keydown', handleShortcut);
-  }, [isOpen]);
+  }, [isOpen, showShortcutsHelp]);
 
   const selectedNation = useMemo(
     () => (selectedNationId ? nations.find(n => n.id === selectedNationId) ?? null : null),
@@ -460,65 +483,6 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
 
       {/* Victory Progress section removed - now handled by VictoryPathsSection above */}
 
-      {/* Morale Outlook - All Nations */}
-      <div>
-        <h3 className="text-lg font-bold text-cyan-300 mb-3 flex items-center gap-2">
-          <Heart className="w-5 h-5" />
-          Morale Outlook
-        </h3>
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-cyan-500/30">
-          <div className="space-y-3">
-            {nations.map((nation) => {
-              const snapshot = governanceMetrics[nation.id];
-              const morale = snapshot?.morale ?? nation.morale ?? 0;
-              const gradient = getMoraleColor(morale);
-              const MoraleIcon = getMoraleIcon(morale);
-              const moraleLabel = getMoraleLabel(morale);
-              const iconColor = getMoraleIconColor(morale);
-
-              return (
-                <motion.div
-                  key={nation.id}
-                  className="flex flex-col gap-1.5"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <MoraleIcon className={`w-4 h-4 ${iconColor}`} />
-                      <span className={`font-semibold ${nation.isPlayer ? 'text-emerald-300' : 'text-cyan-200/90'}`}>
-                        {nation.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] uppercase tracking-wider font-bold ${iconColor}`}>
-                        {moraleLabel}
-                      </span>
-                      <span className="font-mono text-cyan-100 font-bold">{Math.round(morale)}%</span>
-                    </div>
-                  </div>
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-900/50 border border-slate-700/50">
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ background: gradient }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${clamp(morale, 0, 100)}%` }}
-                      transition={{ duration: 0.5, ease: 'easeOut' }}
-                    />
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-          <div className="mt-4 pt-3 border-t border-cyan-500/20">
-            <p className="text-[10px] text-cyan-400/60 text-center">
-              Population sentiment indicator
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Nation Stats */}
       <div>
         <h3 className="text-lg font-bold text-green-400 mb-3 flex items-center gap-2">
@@ -805,22 +769,190 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   const renderLedger = () => (
     <div className="space-y-6">
       <div className="text-sm text-gray-400">
-        Compare global production, military power, and diplomatic alignments at a glance. Click any row to load the full
-        intelligence dossier.
+        Compare global production, military power, and diplomatic alignments at a glance. Click any row to view the full
+        intelligence dossier below.
       </div>
-      <div className="grid gap-6 lg:grid-cols-[2fr_3fr]">
-        <LedgerTable
-          nations={nations}
-          player={player}
-          selectedNationId={selectedNationId}
-          onSelectNation={handleLedgerSelect}
-          calculateMilitaryPower={calculateMilitaryPower}
-          playerMilitaryPower={playerMilitaryPower}
-        />
-        <div className="space-y-4">
+
+      {/* Full-width Ledger Table */}
+      <LedgerTable
+        nations={nations}
+        player={player}
+        selectedNationId={selectedNationId}
+        onSelectNation={handleLedgerSelect}
+        calculateMilitaryPower={calculateMilitaryPower}
+        playerMilitaryPower={playerMilitaryPower}
+      />
+
+      {/* Selected Nation Intelligence Dossier */}
+      {selectedNation && (
+        <div>
+          <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
+            <Target className="w-5 h-5" />
+            Intelligence Dossier
+          </h3>
           {renderEnemyStatus(selectedNation)}
         </div>
+      )}
+
+      {/* Victory Race - All Nations */}
+      <div>
+        <h3 className="text-lg font-bold text-amber-300 mb-3 flex items-center gap-2">
+          <Trophy className="w-5 h-5" />
+          Victory Race
+        </h3>
+        <div className="bg-gray-800/50 p-4 rounded-lg border border-amber-500/30">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-700">
+                  <th className="text-left py-2 px-2 text-gray-400 font-semibold">Nation</th>
+                  <th className="text-center py-2 px-2 text-red-400 font-semibold">Domination</th>
+                  <th className="text-center py-2 px-2 text-yellow-400 font-semibold">Economic</th>
+                  <th className="text-center py-2 px-2 text-green-400 font-semibold">Survival</th>
+                  <th className="text-center py-2 px-2 text-purple-400 font-semibold">Closest</th>
+                </tr>
+              </thead>
+              <tbody>
+                {nations
+                  .filter(nation => nation.population > 0)
+                  .map((nation) => {
+                    const totalNations = nonPlayerNations.length;
+                    const eliminatedCount = nonPlayerNations.filter(
+                      n => n.id !== nation.id && (n.population ?? 0) <= 0
+                    ).length;
+                    const dominationProgress = totalNations > 0 ? (eliminatedCount / totalNations) * 100 : 0;
+                    const economicProgress = Math.min(100, ((nation.cities || 0) / 10) * 100);
+                    const survivalProgress = Math.min(
+                      100,
+                      ((currentTurn / 50) * 50) + ((nation.population >= 50 ? 1 : (nation.population / 50)) * 50)
+                    );
+                    const maxProgress = Math.max(dominationProgress, economicProgress, survivalProgress);
+
+                    let closestPath = 'Domination';
+                    if (economicProgress >= dominationProgress && economicProgress >= survivalProgress) {
+                      closestPath = 'Economic';
+                    } else if (survivalProgress >= dominationProgress && survivalProgress >= economicProgress) {
+                      closestPath = 'Survival';
+                    }
+
+                    return (
+                      <tr
+                        key={nation.id}
+                        className={`border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors ${
+                          maxProgress > 80 ? 'bg-red-500/10' : maxProgress > 60 ? 'bg-amber-500/10' : ''
+                        }`}
+                      >
+                        <td className="py-2 px-2">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: nation.color }}
+                            />
+                            <span className={`font-semibold ${nation.isPlayer ? 'text-emerald-300' : 'text-gray-200'}`}>
+                              {nation.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          <span className={dominationProgress > 70 ? 'text-red-300 font-bold' : 'text-gray-400'}>
+                            {dominationProgress.toFixed(0)}%
+                          </span>
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          <span className={economicProgress > 70 ? 'text-yellow-300 font-bold' : 'text-gray-400'}>
+                            {economicProgress.toFixed(0)}%
+                          </span>
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          <span className={survivalProgress > 70 ? 'text-green-300 font-bold' : 'text-gray-400'}>
+                            {survivalProgress.toFixed(0)}%
+                          </span>
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          <div className="flex flex-col items-center">
+                            <span className={`font-bold ${
+                              maxProgress > 80 ? 'text-red-300' :
+                              maxProgress > 60 ? 'text-amber-300' :
+                              'text-gray-400'
+                            }`}>
+                              {maxProgress.toFixed(0)}%
+                            </span>
+                            <span className="text-[9px] text-gray-500">{closestPath}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 pt-3 border-t border-amber-500/20">
+            <p className="text-[10px] text-amber-400/60 text-center">
+              Real-time victory progress tracking • Highlighted rows indicate imminent victory threat
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Morale Outlook - All Nations */}
+      <div>
+        <h3 className="text-lg font-bold text-cyan-300 mb-3 flex items-center gap-2">
+          <Heart className="w-5 h-5" />
+          Global Morale Outlook
+        </h3>
+        <div className="bg-gray-800/50 p-4 rounded-lg border border-cyan-500/30">
+          <div className="space-y-3">
+            {nations.map((nation) => {
+              const snapshot = governanceMetrics[nation.id];
+              const morale = snapshot?.morale ?? nation.morale ?? 0;
+              const gradient = getMoraleColor(morale);
+              const MoraleIcon = getMoraleIcon(morale);
+              const moraleLabel = getMoraleLabel(morale);
+              const iconColor = getMoraleIconColor(morale);
+
+              return (
+                <motion.div
+                  key={nation.id}
+                  className="flex flex-col gap-1.5"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <MoraleIcon className={`w-4 h-4 ${iconColor}`} />
+                      <span className={`font-semibold ${nation.isPlayer ? 'text-emerald-300' : 'text-cyan-200/90'}`}>
+                        {nation.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] uppercase tracking-wider font-bold ${iconColor}`}>
+                        {moraleLabel}
+                      </span>
+                      <span className="font-mono text-cyan-100 font-bold">{Math.round(morale)}%</span>
+                    </div>
+                  </div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-900/50 border border-slate-700/50">
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ background: gradient }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${clamp(morale, 0, 100)}%` }}
+                      transition={{ duration: 0.5, ease: 'easeOut' }}
+                    />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+          <div className="mt-4 pt-3 border-t border-cyan-500/20">
+            <p className="text-[10px] text-cyan-400/60 text-center">
+              Population sentiment indicator across all nations
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="text-xs text-gray-500 text-center">
         Tip: Press Shift + L to jump straight to this ledger.
       </div>
@@ -937,19 +1069,6 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('ledger')}
-            className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-              activeTab === 'ledger'
-                ? 'bg-gray-900 text-yellow-400 border-b-2 border-yellow-400'
-                : 'text-gray-400 hover:text-white hover:bg-gray-700'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <Table className="w-4 h-4" />
-              Strategic Ledger
-            </div>
-          </button>
-          <button
             onClick={() => setActiveTab('research')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
               activeTab === 'research'
@@ -963,16 +1082,16 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('enemy-status')}
+            onClick={() => setActiveTab('ledger')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-              activeTab === 'enemy-status'
+              activeTab === 'ledger'
                 ? 'bg-gray-900 text-yellow-400 border-b-2 border-yellow-400'
                 : 'text-gray-400 hover:text-white hover:bg-gray-700'
             }`}
           >
             <div className="flex items-center justify-center gap-2">
-              <Users className="w-4 h-4" />
-              Enemy Nations
+              <Target className="w-4 h-4" />
+              Strategic Ledger
             </div>
           </button>
           <button
@@ -993,16 +1112,8 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'own-status' && renderOwnStatus()}
-          {activeTab === 'ledger' && renderLedger()}
           {activeTab === 'research' && renderResearch()}
-          {activeTab === 'enemy-status' && (
-            <div className="space-y-4">
-              <div className="text-xs text-gray-500">
-                Use the Strategic Ledger (Shift + L) to switch focus instantly between rival nations.
-              </div>
-              {renderEnemyStatus(selectedNation)}
-            </div>
-          )}
+          {activeTab === 'ledger' && renderLedger()}
           {activeTab === 'diplomacy' && renderDiplomacy()}
         </div>
 
@@ -1015,11 +1126,72 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
       </div>
     </div>
 
-    <GameDatabase 
-      open={showNukaPedia} 
-      onClose={() => setShowNukaPedia(false)} 
+    <GameDatabase
+      open={showNukaPedia}
+      onClose={() => setShowNukaPedia(false)}
       currentTurn={currentTurn}
     />
+
+    {/* Keyboard Shortcuts Help Overlay */}
+    {showShortcutsHelp && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+        <div className="bg-gray-900 border-2 border-cyan-500 rounded-lg shadow-2xl w-full max-w-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold text-cyan-300 flex items-center gap-2">
+              <Target className="w-5 h-5" />
+              Keyboard Shortcuts
+            </h3>
+            <button
+              onClick={() => setShowShortcutsHelp(false)}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center py-2 border-b border-gray-700">
+              <span className="text-gray-300">Your Empire</span>
+              <kbd className="px-3 py-1 bg-gray-800 border border-cyan-500/50 rounded text-cyan-300 font-mono text-sm">
+                Shift + E
+              </kbd>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-700">
+              <span className="text-gray-300">Research</span>
+              <kbd className="px-3 py-1 bg-gray-800 border border-cyan-500/50 rounded text-cyan-300 font-mono text-sm">
+                Shift + R
+              </kbd>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-700">
+              <span className="text-gray-300">Strategic Ledger</span>
+              <kbd className="px-3 py-1 bg-gray-800 border border-cyan-500/50 rounded text-cyan-300 font-mono text-sm">
+                Shift + L
+              </kbd>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-700">
+              <span className="text-gray-300">Diplomacy</span>
+              <kbd className="px-3 py-1 bg-gray-800 border border-cyan-500/50 rounded text-cyan-300 font-mono text-sm">
+                Shift + D
+              </kbd>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-gray-700">
+              <span className="text-gray-300">Toggle Panel</span>
+              <kbd className="px-3 py-1 bg-gray-800 border border-cyan-500/50 rounded text-cyan-300 font-mono text-sm">
+                I
+              </kbd>
+            </div>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-gray-300">Show Shortcuts</span>
+              <kbd className="px-3 py-1 bg-gray-800 border border-cyan-500/50 rounded text-cyan-300 font-mono text-sm">
+                Shift + ?
+              </kbd>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-700 text-center text-xs text-gray-400">
+            Press any key or click outside to close
+          </div>
+        </div>
+      </div>
+    )}
   </>
   );
 };
