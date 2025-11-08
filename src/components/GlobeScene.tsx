@@ -574,7 +574,13 @@ function EarthWireframe({
   );
 }
 
-function FlatEarthBackdrop({ flatMapVariant }: { flatMapVariant?: boolean | string | null }) {
+function FlatEarthBackdrop({
+  cam,
+  flatMapVariant,
+}: {
+  cam: GlobeSceneProps['cam'];
+  flatMapVariant?: boolean | string | null;
+}) {
   const meshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>>(null);
   const cameraWorldPosition = useRef(new THREE.Vector3());
   const planeWorldPosition = useRef(new THREE.Vector3());
@@ -709,6 +715,44 @@ function FlatEarthBackdrop({ flatMapVariant }: { flatMapVariant?: boolean | stri
     };
   }, [gradientTexture]);
 
+  const applyTexturePanZoom = useCallback(
+    (texture: THREE.Texture | null) => {
+      if (!texture) return;
+
+      const width = size.width || 1;
+      const height = size.height || 1;
+      const safeZoom = cam.zoom <= 0 ? 0.0001 : cam.zoom;
+      const inverseZoom = 1 / safeZoom;
+
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.repeat.set(inverseZoom, inverseZoom);
+
+      const offsetX = -((cam.x / width) * inverseZoom);
+      const offsetY = -((cam.y / height) * inverseZoom);
+      texture.offset.set(offsetX, offsetY);
+    },
+    [cam.x, cam.y, cam.zoom, size.height, size.width],
+  );
+
+  const syncActiveTexture = useCallback(() => {
+    if (!meshRef.current) return;
+    const material = meshRef.current.material;
+    if (!material) return;
+
+    const meshMaterial = Array.isArray(material) ? material[0] : material;
+    if (!meshMaterial || !(meshMaterial instanceof THREE.MeshBasicMaterial)) {
+      return;
+    }
+
+    const activeTexture = meshMaterial.map ?? null;
+    applyTexturePanZoom(activeTexture);
+  }, [applyTexturePanZoom]);
+
+  useEffect(() => {
+    syncActiveTexture();
+  }, [gradientTexture, satelliteTexture, syncActiveTexture]);
+
   const updateBackdropScale = useCallback(() => {
     if (!meshRef.current) return;
 
@@ -736,12 +780,14 @@ function FlatEarthBackdrop({ flatMapVariant }: { flatMapVariant?: boolean | stri
 
   useEffect(() => {
     updateBackdropScale();
-  }, [updateBackdropScale]);
+    syncActiveTexture();
+  }, [syncActiveTexture, updateBackdropScale]);
 
   useFrame(() => {
     if (!meshRef.current) return;
     meshRef.current.quaternion.copy(camera.quaternion);
     updateBackdropScale();
+    syncActiveTexture();
   });
 
   return (
@@ -1014,7 +1060,7 @@ function SceneContent({
       case 'wireframe':
         return <EarthWireframe earthRef={earthRef} vectorTexture={vectorTexture} />;
       case 'flat-realistic':
-        return <FlatEarthBackdrop flatMapVariant={flatMapVariant} />;
+        return <FlatEarthBackdrop cam={cam} flatMapVariant={flatMapVariant} />;
       default:
         return fallback;
     }
