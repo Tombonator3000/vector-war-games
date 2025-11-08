@@ -6,6 +6,7 @@
 
 import type { GameState, Nation } from '@/types/game';
 import type { StrategyResourceType } from '@/types/territorialResources';
+import type { SeededRandom } from './seededRandom';
 
 /**
  * Resource market state
@@ -149,7 +150,8 @@ export function updateResourceMarket(
   market: ResourceMarket,
   gameState: GameState,
   nations: Nation[],
-  turn: number
+  turn: number,
+  rng: SeededRandom
 ): ResourceMarket {
   const updatedMarket = { ...market };
 
@@ -170,8 +172,8 @@ export function updateResourceMarket(
   }
 
   // Random chance for new market event (10% per turn if no active event)
-  if (!updatedMarket.activeEvent && Math.random() < 0.10) {
-    const event = MARKET_EVENTS[Math.floor(Math.random() * MARKET_EVENTS.length)];
+  if (!updatedMarket.activeEvent && rng.next() < 0.10) {
+    const event = rng.choice(MARKET_EVENTS);
     updatedMarket.activeEvent = event;
     updatedMarket.eventDuration = event.duration;
     if (event.volatilityChange) {
@@ -191,7 +193,7 @@ export function updateResourceMarket(
     newPrice *= (1 + demandFactor * 0.1); // ±10% based on demand
 
     // Apply market volatility (random fluctuation)
-    const randomChange = (Math.random() - 0.5) * 2 * market.volatility;
+    const randomChange = (rng.next() - 0.5) * 2 * market.volatility;
     newPrice *= (1 + randomChange * 0.15);
 
     // Apply trend momentum

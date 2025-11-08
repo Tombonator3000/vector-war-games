@@ -67,6 +67,7 @@ import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
 import { GameHelper } from '@/components/GameHelper';
 import { useMultiplayer } from '@/contexts/MultiplayerProvider';
+import { useRNG } from '@/contexts/RNGContext';
 import { useTutorialContext } from '@/contexts/TutorialContext';
 import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
 import { useGameEra } from '@/hooks/useGameEra';
@@ -83,6 +84,7 @@ import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { ResourceStockpileDisplay } from '@/components/ResourceStockpileDisplay';
 import { MarketStatusBadge } from '@/components/ResourceMarketPanel';
 import type { DepletionWarning } from '@/lib/resourceDepletionSystem';
+import type { SeededRandom } from '@/lib/seededRandom';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
 import { LeaderContactModal } from '@/components/LeaderContactModal';
@@ -2780,7 +2782,7 @@ function resolutionPhase() {
 }
 
 // Production Phase - wrapper function that delegates to extracted module
-function productionPhase() {
+function productionPhase(rng: SeededRandom) {
   const deps: ProductionPhaseDependencies = {
     S,
     nations,
@@ -2789,6 +2791,7 @@ function productionPhase() {
     advanceCityConstruction,
     leaders,
     PlayerManager,
+    rng,
   };
   runProductionPhase(deps);
 }
@@ -4998,7 +5001,7 @@ function endTurn() {
       try {
         console.log('[Turn Debug] PRODUCTION phase starting');
         S.phase = 'PRODUCTION';
-        productionPhase();
+        productionPhase(rng);
       } catch (error) {
         console.error('[Turn Debug] ERROR in PRODUCTION phase:', error);
         log('⚠️ Error in production phase - continuing turn', 'warning');
@@ -5602,6 +5605,7 @@ export default function NoradVector() {
   const interfaceRef = useRef<HTMLDivElement>(null);
   const globeSceneRef = useRef<GlobeSceneHandle | null>(null);
   const [gamePhase, setGamePhase] = useState('intro');
+  const { rng } = useRNG();
   const [isGameStarted, setIsGameStarted] = useState(false);
   const hasAutoplayedTurnOneMusicRef = useRef(false);
   const hasBootstrappedGameRef = useRef(false);
