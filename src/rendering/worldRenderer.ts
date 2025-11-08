@@ -35,7 +35,9 @@ export interface WorldRenderContext {
   cam: { x: number; y: number; zoom: number; targetZoom: number };
   currentTheme: string;
   themePalette: ThemePalette;
-  flatRealisticTexture: HTMLImageElement | null;
+  flatRealisticDayTexture: HTMLImageElement | null;
+  flatRealisticNightTexture: HTMLImageElement | null;
+  flatRealisticBlend: number;
   THEME_SETTINGS: Record<string, ThemePalette>;
   projectLocal: (lon: number, lat: number) => ProjectedPoint;
   preloadFlatRealisticTexture: (isDay: boolean) => void;
@@ -153,7 +155,9 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     cam,
     currentTheme,
     themePalette,
-    flatRealisticTexture,
+    flatRealisticDayTexture,
+    flatRealisticNightTexture,
+    flatRealisticBlend,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
@@ -169,30 +173,57 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
   const isFlatRealistic = style === 'flat-realistic';
 
   if (isFlatRealistic) {
-    if (!flatRealisticTexture) {
-      // Try to preload both textures
+    if (!flatRealisticDayTexture) {
       void preloadFlatRealisticTexture(true);
+    }
+    if (!flatRealisticNightTexture) {
       void preloadFlatRealisticTexture(false);
     }
-    if (flatRealisticTexture) {
+
+    const hasDayTexture = Boolean(flatRealisticDayTexture);
+    const hasNightTexture = Boolean(flatRealisticNightTexture);
+
+    if (hasDayTexture || hasNightTexture) {
+      const baseTexture = hasDayTexture ? flatRealisticDayTexture! : flatRealisticNightTexture!;
+      const overlayTexture = hasDayTexture ? flatRealisticNightTexture : null;
+      const blend = MathUtils.clamp(flatRealisticBlend, 0, 1);
+
       ctx.save();
       ctx.imageSmoothingEnabled = true;
-      const sourceWidth = flatRealisticTexture.naturalWidth || flatRealisticTexture.width || W;
-      const sourceHeight = flatRealisticTexture.naturalHeight || flatRealisticTexture.height || H;
-      const destWidth = W * cam.zoom;
-      const destHeight = H * cam.zoom;
-      // Draw fullscreen scaled by the current camera transform
-      ctx.drawImage(
-        flatRealisticTexture,
-        0,
-        0,
-        sourceWidth,
-        sourceHeight,
-        cam.x,
-        cam.y,
-        destWidth,
-        destHeight
-      );
+
+      const drawTexture = (texture: HTMLImageElement, alpha = 1) => {
+        if (alpha <= 0) return;
+        const sourceWidth = texture.naturalWidth || texture.width || W;
+        const sourceHeight = texture.naturalHeight || texture.height || H;
+        const destWidth = W * cam.zoom;
+        const destHeight = H * cam.zoom;
+        if (alpha < 1) {
+          ctx.globalAlpha = alpha;
+        }
+        ctx.drawImage(
+          texture,
+          0,
+          0,
+          sourceWidth,
+          sourceHeight,
+          cam.x,
+          cam.y,
+          destWidth,
+          destHeight
+        );
+        if (alpha < 1) {
+          ctx.globalAlpha = 1;
+        }
+      };
+
+      drawTexture(baseTexture);
+
+      if (overlayTexture && blend > 0) {
+        drawTexture(overlayTexture, blend);
+      } else if (!hasDayTexture && hasNightTexture) {
+        // Already drew night texture as base; nothing else to overlay.
+      }
+
       ctx.restore();
     }
   }

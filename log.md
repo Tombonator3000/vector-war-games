@@ -2828,3 +2828,10 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-08T08:59:52Z - Rename wireframe map style to vector aesthetic
 - Renamed the wireframe map style label to “Vector” with neon-oriented descriptions in both the main index selector and the options menu (`src/pages/Index.tsx`, `src/components/OptionsMenu.tsx`).
 - Updated the localized database entry so it references the Vector style instead of Wireframe (`src/components/GameDatabase.tsx`).
+### 2025-11-08T09:31:47Z - Smooth flat map day/night blending
+- Replaced the flat map texture selector with a helper that returns both day/night assets and the active blend factor, wiring the
+  new values into the world, nation, and territory render contexts (`src/pages/Index.tsx`).
+- Added requestAnimationFrame-powered tweening for manual day/night toggles, synchronized the auto-cycle to update the shared bl
+end ref, and ensured setIsFlatMapDay mirrors the current target (`src/pages/Index.tsx`).
+- Updated the world renderer to accept the new texture inputs, gracefully handle missing assets, and layer the night texture usi
+ng the computed blend (`src/rendering/worldRenderer.ts`).

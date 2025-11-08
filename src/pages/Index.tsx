@@ -738,7 +738,7 @@ let flatRealisticNightTexture: HTMLImageElement | null = null;
 let flatRealisticDayTexturePromise: Promise<HTMLImageElement> | null = null;
 let flatRealisticNightTexturePromise: Promise<HTMLImageElement> | null = null;
 let isDayMode = true; // Track day/night mode
-let dayNightTransition = 0; // 0-1, for smooth transition
+let dayNightTransition = isDayMode ? 0 : 1; // 0-1 blend value for smooth transition
 let dayNightAutoCycle = false; // Auto-cycle enabled/disabled
 let dayNightCycleSpeed = 60000; // Full cycle duration in ms (60 seconds)
 
@@ -796,14 +796,15 @@ function preloadFlatRealisticTexture(isDay: boolean = true) {
   });
 }
 
-function getCurrentFlatRealisticTexture() {
-  // If auto-cycle is off, just return the current mode
-  if (!dayNightAutoCycle) {
-    return isDayMode ? flatRealisticDayTexture : flatRealisticNightTexture;
-  }
-  
-  // Return based on transition value
-  return dayNightTransition < 0.5 ? flatRealisticDayTexture : flatRealisticNightTexture;
+function getFlatRealisticTextureState(blendOverride?: number) {
+  const blendSource = typeof blendOverride === 'number' ? blendOverride : dayNightTransition;
+  const blend = Math.min(Math.max(blendSource, 0), 1);
+
+  return {
+    dayTexture: flatRealisticDayTexture,
+    nightTexture: flatRealisticNightTexture,
+    blend,
+  };
 }
 
 // Leaders configuration
@@ -2909,6 +2910,7 @@ function toLonLatLocal(x: number, y: number): [number, number] {
 
 // World rendering - wrapper function that delegates to extracted module
 function drawWorld(style: MapVisualStyle) {
+  const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState(flatRealisticBlendRef.current);
   const context: WorldRenderContext = {
     ctx,
     worldCountries,
@@ -2917,7 +2919,9 @@ function drawWorld(style: MapVisualStyle) {
     cam,
     currentTheme,
     themePalette: THEME_SETTINGS[currentTheme],
-    flatRealisticTexture: getCurrentFlatRealisticTexture(),
+    flatRealisticDayTexture: dayTexture,
+    flatRealisticNightTexture: nightTexture,
+    flatRealisticBlend: blend,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
@@ -2934,6 +2938,7 @@ function drawWorldPath(coords: number[][]) {
 
 // Nation rendering - wrapper function that delegates to extracted module
 function drawNations(style: MapVisualStyle) {
+  const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState(flatRealisticBlendRef.current);
   const context: NationRenderContext = {
     ctx,
     worldCountries,
@@ -2942,7 +2947,9 @@ function drawNations(style: MapVisualStyle) {
     cam,
     currentTheme,
     themePalette: THEME_SETTINGS[currentTheme],
-    flatRealisticTexture: getCurrentFlatRealisticTexture(),
+    flatRealisticDayTexture: dayTexture,
+    flatRealisticNightTexture: nightTexture,
+    flatRealisticBlend: blend,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
@@ -2960,6 +2967,7 @@ function drawTerritoriesWrapper() {
   const currentTerritories = territoryListRef.current ?? [];
   if (!currentTerritories.length) return;
 
+  const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState(flatRealisticBlendRef.current);
   const context: TerritoryRenderContext = {
     ctx,
     worldCountries,
@@ -2968,7 +2976,9 @@ function drawTerritoriesWrapper() {
     cam,
     currentTheme,
     themePalette: THEME_SETTINGS[currentTheme],
-    flatRealisticTexture: getCurrentFlatRealisticTexture(),
+    flatRealisticDayTexture: dayTexture,
+    flatRealisticNightTexture: nightTexture,
+    flatRealisticBlend: blend,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
@@ -5783,6 +5793,56 @@ export default function NoradVector() {
     return { visual, mode };
   });
   const [isFlatMapDay, setIsFlatMapDay] = useState<boolean>(isDayMode);
+  const flatRealisticBlendRef = useRef<number>(dayNightTransition);
+  const dayNightBlendAnimationFrameRef = useRef<number | null>(null);
+  const dayNightBlendAnimationStartRef = useRef<number | null>(null);
+  const stopDayNightBlendAnimation = useCallback(() => {
+    if (dayNightBlendAnimationFrameRef.current) {
+      cancelAnimationFrame(dayNightBlendAnimationFrameRef.current);
+      dayNightBlendAnimationFrameRef.current = null;
+    }
+    dayNightBlendAnimationStartRef.current = null;
+  }, []);
+  const animateDayNightBlendTo = useCallback((targetBlend: number) => {
+    const clampedTarget = Math.min(Math.max(targetBlend, 0), 1);
+
+    const startBlend = flatRealisticBlendRef.current;
+    if (Math.abs(startBlend - clampedTarget) < 0.001) {
+      stopDayNightBlendAnimation();
+      dayNightTransition = clampedTarget;
+      flatRealisticBlendRef.current = clampedTarget;
+      return;
+    }
+
+    stopDayNightBlendAnimation();
+    const duration = 400;
+
+    const step = (timestamp: number) => {
+      if (dayNightBlendAnimationStartRef.current === null) {
+        dayNightBlendAnimationStartRef.current = timestamp;
+      }
+
+      const elapsed = timestamp - dayNightBlendAnimationStartRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = progress < 0.5
+        ? 2 * progress * progress
+        : -1 + (4 - 2 * progress) * progress;
+      const nextBlend = startBlend + (clampedTarget - startBlend) * easedProgress;
+
+      dayNightTransition = nextBlend;
+      flatRealisticBlendRef.current = nextBlend;
+
+      if (progress < 1) {
+        dayNightBlendAnimationFrameRef.current = requestAnimationFrame(step);
+      } else {
+        stopDayNightBlendAnimation();
+        dayNightTransition = clampedTarget;
+        flatRealisticBlendRef.current = clampedTarget;
+      }
+    };
+
+    dayNightBlendAnimationFrameRef.current = requestAnimationFrame(step);
+  }, [stopDayNightBlendAnimation]);
   const lastFlatMapModeRef = useRef<boolean>(isDayMode);
 
   const handleMapStyleChange = useCallback((style: MapVisualStyle) => {
@@ -5830,12 +5890,13 @@ export default function NoradVector() {
     isDayMode = nextMode;
     lastFlatMapModeRef.current = nextMode;
     setIsFlatMapDay(nextMode);
+    animateDayNightBlendTo(nextMode ? 0 : 1);
     AudioSys.playSFX('click');
     toast({
       title: 'Dag/Natt modus oppdatert',
       description: `Vekslet til ${nextMode ? 'Dagkart' : 'Nattkart'}`,
     });
-  }, [toast]);
+  }, [animateDayNightBlendTo, toast]);
 
   useEffect(() => {
     const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
@@ -6086,14 +6147,30 @@ export default function NoradVector() {
   }, [dayNightAutoCycleEnabled]);
 
   useEffect(() => {
+    return () => {
+      stopDayNightBlendAnimation();
+    };
+  }, [stopDayNightBlendAnimation]);
+
+  useEffect(() => {
+    if (dayNightAutoCycleEnabled || mapStyle.visual !== 'flat-realistic') {
+      return;
+    }
+
+    const targetBlend = isFlatMapDay ? 0 : 1;
+    animateDayNightBlendTo(targetBlend);
+  }, [animateDayNightBlendTo, dayNightAutoCycleEnabled, isFlatMapDay, mapStyle.visual]);
+
+  useEffect(() => {
     if (!dayNightAutoCycleEnabled || mapStyle.visual !== 'flat-realistic') {
       return;
     }
 
+    stopDayNightBlendAnimation();
     let animationId: number | null = null;
-    let lastTime = Date.now();
+    let lastTimestamp: number | null = null;
 
-    const syncModeWithTransition = () => {
+    const syncModeWithBlend = () => {
       const nextIsDay = dayNightTransition < 0.5;
       if (lastFlatMapModeRef.current !== nextIsDay) {
         lastFlatMapModeRef.current = nextIsDay;
@@ -6102,27 +6179,33 @@ export default function NoradVector() {
       }
     };
 
-    const animate = () => {
-      const now = Date.now();
-      const delta = now - lastTime;
-      lastTime = now;
+    dayNightTransition = flatRealisticBlendRef.current;
+    syncModeWithBlend();
 
-      // Update transition value (0 to 1, loops)
-      dayNightTransition = (dayNightTransition + delta / dayNightCycleSpeed) % 1;
-      syncModeWithTransition();
+    const animate = (timestamp: number) => {
+      if (lastTimestamp === null) {
+        lastTimestamp = timestamp;
+      }
+      const delta = timestamp - lastTimestamp;
+      lastTimestamp = timestamp;
+
+      const nextBlend = (dayNightTransition + delta / dayNightCycleSpeed) % 1;
+      dayNightTransition = nextBlend;
+      flatRealisticBlendRef.current = nextBlend;
+      syncModeWithBlend();
 
       animationId = requestAnimationFrame(animate);
     };
 
-    syncModeWithTransition();
     animationId = requestAnimationFrame(animate);
 
     return () => {
       if (animationId) {
         cancelAnimationFrame(animationId);
       }
+      lastTimestamp = null;
     };
-  }, [dayNightAutoCycleEnabled, mapStyle.visual]);
+  }, [dayNightAutoCycleEnabled, dayNightCycleSpeed, flatRealisticBlendRef, mapStyle.visual, setIsFlatMapDay, stopDayNightBlendAnimation]);
   const musicTracks = useMemo(() => AudioSys.getTracks(), []);
   const [pandemicIntegrationEnabled, setPandemicIntegrationEnabled] = useState(() => {
     const stored = Storage.getItem('option_pandemic_integration');
