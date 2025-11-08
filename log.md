@@ -2859,3 +2859,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated the resource market update loop to depend on an injected `SeededRandom` instance and wired it through the production phase handler (`src/lib/resourceMarketSystem.ts`, `src/lib/gamePhaseHandlers.ts`, `src/pages/Index.tsx`).
 - Refactored immigration and corruption event helpers to accept deterministic RNG parameters, replacing all `Math.random`/`Date.now` usage with seeded ID helpers (`src/lib/immigrationCultureEvents.ts`, `src/lib/corruptionPath.ts`).
 - Regenerated deterministic identifiers and random selections via `SeededRandom` utilities to preserve replay synchronization across corruption path subsystems (`src/lib/corruptionPath.ts`).
+
+### 2025-11-08T14:58:12Z - Generate corruption node benefits and surface them in UI/tests
+- Added institution-specific benefit tables with regional adjustments and wired infiltration success to assign them (`src/lib/corruptionPath.ts`).
+- Aggregated influence node benefits into Phase 2 corruption state changes and rendered benefit summaries in the doctrine overview (`src/lib/phase2Integration.ts`, `src/components/greatOldOnes/Phase2DoctrinePanel.tsx`).
+- Authored focused Vitest coverage for benefit generation and UI rendering (`src/lib/__tests__/corruptionPath.test.ts`, `src/components/greatOldOnes/__tests__/Phase2DoctrinePanel.test.tsx`).

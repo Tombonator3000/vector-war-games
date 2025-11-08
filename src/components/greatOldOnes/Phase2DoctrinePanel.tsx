@@ -29,6 +29,20 @@ import type { GreatOldOnesState, Doctrine, OccultVictoryType } from '@/types/gre
 import { OCCULT_VICTORY_CONDITIONS } from '@/types/greatOldOnes';
 import type { Phase2State } from '@/lib/phase2Integration';
 import { checkPhase2UnlockConditions } from '@/lib/phase2Integration';
+import type { InstitutionBenefit } from '@/lib/corruptionPath';
+
+const BENEFIT_LABELS: Record<InstitutionBenefit['type'], string> = {
+  resource_generation: 'Resource Generation',
+  investigation_suppression: 'Investigation Suppression',
+  veil_protection: 'Veil Protection',
+  cultist_recruitment: 'Cultist Recruitment',
+  ritual_support: 'Ritual Support',
+};
+
+function formatInstitutionBenefit(benefit: InstitutionBenefit): string {
+  const label = BENEFIT_LABELS[benefit.type];
+  return `${label} +${benefit.value}`;
+}
 
 export interface Phase2Operation {
   type: string;
@@ -441,10 +455,31 @@ const CorruptionOverview: React.FC<{ state: GreatOldOnesState; phase2State: Phas
               <p className="text-slate-400 text-sm">No influence nodes established</p>
             ) : (
               cor.influenceNetwork.nodes.slice(0, 5).map(node => (
-                <div key={node.id} className="flex items-center justify-between p-3 bg-slate-900/50 rounded">
-                  <div>
+                <div
+                  key={node.id}
+                  className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between p-3 bg-slate-900/50 rounded"
+                >
+                  <div className="flex-1">
                     <div className="font-medium text-slate-200">{node.name}</div>
                     <div className="text-xs text-slate-400">{node.institutionType} • {node.regionId}</div>
+                    {node.benefits.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {node.benefits.map(benefit => (
+                          <div
+                            key={`${node.id}-${benefit.type}-${benefit.description}`}
+                            className="flex flex-wrap items-center gap-2 text-xs"
+                          >
+                            <Badge
+                              variant="outline"
+                              className="border-slate-700 bg-slate-900/70 text-slate-100"
+                            >
+                              {formatInstitutionBenefit(benefit)}
+                            </Badge>
+                            <span className="text-slate-400">{benefit.description}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
