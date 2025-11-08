@@ -2873,3 +2873,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-08T17:45:00Z - Normalize flat map pan/zoom math to CSS pixels
 - Derived CSS pixel dimensions from the renderer for wireframe/flat projections to keep texture pan/zoom aligned with overlay math on high-DPI displays (`src/components/GlobeScene.tsx`).
 - Reworked the flat-position projector to use CSS-sized viewport data and propagate those measurements into the scene registration flow (`src/components/GlobeScene.tsx`).
+
+### 2025-11-08T16:41:58Z - Bundle official world topojson and switch loader to local-first
+- Added the `countries-110m.json` TopoJSON dataset under `public/data/` so the build ships with the full world borders offline.
+- Updated `loadWorld()` to prefer the bundled dataset, refresh the cache key, and drop the crude polygon fallback in favor of the official features (`src/pages/Index.tsx`).
+- Verified the map renders with the local dataset even when CDN requests are blocked and captured a screenshot of the offline view; confirmed the production build succeeds (`npm run build`).
