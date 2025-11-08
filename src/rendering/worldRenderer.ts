@@ -513,7 +513,7 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
     const z = Math.max(0.9, Math.min(1.6, cam.zoom));
     const pad = 4 * z;
 
-    const labelVisibilityThreshold = 1.2;
+    const labelVisibilityThreshold = 0.9;
     const labelFadeRange = 0.2;
     const fadeStart = labelVisibilityThreshold - labelFadeRange;
     const labelVisibility = cam.zoom <= fadeStart

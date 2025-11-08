@@ -3737,8 +3737,8 @@ function drawFX() {
     let ry = typeof b.y === 'number' ? b.y : 0;
     if (b.lon !== undefined && b.lat !== undefined) {
       const projected = projectLocal(b.lon, b.lat);
-      rx = projected[0];
-      ry = projected[1];
+      rx = projected.x;
+      ry = projected.y;
     }
     ctx.beginPath();
     ctx.arc(rx, ry, b.r, 0, Math.PI * 2);
