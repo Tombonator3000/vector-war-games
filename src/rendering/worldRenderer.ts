@@ -176,7 +176,7 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     }
     if (flatRealisticTexture) {
       ctx.save();
-      // Apply camera transform so the texture respects pan/zoom
+      // Align the flat texture with the current camera transform so panning/zooming stay in sync
       ctx.setTransform(cam.zoom, 0, 0, cam.zoom, cam.x, cam.y);
       ctx.imageSmoothingEnabled = true;
       // Draw fullscreen - stretch the entire canvas
