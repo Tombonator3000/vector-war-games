@@ -158,6 +158,22 @@ function clampColorIntensity(color: THREE.Color) {
   return color;
 }
 
+function resolveCssRendererSize(
+  renderer: (THREE.WebGLRenderer & { domElement?: HTMLCanvasElement | null }) | undefined,
+  size: { width: number; height: number },
+) {
+  const pixelRatio = renderer && typeof renderer.getPixelRatio === 'function' ? renderer.getPixelRatio() : 1;
+  const domElement = renderer?.domElement ?? null;
+
+  const fallbackWidth = pixelRatio > 0 ? size.width / pixelRatio : size.width;
+  const fallbackHeight = pixelRatio > 0 ? size.height / pixelRatio : size.height;
+
+  const width = Math.max(1, domElement?.clientWidth ?? fallbackWidth ?? 1);
+  const height = Math.max(1, domElement?.clientHeight ?? fallbackHeight ?? 1);
+
+  return { width, height };
+}
+
 const MATERIAL_TEXTURE_KEYS = [
   'map',
   'alphaMap',
@@ -563,16 +579,28 @@ function EarthWireframe({
   const meshRef = earthRef as MutableRefObject<
     THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null
   >;
-  const { camera, size } = useThree();
+  const { camera, size, gl } = useThree();
   const cameraWorldPosition = useRef(new THREE.Vector3());
   const planeWorldPosition = useRef(new THREE.Vector3());
+
+  const cssDimensions = useMemo(
+    () =>
+      resolveCssRendererSize(
+        gl as (THREE.WebGLRenderer & { domElement?: HTMLCanvasElement | null }) | undefined,
+        { width: size.width, height: size.height },
+      ),
+    [gl, size.height, size.width],
+  );
+
+  const cssWidth = cssDimensions.width;
+  const cssHeight = cssDimensions.height;
 
   const applyTexturePanZoom = useCallback(
     (texture: THREE.Texture | null) => {
       if (!texture) return;
 
-      const width = size.width || 1;
-      const height = size.height || 1;
+      const width = cssWidth || 1;
+      const height = cssHeight || 1;
       const safeZoom = cam.zoom <= 0 ? 0.0001 : cam.zoom;
       const inverseZoom = 1 / safeZoom;
 
@@ -584,7 +612,7 @@ function EarthWireframe({
       const offsetY = -((cam.y / height) * inverseZoom);
       texture.offset.set(offsetX, offsetY);
     },
-    [cam.x, cam.y, cam.zoom, size.height, size.width],
+    [cam.x, cam.y, cam.zoom, cssHeight, cssWidth],
   );
 
   const syncTexturePanZoom = useCallback(() => {
@@ -664,7 +692,19 @@ function FlatEarthBackdrop({
   const meshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>>(null);
   const cameraWorldPosition = useRef(new THREE.Vector3());
   const planeWorldPosition = useRef(new THREE.Vector3());
-  const { camera, size } = useThree();
+  const { camera, size, gl } = useThree();
+
+  const cssDimensions = useMemo(
+    () =>
+      resolveCssRendererSize(
+        gl as (THREE.WebGLRenderer & { domElement?: HTMLCanvasElement | null }) | undefined,
+        { width: size.width, height: size.height },
+      ),
+    [gl, size.height, size.width],
+  );
+
+  const cssWidth = cssDimensions.width;
+  const cssHeight = cssDimensions.height;
 
   const variantKey = useMemo(() => {
     if (typeof flatMapVariant === 'boolean') {
@@ -799,8 +839,8 @@ function FlatEarthBackdrop({
     (texture: THREE.Texture | null) => {
       if (!texture) return;
 
-      const width = size.width || 1;
-      const height = size.height || 1;
+      const width = cssWidth || 1;
+      const height = cssHeight || 1;
       const safeZoom = cam.zoom <= 0 ? 0.0001 : cam.zoom;
       const inverseZoom = 1 / safeZoom;
 
@@ -812,7 +852,7 @@ function FlatEarthBackdrop({
       const offsetY = -((cam.y / height) * inverseZoom);
       texture.offset.set(offsetX, offsetY);
     },
-    [cam.x, cam.y, cam.zoom, size.height, size.width],
+    [cam.x, cam.y, cam.zoom, cssHeight, cssWidth],
   );
 
   const syncActiveTexture = useCallback(() => {
@@ -917,11 +957,23 @@ function SceneContent({
   explosionsRef: MutableRefObject<Map<string, { group: THREE.Group; startTime: number }>>;
   flatMapVariant?: GlobeSceneProps['flatMapVariant'];
 }) {
-  const { camera, size, clock } = useThree();
+  const { camera, size, clock, gl } = useThree();
   const earthRef = useRef<THREE.Mesh | null>(null);
   const visualStyle = mapStyle?.visual ?? 'realistic';
   const currentMode = mapStyle?.mode ?? 'standard';
   const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
+
+  const cssDimensions = useMemo(
+    () =>
+      resolveCssRendererSize(
+        gl as (THREE.WebGLRenderer & { domElement?: HTMLCanvasElement | null }) | undefined,
+        { width: size.width, height: size.height },
+      ),
+    [gl, size.height, size.width],
+  );
+
+  const cssWidth = cssDimensions.width;
+  const cssHeight = cssDimensions.height;
 
   const computeFlatPosition = useCallback(
     (lon: number, lat: number, altitude: number = 0) => {
@@ -934,9 +986,8 @@ function SceneContent({
         return latLonToVector3(lon, lat, EARTH_RADIUS + altitude);
       }
 
-      const { width, height } = size;
-      const safeWidth = width || 1;
-      const safeHeight = height || 1;
+      const safeWidth = cssWidth || 1;
+      const safeHeight = cssHeight || 1;
 
       const baseX = ((lon + 180) / 360) * safeWidth;
       const baseY = ((90 - lat) / 180) * safeHeight;
@@ -971,7 +1022,7 @@ function SceneContent({
 
       return cameraPosition.add(direction.multiplyScalar(distance));
     },
-    [camera, cam.x, cam.y, cam.zoom, isFlat, size.height, size.width],
+    [camera, cam.x, cam.y, cam.zoom, cssHeight, cssWidth, isFlat],
   );
 
   const latLonToSceneVector = useCallback(
@@ -1009,12 +1060,12 @@ function SceneContent({
   useEffect(() => {
     register({
       camera: camera as THREE.PerspectiveCamera,
-      size,
+      size: { width: cssWidth, height: cssHeight },
       earth: isFlat ? null : earthRef.current,
       clock,
       projectPosition: latLonToSceneVector,
     });
-  }, [camera, register, size, isFlat, clock, latLonToSceneVector]);
+  }, [camera, register, cssHeight, cssWidth, isFlat, clock, latLonToSceneVector]);
 
   // Load and render territory boundaries
   useEffect(() => {
