@@ -2864,3 +2864,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added institution-specific benefit tables with regional adjustments and wired infiltration success to assign them (`src/lib/corruptionPath.ts`).
 - Aggregated influence node benefits into Phase 2 corruption state changes and rendered benefit summaries in the doctrine overview (`src/lib/phase2Integration.ts`, `src/components/greatOldOnes/Phase2DoctrinePanel.tsx`).
 - Authored focused Vitest coverage for benefit generation and UI rendering (`src/lib/__tests__/corruptionPath.test.ts`, `src/components/greatOldOnes/__tests__/Phase2DoctrinePanel.test.tsx`).
+
+### 2025-11-08T16:20:00Z - Flatten wireframe globe rendering for WARGAMES theme
+- Replaced the wireframe sphere with a camera-facing plane that reuses the vector texture, ensuring pan/zoom offsets stay in sync with the UI camera (`src/components/GlobeScene.tsx`).
+- Applied the flat-projection math to the wireframe style so markers, projectors, and pickers align with lon/lat coordinates on the new plane (`src/components/GlobeScene.tsx`).
+- Synced the main page camera recenter logic with the wireframe style to keep the flat map centered when the WARGAMES theme auto-selects it (`src/pages/Index.tsx`).
