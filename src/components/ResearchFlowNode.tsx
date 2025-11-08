@@ -201,39 +201,39 @@ export const ResearchFlowNode = memo(({ data }: NodeProps<ResearchNodeData>) => 
               </div>
             </div>
           </TooltipTrigger>
-          <TooltipContent className="max-w-xs bg-slate-950/95 border border-cyan-500/40 text-cyan-50 shadow-lg">
+          <TooltipContent className="max-w-md bg-slate-950/95 border border-cyan-500/40 text-cyan-50 shadow-lg">
             <div className="space-y-3">
-              <div className="space-y-1">
-                <div className="text-[11px] font-semibold tracking-wide text-cyan-200 uppercase">
+              <div className="space-y-1.5">
+                <div className="text-sm font-semibold tracking-wide text-cyan-200 uppercase">
                   {data.name}
                 </div>
-                <p className="text-[11px] leading-relaxed text-slate-200">{data.description}</p>
+                <p className="text-sm leading-relaxed text-slate-200">{data.description}</p>
               </div>
 
-              <div className="space-y-1 text-[10px] text-slate-300">
+              <div className="space-y-1.5 text-xs text-slate-300">
                 <div className="font-semibold text-cyan-300 uppercase">Research Cost</div>
-                <ul className="space-y-0.5">
+                <ul className="space-y-1">
                   {data.cost.production && (
                     <li className="flex items-center gap-2">
-                      <Factory className="h-3.5 w-3.5 text-emerald-300" />
+                      <Factory className="h-4 w-4 text-emerald-300" />
                       <span>{data.cost.production} Production</span>
                     </li>
                   )}
                   {data.cost.intel && (
                     <li className="flex items-center gap-2">
-                      <Brain className="h-3.5 w-3.5 text-cyan-300" />
+                      <Brain className="h-4 w-4 text-cyan-300" />
                       <span>{data.cost.intel} Intel</span>
                     </li>
                   )}
                   {data.cost.uranium && (
                     <li className="flex items-center gap-2">
-                      <ShieldAlert className="h-3.5 w-3.5 text-green-300" />
+                      <ShieldAlert className="h-4 w-4 text-green-300" />
                       <span>{data.cost.uranium} Uranium</span>
                     </li>
                   )}
                   {data.cost.rare_earths && (
                     <li className="flex items-center gap-2">
-                      <Sparkles className="h-3.5 w-3.5 text-purple-300" />
+                      <Sparkles className="h-4 w-4 text-purple-300" />
                       <span>{data.cost.rare_earths} Rare Earths</span>
                     </li>
                   )}
@@ -243,7 +243,7 @@ export const ResearchFlowNode = memo(({ data }: NodeProps<ResearchNodeData>) => 
                 </ul>
               </div>
 
-              <div className="space-y-1 text-[10px] text-slate-300">
+              <div className="space-y-1.5 text-xs text-slate-300">
                 <div className="font-semibold text-cyan-300 uppercase">Prerequisites</div>
                 {data.prerequisiteNames.length > 0 ? (
                   <ul className="list-disc list-inside space-y-0.5">
@@ -256,7 +256,7 @@ export const ResearchFlowNode = memo(({ data }: NodeProps<ResearchNodeData>) => 
                 )}
               </div>
 
-              <div className="space-y-1 text-[10px] text-slate-300">
+              <div className="space-y-1.5 text-xs text-slate-300">
                 <div className="font-semibold text-cyan-300 uppercase">Leads To</div>
                 {data.leadsTo.length > 0 ? (
                   <ul className="list-disc list-inside space-y-0.5">
@@ -273,7 +273,7 @@ export const ResearchFlowNode = memo(({ data }: NodeProps<ResearchNodeData>) => 
               </div>
 
               {data.isResearching && data.researchProgress !== undefined && (
-                <div className="text-[10px] text-amber-300">
+                <div className="text-xs text-amber-300 font-medium">
                   In progress: Turn {data.researchProgress} / {data.turns}
                 </div>
               )}
