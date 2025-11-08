@@ -2830,3 +2830,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Added `public/textures/earth_wireframe.svg` and updated the wireframe material to favor tone-mapped off rendering for sharper contrast.
 - Replaced the procedural canvas atlas in `src/components/GlobeScene.tsx` with a `THREE.TextureLoader` pipeline that loads the SVG and only falls back to the lightweight canvas grid when necessary.
 - Tuned texture filtering and polygon offset so the wireframe style appears crisp in both the start screen preview and the in-game globe.
+### 2025-11-08T08:59:52Z - Rename wireframe map style to vector aesthetic
+- Renamed the wireframe map style label to “Vector” with neon-oriented descriptions in both the main index selector and the options menu (`src/pages/Index.tsx`, `src/components/OptionsMenu.tsx`).
+- Updated the localized database entry so it references the Vector style instead of Wireframe (`src/components/GameDatabase.tsx`).

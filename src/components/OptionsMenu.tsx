@@ -60,7 +60,11 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 
 const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
   { value: 'realistic', label: 'Realistic', description: 'Satellite imagery with terrain overlays.' },
-  { value: 'wireframe', label: 'Wireframe', description: 'Vector borders and topography outlines.' },
+  {
+    value: 'wireframe',
+    label: 'Vector',
+    description: 'Neon vector grid with luminous borders and elevation lines.',
+  },
   {
     value: 'flat-realistic',
     label: 'Flat Realistic',
