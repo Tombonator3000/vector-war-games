@@ -2813,3 +2813,5 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Replaced the static flat-map backdrop plane with a camera-aware scaler so the gradient or satellite texture always fills the frame across perspective shifts (`src/components/GlobeScene.tsx`).
 ### 2025-11-08T08:07:07Z - Sync flat-realistic texture with 2D camera
 - Applied the active camera's translation and zoom to the flat map texture draw so satellite imagery, overlays, and interaction layers stay aligned while panning or zooming (`src/rendering/worldRenderer.ts`).
+### 2025-11-08T08:06:22Z - Pan/zoom flat realistic texture with camera
+- Updated the 2D world renderer to apply the current camera transform when painting the flat realistic backdrop so panning and zooming remain aligned with overlays (`src/rendering/worldRenderer.ts`).
