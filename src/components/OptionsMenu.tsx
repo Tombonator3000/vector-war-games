@@ -137,6 +137,8 @@ export interface OptionsMenuProps {
   /** Controlled map style selection */
   mapStyle: MapStyle;
   onMapStyleChange: (style: MapVisualStyle) => void;
+  dayNightAutoCycleEnabled: boolean;
+  onDayNightAutoCycleToggle: (enabled: boolean) => void;
 
   /** Whether to show in-game only features (like co-op, HUD layout) */
   showInGameFeatures?: boolean;
@@ -166,6 +168,8 @@ export function OptionsMenu({
   onThemeChange,
   mapStyle,
   onMapStyleChange,
+  dayNightAutoCycleEnabled,
+  onDayNightAutoCycleToggle,
   showInGameFeatures = true,
   onChange,
   currentTurn = 1,
@@ -225,6 +229,19 @@ export function OptionsMenu({
       onChange();
     }
   }, [mapStyle.visual, onMapStyleChange, onChange]);
+
+  const handleDayNightAutoCycleToggle = useCallback((enabled: boolean) => {
+    onDayNightAutoCycleToggle(enabled);
+    toast({
+      title: enabled ? 'Auto day/night cycle enabled' : 'Auto day/night cycle disabled',
+      description: enabled
+        ? 'Map lighting will transition between daybreak and nightfall automatically.'
+        : 'Lighting will remain fixed until manually adjusted.',
+    });
+    if (onChange) {
+      onChange();
+    }
+  }, [onDayNightAutoCycleToggle, onChange]);
 
   // Screen resolution state
   const [screenResolution, setScreenResolution] = useState<ScreenResolution>(() => {
@@ -496,6 +513,19 @@ export function OptionsMenu({
               </button>
             );
           })}
+        </div>
+        <div className="options-toggle mt-4">
+          <div className="flex flex-col text-left">
+            <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Auto Day/Night Cycle</span>
+            <span className="text-[11px] text-cyan-400/80">
+              Rotate the flat-realistic map lighting between daylight and nightfall automatically.
+            </span>
+          </div>
+          <Switch
+            checked={dayNightAutoCycleEnabled}
+            onCheckedChange={handleDayNightAutoCycleToggle}
+            aria-label="Toggle automatic day and night transitions"
+          />
         </div>
       </div>
 
