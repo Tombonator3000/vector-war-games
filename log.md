@@ -2794,3 +2794,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-07T23:21:45Z - Correct conventional forces panel wiring
 - Updated `ConsolidatedWarModal` to pass the full territory list, local player metadata, and research unlocks to `ConventionalForcesPanel` while aligning proxy engagement and reinforcement handlers with the latest panel APIs (`src/components/ConsolidatedWarModal.tsx`).
 - Ran `npm run build` to confirm the consolidated war modal renders without runtime type errors (see build output).
+### 2025-11-08T00:18:40Z - Add theme fill colors and overlay-aware world fill
+- Extended `THEME_SETTINGS` with `mapFill` and optional wireframe fill variants and threaded the active palette through the canvas render contexts (`src/pages/Index.tsx`).
+- Updated the world renderer to carry typed theme palettes, compute overlay-driven fill overrides, and fill each landmass before stroking borders in non-wireframe styles (`src/rendering/worldRenderer.ts`).

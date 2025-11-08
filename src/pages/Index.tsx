@@ -262,6 +262,7 @@ import {
   type WorldRenderContext,
   type NationRenderContext,
   type TerritoryRenderContext,
+  type ThemePalette,
 } from '@/rendering/worldRenderer';
 import {
   initializeInternationalCouncil,
@@ -560,54 +561,60 @@ const layoutDensityOptions: LayoutDensityOption[] = [
 
 const layoutDensityOrder: LayoutDensity[] = layoutDensityOptions.map((option) => option.id);
 
-const THEME_SETTINGS: Record<ThemeId, {
-  mapOutline: string;
-  grid: string;
-  radar: string;
-  ocean: string;
-  cloud: string;
-}> = {
+const THEME_SETTINGS: Record<ThemeId, ThemePalette> = {
   synthwave: {
     mapOutline: 'rgba(143,225,255,0.8)',
     grid: 'rgba(143,225,255,0.25)',
     radar: 'rgba(143,225,255,0.08)',
     ocean: 'rgba(40,100,220,0.6)',
-    cloud: 'rgba(255,200,255,0.6)'
+    cloud: 'rgba(255,200,255,0.6)',
+    mapFill: 'rgba(24,12,72,0.7)',
+    mapFillWireframe: 'rgba(80,240,255,0.12)',
   },
   retro80s: {
     mapOutline: 'rgba(0,255,65,0.5)',
     grid: 'rgba(0,255,65,0.2)',
     radar: 'rgba(0,255,65,0.08)',
     ocean: 'rgba(30,70,160,0.65)',
-    cloud: 'rgba(255,105,180,0.6)'
+    cloud: 'rgba(255,105,180,0.6)',
+    mapFill: 'rgba(58,14,90,0.68)',
+    mapFillWireframe: 'rgba(0,255,65,0.1)',
   },
   wargames: {
     mapOutline: 'rgba(0,255,0,0.4)',
     grid: 'rgba(0,255,0,0.1)',
     radar: 'rgba(0,255,0,0.05)',
     ocean: 'rgba(0,80,160,0.6)',
-    cloud: 'rgba(150,150,150,0.6)'
+    cloud: 'rgba(150,150,150,0.6)',
+    mapFill: 'rgba(8,48,18,0.58)',
+    mapFillWireframe: 'rgba(0,255,0,0.1)',
   },
   nightmode: {
     mapOutline: 'rgba(102,204,255,0.5)',
     grid: 'rgba(102,204,255,0.18)',
     radar: 'rgba(102,204,255,0.07)',
     ocean: 'rgba(15,60,130,0.65)',
-    cloud: 'rgba(160,200,240,0.45)'
+    cloud: 'rgba(160,200,240,0.45)',
+    mapFill: 'rgba(10,30,66,0.68)',
+    mapFillWireframe: 'rgba(102,204,255,0.1)',
   },
   highcontrast: {
     mapOutline: 'rgba(255,255,255,0.7)',
     grid: 'rgba(255,255,255,0.25)',
     radar: 'rgba(255,255,255,0.1)',
     ocean: 'rgba(20,80,160,0.7)',
-    cloud: 'rgba(255,220,0,0.45)'
+    cloud: 'rgba(255,220,0,0.45)',
+    mapFill: 'rgba(0,0,0,0.68)',
+    mapFillWireframe: 'rgba(255,255,255,0.12)',
   },
   vectorclassic: {
     mapOutline: 'rgba(143,225,255,0.85)',
     grid: 'rgba(143,225,255,0.28)',
     radar: 'rgba(143,225,255,0.1)',
     ocean: 'rgba(10,45,110,0.7)',
-    cloud: 'rgba(255,180,220,0.45)'
+    cloud: 'rgba(255,180,220,0.45)',
+    mapFill: 'rgba(14,40,96,0.7)',
+    mapFillWireframe: 'rgba(143,225,255,0.12)',
   }
 };
 
@@ -2863,11 +2870,14 @@ function drawWorld(style: MapVisualStyle) {
     H,
     cam,
     currentTheme,
+    themePalette: THEME_SETTINGS[currentTheme],
     flatRealisticTexture,
     flatRealisticTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    mapMode: currentMapMode,
+    modeData: currentMapModeData,
   };
   renderWorld(style, context);
 }
@@ -2886,6 +2896,7 @@ function drawNations(style: MapVisualStyle) {
     H,
     cam,
     currentTheme,
+    themePalette: THEME_SETTINGS[currentTheme],
     flatRealisticTexture,
     flatRealisticTexturePromise,
     THEME_SETTINGS,
@@ -2912,11 +2923,14 @@ function drawTerritoriesWrapper() {
     H,
     cam,
     currentTheme,
+    themePalette: THEME_SETTINGS[currentTheme],
     flatRealisticTexture,
     flatRealisticTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    mapMode: currentMapMode,
+    modeData: currentMapModeData,
     territories: currentTerritories,
     playerId: player.id,
     selectedTerritoryId,
