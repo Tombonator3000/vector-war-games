@@ -2833,3 +2833,5 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-08T08:59:52Z - Rename wireframe map style to vector aesthetic
 - Renamed the wireframe map style label to “Vector” with neon-oriented descriptions in both the main index selector and the options menu (`src/pages/Index.tsx`, `src/components/OptionsMenu.tsx`).
 - Updated the localized database entry so it references the Vector style instead of Wireframe (`src/components/GameDatabase.tsx`).
+### 2025-11-08T09:23:11Z - Align SVG wireframe orientation with overlays
+- Forced the SVG wireframe texture loaded in `src/components/GlobeScene.tsx` to keep `flipY` disabled so latitude and longitude lines line up with missiles, markers, and territory overlays.

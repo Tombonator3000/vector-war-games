@@ -1243,6 +1243,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         return;
       }
 
+      texture.flipY = false;
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.generateMipmaps = true;
       texture.minFilter = THREE.LinearFilter;
