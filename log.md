@@ -2840,3 +2840,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 end ref, and ensured setIsFlatMapDay mirrors the current target (`src/pages/Index.tsx`).
 - Updated the world renderer to accept the new texture inputs, gracefully handle missing assets, and layer the night texture usi
 ng the computed blend (`src/rendering/worldRenderer.ts`).
+### 2025-11-08T10:45:00Z - Sync flat-realistic backdrop with camera transforms
+- Passed the 2D camera state into `FlatEarthBackdrop` so the component can align with map panning and zooming (`src/components/GlobeScene.tsx`).
+- Updated the backdrop material offsets and repeat values each frame to keep the satellite texture locked with overlays and borders when navigating the flat map (`src/components/GlobeScene.tsx`).
+- Re-ran the Vitest suite to confirm existing coverage, noting pre-existing color utility expectations that still fail due to RGB string outputs (`npm run test`).
