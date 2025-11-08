@@ -2967,6 +2967,9 @@ function drawTerritoriesWrapper() {
   const currentTerritories = territoryListRef.current ?? [];
   if (!currentTerritories.length) return;
 
+  const player = PlayerManager.get();
+  if (!player) return;
+
   const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState(flatRealisticBlendRef.current);
   const context: TerritoryRenderContext = {
     ctx,
@@ -2985,7 +2988,7 @@ function drawTerritoriesWrapper() {
     mapMode: currentMapMode,
     modeData: currentMapModeData,
     territories: currentTerritories,
-    playerId: player.id,
+    playerId: player?.id ?? null,
     selectedTerritoryId,
     hoveredTerritoryId,
     draggingTerritoryId: draggingArmy?.sourceId ?? null,

@@ -2844,3 +2844,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Passed the 2D camera state into `FlatEarthBackdrop` so the component can align with map panning and zooming (`src/components/GlobeScene.tsx`).
 - Updated the backdrop material offsets and repeat values each frame to keep the satellite texture locked with overlays and borders when navigating the flat map (`src/components/GlobeScene.tsx`).
 - Re-ran the Vitest suite to confirm existing coverage, noting pre-existing color utility expectations that still fail due to RGB string outputs (`npm run test`).
+
+### 2025-11-08T12:15:00Z - Guard territory rendering when player context is unavailable
+- Retrieved the active player before building the territory render context and skipped drawing when no player is registered (`src/pages/Index.tsx`).
+- Passed a safe player identifier into the territory renderer to prevent undefined access while allowing the canvas loop to progress (`src/pages/Index.tsx`).
+- Ran the production build to ensure the rendering pipeline continues past territory drawing and overlays display again (`npm run build`).
