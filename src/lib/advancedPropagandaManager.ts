@@ -490,15 +490,15 @@ export function processPhobiaCampaigns(
     const effects = PHOBIA_CAMPAIGN_CONFIG.EFFECTS_MULTIPLIER[campaign.type];
     const intensity = campaign.currentPhobiaLevel / 100;
 
-    if (effects.stability) {
+    if ('stability' in effects && effects.stability) {
       target.instability = (target.instability || 0) + Math.abs(effects.stability) * intensity;
     }
 
-    if (effects.morale) {
+    if ('morale' in effects && effects.morale) {
       target.morale = Math.max(0, target.morale + effects.morale * intensity);
     }
 
-    if (effects.production) {
+    if ('production' in effects && effects.production) {
       // Production penalty applied via modifier (handled elsewhere)
     }
 
@@ -569,9 +569,9 @@ export function calculatePhobiaEffects(
       const effects = PHOBIA_CAMPAIGN_CONFIG.EFFECTS_MULTIPLIER[campaign.type];
       const intensity = campaign.currentPhobiaLevel / 100;
 
-      if (effects.stability) totalStabilityPenalty += Math.abs(effects.stability) * intensity;
-      if (effects.production) totalProductionPenalty += Math.abs(effects.production) * intensity;
-      if (effects.diplomacy) totalDiplomaticPenalty += Math.abs(effects.diplomacy) * intensity;
+      if ('stability' in effects && effects.stability) totalStabilityPenalty += Math.abs(effects.stability) * intensity;
+      if ('production' in effects && effects.production) totalProductionPenalty += Math.abs(effects.production) * intensity;
+      if ('diplomacy' in effects && effects.diplomacy) totalDiplomaticPenalty += Math.abs(effects.diplomacy) * intensity;
     }
   }
 

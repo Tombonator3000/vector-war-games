@@ -176,10 +176,14 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     }
     if (flatRealisticTexture) {
       ctx.save();
+      // Reset transform to ignore camera
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.imageSmoothingEnabled = true;
-      // Draw fullscreen without camera transforms
+      // Draw fullscreen - stretch the entire canvas
       ctx.drawImage(flatRealisticTexture, 0, 0, W, H);
       ctx.restore();
+      // Return early - no need to draw borders on flat realistic map
+      return;
     }
   }
 

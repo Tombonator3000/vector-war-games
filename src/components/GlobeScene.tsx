@@ -973,7 +973,7 @@ function SceneContent({
     });
 
     if (missilesRemoved || explosionsRemoved) {
-      requestRender();
+      // Request render if needed
     }
   });
 

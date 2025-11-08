@@ -527,8 +527,8 @@ export function AdvancedPropagandaPanel({
                   >
                     <div className="font-semibold">{type.replace(/_/g, ' ')}</div>
                     <div className="text-gray-400 text-xs">
-                      {bonuses.morale && `+${bonuses.morale} morale`}
-                      {bonuses.combat && ` +${bonuses.combat} combat`}
+                      {'morale' in bonuses && `+${bonuses.morale} morale`}
+                      {'combat' in bonuses && ` +${bonuses.combat} combat`}
                     </div>
                     <div className="text-yellow-400">Cost: {cost} intel</div>
                     {!isCompatible && (

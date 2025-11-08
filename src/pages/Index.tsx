@@ -728,6 +728,9 @@ let flatRealisticNightTexture: HTMLImageElement | null = null;
 let flatRealisticDayTexturePromise: Promise<HTMLImageElement> | null = null;
 let flatRealisticNightTexturePromise: Promise<HTMLImageElement> | null = null;
 let isDayMode = true; // Track day/night mode
+let dayNightTransition = 0; // 0-1, for smooth transition
+let dayNightAutoCycle = false; // Auto-cycle enabled/disabled
+let dayNightCycleSpeed = 60000; // Full cycle duration in ms (60 seconds)
 
 function preloadFlatRealisticTexture(isDay: boolean = true) {
   const url = isDay ? FLAT_REALISTIC_DAY_TEXTURE_URL : FLAT_REALISTIC_NIGHT_TEXTURE_URL;
@@ -784,7 +787,13 @@ function preloadFlatRealisticTexture(isDay: boolean = true) {
 }
 
 function getCurrentFlatRealisticTexture() {
-  return isDayMode ? flatRealisticDayTexture : flatRealisticNightTexture;
+  // If auto-cycle is off, just return the current mode
+  if (!dayNightAutoCycle) {
+    return isDayMode ? flatRealisticDayTexture : flatRealisticNightTexture;
+  }
+  
+  // Return based on transition value
+  return dayNightTransition < 0.5 ? flatRealisticDayTexture : flatRealisticNightTexture;
 }
 
 // Leaders configuration
@@ -5988,6 +5997,10 @@ export default function NoradVector() {
   const [sfxEnabled, setSfxEnabled] = useState(initialSfxEnabled);
   const [musicVolume, setMusicVolume] = useState(initialMusicVolume);
   const [musicSelection, setMusicSelection] = useState<string>(initialMusicSelection);
+  const [dayNightAutoCycleEnabled, setDayNightAutoCycleEnabled] = useState(() => {
+    const stored = Storage.getItem('map_daynight_autocycle');
+    return stored === 'true';
+  });
   const [coopEnabled, setCoopEnabled] = useState(() => {
     const stored = Storage.getItem('option_coop_enabled');
     if (stored === 'true' || stored === 'false') {
@@ -6015,9 +6028,45 @@ export default function NoradVector() {
     if (initialMusicSelection === 'random') {
       AudioSys.setPreferredTrack(null);
     } else {
-      AudioSys.setPreferredTrack(initialMusicSelection as MusicTrackId);
+      if (AudioSys.TRACK_METADATA[initialMusicSelection as MusicTrackId]) {
+        AudioSys.setPreferredTrack(initialMusicSelection as MusicTrackId);
+      }
     }
-  }, [initialMusicEnabled, initialSfxEnabled, initialMusicVolume, initialMusicSelection]);
+  }, []);
+
+  // Day/Night Auto-Cycle Effect
+  useEffect(() => {
+    dayNightAutoCycle = dayNightAutoCycleEnabled;
+    Storage.setItem('map_daynight_autocycle', String(dayNightAutoCycleEnabled));
+  }, [dayNightAutoCycleEnabled]);
+
+  useEffect(() => {
+    if (!dayNightAutoCycleEnabled || mapStyle.visual !== 'flat-realistic') {
+      return;
+    }
+
+    let animationId: number;
+    let lastTime = Date.now();
+
+    const animate = () => {
+      const now = Date.now();
+      const delta = now - lastTime;
+      lastTime = now;
+
+      // Update transition value (0 to 1, loops)
+      dayNightTransition = (dayNightTransition + delta / dayNightCycleSpeed) % 1;
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    animationId = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    };
+  }, [dayNightAutoCycleEnabled, mapStyle.visual]);
   const musicTracks = useMemo(() => AudioSys.getTracks(), []);
   const [pandemicIntegrationEnabled, setPandemicIntegrationEnabled] = useState(() => {
     const stored = Storage.getItem('option_pandemic_integration');

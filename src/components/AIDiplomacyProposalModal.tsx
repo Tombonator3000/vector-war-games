@@ -241,7 +241,6 @@ export function AIDiplomacyProposalModal({
           "border-4",
           moodBorderColor
         )}
-        closeButton={false}
       >
         {/* Header with Leader Portrait */}
         <div className="relative">
