@@ -47,6 +47,8 @@ export interface IntroScreenProps {
   mapStyle: MapStyle;
   /** Change handler for map style */
   onMapStyleChange: (style: MapVisualStyle) => void;
+  dayNightAutoCycleEnabled: boolean;
+  onDayNightAutoCycleToggle: (enabled: boolean) => void;
   musicEnabled?: boolean;
   onMusicToggle?: (enabled: boolean) => void;
   sfxEnabled?: boolean;
@@ -72,6 +74,8 @@ export function IntroScreen({
   onCloseScenarioPanel,
   mapStyle,
   onMapStyleChange,
+  dayNightAutoCycleEnabled,
+  onDayNightAutoCycleToggle,
   musicEnabled,
   onMusicToggle,
   sfxEnabled,
@@ -108,6 +112,8 @@ export function IntroScreen({
             showInGameFeatures={false}
             mapStyle={mapStyle}
             onMapStyleChange={onMapStyleChange}
+            dayNightAutoCycleEnabled={dayNightAutoCycleEnabled}
+            onDayNightAutoCycleToggle={onDayNightAutoCycleToggle}
             musicEnabled={musicEnabled}
             onMusicToggle={onMusicToggle}
             sfxEnabled={sfxEnabled}

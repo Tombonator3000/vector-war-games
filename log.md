@@ -2806,3 +2806,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Added a 10-turn expiry window when AI proposals are enqueued and pruned the queue each turn, surfacing a toast if an active proposal ages out (`src/pages/Index.tsx`).
 ### 2025-11-08T07:11:41Z - Document unified diplomacy architecture
 - Authored a reference guide detailing the canonical relationship helpers, phase integration strategy, proposal lifecycle, and alliance rules for maintainers (`docs/diplomacy-system-architecture.md`).
+### 2025-11-08T07:27:55Z - Add day/night auto-cycle toggle to command options
+- Extended `OptionsMenu` with a dedicated toggle and toast feedback for the automated day/night lighting cycle (`src/components/OptionsMenu.tsx`).
+- Threaded the cycle state and shared handler through the intro dialog and in-game options sheet so the stored preference remains synchronized (`src/components/setup/IntroScreen.tsx`, `src/pages/Index.tsx`).

@@ -7683,6 +7683,10 @@ export default function NoradVector() {
     AudioSys.playNextTrack();
   }, []);
 
+  const handleDayNightAutoCycleToggle = useCallback((enabled: boolean) => {
+    setDayNightAutoCycleEnabled(enabled);
+  }, []);
+
   const activeTrackMeta = useMemo(() => (activeTrackId ? AudioSys.getTrackMetadata(activeTrackId) : null), [activeTrackId]);
 
   const activeTrackMessage = useMemo(() => {
@@ -11853,6 +11857,8 @@ export default function NoradVector() {
         onCloseScenarioPanel={setIsScenarioPanelOpen}
         mapStyle={mapStyle}
         onMapStyleChange={handleMapStyleChange}
+        dayNightAutoCycleEnabled={dayNightAutoCycleEnabled}
+        onDayNightAutoCycleToggle={handleDayNightAutoCycleToggle}
         musicEnabled={musicEnabled}
         onMusicToggle={handleMusicToggle}
         sfxEnabled={sfxEnabled}
@@ -12683,6 +12689,8 @@ export default function NoradVector() {
             onThemeChange={setTheme}
             mapStyle={mapStyle}
             onMapStyleChange={handleMapStyleChange}
+            dayNightAutoCycleEnabled={dayNightAutoCycleEnabled}
+            onDayNightAutoCycleToggle={handleDayNightAutoCycleToggle}
             showInGameFeatures={true}
             onChange={updateDisplay}
             currentTurn={S.turn}
