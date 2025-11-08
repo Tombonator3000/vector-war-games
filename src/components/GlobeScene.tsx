@@ -132,8 +132,6 @@ interface SceneRegistration {
   projectPosition?: (lon: number, lat: number, radius: number) => THREE.Vector3;
 }
 
-type WorldFeature = FeatureCollection<Polygon | MultiPolygon>['features'][number];
-
 function latLonToVector3(lon: number, lat: number, radius: number) {
   const phi = THREE.MathUtils.degToRad(90 - lat);
   const theta = THREE.MathUtils.degToRad(lon + 180);
@@ -226,128 +224,6 @@ function disposeMissileInstance(instance?: MissileTrajectoryInstance | null) {
 function disposeExplosionGroup(group?: THREE.Group | null) {
   if (!group) return;
   disposeObject(group);
-}
-
-function buildAtlasTexture(worldCountries?: FeatureCollection<Polygon | MultiPolygon> | null) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 2048;
-  canvas.height = 1024;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    return null;
-  }
-
-  ctx.fillStyle = '#020912';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  const drawRing = (coords: number[][]) => {
-    if (!coords.length) return;
-    coords.forEach(([lon, lat], index) => {
-      const x = ((lon + 180) / 360) * canvas.width;
-      const y = ((90 - lat) / 180) * canvas.height;
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    ctx.closePath();
-  };
-
-  const featureFillCache = new Map<string, string>();
-
-  const getFeatureId = (feature: WorldFeature) => {
-    const { properties, id } = feature;
-    return (
-      (typeof id === 'string' && id) ||
-      (properties &&
-        ((properties as Record<string, unknown>).name as string | undefined ||
-          (properties as Record<string, unknown>).NAME as string | undefined ||
-          (properties as Record<string, unknown>).ADMIN as string | undefined)) ||
-      'feature'
-    );
-  };
-
-  const getFillColor = (feature: WorldFeature) => {
-    const key = getFeatureId(feature);
-    if (featureFillCache.has(key)) {
-      return featureFillCache.get(key)!;
-    }
-
-    let hash = 0;
-    for (let i = 0; i < key.length; i += 1) {
-      hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
-    }
-
-    const hue = hash % 360;
-    const saturation = 50 + (hash % 30);
-    const lightness = 35 + ((hash >> 3) % 20);
-    const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-    featureFillCache.set(key, color);
-    return color;
-  };
-
-  if (worldCountries && worldCountries.features?.length) {
-    ctx.strokeStyle = 'rgba(94, 255, 255, 0.8)';
-    ctx.lineWidth = 1.2;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-
-    for (const feature of worldCountries.features) {
-      const geometry = feature.geometry;
-      if (!geometry) continue;
-
-      ctx.beginPath();
-      if (geometry.type === 'Polygon') {
-        for (const ring of geometry.coordinates) {
-          drawRing(ring as number[][]);
-        }
-      } else if (geometry.type === 'MultiPolygon') {
-        for (const polygon of geometry.coordinates) {
-          for (const ring of polygon) {
-            drawRing(ring as number[][]);
-          }
-        }
-      }
-
-      ctx.fillStyle = getFillColor(feature);
-      ctx.fill('evenodd');
-      ctx.stroke();
-    }
-  } else {
-    ctx.strokeStyle = 'rgba(94, 255, 255, 0.55)';
-    ctx.lineWidth = 1.2;
-    ctx.strokeRect(0, 0, canvas.width, canvas.height);
-  }
-
-  ctx.strokeStyle = 'rgba(55, 200, 255, 0.25)';
-  ctx.lineWidth = 0.8;
-  for (let lon = -180; lon <= 180; lon += 30) {
-    ctx.beginPath();
-    for (let lat = -90; lat <= 90; lat += 5) {
-      const x = ((lon + 180) / 360) * canvas.width;
-      const y = ((90 - lat) / 180) * canvas.height;
-      if (lat === -90) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }
-
-  for (let lat = -90; lat <= 90; lat += 30) {
-    ctx.beginPath();
-    for (let lon = -180; lon <= 180; lon += 5) {
-      const x = ((lon + 180) / 360) * canvas.width;
-      const y = ((90 - lat) / 180) * canvas.height;
-      if (lon === -180) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.needsUpdate = true;
-  return texture;
 }
 
 function createWireframeFallbackTexture(): THREE.Texture {
@@ -685,10 +561,14 @@ function EarthWireframe({
     <mesh ref={earthRef}>
       <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
       <meshBasicMaterial
-        map={vectorTexture}
-        color="#0a1929"
+        map={vectorTexture ?? undefined}
+        color="#061021"
         transparent
-        opacity={0.95}
+        opacity={0.98}
+        toneMapped={false}
+        polygonOffset
+        polygonOffsetFactor={-0.1}
+        polygonOffsetUnits={-0.1}
       />
     </mesh>
   );
@@ -1277,7 +1157,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   {
     cam,
     nations,
-    worldCountries,
+    worldCountries: _worldCountries,
     territories,
     units,
     showTerritories = false,
@@ -1293,6 +1173,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   }: GlobeSceneProps,
   ref,
 ) {
+  void _worldCountries;
   const containerRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -1339,6 +1220,10 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     return 0;
   }, []);
 
+  const wireframeTextureUrl = useMemo(
+    () => resolvePublicAssetPath('textures/earth_wireframe.svg'),
+    [],
+  );
   const [vectorTexture, setVectorTexture] = useState<THREE.Texture | null>(null);
 
   useEffect(() => {
@@ -1346,26 +1231,51 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       return;
     }
 
-    let nextTexture: THREE.Texture | null = null;
+    let disposed = false;
+    let activeTexture: THREE.Texture | null = null;
+    const loader = new THREE.TextureLoader();
 
-    try {
-      nextTexture = buildAtlasTexture(worldCountries);
-    } catch (error) {
-      console.warn('Failed to build globe atlas texture', error);
-    }
+    setVectorTexture(null);
 
-    if (!nextTexture) {
-      nextTexture = createWireframeFallbackTexture();
-    }
+    const handleTextureReady = (texture: THREE.Texture) => {
+      if (disposed) {
+        texture.dispose();
+        return;
+      }
 
-    setVectorTexture(nextTexture);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.generateMipmaps = true;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.anisotropy = 8;
+      texture.needsUpdate = true;
+
+      activeTexture = texture;
+      setVectorTexture(texture);
+    };
+
+    const handleError = (error?: unknown) => {
+      if (error) {
+        console.warn('Failed to load earth wireframe texture', error);
+      }
+      const fallback = createWireframeFallbackTexture();
+      if (disposed) {
+        fallback.dispose();
+        return;
+      }
+      activeTexture = fallback;
+      setVectorTexture(fallback);
+    };
+
+    loader.load(wireframeTextureUrl, handleTextureReady, undefined, handleError);
 
     return () => {
-      if (nextTexture) {
-        nextTexture.dispose();
+      disposed = true;
+      if (activeTexture) {
+        activeTexture.dispose();
       }
     };
-  }, [worldCountries]);
+  }, [wireframeTextureUrl]);
 
   useEffect(() => {
     const missiles = missilesRef.current;
