@@ -120,6 +120,7 @@ export interface GlobeSceneProps {
   onPickerReady?: (picker: PickerFn) => void;
   mapStyle?: MapStyle;
   modeData?: MapModeOverlayData;
+  flatMapVariant?: boolean | string | null;
 }
 
 interface SceneRegistration {
@@ -691,13 +692,44 @@ function EarthWireframe({
   );
 }
 
-function FlatEarthBackdrop() {
+function FlatEarthBackdrop({ flatMapVariant }: { flatMapVariant?: boolean | string | null }) {
   const meshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>>(null);
   const cameraWorldPosition = useRef(new THREE.Vector3());
   const planeWorldPosition = useRef(new THREE.Vector3());
   const { camera, size } = useThree();
 
-  const textureUrl = useMemo(() => resolvePublicAssetPath('textures/earth_day.jpg'), []);
+  const variantKey = useMemo(() => {
+    if (typeof flatMapVariant === 'boolean') {
+      return flatMapVariant ? 'day' : 'night';
+    }
+
+    if (typeof flatMapVariant === 'string') {
+      const trimmed = flatMapVariant.trim();
+      const normalized = trimmed.toLowerCase();
+      if (normalized === 'day' || normalized === 'night') {
+        return normalized;
+      }
+      return trimmed;
+    }
+
+    return 'day';
+  }, [flatMapVariant]);
+
+  const textureUrl = useMemo(() => {
+    if (!variantKey) {
+      return resolvePublicAssetPath('textures/earth_day_flat.jpg');
+    }
+
+    if (variantKey === 'day' || variantKey === 'night') {
+      return resolvePublicAssetPath(`textures/earth_${variantKey}_flat.jpg`);
+    }
+
+    if (/^https?:\/\//i.test(variantKey)) {
+      return variantKey;
+    }
+
+    return resolvePublicAssetPath(variantKey);
+  }, [variantKey]);
   const [satelliteTexture, setSatelliteTexture] = useState<THREE.Texture | null>(null);
   const satelliteTextureRef = useRef<THREE.Texture | null>(null);
 
@@ -739,6 +771,21 @@ function FlatEarthBackdrop() {
     const loader = new THREE.TextureLoader();
     let isMounted = true;
 
+    const disposeCurrentTexture = () => {
+      satelliteTextureRef.current?.dispose();
+      satelliteTextureRef.current = null;
+    };
+
+    disposeCurrentTexture();
+    setSatelliteTexture(null);
+
+    if (!textureUrl) {
+      return () => {
+        isMounted = false;
+        disposeCurrentTexture();
+      };
+    }
+
     loader.load(
       textureUrl,
       loadedTexture => {
@@ -753,7 +800,7 @@ function FlatEarthBackdrop() {
         loadedTexture.magFilter = THREE.LinearFilter;
         loadedTexture.needsUpdate = true;
 
-        satelliteTextureRef.current?.dispose();
+        disposeCurrentTexture();
         satelliteTextureRef.current = loadedTexture;
         setSatelliteTexture(loadedTexture);
       },
@@ -763,16 +810,14 @@ function FlatEarthBackdrop() {
           return;
         }
 
-        satelliteTextureRef.current?.dispose();
-        satelliteTextureRef.current = null;
+        disposeCurrentTexture();
         setSatelliteTexture(null);
       }
     );
 
     return () => {
       isMounted = false;
-      satelliteTextureRef.current?.dispose();
-      satelliteTextureRef.current = null;
+      disposeCurrentTexture();
     };
   }, [textureUrl]);
 
@@ -845,6 +890,7 @@ function SceneContent({
   modeData,
   missilesRef,
   explosionsRef,
+  flatMapVariant,
 }: {
   cam: GlobeSceneProps['cam'];
   vectorTexture: THREE.Texture | null;
@@ -861,6 +907,7 @@ function SceneContent({
   modeData?: MapModeOverlayData;
   missilesRef: React.MutableRefObject<Map<string, MissileTrajectoryInstance>>;
   explosionsRef: React.MutableRefObject<Map<string, { group: THREE.Group; startTime: number }>>;
+  flatMapVariant?: GlobeSceneProps['flatMapVariant'];
 }) {
   const { camera, size, clock } = useThree();
   const earthRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>(null);
@@ -1025,7 +1072,7 @@ function SceneContent({
       case 'wireframe':
         return <EarthWireframe earthRef={earthRef} vectorTexture={vectorTexture} />;
       case 'flat-realistic':
-        return <FlatEarthBackdrop />;
+        return <FlatEarthBackdrop flatMapVariant={flatMapVariant} />;
       default:
         return fallback;
     }
@@ -1182,6 +1229,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     onPickerReady,
     mapStyle = DEFAULT_MAP_STYLE,
     modeData,
+    flatMapVariant,
   }: GlobeSceneProps,
   ref,
 ) {
@@ -1484,6 +1532,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           modeData={modeData}
           missilesRef={missilesRef}
           explosionsRef={explosionsRef}
+          flatMapVariant={flatMapVariant}
         />
       </Canvas>
       <canvas ref={overlayRef} className="globe-scene__overlay" />

@@ -5778,6 +5778,8 @@ export default function NoradVector() {
     const mode = isMapModeValue(storedMode) ? storedMode : DEFAULT_MAP_STYLE.mode;
     return { visual, mode };
   });
+  const [isFlatMapDay, setIsFlatMapDay] = useState<boolean>(isDayMode);
+  const lastFlatMapModeRef = useRef<boolean>(isDayMode);
 
   const handleMapStyleChange = useCallback((style: MapVisualStyle) => {
     setMapStyle(prev => {
@@ -5820,11 +5822,14 @@ export default function NoradVector() {
   }, [toast]);
 
   const handleDayNightToggle = useCallback(() => {
-    isDayMode = !isDayMode;
+    const nextMode = !isDayMode;
+    isDayMode = nextMode;
+    lastFlatMapModeRef.current = nextMode;
+    setIsFlatMapDay(nextMode);
     AudioSys.playSFX('click');
     toast({
       title: 'Dag/Natt modus oppdatert',
-      description: `Vekslet til ${isDayMode ? 'Dagkart' : 'Nattkart'}`,
+      description: `Vekslet til ${nextMode ? 'Dagkart' : 'Nattkart'}`,
     });
   }, [toast]);
 
@@ -6033,6 +6038,9 @@ export default function NoradVector() {
     const stored = Storage.getItem('map_daynight_autocycle');
     return stored === 'true';
   });
+  useEffect(() => {
+    lastFlatMapModeRef.current = isFlatMapDay;
+  }, [isFlatMapDay]);
   const [coopEnabled, setCoopEnabled] = useState(() => {
     const stored = Storage.getItem('option_coop_enabled');
     if (stored === 'true' || stored === 'false') {
@@ -6077,8 +6085,17 @@ export default function NoradVector() {
       return;
     }
 
-    let animationId: number;
+    let animationId: number | null = null;
     let lastTime = Date.now();
+
+    const syncModeWithTransition = () => {
+      const nextIsDay = dayNightTransition < 0.5;
+      if (lastFlatMapModeRef.current !== nextIsDay) {
+        lastFlatMapModeRef.current = nextIsDay;
+        isDayMode = nextIsDay;
+        setIsFlatMapDay(nextIsDay);
+      }
+    };
 
     const animate = () => {
       const now = Date.now();
@@ -6087,10 +6104,12 @@ export default function NoradVector() {
 
       // Update transition value (0 to 1, loops)
       dayNightTransition = (dayNightTransition + delta / dayNightCycleSpeed) % 1;
+      syncModeWithTransition();
 
       animationId = requestAnimationFrame(animate);
     };
 
+    syncModeWithTransition();
     animationId = requestAnimationFrame(animate);
 
     return () => {
@@ -12026,6 +12045,7 @@ export default function NoradVector() {
           modeData={mapModeData}
           showTerritories={showTerritories}
           showUnits={showUnits}
+          flatMapVariant={isFlatMapDay}
         />
 
         {draggingArmy && draggingArmyPosition && (
