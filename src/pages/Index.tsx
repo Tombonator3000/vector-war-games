@@ -4927,6 +4927,10 @@ function aiTurn(n: Nation) {
 // Global flag to prevent multiple simultaneous endTurn calls
 let turnInProgress = false;
 
+// Track the active SeededRandom instance so global helpers (like endTurn)
+// can access the deterministic RNG provided by the React tree.
+let activeRng: SeededRandom | null = null;
+
 // End turn
 function endTurn() {
   console.log('[Turn Debug] endTurn called, current phase:', S.phase, 'gameOver:', S.gameOver, 'turnInProgress:', turnInProgress);
@@ -5001,7 +5005,11 @@ function endTurn() {
       try {
         console.log('[Turn Debug] PRODUCTION phase starting');
         S.phase = 'PRODUCTION';
-        productionPhase(rng);
+        if (!activeRng) {
+          console.error('[Turn Debug] ERROR: No active RNG available for production phase');
+        } else {
+          productionPhase(activeRng);
+        }
       } catch (error) {
         console.error('[Turn Debug] ERROR in PRODUCTION phase:', error);
         log('⚠️ Error in production phase - continuing turn', 'warning');
@@ -5610,6 +5618,16 @@ export default function NoradVector() {
   const hasAutoplayedTurnOneMusicRef = useRef(false);
   const hasBootstrappedGameRef = useRef(false);
   const [, setRenderTick] = useState(0);
+
+  useEffect(() => {
+    activeRng = rng;
+
+    return () => {
+      if (activeRng === rng) {
+        activeRng = null;
+      }
+    };
+  }, [rng]);
 
   // Modal management - Extracted to useModalManager hook (Phase 7 refactoring)
   const { showModal, modalContent, openModal, closeModal } = useModalManager();
