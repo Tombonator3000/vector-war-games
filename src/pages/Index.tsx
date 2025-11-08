@@ -6045,7 +6045,7 @@ export default function NoradVector() {
 
   useEffect(() => {
     currentMapStyle = mapStyle.visual;
-    if (mapStyle.visual === 'flat-realistic') {
+    if (mapStyle.visual === 'flat-realistic' || mapStyle.visual === 'wireframe') {
       const expectedX = (W - W * cam.zoom) / 2;
       const expectedY = (H - H * cam.zoom) / 2;
       const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;

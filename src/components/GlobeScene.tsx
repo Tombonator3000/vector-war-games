@@ -9,6 +9,7 @@ import {
   Suspense,
   useState,
 } from 'react';
+import type { MutableRefObject } from 'react';
 import { Canvas, useFrame, useThree, useLoader, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -127,7 +128,7 @@ export interface GlobeSceneProps {
 interface SceneRegistration {
   camera: THREE.PerspectiveCamera;
   size: { width: number; height: number };
-  earth: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> | null;
+  earth: THREE.Mesh | null;
   clock: THREE.Clock;
   projectPosition?: (lon: number, lat: number, radius: number) => THREE.Vector3;
 }
@@ -505,7 +506,7 @@ function Atmosphere() {
 function EarthRealistic({
   earthRef,
 }: {
-  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
+  earthRef: MutableRefObject<THREE.Mesh | null>;
 }) {
   const textureUrls = useMemo(() => {
     const base = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
@@ -553,22 +554,101 @@ function EarthRealistic({
 function EarthWireframe({
   earthRef,
   vectorTexture,
+  cam,
 }: {
-  earthRef: React.RefObject<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>;
+  earthRef: MutableRefObject<THREE.Mesh | null>;
   vectorTexture: THREE.Texture | null;
+  cam: GlobeSceneProps['cam'];
 }) {
+  const meshRef = earthRef as MutableRefObject<
+    THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null
+  >;
+  const { camera, size } = useThree();
+  const cameraWorldPosition = useRef(new THREE.Vector3());
+  const planeWorldPosition = useRef(new THREE.Vector3());
+
+  const applyTexturePanZoom = useCallback(
+    (texture: THREE.Texture | null) => {
+      if (!texture) return;
+
+      const width = size.width || 1;
+      const height = size.height || 1;
+      const safeZoom = cam.zoom <= 0 ? 0.0001 : cam.zoom;
+      const inverseZoom = 1 / safeZoom;
+
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.repeat.set(inverseZoom, inverseZoom);
+
+      const offsetX = -((cam.x / width) * inverseZoom);
+      const offsetY = -((cam.y / height) * inverseZoom);
+      texture.offset.set(offsetX, offsetY);
+    },
+    [cam.x, cam.y, cam.zoom, size.height, size.width],
+  );
+
+  const syncTexturePanZoom = useCallback(() => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+
+    const material = mesh.material;
+    if (!material || Array.isArray(material) || !(material instanceof THREE.MeshBasicMaterial)) {
+      return;
+    }
+
+    applyTexturePanZoom(material.map ?? null);
+  }, [applyTexturePanZoom]);
+
+  const updatePlaneScale = useCallback(() => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+
+    const perspective = camera as THREE.PerspectiveCamera;
+    if (!perspective.isPerspectiveCamera) return;
+
+    perspective.getWorldPosition(cameraWorldPosition.current);
+    mesh.getWorldPosition(planeWorldPosition.current);
+
+    const distance = cameraWorldPosition.current.distanceTo(planeWorldPosition.current);
+    if (distance === 0) return;
+
+    const verticalFov = THREE.MathUtils.degToRad(perspective.fov);
+    const viewportHeight = 2 * Math.tan(verticalFov / 2) * distance;
+    const aspect = size.height === 0 ? perspective.aspect : size.width / size.height;
+    const viewportWidth = viewportHeight * aspect;
+
+    if (!Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight)) {
+      return;
+    }
+
+    const overscan = 1.08;
+    mesh.scale.set(viewportWidth * overscan, viewportHeight * overscan, 1);
+  }, [camera, size.height, size.width]);
+
+  useEffect(() => {
+    updatePlaneScale();
+    syncTexturePanZoom();
+  }, [syncTexturePanZoom, updatePlaneScale, vectorTexture]);
+
+  useFrame(() => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    mesh.quaternion.copy(camera.quaternion);
+    updatePlaneScale();
+    syncTexturePanZoom();
+  });
+
   return (
-    <mesh ref={earthRef}>
-      <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
+    <mesh ref={meshRef} position={[0, 0, FLAT_PLANE_Z]} renderOrder={-15} frustumCulled={false}>
+      <planeGeometry args={[1, 1]} />
       <meshBasicMaterial
         map={vectorTexture ?? undefined}
-        color="#061021"
+        color={vectorTexture ? undefined : '#061021'}
         transparent
-        opacity={0.98}
+        opacity={vectorTexture ? 1 : 0.98}
         toneMapped={false}
-        polygonOffset
-        polygonOffsetFactor={-0.1}
-        polygonOffsetUnits={-0.1}
+        side={THREE.DoubleSide}
+        depthWrite={false}
       />
     </mesh>
   );
@@ -833,15 +913,15 @@ function SceneContent({
   register: (registration: SceneRegistration) => void;
   mapStyle?: MapStyle;
   modeData?: MapModeOverlayData;
-  missilesRef: React.MutableRefObject<Map<string, MissileTrajectoryInstance>>;
-  explosionsRef: React.MutableRefObject<Map<string, { group: THREE.Group; startTime: number }>>;
+  missilesRef: MutableRefObject<Map<string, MissileTrajectoryInstance>>;
+  explosionsRef: MutableRefObject<Map<string, { group: THREE.Group; startTime: number }>>;
   flatMapVariant?: GlobeSceneProps['flatMapVariant'];
 }) {
   const { camera, size, clock } = useThree();
-  const earthRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>>(null);
+  const earthRef = useRef<THREE.Mesh | null>(null);
   const visualStyle = mapStyle?.visual ?? 'realistic';
   const currentMode = mapStyle?.mode ?? 'standard';
-  const isFlat = visualStyle === 'flat-realistic';
+  const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
 
   const computeFlatPosition = useCallback(
     (lon: number, lat: number, altitude: number = 0) => {
@@ -1058,7 +1138,7 @@ function SceneContent({
           </Suspense>
         );
       case 'wireframe':
-        return <EarthWireframe earthRef={earthRef} vectorTexture={vectorTexture} />;
+        return <EarthWireframe earthRef={earthRef} vectorTexture={vectorTexture} cam={cam} />;
       case 'flat-realistic':
         return <FlatEarthBackdrop cam={cam} flatMapVariant={flatMapVariant} />;
       default:
@@ -1224,7 +1304,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const sizeRef = useRef<{ width: number; height: number }>({ width: 1, height: 1 });
-  const earthMeshRef = useRef<THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> | null>(null);
+  const earthMeshRef = useRef<THREE.Mesh | null>(null);
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerVec = useRef(new THREE.Vector2());
   const projectorRef = useRef<ProjectorFn>(NOOP_PROJECTOR);
@@ -1340,7 +1420,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     const projector: ProjectorFn = (lon, lat) => {
       const size = sizeRef.current;
       const overlay = overlayRef.current;
-      const isFlat = visualStyle === 'flat-realistic';
+      const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
 
       const overlayWidth = overlay && overlay.width > 0 ? overlay.width : undefined;
       const overlayHeight = overlay && overlay.height > 0 ? overlay.height : undefined;
@@ -1387,7 +1467,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       const overlay = overlayRef.current;
       if (!container) return null;
 
-      const isFlat = visualStyle === 'flat-realistic';
+      const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
       if (isFlat) {
         const rect = overlay?.getBoundingClientRect() ?? container.getBoundingClientRect();
         const size = sizeRef.current;
