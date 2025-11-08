@@ -5554,27 +5554,13 @@ function gameLoop() {
     ctx.imageSmoothingEnabled = !(currentTheme === 'retro80s' || currentTheme === 'wargames');
   };
 
-  if (!isGameplayLoopEnabled) {
-    if (!isAttractModeActive) {
-      return;
-    }
-
-    applyCanvasDefaults();
-    ctx.clearRect(0, 0, W, H);
-    drawWorld(currentMapStyle);
-    return;
-  }
-
-  if (S.paused || S.gameOver) {
-    return;
-  }
-
   applyCanvasDefaults();
 
   const nowMs = Date.now();
 
   ctx.clearRect(0, 0, W, H);
 
+  // Always update and draw map elements, regardless of game state
   Atmosphere.update();
   Atmosphere.draw(ctx, currentMapStyle);
 
@@ -11264,11 +11250,6 @@ export default function NoradVector() {
         const focalY = e.clientY - rect.top;
         const [focalLon, focalLat] = toLonLatLocal(focalX, focalY);
         const prevZoom = cam.zoom;
-        const focalProjection = projectLocal(focalLon, focalLat);
-        if (!focalProjection.visible) {
-          return;
-        }
-        const { x: projectedX, y: projectedY } = focalProjection;
 
         const zoomIntensity = 0.0015;
         const delta = Math.exp(-e.deltaY * zoomIntensity);
@@ -11277,14 +11258,23 @@ export default function NoradVector() {
 
         cam.targetZoom = newZoom;
         cam.zoom = newZoom;
-        
+
+        // Try to zoom towards focal point if it's visible
+        const focalProjection = projectLocal(focalLon, focalLat);
+
         // Auto-center in bounded flat projections when at default zoom
         if (isBoundedFlatProjection() && newZoom <= 1.05) {
           cam.x = (W - W * cam.zoom) / 2;
           cam.y = (H - H * cam.zoom) / 2;
-        } else {
+        } else if (focalProjection.visible) {
+          // Focal point is visible - zoom towards it
+          const { x: projectedX, y: projectedY } = focalProjection;
           cam.x = focalX - (projectedX - cam.x) * zoomScale;
           cam.y = focalY - (projectedY - cam.y) * zoomScale;
+        } else {
+          // Focal point not visible (e.g., on back of globe) - simple center zoom
+          cam.x = W / 2 - (W / 2 - cam.x) * zoomScale;
+          cam.y = H / 2 - (H / 2 - cam.y) * zoomScale;
         }
 
         clampPanBounds();
