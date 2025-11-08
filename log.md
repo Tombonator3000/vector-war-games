@@ -2849,3 +2849,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Retrieved the active player before building the territory render context and skipped drawing when no player is registered (`src/pages/Index.tsx`).
 - Passed a safe player identifier into the territory renderer to prevent undefined access while allowing the canvas loop to progress (`src/pages/Index.tsx`).
 - Ran the production build to ensure the rendering pipeline continues past territory drawing and overlays display again (`npm run build`).
+
+### 2025-11-08T13:30:00Z - Align GameStateManager with core game types
+- Replaced the local GameState and DiplomacyState interfaces with imports from the shared schema and extended LocalGameState to wrap the core definition (`src/state/GameStateManager.ts`).
+- Normalized the initial state factory and reset logic so optional campaign systems are explicitly initialised or nullish without relying on implicit anys (`src/state/GameStateManager.ts`).
+- Removed the redundant GameState assertion in the main page now that the manager returns the fully typed state (`src/pages/Index.tsx`).
