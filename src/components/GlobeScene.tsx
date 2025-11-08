@@ -49,6 +49,7 @@ const CITY_LIGHT_MAX_SCALE = 1.35;
 const CITY_LIGHT_ALTITUDE = EARTH_RADIUS + 0.012;
 const WHITE_COLOR = new THREE.Color('#ffffff');
 const FALLBACK_CITY_COLOR = new THREE.Color('#ffdd00');
+const FLAT_PLANE_Z = -0.02;
 
 const NOOP_PROJECTOR: ProjectorFn = () => ({ x: 0, y: 0, visible: false });
 const NOOP_PICKER: PickerFn = () => null;
@@ -128,6 +129,7 @@ interface SceneRegistration {
   size: { width: number; height: number };
   earth: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial> | null;
   clock: THREE.Clock;
+  projectPosition?: (lon: number, lat: number, radius: number) => THREE.Vector3;
 }
 
 type WorldFeature = FeatureCollection<Polygon | MultiPolygon>['features'][number];
@@ -915,6 +917,68 @@ function SceneContent({
   const currentMode = mapStyle?.mode ?? 'standard';
   const isFlat = visualStyle === 'flat-realistic';
 
+  const computeFlatPosition = useCallback(
+    (lon: number, lat: number, altitude: number = 0) => {
+      if (!isFlat) {
+        return latLonToVector3(lon, lat, EARTH_RADIUS + altitude);
+      }
+
+      const perspective = camera as THREE.PerspectiveCamera;
+      if (!perspective || !(perspective as THREE.PerspectiveCamera).isPerspectiveCamera) {
+        return latLonToVector3(lon, lat, EARTH_RADIUS + altitude);
+      }
+
+      const { width, height } = size;
+      const safeWidth = width || 1;
+      const safeHeight = height || 1;
+
+      const baseX = ((lon + 180) / 360) * safeWidth;
+      const baseY = ((90 - lat) / 180) * safeHeight;
+
+      const screenX = baseX * cam.zoom + cam.x;
+      const screenY = baseY * cam.zoom + cam.y;
+
+      const ndcX = (screenX / safeWidth) * 2 - 1;
+      const ndcY = -(screenY / safeHeight) * 2 + 1;
+
+      const worldPosition = new THREE.Vector3(ndcX, ndcY, 0.5).unproject(perspective);
+
+      const cameraPosition = perspective.position instanceof THREE.Vector3
+        ? perspective.position.clone()
+        : new THREE.Vector3(
+            (perspective.position as unknown as { x?: number; y?: number; z?: number }).x ?? 0,
+            (perspective.position as unknown as { x?: number; y?: number; z?: number }).y ?? 0,
+            (perspective.position as unknown as { x?: number; y?: number; z?: number }).z ?? EARTH_RADIUS + 3,
+          );
+
+      const direction = worldPosition.clone().sub(cameraPosition).normalize();
+      const planeZ = FLAT_PLANE_Z + altitude;
+
+      if (direction.z === 0) {
+        return new THREE.Vector3(worldPosition.x, worldPosition.y, planeZ);
+      }
+
+      const distance = (planeZ - cameraPosition.z) / direction.z;
+      if (!Number.isFinite(distance) || distance <= 0) {
+        return new THREE.Vector3(worldPosition.x, worldPosition.y, planeZ);
+      }
+
+      return cameraPosition.add(direction.multiplyScalar(distance));
+    },
+    [camera, cam.x, cam.y, cam.zoom, isFlat, size.height, size.width],
+  );
+
+  const latLonToSceneVector = useCallback(
+    (lon: number, lat: number, radius: number) => {
+      if (!isFlat) {
+        return latLonToVector3(lon, lat, radius);
+      }
+      const altitude = radius - EARTH_RADIUS;
+      return computeFlatPosition(lon, lat, altitude);
+    },
+    [computeFlatPosition, isFlat],
+  );
+
   // Territory boundaries state
   const [territoryGroups, setTerritoryGroups] = useState<THREE.Group[]>([]);
 
@@ -942,12 +1006,13 @@ function SceneContent({
       size,
       earth: isFlat ? null : earthRef.current,
       clock,
+      projectPosition: latLonToSceneVector,
     });
-  }, [camera, register, size, isFlat, clock]);
+  }, [camera, register, size, isFlat, clock, latLonToSceneVector]);
 
   // Load and render territory boundaries
   useEffect(() => {
-    if (!showTerritories || isFlat || territories.length === 0) {
+    if (!showTerritories || territories.length === 0) {
       setTerritoryGroups(prevGroups => {
         prevGroups.forEach(group => disposeObject(group));
         return [];
@@ -956,7 +1021,7 @@ function SceneContent({
     }
 
     const groups = territories.map(territory =>
-      createTerritoryBoundaries(territory, latLonToVector3, EARTH_RADIUS)
+      createTerritoryBoundaries(territory, latLonToSceneVector, EARTH_RADIUS)
     );
 
     setTerritoryGroups(prevGroups => {
@@ -967,11 +1032,11 @@ function SceneContent({
     return () => {
       groups.forEach(group => disposeObject(group));
     };
-  }, [territories, showTerritories, isFlat]);
+  }, [territories, showTerritories, latLonToSceneVector]);
 
   // Load and render units
   useEffect(() => {
-    if (!showUnits || isFlat || units.length === 0) {
+    if (!showUnits || units.length === 0) {
       setUnitVisualizations(prevVisualizations => {
         prevVisualizations.forEach(viz => disposeObject(viz.mesh));
         return [];
@@ -980,7 +1045,7 @@ function SceneContent({
     }
 
     const visualizations = units.map(unit =>
-      createUnitBillboard(unit, latLonToVector3, EARTH_RADIUS)
+      createUnitBillboard(unit, latLonToSceneVector, EARTH_RADIUS)
     );
 
     setUnitVisualizations(prevVisualizations => {
@@ -991,7 +1056,7 @@ function SceneContent({
     return () => {
       visualizations.forEach(viz => disposeObject(viz.mesh));
     };
-  }, [units, showUnits, isFlat]);
+  }, [units, showUnits, latLonToSceneVector]);
 
   useEffect(() => {
     if (!isFlat) {
@@ -1005,26 +1070,23 @@ function SceneContent({
   }, [camera, isFlat]);
 
   useFrame(() => {
-    if (isFlat) {
-      return;
+    if (!isFlat) {
+      const { width, height } = size;
+      const centerLon = ((width / 2 - cam.x) / (width * cam.zoom)) * 360 - 180;
+      const centerLat = 90 - ((height / 2 - cam.y) / (height * cam.zoom)) * 180;
+
+      const centerDir = latLonToVector3(centerLon, centerLat, 1).normalize();
+      const minDistance = EARTH_RADIUS + 1.3;
+      const maxDistance = EARTH_RADIUS + 3.4;
+      const zoomT = THREE.MathUtils.clamp((cam.zoom - 0.5) / (3 - 0.5), 0, 1);
+      const targetDistance = THREE.MathUtils.lerp(maxDistance, minDistance, zoomT);
+
+      const desired = centerDir.clone().multiplyScalar(targetDistance);
+      (camera as THREE.PerspectiveCamera).position.lerp(desired, 0.12);
+      (camera as THREE.PerspectiveCamera).lookAt(0, 0, 0);
+      (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
     }
 
-    const { width, height } = size;
-    const centerLon = ((width / 2 - cam.x) / (width * cam.zoom)) * 360 - 180;
-    const centerLat = 90 - ((height / 2 - cam.y) / (height * cam.zoom)) * 180;
-
-    const centerDir = latLonToVector3(centerLon, centerLat, 1).normalize();
-    const minDistance = EARTH_RADIUS + 1.3;
-    const maxDistance = EARTH_RADIUS + 3.4;
-    const zoomT = THREE.MathUtils.clamp((cam.zoom - 0.5) / (3 - 0.5), 0, 1);
-    const targetDistance = THREE.MathUtils.lerp(maxDistance, minDistance, zoomT);
-
-    const desired = centerDir.clone().multiplyScalar(targetDistance);
-    (camera as THREE.PerspectiveCamera).position.lerp(desired, 0.12);
-    (camera as THREE.PerspectiveCamera).lookAt(0, 0, 0);
-    (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
-
-    // Animate missiles
     const currentTime = clock.getElapsedTime();
     let missilesRemoved = false;
     missilesRef.current.forEach((missile, id) => {
@@ -1089,11 +1151,10 @@ function SceneContent({
       )}
       {renderEarth()}
       {visualStyle === 'realistic' && <CityLights nations={nations} />}
-      {!isFlat && (
-        <group>
-          {nations.map(nation => {
+      <group>
+        {nations.map(nation => {
             if (Number.isNaN(nation.lon) || Number.isNaN(nation.lat)) return null;
-            const position = latLonToVector3(nation.lon, nation.lat, EARTH_RADIUS + MARKER_OFFSET);
+            const position = latLonToSceneVector(nation.lon, nation.lat, EARTH_RADIUS + MARKER_OFFSET);
             const overlayKey = nation.id;
             let overlayColor: string | null = null;
             let overlayScale = 0.28;
@@ -1178,37 +1239,36 @@ function SceneContent({
             );
           })}
 
-          {/* Territory boundaries */}
-          {territoryGroups.map((group, i) => (
-            <primitive key={`territory-${i}`} object={group} />
-          ))}
+        {/* Territory boundaries */}
+        {territoryGroups.map((group, i) => (
+          <primitive key={`territory-${i}`} object={group} />
+        ))}
 
-          {/* Unit visualizations */}
-          {unitVisualizations.map(viz => (
-            <primitive
-              key={`unit-${viz.id}`}
-              object={viz.mesh}
-              onClick={(event: ThreeEvent<PointerEvent>) => {
-                event.stopPropagation();
-                onUnitClick?.(viz.id);
-              }}
-            />
-          ))}
+        {/* Unit visualizations */}
+        {unitVisualizations.map(viz => (
+          <primitive
+            key={`unit-${viz.id}`}
+            object={viz.mesh}
+            onClick={(event: ThreeEvent<PointerEvent>) => {
+              event.stopPropagation();
+              onUnitClick?.(viz.id);
+            }}
+          />
+        ))}
 
-          {/* Active missile trajectories */}
-          {Array.from(missilesRef.current.values()).map(missile => (
-            <group key={`missile-${missile.id}`}>
-              <primitive object={missile.line} />
-              {missile.trail && <primitive object={missile.trail} />}
-            </group>
-          ))}
+        {/* Active missile trajectories */}
+        {Array.from(missilesRef.current.values()).map(missile => (
+          <group key={`missile-${missile.id}`}>
+            <primitive object={missile.line} />
+            {missile.trail && <primitive object={missile.trail} />}
+          </group>
+        ))}
 
-          {/* Explosions */}
-          {Array.from(explosionsRef.current.values()).map((explosion, i) => (
-            <primitive key={`explosion-${i}`} object={explosion.group} />
-          ))}
-        </group>
-      )}
+        {/* Explosions */}
+        {Array.from(explosionsRef.current.values()).map((explosion, i) => (
+          <primitive key={`explosion-${i}`} object={explosion.group} />
+        ))}
+      </group>
     </>
   );
 }
@@ -1242,6 +1302,9 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   const pointerVec = useRef(new THREE.Vector2());
   const projectorRef = useRef<ProjectorFn>(NOOP_PROJECTOR);
   const pickerRef = useRef<PickerFn>(NOOP_PICKER);
+  const positionProjectorRef = useRef<(lon: number, lat: number, radius: number) => THREE.Vector3>(
+    (lon, lat, radius) => latLonToVector3(lon, lat, radius),
+  );
   const visualStyle = mapStyle?.visual ?? DEFAULT_MAP_STYLE.visual;
   const [, triggerRender] = useReducer((value: number) => value + 1, 0);
   const isMountedRef = useRef(true);
@@ -1412,11 +1475,14 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   }, [cam.x, cam.y, cam.zoom, visualStyle, onPickerReady]);
 
   const handleRegister = useCallback(
-    ({ camera, size, earth, clock }: SceneRegistration) => {
+    ({ camera, size, earth, clock, projectPosition }: SceneRegistration) => {
       cameraRef.current = camera;
       sizeRef.current = size;
       earthMeshRef.current = earth;
       clockRef.current = clock;
+      positionProjectorRef.current = projectPosition
+        ? projectPosition
+        : (lon, lat, radius) => latLonToVector3(lon, lat, radius);
       updateProjector();
       updatePicker();
     },
@@ -1448,7 +1514,8 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         type: options?.type || 'ballistic'
       };
 
-      const instance = createMissileTrajectory(trajectory, latLonToVector3, EARTH_RADIUS);
+      const projector = positionProjectorRef.current;
+      const instance = createMissileTrajectory(trajectory, projector, EARTH_RADIUS);
       instance.startTime = getElapsedTime();
       missilesRef.current.set(id, instance);
       requestRender();
@@ -1464,7 +1531,8 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       lat: number,
       radiusKm: number = 50,
     ): void => {
-      const position = latLonToVector3(lon, lat, EARTH_RADIUS + 0.01);
+      const projector = positionProjectorRef.current;
+      const position = projector(lon, lat, EARTH_RADIUS + 0.01);
       const explosion = createExplosion(position, radiusKm);
       const id = `explosion-${++explosionIdCounterRef.current}`;
 

@@ -2821,3 +2821,7 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-08T08:41:48Z - Restore borders on flat realistic map
 - Scaled the flat-realistic satellite texture directly via `drawImage` so it respects camera zoom/pan without holding a transformed context (`src/rendering/worldRenderer.ts`).
 - Allowed the standard border, fill, and grid rendering passes to execute for the flat realistic style so overlays appear above the satellite backdrop (`src/rendering/worldRenderer.ts`).
+### 2025-11-08T08:56:51Z - Render overlays on flat-realistic map
+- Updated `src/components/GlobeScene.tsx` to project nation markers, territory boundaries, units, missiles, and explosions using a shared lat/lon projector that supports both spherical and flat-realistic views.
+- Registered the position projector with the GlobeScene imperative API so missiles and explosions triggered via refs honor the flat projection.
+- Ensured the overlay group renders for flat mode and kept animation updates active regardless of projection to maintain interactive overlays.
