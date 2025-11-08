@@ -498,6 +498,66 @@ function processCorruptionTurn(
     });
   }
 
+  if (phase2State.corruption.influenceNetwork.nodes.length > 0) {
+    const aggregated = phase2State.corruption.influenceNetwork.nodes.reduce(
+      (acc, node) => {
+        for (const benefit of node.benefits) {
+          switch (benefit.type) {
+            case 'resource_generation':
+              acc.sanityFragments += benefit.value;
+              break;
+            case 'cultist_recruitment':
+              acc.cultists += benefit.value;
+              break;
+            case 'ritual_support':
+              acc.corruption += benefit.value;
+              break;
+            case 'veil_protection':
+              acc.veil += benefit.value;
+              break;
+            case 'investigation_suppression':
+              acc.veil += benefit.value;
+              break;
+          }
+        }
+        return acc;
+      },
+      { sanityFragments: 0, cultists: 0, corruption: 0, veil: 0 }
+    );
+
+    if (aggregated.sanityFragments > 0) {
+      stateChanges.push({
+        type: 'sanity_fragments',
+        value: aggregated.sanityFragments,
+        reason: 'Influence network siphons institutional resources',
+      });
+    }
+
+    if (aggregated.cultists > 0) {
+      stateChanges.push({
+        type: 'cultist_recruitment',
+        value: aggregated.cultists,
+        reason: 'Influence network converts insiders into cultists',
+      });
+    }
+
+    if (aggregated.corruption > 0) {
+      stateChanges.push({
+        type: 'corruption_gain',
+        value: aggregated.corruption,
+        reason: 'Institutional logistics accelerate ritual planning',
+      });
+    }
+
+    if (aggregated.veil > 0) {
+      stateChanges.push({
+        type: 'veil_damage',
+        value: -aggregated.veil,
+        reason: 'Influence network suppresses public exposure',
+      });
+    }
+  }
+
   return { events, stateChanges };
 }
 

@@ -6,9 +6,9 @@
 import {
   GreatOldOnesState,
   RegionalState,
-  CulturalTrait,
   Doctrine,
 } from '../types/greatOldOnes';
+import type { RegionalMorale } from '../types/regionalMorale';
 import type { SeededRandom } from './seededRandom';
 
 // ============================================================================
@@ -72,6 +72,219 @@ export interface InstitutionBenefit {
   type: 'resource_generation' | 'investigation_suppression' | 'veil_protection' | 'cultist_recruitment' | 'ritual_support';
   value: number;
   description: string;
+}
+
+const BASE_INSTITUTION_BENEFITS: Record<
+  InstitutionType,
+  InstitutionBenefit[]
+> = {
+  government: [
+    {
+      type: 'resource_generation',
+      value: 15,
+      description: 'Redirect public funds and contracts toward cult operations.',
+    },
+    {
+      type: 'investigation_suppression',
+      value: 12,
+      description: 'Bury hostile inquiries inside endless bureaucracy.',
+    },
+    {
+      type: 'veil_protection',
+      value: 10,
+      description: 'Legislate secrecy and emergency powers that shroud occult acts.',
+    },
+  ],
+  military: [
+    {
+      type: 'ritual_support',
+      value: 14,
+      description: 'Secure heavy logistics and elite squads for eldritch rituals.',
+    },
+    {
+      type: 'veil_protection',
+      value: 16,
+      description: 'Invoke national security to silence witnesses and evidence.',
+    },
+    {
+      type: 'investigation_suppression',
+      value: 8,
+      description: 'Divert counter-intelligence assets away from cult operations.',
+    },
+  ],
+  corporate: [
+    {
+      type: 'resource_generation',
+      value: 18,
+      description: 'Channel private capital and shell companies into cult finances.',
+    },
+    {
+      type: 'cultist_recruitment',
+      value: 10,
+      description: 'Identify ambitious executives for indoctrination programs.',
+    },
+    {
+      type: 'veil_protection',
+      value: 8,
+      description: 'Launch PR campaigns to discredit occult whistleblowers.',
+    },
+  ],
+  media: [
+    {
+      type: 'cultist_recruitment',
+      value: 14,
+      description: 'Seed conspiracy content that converts curious viewers.',
+    },
+    {
+      type: 'veil_protection',
+      value: 12,
+      description: 'Control headlines to normalize inexplicable phenomena.',
+    },
+    {
+      type: 'investigation_suppression',
+      value: 9,
+      description: 'Smear investigative journalists pursuing the Order.',
+    },
+  ],
+  academia: [
+    {
+      type: 'ritual_support',
+      value: 15,
+      description: 'Access laboratories and occult archives for research breakthroughs.',
+    },
+    {
+      type: 'cultist_recruitment',
+      value: 9,
+      description: 'Groom promising students into loyal cult scholars.',
+    },
+    {
+      type: 'veil_protection',
+      value: 7,
+      description: 'Publish plausible deniability papers that rationalize anomalies.',
+    },
+  ],
+  religious: [
+    {
+      type: 'cultist_recruitment',
+      value: 16,
+      description: 'Fold congregations into ecstatic cult worship.',
+    },
+    {
+      type: 'veil_protection',
+      value: 12,
+      description: 'Sanctify rituals as divine visions to calm the faithful.',
+    },
+    {
+      type: 'resource_generation',
+      value: 10,
+      description: 'Divert tithes and donations into eldritch coffers.',
+    },
+  ],
+  intelligence: [
+    {
+      type: 'investigation_suppression',
+      value: 20,
+      description: 'Erase case files and misdirect enemy agents.',
+    },
+    {
+      type: 'veil_protection',
+      value: 18,
+      description: 'Wrap occult incidents in layers of classification.',
+    },
+    {
+      type: 'ritual_support',
+      value: 10,
+      description: 'Deploy covert logistics and safe houses for rituals.',
+    },
+  ],
+};
+
+function isRegionalState(region: RegionalMorale | RegionalState): region is RegionalState {
+  return (region as RegionalState).regionId !== undefined;
+}
+
+function isRegionalMorale(region: RegionalMorale | RegionalState): region is RegionalMorale {
+  return (region as RegionalMorale).territoryId !== undefined;
+}
+
+function adjustBenefit(
+  benefits: InstitutionBenefit[],
+  type: InstitutionBenefit['type'],
+  amount: number
+): void {
+  const benefit = benefits.find(b => b.type === type);
+  if (!benefit || amount === 0) {
+    return;
+  }
+
+  benefit.value = Math.max(0, Math.round(benefit.value + amount));
+}
+
+export function generateInstitutionBenefits(
+  institutionType: InstitutionType,
+  region: RegionalMorale | RegionalState
+): InstitutionBenefit[] {
+  const benefits = BASE_INSTITUTION_BENEFITS[institutionType].map(benefit => ({
+    ...benefit,
+  }));
+
+  if (isRegionalState(region)) {
+    const corruption = region.corruption;
+    const investigationHeat = region.investigationHeat;
+    const traits = region.culturalTraits || [];
+
+    if (corruption >= 70) {
+      adjustBenefit(benefits, 'resource_generation', 5);
+      adjustBenefit(benefits, 'cultist_recruitment', 4);
+    } else if (corruption >= 40) {
+      adjustBenefit(benefits, 'resource_generation', 3);
+    }
+
+    if (investigationHeat <= 30) {
+      adjustBenefit(benefits, 'veil_protection', 4);
+      adjustBenefit(benefits, 'investigation_suppression', 4);
+    } else if (investigationHeat >= 70) {
+      adjustBenefit(benefits, 'veil_protection', -3);
+      adjustBenefit(benefits, 'investigation_suppression', -4);
+    }
+
+    if (traits.includes('urban') && institutionType === 'media') {
+      adjustBenefit(benefits, 'cultist_recruitment', 4);
+    }
+    if (traits.includes('academic') && institutionType === 'academia') {
+      adjustBenefit(benefits, 'ritual_support', 4);
+    }
+    if (traits.includes('faithful') && institutionType === 'religious') {
+      adjustBenefit(benefits, 'cultist_recruitment', 5);
+    }
+    if (traits.includes('rationalist')) {
+      adjustBenefit(benefits, 'cultist_recruitment', -3);
+    }
+  } else if (isRegionalMorale(region)) {
+    const morale = region.morale;
+
+    if (morale < 35) {
+      adjustBenefit(benefits, 'cultist_recruitment', 4);
+      adjustBenefit(benefits, 'resource_generation', 3);
+    } else if (morale > 75) {
+      adjustBenefit(benefits, 'cultist_recruitment', -3);
+    }
+  }
+
+  return benefits;
+}
+
+function createFallbackRegionalMorale(regionId: string): RegionalMorale {
+  return {
+    territoryId: regionId,
+    morale: 50,
+    lastEventTurn: 0,
+    lastMoraleChange: 0,
+    historicalMorale: [],
+    protests: null,
+    strikes: null,
+    refugeeInflux: 0,
+  };
 }
 
 export interface InfluenceNetwork {
@@ -148,6 +361,8 @@ export function infiltrateInstitution(
   const roll = rng.next() * 100;
 
   if (roll <= successChance) {
+    const benefitsRegion = region ?? createFallbackRegionalMorale(regionId);
+
     const node: InfluenceNode = {
       id: generateDeterministicId('node', rng),
       institutionType,
@@ -156,7 +371,7 @@ export function infiltrateInstitution(
       corruptionLevel: 20 + rng.next() * 20,
       compromisedIndividuals: [],
       sleeperCells: Math.floor(cultistsAssigned * 0.3),
-      benefits: [], // TODO: Implement generateInstitutionBenefits
+      benefits: generateInstitutionBenefits(institutionType, benefitsRegion),
       exposureRisk: 10 + rng.next() * 15,
       underInvestigation: false,
     };
