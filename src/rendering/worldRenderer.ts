@@ -176,14 +176,24 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     }
     if (flatRealisticTexture) {
       ctx.save();
-      // Align the flat texture with the current camera transform so panning/zooming stay in sync
-      ctx.setTransform(cam.zoom, 0, 0, cam.zoom, cam.x, cam.y);
       ctx.imageSmoothingEnabled = true;
-      // Draw fullscreen - stretch the entire canvas
-      ctx.drawImage(flatRealisticTexture, 0, 0, W, H);
+      const sourceWidth = flatRealisticTexture.naturalWidth || flatRealisticTexture.width || W;
+      const sourceHeight = flatRealisticTexture.naturalHeight || flatRealisticTexture.height || H;
+      const destWidth = W * cam.zoom;
+      const destHeight = H * cam.zoom;
+      // Draw fullscreen scaled by the current camera transform
+      ctx.drawImage(
+        flatRealisticTexture,
+        0,
+        0,
+        sourceWidth,
+        sourceHeight,
+        cam.x,
+        cam.y,
+        destWidth,
+        destHeight
+      );
       ctx.restore();
-      // Return early - no need to draw borders on flat realistic map
-      return;
     }
   }
 
