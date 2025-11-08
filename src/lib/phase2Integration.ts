@@ -854,7 +854,17 @@ export function applyPhase2StateChanges(
   for (const change of changes) {
     switch (change.type) {
       case 'veil_damage':
-        state.veil.integrity = Math.max(0, state.veil.integrity - change.value);
+        if (change.value >= 0) {
+          state.veil.integrity = Math.max(
+            0,
+            state.veil.integrity - change.value
+          );
+        } else {
+          state.veil.integrity = Math.min(
+            100,
+            state.veil.integrity - change.value
+          );
+        }
         break;
 
       case 'sanity_drain':
