@@ -2859,3 +2859,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated the resource market update loop to depend on an injected `SeededRandom` instance and wired it through the production phase handler (`src/lib/resourceMarketSystem.ts`, `src/lib/gamePhaseHandlers.ts`, `src/pages/Index.tsx`).
 - Refactored immigration and corruption event helpers to accept deterministic RNG parameters, replacing all `Math.random`/`Date.now` usage with seeded ID helpers (`src/lib/immigrationCultureEvents.ts`, `src/lib/corruptionPath.ts`).
 - Regenerated deterministic identifiers and random selections via `SeededRandom` utilities to preserve replay synchronization across corruption path subsystems (`src/lib/corruptionPath.ts`).
+
+2025-11-08T15:16:22+00:00 - Codex: Updated global RNG wiring for endTurn fix.
