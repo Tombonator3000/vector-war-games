@@ -165,7 +165,23 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     modeData,
   } = context;
 
-  if (!ctx) return;
+  if (!ctx) {
+    console.error('[drawWorld] ctx is null');
+    return;
+  }
+
+  // Debug logging
+  if (Math.random() < 0.005) { // Log 0.5% of calls
+    console.log('[drawWorld Debug]', {
+      style,
+      worldCountries: !!worldCountries,
+      worldCountriesFeatures: worldCountries ? (worldCountries as any).features?.length : 0,
+      W, H,
+      cam: { ...cam },
+      flatRealisticDayTexture: !!flatRealisticDayTexture,
+      flatRealisticNightTexture: !!flatRealisticNightTexture,
+    });
+  }
 
   const palette = themePalette ?? THEME_SETTINGS[currentTheme];
 
@@ -343,7 +359,24 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
     modeData,
   } = context;
 
-  if (!ctx || nations.length === 0) return;
+  if (!ctx) {
+    console.error('[drawNations] ctx is null');
+    return;
+  }
+
+  if (nations.length === 0) {
+    console.warn('[drawNations] No nations to draw');
+    return;
+  }
+
+  // Debug logging
+  if (Math.random() < 0.005) { // Log 0.5% of calls
+    console.log('[drawNations Debug]', {
+      style,
+      nationsCount: nations.length,
+      cam: { ...cam }
+    });
+  }
 
   const isWireframeStyle = style === 'wireframe';
   const isFlatStyle = style === 'flat-realistic';

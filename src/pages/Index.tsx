@@ -5547,7 +5547,25 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 
   if (!ctx) {
+    console.error('[GameLoop] ctx is null - canvas not initialized');
     return;
+  }
+
+  if (!canvas) {
+    console.error('[GameLoop] canvas is null');
+    return;
+  }
+
+  // Debug logging (remove after debugging)
+  if (Math.random() < 0.01) { // Log 1% of frames to avoid spam
+    console.log('[GameLoop Debug]', {
+      canvasSize: `${canvas.width}x${canvas.height}`,
+      W, H,
+      cam: { ...cam },
+      worldCountries: !!worldCountries,
+      currentMapStyle,
+      ctx: !!ctx
+    });
   }
 
   const applyCanvasDefaults = () => {
