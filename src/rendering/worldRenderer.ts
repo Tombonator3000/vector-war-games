@@ -8,7 +8,7 @@
 import type { MapMode, MapModeOverlayData, MapVisualStyle } from '@/components/GlobeScene';
 import type { ProjectedPoint } from '@/lib/renderingUtils';
 import type { Nation, GameState } from '@/types/game';
-import { Color, MathUtils } from 'three';
+import { MathUtils } from 'three';
 import {
   computeDiplomaticColor,
   computeIntelColor,
@@ -17,6 +17,16 @@ import {
   colorToRgba,
 } from '@/lib/mapColorUtils';
 
+export interface ThemePalette {
+  mapOutline: string;
+  grid: string;
+  radar: string;
+  ocean: string;
+  cloud: string;
+  mapFill: string;
+  mapFillWireframe?: string;
+}
+
 export interface WorldRenderContext {
   ctx: CanvasRenderingContext2D | null;
   worldCountries: unknown;
@@ -24,19 +34,20 @@ export interface WorldRenderContext {
   H: number;
   cam: { x: number; y: number; zoom: number; targetZoom: number };
   currentTheme: string;
+  themePalette: ThemePalette;
   flatRealisticTexture: HTMLImageElement | null;
   flatRealisticTexturePromise: Promise<HTMLImageElement> | null;
-  THEME_SETTINGS: Record<string, unknown>;
+  THEME_SETTINGS: Record<string, ThemePalette>;
   projectLocal: (lon: number, lat: number) => ProjectedPoint;
   preloadFlatRealisticTexture: () => void;
+  mapMode?: MapMode;
+  modeData?: MapModeOverlayData | null;
 }
 
 export interface NationRenderContext extends WorldRenderContext {
   nations: Nation[];
   S: GameState;
   selectedTargetRefId: string | null;
-  mapMode: MapMode;
-  modeData?: MapModeOverlayData | null;
 }
 
 export interface TerritoryRenderContext extends WorldRenderContext {
@@ -82,6 +93,55 @@ export function drawWorldPath(
   }
 }
 
+function resolveOverlayFillColor(
+  mapMode: MapMode | undefined,
+  modeData: MapModeOverlayData | null | undefined
+): string | null {
+  if (!mapMode || mapMode === 'standard' || !modeData) {
+    return null;
+  }
+
+  switch (mapMode) {
+    case 'diplomatic': {
+      const values = Object.values(modeData.relationships ?? {}).filter(value => Number.isFinite(value));
+      if (!values.length) return null;
+      const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+      return colorToRgba(computeDiplomaticColor(average), 0.28);
+    }
+    case 'intel': {
+      const values = Object.values(modeData.intelLevels ?? {}).filter(value => Number.isFinite(value));
+      if (!values.length) return null;
+      const max = Math.max(0, ...values);
+      if (max <= 0) return null;
+      const normalized = values.reduce((sum, value) => sum + value, 0) / (values.length * max);
+      return colorToRgba(computeIntelColor(normalized), 0.28);
+    }
+    case 'resources': {
+      const values = Object.values(modeData.resourceTotals ?? {}).filter(value => Number.isFinite(value));
+      if (!values.length) return null;
+      const max = Math.max(0, ...values);
+      if (max <= 0) return null;
+      const normalized = values.reduce((sum, value) => sum + value, 0) / (values.length * max);
+      return colorToRgba(computeResourceColor(normalized), 0.28);
+    }
+    case 'unrest': {
+      const stabilityValues = Object.values(modeData.unrest ?? {})
+        .map(metrics => {
+          const morale = typeof metrics?.morale === 'number' ? metrics.morale : 0;
+          const opinion = typeof metrics?.publicOpinion === 'number' ? metrics.publicOpinion : 0;
+          const instability = typeof metrics?.instability === 'number' ? metrics.instability : 0;
+          return (morale + opinion) / 2 - instability * 0.35;
+        })
+        .filter(value => Number.isFinite(value));
+      if (!stabilityValues.length) return null;
+      const average = stabilityValues.reduce((sum, value) => sum + value, 0) / stabilityValues.length;
+      return colorToRgba(computeUnrestColor(average), 0.3);
+    }
+    default:
+      return null;
+  }
+}
+
 /**
  * Render the world map with various visual styles
  */
@@ -93,16 +153,19 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     H,
     cam,
     currentTheme,
+    themePalette,
     flatRealisticTexture,
     flatRealisticTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
+    mapMode,
+    modeData,
   } = context;
 
   if (!ctx) return;
 
-  const palette = THEME_SETTINGS[currentTheme];
+  const palette = themePalette ?? THEME_SETTINGS[currentTheme];
 
   const isWireframe = style === 'wireframe';
   const isFlatRealistic = style === 'flat-realistic';
@@ -125,6 +188,9 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
+    const overlayFill = !isWireframe && isFlatRealistic ? resolveOverlayFillColor(mapMode, modeData ?? null) : null;
+    const baseFill = palette.mapFill;
+
     (worldCountries as { features: { geometry: { type: string; coordinates: number[][][] } }[] }).features.forEach((feature, index: number) => {
       ctx.beginPath();
       const coords = feature.geometry.coordinates;
@@ -140,6 +206,11 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
         ctx.strokeStyle = 'rgba(255,255,255,0.25)';
       } else {
         ctx.strokeStyle = palette.mapOutline;
+      }
+
+      if (!isWireframe && baseFill) {
+        ctx.fillStyle = overlayFill ?? baseFill;
+        ctx.fill('evenodd');
       }
 
       ctx.stroke();
