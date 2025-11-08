@@ -656,7 +656,13 @@ if (typeof window !== 'undefined') {
 
 // Nations and deltas are now managed by GameStateManager
 // Keep references for backward compatibility
-let nations: LocalNation[] = GameStateManager.getNations();
+// Initialize with placeholder nations to prevent blank map before game starts
+let nations: LocalNation[] = GameStateManager.getNations().length > 0 ? GameStateManager.getNations() : [
+  { id: 'usa', name: 'United States', lat: 38, lon: -97, isPlayer: false, color: '#0088ff', population: 300, missiles: 0, eliminated: false },
+  { id: 'ussr', name: 'Soviet Union', lat: 55, lon: 37, isPlayer: false, color: '#ff0000', population: 280, missiles: 0, eliminated: false },
+  { id: 'china', name: 'China', lat: 35, lon: 105, isPlayer: false, color: '#ffff00', population: 1400, missiles: 0, eliminated: false },
+  { id: 'uk', name: 'United Kingdom', lat: 54, lon: -2, isPlayer: false, color: '#ff88ff', population: 65, missiles: 0, eliminated: false }
+] as any[];
 let conventionalDeltas: ConventionalWarfareDelta[] = GameStateManager.getConventionalDeltas();
 let suppressMultiplayerBroadcast = false;
 let multiplayerPublisher: (() => void) | null = null;
