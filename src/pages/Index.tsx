@@ -720,44 +720,71 @@ let worldLoadPromise: Promise<void> | null = null;
 
 // resolvePublicAssetPath moved to @/lib/renderingUtils
 
-const FLAT_REALISTIC_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day.jpg');
-let flatRealisticTexture: HTMLImageElement | null = null;
-let flatRealisticTexturePromise: Promise<HTMLImageElement> | null = null;
+const FLAT_REALISTIC_DAY_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day_flat.jpg');
+const FLAT_REALISTIC_NIGHT_TEXTURE_URL = resolvePublicAssetPath('textures/earth_night_flat.jpg');
 
-function preloadFlatRealisticTexture() {
-  if (flatRealisticTexture) {
-    return Promise.resolve(flatRealisticTexture);
+let flatRealisticDayTexture: HTMLImageElement | null = null;
+let flatRealisticNightTexture: HTMLImageElement | null = null;
+let flatRealisticDayTexturePromise: Promise<HTMLImageElement> | null = null;
+let flatRealisticNightTexturePromise: Promise<HTMLImageElement> | null = null;
+let isDayMode = true; // Track day/night mode
+
+function preloadFlatRealisticTexture(isDay: boolean = true) {
+  const url = isDay ? FLAT_REALISTIC_DAY_TEXTURE_URL : FLAT_REALISTIC_NIGHT_TEXTURE_URL;
+  const texture = isDay ? flatRealisticDayTexture : flatRealisticNightTexture;
+  const promise = isDay ? flatRealisticDayTexturePromise : flatRealisticNightTexturePromise;
+
+  if (texture) {
+    return Promise.resolve(texture);
   }
 
-  if (flatRealisticTexturePromise) {
-    return flatRealisticTexturePromise;
+  if (promise) {
+    return promise;
   }
 
   if (typeof window === 'undefined' || typeof Image === 'undefined') {
     return Promise.resolve(null);
   }
 
-  flatRealisticTexturePromise = new Promise<HTMLImageElement>((resolve, reject) => {
+  const newPromise = new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.onload = () => {
-      flatRealisticTexture = image;
+      if (isDay) {
+        flatRealisticDayTexture = image;
+      } else {
+        flatRealisticNightTexture = image;
+      }
       resolve(image);
     };
     image.onerror = (event) => {
-      flatRealisticTexturePromise = null;
+      if (isDay) {
+        flatRealisticDayTexturePromise = null;
+      } else {
+        flatRealisticNightTexturePromise = null;
+      }
       reject(
         event instanceof ErrorEvent
           ? event.error ?? new Error('Failed to load flat map texture')
           : new Error('Failed to load flat map texture'),
       );
     };
-    image.src = FLAT_REALISTIC_TEXTURE_URL;
+    image.src = url;
   });
 
-  return flatRealisticTexturePromise.catch(error => {
+  if (isDay) {
+    flatRealisticDayTexturePromise = newPromise;
+  } else {
+    flatRealisticNightTexturePromise = newPromise;
+  }
+
+  return newPromise.catch(error => {
     // Texture load failed - fallback to standard rendering
     return null;
   });
+}
+
+function getCurrentFlatRealisticTexture() {
+  return isDayMode ? flatRealisticDayTexture : flatRealisticNightTexture;
 }
 
 // Leaders configuration
@@ -2871,8 +2898,7 @@ function drawWorld(style: MapVisualStyle) {
     cam,
     currentTheme,
     themePalette: THEME_SETTINGS[currentTheme],
-    flatRealisticTexture,
-    flatRealisticTexturePromise,
+    flatRealisticTexture: getCurrentFlatRealisticTexture(),
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
@@ -2897,8 +2923,7 @@ function drawNations(style: MapVisualStyle) {
     cam,
     currentTheme,
     themePalette: THEME_SETTINGS[currentTheme],
-    flatRealisticTexture,
-    flatRealisticTexturePromise,
+    flatRealisticTexture: getCurrentFlatRealisticTexture(),
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
@@ -2924,8 +2949,7 @@ function drawTerritoriesWrapper() {
     cam,
     currentTheme,
     themePalette: THEME_SETTINGS[currentTheme],
-    flatRealisticTexture,
-    flatRealisticTexturePromise,
+    flatRealisticTexture: getCurrentFlatRealisticTexture(),
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
@@ -5725,7 +5749,7 @@ export default function NoradVector() {
       currentMapStyle = style;
       AudioSys.playSFX('click');
       if (style === 'flat-realistic') {
-        void preloadFlatRealisticTexture();
+        void Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)]);
       }
       toast({
         title: 'Kartstil oppdatert',
@@ -5751,6 +5775,15 @@ export default function NoradVector() {
 
       currentMapMode = mode;
       return { ...prev, mode };
+    });
+  }, [toast]);
+
+  const handleDayNightToggle = useCallback(() => {
+    isDayMode = !isDayMode;
+    AudioSys.playSFX('click');
+    toast({
+      title: 'Dag/Natt modus oppdatert',
+      description: `Vekslet til ${isDayMode ? 'Dagkart' : 'Nattkart'}`,
     });
   }, [toast]);
 
@@ -5921,14 +5954,14 @@ export default function NoradVector() {
     currentMapMode = mapStyle.mode;
   }, [mapStyle.mode]);
   useEffect(() => {
-    void preloadFlatRealisticTexture();
+    void Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)]);
   }, []);
   useEffect(() => {
     void loadWorld();
   }, []);
   useEffect(() => {
     if (mapStyle.visual === 'flat-realistic') {
-      void preloadFlatRealisticTexture();
+      void Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)]);
     }
   }, [mapStyle.visual]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
@@ -11394,6 +11427,13 @@ export default function NoradVector() {
           case 'I':
             e.preventDefault();
             setCivInfoPanelOpen(prev => !prev);
+            break;
+          case 'n':
+          case 'N':
+            if (mapStyle.visual === 'flat-realistic') {
+              e.preventDefault();
+              handleDayNightToggle();
+            }
             break;
           case 'Enter': /* end turn */ break;
           case ' ':

@@ -36,10 +36,9 @@ export interface WorldRenderContext {
   currentTheme: string;
   themePalette: ThemePalette;
   flatRealisticTexture: HTMLImageElement | null;
-  flatRealisticTexturePromise: Promise<HTMLImageElement> | null;
   THEME_SETTINGS: Record<string, ThemePalette>;
   projectLocal: (lon: number, lat: number) => ProjectedPoint;
-  preloadFlatRealisticTexture: () => void;
+  preloadFlatRealisticTexture: (isDay: boolean) => void;
   mapMode?: MapMode;
   modeData?: MapModeOverlayData | null;
 }
@@ -155,7 +154,6 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     currentTheme,
     themePalette,
     flatRealisticTexture,
-    flatRealisticTexturePromise,
     THEME_SETTINGS,
     projectLocal,
     preloadFlatRealisticTexture,
@@ -171,13 +169,16 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
   const isFlatRealistic = style === 'flat-realistic';
 
   if (isFlatRealistic) {
-    if (!flatRealisticTexture && !flatRealisticTexturePromise) {
-      void preloadFlatRealisticTexture();
+    if (!flatRealisticTexture) {
+      // Try to preload both textures
+      void preloadFlatRealisticTexture(true);
+      void preloadFlatRealisticTexture(false);
     }
     if (flatRealisticTexture) {
       ctx.save();
       ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(flatRealisticTexture, cam.x, cam.y, W * cam.zoom, H * cam.zoom);
+      // Draw fullscreen without camera transforms
+      ctx.drawImage(flatRealisticTexture, 0, 0, W, H);
       ctx.restore();
     }
   }
