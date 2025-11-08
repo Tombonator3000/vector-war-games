@@ -2809,3 +2809,5 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-08T07:27:55Z - Add day/night auto-cycle toggle to command options
 - Extended `OptionsMenu` with a dedicated toggle and toast feedback for the automated day/night lighting cycle (`src/components/OptionsMenu.tsx`).
 - Threaded the cycle state and shared handler through the intro dialog and in-game options sheet so the stored preference remains synchronized (`src/components/setup/IntroScreen.tsx`, `src/pages/Index.tsx`).
+### 2025-11-08T07:36:01Z - Scale flat map backdrop with camera and viewport
+- Replaced the static flat-map backdrop plane with a camera-aware scaler so the gradient or satellite texture always fills the frame across perspective shifts (`src/components/GlobeScene.tsx`).

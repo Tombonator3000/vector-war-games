@@ -693,7 +693,9 @@ function EarthWireframe({
 
 function FlatEarthBackdrop() {
   const meshRef = useRef<THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>>(null);
-  const { camera } = useThree();
+  const cameraWorldPosition = useRef(new THREE.Vector3());
+  const planeWorldPosition = useRef(new THREE.Vector3());
+  const { camera, size } = useThree();
 
   const textureUrl = useMemo(() => resolvePublicAssetPath('textures/earth_day.jpg'), []);
   const [satelliteTexture, setSatelliteTexture] = useState<THREE.Texture | null>(null);
@@ -780,16 +782,44 @@ function FlatEarthBackdrop() {
     };
   }, [gradientTexture]);
 
+  const updateBackdropScale = useCallback(() => {
+    if (!meshRef.current) return;
+
+    const perspective = camera as THREE.PerspectiveCamera;
+    if (!perspective.isPerspectiveCamera) return;
+
+    perspective.getWorldPosition(cameraWorldPosition.current);
+    meshRef.current.getWorldPosition(planeWorldPosition.current);
+
+    const distance = cameraWorldPosition.current.distanceTo(planeWorldPosition.current);
+    if (distance === 0) return;
+
+    const verticalFov = THREE.MathUtils.degToRad(perspective.fov);
+    const viewportHeight = 2 * Math.tan(verticalFov / 2) * distance;
+    const aspect = size.height === 0 ? perspective.aspect : size.width / size.height;
+    const viewportWidth = viewportHeight * aspect;
+
+    if (!Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight)) {
+      return;
+    }
+
+    const overscan = 1.12;
+    meshRef.current.scale.set(viewportWidth * overscan, viewportHeight * overscan, 1);
+  }, [camera, size.height, size.width]);
+
+  useEffect(() => {
+    updateBackdropScale();
+  }, [updateBackdropScale]);
+
   useFrame(() => {
     if (!meshRef.current) return;
     meshRef.current.quaternion.copy(camera.quaternion);
+    updateBackdropScale();
   });
-
-  const planeSize = EARTH_RADIUS * 3.4;
 
   return (
     <mesh ref={meshRef} position={[0, 0, -0.02]} renderOrder={-20} frustumCulled={false}>
-      <planeGeometry args={[planeSize, planeSize]} />
+      <planeGeometry args={[1, 1]} />
       <meshBasicMaterial
         map={satelliteTexture ?? gradientTexture}
         color={satelliteTexture || gradientTexture ? undefined : '#071426'}
