@@ -2807,86 +2807,70 @@ function loadWorld(): Promise<void> {
   }
 
   worldLoadPromise = (async () => {
-    const CACHE_NAME = 'offlineTopo110m';
+    const CACHE_NAME = 'offlineTopo110m-v2';
 
-    try {
-      const cached = Storage.getItem(CACHE_NAME);
-      if (cached) {
-        const data = JSON.parse(cached);
-        if (data.type === 'Topology' && data.objects) {
-          worldData = data;
-          worldCountries = feature(data, data.objects.countries || data.objects.land);
-          log('World map loaded from cache');
-          if (uiUpdateCallback) uiUpdateCallback();
-          return;
-        } else if (data.type === 'FeatureCollection') {
-          worldCountries = data;
-          log('World map loaded from cache (GeoJSON)');
-          if (uiUpdateCallback) uiUpdateCallback();
-          return;
-        }
+    const processWorldData = (data: any, source: string): boolean => {
+      if (!data) {
+        return false;
       }
-    } catch (e) {
-      // Cache load failed - fallback to CDN fetch
-    }
 
-    try {
-      log('Fetching world map from CDN...');
-      const response = await fetch('https://unpkg.com/world-atlas@2/countries-110m.json');
-      if (response.ok) {
+      if (data.type === 'Topology' && data.objects) {
+        worldData = data;
+        worldCountries = feature(data, data.objects.countries || data.objects.land);
+      } else if (data.type === 'FeatureCollection') {
+        worldData = null;
+        worldCountries = data;
+      } else {
+        return false;
+      }
+
+      log(`World map loaded from ${source}`);
+      if (uiUpdateCallback) uiUpdateCallback();
+      return true;
+    };
+
+    const loadAndProcess = async (url: string, source: string): Promise<boolean> => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          return false;
+        }
         const topo = await response.json();
-
+        if (!processWorldData(topo, source)) {
+          return false;
+        }
         try {
           Storage.setItem(CACHE_NAME, JSON.stringify(topo));
         } catch (e) {
           // Could not cache - not critical, continue without cache
         }
+        return true;
+      } catch (e) {
+        return false;
+      }
+    };
 
-        if (topo.objects) {
-          worldData = topo;
-          worldCountries = feature(topo, topo.objects.countries || topo.objects.land);
-          log('World map loaded from CDN');
-          if (uiUpdateCallback) uiUpdateCallback();
+    try {
+      const cached = Storage.getItem(CACHE_NAME);
+      if (cached) {
+        const data = JSON.parse(cached);
+        if (processWorldData(data, 'cache')) {
           return;
         }
       }
     } catch (e) {
-      // CDN fetch failed - fallback to embedded data
+      // Cache load failed - continue to fetch sources
     }
 
-    // Fallback world data
-    worldCountries = {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: { name: "Americas" },
-          geometry: {
-            type: "Polygon",
-            coordinates: [[
-              [-170, 70], [-100, 71], [-80, 50], [-75, 25], [-80, 10], [-85, -10],
-              [-75, -30], [-70, -55], [-75, -55], [-80, -30], [-85, -10], [-95, 0],
-              [-105, 20], [-120, 35], [-130, 40], [-140, 50], [-160, 60], [-170, 70]
-            ]]
-          }
-        },
-        {
-          type: "Feature",
-          properties: { name: "Eurasia" },
-          geometry: {
-            type: "Polygon",
-            coordinates: [[
-              [-10, 35], [0, 40], [10, 45], [30, 50], [50, 55], [80, 60], [120, 65],
-              [140, 60], [160, 55], [170, 60], [180, 65], [180, 70], [140, 75],
-              [80, 75], [20, 70], [-10, 60], [-10, 35]
-            ]]
-          }
-        }
-      ]
-    };
+    if (await loadAndProcess(resolvePublicAssetPath('data/countries-110m.json'), 'local asset')) {
+      return;
+    }
 
-    log('Using fallback continent outlines');
-    if (uiUpdateCallback) uiUpdateCallback();
+    if (await loadAndProcess('https://unpkg.com/world-atlas@2/countries-110m.json', 'CDN')) {
+      return;
+    }
+
+    throw new Error('Failed to load world map data');
   })().catch(error => {
     worldLoadPromise = null;
     throw error;
