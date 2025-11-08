@@ -8,6 +8,7 @@
 import type { Nation } from '@/types/game';
 import type {
   DiplomaticInfluence,
+  DIPIncome,
   DIPTransaction,
 } from '@/types/diplomacyPhase3';
 import { DIPEarning, DIPCosts } from '@/types/diplomacyPhase3';
@@ -137,26 +138,37 @@ export function hasEnoughDIP(nation: Nation, cost: number): boolean {
  */
 export function calculateDIPIncome(
   nation: Nation,
-  allNations: Nation[],
-  currentTurn: number
-): number {
-  let income = 5; // Base income
+  _allNations: Nation[],
+  _currentTurn: number,
+  peaceTurns: number = 0
+): DIPIncome {
+  const baseIncome = 5; // Base income
 
   // Check for high-level alliances
   const highLevelAlliances = nation.specializedAlliances?.filter(
     (alliance) => alliance.level >= 3
   ) || [];
-  income += highLevelAlliances.length * 2;
+  const fromAlliances = highLevelAlliances.length * 2;
 
   // Check for council membership
-  if (nation.councilMembership === 'permanent' || nation.councilMembership === 'elected') {
-    income += 10;
-  }
+  const fromCouncilSeat =
+    nation.councilMembership === 'permanent' || nation.councilMembership === 'elected'
+      ? 10
+      : 0;
 
-  // Check for peace years (5+ consecutive turns without declaring war)
-  // This would need to be tracked in game state, for now we'll skip
+  const fromMediation = nation.diplomaticInfluence?.perTurnIncome.fromMediation ?? 0;
+  const fromPeaceYears = Math.floor(Math.max(0, peaceTurns) / 5);
 
-  return income;
+  const total = baseIncome + fromAlliances + fromCouncilSeat + fromMediation + fromPeaceYears;
+
+  return {
+    baseIncome,
+    fromAlliances,
+    fromCouncilSeat,
+    fromMediation,
+    fromPeaceYears,
+    total,
+  };
 }
 
 /**
@@ -165,36 +177,32 @@ export function calculateDIPIncome(
 export function updateDIPIncome(
   nation: Nation,
   allNations: Nation[],
-  currentTurn: number
+  currentTurn: number,
+  peaceTurns: number
 ): Nation {
   if (!nation.diplomaticInfluence) {
     nation = initializeDIP(nation);
   }
 
-  const baseIncome = 5;
-  const highLevelAlliances = nation.specializedAlliances?.filter(
-    (alliance) => alliance.level >= 3
-  ) || [];
-  const fromAlliances = highLevelAlliances.length * 2;
-
-  const fromCouncilSeat =
-    nation.councilMembership === 'permanent' || nation.councilMembership === 'elected'
-      ? 10
-      : 0;
-
-  const total = baseIncome + fromAlliances + fromCouncilSeat;
+  const incomeBreakdown = calculateDIPIncome(nation, allNations, currentTurn, peaceTurns);
+  const previousIncome =
+    nation.diplomaticInfluence!.perTurnIncome ??
+    ({
+      baseIncome: 0,
+      fromAlliances: 0,
+      fromCouncilSeat: 0,
+      fromMediation: 0,
+      fromPeaceYears: 0,
+      total: 0,
+    } satisfies DIPIncome);
 
   return {
     ...nation,
     diplomaticInfluence: {
       ...nation.diplomaticInfluence!,
       perTurnIncome: {
-        baseIncome,
-        fromAlliances,
-        fromCouncilSeat,
-        fromMediation: 0, // Updated separately when mediation occurs
-        fromPeaceYears: 0, // Would need tracking in game state
-        total,
+        ...previousIncome,
+        ...incomeBreakdown,
       },
     },
   };
@@ -208,7 +216,7 @@ export function applyDIPIncome(nation: Nation, currentTurn: number): Nation {
     nation = initializeDIP(nation);
   }
 
-  const income = nation.diplomaticInfluence!.perTurnIncome.total;
+  const income = nation.diplomaticInfluence!.perTurnIncome.total ?? 0;
   return earnDIP(nation, income, 'Per-turn income', currentTurn);
 }
 

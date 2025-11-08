@@ -247,7 +247,7 @@ import {
   initializeDiplomacyPhase3State,
   type DiplomacyPhase3State as DiplomacyPhase3SystemState,
 } from '@/types/diplomacyPhase3';
-import { calculateDIPIncome, applyDIPIncome, initializeDIP, spendDIP } from '@/lib/diplomaticCurrencyUtils';
+import { applyDIPIncome, initializeDIP, spendDIP } from '@/lib/diplomaticCurrencyUtils';
 import {
   launch as launchMissile,
   resolutionPhase as runResolutionPhase,

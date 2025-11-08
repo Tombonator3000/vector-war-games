@@ -2878,3 +2878,10 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added the `countries-110m.json` TopoJSON dataset under `public/data/` so the build ships with the full world borders offline.
 - Updated `loadWorld()` to prefer the bundled dataset, refresh the cache key, and drop the crude polygon fallback in favor of the official features (`src/pages/Index.tsx`).
 - Verified the map renders with the local dataset even when CDN requests are blocked and captured a screenshot of the offline view; confirmed the production build succeeds (`npm run build`).
+
+### 2025-11-08T22:27:41Z - Track peace streak DIP income bonuses
+- Refactored diplomatic income helpers to compute peace-turn streak bonuses, persist per-turn breakdowns, and apply earnings through the transaction system (`src/lib/diplomaticCurrencyUtils.ts`).
+- Updated production phase handlers to reuse the refactored helpers and propagate the global peace streak when distributing income (`src/lib/gamePhaseHandlers.ts`).
+- Added regression coverage for peace streak bonuses and transaction logging (`src/lib/__tests__/diplomaticCurrencyUtils.test.ts`).
+- Cleaned up unused imports tied to the old income helper signature (`src/pages/Index.tsx`).
+- Verified the behavior with the targeted Vitest suite (`npm run test -- diplomaticCurrencyUtils`).

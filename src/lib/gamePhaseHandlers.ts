@@ -23,7 +23,7 @@ import { applyTrustDecay } from '@/lib/trustAndFavorsUtils';
 import { updateGrievancesAndClaimsPerTurn } from '@/lib/grievancesAndClaimsUtils';
 import { updateAlliancesPerTurn } from '@/lib/specializedAlliancesUtils';
 import { updatePhase2PerTurn } from '@/lib/diplomacyPhase2Integration';
-import { calculateDIPIncome } from '@/lib/diplomaticCurrencyUtils';
+import { applyDIPIncome, updateDIPIncome } from '@/lib/diplomaticCurrencyUtils';
 import { applyIdeologyBonusesForProduction } from '@/lib/ideologyIntegration';
 import { updateDoctrineIncidentSystem } from '@/lib/doctrineIncidentSystem';
 import {
@@ -609,7 +609,9 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
   }
 
   // Update Diplomacy Phase 1-3 systems per turn
-  nations.forEach(n => {
+  const peaceTurns = S.diplomacy?.peaceTurns ?? 0;
+
+  nations.forEach((n, index) => {
     if (n.population <= 0) return;
 
     // Phase 1: Apply trust decay and update favors
@@ -624,12 +626,9 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
     // Phase 3: Update DIP income
     if (n.diplomaticInfluence) {
-      const income = calculateDIPIncome(n, nations, S.turn);
-      n.diplomaticInfluence.points = Math.min(
-        n.diplomaticInfluence.capacity,
-        n.diplomaticInfluence.points + income
-      );
-      n.diplomaticInfluence.perTurnIncome.total = income;
+      const withUpdatedIncome = updateDIPIncome(n, nations, S.turn, peaceTurns);
+      const withIncomeApplied = applyDIPIncome(withUpdatedIncome, S.turn);
+      nations[index] = withIncomeApplied;
     }
   });
 
