@@ -132,7 +132,7 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
       'Alt + 5: Uro – aktiverer Political Stability Overlay og markerer morale, opinion og instabilitet pr. nasjon'
     ],
     tips: [
-      'Kartmoduser kan kombineres med enhver visuell stil (Realistisk, Natt, Wireframe osv.) uten å miste data-overlays',
+      'Kartmoduser kan kombineres med enhver visuell stil (Realistisk, Natt, Vector osv.) uten å miste data-overlays',
       'Hold Alt nede og trykk på tallene i rekkefølge for rask scanning av globale situasjoner',
       'Uro-modusen oppdateres når governance-metrikker endres – bruk den etter politiske beslutninger for å se effekt umiddelbart'
     ],
