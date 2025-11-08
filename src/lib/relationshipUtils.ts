@@ -16,9 +16,17 @@
 
 import type { Nation, RelationshipEvent } from '@/types/game';
 
-const MIN_RELATIONSHIP = -100;
-const MAX_RELATIONSHIP = 100;
-const DEFAULT_RELATIONSHIP = 0;
+export const MIN_RELATIONSHIP = -100;
+export const MAX_RELATIONSHIP = 100;
+export const NEUTRAL_RELATIONSHIP = 0;
+
+export const RELATIONSHIP_HOSTILE = -60;
+export const RELATIONSHIP_UNFRIENDLY = -30;
+export const RELATIONSHIP_NEUTRAL = 0;
+export const RELATIONSHIP_FRIENDLY = 30;
+export const RELATIONSHIP_ALLIED = 60;
+
+const DEFAULT_RELATIONSHIP = NEUTRAL_RELATIONSHIP;
 const MAX_HISTORY_ENTRIES = 50; // Limit history to prevent memory bloat
 
 /**
@@ -133,13 +141,11 @@ export function initializeRelationships(nation: Nation, allNationIds: string[]):
  * @returns Descriptive category
  */
 export function getRelationshipCategory(value: number): string {
-  if (value <= -75) return 'Mortal Enemies';
-  if (value <= -50) return 'Hostile';
-  if (value <= -25) return 'Unfriendly';
-  if (value <= 24) return 'Neutral';
-  if (value <= 49) return 'Friendly';
-  if (value <= 74) return 'Close Allies';
-  return 'Strategic Partners';
+  if (value >= RELATIONSHIP_ALLIED) return 'Allied';
+  if (value >= RELATIONSHIP_FRIENDLY) return 'Friendly';
+  if (value >= RELATIONSHIP_UNFRIENDLY) return 'Neutral';
+  if (value >= RELATIONSHIP_HOSTILE) return 'Unfriendly';
+  return 'Hostile';
 }
 
 /**
@@ -161,11 +167,11 @@ export function getRelationshipModifier(value: number): number {
  * @returns Color string (Tailwind classes)
  */
 export function getRelationshipColor(value: number): string {
-  if (value <= -50) return 'text-red-500';
-  if (value <= -25) return 'text-orange-500';
-  if (value <= 24) return 'text-gray-400';
-  if (value <= 49) return 'text-green-400';
-  return 'text-green-500';
+  if (value >= RELATIONSHIP_ALLIED) return 'text-green-500';
+  if (value >= RELATIONSHIP_FRIENDLY) return 'text-green-400';
+  if (value >= RELATIONSHIP_UNFRIENDLY) return 'text-gray-400';
+  if (value >= RELATIONSHIP_HOSTILE) return 'text-orange-400';
+  return 'text-red-500';
 }
 
 /**
@@ -174,7 +180,11 @@ export function getRelationshipColor(value: number): string {
  * @returns True if relationship is high enough for alliance
  */
 export function canFormAlliance(relationship: number): boolean {
-  return relationship >= 25; // Must be at least "Friendly"
+  return relationship >= RELATIONSHIP_ALLIED;
+}
+
+export function hasTruceLevel(relationship: number): boolean {
+  return relationship >= RELATIONSHIP_FRIENDLY;
 }
 
 /**
@@ -192,13 +202,19 @@ export function isLikelyToAcceptProposal(relationship: number): boolean {
  * @returns Delta to apply per turn
  */
 export function calculateRelationshipDecay(currentRelationship: number): number {
-  // Relationships naturally decay toward neutral (0) over time
-  if (currentRelationship > 0) {
-    return -Math.max(1, Math.floor(currentRelationship / 50)); // Positive decays toward 0
-  } else if (currentRelationship < 0) {
-    return Math.max(1, Math.floor(-currentRelationship / 50)); // Negative decays toward 0
+  if (currentRelationship === 0) {
+    return 0;
   }
-  return 0;
+
+  const magnitude = Math.abs(currentRelationship);
+  const step = magnitude >= RELATIONSHIP_ALLIED ? 2 : 1;
+  const direction = currentRelationship > NEUTRAL_RELATIONSHIP ? -1 : 1;
+  return step * direction;
+}
+
+export function getAcceptanceModifier(relationship: number): number {
+  const clamped = clampRelationship(relationship);
+  return 1.0 + (clamped / 100);
 }
 
 /**
@@ -207,17 +223,22 @@ export function calculateRelationshipDecay(currentRelationship: number): number 
  */
 export const RelationshipDeltas = {
   // Positive actions
-  FORM_ALLIANCE: 20,
+  FORM_ALLIANCE: 40,
+  HONOR_TREATY: 5,
+  SUPPORT_IN_WAR: 15,
   TRADE_AGREEMENT: 10,
   SHARE_INTEL: 8,
-  SEND_AID: 5,
+  SEND_AID: 10,
   ACCEPT_REFUGEES: 3,
 
   // Negative actions
   DECLARE_WAR: -30,
   NUCLEAR_STRIKE: -50,
+  BIO_ATTACK: -45,
   CYBER_ATTACK: -15,
-  BREAK_ALLIANCE: -25,
+  TERRITORIAL_ATTACK: -25,
+  BREAK_ALLIANCE: -35,
+  BREAK_TREATY: -35,
   SANCTION: -10,
   SPY_CAUGHT: -8,
   CLOSE_BORDERS: -5,
@@ -226,6 +247,9 @@ export const RelationshipDeltas = {
   END_WAR: 15,
   PEACE_TREATY: 10,
   NON_AGGRESSION_PACT: 5,
+
+  // System constants
+  DECAY_TOWARD_NEUTRAL: 0.5,
 } as const;
 
 /**

@@ -15,9 +15,10 @@ import {
   RELATIONSHIP_NEUTRAL,
   RELATIONSHIP_UNFRIENDLY,
   RELATIONSHIP_HOSTILE,
-  RelationshipDeltas,
   getAcceptanceModifier,
-} from '@/types/unifiedDiplomacy';
+  calculateRelationshipDecay,
+  clampRelationship,
+} from '@/lib/relationshipUtils';
 import { getRelationship, updateRelationship } from '@/lib/unifiedDiplomacyMigration';
 
 /**
@@ -249,16 +250,10 @@ export function applyRelationshipDecay(nations: Nation[], turn: number): Nation[
         continue;
       }
 
-      // Decay toward neutral
-      if (relationship > RELATIONSHIP_NEUTRAL) {
-        updatedRelationships[targetId] = Math.max(
-          RELATIONSHIP_NEUTRAL,
-          relationship - RelationshipDeltas.DECAY_TOWARD_NEUTRAL
-        );
-      } else if (relationship < RELATIONSHIP_NEUTRAL) {
-        updatedRelationships[targetId] = Math.min(
-          RELATIONSHIP_NEUTRAL,
-          relationship + RelationshipDeltas.DECAY_TOWARD_NEUTRAL
+      const decay = calculateRelationshipDecay(relationship);
+      if (decay !== 0) {
+        updatedRelationships[targetId] = clampRelationship(
+          relationship + decay
         );
       }
     }

@@ -7,7 +7,7 @@
  */
 
 import type { Nation } from '@/types/game';
-import { clampRelationship, NEUTRAL_RELATIONSHIP } from '@/types/unifiedDiplomacy';
+import { clampRelationship, NEUTRAL_RELATIONSHIP } from '@/lib/relationshipUtils';
 import { getDIP } from '@/lib/diplomaticCurrencyUtils';
 import { clampTrust, clampFavors, DEFAULT_TRUST } from '@/types/trustAndFavors';
 import type { TrustRecord, FavorBalance } from '@/types/trustAndFavors';
