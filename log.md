@@ -2818,3 +2818,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 ### 2025-11-08T08:24:37Z - Consolidate phase transition overlay messaging
 - Extended the phase transition overlay to accept optional banner text, keep it visible for player phases, and surface the tertiary line inside the animated card (`src/components/PhaseTransitionOverlay.tsx`).
 - Routed the TTL-governed overlay banner state into the transition overlay and removed the redundant standalone banner layer (`src/pages/Index.tsx`).
+### 2025-11-08T08:41:48Z - Restore borders on flat realistic map
+- Scaled the flat-realistic satellite texture directly via `drawImage` so it respects camera zoom/pan without holding a transformed context (`src/rendering/worldRenderer.ts`).
+- Allowed the standard border, fill, and grid rendering passes to execute for the flat realistic style so overlays appear above the satellite backdrop (`src/rendering/worldRenderer.ts`).
