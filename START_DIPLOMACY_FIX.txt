@@ -1,0 +1,38 @@
+PASTE THIS INTO A NEW CHAT TO BEGIN FIXING THE DIPLOMACY SYSTEM:
+
+================================================================================
+
+I need help refactoring my game's diplomacy system based on a comprehensive audit.
+
+**CRITICAL CONTEXT:**
+- Full audit findings: `DIPLOMACY_AUDIT_FINDINGS.md`
+- Detailed fix instructions: `DIPLOMACY_FIX_PROMPT.md`
+- Project: vector-war-games (Cold War strategy game)
+- Branch: claude/audit-diplomacy-system-011CUuKn2MrGjHhGM7W2wkao
+
+**MAIN PROBLEMS:**
+1. 🔴 CRITICAL BUG: `src/pages/Index.tsx:6554` - modifyRelationship() called with wrong signature, likely broken
+2. 🔴 DUAL SYSTEMS: Two conflicting relationship systems with different thresholds:
+   - `src/types/unifiedDiplomacy.ts` (alliance at 60, used by UI)
+   - `src/lib/relationshipUtils.ts` (alliance at 25, used by game logic)
+3. 🔴 CONFLICTING CONSTANTS: RelationshipDeltas defined differently in both files
+4. 🟡 UNCLEAR ARCHITECTURE: 4 parallel diplomacy phases all active simultaneously
+
+**YOUR TASK:**
+1. Read `DIPLOMACY_AUDIT_FINDINGS.md` for complete analysis
+2. Read `DIPLOMACY_FIX_PROMPT.md` for structured fix approach
+3. Ask me the 5 design decision questions before starting
+4. Fix critical bugs (Priority 1) first
+5. Consolidate systems systematically
+6. Test and commit changes incrementally
+
+**DESIGN DECISIONS NEEDED FROM ME:**
+1. Alliance threshold: 25 or 60? (affects gameplay balance)
+2. Decay rate: fixed 0.5 or dynamic 1-2? (affects relationship stability)
+3. Phase system: deprecate old phases or keep as modifiers?
+4. Acceptance scaling: linear (2.0x) or conservative (1.5x)?
+5. Backward compatibility: maintain save game compatibility?
+
+Please start by reading both markdown files, then ask me the design questions so we can fix this systematically. Focus on correctness first, optimization later.
+
+================================================================================
