@@ -5,12 +5,13 @@
 
 import type { Nation } from '../types/game';
 import { PopSystemManager } from './popSystemManager';
+import type { SeededRandom } from './seededRandom';
 
 export interface ImmigrationEvent {
   id: string;
   title: string;
   description: string;
-  trigger: (nation: Nation) => boolean;
+  trigger: (nation: Nation, rng: SeededRandom) => boolean;
   choices: EventChoice[];
 }
 
@@ -34,10 +35,10 @@ export const IMMIGRATION_CULTURE_EVENTS: ImmigrationEvent[] = [
     id: 'refugee_crisis',
     title: 'Refugee Crisis at Border',
     description: 'A devastating war in a neighboring region has created a refugee crisis. 5 million people seek asylum at your borders.',
-    trigger: (nation) => {
+    trigger: (nation, rng) => {
       const hasOpenPolicy = nation.currentImmigrationPolicy !== 'closed_borders';
       const isStable = (nation.instability || 0) < 50;
-      return hasOpenPolicy && isStable && Math.random() < 0.08;
+      return hasOpenPolicy && isStable && rng.next() < 0.08;
     },
     choices: [
       {
@@ -94,11 +95,11 @@ export const IMMIGRATION_CULTURE_EVENTS: ImmigrationEvent[] = [
     id: 'brain_drain_wave',
     title: 'Talent Exodus Warning',
     description: 'Intelligence reports that a rival nation is offering lucrative incentives to your top scientists and engineers.',
-    trigger: (nation) => {
+    trigger: (nation, rng) => {
       const population = nation.popGroups
         ? PopSystemManager.getTotalPopulation(nation.popGroups)
         : nation.population;
-      return population > 50 && Math.random() < 0.06;
+      return population > 50 && rng.next() < 0.06;
     },
     choices: [
       {
@@ -151,10 +152,10 @@ export const IMMIGRATION_CULTURE_EVENTS: ImmigrationEvent[] = [
     id: 'cultural_renaissance',
     title: 'Cultural Golden Age',
     description: 'Your nation experiences an unexpected cultural renaissance! Artists, writers, and thinkers are flourishing.',
-    trigger: (nation) => {
+    trigger: (nation, rng) => {
       const culturalPower = nation.culturalPower || 0;
       const instability = nation.instability || 0;
-      return culturalPower > 70 && instability < 20 && Math.random() < 0.05;
+      return culturalPower > 70 && instability < 20 && rng.next() < 0.05;
     },
     choices: [
       {
@@ -193,10 +194,10 @@ export const IMMIGRATION_CULTURE_EVENTS: ImmigrationEvent[] = [
     id: 'cultural_backlash',
     title: 'Cultural Identity Backlash',
     description: 'Rapid demographic changes have triggered a backlash from traditionalists. Protests demanding stricter immigration controls are growing.',
-    trigger: (nation) => {
+    trigger: (nation, rng) => {
       if (!nation.popGroups) return false;
       const avgAssimilation = PopSystemManager.getAverageAssimilation(nation.popGroups);
-      return avgAssimilation < 60 && nation.currentImmigrationPolicy === 'open_borders' && Math.random() < 0.1;
+      return avgAssimilation < 60 && nation.currentImmigrationPolicy === 'open_borders' && rng.next() < 0.1;
     },
     choices: [
       {
@@ -235,9 +236,9 @@ export const IMMIGRATION_CULTURE_EVENTS: ImmigrationEvent[] = [
     id: 'mass_defection',
     title: 'Mass Defection Opportunity',
     description: 'Political instability in a neighboring nation has created an opportunity. Thousands of their citizens want to defect to your nation.',
-    trigger: (nation) => {
+    trigger: (nation, rng) => {
       const hasGoodReputation = (nation.diplomaticReputation?.globalScore || 0) > 50;
-      return hasGoodReputation && Math.random() < 0.07;
+      return hasGoodReputation && rng.next() < 0.07;
     },
     choices: [
       {
@@ -294,9 +295,9 @@ export const IMMIGRATION_CULTURE_EVENTS: ImmigrationEvent[] = [
     id: 'cultural_wonder_tourism',
     title: 'Tourism Boom',
     description: 'Your cultural wonders are attracting unprecedented international attention. Immigration applications have surged.',
-    trigger: (nation) => {
+    trigger: (nation, rng) => {
       const hasWonders = (nation.culturalWonders?.filter(w => w.completed) || []).length > 0;
-      return hasWonders && Math.random() < 0.06;
+      return hasWonders && rng.next() < 0.06;
     },
     choices: [
       {
@@ -339,16 +340,16 @@ export const IMMIGRATION_CULTURE_EVENTS: ImmigrationEvent[] = [
 /**
  * Check if any events should trigger for a nation this turn
  */
-export function checkForEvents(nation: Nation): ImmigrationEvent | null {
+export function checkForEvents(nation: Nation, rng: SeededRandom): ImmigrationEvent | null {
   // Only check events for nations with non-closed borders (unless event specifically designed for closed)
   const eligibleEvents = IMMIGRATION_CULTURE_EVENTS.filter(event =>
-    event.trigger(nation)
+    event.trigger(nation, rng)
   );
 
   if (eligibleEvents.length === 0) return null;
 
   // Return random eligible event
-  const index = Math.floor(Math.random() * eligibleEvents.length);
+  const index = rng.nextInt(0, eligibleEvents.length - 1);
   return eligibleEvents[index];
 }
 

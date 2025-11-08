@@ -9,6 +9,7 @@ import {
   CulturalTrait,
   Doctrine,
 } from '../types/greatOldOnes';
+import type { SeededRandom } from './seededRandom';
 
 // ============================================================================
 // INFILTRATION ARCHITECTURE
@@ -101,7 +102,8 @@ export function infiltrateInstitution(
   regionId: string,
   cultistsAssigned: number,
   eldritchPowerSpent: number,
-  state: GreatOldOnesState
+  state: GreatOldOnesState,
+  rng: SeededRandom
 ): { success: boolean; node?: InfluenceNode; message: string } {
   // Base infiltration chance
   let successChance = 40;
@@ -143,19 +145,19 @@ export function infiltrateInstitution(
   };
   successChance += institutionDifficulty[institutionType];
 
-  const roll = Math.random() * 100;
+  const roll = rng.next() * 100;
 
   if (roll <= successChance) {
     const node: InfluenceNode = {
-      id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateDeterministicId('node', rng),
       institutionType,
       regionId,
-      name: generateInstitutionName(institutionType, region?.regionName || 'Unknown'),
-      corruptionLevel: 20 + Math.random() * 20,
+      name: generateInstitutionName(institutionType, region?.regionName || 'Unknown', rng),
+      corruptionLevel: 20 + rng.next() * 20,
       compromisedIndividuals: [],
       sleeperCells: Math.floor(cultistsAssigned * 0.3),
       benefits: [], // TODO: Implement generateInstitutionBenefits
-      exposureRisk: 10 + Math.random() * 15,
+      exposureRisk: 10 + rng.next() * 15,
       underInvestigation: false,
     };
 
@@ -180,7 +182,8 @@ export function deepenCorruption(
   method: CompromisedPerson['method'],
   targetImportance: number,
   resourcesSpent: { cultists: number; power: number; fragments: number },
-  state: GreatOldOnesState
+  state: GreatOldOnesState,
+  rng: SeededRandom
 ): { success: boolean; person?: CompromisedPerson; message: string } {
   // Higher importance targets are harder
   let successChance = 60 - (targetImportance * 4);
@@ -203,20 +206,20 @@ export function deepenCorruption(
   };
   successChance += methodModifiers[method];
 
-  const roll = Math.random() * 100;
+  const roll = rng.next() * 100;
 
   if (roll <= successChance) {
     const loyalty = {
-      blackmail: 40 + Math.random() * 20,
-      bribery: 50 + Math.random() * 20,
-      conversion: 70 + Math.random() * 25,
+      blackmail: 40 + rng.next() * 20,
+      bribery: 50 + rng.next() * 20,
+      conversion: 70 + rng.next() * 25,
       possession: 100,
       replacement: 100,
     }[method];
 
     const person: CompromisedPerson = {
-      id: `person_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: generatePersonName(),
+      id: generateDeterministicId('person', rng),
+      name: generatePersonName(rng),
       position: generatePosition(node.institutionType, targetImportance),
       importance: targetImportance,
       method,
@@ -245,7 +248,8 @@ export function activateSleeperCells(
   network: InfluenceNetwork,
   targetNodeIds: string[],
   operation: 'sabotage' | 'information_theft' | 'assassination' | 'ritual_support' | 'mass_activation',
-  state: GreatOldOnesState
+  state: GreatOldOnesState,
+  rng: SeededRandom
 ): {
   success: boolean;
   results: SleeperCellResult[];
@@ -288,10 +292,10 @@ export function activateSleeperCells(
       successChance -= 30;
     }
 
-    const roll = Math.random() * 100;
+    const roll = rng.next() * 100;
 
     if (roll <= successChance) {
-      const exposure = operationDifficulty / 2 + Math.random() * 10;
+      const exposure = operationDifficulty / 2 + rng.next() * 10;
       totalExposure += exposure;
 
       results.push({
@@ -306,7 +310,7 @@ export function activateSleeperCells(
         node.sleeperCells = Math.max(0, node.sleeperCells - 1);
       }
     } else {
-      const exposure = operationDifficulty * 1.5 + Math.random() * 20;
+      const exposure = operationDifficulty * 1.5 + rng.next() * 20;
       totalExposure += exposure;
 
       results.push({
@@ -393,7 +397,8 @@ export function createMemeticAgent(
   type: MemeticAgent['type'],
   vectors: MemeticVector[],
   eldritchPowerInvested: number,
-  state: GreatOldOnesState
+  state: GreatOldOnesState,
+  rng: SeededRandom
 ): MemeticAgent {
   // Base stats by type
   const typeStats = {
@@ -411,8 +416,8 @@ export function createMemeticAgent(
   const powerBonus = eldritchPowerInvested / 50;
 
   return {
-    id: `meme_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    name: generateMemeName(type),
+    id: generateDeterministicId('meme', rng),
+    name: generateMemeName(type, rng),
     description: generateMemeDescription(type),
     type,
     virality: Math.min(100, stats.virality + powerBonus),
@@ -431,7 +436,8 @@ export function spreadMeme(
   agent: MemeticAgent,
   region: RegionalState,
   amplificationNodes: InfluenceNode[],
-  state: GreatOldOnesState
+  state: GreatOldOnesState,
+  rng: SeededRandom
 ): {
   newReach: number;
   sanityDrained: number;
@@ -479,7 +485,7 @@ export function spreadMeme(
 
   // Check for counter-meme
   const counterMemeChance = region.investigationHeat / 2 - agent.resistance / 2;
-  const counterMemeDetected = Math.random() * 100 < counterMemeChance;
+  const counterMemeDetected = rng.next() * 100 < counterMemeChance;
 
   return {
     newReach,
@@ -590,7 +596,8 @@ export function launchDreamInvasion(
   architecture: DreamArchitecture,
   ritualSite: string,
   eldritchPowerSpent: number,
-  state: GreatOldOnesState
+  state: GreatOldOnesState,
+  rng: SeededRandom
 ): {
   success: boolean;
   ritual?: DreamRitual;
@@ -616,7 +623,7 @@ export function launchDreamInvasion(
     successChance += 15;  // New moon or full moon boost
   }
 
-  const roll = Math.random() * 100;
+  const roll = rng.next() * 100;
 
   if (roll > successChance) {
     return {
@@ -628,7 +635,7 @@ export function launchDreamInvasion(
 
   // Create ritual
   const ritual: DreamRitual = {
-    id: `dream_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    id: generateDeterministicId('dream', rng),
     name: `Nightmare Epidemic: ${targetRegionId}`,
     targetRegionId,
     dreamType,
@@ -701,7 +708,8 @@ function calculateDreamEffect(
  */
 export function generateDreamProphet(
   regionId: string,
-  dreamType: DreamRitual['dreamType']
+  dreamType: DreamRitual['dreamType'],
+  rng: SeededRandom
 ): {
   name: string;
   influence: number;
@@ -709,9 +717,9 @@ export function generateDreamProphet(
   benefits: string[];
 } {
   const names = ['Sarah Chen', 'Marcus Webb', 'Elena Volkov', 'James Morrison', 'Aria Santos'];
-  const name = names[Math.floor(Math.random() * names.length)];
+  const name = rng.choice(names);
 
-  const influence = 40 + Math.random() * 40;
+  const influence = 40 + rng.next() * 40;
 
   const benefits = [
     '+5% corruption spread in region',
@@ -806,7 +814,8 @@ export function passLegislation(
   puppet: PuppetGovernment,
   legislationType: LegislationEffect['type'],
   coverStory: string,
-  state: GreatOldOnesState
+  state: GreatOldOnesState,
+  rng: SeededRandom
 ): {
   success: boolean;
   legislation?: EldritchLegislation;
@@ -850,7 +859,7 @@ export function passLegislation(
   };
   successChance += difficultyModifiers[legislationType];
 
-  const roll = Math.random() * 100;
+  const roll = rng.next() * 100;
 
   if (roll > successChance) {
     const suspicion = Math.abs(difficultyModifiers[legislationType]) / 2;
@@ -863,7 +872,7 @@ export function passLegislation(
 
   // Create legislation
   const legislation: EldritchLegislation = {
-    id: `law_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    id: generateDeterministicId('law', rng),
     name: coverStory,
     description: generateLegislationDescription(legislationType, coverStory),
     effects: [generateLegislationEffect(legislationType)],
@@ -886,7 +895,8 @@ export function suppressInvestigation(
   puppet: PuppetGovernment,
   targetInvestigatorId: string,
   method: 'discredit' | 'redirect' | 'bribe' | 'threaten' | 'eliminate',
-  state: GreatOldOnesState
+  state: GreatOldOnesState,
+  rng: SeededRandom
 ): {
   success: boolean;
   investigationReduction: number;
@@ -922,7 +932,7 @@ export function suppressInvestigation(
 
   const successChance = 60 + official.loyalty / 2 - stats.difficulty;
 
-  const roll = Math.random() * 100;
+  const roll = rng.next() * 100;
 
   if (roll > successChance) {
     return {
@@ -945,7 +955,7 @@ export function suppressInvestigation(
 // HELPER FUNCTIONS
 // ============================================================================
 
-function generateInstitutionName(type: InstitutionType, regionName: string): string {
+function generateInstitutionName(type: InstitutionType, regionName: string, rng: SeededRandom): string {
   const templates = {
     government: [`${regionName} Department of Public Safety`, `${regionName} City Council`],
     military: [`${regionName} Military District`, `${regionName} National Guard`],
@@ -957,13 +967,13 @@ function generateInstitutionName(type: InstitutionType, regionName: string): str
   };
 
   const options = templates[type];
-  return options[Math.floor(Math.random() * options.length)];
+  return rng.choice(options);
 }
 
-function generatePersonName(): string {
+function generatePersonName(rng: SeededRandom): string {
   const firstNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Avery', 'Quinn'];
   const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis'];
-  return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+  return `${rng.choice(firstNames)} ${rng.choice(lastNames)}`;
 }
 
 function generatePosition(type: InstitutionType, importance: number): string {
@@ -982,7 +992,7 @@ function generatePosition(type: InstitutionType, importance: number): string {
   return list[index];
 }
 
-function generateMemeName(type: MemeticAgent['type']): string {
+function generateMemeName(type: MemeticAgent['type'], rng: SeededRandom): string {
   const names = {
     nihilism: ['Nothing Matters Movement', 'The Void Aesthetic', 'Existential Despair Collective'],
     conspiracy: ['The Hidden Truth', 'They Are Watching', 'Wake Up Theory'],
@@ -993,7 +1003,7 @@ function generateMemeName(type: MemeticAgent['type']): string {
   };
 
   const options = names[type];
-  return options[Math.floor(Math.random() * options.length)];
+  return rng.choice(options);
 }
 
 function generateMemeDescription(type: MemeticAgent['type']): string {
@@ -1057,4 +1067,10 @@ function generateLegislationEffect(type: LegislationEffect['type']): Legislation
     benefit: effect.benefit,
     value: effect.value,
   };
+}
+
+function generateDeterministicId(prefix: string, rng: SeededRandom): string {
+  const numeric = rng.nextInt(0, 1_000_000_000);
+  const alpha = rng.next().toString(36).slice(2, 10).padEnd(8, '0');
+  return `${prefix}_${numeric.toString(36)}_${alpha}`;
 }

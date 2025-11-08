@@ -45,6 +45,7 @@ import {
   progressIntelOperation,
   calculateAgencyReputation,
 } from '@/lib/intelligenceAgencyUtils';
+import type { SeededRandom } from '@/lib/seededRandom';
 
 // Types for dependencies that will be injected
 export interface LaunchDependencies {
@@ -79,6 +80,7 @@ export interface ProductionPhaseDependencies {
   leaders: any[];
   PlayerManager: any;
   conventionalState?: any;  // Optional: conventional warfare state with territories
+  rng: SeededRandom;
 }
 
 /**
@@ -394,7 +396,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
   if (S.territoryResources && conventionalState?.territories) {
     // Update resource market with dynamic pricing
     if (S.resourceMarket) {
-      S.resourceMarket = updateResourceMarket(S.resourceMarket, S, nations, S.turn);
+      S.resourceMarket = updateResourceMarket(S.resourceMarket, S, nations, S.turn, deps.rng);
 
       // Log market events for player
       const player = PlayerManager.get();
