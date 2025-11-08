@@ -725,7 +725,36 @@ const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
 
 // World data
 let worldData: any = null;
-let worldCountries: any = null;
+// Initialize worldCountries with immediate fallback to prevent race condition
+let worldCountries: any = {
+  type: "FeatureCollection",
+  features: [
+    {
+      type: "Feature",
+      properties: { name: "Americas" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [-170, 70], [-100, 71], [-80, 50], [-75, 25], [-80, 10], [-85, -10],
+          [-75, -30], [-70, -55], [-75, -55], [-80, -30], [-85, -10], [-95, 0],
+          [-105, 20], [-120, 35], [-130, 40], [-140, 50], [-160, 60], [-170, 70]
+        ]]
+      }
+    },
+    {
+      type: "Feature",
+      properties: { name: "Eurasia" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [-10, 35], [0, 40], [10, 45], [30, 50], [50, 55], [80, 60], [120, 65],
+          [140, 60], [160, 55], [170, 60], [180, 65], [180, 70], [140, 75],
+          [80, 75], [20, 70], [-10, 60], [-10, 35]
+        ]]
+      }
+    }
+  ]
+};
 let worldLoadPromise: Promise<void> | null = null;
 
 // resolvePublicAssetPath moved to @/lib/renderingUtils
@@ -2795,7 +2824,8 @@ function productionPhase() {
 
 // World map loading
 function loadWorld(): Promise<void> {
-  if (worldCountries) {
+  // Check if we already have detailed world data loaded (not just the fallback)
+  if (worldData && worldCountries && (worldCountries as any).features?.length > 2) {
     return Promise.resolve();
   }
 
