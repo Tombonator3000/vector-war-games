@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="2048" height="1024" viewBox="0 0 2048 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="globe-glow" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#051024" />
+      <stop offset="100%" stop-color="#02060f" />
+    </linearGradient>
+    <radialGradient id="core-glow" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0%" stop-color="#06223f" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#020915" stop-opacity="1" />
+    </radialGradient>
+  </defs>
+  <rect width="2048" height="1024" fill="url(#globe-glow)" />
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="#0ef" stroke-opacity="0.8" stroke-width="2">
+      <ellipse cx="1024" cy="512" rx="960" ry="480" fill="url(#core-glow)" />
+    </g>
+    <g stroke="#4de3ff" stroke-opacity="0.6" stroke-width="1.5">
+      <ellipse cx="1024" cy="512" rx="880" ry="440" fill="none" />
+      <ellipse cx="1024" cy="512" rx="960" ry="480" fill="none" />
+      <ellipse cx="1024" cy="512" rx="1030" ry="515" fill="none" />
+    </g>
+    <g stroke="#5effff" stroke-opacity="0.82" stroke-width="1.4">
+      <path d="M1024 72c-132 0-252 24-360 68-64 25-140 72-176 118-38 48-46 92-28 124 28 48 110 72 172 124 54 45 104 120 140 184 50 90 80 168 152 216 90 60 220 56 296 16 70-36 100-108 140-184 44-88 88-166 172-232 66-52 148-68 180-120 24-38 10-92-24-138-38-52-110-90-188-120-106-40-230-56-316-56Z" fill="none" />
+      <path d="M1024 952c180 0 328-48 444-120 86-54 170-132 176-212 4-54-30-110-92-152-72-48-186-72-286-72-148 0-260 56-380 56-118 0-216-60-306-60-76 0-160 24-226 64-64 40-100 96-96 156 6 84 84 158 168 212 122 78 298 128 598 128Z" fill="none" />
+    </g>
+    <g stroke="#38d0ff" stroke-opacity="0.35" stroke-width="1">
+      <!-- Meridians -->
+      <path d="M512 40c-180 220-180 724 0 944" fill="none" />
+      <path d="M768 24c-160 220-160 752 0 972" fill="none" />
+      <path d="M1024 16c-140 228-140 780 0 988" fill="none" />
+      <path d="M1280 24c160 220 160 752 0 972" fill="none" />
+      <path d="M1536 40c180 220 180 724 0 944" fill="none" />
+      <path d="M256 96c-220 230-220 604 0 834" fill="none" />
+      <path d="M1792 96c220 230 220 604 0 834" fill="none" />
+      <!-- Parallels -->
+      <ellipse cx="1024" cy="512" rx="1000" ry="480" fill="none" />
+      <ellipse cx="1024" cy="512" rx="900" ry="410" fill="none" />
+      <ellipse cx="1024" cy="512" rx="720" ry="320" fill="none" />
+      <ellipse cx="1024" cy="512" rx="540" ry="240" fill="none" />
+      <ellipse cx="1024" cy="512" rx="320" ry="140" fill="none" />
+      <ellipse cx="1024" cy="512" rx="160" ry="60" fill="none" />
+    </g>
+    <g stroke="#5effff" stroke-width="1">
+      <rect x="120" y="120" width="1808" height="784" rx="68" ry="68" fill="none" opacity="0.45" />
+    </g>
+    <g fill="#5effff" fill-opacity="0.18">
+      <circle cx="512" cy="256" r="18" />
+      <circle cx="928" cy="320" r="12" />
+      <circle cx="1420" cy="256" r="10" />
+      <circle cx="1620" cy="620" r="14" />
+      <circle cx="420" cy="620" r="11" />
+      <circle cx="1200" cy="760" r="16" />
+    </g>
+  </g>
+</svg>

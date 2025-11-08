@@ -2825,3 +2825,8 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Updated `src/components/GlobeScene.tsx` to project nation markers, territory boundaries, units, missiles, and explosions using a shared lat/lon projector that supports both spherical and flat-realistic views.
 - Registered the position projector with the GlobeScene imperative API so missiles and explosions triggered via refs honor the flat projection.
 - Ensured the overlay group renders for flat mode and kept animation updates active regardless of projection to maintain interactive overlays.
+
+### 2025-11-08T09:42:00Z - Switch wireframe globe to vector texture asset
+- Added `public/textures/earth_wireframe.svg` and updated the wireframe material to favor tone-mapped off rendering for sharper contrast.
+- Replaced the procedural canvas atlas in `src/components/GlobeScene.tsx` with a `THREE.TextureLoader` pipeline that loads the SVG and only falls back to the lightweight canvas grid when necessary.
+- Tuned texture filtering and polygon offset so the wireframe style appears crisp in both the start screen preview and the in-game globe.
