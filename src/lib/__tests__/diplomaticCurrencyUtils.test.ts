@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getDIP, modifyDIP } from '@/lib/diplomaticCurrencyUtils';
+import { applyDIPIncome, getDIP, modifyDIP, updateDIPIncome } from '@/lib/diplomaticCurrencyUtils';
 import type { Nation } from '@/types/game';
 
 function createBaseNation(overrides: Partial<Nation> = {}): Nation {
@@ -70,6 +70,33 @@ describe('diplomaticCurrencyUtils', () => {
       newBalance: 95,
       reason: 'Legacy carry-over',
       turn: 3,
+    });
+  });
+
+  it('applies peace streak bonuses and records income transactions', () => {
+    const nation = createBaseNation({
+      diplomaticInfluence: {
+        points: 10,
+        capacity: 200,
+        perTurnIncome: baseIncome,
+        history: [],
+      },
+    });
+
+    const peaceTurns = 12; // Two bonuses at 5 turns each (with remainder ignored)
+    const withIncome = updateDIPIncome(nation, [nation], 4, peaceTurns);
+
+    expect(withIncome.diplomaticInfluence?.perTurnIncome.fromPeaceYears).toBe(2);
+    expect(withIncome.diplomaticInfluence?.perTurnIncome.total).toBe(7);
+
+    const afterApply = applyDIPIncome(withIncome, 4);
+
+    expect(afterApply.diplomaticInfluence?.points).toBe(17);
+    expect(afterApply.diplomaticInfluence?.history).toHaveLength(1);
+    expect(afterApply.diplomaticInfluence?.history[0]).toMatchObject({
+      delta: 7,
+      reason: 'Per-turn income',
+      turn: 4,
     });
   });
 });
