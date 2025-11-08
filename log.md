@@ -2815,3 +2815,6 @@ When state is initialized in multiple places (useState + useEffect), be careful 
 - Applied the active camera's translation and zoom to the flat map texture draw so satellite imagery, overlays, and interaction layers stay aligned while panning or zooming (`src/rendering/worldRenderer.ts`).
 ### 2025-11-08T08:06:22Z - Pan/zoom flat realistic texture with camera
 - Updated the 2D world renderer to apply the current camera transform when painting the flat realistic backdrop so panning and zooming remain aligned with overlays (`src/rendering/worldRenderer.ts`).
+### 2025-11-08T08:24:37Z - Consolidate phase transition overlay messaging
+- Extended the phase transition overlay to accept optional banner text, keep it visible for player phases, and surface the tertiary line inside the animated card (`src/components/PhaseTransitionOverlay.tsx`).
+- Routed the TTL-governed overlay banner state into the transition overlay and removed the redundant standalone banner layer (`src/pages/Index.tsx`).

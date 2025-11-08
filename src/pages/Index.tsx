@@ -5925,6 +5925,7 @@ export default function NoradVector() {
   const tutorialContext = useTutorialContext();
   const [isPhaseTransitioning, setIsPhaseTransitioning] = useState(false);
   const [overlayBanner, setOverlayBanner] = useState<OverlayNotification | null>(null);
+  const activeOverlayMessage = overlayBanner && overlayBanner.expiresAt > Date.now() ? overlayBanner.text : null;
 
   // Era system state
   const [showEraTransition, setShowEraTransition] = useState(false);
@@ -13484,16 +13485,12 @@ export default function NoradVector() {
         }} 
       />
 
-      {overlayBanner && overlayBanner.expiresAt > Date.now() && (
-        <div className="pointer-events-none fixed inset-0 z-[9997] flex items-center justify-center">
-          <div className="rounded-lg border border-cyan-500/70 bg-black/80 px-8 py-4 shadow-[0_0_28px_rgba(34,211,238,0.45)]">
-            <p className="font-mono text-xl tracking-[0.4em] text-cyan-100">{overlayBanner.text}</p>
-          </div>
-        </div>
-      )}
-
       {/* New Phase 1 Tutorial & Feedback Overlays */}
-      <PhaseTransitionOverlay phase={S.phase} isTransitioning={isPhaseTransitioning} />
+      <PhaseTransitionOverlay
+        phase={S.phase}
+        isTransitioning={isPhaseTransitioning}
+        overlayMessage={activeOverlayMessage}
+      />
 
       {/* Era Transition Overlay */}
       {showEraTransition && eraTransitionData && (
