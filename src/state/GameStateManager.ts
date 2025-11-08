@@ -8,6 +8,7 @@
  */
 
 import type {
+  GameState as CoreGameState,
   Nation,
   ConventionalWarfareDelta,
   SatelliteOrbit,
@@ -20,7 +21,8 @@ import type {
   RadiationZone,
   EMPEffect,
   Ring,
-  RefugeeCamp
+  RefugeeCamp,
+  DiplomacyState,
 } from '@/types/game';
 import type { ConventionalState, NationConventionalProfile } from '@/hooks/useConventionalWarfare';
 import type { ScenarioConfig } from '@/types/scenario';
@@ -31,51 +33,17 @@ import type { GreatOldOnesState } from '@/types/greatOldOnes';
 /**
  * Diplomacy state tracking
  */
-export interface DiplomacyState {
-  peaceTurns: number;
-  lastEvaluatedTurn: number;
-  allianceRatio: number;
-  influenceScore: number;
-  nearVictoryNotified: boolean;
-  victoryAnnounced: boolean;
-}
+export type GameState = CoreGameState;
+export type { DiplomacyState };
 
-/**
- * Core game state interface
- */
-export interface GameState {
-  turn: number;
-  defcon: number;
-  phase: 'PLAYER' | 'AI' | 'RESOLUTION' | 'PRODUCTION';
-  actionsRemaining: number;
-  paused: boolean;
-  gameOver: boolean;
-  selectedLeader: string | null;
-  selectedDoctrine: string | null;
-  playerName?: string;
-  difficulty?: string;
-  missiles: Missile[];
-  bombers: Bomber[];
-  submarines?: Submarine[];
-  explosions: Explosion[];
-  particles: Particle[];
-  radiationZones: RadiationZone[];
-  empEffects: EMPEffect[];
-  rings: Ring[];
-  refugeeCamps?: RefugeeCamp[];
-  screenShake: number;
-  overlay?: { text: string; ttl: number } | null;
-  fx?: number;
-  nuclearWinterLevel?: number;
-  globalRadiation?: number;
-  events?: boolean;
-  diplomacy?: DiplomacyState;
+type LocalGameStateBase = Omit<CoreGameState, 'nations'> & {
+  nations: LocalNation[];
+};
+
+type LocalGameStateExtras = {
   conventional?: ConventionalState;
   conventionalMovements?: unknown[];
   conventionalUnits?: unknown[];
-  satelliteOrbits: SatelliteOrbit[];
-  falloutMarks: FalloutMark[];
-  nations: Nation[];
   statistics?: {
     nukesLaunched: number;
     nukesReceived: number;
@@ -83,8 +51,6 @@ export interface GameState {
   };
   showEndGameScreen?: boolean;
   endGameStatistics?: unknown;
-  scenario?: ScenarioConfig;
-  greatOldOnes?: GreatOldOnesState;
   victoryProgressNotifications?: {
     economic: boolean;
     demographic: boolean;
@@ -92,15 +58,12 @@ export interface GameState {
     survival: boolean;
     domination: boolean;
   };
-}
+};
 
 /**
  * Local game state (includes conventional warfare)
  */
-export type LocalGameState = Omit<GameState, 'nations'> & {
-  nations: LocalNation[];
-  conventional?: ConventionalState;
-};
+export type LocalGameState = LocalGameStateBase & LocalGameStateExtras;
 
 /**
  * Local nation type (extends Nation with additional properties)
@@ -124,18 +87,8 @@ export function createDefaultDiplomacyState(): DiplomacyState {
   };
 }
 
-/**
- * GameStateManager class
- *
- * Manages the global game state (S object) and provides a clean API
- * for state access and modification.
- */
-class GameStateManager {
-  /**
-   * The global game state
-   * Exposed for backward compatibility with existing code
-   */
-  private static _state: LocalGameState = {
+function createInitialState(): LocalGameState {
+  return {
     turn: 1,
     defcon: 5,
     phase: 'PLAYER',
@@ -157,25 +110,53 @@ class GameStateManager {
     falloutMarks: [],
     satelliteOrbits: [],
     screenShake: 0,
+    overlay: null,
     fx: 1,
     nuclearWinterLevel: 0,
     globalRadiation: 0,
+    events: false,
     diplomacy: createDefaultDiplomacyState(),
     conventional: createDefaultConventionalState(),
     conventionalMovements: [],
     conventionalUnits: [],
+    casusBelliState: {
+      allWars: [],
+      warHistory: [],
+    },
     statistics: {
       nukesLaunched: 0,
       nukesReceived: 0,
       enemiesDestroyed: 0,
     },
     showEndGameScreen: false,
+    endGameStatistics: undefined,
     territoryResources: undefined,
     resourceTrades: [],
     resourceMarket: undefined,
     depletionWarnings: [],
-    nations: [] as LocalNation[],
+    greatOldOnes: undefined,
+    diplomacyPhase3: undefined,
+    multiPartyDiplomacy: undefined,
+    doctrineIncidentState: undefined,
+    doctrineShiftState: undefined,
+    advancedPropaganda: undefined,
+    victoryProgressNotifications: undefined,
+    nations: [],
   };
+}
+
+/**
+ * GameStateManager class
+ *
+ * Manages the global game state (S object) and provides a clean API
+ * for state access and modification.
+ */
+class GameStateManager {
+  /**
+   * The global game state
+   * Exposed for backward compatibility with existing code
+   */
+  private static _state: LocalGameState = createInitialState();
 
   /**
    * Nations array
@@ -200,7 +181,7 @@ class GameStateManager {
    */
   static setState(state: LocalGameState): void {
     if (Array.isArray(state.nations)) {
-      this._nations = state.nations as LocalNation[];
+      this._nations = state.nations;
     }
     this._state = state;
     this._state.nations = this._nations;
@@ -722,51 +703,7 @@ class GameStateManager {
    * Resets the game state to initial values
    */
   static reset(): void {
-    this._state = {
-      turn: 1,
-      defcon: 5,
-      phase: 'PLAYER',
-      actionsRemaining: 1,
-      paused: false,
-      gameOver: false,
-      selectedLeader: null,
-      selectedDoctrine: null,
-      scenario: getDefaultScenario(),
-      missiles: [],
-      bombers: [],
-      submarines: [],
-      explosions: [],
-      particles: [],
-      radiationZones: [],
-      empEffects: [],
-      rings: [],
-      refugeeCamps: [],
-      falloutMarks: [],
-      satelliteOrbits: [],
-      screenShake: 0,
-      fx: 1,
-      nuclearWinterLevel: 0,
-      globalRadiation: 0,
-      diplomacy: createDefaultDiplomacyState(),
-      conventional: createDefaultConventionalState(),
-      conventionalMovements: [],
-      conventionalUnits: [],
-      casusBelliState: {
-        allWars: [],
-        warHistory: [],
-      },
-      statistics: {
-        nukesLaunched: 0,
-        nukesReceived: 0,
-        enemiesDestroyed: 0,
-      },
-      showEndGameScreen: false,
-      territoryResources: undefined,
-      resourceTrades: [],
-      resourceMarket: undefined,
-      depletionWarnings: [],
-      nations: [] as LocalNation[],
-    };
+    this._state = createInitialState();
     this._nations = [];
     this._conventionalDeltas = [];
     this._state.nations = this._nations;

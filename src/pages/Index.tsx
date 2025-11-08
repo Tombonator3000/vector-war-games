@@ -5692,7 +5692,7 @@ export default function NoradVector() {
   );
 
   const playerNation = useMemo(() => nations.find(n => n.isPlayer), [nations]);
-  const advancedGameState = GameStateManager.getState() as GameState;
+  const advancedGameState = GameStateManager.getState();
   const enemyNations = useMemo(() => nations.filter(n => !n.isPlayer && !n.eliminated), [nations]);
   const currentPlayerLeaderName = playerNation?.leaderName || playerNation?.leader;
   const playerLeaderImage = useMemo(() => getLeaderImage(currentPlayerLeaderName), [currentPlayerLeaderName]);
