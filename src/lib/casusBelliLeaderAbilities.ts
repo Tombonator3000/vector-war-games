@@ -90,7 +90,7 @@ export function canLeaderGrantCasusBelli(
   }
 
   if (ability.conditions?.requiresIdeology) {
-    if (leader.ideologyState?.ideology !== ability.conditions.requiresIdeology) {
+    if (leader.ideologyState?.currentIdeology !== ability.conditions.requiresIdeology) {
       return false;
     }
   }
@@ -208,9 +208,10 @@ export function applyLeaderWarBonuses(
     bonuses.publicSupportBonus = (bonuses.publicSupportBonus || 0) + 15;
   }
 
-  if (casusBelli.type === 'holy-war' && leader.ideologyState?.ideology) {
-    const zealotry = leader.ideologyState.zealotry || 0;
-    bonuses.publicSupportBonus = (bonuses.publicSupportBonus || 0) + zealotry * 30;
+  if (casusBelli.type === 'holy-war' && leader.ideologyState?.currentIdeology) {
+    // Holy war bonus based on ideology stability
+    const ideologyStability = leader.ideologyState.ideologyStability || 0;
+    bonuses.publicSupportBonus = (bonuses.publicSupportBonus || 0) + (ideologyStability / 100) * 30;
   }
 
   return bonuses;

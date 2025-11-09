@@ -220,9 +220,9 @@ export function aiShouldDeclareWar(
   }
 
   // Factor 7: Economic strength
-  if (aiNation.resources.production < 30) {
+  if (aiNation.production < 30) {
     confidence -= 20;
-    reasoning.push(`Weak economy (production: ${aiNation.resources.production})`);
+    reasoning.push(`Weak economy (production: ${aiNation.production})`);
   }
 
   // Factor 8: Expansionist desires

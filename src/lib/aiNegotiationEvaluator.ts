@@ -133,7 +133,7 @@ export function evaluateNegotiation(
   const agendaModifier = calculateAgendaNegotiationBonus(
     playerNation,
     aiNation,
-    { nations: allNations, turn: currentTurn }
+    { nations: allNations, turn: currentTurn } as any
   );
 
   const strategicValue = calculateStrategicValue(negotiation, aiNation, playerNation, allNations);
@@ -210,12 +210,12 @@ export function evaluateNegotiation(
       const violations = checkAgendaViolations(
         playerNation,
         aiNation,
-        { nations: allNations, turn: currentTurn }
+        { nations: allNations, turn: currentTurn } as any
       );
       const agendaFeedback = getAgendaFeedback(
         playerNation,
         aiNation,
-        { nations: allNations, turn: currentTurn }
+        { nations: allNations, turn: currentTurn } as any
       );
 
       if (violations.length > 0) {

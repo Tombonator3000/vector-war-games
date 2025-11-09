@@ -621,7 +621,6 @@ const ACT_3: ActDefinition = {
           choiceText: 'Perform the sacrifice',
           description: 'Sacrifice the High Priest Council',
           consequences: {
-            eldritchPower: 500,
             councilUnityChange: -100,
             narrativeFlag: 'council_sacrificed',
           },

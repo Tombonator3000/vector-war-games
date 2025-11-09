@@ -34,23 +34,23 @@ function createTestGameState(): GameState {
     phase: 'PLAYER' as const,
     defcon: 5,
     actionsRemaining: 3,
-    difficulty: 'medium',
-    doomsdayClock: 100,
-    isHardcoreMode: false,
-    isCoopGame: false,
     paused: false,
     gameOver: false,
     selectedLeader: 'test',
     selectedDoctrine: 'convergence',
-    selectedScenario: 'coldWar',
-    setupComplete: true,
-    winner: null,
-    player: testNation,
     nations: [testNation],
     missiles: [],
     bombers: [],
     submarines: [],
-  } as GameState;
+    explosions: [],
+    particles: [],
+    radiationZones: [],
+    empEffects: [],
+    rings: [],
+    screenShake: 0,
+    falloutMarks: [],
+    satelliteOrbits: [],
+  };
 }
 
 describe('unifiedGameMigration', () => {
