@@ -34,6 +34,9 @@ export interface IdeologyState {
   /** Turn when ideology was last changed */
   lastIdeologyChangeTurn?: number;
 
+  /** Last production multiplier applied from ideology bonuses */
+  lastAppliedProductionMultiplier?: number;
+
   /** Whether this nation is actively spreading its ideology */
   ideologicalExport: boolean;
 
