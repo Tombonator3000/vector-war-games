@@ -3249,17 +3249,19 @@ function registerSatelliteOrbit(ownerId: string, targetId: string) {
 function drawMissiles() {
   if (!ctx) return;
 
-  S.missiles.forEach((m: any, i: number) => {
+  // Iterate backwards to safely remove missiles during iteration
+  for (let i = S.missiles.length - 1; i >= 0; i--) {
+    const m = S.missiles[i];
     m.t = Math.min(1, m.t + 0.016);
-    
+
     const startProjection = projectLocal(m.fromLon, m.fromLat);
     const targetProjection = projectLocal(m.toLon, m.toLat);
     if (!startProjection.visible || !targetProjection.visible) {
-      return;
+      continue;
     }
     const { x: sx, y: sy } = startProjection;
     const { x: tx, y: ty } = targetProjection;
-    
+
     const u = 1 - m.t;
     const cx = (sx + tx) / 2;
     const cy = (sy + ty) / 2 - 150;
@@ -3292,18 +3294,18 @@ function drawMissiles() {
     ctx.fill();
     drawIcon(missileIcon, x, y, heading, MISSILE_ICON_BASE_SCALE);
     ctx.restore();
-    
+
     // Incoming warning
     if (!m._tele && m.t > 0.8) {
       m._tele = true;
       S.rings.push({
-        x: tx, y: ty, r: 2, max: 60 * (S.fx || 1), 
+        x: tx, y: ty, r: 2, max: 60 * (S.fx || 1),
         speed: 3, alpha: 1, type: 'incoming', txt: 'INCOMING'
       });
     }
 
     // Impact
-    if (m.t >= 1) {
+    if (m.t >= 1 && !m.hasExploded) {
       // MIRV split check
       const mirvChance = getMirvSplitChance(m.from, !!m.isMirv);
       if (mirvChance > 0 && Math.random() < mirvChance) {
@@ -3329,7 +3331,7 @@ function drawMissiles() {
           }, j * 200);
         }
       }
-      
+
       // Interception check
       if (m.t >= 0.95 && !m.interceptChecked) {
         m.interceptChecked = true;
@@ -3342,19 +3344,20 @@ function drawMissiles() {
             log(`${ally.name} helps defend ${m.target.name}!`, 'success');
           }
         });
-        
+
         if (Math.random() < totalIntercept) {
           S.missiles.splice(i, 1);
           log(`Missile intercepted! Defense successful`, 'success');
           S.rings.push({ x: tx, y: ty, r: 1, max: 40, speed: 3, alpha: 1, type: 'intercept' });
-          return;
+          continue;
         }
       }
-      
+
+      m.hasExploded = true;
       explode(tx, ty, m.target, m.yield);
       S.missiles.splice(i, 1);
     }
-  });
+  }
 }
 
 function drawBombers() {
