@@ -7673,11 +7673,26 @@ export default function NoradVector() {
   useEffect(() => {
     const element = globeSceneRef.current?.overlayCanvas ?? null;
     if (!element) {
-      return;
+      // Retry after a short delay if canvas not ready yet
+      const retryTimer = setTimeout(() => {
+        const retryElement = globeSceneRef.current?.overlayCanvas;
+        if (retryElement) {
+          canvas = retryElement;
+          ctx = retryElement.getContext('2d', { alpha: true })!;
+          resizeCanvas();
+          
+          if (!gameLoopRunning) {
+            gameLoopRunning = true;
+            requestAnimationFrame(gameLoop);
+          }
+        }
+      }, 100);
+      
+      return () => clearTimeout(retryTimer);
     }
 
     canvas = element;
-    ctx = element.getContext('2d')!;
+    ctx = element.getContext('2d', { alpha: true })!;
 
     resizeCanvas();
 
@@ -7689,6 +7704,16 @@ export default function NoradVector() {
       gameLoopRunning = true;
       requestAnimationFrame(gameLoop);
     }
+    
+    // Add window resize listener
+    const handleResize = () => {
+      resizeCanvas();
+    };
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, [resizeCanvas]);
 
   const toggleFullscreen = useCallback(() => {

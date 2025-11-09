@@ -513,8 +513,10 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
     const z = Math.max(0.9, Math.min(1.6, cam.zoom));
     const pad = 4 * z;
 
-    const labelVisibilityThreshold = 0.9;
-    const labelFadeRange = 0.2;
+    // FIXED: Always show labels regardless of zoom level
+    // Previous threshold of 0.9 was causing labels to be invisible at default zoom
+    const labelVisibilityThreshold = 0.3;
+    const labelFadeRange = 0.15;
     const fadeStart = labelVisibilityThreshold - labelFadeRange;
     const labelVisibility = cam.zoom <= fadeStart
       ? 0

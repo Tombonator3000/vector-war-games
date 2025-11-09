@@ -52,6 +52,9 @@ const WHITE_COLOR = new THREE.Color('#ffffff');
 const FALLBACK_CITY_COLOR = new THREE.Color('#ffdd00');
 const FLAT_PLANE_Z = -0.02;
 
+// Debug flag for overlay canvas
+const DEBUG_OVERLAY = false;
+
 const NOOP_PROJECTOR: ProjectorFn = () => ({ x: 0, y: 0, visible: false });
 const NOOP_PICKER: PickerFn = () => null;
 
@@ -1664,12 +1667,13 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   );
 
   return (
-    <div ref={containerRef} className="globe-scene">
+    <div ref={containerRef} className="globe-scene" style={{ position: 'relative', width: '100%', height: '100%' }}>
       <Canvas
         className="globe-scene__webgl"
         dpr={[1, 1.75]}
         camera={{ position: [0, 0, EARTH_RADIUS + 3], fov: 40, near: 0.1, far: 100 }}
         shadows
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
       >
         <SceneContent
           cam={cam}
@@ -1690,7 +1694,20 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           flatMapVariant={flatMapVariant}
         />
       </Canvas>
-      <canvas ref={overlayRef} className="globe-scene__overlay" />
+      <canvas 
+        ref={overlayRef} 
+        className="globe-scene__overlay" 
+        style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          width: '100%', 
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 1,
+          ...(DEBUG_OVERLAY ? { border: '2px solid red' } : {})
+        }} 
+      />
     </div>
   );
 });
