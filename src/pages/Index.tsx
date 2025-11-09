@@ -6144,69 +6144,12 @@ export default function NoradVector() {
     }
   }, []);
 
-  // Day/Night Auto-Cycle Effect
-  useEffect(() => {
-    dayNightAutoCycle = dayNightAutoCycleEnabled;
-    Storage.setItem('map_daynight_autocycle', String(dayNightAutoCycleEnabled));
-  }, [dayNightAutoCycleEnabled]);
-
   useEffect(() => {
     return () => {
       stopDayNightBlendAnimation();
     };
   }, [stopDayNightBlendAnimation]);
 
-  useEffect(() => {
-    if (dayNightAutoCycleEnabled || mapStyle.visual !== 'flat-realistic') {
-      return;
-    }
-
-    const targetBlend = isFlatMapDay ? 0 : 1;
-    animateDayNightBlendTo(targetBlend);
-  }, [animateDayNightBlendTo, dayNightAutoCycleEnabled, isFlatMapDay, mapStyle.visual]);
-
-  useEffect(() => {
-    if (!dayNightAutoCycleEnabled || mapStyle.visual !== 'flat-realistic') {
-      return;
-    }
-
-    stopDayNightBlendAnimation();
-    let animationId: number | null = null;
-    let lastTimestamp: number | null = null;
-
-    const syncModeWithBlend = () => {
-      const nextIsDay = flatRealisticBlendRef.current < 0.5;
-      if (lastFlatMapModeRef.current !== nextIsDay) {
-        lastFlatMapModeRef.current = nextIsDay;
-        setIsFlatMapDay(nextIsDay);
-      }
-    };
-
-    syncModeWithBlend();
-
-    const animate = (timestamp: number) => {
-      if (lastTimestamp === null) {
-        lastTimestamp = timestamp;
-      }
-      const delta = timestamp - lastTimestamp;
-      lastTimestamp = timestamp;
-
-      const nextBlend = (flatRealisticBlendRef.current + delta / dayNightCycleSpeed) % 1;
-      flatRealisticBlendRef.current = nextBlend;
-      syncModeWithBlend();
-
-      animationId = requestAnimationFrame(animate);
-    };
-
-    animationId = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-      lastTimestamp = null;
-    };
-  }, [dayNightAutoCycleEnabled, dayNightCycleSpeed, flatRealisticBlendRef, mapStyle.visual, setIsFlatMapDay, stopDayNightBlendAnimation]);
   const musicTracks = useMemo(() => AudioSys.getTracks(), []);
   const [pandemicIntegrationEnabled, setPandemicIntegrationEnabled] = useState(() => {
     const stored = Storage.getItem('option_pandemic_integration');
