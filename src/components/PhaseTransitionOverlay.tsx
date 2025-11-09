@@ -58,20 +58,17 @@ export function PhaseTransitionOverlay({ phase, isTransitioning, overlayMessage 
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[9998] pointer-events-none flex items-center justify-center"
+          className="fixed inset-0 z-[9998] pointer-events-none"
         >
-          {/* Semi-transparent overlay */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-
-          {/* Center card */}
+          {/* Corner card */}
           <motion.div
             initial={{ scale: 0.8, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.8, y: 20 }}
             transition={{ type: 'spring', damping: 20 }}
-            className="relative z-10"
+            className="pointer-events-none fixed top-6 right-6 z-10"
           >
-            <div className="bg-gradient-to-br from-gray-900 to-black border-2 border-cyan-500/60 rounded-lg shadow-2xl shadow-cyan-500/20 p-8 min-w-[320px]">
+            <div className="bg-gradient-to-br from-gray-900 to-black border-2 border-cyan-500/60 rounded-lg shadow-2xl shadow-cyan-500/20 p-6 min-w-[320px]">
               {/* Animated gradient bar */}
               <div className="mb-6 h-1 bg-gray-800 rounded-full overflow-hidden">
                 <motion.div
