@@ -733,8 +733,8 @@ let worldLoadPromise: Promise<void> | null = null;
 
 // resolvePublicAssetPath moved to @/lib/renderingUtils
 
-const FLAT_REALISTIC_DAY_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day_flat.jpg');
-const FLAT_REALISTIC_NIGHT_TEXTURE_URL = resolvePublicAssetPath('textures/earth_night_flat.jpg');
+const FLAT_REALISTIC_DAY_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day.jpg');
+const FLAT_REALISTIC_NIGHT_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day.jpg'); // Using day texture for now since night_flat doesn't exist
 
 let flatRealisticDayTexture: HTMLImageElement | null = null;
 let flatRealisticNightTexture: HTMLImageElement | null = null;
