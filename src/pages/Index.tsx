@@ -675,7 +675,6 @@ let triggerNationsUpdate: (() => void) | null = null;
 let selectedTerritoryId: string | null = null;
 let hoveredTerritoryId: string | null = null;
 let dragTargetTerritoryId: string | null = null;
-let draggingArmyInfo: { sourceId: string; armies: number } | null = null;
 
 type OverlayNotification = { text: string; expiresAt: number };
 type OverlayListener = (message: OverlayNotification | null) => void;
@@ -2973,9 +2972,6 @@ function drawTerritoriesWrapper() {
 
   const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState();
   
-  // Get dragging army info from module-level variable
-  const draggingSource = draggingArmyInfo?.sourceId ?? null;
-  
   const context: TerritoryRenderContext = {
     ctx,
     worldCountries,
@@ -2996,7 +2992,7 @@ function drawTerritoriesWrapper() {
     playerId: player?.id ?? null,
     selectedTerritoryId,
     hoveredTerritoryId,
-    draggingTerritoryId: draggingSource,
+    draggingTerritoryId: null,
     dragTargetTerritoryId,
   };
   renderTerritories(context);
@@ -5786,24 +5782,7 @@ export default function NoradVector() {
       triggerNationsUpdate = null;
     };
   }, []);
-  const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
-    const storedVisual = Storage.getItem('map_style_visual') ?? Storage.getItem('map_style');
-    const storedMode = Storage.getItem('map_mode');
-    
-    // Force migration from old wireframe-only to new default 'flat'
-    let visual: MapVisualStyle;
-    if (storedVisual === 'wireframe' || !isVisualStyleValue(storedVisual)) {
-      visual = DEFAULT_MAP_STYLE.visual; // 'flat'
-      Storage.setItem('map_style_visual', visual);
-      Storage.setItem('map_style', visual);
-      console.log('[MAP INIT] Migrated from wireframe to flat style');
-    } else {
-      visual = storedVisual;
-    }
-    
-    const mode = isMapModeValue(storedMode) ? storedMode : DEFAULT_MAP_STYLE.mode;
-    return { visual, mode };
-  });
+  const [mapStyle, setMapStyle] = useState<MapStyle>(DEFAULT_MAP_STYLE);
   const [isFlatMapDay, setIsFlatMapDay] = useState<boolean>(isDayMode);
   const flatRealisticBlendRef = useRef<number>(dayNightTransition);
   const dayNightBlendAnimationFrameRef = useRef<number | null>(null);
@@ -6234,7 +6213,6 @@ export default function NoradVector() {
   
   useEffect(() => {
     draggingArmyRef.current = draggingArmy;
-    draggingArmyInfo = draggingArmy; // Sync to module-level variable
   }, [draggingArmy]);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
     const stored = Storage.getItem('conventional_state');
