@@ -34,6 +34,7 @@ interface CivilizationInfoPanelProps {
   doctrineShiftState?: DoctrineShiftState;
   resourceMarket?: ResourceMarket;
   depletionWarnings?: DepletionWarning[];
+  onOpenFullDiplomacy?: () => void;
 }
 
 type TabType = 'own-status' | 'ledger' | 'diplomacy' | 'research';
@@ -54,6 +55,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   doctrineShiftState,
   resourceMarket,
   depletionWarnings,
+  onOpenFullDiplomacy,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
   const [selectedNationId, setSelectedNationId] = useState<string | null>(null);
@@ -960,10 +962,20 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
   );
 
   const renderDiplomacy = () => (
-    <UnifiedDiplomacyPanel
-      player={player}
-      nations={nations}
-    />
+    <div className="space-y-4">
+      <UnifiedDiplomacyPanel
+        player={player}
+        nations={nations}
+      />
+      {onOpenFullDiplomacy && (
+        <button
+          onClick={onOpenFullDiplomacy}
+          className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+        >
+          Open Full Diplomacy Screen
+        </button>
+      )}
+    </div>
   );
 
   const renderResearch = () => {
