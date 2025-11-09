@@ -745,10 +745,6 @@ let flatRealisticDayTexture: HTMLImageElement | null = null;
 let flatRealisticNightTexture: HTMLImageElement | null = null;
 let flatRealisticDayTexturePromise: Promise<HTMLImageElement> | null = null;
 let flatRealisticNightTexturePromise: Promise<HTMLImageElement> | null = null;
-let isDayMode = true; // Track day/night mode
-let dayNightTransition = isDayMode ? 0 : 1; // 0-1 blend value for smooth transition
-let dayNightAutoCycle = false; // Auto-cycle enabled/disabled
-let dayNightCycleSpeed = 60000; // Full cycle duration in ms (60 seconds)
 
 function preloadFlatRealisticTexture(isDay: boolean = true) {
   const url = isDay ? FLAT_REALISTIC_DAY_TEXTURE_URL : FLAT_REALISTIC_NIGHT_TEXTURE_URL;
@@ -805,7 +801,21 @@ function preloadFlatRealisticTexture(isDay: boolean = true) {
 }
 
 function getFlatRealisticTextureState(blendOverride?: number) {
-  const blendSource = typeof blendOverride === 'number' ? blendOverride : dayNightTransition;
+  // Calculate blend based on current turn (4-round cycle: day -> night -> day)
+  // Rounds 1-2: Day to Night (blend 0 -> 1)
+  // Rounds 3-4: Night to Day (blend 1 -> 0)
+  const turnInCycle = ((S.turn - 1) % 4); // 0-3
+  let calculatedBlend: number;
+  
+  if (turnInCycle < 2) {
+    // First half of cycle: fade to night (0 -> 1)
+    calculatedBlend = turnInCycle / 2;
+  } else {
+    // Second half of cycle: fade to day (1 -> 0)
+    calculatedBlend = 1 - (turnInCycle - 2) / 2;
+  }
+  
+  const blendSource = typeof blendOverride === 'number' ? blendOverride : calculatedBlend;
   const blend = Math.min(Math.max(blendSource, 0), 1);
 
   return {

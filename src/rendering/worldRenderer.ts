@@ -196,6 +196,52 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
       ctx.save();
       ctx.imageSmoothingEnabled = true;
 
+      // Draw world borders using topojson after texture
+      const drawWorldBorders = () => {
+        if (!worldCountries || typeof worldCountries !== 'object') return;
+        
+        ctx.save();
+        ctx.strokeStyle = 'rgba(100, 100, 100, 0.4)'; // Semi-transparent gray borders
+        ctx.lineWidth = 0.8;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        const features = (worldCountries as any).features;
+        if (!Array.isArray(features)) return;
+        
+        for (const feature of features) {
+          if (!feature.geometry) continue;
+          
+          const drawGeometry = (geometry: any) => {
+            if (geometry.type === 'Polygon') {
+              for (const ring of geometry.coordinates) {
+                ctx.beginPath();
+                drawWorldPath(ring, ctx, projectLocal);
+                ctx.stroke();
+              }
+            } else if (geometry.type === 'MultiPolygon') {
+              for (const polygon of geometry.coordinates) {
+                for (const ring of polygon) {
+                  ctx.beginPath();
+                  drawWorldPath(ring, ctx, projectLocal);
+                  ctx.stroke();
+                }
+              }
+            }
+          };
+          
+          if (feature.geometry.type === 'GeometryCollection') {
+            for (const geom of feature.geometry.geometries) {
+              drawGeometry(geom);
+            }
+          } else {
+            drawGeometry(feature.geometry);
+          }
+        }
+        
+        ctx.restore();
+      };
+
       const drawTexture = (texture: HTMLImageElement, alpha = 1) => {
         if (alpha <= 0) return;
         const sourceWidth = texture.naturalWidth || texture.width || W;
@@ -228,6 +274,9 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
       } else if (!hasDayTexture && hasNightTexture) {
         // Already drew night texture as base; nothing else to overlay.
       }
+
+      // Draw country borders on top of the texture
+      drawWorldBorders();
 
       ctx.restore();
     }
