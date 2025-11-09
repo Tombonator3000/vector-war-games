@@ -645,6 +645,8 @@ let currentTheme: ThemeId = 'synthwave';
 let currentMapStyle: MapVisualStyle = 'realistic';
 let currentMapMode: MapMode = 'standard';
 let currentMapModeData: MapModeOverlayData | null = null;
+let isDayMode: boolean = true;
+let dayNightTransition: number = 0;
 let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
