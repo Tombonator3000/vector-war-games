@@ -95,8 +95,18 @@ export function applyIdeologyBonusesForProduction(nations: Nation[]): void {
     if (nation.population <= 0 || nation.eliminated) return;
     if (!nation.ideologyState) return;
 
-    // Reset bonuses that are applied fresh each turn
-    // (Don't reset if they're cumulative from other sources)
+    // Remove the prior ideology production multiplier before applying a new one
+    const ideologyState = nation.ideologyState;
+    const previousMultiplier = ideologyState.lastAppliedProductionMultiplier ?? 1;
+    const currentMultiplier = nation.productionMultiplier ?? 1;
+
+    if (previousMultiplier && previousMultiplier !== 1) {
+      nation.productionMultiplier = currentMultiplier / previousMultiplier;
+    } else if (nation.productionMultiplier === undefined) {
+      nation.productionMultiplier = currentMultiplier;
+    }
+
+    ideologyState.lastAppliedProductionMultiplier = 1;
 
     // Apply ideology bonuses
     applyIdeologyBonuses(nation);

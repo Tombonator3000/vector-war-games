@@ -2888,3 +2888,9 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-09T15:29:37Z - Restore default compositing for world borders
 - Set the canvas composite mode to `source-over` during world country rendering to ensure borders draw over flat-realistic effects (`src/rendering/worldRenderer.ts`).
 - Ran `npm run dev` to verify the Vite dev server starts for manual inspection of the flat-realistic scenario.
+### 2025-11-09T16:15:00Z - Stabilize ideology production multipliers
+- Added tracking for the last applied ideology production multiplier so bonuses no longer stack each turn (`src/types/ideology.ts`, `src/lib/ideologyManager.ts`, `src/lib/ideologyIntegration.ts`).
+- Updated production bonus application to divide out the previous ideology multiplier before reapplying and to persist the active multiplier on the ideology state (`src/lib/ideologyIntegration.ts`).
+- Created regression tests ensuring repeated production phases with a static ideology keep multipliers stable and that other modifiers persist across ideology changes (`src/lib/__tests__/ideologyIntegration.test.ts`).
+- Ran the targeted Vitest suite to verify the new coverage passes (`npm run test -- ideologyIntegration`).
+

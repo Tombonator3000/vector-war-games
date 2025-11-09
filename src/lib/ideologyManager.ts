@@ -35,6 +35,7 @@ export function initializeIdeologyState(
     ideologicalPressures: [],
     ideologicalExport: false,
     ideologicalDefense: 50,
+    lastAppliedProductionMultiplier: 1,
   };
 }
 
@@ -58,9 +59,10 @@ export function applyIdeologyBonuses(nation: Nation): void {
   const bonuses = IDEOLOGY_BONUSES[ideology];
 
   // Apply production multiplier
-  if (bonuses.productionMultiplier !== 1.0) {
-    nation.productionMultiplier = (nation.productionMultiplier || 1.0) * bonuses.productionMultiplier;
-  }
+  const baseMultiplier = nation.productionMultiplier ?? 1.0;
+  const ideologyMultiplier = bonuses.productionMultiplier ?? 1.0;
+  nation.productionMultiplier = baseMultiplier * ideologyMultiplier;
+  nation.ideologyState.lastAppliedProductionMultiplier = ideologyMultiplier;
 
   // Apply unit bonuses
   if (bonuses.unitAttackBonus !== 0) {
