@@ -666,6 +666,11 @@ let militaryTemplatesApi: ReturnType<typeof useMilitaryTemplates> | null = null;
 let supplySystemApi: ReturnType<typeof useSupplySystem> | null = null;
 let triggerNationsUpdate: (() => void) | null = null;
 
+// Territory selection state (module-level to avoid scope issues)
+let selectedTerritoryId: string | null = null;
+let hoveredTerritoryId: string | null = null;
+let dragTargetTerritoryId: string | null = null;
+
 type OverlayNotification = { text: string; expiresAt: number };
 type OverlayListener = (message: OverlayNotification | null) => void;
 let overlayListener: OverlayListener | null = null;
@@ -2956,6 +2961,10 @@ function drawTerritoriesWrapper() {
   if (!player) return;
 
   const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState();
+  
+  // Get dragging army info from refs since it's React state
+  const draggingSource = draggingArmyRef.current?.sourceId ?? null;
+  
   const context: TerritoryRenderContext = {
     ctx,
     worldCountries,
@@ -2976,7 +2985,7 @@ function drawTerritoriesWrapper() {
     playerId: player?.id ?? null,
     selectedTerritoryId,
     hoveredTerritoryId,
-    draggingTerritoryId: draggingArmy?.sourceId ?? null,
+    draggingTerritoryId: draggingSource,
     dragTargetTerritoryId,
   };
   renderTerritories(context);
@@ -6215,11 +6224,31 @@ export default function NoradVector() {
   const [isWarCouncilOpen, setIsWarCouncilOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const lastTargetPingIdRef = useRef<string | null>(null);
-  const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null);
-  const [hoveredTerritoryId, setHoveredTerritoryId] = useState<string | null>(null);
+  
+  // Territory state - synced with module-level variables
+  const [selectedTerritoryIdState, setSelectedTerritoryIdState] = useState<string | null>(null);
+  const [hoveredTerritoryIdState, setHoveredTerritoryIdState] = useState<string | null>(null);
   const [draggingArmy, setDraggingArmy] = useState<{ sourceId: string; armies: number } | null>(null);
+  const draggingArmyRef = useRef<{ sourceId: string; armies: number } | null>(null);
   const [draggingArmyPosition, setDraggingArmyPosition] = useState<{ x: number; y: number } | null>(null);
-  const [dragTargetTerritoryId, setDragTargetTerritoryId] = useState<string | null>(null);
+  const [dragTargetTerritoryIdState, setDragTargetTerritoryIdState] = useState<string | null>(null);
+  
+  // Sync module-level variables when state changes
+  useEffect(() => {
+    selectedTerritoryId = selectedTerritoryIdState;
+  }, [selectedTerritoryIdState]);
+  
+  useEffect(() => {
+    hoveredTerritoryId = hoveredTerritoryIdState;
+  }, [hoveredTerritoryIdState]);
+  
+  useEffect(() => {
+    dragTargetTerritoryId = dragTargetTerritoryIdState;
+  }, [dragTargetTerritoryIdState]);
+  
+  useEffect(() => {
+    draggingArmyRef.current = draggingArmy;
+  }, [draggingArmy]);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
     const stored = Storage.getItem('conventional_state');
     if (stored) {
@@ -10974,7 +11003,7 @@ export default function NoradVector() {
       const updateHover = (territoryId: string | null) => {
         if (lastHoverId !== territoryId) {
           lastHoverId = territoryId;
-          setHoveredTerritoryId(territoryId);
+          setHoveredTerritoryIdState(territoryId);
         }
       };
 
@@ -10985,7 +11014,7 @@ export default function NoradVector() {
         pointerMode = 'none';
         setDraggingArmy(null);
         setDraggingArmyPosition(null);
-        setDragTargetTerritoryId(null);
+        setDragTargetTerritoryIdState(null);
         updateHover(null);
       };
 
@@ -11064,11 +11093,11 @@ export default function NoradVector() {
                     title: 'Armies redeployed',
                     description: `Moved ${armiesToSend} armies from ${source.name} to ${target.name}.`,
                   });
-                  setSelectedTerritoryId(target.id);
+                  setSelectedTerritoryIdState(target.id);
                 } else if (result && !result.success) {
                   AudioSys.playSFX('error');
                   toast({ title: 'Cannot move armies', description: result.reason, variant: 'destructive' });
-                  setSelectedTerritoryId(source.id);
+                  setSelectedTerritoryIdState(source.id);
                 }
               } else {
                 const result = resolveBorderConflictRef.current?.(source.id, target.id, armiesToSend);
@@ -11078,17 +11107,17 @@ export default function NoradVector() {
                     title: 'Assault initiated',
                     description: `Launching ${armiesToSend} armies into ${target.name}.`,
                   });
-                  setSelectedTerritoryId(null);
+                  setSelectedTerritoryIdState(null);
                 } else if (result && !result.success) {
                   AudioSys.playSFX('error');
                   toast({ title: 'Cannot launch attack', description: result.reason, variant: 'destructive' });
-                  setSelectedTerritoryId(source.id);
+                  setSelectedTerritoryIdState(source.id);
                 }
               }
             } else if (dragTargetId) {
               AudioSys.playSFX('error');
               toast({ title: 'Invalid target', description: 'Armies can only move to adjacent territories.', variant: 'destructive' });
-              setSelectedTerritoryId(source.id);
+              setSelectedTerritoryIdState(source.id);
             }
           }
 
@@ -11140,10 +11169,10 @@ export default function NoradVector() {
               dragArmiesCount = Math.min(maxAvailable, desiredCount);
               dragTargetId = null;
               updateHover(null);
-              setSelectedTerritoryId(territory.id);
+              setSelectedTerritoryIdState(territory.id);
               setDraggingArmy({ sourceId: territory.id, armies: dragArmiesCount });
               setDraggingArmyPosition({ x: mx, y: my });
-              setDragTargetTerritoryId(null);
+              setDragTargetTerritoryIdState(null);
               activePointerId = e.pointerId;
               canvas?.setPointerCapture(e.pointerId);
               AudioSys.playSFX('click');
@@ -11153,7 +11182,7 @@ export default function NoradVector() {
         }
 
         pointerMode = 'map-pan';
-        setDragTargetTerritoryId(null);
+        setDragTargetTerritoryIdState(null);
         setDraggingArmy(null);
         setDraggingArmyPosition(null);
         isDragging = true;
@@ -11216,7 +11245,7 @@ export default function NoradVector() {
 
           if (dragTargetId !== nextTarget) {
             dragTargetId = nextTarget;
-            setDragTargetTerritoryId(nextTarget);
+            setDragTargetTerritoryIdState(nextTarget);
             updateHover(nextTarget);
           }
           return;
@@ -11456,11 +11485,11 @@ export default function NoradVector() {
                   const isAttack = territory.controllingNationId !== player.id;
                   // Actions will be handled through TerritoryMapPanel callbacks
                   if (!isAttack) {
-                    setDragTargetTerritoryId(territory.id);
+                    setDragTargetTerritoryIdState(territory.id);
                   }
                 }
               }
-              setSelectedTerritoryId(territory.id);
+              setSelectedTerritoryIdState(territory.id);
               AudioSys.playSFX('click');
               return; // Exit early - don't check nations
             }
