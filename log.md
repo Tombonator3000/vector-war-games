@@ -2912,3 +2912,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated the overlay mount effect dependencies and guard clauses so a delayed `GlobeScene` mount still triggers `requestAnimationFrame(gameLoop)` once the canvas becomes available (`src/pages/Index.tsx`).
 - Confirmed the game bootstrap effect now schedules the loop immediately after binding the canvas context to avoid missing the first frame when entering flat-realistic mode (`src/pages/Index.tsx`).
 
+### 2025-11-09T18:25:16Z - Document mapStyle desync root cause and fix
+- Identified that `currentMapStyle` at module scope in `src/pages/Index.tsx` had been hard-coded to `'realistic'`, overriding the React `mapStyle` state loaded from `localStorage` and forcing the satellite texture on game start.
+- Updated the bootstrap logic so the module-level `currentMapStyle` syncs with state (defaulting to `flat-realistic`), added logging to trace synchronisation, and forced a migration path that remaps legacy `'wireframe'` saves to `'flat'` while refreshing runtime refs.
+- Added a persistent module `draggingArmyInfo` placeholder to avoid `draggingArmyRef is not defined` exceptions during the same initialization window.
