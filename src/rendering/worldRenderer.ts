@@ -279,6 +279,9 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
       drawWorldBorders();
 
       ctx.restore();
+      
+      // Return early - we don't want to draw landmasses over the texture
+      return;
     }
   }
 
