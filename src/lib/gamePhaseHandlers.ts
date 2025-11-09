@@ -224,11 +224,12 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
 
   // Missile impacts and effects
   S.missiles.forEach((missile: any) => {
-    if (missile.t >= 1) {
+    if (missile.t >= 1 && !missile.hasExploded) {
       const { x, y, visible } = projectLocal(missile.toLon, missile.toLat);
       if (!visible) {
         return;
       }
+      missile.hasExploded = true;
       explode(x, y, missile.target, missile.yield);
     }
   });
