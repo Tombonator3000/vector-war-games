@@ -21,6 +21,12 @@ export type IdeologyType =
 export interface IdeologyState {
   /** Current ideology of the nation */
   currentIdeology: IdeologyType;
+  
+  /** Legacy: Direct ideology access (deprecated, use currentIdeology) */
+  ideology?: IdeologyType;
+  
+  /** Zealotry level for theocratic nations */
+  zealotry?: number;
 
   /** Stability of the current ideology (0-100) */
   ideologyStability: number;

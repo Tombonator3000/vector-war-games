@@ -63,11 +63,10 @@ export function calculateJustificationFactors(
 
   // Ideological conflict: opposing ideologies provide justification
   let ideologicalConflict = 0;
-  if (attacker.ideology && defender.ideology) {
-    const ideologyDiff = Math.abs(
-      (attacker.ideology.alignment || 0) - (defender.ideology.alignment || 0)
-    );
-    ideologicalConflict = Math.min(20, ideologyDiff * 2);
+  const attackerIdeology = attacker.ideologyState?.currentIdeology || attacker.ideology;
+  const defenderIdeology = defender.ideologyState?.currentIdeology || defender.ideology;
+  if (attackerIdeology && defenderIdeology && attackerIdeology !== defenderIdeology) {
+    ideologicalConflict = 15; // Base conflict between different ideologies
   }
 
   // Council authorization: strong justification if sanctioned
@@ -315,16 +314,12 @@ export function createHolyWarCB(
   defender: Nation,
   currentTurn: number
 ): CasusBelli {
-  let ideologyDiff = 0;
-  if (attacker.ideology && defender.ideology) {
-    ideologyDiff = Math.abs(
-      (attacker.ideology.alignment || 0) - (defender.ideology.alignment || 0)
-    );
-  }
-
-  const justification = Math.min(30, ideologyDiff * 3);
-  const publicSupport = attacker.ideology?.zealotry
-    ? 60 + attacker.ideology.zealotry * 20
+  const attackerIdeology = attacker.ideologyState?.currentIdeology || attacker.ideology;
+  const defenderIdeology = defender.ideologyState?.currentIdeology || defender.ideology;
+  
+  const justification = attackerIdeology && defenderIdeology && attackerIdeology !== defenderIdeology ? 30 : 10;
+  const publicSupport = attacker.ideologyState?.zealotry
+    ? 60 + attacker.ideologyState.zealotry * 0.2
     : 50;
 
   return createCasusBelli(
@@ -332,7 +327,7 @@ export function createHolyWarCB(
     attacker.id,
     defender.id,
     justification,
-    `Ideological conflict: ${attacker.ideology?.name || 'unknown'} vs ${defender.ideology?.name || 'unknown'}`,
+    `Ideological conflict: ${attackerIdeology || 'unknown'} vs ${defenderIdeology || 'unknown'}`,
     currentTurn,
     {
       publicSupport,
