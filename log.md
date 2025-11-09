@@ -2942,3 +2942,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Extended `src/types/militaryTemplates.ts` with `ArmyGroup`, `Frontline`, and `ArmyGroupSummary` structures plus cross-references from `DeployedUnit`.
 - Expanded `useMilitaryTemplates` to manage army group/frontline CRUD, unit assignments, and summary selectors for UI consumers.
 - Built `OrderOfBattlePanel` and mounted it alongside the strategic outliner in `src/pages/Index.tsx`, updating the outliner logic to surface per-group and frontline alerts.
+
+### 2025-11-09T22:58:13Z - Tune 2D/3D label fade thresholds
+- Updated `src/rendering/worldRenderer.ts` to derive style-aware label visibility thresholds and fade ranges so nation labels remain hidden until the camera zooms beyond the clarity point.
+- Noted that fully validating the fade in both globe and flat map views requires the interactive client; the current headless environment prevents visual confirmation beyond code review.
