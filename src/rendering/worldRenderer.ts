@@ -235,6 +235,7 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
 
   if (worldCountries) {
     ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
     ctx.lineWidth = isWireframe ? 1.5 : (isFlatRealistic ? 1.5 : 1);
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';

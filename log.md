@@ -2885,3 +2885,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added regression coverage for peace streak bonuses and transaction logging (`src/lib/__tests__/diplomaticCurrencyUtils.test.ts`).
 - Cleaned up unused imports tied to the old income helper signature (`src/pages/Index.tsx`).
 - Verified the behavior with the targeted Vitest suite (`npm run test -- diplomaticCurrencyUtils`).
+### 2025-11-09T15:29:37Z - Restore default compositing for world borders
+- Set the canvas composite mode to `source-over` during world country rendering to ensure borders draw over flat-realistic effects (`src/rendering/worldRenderer.ts`).
+- Ran `npm run dev` to verify the Vite dev server starts for manual inspection of the flat-realistic scenario.
