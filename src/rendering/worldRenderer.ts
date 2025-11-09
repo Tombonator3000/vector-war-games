@@ -1,3 +1,15 @@
+export type MapVisualStyle = 'flat-realistic';
+export type MapMode = 'standard' | 'diplomatic' | 'intel' | 'resources' | 'unrest';
+
+export const MAP_MODES: MapMode[] = ['standard', 'diplomatic', 'intel', 'resources', 'unrest'];
+
+export interface MapStyle {
+  visual: MapVisualStyle;
+  mode: MapMode;
+}
+
+export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'flat-realistic', mode: 'standard' };
+
 /**
  * World Map Rendering Functions
  *
@@ -147,8 +159,6 @@ function resolveOverlayFillColor(
  * Render the world map with various visual styles
  */
 export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): void {
-  console.log('[WORLD RENDERER] drawWorld called with style:', style);
-  
   const {
     ctx,
     worldCountries,
@@ -171,29 +181,18 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
 
   const palette = themePalette ?? THEME_SETTINGS[currentTheme];
 
-  const isWireframe = style === 'wireframe';
-  const isFlatRealistic = style === 'flat-realistic';
-  
-  console.log('[WORLD RENDERER] isWireframe:', isWireframe, 'isFlatRealistic:', isFlatRealistic, 'worldCountries exists:', !!worldCountries);
-
-  // In wireframe mode, don't draw on 2D overlay - the 3D wireframe handles visualization
-  if (isWireframe) {
-    console.log('[WORLD RENDERER] Early return due to wireframe mode');
-    return;
+  // Always use flat realistic textures
+  if (!flatRealisticDayTexture) {
+    void preloadFlatRealisticTexture(true);
+  }
+  if (!flatRealisticNightTexture) {
+    void preloadFlatRealisticTexture(false);
   }
 
-  if (isFlatRealistic) {
-    if (!flatRealisticDayTexture) {
-      void preloadFlatRealisticTexture(true);
-    }
-    if (!flatRealisticNightTexture) {
-      void preloadFlatRealisticTexture(false);
-    }
+  const hasDayTexture = Boolean(flatRealisticDayTexture);
+  const hasNightTexture = Boolean(flatRealisticNightTexture);
 
-    const hasDayTexture = Boolean(flatRealisticDayTexture);
-    const hasNightTexture = Boolean(flatRealisticNightTexture);
-
-    if (hasDayTexture || hasNightTexture) {
+  if (hasDayTexture || hasNightTexture) {
       const baseTexture = hasDayTexture ? flatRealisticDayTexture! : flatRealisticNightTexture!;
       const overlayTexture = hasDayTexture ? flatRealisticNightTexture : null;
       const blend = MathUtils.clamp(flatRealisticBlend, 0, 1);
@@ -236,15 +235,14 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
 
       ctx.restore();
     }
-  }
 
   if (worldCountries) {
     ctx.save();
-    ctx.lineWidth = isWireframe ? 1.5 : 1;
+    ctx.lineWidth = 1;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
-    const overlayFill = !isWireframe && isFlatRealistic ? resolveOverlayFillColor(mapMode, modeData ?? null) : null;
+    const overlayFill = resolveOverlayFillColor(mapMode, modeData ?? null);
     const baseFill = palette.mapFill;
 
     (worldCountries as { features: { geometry: { type: string; coordinates: number[][][] } }[] }).features.forEach((feature, index: number) => {
@@ -256,15 +254,10 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
       } else if (feature.geometry.type === 'MultiPolygon') {
         coords.forEach((poly: number[][]) => drawWorldPath(poly[0], ctx, projectLocal));
       }
-      if (isWireframe) {
-        ctx.strokeStyle = 'rgba(80,240,255,0.75)';
-      } else if (isFlatRealistic) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-      } else {
-        ctx.strokeStyle = palette.mapOutline;
-      }
+      
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
 
-      if (!isWireframe && baseFill) {
+      if (baseFill) {
         ctx.fillStyle = overlayFill ?? baseFill;
         ctx.fill('evenodd');
       }
@@ -275,16 +268,11 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     ctx.restore();
   }
 
-  const shouldDrawGrid = style !== 'realistic';
-  if (shouldDrawGrid) {
+  // Always draw grid for flat map
+  {
     ctx.save();
-    if (isWireframe) {
-      ctx.strokeStyle = 'rgba(80,240,255,0.35)';
-      ctx.lineWidth = 0.7;
-    } else {
-      ctx.strokeStyle = palette.grid;
-      ctx.lineWidth = 0.5;
-    }
+    ctx.strokeStyle = palette.grid;
+    ctx.lineWidth = 0.5;
 
     for (let lon = -180; lon <= 180; lon += 30) {
       ctx.beginPath();
@@ -331,11 +319,10 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     ctx.restore();
   }
 
-  if (style !== 'wireframe') {
-    const scanY = (Date.now() / 30) % H;
-    ctx.fillStyle = palette.radar;
-    ctx.fillRect(0, scanY, W, 2);
-  }
+  // Radar scan line
+  const scanY = (Date.now() / 30) % H;
+  ctx.fillStyle = palette.radar;
+  ctx.fillRect(0, scanY, W, 2);
 }
 
 /**
