@@ -21,6 +21,44 @@ export type UnitComponent =
 
 export type TemplateSize = 'battalion' | 'regiment' | 'brigade' | 'division' | 'corps';
 
+export type ArmyGroupPosture = 'offensive' | 'defensive' | 'reserve' | 'support';
+
+export type ArmyGroupPriority = 'critical' | 'high' | 'standard' | 'low';
+
+export type FrontlineStatus = 'stable' | 'pressured' | 'breakthrough' | 'stalled';
+
+export type FrontlineSupplyState = 'secure' | 'strained' | 'critical';
+
+export interface ArmyGroup {
+  id: string;
+  nationId: string;
+  name: string;
+  theater: string;
+  posture: ArmyGroupPosture;
+  priority: ArmyGroupPriority;
+  readiness: number;
+  supplyLevel: number;
+  frontlineIds: string[];
+  commander?: string;
+  headquarters?: string;
+  notes?: string;
+}
+
+export interface Frontline {
+  id: string;
+  nationId: string;
+  armyGroupId: string | null;
+  name: string;
+  theater: string;
+  axis: string;
+  objective?: string;
+  status: FrontlineStatus;
+  supplyState: FrontlineSupplyState;
+  readiness: number;
+  contested: boolean;
+  lastUpdatedTurn?: number;
+}
+
 export interface UnitComponentData {
   type: UnitComponent;
   name: string;
@@ -118,6 +156,8 @@ export interface DeployedUnit {
 
   // Location
   territoryId: string | null;
+  armyGroupId?: string | null;
+  frontlineId?: string | null;
 
   // Status
   health: number; // 0-100%
@@ -137,10 +177,20 @@ export interface DeployedUnit {
   veterancy: 'green' | 'regular' | 'veteran' | 'elite';
 }
 
+export interface ArmyGroupSummary {
+  group: ArmyGroup;
+  frontlines: Frontline[];
+  units: DeployedUnit[];
+  readiness: number;
+  supplyLevel: number;
+}
+
 export interface TemplateDesignerState {
   nationId: string;
   templates: MilitaryTemplate[];
   deployedUnits: DeployedUnit[];
+  armyGroups: ArmyGroup[];
+  frontlines: Frontline[];
 
   // Designer state
   isDesignerOpen: boolean;

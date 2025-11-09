@@ -2937,3 +2937,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - [21:38 UTC] Extended `useConventionalWarfare`, `useMilitaryTemplates`, and `useSupplySystem` to share template stats and supply modifiers with combat resolution.
 - [21:45 UTC] Added Vitest coverage demonstrating reduced combat power for HoI-trained units under critical supply.
 - [21:47 UTC] Ran `npm run test -- useConventionalWarfare` to verify updated conventional warfare behaviour.
+
+### 2025-11-09T22:58:00Z - Introduce order of battle grouping
+- Extended `src/types/militaryTemplates.ts` with `ArmyGroup`, `Frontline`, and `ArmyGroupSummary` structures plus cross-references from `DeployedUnit`.
+- Expanded `useMilitaryTemplates` to manage army group/frontline CRUD, unit assignments, and summary selectors for UI consumers.
+- Built `OrderOfBattlePanel` and mounted it alongside the strategic outliner in `src/pages/Index.tsx`, updating the outliner logic to surface per-group and frontline alerts.
