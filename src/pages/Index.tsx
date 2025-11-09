@@ -341,6 +341,7 @@ const getLeaderInitials = (name?: string): string => {
 // Game State Types - now imported from @/state module (Phase 6 refactoring)
 let governanceApiRef: UseGovernanceReturn | null = null;
 let enqueueAIProposalRef: ((proposal: DiplomaticProposal) => void) | null = null;
+let territoryListRef: { current: TerritoryState[] } = { current: [] };
 
 const PROPOSAL_MAX_AGE = 10;
 
@@ -6247,7 +6248,7 @@ export default function NoradVector() {
     return map;
   }, [territoryList]);
 
-  const territoryListRef = useRef<TerritoryState[]>(territoryList);
+  // Update module-level territoryListRef
   useEffect(() => {
     territoryListRef.current = territoryList;
   }, [territoryList]);
