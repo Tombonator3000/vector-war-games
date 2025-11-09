@@ -75,7 +75,7 @@ import { useVictoryTracking } from '@/hooks/useVictoryTracking';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
 import { LockedFeatureWrapper } from '@/components/LockedFeatureBadge';
-import { FEATURE_UNLOCK_INFO } from '@/types/era';
+import { FEATURE_UNLOCK_INFO, type EraDefinition, type GameEra } from '@/types/era';
 import type { ActionConsequences } from '@/types/consequences';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { applyRemoteGameStateSync } from '@/lib/coopSync';
@@ -5792,6 +5792,46 @@ export default function NoradVector() {
     agenda: any;
   } | null>(null);
 
+  const blockingModalActive = useMemo(
+    () =>
+      Boolean(
+        activeFlashpoint ||
+          currentFlashpointOutcome ||
+          phase2PanelOpen ||
+          councilSchismModalOpen ||
+          showEnhancedDiplomacy ||
+          leaderContactModalOpen ||
+          leadersScreenOpen ||
+          isIntelOperationsOpen ||
+          isCulturePanelOpen ||
+          isBioWarfareOpen ||
+          isWarCouncilOpen ||
+          isSpyPanelOpen ||
+          showGovernanceDetails ||
+          showPolicyPanel ||
+          isStrikePlannerOpen ||
+          civInfoPanelOpen
+      ),
+    [
+      activeFlashpoint,
+      currentFlashpointOutcome,
+      phase2PanelOpen,
+      councilSchismModalOpen,
+      showEnhancedDiplomacy,
+      leaderContactModalOpen,
+      leadersScreenOpen,
+      isIntelOperationsOpen,
+      isCulturePanelOpen,
+      isBioWarfareOpen,
+      isWarCouncilOpen,
+      isSpyPanelOpen,
+      showGovernanceDetails,
+      showPolicyPanel,
+      isStrikePlannerOpen,
+      civInfoPanelOpen,
+    ],
+  );
+
   // AI-Initiated Negotiations state (Phase 4)
   const [aiInitiatedNegotiations, setAiInitiatedNegotiations] = useState<any[]>([]);
   const [activeAIProposal, setActiveAIProposal] = useState<any | null>(null);
@@ -6043,6 +6083,7 @@ export default function NoradVector() {
 
   // Era system state
   const [showEraTransition, setShowEraTransition] = useState(false);
+  const [eraTransitionQueued, setEraTransitionQueued] = useState(false);
   const [eraTransitionData, setEraTransitionData] = useState<{
     era: 'early' | 'mid' | 'late';
     name: string;
@@ -7104,17 +7145,15 @@ export default function NoradVector() {
   });
 
   // Era system for progressive complexity
-  const gameEra = useGameEra({
-    currentTurn: S.turn,
-    scenario: S.scenario,
-    onEraChange: (newEra, oldEra, definitions) => {
+  const handleEraChange = useCallback(
+    (newEra: GameEra, oldEra: GameEra, definitions: Record<GameEra, EraDefinition>) => {
       const eraDef = definitions[newEra];
       const previousEraFeatures = definitions[oldEra]?.unlockedFeatures ?? [];
       const newFeatures = eraDef.unlockedFeatures.filter(
         (feature) => !previousEraFeatures.includes(feature)
       );
 
-      setEraTransitionData({
+      const transitionPayload = {
         era: newEra,
         name: eraDef.name,
         description: eraDef.description,
@@ -7125,8 +7164,17 @@ export default function NoradVector() {
             unlockTurn: eraDef.startTurn,
           };
         }),
-      });
-      setShowEraTransition(true);
+      };
+
+      setEraTransitionData(transitionPayload);
+
+      if (blockingModalActive) {
+        setEraTransitionQueued(true);
+        setShowEraTransition(false);
+      } else {
+        setShowEraTransition(true);
+        setEraTransitionQueued(false);
+      }
 
       addNewsItem(
         'crisis',
@@ -7134,7 +7182,39 @@ export default function NoradVector() {
         'urgent'
       );
     },
+    [addNewsItem, blockingModalActive],
+  );
+
+  const gameEra = useGameEra({
+    currentTurn: S.turn,
+    scenario: S.scenario,
+    onEraChange: handleEraChange,
   });
+
+  useEffect(() => {
+    if (!eraTransitionData) {
+      return;
+    }
+
+    if (blockingModalActive) {
+      if (!eraTransitionQueued) {
+        setEraTransitionQueued(true);
+      }
+
+      if (showEraTransition) {
+        setShowEraTransition(false);
+      }
+      return;
+    }
+
+    if (!showEraTransition) {
+      setShowEraTransition(true);
+    }
+
+    if (eraTransitionQueued) {
+      setEraTransitionQueued(false);
+    }
+  }, [blockingModalActive, eraTransitionData, eraTransitionQueued, showEraTransition]);
 
   // Victory tracking system
   const victoryAnalysis = useVictoryTracking({
@@ -13205,7 +13285,11 @@ export default function NoradVector() {
           eraName={eraTransitionData.name}
           eraDescription={eraTransitionData.description}
           unlockedFeatures={eraTransitionData.features}
-          onDismiss={() => setShowEraTransition(false)}
+          onDismiss={() => {
+            setShowEraTransition(false);
+            setEraTransitionData(null);
+            setEraTransitionQueued(false);
+          }}
         />
       )}
 

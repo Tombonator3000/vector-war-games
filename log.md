@@ -2912,6 +2912,11 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated the overlay mount effect dependencies and guard clauses so a delayed `GlobeScene` mount still triggers `requestAnimationFrame(gameLoop)` once the canvas becomes available (`src/pages/Index.tsx`).
 - Confirmed the game bootstrap effect now schedules the loop immediately after binding the canvas context to avoid missing the first frame when entering flat-realistic mode (`src/pages/Index.tsx`).
 
+### 2025-11-10T06:05:00Z - Defer era overlays until blocking modals close
+- Added a queued era transition state and centralized modal blocking detection in `src/pages/Index.tsx` so era unlock overlays wait for flashpoints, doctrine panels, diplomacy dialogs, and similar sheets to dismiss before appearing.
+- Updated the era change handler to cache payloads when blockers are active, introduced an effect to replay queued overlays once the UI clears, and reset the queue on dismiss to avoid immediate re-triggering (`src/pages/Index.tsx`).
+- Ensured the era transition overlay dismissal clears queued data to keep subsequent transitions responsive and prevent stale payloads from re-opening unexpectedly (`src/pages/Index.tsx`).
+
 ### 2025-11-09T18:25:16Z - Document mapStyle desync root cause and fix
 - Identified that `currentMapStyle` at module scope in `src/pages/Index.tsx` had been hard-coded to `'realistic'`, overriding the React `mapStyle` state loaded from `localStorage` and forcing the satellite texture on game start.
 - Updated the bootstrap logic so the module-level `currentMapStyle` syncs with state (defaulting to `flat-realistic`), added logging to trace synchronisation, and forced a migration path that remaps legacy `'wireframe'` saves to `'flat'` while refreshing runtime refs.
