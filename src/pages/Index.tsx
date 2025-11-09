@@ -4589,14 +4589,11 @@ function aiTurn(n: Nation) {
   // UNIFIED DIPLOMACY: AI proactive diplomacy actions
   const diplomacyBias = 0.18 + Math.max(0, defenseMod * 0.5) + (n.ai === 'defensive' ? 0.1 : 0) + (n.ai === 'balanced' ? 0.05 : 0);
   if (Math.random() < diplomacyBias) {
-    console.log(`[AI Diplomacy] ${n.name} considering diplomatic actions...`);
-    
     // Try unified diplomacy first
     const potentialTargets = nations.filter(t => t !== n && !t.eliminated);
     for (const target of potentialTargets) {
       const { action, reason } = considerDiplomaticAction(n, target, nations, S.turn);
       if (action) {
-        console.log(`[AI Diplomacy] ${n.name} wants to ${action} with ${target.name}: ${reason}`);
         
         // For now, just create a proposal to player if target is player
         if (target.isPlayer && player) {
@@ -9770,16 +9767,12 @@ export default function NoradVector() {
 
     // Show enhanced diplomacy modal with Phase 3 features
     setShowEnhancedDiplomacy(true);
-    return;
+  }, [requestApproval]);
 
-    // Legacy diplomacy actions (kept for reference, unreachable)
-    const treatyWith = (nation: Nation) => player.treaties?.[nation.id];
+  // Legacy diplomacy code removed (was ~400 lines of unreachable dead code after return statement)
 
-    const diplomacyActions: OperationAction[] = [
-      {
-        id: 'truce',
-        title: 'DECLARE TRUCE',
-        subtitle: 'Mutual peace for 2 turns',
+  useEffect(() => {
+    handleAttackRef.current = handleAttack;
         requiresTarget: true,
         disabled: false,
         targetFilter: nation => !(treatyWith(nation)?.truceTurns > 0),
