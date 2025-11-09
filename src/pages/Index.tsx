@@ -366,16 +366,10 @@ interface PendingLaunchState {
 }
 
 const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
-  { value: 'realistic', label: 'Realistic', description: 'Satellite imagery with terrain overlays.' },
   {
     value: 'wireframe',
     label: 'Vector',
     description: 'Neon vector grid with luminous borders and elevation lines.',
-  },
-  {
-    value: 'flat-realistic',
-    label: 'Flat Realistic',
-    description: 'High-resolution satellite texture rendered on the flat map.',
   },
 ];
 
@@ -635,7 +629,7 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 
 let currentTheme: ThemeId = 'synthwave';
 // NOTE: currentMapStyle is initialized from React state in useEffect - DO NOT hardcode here
-let currentMapStyle: MapVisualStyle = 'flat-realistic';  // Default, will be overridden by React state
+let currentMapStyle: MapVisualStyle = 'wireframe';  // Default wireframe only
 let currentMapMode: MapMode = 'standard';
 let currentMapModeData: MapModeOverlayData | null = null;
 let selectedTargetRefId: string | null = null;
@@ -3045,7 +3039,7 @@ function drawSatellites(nowMs: number) {
 
   const activeOrbits: SatelliteOrbit[] = [];
   const player = PlayerManager.get();
-  const isFlatTexture = currentMapStyle === 'flat-realistic';
+  // Wireframe only - no flat texture check needed
 
   orbits.forEach(orbit => {
     const targetNation = nations.find(nation => nation.id === orbit.targetId);
@@ -3558,10 +3552,9 @@ function drawParticles() {
 }
 
 function drawFalloutMarks(deltaMs: number) {
-  if (!ctx || currentMapStyle !== 'flat-realistic') {
-    return;
-  }
-
+  // Fallout marks removed with 2D maps - wireframe only
+  if (!ctx) return;
+  
   if (!Array.isArray(S.falloutMarks)) {
     S.falloutMarks = [];
     return;
@@ -6057,14 +6050,13 @@ export default function NoradVector() {
     currentMapStyle = mapStyle.visual;
     console.log('[MAP SYNC] currentMapStyle synced to:', currentMapStyle);
     
-    if (mapStyle.visual === 'flat-realistic' || mapStyle.visual === 'wireframe') {
-      const expectedX = (W - W * cam.zoom) / 2;
-      const expectedY = (H - H * cam.zoom) / 2;
-      const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;
-      if (needsRecentering) {
-        cam.x = expectedX;
-        cam.y = expectedY;
-      }
+    // Wireframe only - always center
+    const expectedX = (W - W * cam.zoom) / 2;
+    const expectedY = (H - H * cam.zoom) / 2;
+    const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;
+    if (needsRecentering) {
+      cam.x = expectedX;
+      cam.y = expectedY;
     }
   }, [cam.x, cam.y, cam.zoom, mapStyle.visual]);
   useEffect(() => {
@@ -6072,7 +6064,7 @@ export default function NoradVector() {
     console.log('[MAP SYNC] currentMapMode synced to:', currentMapMode);
   }, [mapStyle.mode]);
   useEffect(() => {
-    void Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)]);
+    // Preload removed - wireframe only, no textures needed
   }, []);
   useEffect(() => {
     void loadWorld().then(() => {
@@ -6086,9 +6078,7 @@ export default function NoradVector() {
     });
   }, []);
   useEffect(() => {
-    if (mapStyle.visual === 'flat-realistic') {
-      void Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)]);
-    }
+    // Wireframe only - no texture preloading needed
   }, [mapStyle.visual]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
   const initialMusicEnabled = storedMusicEnabled === 'true' ? true : storedMusicEnabled === 'false' ? false : AudioSys.musicEnabled;
@@ -6176,50 +6166,13 @@ export default function NoradVector() {
   }, [animateDayNightBlendTo, dayNightAutoCycleEnabled, isFlatMapDay, mapStyle.visual]);
 
   useEffect(() => {
-    if (!dayNightAutoCycleEnabled || mapStyle.visual !== 'flat-realistic') {
-      return;
-    }
+    // Day/night manual toggle removed with 2D maps
+  }, [dayNightAutoCycleEnabled, mapStyle.visual]);
 
-    stopDayNightBlendAnimation();
-    let animationId: number | null = null;
-    let lastTimestamp: number | null = null;
-
-    const syncModeWithBlend = () => {
-      const nextIsDay = dayNightTransition < 0.5;
-      if (lastFlatMapModeRef.current !== nextIsDay) {
-        lastFlatMapModeRef.current = nextIsDay;
-        isDayMode = nextIsDay;
-        setIsFlatMapDay(nextIsDay);
-      }
-    };
-
-    dayNightTransition = flatRealisticBlendRef.current;
-    syncModeWithBlend();
-
-    const animate = (timestamp: number) => {
-      if (lastTimestamp === null) {
-        lastTimestamp = timestamp;
-      }
-      const delta = timestamp - lastTimestamp;
-      lastTimestamp = timestamp;
-
-      const nextBlend = (dayNightTransition + delta / dayNightCycleSpeed) % 1;
-      dayNightTransition = nextBlend;
-      flatRealisticBlendRef.current = nextBlend;
-      syncModeWithBlend();
-
-      animationId = requestAnimationFrame(animate);
-    };
-
-    animationId = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-      lastTimestamp = null;
-    };
-  }, [dayNightAutoCycleEnabled, dayNightCycleSpeed, flatRealisticBlendRef, mapStyle.visual, setIsFlatMapDay, stopDayNightBlendAnimation]);
+  useEffect(() => {
+    // Day/night auto-cycle removed with 2D maps
+  }, [dayNightAutoCycleEnabled, mapStyle.visual]);
+  
   const musicTracks = useMemo(() => AudioSys.getTracks(), []);
   const [pandemicIntegrationEnabled, setPandemicIntegrationEnabled] = useState(() => {
     const stored = Storage.getItem('option_pandemic_integration');
@@ -11039,8 +10992,8 @@ export default function NoradVector() {
         updateHover(null);
       };
 
-      const isBoundedFlatProjection = () => currentMapStyle === 'flat-realistic';
-      const minZoom = isBoundedFlatProjection() ? 1 : 0.5;
+      const isBoundedFlatProjection = () => false; // Wireframe only - no bounded projection
+      const minZoom = 0.5;
 
       const clampLatitude = () => {
         const maxLat = 85;
@@ -11694,10 +11647,7 @@ export default function NoradVector() {
             break;
           case 'n':
           case 'N':
-            if (mapStyle.visual === 'flat-realistic') {
-              e.preventDefault();
-              handleDayNightToggle();
-            }
+            // Day/night toggle removed with 2D maps
             break;
           case 'Enter': /* end turn */ break;
           case ' ':

@@ -1,7 +1,7 @@
-export type MapVisualStyle = 'flat-realistic';
+export type MapVisualStyle = 'wireframe';
 export type MapMode = 'standard' | 'diplomatic' | 'intel' | 'resources' | 'unrest';
 
-export const MAP_VISUAL_STYLES: MapVisualStyle[] = ['flat-realistic'];
+export const MAP_VISUAL_STYLES: MapVisualStyle[] = ['wireframe'];
 export const MAP_MODES: MapMode[] = ['standard', 'diplomatic', 'intel', 'resources', 'unrest'];
 
 export interface MapStyle {
@@ -9,7 +9,7 @@ export interface MapStyle {
   mode: MapMode;
 }
 
-export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'flat-realistic', mode: 'standard' };
+export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'wireframe', mode: 'standard' };
 
 /**
  * World Map Rendering Functions

@@ -60,9 +60,9 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 
 const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
   {
-    value: 'flat-realistic',
-    label: 'Flat Realistic',
-    description: 'High-resolution satellite texture rendered on the flat map.',
+    value: 'wireframe',
+    label: 'Wireframe',
+    description: 'Minimal geometric visualization with territory outlines.',
   },
 ];
 
