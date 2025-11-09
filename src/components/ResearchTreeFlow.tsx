@@ -22,6 +22,8 @@ import {
   Satellite,
   Eye,
   FlaskConical,
+  Shield,
+  Target,
 } from 'lucide-react';
 import type { Nation } from '@/types/game';
 import type { ResearchNode, ResearchCategory } from '@/lib/researchData';
@@ -135,6 +137,18 @@ const DISPLAY_CATEGORY_CONFIG: Record<DisplayCategory, {
     color: CATEGORY_COLORS.intelligence,
     label: 'Intelligence Ops',
     description: 'Expand espionage networks to infiltrate, destabilize, and reveal adversaries.',
+  },
+  defense: {
+    icon: Shield,
+    color: '#10b981',
+    label: 'Defense Systems',
+    description: 'Build comprehensive defense networks to protect against incoming threats.',
+  },
+  delivery: {
+    icon: Target,
+    color: '#f97316',
+    label: 'Delivery Systems',
+    description: 'Develop advanced delivery mechanisms for strategic weapons deployment.',
   },
   biolab: {
     icon: FlaskConical,

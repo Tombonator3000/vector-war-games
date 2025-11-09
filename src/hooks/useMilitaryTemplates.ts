@@ -34,9 +34,9 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
 
     nations.forEach((nation) => {
       // Initialize with default templates
-      const defaultTemplates = DEFAULT_TEMPLATES.map((template) => ({
+      const defaultTemplates = DEFAULT_TEMPLATES.map((template, index) => ({
         ...template,
-        id: `${nation.id}-${template.id}`,
+        id: `${nation.id}-template-${index}`,
         nationId: nation.id,
         createdTurn: currentTurn,
         unitsDeployed: 0,

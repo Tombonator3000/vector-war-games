@@ -77,6 +77,14 @@ export interface EngagementLogEntry {
   instabilityDelta: Record<string, number>;
   productionDelta: Record<string, number>;
   diceRolls?: DiceRollResult[]; // Track all dice rolls in battle
+  // Nation IDs involved in the engagement
+  attackerNationId?: string;
+  defenderNationId?: string;
+  // Casualty counts for display
+  attackerCasualties?: number;
+  defenderCasualties?: number;
+  // Number of combat rounds
+  rounds?: number;
 }
 
 export interface NationConventionalProfile {
@@ -943,7 +951,7 @@ export function useConventionalWarfare({
         defenderId,
         TERRITORIAL_ATTACK_PENALTY,
         'Conventional warfare territorial assault',
-        options.currentTurn
+        currentTurn
       );
 
       // Allies of defender get upset
@@ -954,7 +962,7 @@ export function useConventionalWarfare({
             allyId,
             -15,
             `Failure to honour alliance with ${defenderNation?.name ?? 'ally'}`,
-            options.currentTurn
+            currentTurn
           );
         }
       });
