@@ -2928,3 +2928,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-09T19:32:12Z - Restore HUD layering above globe overlay
 - Raised the `.hud-layers` z-index to 30 in `src/index.css` so the top bar, news ticker, and command buttons render above `.globe-scene__overlay`.
 - Reloaded the running dev build and captured updated Playwright screenshots confirming all controls display correctly and remain clickable.
+### 2025-11-09T21:24:28Z - Reposition AI phase indicator overlay
+- Updated `src/components/PhaseTransitionOverlay.tsx` so the AI status card anchors to the top-right corner without rendering a fullscreen backdrop.
+- Preserved the `pointer-events-none` container behavior to keep strategic map interactions responsive while status updates remain visible.
+- Launched the dev server to exercise the overlay; headless rendering keeps the globe blank, but the indicator no longer occupies the full viewport.
