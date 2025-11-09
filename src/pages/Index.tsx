@@ -40,18 +40,14 @@ import type { BioLabTier } from '@/types/bioLab';
 import type { EvolutionNodeId } from '@/types/biowarfare';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import { FlashpointOutcomeModal } from '@/components/FlashpointOutcomeModal';
-import GlobeScene, {
-  type GlobeSceneHandle,
-  PickerFn,
-  ProjectorFn,
+import {
   type MapStyle,
   type MapVisualStyle,
   type MapMode,
   type MapModeOverlayData,
   DEFAULT_MAP_STYLE,
-  MAP_VISUAL_STYLES,
   MAP_MODES,
-} from '@/components/GlobeScene';
+} from '@/rendering/worldRenderer';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
 import {
   useGovernance,
@@ -5588,7 +5584,7 @@ function consumeAction() {
 export default function NoradVector() {
   const navigate = useNavigate();
   const interfaceRef = useRef<HTMLDivElement>(null);
-  const globeSceneRef = useRef<GlobeSceneHandle | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [gamePhase, setGamePhase] = useState('intro');
   const { rng } = useRNG();
   const [isGameStarted, setIsGameStarted] = useState(false);
@@ -6355,7 +6351,7 @@ export default function NoradVector() {
       return;
     }
 
-    const canvasElement = globeSceneRef.current?.overlayCanvas ?? null;
+    const canvasElement = canvasRef.current;
     if (!canvasElement) {
       return;
     }
@@ -6493,12 +6489,7 @@ export default function NoradVector() {
     }
   }, [pandemicIntegrationEnabled, bioWarfareEnabled]);
   const handleAttackRef = useRef<() => void>(() => {});
-  const handleProjectorReady = useCallback((projector: ProjectorFn) => {
-    globeProjector = projector;
-  }, []);
-  const handlePickerReady = useCallback((picker: PickerFn) => {
-    globePicker = picker;
-  }, []);
+  
   const { ensureAction, registerStateListener, publishState, canExecute } = useMultiplayer();
 
   const requestApproval = useCallback(
@@ -7620,7 +7611,7 @@ export default function NoradVector() {
   }, []);
 
   const resizeCanvas = useCallback(() => {
-    const element = globeSceneRef.current?.overlayCanvas ?? null;
+    const element = canvasRef.current;
     if (!element) return;
 
     const parent = element.parentElement;
@@ -7673,11 +7664,11 @@ export default function NoradVector() {
   }, [screenResolution]);
 
   useEffect(() => {
-    const element = globeSceneRef.current?.overlayCanvas ?? null;
+    const element = canvasRef.current;
     if (!element) {
       // Retry after a short delay if canvas not ready yet
       const retryTimer = setTimeout(() => {
-        const retryElement = globeSceneRef.current?.overlayCanvas;
+        const retryElement = canvasRef.current;
         if (retryElement) {
           canvas = retryElement;
           ctx = retryElement.getContext('2d', { alpha: true })!;
@@ -7838,16 +7829,13 @@ export default function NoradVector() {
       document.body.classList.add(`theme-${theme}`);
     }
     Storage.setItem('theme', theme);
-    const overlayCanvas = globeSceneRef.current?.overlayCanvas;
+    const overlayCanvas = canvasRef.current;
     if (overlayCanvas) {
       overlayCanvas.style.imageRendering = theme === 'retro80s' || theme === 'wargames' ? 'pixelated' : 'auto';
     }
     
-    // Auto-switch to wireframe map when wargames theme is selected
-    if (theme === 'wargames' && mapStyle.visual !== 'wireframe') {
-      handleMapStyleChange('wireframe');
-    }
-  }, [theme, mapStyle.visual, handleMapStyleChange]);
+    // Auto-switch to flat-realistic is no longer needed - always use it
+  }, [theme]);
 
   useEffect(() => {
     uiUpdateCallback = () => setUiTick(prev => prev + 1);
@@ -10943,7 +10931,7 @@ export default function NoradVector() {
       return;
     }
 
-    const overlayCanvas = globeSceneRef.current?.overlayCanvas;
+    const overlayCanvas = canvasRef.current;
     if (overlayCanvas) {
       canvas = overlayCanvas;
       ctx = canvas.getContext('2d')!;
@@ -12120,7 +12108,7 @@ export default function NoradVector() {
     </div>
   );
 
-  const overlayCanvas = globeSceneRef.current?.overlayCanvas ?? null;
+  const overlayCanvas = canvasRef.current;
 
   return (
     <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity}`}>
@@ -12128,20 +12116,17 @@ export default function NoradVector() {
       <div className="command-interface__scanlines" aria-hidden="true" />
 
       <div className="map-shell">
-        <GlobeScene
-          ref={globeSceneRef}
-          cam={cam}
-          nations={nations}
-          worldCountries={worldCountries}
-          territories={territoryPolygons}
-          units={globeUnits}
-          onProjectorReady={handleProjectorReady}
-          onPickerReady={handlePickerReady}
-          mapStyle={mapStyle}
-          modeData={mapModeData}
-          showTerritories={showTerritories}
-          showUnits={showUnits}
-          flatMapVariant={isFlatMapDay}
+        <canvas 
+          ref={canvasRef}
+          className="map-canvas"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            imageRendering: theme === 'retro80s' || theme === 'wargames' ? 'pixelated' : 'auto'
+          }}
         />
 
         {draggingArmy && draggingArmyPosition && (
