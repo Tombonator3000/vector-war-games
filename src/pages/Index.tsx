@@ -5654,9 +5654,9 @@ function consumeAction() {
   S.actionsRemaining--;
   updateDisplay();
 
+  // Player must manually click "End Turn" - no automatic turn end
   if (S.actionsRemaining <= 0) {
-    emitOverlayMessage('NEXT ROUND', 1000);
-    setTimeout(endTurn, 500);
+    emitOverlayMessage('NO ACTIONS REMAINING - Click End Turn', 2000);
   }
 }
 
@@ -11564,20 +11564,22 @@ export default function NoradVector() {
         const my = e.clientY - rect.top;
         
         if (zoomedIn) {
-          cam.targetZoom = 1;
-          cam.zoom = 1;
+          cam.targetZoom = minZoom;
+          cam.zoom = minZoom;
           cam.x = (W - W * cam.zoom) / 2;
           cam.y = (H - H * cam.zoom) / 2;
+          clampPanBounds();
           zoomedIn = false;
           return;
         }
         
         const [lon, lat] = toLonLatLocal(mx, my);
-        const newZoom = Math.min(3, cam.targetZoom * 1.5);
+        const newZoom = Math.max(minZoom, Math.min(3, cam.targetZoom * 1.5));
         cam.targetZoom = newZoom;
         cam.zoom = newZoom;
         cam.x = W / 2 - ((lon + 180) / 360) * W * newZoom;
         cam.y = H / 2 - ((90 - lat) / 180) * H * newZoom;
+        clampPanBounds();
         zoomedIn = true;
         
         let nearest = null;
