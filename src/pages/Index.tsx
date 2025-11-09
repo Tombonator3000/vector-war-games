@@ -5817,7 +5817,6 @@ export default function NoradVector() {
     const startBlend = flatRealisticBlendRef.current;
     if (Math.abs(startBlend - clampedTarget) < 0.001) {
       stopDayNightBlendAnimation();
-      dayNightTransition = clampedTarget;
       flatRealisticBlendRef.current = clampedTarget;
       return;
     }
@@ -5837,14 +5836,12 @@ export default function NoradVector() {
         : -1 + (4 - 2 * progress) * progress;
       const nextBlend = startBlend + (clampedTarget - startBlend) * easedProgress;
 
-      dayNightTransition = nextBlend;
       flatRealisticBlendRef.current = nextBlend;
 
       if (progress < 1) {
         dayNightBlendAnimationFrameRef.current = requestAnimationFrame(step);
       } else {
         stopDayNightBlendAnimation();
-        dayNightTransition = clampedTarget;
         flatRealisticBlendRef.current = clampedTarget;
       }
     };
@@ -6194,8 +6191,7 @@ export default function NoradVector() {
       const delta = timestamp - lastTimestamp;
       lastTimestamp = timestamp;
 
-      const nextBlend = (dayNightTransition + delta / dayNightCycleSpeed) % 1;
-      dayNightTransition = nextBlend;
+      const nextBlend = (flatRealisticBlendRef.current + delta / dayNightCycleSpeed) % 1;
       flatRealisticBlendRef.current = nextBlend;
       syncModeWithBlend();
 
