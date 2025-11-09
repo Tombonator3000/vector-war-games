@@ -1666,34 +1666,39 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     [projectLonLat, pickLonLat, fireMissile, addExplosion, clearMissiles, clearExplosions],
   );
 
+  // Hide 3D globe when using flat-realistic map style
+  const is2DMode = visualStyle === 'flat-realistic';
+  
   return (
     <div ref={containerRef} className="globe-scene" style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <Canvas
-        className="globe-scene__webgl"
-        dpr={[1, 1.75]}
-        camera={{ position: [0, 0, EARTH_RADIUS + 3], fov: 40, near: 0.1, far: 100 }}
-        shadows
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}
-      >
-        <SceneContent
-          cam={cam}
-          vectorTexture={vectorTexture}
-          nations={nations}
-          territories={territories}
-          units={units}
-          showTerritories={showTerritories}
-          showUnits={showUnits}
-          onNationClick={onNationClick}
-          onTerritoryClick={onTerritoryClick}
-          onUnitClick={onUnitClick}
-          register={handleRegister}
-          mapStyle={mapStyle}
-          modeData={modeData}
-          missilesRef={missilesRef}
-          explosionsRef={explosionsRef}
-          flatMapVariant={flatMapVariant}
-        />
-      </Canvas>
+      {!is2DMode && (
+        <Canvas
+          className="globe-scene__webgl"
+          dpr={[1, 1.75]}
+          camera={{ position: [0, 0, EARTH_RADIUS + 3], fov: 40, near: 0.1, far: 100 }}
+          shadows
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}
+        >
+          <SceneContent
+            cam={cam}
+            vectorTexture={vectorTexture}
+            nations={nations}
+            territories={territories}
+            units={units}
+            showTerritories={showTerritories}
+            showUnits={showUnits}
+            onNationClick={onNationClick}
+            onTerritoryClick={onTerritoryClick}
+            onUnitClick={onUnitClick}
+            register={handleRegister}
+            mapStyle={mapStyle}
+            modeData={modeData}
+            missilesRef={missilesRef}
+            explosionsRef={explosionsRef}
+            flatMapVariant={flatMapVariant}
+          />
+        </Canvas>
+      )}
       <canvas 
         ref={overlayRef} 
         className="globe-scene__overlay" 
