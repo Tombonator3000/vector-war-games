@@ -2916,3 +2916,10 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Identified that `currentMapStyle` at module scope in `src/pages/Index.tsx` had been hard-coded to `'realistic'`, overriding the React `mapStyle` state loaded from `localStorage` and forcing the satellite texture on game start.
 - Updated the bootstrap logic so the module-level `currentMapStyle` syncs with state (defaulting to `flat-realistic`), added logging to trace synchronisation, and forced a migration path that remaps legacy `'wireframe'` saves to `'flat'` while refreshing runtime refs.
 - Added a persistent module `draggingArmyInfo` placeholder to avoid `draggingArmyRef is not defined` exceptions during the same initialization window.
+### 2025-11-09T19:19:23Z - Investigate missing HUD overlays
+- Launched the Vite dev server (`npm run dev -- --host 0.0.0.0 --port 4173`) and navigated in-game to reproduce the issue where only the help button appears.
+- Captured baseline and in-game screenshots plus DOM metrics via Playwright to confirm the top bar, ticker, and command buttons were rendered but hidden beneath the globe overlay.
+- Inspected `src/index.css` to trace z-index stacking between `.hud-layers` and `.globe-scene__overlay` and identified the lower z-index on `.hud-layers` as the cause.
+### 2025-11-09T19:32:12Z - Restore HUD layering above globe overlay
+- Raised the `.hud-layers` z-index to 30 in `src/index.css` so the top bar, news ticker, and command buttons render above `.globe-scene__overlay`.
+- Reloaded the running dev build and captured updated Playwright screenshots confirming all controls display correctly and remain clickable.

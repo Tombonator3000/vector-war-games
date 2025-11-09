@@ -1132,7 +1132,7 @@ body.theme-synthwave .command-interface__scanlines {
   display: grid;
   grid-template-rows: auto 1fr auto;
   align-items: stretch;
-  z-index: 2;
+  z-index: 30;
   pointer-events: none;
 }
 
