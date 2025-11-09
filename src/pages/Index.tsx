@@ -5557,8 +5557,12 @@ function gameLoop() {
 
   cam.zoom += (cam.targetZoom - cam.zoom) * 0.1;
 
-  drawWorld(currentMapStyle);
-  CityLights.draw(ctx, currentMapStyle);
+  // Only draw map if world data is loaded
+  if (worldCountries) {
+    drawWorld(currentMapStyle);
+    CityLights.draw(ctx, currentMapStyle);
+  }
+  
   drawNations(currentMapStyle);
   drawTerritoriesWrapper();
   drawSatellites(nowMs);
@@ -6045,7 +6049,11 @@ export default function NoradVector() {
     void Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)]);
   }, []);
   useEffect(() => {
-    void loadWorld();
+    void loadWorld().then(() => {
+      console.log('World map loaded successfully, worldCountries:', !!worldCountries);
+    }).catch(err => {
+      console.error('Failed to load world map:', err);
+    });
   }, []);
   useEffect(() => {
     if (mapStyle.visual === 'flat-realistic') {
