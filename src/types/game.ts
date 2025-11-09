@@ -213,7 +213,6 @@ export interface Nation {
   hasRegimeDestabilization?: boolean;
   eliminated?: boolean;
   intelligence?: number;
-  resources?: Record<string, number>;  // Legacy resources tracking
 
   // Pop System & Cultural Warfare (Enhanced Immigration & Culture)
   popGroups?: PopGroup[];                           // Detailed population groups
@@ -227,7 +226,6 @@ export interface Nation {
   activeCulturalDefenses?: string[];                // Active defense types
 
   // Ideology System
-  ideology?: string;                                 // Legacy: Direct ideology string (deprecated, use ideologyState)
   ideologyState?: IdeologyState;                    // Nation's ideology and support levels
   revolutionState?: RevolutionState;                // Revolution risk tracking
 

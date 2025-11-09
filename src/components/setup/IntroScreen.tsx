@@ -8,11 +8,12 @@
 
 import { IntroLogo } from '@/components/intro/IntroLogo';
 import { Starfield } from '@/components/intro/Starfield';
+import { SpinningEarth } from '@/components/intro/SpinningEarth';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { OptionsMenu } from '@/components/OptionsMenu';
 import type { MusicTrack } from '@/components/OptionsMenu';
-import type { MapStyle, MapVisualStyle } from '@/rendering/worldRenderer';
+import type { MapStyle, MapVisualStyle } from '@/components/GlobeScene';
 import { CreditsDialog } from '@/components/setup/CreditsDialog';
 import type { ScenarioConfig } from '@/types/scenario';
 import { useState } from 'react';
@@ -130,10 +131,12 @@ export function IntroScreen({
       <CreditsDialog open={isCreditsOpen} onOpenChange={setIsCreditsOpen} />
       <div className="intro-screen">
         <Starfield />
-      <div className="intro-screen__scanlines" aria-hidden="true" />
+        <div className="intro-screen__scanlines" aria-hidden="true" />
 
-      <div className="intro-screen__left">
-        {/* Highscore Section */}
+        <div className="intro-screen__left">
+          <SpinningEarth />
+
+          {/* Highscore Section */}
           {highscores.length > 0 && (
             <div className="absolute bottom-8 left-8 bg-black/80 border border-cyan-500/50 rounded-lg p-4 w-80 backdrop-blur-sm z-10">
               <h3 className="text-lg font-mono text-cyan-400 mb-3 tracking-wider uppercase flex items-center gap-2">

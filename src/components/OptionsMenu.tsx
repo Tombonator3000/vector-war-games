@@ -13,7 +13,7 @@ import { toast } from "@/components/ui/use-toast";
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
 import { GameDatabase } from '@/components/GameDatabase';
 import { ComprehensiveTutorial } from '@/components/ComprehensiveTutorial';
-import type { MapStyle, MapVisualStyle } from '@/rendering/worldRenderer';
+import type { MapStyle, MapVisualStyle } from '@/components/GlobeScene';
 import { BookOpen, GraduationCap } from 'lucide-react';
 
 // Storage wrapper for localStorage
@@ -59,20 +59,16 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 ];
 
 const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
-  {
-    value: 'flat',
-    label: '2D Flat',
-    description: 'Classic 2D TopoJSON world map projection.',
-  },
-  {
-    value: 'realistic',
-    label: 'Realistic',
-    description: 'Photorealistic satellite imagery with day/night cycle.',
-  },
+  { value: 'realistic', label: 'Realistic', description: 'Satellite imagery with terrain overlays.' },
   {
     value: 'wireframe',
-    label: 'Wireframe',
-    description: 'Minimal geometric visualization with territory outlines.',
+    label: 'Vector',
+    description: 'Neon vector grid with luminous borders and elevation lines.',
+  },
+  {
+    value: 'flat-realistic',
+    label: 'Flat Realistic',
+    description: 'High-resolution satellite texture rendered on the flat map.',
   },
 ];
 

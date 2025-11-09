@@ -40,15 +40,18 @@ import type { BioLabTier } from '@/types/bioLab';
 import type { EvolutionNodeId } from '@/types/biowarfare';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import { FlashpointOutcomeModal } from '@/components/FlashpointOutcomeModal';
-import {
+import GlobeScene, {
+  type GlobeSceneHandle,
+  PickerFn,
+  ProjectorFn,
   type MapStyle,
   type MapVisualStyle,
   type MapMode,
   type MapModeOverlayData,
   DEFAULT_MAP_STYLE,
-  MAP_MODES,
   MAP_VISUAL_STYLES,
-} from '@/rendering/worldRenderer';
+  MAP_MODES,
+} from '@/components/GlobeScene';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
 import {
   useGovernance,
@@ -366,20 +369,16 @@ interface PendingLaunchState {
 }
 
 const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
-  {
-    value: 'flat',
-    label: '2D Flat',
-    description: 'Classic 2D TopoJSON world map projection.',
-  },
-  {
-    value: 'realistic',
-    label: 'Realistic',
-    description: 'Photorealistic satellite imagery with day/night cycle.',
-  },
+  { value: 'realistic', label: 'Realistic', description: 'Satellite imagery with terrain overlays.' },
   {
     value: 'wireframe',
     label: 'Vector',
     description: 'Neon vector grid with luminous borders and elevation lines.',
+  },
+  {
+    value: 'flat-realistic',
+    label: 'Flat Realistic',
+    description: 'High-resolution satellite texture rendered on the flat map.',
   },
 ];
 
@@ -638,8 +637,7 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 ];
 
 let currentTheme: ThemeId = 'synthwave';
-// NOTE: currentMapStyle is initialized from React state in useEffect - DO NOT hardcode here
-let currentMapStyle: MapVisualStyle = 'flat';  // Default to 2D flat map
+let currentMapStyle: MapVisualStyle = 'realistic';
 let currentMapMode: MapMode = 'standard';
 let currentMapModeData: MapModeOverlayData | null = null;
 let selectedTargetRefId: string | null = null;
@@ -670,11 +668,6 @@ let economicDepthApi: ReturnType<typeof useEconomicDepth> | null = null;
 let militaryTemplatesApi: ReturnType<typeof useMilitaryTemplates> | null = null;
 let supplySystemApi: ReturnType<typeof useSupplySystem> | null = null;
 let triggerNationsUpdate: (() => void) | null = null;
-
-// Territory selection state (module-level to avoid scope issues)
-let selectedTerritoryId: string | null = null;
-let hoveredTerritoryId: string | null = null;
-let dragTargetTerritoryId: string | null = null;
 
 type OverlayNotification = { text: string; expiresAt: number };
 type OverlayListener = (message: OverlayNotification | null) => void;
@@ -2905,11 +2898,6 @@ function toLonLatLocal(x: number, y: number): [number, number] {
 
 // World rendering - wrapper function that delegates to extracted module
 function drawWorld(style: MapVisualStyle) {
-  if (!ctx || !worldCountries) {
-    console.warn('[drawWorld] Missing ctx or worldCountries:', { ctx: !!ctx, worldCountries: !!worldCountries });
-    return;
-  }
-  
   const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState();
   const context: WorldRenderContext = {
     ctx,
@@ -2971,7 +2959,6 @@ function drawTerritoriesWrapper() {
   if (!player) return;
 
   const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState();
-  
   const context: TerritoryRenderContext = {
     ctx,
     worldCountries,
@@ -2992,7 +2979,7 @@ function drawTerritoriesWrapper() {
     playerId: player?.id ?? null,
     selectedTerritoryId,
     hoveredTerritoryId,
-    draggingTerritoryId: null,
+    draggingTerritoryId: draggingArmy?.sourceId ?? null,
     dragTargetTerritoryId,
   };
   renderTerritories(context);
@@ -3046,7 +3033,7 @@ function drawSatellites(nowMs: number) {
 
   const activeOrbits: SatelliteOrbit[] = [];
   const player = PlayerManager.get();
-  // Wireframe only - no flat texture check needed
+  const isFlatTexture = currentMapStyle === 'flat-realistic';
 
   orbits.forEach(orbit => {
     const targetNation = nations.find(nation => nation.id === orbit.targetId);
@@ -3559,9 +3546,10 @@ function drawParticles() {
 }
 
 function drawFalloutMarks(deltaMs: number) {
-  // Fallout marks removed with 2D maps - wireframe only
-  if (!ctx) return;
-  
+  if (!ctx || currentMapStyle !== 'flat-realistic') {
+    return;
+  }
+
   if (!Array.isArray(S.falloutMarks)) {
     S.falloutMarks = [];
     return;
@@ -5572,19 +5560,8 @@ function gameLoop() {
 
   cam.zoom += (cam.targetZoom - cam.zoom) * 0.1;
 
-  // Only draw map if world data is loaded
-  if (worldCountries) {
-    drawWorld(currentMapStyle);
-    CityLights.draw(ctx, currentMapStyle);
-  } else {
-    // Debug: draw a test pattern to verify canvas is working
-    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-    ctx.fillRect(10, 10, 200, 100);
-    ctx.fillStyle = 'white';
-    ctx.font = '16px monospace';
-    ctx.fillText('Waiting for map data...', 20, 50);
-  }
-  
+  drawWorld(currentMapStyle);
+  CityLights.draw(ctx, currentMapStyle);
   drawNations(currentMapStyle);
   drawTerritoriesWrapper();
   drawSatellites(nowMs);
@@ -5611,7 +5588,7 @@ function consumeAction() {
 export default function NoradVector() {
   const navigate = useNavigate();
   const interfaceRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const globeSceneRef = useRef<GlobeSceneHandle | null>(null);
   const [gamePhase, setGamePhase] = useState('intro');
   const { rng } = useRNG();
   const [isGameStarted, setIsGameStarted] = useState(false);
@@ -5782,7 +5759,17 @@ export default function NoradVector() {
       triggerNationsUpdate = null;
     };
   }, []);
-  const [mapStyle, setMapStyle] = useState<MapStyle>(DEFAULT_MAP_STYLE);
+  const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
+    const storedVisual = Storage.getItem('map_style_visual') ?? Storage.getItem('map_style');
+    const storedMode = Storage.getItem('map_mode');
+    const visual = isVisualStyleValue(storedVisual) ? storedVisual : (() => {
+      Storage.setItem('map_style_visual', DEFAULT_MAP_STYLE.visual);
+      Storage.setItem('map_style', DEFAULT_MAP_STYLE.visual);
+      return DEFAULT_MAP_STYLE.visual;
+    })();
+    const mode = isMapModeValue(storedMode) ? storedMode : DEFAULT_MAP_STYLE.mode;
+    return { visual, mode };
+  });
   const [isFlatMapDay, setIsFlatMapDay] = useState<boolean>(isDayMode);
   const flatRealisticBlendRef = useRef<number>(dayNightTransition);
   const dayNightBlendAnimationFrameRef = useRef<number | null>(null);
@@ -6042,35 +6029,31 @@ export default function NoradVector() {
   }, [overlayBanner]);
 
   useEffect(() => {
-    console.log('[INDEX] mapStyle changed:', mapStyle);
-    // CRITICAL: Sync module-level variable with React state
     currentMapStyle = mapStyle.visual;
-    console.log('[MAP SYNC] currentMapStyle synced to:', currentMapStyle);
-    
-    // Center camera for all map styles
-    const expectedX = (W - W * cam.zoom) / 2;
-    const expectedY = (H - H * cam.zoom) / 2;
-    const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;
-    if (needsRecentering) {
-      cam.x = expectedX;
-      cam.y = expectedY;
+    if (mapStyle.visual === 'flat-realistic' || mapStyle.visual === 'wireframe') {
+      const expectedX = (W - W * cam.zoom) / 2;
+      const expectedY = (H - H * cam.zoom) / 2;
+      const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;
+      if (needsRecentering) {
+        cam.x = expectedX;
+        cam.y = expectedY;
+      }
     }
   }, [cam.x, cam.y, cam.zoom, mapStyle.visual]);
   useEffect(() => {
     currentMapMode = mapStyle.mode;
-    console.log('[MAP SYNC] currentMapMode synced to:', currentMapMode);
   }, [mapStyle.mode]);
   useEffect(() => {
-    void loadWorld().then(() => {
-      console.log('[Map Debug] World map loaded successfully:', { 
-        hasWorldCountries: !!worldCountries,
-        featureCount: worldCountries?.features?.length ?? 0,
-        type: worldCountries?.type
-      });
-    }).catch(err => {
-      console.error('[Map Debug] Failed to load world map:', err);
-    });
+    void Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)]);
   }, []);
+  useEffect(() => {
+    void loadWorld();
+  }, []);
+  useEffect(() => {
+    if (mapStyle.visual === 'flat-realistic') {
+      void Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)]);
+    }
+  }, [mapStyle.visual]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
   const initialMusicEnabled = storedMusicEnabled === 'true' ? true : storedMusicEnabled === 'false' ? false : AudioSys.musicEnabled;
   const storedSfxEnabled = Storage.getItem('audio_sfx_enabled');
@@ -6157,13 +6140,50 @@ export default function NoradVector() {
   }, [animateDayNightBlendTo, dayNightAutoCycleEnabled, isFlatMapDay, mapStyle.visual]);
 
   useEffect(() => {
-    // Day/night manual toggle removed with 2D maps
-  }, [dayNightAutoCycleEnabled, mapStyle.visual]);
+    if (!dayNightAutoCycleEnabled || mapStyle.visual !== 'flat-realistic') {
+      return;
+    }
 
-  useEffect(() => {
-    // Day/night auto-cycle removed with 2D maps
-  }, [dayNightAutoCycleEnabled, mapStyle.visual]);
-  
+    stopDayNightBlendAnimation();
+    let animationId: number | null = null;
+    let lastTimestamp: number | null = null;
+
+    const syncModeWithBlend = () => {
+      const nextIsDay = dayNightTransition < 0.5;
+      if (lastFlatMapModeRef.current !== nextIsDay) {
+        lastFlatMapModeRef.current = nextIsDay;
+        isDayMode = nextIsDay;
+        setIsFlatMapDay(nextIsDay);
+      }
+    };
+
+    dayNightTransition = flatRealisticBlendRef.current;
+    syncModeWithBlend();
+
+    const animate = (timestamp: number) => {
+      if (lastTimestamp === null) {
+        lastTimestamp = timestamp;
+      }
+      const delta = timestamp - lastTimestamp;
+      lastTimestamp = timestamp;
+
+      const nextBlend = (dayNightTransition + delta / dayNightCycleSpeed) % 1;
+      dayNightTransition = nextBlend;
+      flatRealisticBlendRef.current = nextBlend;
+      syncModeWithBlend();
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    animationId = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+      lastTimestamp = null;
+    };
+  }, [dayNightAutoCycleEnabled, dayNightCycleSpeed, flatRealisticBlendRef, mapStyle.visual, setIsFlatMapDay, stopDayNightBlendAnimation]);
   const musicTracks = useMemo(() => AudioSys.getTracks(), []);
   const [pandemicIntegrationEnabled, setPandemicIntegrationEnabled] = useState(() => {
     const stored = Storage.getItem('option_pandemic_integration');
@@ -6189,31 +6209,11 @@ export default function NoradVector() {
   const [isWarCouncilOpen, setIsWarCouncilOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const lastTargetPingIdRef = useRef<string | null>(null);
-  
-  // Territory state - synced with module-level variables
-  const [selectedTerritoryIdState, setSelectedTerritoryIdState] = useState<string | null>(null);
-  const [hoveredTerritoryIdState, setHoveredTerritoryIdState] = useState<string | null>(null);
+  const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null);
+  const [hoveredTerritoryId, setHoveredTerritoryId] = useState<string | null>(null);
   const [draggingArmy, setDraggingArmy] = useState<{ sourceId: string; armies: number } | null>(null);
-  const draggingArmyRef = useRef<{ sourceId: string; armies: number } | null>(null);
   const [draggingArmyPosition, setDraggingArmyPosition] = useState<{ x: number; y: number } | null>(null);
-  const [dragTargetTerritoryIdState, setDragTargetTerritoryIdState] = useState<string | null>(null);
-  
-  // Sync module-level variables when state changes
-  useEffect(() => {
-    selectedTerritoryId = selectedTerritoryIdState;
-  }, [selectedTerritoryIdState]);
-  
-  useEffect(() => {
-    hoveredTerritoryId = hoveredTerritoryIdState;
-  }, [hoveredTerritoryIdState]);
-  
-  useEffect(() => {
-    dragTargetTerritoryId = dragTargetTerritoryIdState;
-  }, [dragTargetTerritoryIdState]);
-  
-  useEffect(() => {
-    draggingArmyRef.current = draggingArmy;
-  }, [draggingArmy]);
+  const [dragTargetTerritoryId, setDragTargetTerritoryId] = useState<string | null>(null);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
     const stored = Storage.getItem('conventional_state');
     if (stored) {
@@ -6354,7 +6354,7 @@ export default function NoradVector() {
       return;
     }
 
-    const canvasElement = canvasRef.current;
+    const canvasElement = globeSceneRef.current?.overlayCanvas ?? null;
     if (!canvasElement) {
       return;
     }
@@ -6492,7 +6492,12 @@ export default function NoradVector() {
     }
   }, [pandemicIntegrationEnabled, bioWarfareEnabled]);
   const handleAttackRef = useRef<() => void>(() => {});
-  
+  const handleProjectorReady = useCallback((projector: ProjectorFn) => {
+    globeProjector = projector;
+  }, []);
+  const handlePickerReady = useCallback((picker: PickerFn) => {
+    globePicker = picker;
+  }, []);
   const { ensureAction, registerStateListener, publishState, canExecute } = useMultiplayer();
 
   const requestApproval = useCallback(
@@ -7614,7 +7619,7 @@ export default function NoradVector() {
   }, []);
 
   const resizeCanvas = useCallback(() => {
-    const element = canvasRef.current;
+    const element = globeSceneRef.current?.overlayCanvas ?? null;
     if (!element) return;
 
     const parent = element.parentElement;
@@ -7667,11 +7672,11 @@ export default function NoradVector() {
   }, [screenResolution]);
 
   useEffect(() => {
-    const element = canvasRef.current;
+    const element = globeSceneRef.current?.overlayCanvas ?? null;
     if (!element) {
       // Retry after a short delay if canvas not ready yet
       const retryTimer = setTimeout(() => {
-        const retryElement = canvasRef.current;
+        const retryElement = globeSceneRef.current?.overlayCanvas;
         if (retryElement) {
           canvas = retryElement;
           ctx = retryElement.getContext('2d', { alpha: true })!;
@@ -7832,13 +7837,16 @@ export default function NoradVector() {
       document.body.classList.add(`theme-${theme}`);
     }
     Storage.setItem('theme', theme);
-    const overlayCanvas = canvasRef.current;
+    const overlayCanvas = globeSceneRef.current?.overlayCanvas;
     if (overlayCanvas) {
       overlayCanvas.style.imageRendering = theme === 'retro80s' || theme === 'wargames' ? 'pixelated' : 'auto';
     }
     
-    // Auto-switch to flat-realistic is no longer needed - always use it
-  }, [theme]);
+    // Auto-switch to wireframe map when wargames theme is selected
+    if (theme === 'wargames' && mapStyle.visual !== 'wireframe') {
+      handleMapStyleChange('wireframe');
+    }
+  }, [theme, mapStyle.visual, handleMapStyleChange]);
 
   useEffect(() => {
     uiUpdateCallback = () => setUiTick(prev => prev + 1);
@@ -10934,7 +10942,7 @@ export default function NoradVector() {
       return;
     }
 
-    const overlayCanvas = canvasRef.current;
+    const overlayCanvas = globeSceneRef.current?.overlayCanvas;
     if (overlayCanvas) {
       canvas = overlayCanvas;
       ctx = canvas.getContext('2d')!;
@@ -10968,7 +10976,7 @@ export default function NoradVector() {
       const updateHover = (territoryId: string | null) => {
         if (lastHoverId !== territoryId) {
           lastHoverId = territoryId;
-          setHoveredTerritoryIdState(territoryId);
+          setHoveredTerritoryId(territoryId);
         }
       };
 
@@ -10979,12 +10987,12 @@ export default function NoradVector() {
         pointerMode = 'none';
         setDraggingArmy(null);
         setDraggingArmyPosition(null);
-        setDragTargetTerritoryIdState(null);
+        setDragTargetTerritoryId(null);
         updateHover(null);
       };
 
-      const isBoundedFlatProjection = () => false; // Wireframe only - no bounded projection
-      const minZoom = 0.5;
+      const isBoundedFlatProjection = () => currentMapStyle === 'flat-realistic';
+      const minZoom = isBoundedFlatProjection() ? 1 : 0.5;
 
       const clampLatitude = () => {
         const maxLat = 85;
@@ -11058,11 +11066,11 @@ export default function NoradVector() {
                     title: 'Armies redeployed',
                     description: `Moved ${armiesToSend} armies from ${source.name} to ${target.name}.`,
                   });
-                  setSelectedTerritoryIdState(target.id);
+                  setSelectedTerritoryId(target.id);
                 } else if (result && !result.success) {
                   AudioSys.playSFX('error');
                   toast({ title: 'Cannot move armies', description: result.reason, variant: 'destructive' });
-                  setSelectedTerritoryIdState(source.id);
+                  setSelectedTerritoryId(source.id);
                 }
               } else {
                 const result = resolveBorderConflictRef.current?.(source.id, target.id, armiesToSend);
@@ -11072,17 +11080,17 @@ export default function NoradVector() {
                     title: 'Assault initiated',
                     description: `Launching ${armiesToSend} armies into ${target.name}.`,
                   });
-                  setSelectedTerritoryIdState(null);
+                  setSelectedTerritoryId(null);
                 } else if (result && !result.success) {
                   AudioSys.playSFX('error');
                   toast({ title: 'Cannot launch attack', description: result.reason, variant: 'destructive' });
-                  setSelectedTerritoryIdState(source.id);
+                  setSelectedTerritoryId(source.id);
                 }
               }
             } else if (dragTargetId) {
               AudioSys.playSFX('error');
               toast({ title: 'Invalid target', description: 'Armies can only move to adjacent territories.', variant: 'destructive' });
-              setSelectedTerritoryIdState(source.id);
+              setSelectedTerritoryId(source.id);
             }
           }
 
@@ -11134,10 +11142,10 @@ export default function NoradVector() {
               dragArmiesCount = Math.min(maxAvailable, desiredCount);
               dragTargetId = null;
               updateHover(null);
-              setSelectedTerritoryIdState(territory.id);
+              setSelectedTerritoryId(territory.id);
               setDraggingArmy({ sourceId: territory.id, armies: dragArmiesCount });
               setDraggingArmyPosition({ x: mx, y: my });
-              setDragTargetTerritoryIdState(null);
+              setDragTargetTerritoryId(null);
               activePointerId = e.pointerId;
               canvas?.setPointerCapture(e.pointerId);
               AudioSys.playSFX('click');
@@ -11147,7 +11155,7 @@ export default function NoradVector() {
         }
 
         pointerMode = 'map-pan';
-        setDragTargetTerritoryIdState(null);
+        setDragTargetTerritoryId(null);
         setDraggingArmy(null);
         setDraggingArmyPosition(null);
         isDragging = true;
@@ -11210,7 +11218,7 @@ export default function NoradVector() {
 
           if (dragTargetId !== nextTarget) {
             dragTargetId = nextTarget;
-            setDragTargetTerritoryIdState(nextTarget);
+            setDragTargetTerritoryId(nextTarget);
             updateHover(nextTarget);
           }
           return;
@@ -11450,11 +11458,11 @@ export default function NoradVector() {
                   const isAttack = territory.controllingNationId !== player.id;
                   // Actions will be handled through TerritoryMapPanel callbacks
                   if (!isAttack) {
-                    setDragTargetTerritoryIdState(territory.id);
+                    setDragTargetTerritoryId(territory.id);
                   }
                 }
               }
-              setSelectedTerritoryIdState(territory.id);
+              setSelectedTerritoryId(territory.id);
               AudioSys.playSFX('click');
               return; // Exit early - don't check nations
             }
@@ -11638,7 +11646,10 @@ export default function NoradVector() {
             break;
           case 'n':
           case 'N':
-            // Day/night toggle removed with 2D maps
+            if (mapStyle.visual === 'flat-realistic') {
+              e.preventDefault();
+              handleDayNightToggle();
+            }
             break;
           case 'Enter': /* end turn */ break;
           case ' ':
@@ -12108,7 +12119,7 @@ export default function NoradVector() {
     </div>
   );
 
-  const overlayCanvas = canvasRef.current;
+  const overlayCanvas = globeSceneRef.current?.overlayCanvas ?? null;
 
   return (
     <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity}`}>
@@ -12116,17 +12127,20 @@ export default function NoradVector() {
       <div className="command-interface__scanlines" aria-hidden="true" />
 
       <div className="map-shell">
-        <canvas 
-          ref={canvasRef}
-          className="map-canvas"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            imageRendering: theme === 'retro80s' || theme === 'wargames' ? 'pixelated' : 'auto'
-          }}
+        <GlobeScene
+          ref={globeSceneRef}
+          cam={cam}
+          nations={nations}
+          worldCountries={worldCountries}
+          territories={territoryPolygons}
+          units={globeUnits}
+          onProjectorReady={handleProjectorReady}
+          onPickerReady={handlePickerReady}
+          mapStyle={mapStyle}
+          modeData={mapModeData}
+          showTerritories={showTerritories}
+          showUnits={showUnits}
+          flatMapVariant={isFlatMapDay}
         />
 
         {draggingArmy && draggingArmyPosition && (

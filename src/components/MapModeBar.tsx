@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 import { Globe2, Handshake, Radar, Factory, AlertTriangle } from 'lucide-react';
-import type { MapMode } from '@/rendering/worldRenderer';
+import type { MapMode } from '@/components/GlobeScene';
 
 const MAP_MODE_ORDER: MapMode[] = ['standard', 'diplomatic', 'intel', 'resources', 'unrest'];
 

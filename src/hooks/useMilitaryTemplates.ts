@@ -465,13 +465,12 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
     };
   };
 
-  // Initialize on mount - ONLY ONCE to avoid infinite loop
+  // Initialize on mount
   useEffect(() => {
     if (templateStates.size === 0) {
       initializeTemplates();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initializeTemplates, templateStates.size]);
 
   return {
     // State

@@ -40,45 +40,12 @@ export function migrateGameSystems(nations: Nation[], gameState: GameState): {
     console.log('  → Migrating immigration & culture system...');
     for (const nation of migratedNations) {
       if (!nation.eliminated) {
-        try {
-          initializeNationPopSystem(nation);
-        } catch (popError) {
-          console.warn(`  ⚠️  Failed to initialize pop system for ${nation.name}:`, popError);
-          // Continue with other nations even if one fails
-        }
+        initializeNationPopSystem(nation);
       }
     }
     console.log('  ✓ Immigration & culture migration complete');
   } catch (error) {
     console.error('  ✗ Immigration & culture migration failed:', error);
-  }
-  
-  // Step 3: Initialize ideology system for nations that need it
-  try {
-    console.log('  → Initializing ideology system...');
-    for (const nation of migratedNations) {
-      if (!nation.eliminated && !nation.ideologyState && nation.ideology) {
-        // Migrate legacy ideology to ideologyState
-        nation.ideologyState = {
-          currentIdeology: nation.ideology as any,
-          ideology: nation.ideology as any,
-          ideologyStability: 75,
-          ideologicalSupport: {
-            democracy: 0,
-            authoritarianism: 0,
-            communism: 0,
-            theocracy: 0,
-            technocracy: 0,
-          },
-          ideologicalPressures: [],
-          ideologicalExport: false,
-          ideologicalDefense: 50,
-        };
-      }
-    }
-    console.log('  ✓ Ideology system initialization complete');
-  } catch (error) {
-    console.error('  ✗ Ideology system initialization failed:', error);
   }
 
   console.log('✓ Unified game migration complete');
