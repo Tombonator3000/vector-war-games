@@ -744,10 +744,12 @@ const FLAT_REALISTIC_NIGHT_TEXTURE_URL = resolvePublicAssetPath('textures/earth_
 
 let flatRealisticDayTexture: HTMLImageElement | null = null;
 let flatRealisticNightTexture: HTMLImageElement | null = null;
-let flatRealisticDayTexturePromise: Promise<HTMLImageElement> | null = null;
-let flatRealisticNightTexturePromise: Promise<HTMLImageElement> | null = null;
+let flatRealisticDayTexturePromise: Promise<HTMLImageElement | null> | null = null;
+let flatRealisticNightTexturePromise: Promise<HTMLImageElement | null> | null = null;
+let flatRealisticDayAbortController: AbortController | null = null;
+let flatRealisticNightAbortController: AbortController | null = null;
 
-function preloadFlatRealisticTexture(isDay: boolean = true) {
+function preloadFlatRealisticTexture(isDay: boolean = true): Promise<HTMLImageElement | null> {
   const url = isDay ? FLAT_REALISTIC_DAY_TEXTURE_URL : FLAT_REALISTIC_NIGHT_TEXTURE_URL;
   const texture = isDay ? flatRealisticDayTexture : flatRealisticNightTexture;
   const promise = isDay ? flatRealisticDayTexturePromise : flatRealisticNightTexturePromise;
@@ -764,28 +766,66 @@ function preloadFlatRealisticTexture(isDay: boolean = true) {
     return Promise.resolve(null);
   }
 
-  const newPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+  // Cancel any previous load for this texture type
+  const prevController = isDay ? flatRealisticDayAbortController : flatRealisticNightAbortController;
+  if (prevController) {
+    prevController.abort();
+  }
+
+  // Create new abort controller for this load
+  const abortController = new AbortController();
+  if (isDay) {
+    flatRealisticDayAbortController = abortController;
+  } else {
+    flatRealisticNightAbortController = abortController;
+  }
+
+  const newPromise = new Promise<HTMLImageElement | null>((resolve, reject) => {
     const image = new Image();
+    let isAborted = false;
+
+    const cleanup = () => {
+      if (isDay && flatRealisticDayAbortController === abortController) {
+        flatRealisticDayAbortController = null;
+      } else if (!isDay && flatRealisticNightAbortController === abortController) {
+        flatRealisticNightAbortController = null;
+      }
+    };
+
+    abortController.signal.addEventListener('abort', () => {
+      isAborted = true;
+      cleanup();
+      reject(new Error('Texture load aborted'));
+    });
+
     image.onload = () => {
+      if (isAborted) return;
+
       if (isDay) {
         flatRealisticDayTexture = image;
       } else {
         flatRealisticNightTexture = image;
       }
+      cleanup();
       resolve(image);
     };
+
     image.onerror = (event) => {
+      if (isAborted) return;
+
       if (isDay) {
         flatRealisticDayTexturePromise = null;
       } else {
         flatRealisticNightTexturePromise = null;
       }
+      cleanup();
       reject(
         event instanceof ErrorEvent
           ? event.error ?? new Error('Failed to load flat map texture')
           : new Error('Failed to load flat map texture'),
       );
     };
+
     image.src = url;
   });
 
@@ -796,7 +836,7 @@ function preloadFlatRealisticTexture(isDay: boolean = true) {
   }
 
   return newPromise.catch(error => {
-    // Texture load failed - fallback to standard rendering
+    // Texture load failed or aborted - fallback to standard rendering
     return null;
   });
 }

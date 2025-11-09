@@ -45,9 +45,21 @@ class AudioManager {
       // Clone the audio to allow overlapping plays
       const audioClone = sound.cloneNode(true) as HTMLAudioElement;
       audioClone.volume = volumeOverride !== undefined ? volumeOverride : this.volume;
-      
+
+      // Clean up audio element after playback to prevent memory leak
+      const cleanup = () => {
+        audioClone.removeEventListener('ended', cleanup);
+        audioClone.removeEventListener('error', cleanup);
+        audioClone.src = '';
+        audioClone.load();
+      };
+
+      audioClone.addEventListener('ended', cleanup);
+      audioClone.addEventListener('error', cleanup);
+
       audioClone.play().catch(() => {
         // Silently fail - user might not have interacted with page yet
+        cleanup();
       });
     } catch (err) {
       // Silently fail
