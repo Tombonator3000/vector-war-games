@@ -6064,14 +6064,17 @@ export default function NoradVector() {
     currentMapMode = mapStyle.mode;
   }, [mapStyle.mode]);
   useEffect(() => {
-    void Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)]);
+    // Preload textures immediately on mount - wait for day texture to ensure it's ready
+    Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)])
+      .catch(err => console.error('Error preloading textures:', err));
   }, []);
   useEffect(() => {
     void loadWorld();
   }, []);
   useEffect(() => {
     if (mapStyle.visual === 'flat-realistic') {
-      void Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)]);
+      Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)])
+        .catch(err => console.error('Error preloading textures:', err));
     }
   }, [mapStyle.visual]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
