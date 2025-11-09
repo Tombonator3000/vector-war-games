@@ -2898,3 +2898,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Imported the territorial resource bootstrapper into the campaign entrypoint and wrapped nation setup with a helper to seed stockpiles and reset per-turn generation caches (`src/pages/Index.tsx`).
 - Applied the helper to player and AI nations across both the default and Cuban Crisis setups so HUD stockpiles populate immediately on game start (`src/pages/Index.tsx`).
 
+### 2025-11-09T16:55:09Z - Point 2D globe textures to flat variants
+- Updated the flat globe day/night texture constants to reference the new flat assets so 2D rendering uses the correct images (`src/pages/Index.tsx`).
+- Verified the preload helper continues to select the appropriate day/night URL for blending logic (`src/pages/Index.tsx`).
+
