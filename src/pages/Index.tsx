@@ -650,6 +650,7 @@ let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
 let isGameplayLoopEnabled = false;
 let isAttractModeActive = false;
+let globalRNG: SeededRandom | null = null; // Global RNG reference for use outside React component
 
 // Global game state - now managed by GameStateManager (Phase 6 refactoring)
 // Initialize GameStateManager (it has default state already)
@@ -5016,7 +5017,9 @@ function endTurn() {
       try {
         console.log('[Turn Debug] PRODUCTION phase starting');
         S.phase = 'PRODUCTION';
-        productionPhase(rng);
+        if (globalRNG) {
+          productionPhase(globalRNG);
+        }
       } catch (error) {
         console.error('[Turn Debug] ERROR in PRODUCTION phase:', error);
         log('⚠️ Error in production phase - continuing turn', 'warning');
@@ -5669,6 +5672,11 @@ export default function NoradVector() {
       setShowMinimalCommandSheet(false);
     }
   }, [layoutDensity]);
+
+  // Update global RNG reference for use outside React component
+  useEffect(() => {
+    globalRNG = rng;
+  }, [rng]);
 
   const refreshGameState = useCallback((updatedNations: LocalNation[]) => {
     nations = updatedNations;
