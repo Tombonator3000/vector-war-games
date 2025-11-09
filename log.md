@@ -2894,3 +2894,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Created regression tests ensuring repeated production phases with a static ideology keep multipliers stable and that other modifiers persist across ideology changes (`src/lib/__tests__/ideologyIntegration.test.ts`).
 - Ran the targeted Vitest suite to verify the new coverage passes (`npm run test -- ideologyIntegration`).
 
+### 2025-11-09T18:52:00Z - Prime resource stockpiles for new campaigns
+- Imported the territorial resource bootstrapper into the campaign entrypoint and wrapped nation setup with a helper to seed stockpiles and reset per-turn generation caches (`src/pages/Index.tsx`).
+- Applied the helper to player and AI nations across both the default and Cuban Crisis setups so HUD stockpiles populate immediately on game start (`src/pages/Index.tsx`).
+

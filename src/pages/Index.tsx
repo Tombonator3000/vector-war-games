@@ -156,6 +156,7 @@ import {
   applyIdeologyBonusesForProduction,
   generateIdeologicalGrievances,
 } from '@/lib/ideologyIntegration';
+import { initializeResourceStockpile } from '@/lib/territorialResourcesSystem';
 import {
   useCyberWarfare,
   createDefaultNationCyberProfile,
@@ -2032,6 +2033,16 @@ function advanceCityConstruction(nation: Nation, phase: 'PRODUCTION' | 'RESOLUTI
   }
 }
 
+function bootstrapNationResourceState(nation: LocalNation) {
+  initializeResourceStockpile(nation);
+  nation.resourceGeneration = {
+    oil: 0,
+    uranium: 0,
+    rare_earths: 0,
+    food: 0,
+  };
+}
+
 // Cuban Crisis specific initialization with historical nations
 function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: any, selectedDoctrine: DoctrineKey | undefined) {
   const player = PlayerManager.get();
@@ -2089,6 +2100,7 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   // Apply leader bonuses to USA (FASE 2.1)
   applyLeaderBonuses(usaNation, 'John F. Kennedy');
   initializeNationLeaderAbility(usaNation);
+  bootstrapNationResourceState(usaNation);
   nations.push(usaNation);
 
   // USSR (Khrushchev) - historically had fewer missiles but was building up
@@ -2139,6 +2151,7 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   // Apply leader bonuses to USSR (FASE 2.1)
   applyLeaderBonuses(ussrNation, 'Nikita Khrushchev');
   initializeNationLeaderAbility(ussrNation);
+  bootstrapNationResourceState(ussrNation);
   nations.push(ussrNation);
 
   // Cuba (Castro) - revolutionary state with Soviet support
@@ -2189,6 +2202,7 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   // Apply leader bonuses to Cuba (FASE 2.1)
   applyLeaderBonuses(cubaNation, 'Fidel Castro');
   initializeNationLeaderAbility(cubaNation);
+  bootstrapNationResourceState(cubaNation);
   nations.push(cubaNation);
 
   // Initialize threat levels (historically accurate tensions)
@@ -2439,6 +2453,7 @@ function initNations() {
   // Apply leader-specific bonuses (FASE 2.1)
   applyLeaderBonuses(playerNation, playerLeaderName);
   initializeNationLeaderAbility(playerNation);
+  bootstrapNationResourceState(playerNation);
 
   nations.push(playerNation);
 
@@ -2521,6 +2536,7 @@ function initNations() {
     // Apply leader-specific bonuses to AI nations (FASE 2.1)
     applyLeaderBonuses(nation, leaderConfig?.name || `AI_${i}`);
     initializeNationLeaderAbility(nation);
+    bootstrapNationResourceState(nation);
 
     // Initialize threat tracking for all nations
     nations.forEach(existingNation => {
