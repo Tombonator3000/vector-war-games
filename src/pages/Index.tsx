@@ -12504,21 +12504,10 @@ export default function NoradVector() {
                       className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
                         intelAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                       }`}
-                      title={intelAllowed ? 'INTEL - Intelligence operations (satellite, sabotage, cyber)' : 'Tactician authorization required to operate intel'}
+                      title={intelAllowed ? 'INTEL - Intelligence & spy operations' : 'Tactician authorization required to operate intel'}
                     >
                       <Target className="h-5 w-5" />
                       <span className="text-[8px] font-mono">INTEL</span>
-                    </Button>
-
-                    <Button
-                      onClick={() => setIsSpyPanelOpen(true)}
-                      variant="ghost"
-                      size="icon"
-                      className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
-                      title="SPY - Operate spy networks and missions"
-                    >
-                      <UserSearch className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">SPY</span>
                     </Button>
 
                     <Button
@@ -12689,23 +12678,10 @@ export default function NoradVector() {
                       className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
                         intelAllowed ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                       }`}
-                      title={intelAllowed ? 'INTEL - Intelligence operations (satellite, sabotage, cyber)' : 'Tactician authorization required to operate intel'}
+                      title={intelAllowed ? 'INTEL - Intelligence & spy operations' : 'Tactician authorization required to operate intel'}
                     >
                       <Target className="h-5 w-5" />
                       INTEL
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setIsSpyPanelOpen(true);
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10"
-                      title="SPY - Operate spy networks and missions"
-                    >
-                      <UserSearch className="h-5 w-5" />
-                      SPY
                     </Button>
                     <Button
                       onClick={() => {
@@ -13095,64 +13071,65 @@ export default function NoradVector() {
         );
       })()}
 
-      <Dialog open={isSpyPanelOpen} onOpenChange={setIsSpyPanelOpen}>
+      <Dialog open={isIntelOperationsOpen} onOpenChange={setIsIntelOperationsOpen}>
         <DialogContent className="max-w-4xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
             <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">
-              Spy Network Operations
+              Intelligence & Espionage Operations
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-400 mt-1">
-              Recruit agents, launch missions, and coordinate counter-intelligence efforts.
+              Intel operations, spy networks, and counter-intelligence
             </DialogDescription>
           </DialogHeader>
-          {playerNation ? (
-            <SpyNetworkPanel
-              player={playerNation}
-              enemies={enemyNations}
-              onRecruitSpy={(cover, targetNation, specialization) => {
-                spyNetwork.recruitSpy(playerNation.id, {
-                  cover,
-                  targetNation,
-                  specialization,
-                });
-              }}
-              onLaunchMission={(spyId, targetNationId, missionType) => {
-                spyNetwork.launchMission(playerNation.id, spyId, targetNationId, missionType);
-              }}
-              onLaunchCounterIntel={() => {
-                spyNetwork.launchCounterIntel(playerNation.id);
-              }}
-              calculateMissionSuccessChance={(spyId, targetNationId, missionType) =>
-                spyNetwork.calculateMissionSuccessChance(spyId, playerNation.id, targetNationId, missionType)
-              }
-              calculateDetectionRisk={(spyId, targetNationId, missionType) =>
-                spyNetwork.calculateDetectionRisk(spyId, playerNation.id, targetNationId, missionType)
-              }
-            />
-          ) : (
-            <div className="text-sm text-slate-400">Player nation not initialized.</div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isIntelOperationsOpen} onOpenChange={setIsIntelOperationsOpen}>
-        <DialogContent className="max-w-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
-            <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">
-              Intelligence Operations
-            </DialogTitle>
-            <DialogDescription className="text-sm text-gray-400 mt-1">
-              Unified intel operations: Satellite deployment, sabotage, and cyber attacks
-            </DialogDescription>
-          </DialogHeader>
-          <UnifiedIntelOperationsPanel
-            player={PlayerManager.get() || {} as Nation}
-            enemies={nations.filter(n => !n.isPlayer && !n.eliminated)}
-            onDeploySatellite={handleDeploySatellite}
-            onSabotageOperation={handleSabotageOperation}
-            onCyberAttack={handleCyberAttackOperation}
-            operationCooldowns={PlayerManager.get()?.intelOperationCooldowns}
-          />
+          <Tabs defaultValue="intel" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-black/40 border border-cyan-500/30">
+              <TabsTrigger value="intel" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">
+                Intel Ops
+              </TabsTrigger>
+              <TabsTrigger value="spy" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300">
+                Spy Network
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="intel" className="mt-4">
+              <UnifiedIntelOperationsPanel
+                player={PlayerManager.get() || {} as Nation}
+                enemies={nations.filter(n => !n.isPlayer && !n.eliminated)}
+                onDeploySatellite={handleDeploySatellite}
+                onSabotageOperation={handleSabotageOperation}
+                onCyberAttack={handleCyberAttackOperation}
+                operationCooldowns={PlayerManager.get()?.intelOperationCooldowns}
+              />
+            </TabsContent>
+            <TabsContent value="spy" className="mt-4">
+              {playerNation ? (
+                <SpyNetworkPanel
+                  player={playerNation}
+                  enemies={enemyNations}
+                  onRecruitSpy={(cover, targetNation, specialization) => {
+                    spyNetwork.recruitSpy(playerNation.id, {
+                      cover,
+                      targetNation,
+                      specialization,
+                    });
+                  }}
+                  onLaunchMission={(spyId, targetNationId, missionType) => {
+                    spyNetwork.launchMission(playerNation.id, spyId, targetNationId, missionType);
+                  }}
+                  onLaunchCounterIntel={() => {
+                    spyNetwork.launchCounterIntel(playerNation.id);
+                  }}
+                  calculateMissionSuccessChance={(spyId, targetNationId, missionType) =>
+                    spyNetwork.calculateMissionSuccessChance(spyId, playerNation.id, targetNationId, missionType)
+                  }
+                  calculateDetectionRisk={(spyId, targetNationId, missionType) =>
+                    spyNetwork.calculateDetectionRisk(spyId, playerNation.id, targetNationId, missionType)
+                  }
+                />
+              ) : (
+                <div className="text-sm text-slate-400">Player nation not initialized.</div>
+              )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 

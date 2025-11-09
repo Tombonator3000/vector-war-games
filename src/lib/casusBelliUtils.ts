@@ -62,10 +62,11 @@ export function calculateJustificationFactors(
   // Ideological conflict: opposing ideologies provide justification
   let ideologicalConflict = 0;
   if (attacker.ideologyState && defender.ideologyState) {
-    const ideologyDiff = Math.abs(
-      (attacker.ideologyState.alignment || 0) - (defender.ideologyState.alignment || 0)
-    );
-    ideologicalConflict = Math.min(20, ideologyDiff * 2);
+    // Use ideology support as proxy for alignment difference
+    const attackerDem = attacker.ideologyState.ideologicalSupport?.democracy || 0;
+    const defenderDem = defender.ideologyState.ideologicalSupport?.democracy || 0;
+    const ideologyDiff = Math.abs(attackerDem - defenderDem);
+    ideologicalConflict = Math.min(20, ideologyDiff / 5);
   }
 
   // Council authorization: strong justification if sanctioned
@@ -303,14 +304,14 @@ export function createHolyWarCB(
 ): CasusBelli {
   let ideologyDiff = 0;
   if (attacker.ideologyState && defender.ideologyState) {
-    ideologyDiff = Math.abs(
-      (attacker.ideologyState.alignment || 0) - (defender.ideologyState.alignment || 0)
-    );
+    const attackerDem = attacker.ideologyState.ideologicalSupport?.democracy || 0;
+    const defenderDem = defender.ideologyState.ideologicalSupport?.democracy || 0;
+    ideologyDiff = Math.abs(attackerDem - defenderDem);
   }
 
-  const justification = Math.min(30, ideologyDiff * 3);
-  const publicSupport = attacker.ideologyState?.zealotry
-    ? 60 + attacker.ideologyState.zealotry * 20
+  const justification = Math.min(30, ideologyDiff / 3);
+  const publicSupport = attacker.ideologyState?.ideologyStability
+    ? 50 + attacker.ideologyState.ideologyStability / 2
     : 50;
 
   return createCasusBelli(
@@ -409,8 +410,8 @@ export function validateWarDeclaration(
 
   // Determine validity
   let validity: CasusBelliValidity = 'invalid';
-  let diplomaticPenalty = UNJUSTIFIED_WAR_PENALTIES.NO_CB.relationshipPenalty;
-  let trustPenalty = UNJUSTIFIED_WAR_PENALTIES.NO_CB.trustPenalty;
+  let diplomaticPenalty = -40;
+  let trustPenalty = -30;
 
   if (justificationScore >= WAR_JUSTIFICATION_THRESHOLDS.VALID) {
     validity = 'valid';
@@ -421,8 +422,8 @@ export function validateWarDeclaration(
     );
   } else if (justificationScore >= WAR_JUSTIFICATION_THRESHOLDS.WEAK) {
     validity = 'weak';
-    diplomaticPenalty = UNJUSTIFIED_WAR_PENALTIES.WEAK_CB.relationshipPenalty;
-    trustPenalty = UNJUSTIFIED_WAR_PENALTIES.WEAK_CB.trustPenalty;
+    diplomaticPenalty = -15;
+    trustPenalty = -10;
     reasons.push(
       `Weak Casus Belli (justification: ${justificationScore.toFixed(0)})`
     );
@@ -583,11 +584,11 @@ export function generateAutomaticCasusBelli(
   }
 
   // From ideology
-  if (attacker.ideology && defender.ideology) {
-    const ideologyDiff = Math.abs(
-      (attacker.ideology.alignment || 0) - (defender.ideology.alignment || 0)
-    );
-    if (ideologyDiff >= 15 && attacker.ideology.zealotry && attacker.ideology.zealotry > 0.3) {
+  if (attacker.ideologyState && defender.ideologyState) {
+    const attackerDem = attacker.ideologyState.ideologicalSupport?.democracy || 0;
+    const defenderDem = defender.ideologyState.ideologicalSupport?.democracy || 0;
+    const ideologyDiff = Math.abs(attackerDem - defenderDem);
+    if (ideologyDiff >= 40 && attacker.ideologyState.ideologyStability > 60) {
       newCBs.push(createHolyWarCB(attacker, defender, currentTurn));
     }
   }

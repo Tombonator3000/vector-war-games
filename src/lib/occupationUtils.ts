@@ -11,10 +11,10 @@ import type {
   GarrisonState,
   OccupationPolicyType,
   UprisingEvent,
-  OCCUPATION_POLICIES,
   ResistanceActivity,
   ForeignResistanceSupport,
 } from '@/types/heartsOfIronPhase4';
+import { OCCUPATION_POLICIES } from '@/types/heartsOfIronPhase4';
 import { generateId } from './idGenerator';
 
 /**

@@ -653,7 +653,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     const agency = n.intelligenceAgency;
     if (agency && agency.activeOperations.length > 0) {
       agency.activeOperations = agency.activeOperations
-        .map(op => progressIntelOperation(op))
+        .map(op => progressIntelOperation(op, S.turn))
         .filter(op => op.turnsRemaining > 0); // Remove completed operations
 
       // Update reputation based on completed operations
