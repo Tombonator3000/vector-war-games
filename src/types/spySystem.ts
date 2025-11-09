@@ -104,7 +104,13 @@ export type SpyMissionType =
   | 'recruit-asset'        // Recruit local assets
   | 'cyber-assist'         // Assist in cyber operations
   | 'false-flag'           // Frame another nation
-  | 'exfiltrate';          // Extract someone/something
+  | 'exfiltrate'           // Extract someone/something
+  | 'reveal-hidden-agendas'    // Uncover secret diplomatic traits and motivations
+  | 'spy-on-negotiations'      // See what deals they are making
+  | 'assess-military-plans'    // Learn their military targets and timing
+  | 'assess-resources'         // Get exact counts of resources and weapons
+  | 'steal-research-intel'     // Discover their research projects and progress
+  | 'assess-alliance-plans';   // Find out who they want to ally with
 
 /**
  * Active spy mission
@@ -301,6 +307,14 @@ export const SPY_COSTS = {
   FALSE_FLAG: 70,
   EXFILTRATE: 55,
 
+  // Diplomatic intelligence operations
+  REVEAL_HIDDEN_AGENDAS: 30,
+  SPY_ON_NEGOTIATIONS: 25,
+  ASSESS_MILITARY_PLANS: 35,
+  ASSESS_RESOURCES: 20,
+  STEAL_RESEARCH_INTEL: 25,
+  ASSESS_ALLIANCE_PLANS: 20,
+
   // Additional production costs for some missions
   SABOTAGE_PRODUCTION_PROD: 15,
   ASSASSINATION_PROD: 25,
@@ -326,6 +340,14 @@ export const MISSION_DURATIONS = {
   CYBER_ASSIST: 1,
   FALSE_FLAG: 3,
   EXFILTRATE: 2,
+
+  // Diplomatic intelligence operations (generally faster)
+  REVEAL_HIDDEN_AGENDAS: 2,
+  SPY_ON_NEGOTIATIONS: 2,
+  ASSESS_MILITARY_PLANS: 2,
+  ASSESS_RESOURCES: 1,
+  STEAL_RESEARCH_INTEL: 2,
+  ASSESS_ALLIANCE_PLANS: 2,
 } as const;
 
 /**
@@ -345,6 +367,14 @@ export const BASE_DETECTION_RISKS = {
   CYBER_ASSIST: 30,
   FALSE_FLAG: 55,
   EXFILTRATE: 40,
+
+  // Diplomatic intelligence operations (lower risk, passive observation)
+  REVEAL_HIDDEN_AGENDAS: 25,
+  SPY_ON_NEGOTIATIONS: 30,
+  ASSESS_MILITARY_PLANS: 45,
+  ASSESS_RESOURCES: 20,
+  STEAL_RESEARCH_INTEL: 35,
+  ASSESS_ALLIANCE_PLANS: 25,
 } as const;
 
 /**

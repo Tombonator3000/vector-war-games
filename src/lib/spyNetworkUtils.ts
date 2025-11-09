@@ -216,6 +216,24 @@ export function getMissionCost(missionType: SpyMissionType): { intel: number; pr
     case 'exfiltrate':
       cost.intel = SPY_COSTS.EXFILTRATE;
       break;
+    case 'reveal-hidden-agendas':
+      cost.intel = SPY_COSTS.REVEAL_HIDDEN_AGENDAS;
+      break;
+    case 'spy-on-negotiations':
+      cost.intel = SPY_COSTS.SPY_ON_NEGOTIATIONS;
+      break;
+    case 'assess-military-plans':
+      cost.intel = SPY_COSTS.ASSESS_MILITARY_PLANS;
+      break;
+    case 'assess-resources':
+      cost.intel = SPY_COSTS.ASSESS_RESOURCES;
+      break;
+    case 'steal-research-intel':
+      cost.intel = SPY_COSTS.STEAL_RESEARCH_INTEL;
+      break;
+    case 'assess-alliance-plans':
+      cost.intel = SPY_COSTS.ASSESS_ALLIANCE_PLANS;
+      break;
   }
 
   return cost;
@@ -336,6 +354,12 @@ function getBaseDetectionRisk(missionType: SpyMissionType): number {
     case 'cyber-assist': return BASE_DETECTION_RISKS.CYBER_ASSIST;
     case 'false-flag': return BASE_DETECTION_RISKS.FALSE_FLAG;
     case 'exfiltrate': return BASE_DETECTION_RISKS.EXFILTRATE;
+    case 'reveal-hidden-agendas': return BASE_DETECTION_RISKS.REVEAL_HIDDEN_AGENDAS;
+    case 'spy-on-negotiations': return BASE_DETECTION_RISKS.SPY_ON_NEGOTIATIONS;
+    case 'assess-military-plans': return BASE_DETECTION_RISKS.ASSESS_MILITARY_PLANS;
+    case 'assess-resources': return BASE_DETECTION_RISKS.ASSESS_RESOURCES;
+    case 'steal-research-intel': return BASE_DETECTION_RISKS.STEAL_RESEARCH_INTEL;
+    case 'assess-alliance-plans': return BASE_DETECTION_RISKS.ASSESS_ALLIANCE_PLANS;
     default: return 50;
   }
 }
@@ -359,6 +383,14 @@ function getMissionDifficulty(missionType: SpyMissionType): number {
     'rig-election': 35,
     'exfiltrate': 30,
     'assassination': 40,
+
+    // Diplomatic intelligence operations (low to medium difficulty)
+    'assess-resources': 5,
+    'assess-alliance-plans': 10,
+    'reveal-hidden-agendas': 15,
+    'spy-on-negotiations': 15,
+    'steal-research-intel': 20,
+    'assess-military-plans': 25,
   };
 
   return difficulties[missionType] || 25;
@@ -407,6 +439,14 @@ function getRelevantSpecialization(
     'cyber-assist': ['hacking', 'tech-theft'],
     'false-flag': ['infiltration', 'counter-intel'],
     'exfiltrate': ['infiltration', 'combat'],
+
+    // Diplomatic intelligence operations
+    'reveal-hidden-agendas': ['infiltration', 'seduction', 'counter-intel'],
+    'spy-on-negotiations': ['infiltration', 'hacking', 'disguise'],
+    'assess-military-plans': ['infiltration', 'hacking', 'tech-theft'],
+    'assess-resources': ['infiltration', 'hacking'],
+    'steal-research-intel': ['tech-theft', 'hacking', 'infiltration'],
+    'assess-alliance-plans': ['infiltration', 'seduction', 'hacking'],
   };
 
   const relevant = relevantSpecs[missionType] || [];
@@ -471,6 +511,12 @@ function getMissionDuration(missionType: SpyMissionType): number {
     case 'cyber-assist': return MISSION_DURATIONS.CYBER_ASSIST;
     case 'false-flag': return MISSION_DURATIONS.FALSE_FLAG;
     case 'exfiltrate': return MISSION_DURATIONS.EXFILTRATE;
+    case 'reveal-hidden-agendas': return MISSION_DURATIONS.REVEAL_HIDDEN_AGENDAS;
+    case 'spy-on-negotiations': return MISSION_DURATIONS.SPY_ON_NEGOTIATIONS;
+    case 'assess-military-plans': return MISSION_DURATIONS.ASSESS_MILITARY_PLANS;
+    case 'assess-resources': return MISSION_DURATIONS.ASSESS_RESOURCES;
+    case 'steal-research-intel': return MISSION_DURATIONS.STEAL_RESEARCH_INTEL;
+    case 'assess-alliance-plans': return MISSION_DURATIONS.ASSESS_ALLIANCE_PLANS;
     default: return 2;
   }
 }
@@ -631,6 +677,133 @@ function generateMissionRewards(
 
     case 'counter-intel':
       rewards.otherEffects = ['Counter-intelligence operation successful'];
+      break;
+
+    // Diplomatic Intelligence Operations
+    case 'reveal-hidden-agendas':
+      rewards.intelGained = 20;
+      rewards.otherEffects = [];
+      if (target.agendas) {
+        const hiddenAgendas = target.agendas.filter((a) => a.type === 'hidden' && !a.isRevealed);
+        if (hiddenAgendas.length > 0) {
+          rewards.otherEffects.push(`Revealed ${hiddenAgendas.length} hidden agenda(s)`);
+          hiddenAgendas.forEach((agenda) => {
+            rewards.otherEffects?.push(`  - ${agenda.name}: ${agenda.description}`);
+          });
+        } else {
+          rewards.otherEffects.push('No hidden agendas discovered');
+        }
+      } else {
+        rewards.otherEffects.push('Target has no diplomatic agendas');
+      }
+      break;
+
+    case 'spy-on-negotiations':
+      rewards.intelGained = 15;
+      rewards.otherEffects = [];
+      // Check for active negotiations
+      const targetNegotiations = gameState.diplomacy?.activeNegotiations?.filter(
+        (n: any) => n.initiatorId === target.id || n.recipientId === target.id
+      ) || [];
+      if (targetNegotiations.length > 0) {
+        rewards.otherEffects.push(`Discovered ${targetNegotiations.length} active negotiation(s)`);
+        targetNegotiations.slice(0, 3).forEach((neg: any) => {
+          const otherParty = neg.initiatorId === target.id ? neg.recipientId : neg.initiatorId;
+          const otherNation = gameState.nations.find((n) => n.id === otherParty);
+          if (otherNation) {
+            rewards.otherEffects?.push(`  - Negotiating with ${otherNation.name}`);
+          }
+        });
+      } else {
+        rewards.otherEffects.push('No active negotiations detected');
+      }
+      break;
+
+    case 'assess-military-plans':
+      rewards.intelGained = 25;
+      rewards.otherEffects = [];
+      // Analyze target's military posture
+      if (target.threats) {
+        const threats = Object.entries(target.threats).sort((a, b) => b[1] - a[1]);
+        if (threats.length > 0 && threats[0][1] > 50) {
+          const primaryTarget = gameState.nations.find((n) => n.id === threats[0][0]);
+          if (primaryTarget) {
+            rewards.otherEffects.push(`Primary military target: ${primaryTarget.name}`);
+            rewards.otherEffects.push(`Threat level: ${Math.round(threats[0][1])}%`);
+            if (target.missiles > 5) {
+              rewards.otherEffects.push('Likely planning missile strike');
+            } else if (target.bombers && target.bombers > 3) {
+              rewards.otherEffects.push('Likely planning bomber raid');
+            } else {
+              rewards.otherEffects.push('Limited offensive capability');
+            }
+          }
+        } else {
+          rewards.otherEffects.push('No immediate military plans detected');
+        }
+      } else {
+        rewards.otherEffects.push('No military intelligence available');
+      }
+      break;
+
+    case 'assess-resources':
+      rewards.intelGained = 10;
+      rewards.otherEffects = [];
+      rewards.otherEffects.push(`Production: ${target.production}`);
+      rewards.otherEffects.push(`Uranium: ${target.uranium}`);
+      rewards.otherEffects.push(`Intel: ${target.intel}`);
+      rewards.otherEffects.push(`Missiles: ${target.missiles}`);
+      const warheadCount = Object.values(target.warheads).reduce((sum, count) => sum + count, 0);
+      rewards.otherEffects.push(`Total Warheads: ${warheadCount}`);
+      if (target.bombers) {
+        rewards.otherEffects.push(`Bombers: ${target.bombers}`);
+      }
+      if (target.submarines) {
+        rewards.otherEffects.push(`Submarines: ${target.submarines}`);
+      }
+      break;
+
+    case 'steal-research-intel':
+      rewards.intelGained = 15;
+      rewards.otherEffects = [];
+      if (target.researchQueue) {
+        rewards.otherEffects.push(`Current Research: ${target.researchQueue.projectId}`);
+        rewards.otherEffects.push(`Turns remaining: ${target.researchQueue.turnsRemaining}`);
+      } else {
+        rewards.otherEffects.push('No active research project');
+      }
+      if (target.researched) {
+        const completedProjects = Object.keys(target.researched).filter((k) => target.researched![k]);
+        rewards.otherEffects.push(`Completed projects: ${completedProjects.length}`);
+        completedProjects.slice(0, 5).forEach((project) => {
+          rewards.otherEffects?.push(`  - ${project}`);
+        });
+      }
+      break;
+
+    case 'assess-alliance-plans':
+      rewards.intelGained = 15;
+      rewards.otherEffects = [];
+      if (target.relationships) {
+        const goodRelationships = Object.entries(target.relationships)
+          .filter(([id, rel]) => rel > 40 && !target.alliances?.includes(id))
+          .sort((a, b) => b[1] - a[1]);
+
+        if (goodRelationships.length > 0) {
+          rewards.otherEffects.push('Potential alliance partners:');
+          goodRelationships.slice(0, 3).forEach(([nationId, relationship]) => {
+            const nation = gameState.nations.find((n) => n.id === nationId);
+            if (nation) {
+              rewards.otherEffects?.push(`  - ${nation.name} (relationship: ${Math.round(relationship)})`);
+            }
+          });
+        } else {
+          rewards.otherEffects.push('No strong diplomatic ties detected');
+        }
+      }
+      if (target.alliances && target.alliances.length > 0) {
+        rewards.otherEffects.push(`Current alliances: ${target.alliances.length}`);
+      }
       break;
   }
 
