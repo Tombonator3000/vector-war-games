@@ -5815,6 +5815,16 @@ export default function NoradVector() {
     () => S.diplomacyPhase3 ?? null
   );
 
+  // Modal and panel states - MUST be declared before blockingModalActive useMemo
+  const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
+  const [isCulturePanelOpen, setIsCulturePanelOpen] = useState(false);
+  const [showGovernanceDetails, setShowGovernanceDetails] = useState(false);
+  const [showPolicyPanel, setShowPolicyPanel] = useState(false);
+  const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
+  const [isIntelOperationsOpen, setIsIntelOperationsOpen] = useState(false);
+  const [isSpyPanelOpen, setIsSpyPanelOpen] = useState(false);
+  const [isWarCouncilOpen, setIsWarCouncilOpen] = useState(false);
+
   const blockingModalActive = useMemo(
     () =>
       Boolean(
@@ -6266,14 +6276,6 @@ export default function NoradVector() {
     }
     return true;
   });
-  const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
-  const [isCulturePanelOpen, setIsCulturePanelOpen] = useState(false);
-  const [showGovernanceDetails, setShowGovernanceDetails] = useState(false);
-  const [showPolicyPanel, setShowPolicyPanel] = useState(false);
-  const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
-  const [isIntelOperationsOpen, setIsIntelOperationsOpen] = useState(false);
-  const [isSpyPanelOpen, setIsSpyPanelOpen] = useState(false);
-  const [isWarCouncilOpen, setIsWarCouncilOpen] = useState(false);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const lastTargetPingIdRef = useRef<string | null>(null);
   const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null);
