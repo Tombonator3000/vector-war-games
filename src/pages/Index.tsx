@@ -6345,6 +6345,11 @@ export default function NoradVector() {
     canvas = canvasElement;
     ctx = canvasElement.getContext('2d')!;
 
+    if (!gameLoopRunning) {
+      gameLoopRunning = true;
+      requestAnimationFrame(gameLoop);
+    }
+
     if (hasBootstrappedGameRef.current) {
       isGameplayLoopEnabled = true;
       isAttractModeActive = false;
@@ -7664,14 +7669,15 @@ export default function NoradVector() {
           canvas = retryElement;
           ctx = retryElement.getContext('2d', { alpha: true })!;
           resizeCanvas();
-          
-          if (!gameLoopRunning) {
+
+          const shouldStartLoop = isGameplayLoopEnabled || isAttractModeActive || isGameStarted;
+          if (!gameLoopRunning && shouldStartLoop) {
             gameLoopRunning = true;
             requestAnimationFrame(gameLoop);
           }
         }
       }, 100);
-      
+
       return () => clearTimeout(retryTimer);
     }
 
@@ -7684,7 +7690,8 @@ export default function NoradVector() {
       isAttractModeActive = true;
     }
 
-    if (!gameLoopRunning) {
+    const shouldStartLoop = isGameplayLoopEnabled || isAttractModeActive || isGameStarted;
+    if (!gameLoopRunning && shouldStartLoop) {
       gameLoopRunning = true;
       requestAnimationFrame(gameLoop);
     }
@@ -7698,7 +7705,7 @@ export default function NoradVector() {
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [resizeCanvas]);
+  }, [isGameStarted, resizeCanvas]);
 
   const toggleFullscreen = useCallback(() => {
     AudioSys.playSFX('click');

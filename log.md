@@ -2907,3 +2907,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Removed the legacy wireframe texture asset in favor of the procedural geometry (`public/textures/earth_wireframe.svg`).
 - Ran the Vitest suite targeting the GlobeScene component to confirm existing behaviors remain stable (`npm run test -- GlobeScene`).
 
+### 2025-11-10T04:32:00Z - Restart overlay canvas loop when gameplay begins
+- Reviewed the `isGameStarted` bootstrap effect in `src/pages/Index.tsx` to ensure the overlay canvas and context initialize the draw loop when the campaign begins.
+- Updated the overlay mount effect dependencies and guard clauses so a delayed `GlobeScene` mount still triggers `requestAnimationFrame(gameLoop)` once the canvas becomes available (`src/pages/Index.tsx`).
+- Confirmed the game bootstrap effect now schedules the loop immediately after binding the canvas context to avoid missing the first frame when entering flat-realistic mode (`src/pages/Index.tsx`).
+
