@@ -2902,3 +2902,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated the flat globe day/night texture constants to reference the new flat assets so 2D rendering uses the correct images (`src/pages/Index.tsx`).
 - Verified the preload helper continues to select the appropriate day/night URL for blending logic (`src/pages/Index.tsx`).
 
+### 2025-11-09T17:17:09Z - Procedural wireframe globe outlines
+- Replaced the SVG-based wireframe plane with procedural line segments derived from the world country GeoJSON, including dynamic pan/zoom projection updates (`src/components/GlobeScene.tsx`).
+- Removed the legacy wireframe texture asset in favor of the procedural geometry (`public/textures/earth_wireframe.svg`).
+- Ran the Vitest suite targeting the GlobeScene component to confirm existing behaviors remain stable (`npm run test -- GlobeScene`).
+
