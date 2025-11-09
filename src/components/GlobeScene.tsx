@@ -768,7 +768,12 @@ function EarthWireframe({
 
   return (
     <group ref={groupRef} renderOrder={-15}>
-      <mesh ref={meshRef} position={[0, 0, FLAT_PLANE_Z]} frustumCulled={false}>
+      <mesh
+        ref={meshRef}
+        position={[0, 0, FLAT_PLANE_Z]}
+        renderOrder={-15}
+        frustumCulled={false}
+      >
         <planeGeometry args={[1, 1]} />
         <meshBasicMaterial
           color="#061021"
