@@ -333,7 +333,14 @@ describe('Conventional warfare panels', () => {
           },
         ]}
         territories={[]}
-        profile={{ readiness: 80, reserve: 1, focus: 'army', deployedUnits: [] }}
+        profile={{
+          readiness: 80,
+          reserve: 1,
+          professionalism: 60,
+          tradition: 50,
+          focus: 'army',
+          deployedUnits: [],
+        }}
         onTrain={handleTrain}
         playerId="player"
         researchUnlocks={{ conventional_armored_doctrine: true }}
@@ -363,7 +370,14 @@ describe('Conventional warfare panels', () => {
           },
         ]}
         territories={[]}
-        profile={{ readiness: 70, reserve: 1, focus: 'navy', deployedUnits: [] }}
+        profile={{
+          readiness: 70,
+          reserve: 1,
+          professionalism: 55,
+          tradition: 60,
+          focus: 'navy',
+          deployedUnits: [],
+        }}
         onTrain={handleTrain}
         playerId="player"
         researchUnlocks={{}}

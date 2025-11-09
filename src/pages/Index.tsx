@@ -7329,6 +7329,7 @@ export default function NoradVector() {
     if (!metrics) {
       return null;
     }
+    const profile = player.conventional ?? createDefaultNationConventionalProfile();
     return {
       id: player.id,
       name: player.name,
@@ -7337,7 +7338,9 @@ export default function NoradVector() {
       intel: player.intel ?? 0,
       uranium: player.uranium ?? 0,
       instability: player.instability ?? 0,
-      readiness: player.conventional?.readiness ?? 60,
+      readiness: profile.readiness,
+      professionalism: profile.professionalism,
+      tradition: profile.tradition,
     };
   }, [player, governance.metrics]);
 
@@ -7353,6 +7356,8 @@ export default function NoradVector() {
       deployed,
       reserve,
       readiness: playerSnapshot.readiness,
+      professionalism: playerSnapshot.professionalism,
+      tradition: playerSnapshot.tradition,
     };
   }, [conventionalUnits, playerSnapshot]);
 
@@ -11572,20 +11577,33 @@ export default function NoradVector() {
       const readiness = Math.round(playerForceSummary.readiness);
       const readinessStatus: 'normal' | 'warning' | 'critical' =
         readiness <= 35 ? 'critical' : readiness < 55 ? 'warning' : 'normal';
+      const professionalism = Math.round(playerForceSummary.professionalism);
+      const tradition = Math.round(playerForceSummary.tradition);
+      const doctrineTilt = professionalism - tradition;
+      const doctrineLabel =
+        doctrineTilt >= 12
+          ? 'Kvalitetsfokus'
+          : doctrineTilt <= -12
+            ? 'Massemobilisering'
+            : 'Hybrid-styrke';
       const groupBreakdown = playerArmyGroupSummaries
         .map((summary) => `${summary.group.name}: ${Math.round(summary.readiness)}%`)
         .join(' • ');
+      const metaSegments = [`Profesjonalitet ${professionalism}%`, `Tradisjon ${tradition}%`];
+      if (groupBreakdown) {
+        metaSegments.push(groupBreakdown);
+      }
       militaryItems.push({
         id: 'force-readiness',
         title: `Total beredskap ${readiness}%`,
-        subtitle: `${playerForceSummary.deployed} deployert • ${playerForceSummary.reserve} i reserve`,
+        subtitle: `${playerForceSummary.deployed} deployert • ${playerForceSummary.reserve} i reserve • Prof ${professionalism}% / Trad ${tradition}%`,
         description:
           playerArmyGroupSummaries.length > 0
             ? `Grupper: ${playerArmyGroupSummaries.length}`
             : 'Ingen armégrupper organisert',
         icon: <Shield className="h-4 w-4" />,
         status: readinessStatus,
-        meta: groupBreakdown || undefined,
+        meta: [doctrineLabel, ...metaSegments].join(' • '),
       });
     }
 

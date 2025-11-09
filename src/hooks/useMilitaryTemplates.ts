@@ -862,7 +862,10 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
    * Calculate combat effectiveness for a unit
    */
   const calculateCombatEffectiveness = useCallback(
-    (unitId: string): CombatModifiers | null => {
+    (
+      unitId: string,
+      doctrineModifiers?: { professionalism?: number; tradition?: number }
+    ): CombatModifiers | null => {
       for (const [nationId, units] of deployedUnits.entries()) {
         const unit = units.find((u) => u.id === unitId);
         if (unit) {
@@ -872,13 +875,38 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
           const veterancyBonus =
             unit.veterancy === 'elite' ? 0.3 : unit.veterancy === 'veteran' ? 0.2 : unit.veterancy === 'regular' ? 0.1 : 0;
 
-          const totalEffectiveness = supplyModifier * organizationModifier * experienceModifier * (1 + veterancyBonus);
+          const professionalismValue = Math.min(
+            100,
+            Math.max(0, doctrineModifiers?.professionalism ?? 50),
+          );
+          const traditionValue = Math.min(100, Math.max(0, doctrineModifiers?.tradition ?? 50));
+          const professionalismModifierRaw = 1 + ((professionalismValue - 50) / 100) * 0.4;
+          const traditionModifierRaw = 1 - ((traditionValue - 50) / 100) * 0.3;
+          const doctrineSkew = Math.abs(professionalismValue - traditionValue) / 100;
+          const balanceModifierRaw = 1 - doctrineSkew * 0.2;
+
+          const professionalismModifier = Number(Math.max(0.6, professionalismModifierRaw).toFixed(3));
+          const traditionModifier = Number(Math.max(0.5, traditionModifierRaw).toFixed(3));
+          const doctrineBalanceModifier = Number(Math.max(0.75, balanceModifierRaw).toFixed(3));
+
+          const baseEffectiveness = supplyModifier * organizationModifier * experienceModifier * (1 + veterancyBonus);
+          const totalEffectiveness = Number(
+            (
+              baseEffectiveness *
+              professionalismModifier *
+              traditionModifier *
+              doctrineBalanceModifier
+            ).toFixed(3),
+          );
 
           return {
             supplyModifier,
             organizationModifier,
             experienceModifier,
             veterancyBonus,
+            professionalismModifier,
+            traditionModifier,
+            doctrineBalanceModifier,
             totalEffectiveness,
           };
         }

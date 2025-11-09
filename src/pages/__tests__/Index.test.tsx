@@ -214,7 +214,14 @@ vi.mock('@/hooks/useConventionalWarfare', () => ({
     getUnitsForNation: vi.fn(() => []),
   }),
   createDefaultConventionalState: () => ({ units: {}, territories: {} }),
-  createDefaultNationConventionalProfile: () => ({}),
+  createDefaultNationConventionalProfile: () => ({
+    readiness: 75,
+    reserve: 2,
+    professionalism: 55,
+    tradition: 55,
+    focus: 'army',
+    deployedUnits: [],
+  }),
 }));
 
 vi.mock('@/hooks/useCyberWarfare', () => ({
