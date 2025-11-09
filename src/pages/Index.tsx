@@ -5792,6 +5792,17 @@ export default function NoradVector() {
     agenda: any;
   } | null>(null);
 
+  // News ticker and flashpoints - MUST be declared before blockingModalActive useMemo
+  const { newsItems, addNewsItem } = useNewsManager();
+  const [currentFlashpointOutcome, setCurrentFlashpointOutcome] = useState<FlashpointOutcome | null>(null);
+  const {
+    activeFlashpoint,
+    pendingFollowUps,
+    triggerRandomFlashpoint,
+    resolveFlashpoint,
+    dismissFlashpoint,
+  } = useFlashpoints();
+
   const blockingModalActive = useMemo(
     () =>
       Boolean(
@@ -6671,17 +6682,7 @@ export default function NoradVector() {
     };
   }, []);
 
-  // News ticker and flashpoints
-  // News management - Extracted to useNewsManager hook (Phase 7 refactoring)
-  const { newsItems, addNewsItem } = useNewsManager();
-  const [currentFlashpointOutcome, setCurrentFlashpointOutcome] = useState<FlashpointOutcome | null>(null);
-  const {
-    activeFlashpoint,
-    pendingFollowUps,
-    triggerRandomFlashpoint,
-    resolveFlashpoint,
-    dismissFlashpoint,
-  } = useFlashpoints();
+  // News ticker and flashpoints - Moved up before blockingModalActive
   const [isOutlinerCollapsed, setIsOutlinerCollapsed] = useState(false);
   const [outlinerAttentionTick, setOutlinerAttentionTick] = useState(0);
   const strategicOutlinerRef = useRef<HTMLDivElement | null>(null);
