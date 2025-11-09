@@ -2900,6 +2900,11 @@ function toLonLatLocal(x: number, y: number): [number, number] {
 
 // World rendering - wrapper function that delegates to extracted module
 function drawWorld(style: MapVisualStyle) {
+  if (!ctx || !worldCountries) {
+    console.warn('[drawWorld] Missing ctx or worldCountries:', { ctx: !!ctx, worldCountries: !!worldCountries });
+    return;
+  }
+  
   const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState();
   const context: WorldRenderContext = {
     ctx,
@@ -5570,6 +5575,13 @@ function gameLoop() {
   if (worldCountries) {
     drawWorld(currentMapStyle);
     CityLights.draw(ctx, currentMapStyle);
+  } else {
+    // Debug: draw a test pattern to verify canvas is working
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+    ctx.fillRect(10, 10, 200, 100);
+    ctx.fillStyle = 'white';
+    ctx.font = '16px monospace';
+    ctx.fillText('Waiting for map data...', 20, 50);
   }
   
   drawNations(currentMapStyle);
@@ -6059,9 +6071,13 @@ export default function NoradVector() {
   }, []);
   useEffect(() => {
     void loadWorld().then(() => {
-      console.log('World map loaded successfully, worldCountries:', !!worldCountries);
+      console.log('[Map Debug] World map loaded successfully:', { 
+        hasWorldCountries: !!worldCountries,
+        featureCount: worldCountries?.features?.length ?? 0,
+        type: worldCountries?.type
+      });
     }).catch(err => {
-      console.error('Failed to load world map:', err);
+      console.error('[Map Debug] Failed to load world map:', err);
     });
   }, []);
   useEffect(() => {
