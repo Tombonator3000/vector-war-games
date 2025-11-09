@@ -235,7 +235,7 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
 
   if (worldCountries) {
     ctx.save();
-    ctx.lineWidth = isWireframe ? 1.5 : 1;
+    ctx.lineWidth = isWireframe ? 1.5 : (isFlatRealistic ? 1.5 : 1);
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
@@ -254,7 +254,13 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
       if (isWireframe) {
         ctx.strokeStyle = 'rgba(80,240,255,0.75)';
       } else if (isFlatRealistic) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        // Draw borders twice for better visibility: first a dark outline, then light inner line
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1.2;
       } else {
         ctx.strokeStyle = palette.mapOutline;
       }
