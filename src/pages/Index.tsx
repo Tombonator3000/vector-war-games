@@ -645,8 +645,6 @@ let currentTheme: ThemeId = 'synthwave';
 let currentMapStyle: MapVisualStyle = 'realistic';
 let currentMapMode: MapMode = 'standard';
 let currentMapModeData: MapModeOverlayData | null = null;
-let isDayMode: boolean = true;
-let dayNightTransition: number = 0;
 let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
@@ -5802,8 +5800,8 @@ export default function NoradVector() {
     const mode = isMapModeValue(storedMode) ? storedMode : DEFAULT_MAP_STYLE.mode;
     return { visual, mode };
   });
-  const [isFlatMapDay, setIsFlatMapDay] = useState<boolean>(isDayMode);
-  const flatRealisticBlendRef = useRef<number>(dayNightTransition);
+  const [isFlatMapDay, setIsFlatMapDay] = useState<boolean>(true);
+  const flatRealisticBlendRef = useRef<number>(0);
   const dayNightBlendAnimationFrameRef = useRef<number | null>(null);
   const dayNightBlendAnimationStartRef = useRef<number | null>(null);
   const stopDayNightBlendAnimation = useCallback(() => {
@@ -5853,7 +5851,7 @@ export default function NoradVector() {
 
     dayNightBlendAnimationFrameRef.current = requestAnimationFrame(step);
   }, [stopDayNightBlendAnimation]);
-  const lastFlatMapModeRef = useRef<boolean>(isDayMode);
+  const lastFlatMapModeRef = useRef<boolean>(true);
 
   const handleMapStyleChange = useCallback((style: MapVisualStyle) => {
     setMapStyle(prev => {
@@ -5896,17 +5894,13 @@ export default function NoradVector() {
   }, [toast]);
 
   const handleDayNightToggle = useCallback(() => {
-    const nextMode = !isDayMode;
-    isDayMode = nextMode;
-    lastFlatMapModeRef.current = nextMode;
-    setIsFlatMapDay(nextMode);
-    animateDayNightBlendTo(nextMode ? 0 : 1);
+    // Day/night is now automatic based on round number
     AudioSys.playSFX('click');
     toast({
-      title: 'Dag/Natt modus oppdatert',
-      description: `Vekslet til ${nextMode ? 'Dagkart' : 'Nattkart'}`,
+      title: 'Dag/Natt modus',
+      description: 'Dag/natt-syklusen er nå automatisk basert på runde',
     });
-  }, [animateDayNightBlendTo, toast]);
+  }, [toast]);
 
   useEffect(() => {
     const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
@@ -6184,15 +6178,13 @@ export default function NoradVector() {
     let lastTimestamp: number | null = null;
 
     const syncModeWithBlend = () => {
-      const nextIsDay = dayNightTransition < 0.5;
+      const nextIsDay = flatRealisticBlendRef.current < 0.5;
       if (lastFlatMapModeRef.current !== nextIsDay) {
         lastFlatMapModeRef.current = nextIsDay;
-        isDayMode = nextIsDay;
         setIsFlatMapDay(nextIsDay);
       }
     };
 
-    dayNightTransition = flatRealisticBlendRef.current;
     syncModeWithBlend();
 
     const animate = (timestamp: number) => {
