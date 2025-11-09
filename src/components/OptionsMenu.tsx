@@ -60,6 +60,16 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 
 const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
   {
+    value: 'flat',
+    label: '2D Flat',
+    description: 'Classic 2D TopoJSON world map projection.',
+  },
+  {
+    value: 'realistic',
+    label: 'Realistic',
+    description: 'Photorealistic satellite imagery with day/night cycle.',
+  },
+  {
     value: 'wireframe',
     label: 'Wireframe',
     description: 'Minimal geometric visualization with territory outlines.',

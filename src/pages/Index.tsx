@@ -367,6 +367,16 @@ interface PendingLaunchState {
 
 const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
   {
+    value: 'flat',
+    label: '2D Flat',
+    description: 'Classic 2D TopoJSON world map projection.',
+  },
+  {
+    value: 'realistic',
+    label: 'Realistic',
+    description: 'Photorealistic satellite imagery with day/night cycle.',
+  },
+  {
     value: 'wireframe',
     label: 'Vector',
     description: 'Neon vector grid with luminous borders and elevation lines.',
@@ -629,7 +639,7 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 
 let currentTheme: ThemeId = 'synthwave';
 // NOTE: currentMapStyle is initialized from React state in useEffect - DO NOT hardcode here
-let currentMapStyle: MapVisualStyle = 'wireframe';  // Default wireframe only
+let currentMapStyle: MapVisualStyle = 'flat';  // Default to 2D flat map
 let currentMapMode: MapMode = 'standard';
 let currentMapModeData: MapModeOverlayData | null = null;
 let selectedTargetRefId: string | null = null;
