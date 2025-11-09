@@ -675,6 +675,7 @@ let triggerNationsUpdate: (() => void) | null = null;
 let selectedTerritoryId: string | null = null;
 let hoveredTerritoryId: string | null = null;
 let dragTargetTerritoryId: string | null = null;
+let draggingArmyInfo: { sourceId: string; armies: number } | null = null;
 
 type OverlayNotification = { text: string; expiresAt: number };
 type OverlayListener = (message: OverlayNotification | null) => void;
@@ -2972,8 +2973,8 @@ function drawTerritoriesWrapper() {
 
   const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState();
   
-  // Get dragging army info from refs since it's React state
-  const draggingSource = draggingArmyRef.current?.sourceId ?? null;
+  // Get dragging army info from module-level variable
+  const draggingSource = draggingArmyInfo?.sourceId ?? null;
   
   const context: TerritoryRenderContext = {
     ctx,
@@ -5788,11 +5789,18 @@ export default function NoradVector() {
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
     const storedVisual = Storage.getItem('map_style_visual') ?? Storage.getItem('map_style');
     const storedMode = Storage.getItem('map_mode');
-    const visual = isVisualStyleValue(storedVisual) ? storedVisual : (() => {
-      Storage.setItem('map_style_visual', DEFAULT_MAP_STYLE.visual);
-      Storage.setItem('map_style', DEFAULT_MAP_STYLE.visual);
-      return DEFAULT_MAP_STYLE.visual;
-    })();
+    
+    // Force migration from old wireframe-only to new default 'flat'
+    let visual: MapVisualStyle;
+    if (storedVisual === 'wireframe' || !isVisualStyleValue(storedVisual)) {
+      visual = DEFAULT_MAP_STYLE.visual; // 'flat'
+      Storage.setItem('map_style_visual', visual);
+      Storage.setItem('map_style', visual);
+      console.log('[MAP INIT] Migrated from wireframe to flat style');
+    } else {
+      visual = storedVisual;
+    }
+    
     const mode = isMapModeValue(storedMode) ? storedMode : DEFAULT_MAP_STYLE.mode;
     return { visual, mode };
   });
@@ -6060,7 +6068,7 @@ export default function NoradVector() {
     currentMapStyle = mapStyle.visual;
     console.log('[MAP SYNC] currentMapStyle synced to:', currentMapStyle);
     
-    // Wireframe only - always center
+    // Center camera for all map styles
     const expectedX = (W - W * cam.zoom) / 2;
     const expectedY = (H - H * cam.zoom) / 2;
     const needsRecentering = Math.abs(cam.x - expectedX) > 0.5 || Math.abs(cam.y - expectedY) > 0.5;
@@ -6074,9 +6082,6 @@ export default function NoradVector() {
     console.log('[MAP SYNC] currentMapMode synced to:', currentMapMode);
   }, [mapStyle.mode]);
   useEffect(() => {
-    // Preload removed - wireframe only, no textures needed
-  }, []);
-  useEffect(() => {
     void loadWorld().then(() => {
       console.log('[Map Debug] World map loaded successfully:', { 
         hasWorldCountries: !!worldCountries,
@@ -6087,9 +6092,6 @@ export default function NoradVector() {
       console.error('[Map Debug] Failed to load world map:', err);
     });
   }, []);
-  useEffect(() => {
-    // Wireframe only - no texture preloading needed
-  }, [mapStyle.visual]);
   const storedMusicEnabled = Storage.getItem('audio_music_enabled');
   const initialMusicEnabled = storedMusicEnabled === 'true' ? true : storedMusicEnabled === 'false' ? false : AudioSys.musicEnabled;
   const storedSfxEnabled = Storage.getItem('audio_sfx_enabled');
@@ -6232,6 +6234,7 @@ export default function NoradVector() {
   
   useEffect(() => {
     draggingArmyRef.current = draggingArmy;
+    draggingArmyInfo = draggingArmy; // Sync to module-level variable
   }, [draggingArmy]);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
     const stored = Storage.getItem('conventional_state');
