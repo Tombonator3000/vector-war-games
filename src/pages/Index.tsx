@@ -91,7 +91,9 @@ import { LeaderContactModal } from '@/components/LeaderContactModal';
 import { LeadersScreen } from '@/components/LeadersScreen';
 import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
 import { LeaderOverviewPanel } from '@/components/LeaderOverviewPanel';
+import { StrategicOutliner } from '@/components/StrategicOutliner';
 import type { StrategicOutlinerGroup } from '@/components/StrategicOutliner';
+import { OrderOfBattlePanel } from '@/components/OrderOfBattlePanel';
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { AIDiplomacyProposalModal } from '@/components/AIDiplomacyProposalModal';
 import { EndGameScreen } from '@/components/EndGameScreen';
@@ -198,6 +200,7 @@ import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, ty
 import type { GreatOldOnesState } from '@/types/greatOldOnes';
 import { initializeGreatOldOnesState } from '@/lib/greatOldOnesHelpers';
 import { initializeNationLeaderAbility, useLeaderAbility } from '@/lib/leaderAbilityIntegration';
+import type { ArmyGroupSummary } from '@/types/militaryTemplates';
 import { getLeaderImage } from '@/lib/leaderImages';
 import { initializeWeek3State, updateWeek3Systems, type Week3ExtendedState } from '@/lib/greatOldOnesWeek3Integration';
 import { initializePhase2State, updatePhase2Systems, checkPhase2UnlockConditions, type Phase2State } from '@/lib/phase2Integration';
@@ -6688,7 +6691,8 @@ export default function NoradVector() {
   // News ticker and flashpoints - Moved up before blockingModalActive
   const [isOutlinerCollapsed, setIsOutlinerCollapsed] = useState(false);
   const [outlinerAttentionTick, setOutlinerAttentionTick] = useState(0);
-  const strategicOutlinerRef = useRef<HTMLDivElement | null>(null);
+  const globalStrategicOutlinerRef = useRef<HTMLDivElement | null>(null);
+  const leaderStrategicOutlinerRef = useRef<HTMLDivElement | null>(null);
   const strategicOutlinerHotkeys = useMemo(() => ({ toggle: 'O', focus: 'Shift+O' }), []);
   const handleOutlinerToggle = useCallback(() => {
     setIsOutlinerCollapsed((previous) => {
@@ -6962,6 +6966,8 @@ export default function NoradVector() {
     currentTurn: S.turn,
     nations: nations.map(n => ({ id: n.id, name: n.name })),
   });
+
+  const { templateStates: militaryTemplateStates, deployedUnits: militaryDeployedUnits } = militaryTemplates;
 
   // Hearts of Iron Phase 2: Supply System
   const supplySystem = useSupplySystem({
@@ -7349,6 +7355,18 @@ export default function NoradVector() {
       readiness: playerSnapshot.readiness,
     };
   }, [conventionalUnits, playerSnapshot]);
+
+  const playerArmyGroupSummaries = useMemo<ArmyGroupSummary[]>(() => {
+    if (!playerNationId) {
+      return [];
+    }
+    return militaryTemplates.getArmyGroupSummaries(playerNationId);
+  }, [
+    militaryTemplates,
+    militaryTemplateStates,
+    militaryDeployedUnits,
+    playerNationId,
+  ]);
 
   const latestConventionalEvents = useMemo(() => {
     return (conventionalLogs ?? []).slice(-2).reverse();
@@ -11446,17 +11464,128 @@ export default function NoradVector() {
 
     const militaryItems: StrategicOutlinerGroup['items'] = [];
 
+    const postureLabel = (posture: string) =>
+      posture === 'offensive'
+        ? 'Offensiv'
+        : posture === 'defensive'
+          ? 'Defensiv'
+          : posture === 'reserve'
+            ? 'Reserve'
+            : posture === 'support'
+              ? 'Støtte'
+              : posture;
+
+    const frontlineStatusLabel = (status: string) =>
+      status === 'breakthrough'
+        ? 'Gjennombrudd'
+        : status === 'pressured'
+          ? 'Presset'
+          : status === 'stalled'
+            ? 'Stanset'
+            : 'Stabil';
+
+    const supplyStateLabel = (state: string) =>
+      state === 'critical' ? 'Kritisk forsyning' : state === 'strained' ? 'Anstrengt forsyning' : 'Sikker forsyning';
+
+    const frontlineSeverity = (
+      status: string,
+      supply: string,
+      contested: boolean
+    ): 'normal' | 'warning' | 'critical' => {
+      if (status === 'breakthrough' || supply === 'critical' || contested) {
+        return 'critical';
+      }
+      if (status === 'pressured' || supply === 'strained') {
+        return 'warning';
+      }
+      return 'normal';
+    };
+
+    const groupSeverity = (summary: ArmyGroupSummary): 'normal' | 'warning' | 'critical' => {
+      const readiness = summary.readiness;
+      const supply = summary.supplyLevel;
+      const frontlineAlerts = summary.frontlines.map((frontline) =>
+        frontlineSeverity(frontline.status, frontline.supplyState, frontline.contested)
+      );
+
+      if (
+        readiness <= 35 ||
+        supply <= 35 ||
+        frontlineAlerts.some((severity) => severity === 'critical')
+      ) {
+        return 'critical';
+      }
+      if (
+        readiness < 55 ||
+        supply < 55 ||
+        frontlineAlerts.some((severity) => severity === 'warning')
+      ) {
+        return 'warning';
+      }
+      return 'normal';
+    };
+
+    if (playerArmyGroupSummaries.length > 0) {
+      playerArmyGroupSummaries.forEach((summary) => {
+        const readiness = Math.round(summary.readiness);
+        const supply = Math.round(summary.supplyLevel);
+        const status = groupSeverity(summary);
+        const frontlineSummary = summary.frontlines.length
+          ? summary.frontlines
+              .map(
+                (frontline) =>
+                  `${frontline.name}: ${frontlineStatusLabel(frontline.status)} • ${supplyStateLabel(frontline.supplyState)}`
+              )
+              .join(' • ')
+          : 'Ingen frontlinjer tilordnet';
+
+        militaryItems.push({
+          id: `army-group-${summary.group.id}`,
+          title: `${summary.group.name} • ${summary.group.theater}`,
+          subtitle: `${postureLabel(summary.group.posture)} • ${summary.units.length} enheter`,
+          description: frontlineSummary,
+          icon: <Swords className="h-4 w-4" />,
+          status,
+          meta: `Beredskap ${readiness}% • Forsyning ${supply}%`,
+        });
+
+        summary.frontlines.forEach((frontline) => {
+          const severity = frontlineSeverity(frontline.status, frontline.supplyState, frontline.contested);
+          if (severity === 'normal') {
+            return;
+          }
+
+          militaryItems.push({
+            id: `frontline-${frontline.id}`,
+            title: `${frontline.name} • ${frontline.axis}`,
+            subtitle: `Teater ${frontline.theater}`,
+            description: `${frontlineStatusLabel(frontline.status)} • ${supplyStateLabel(frontline.supplyState)} • Readiness ${Math.round(frontline.readiness)}%`,
+            icon: <Target className="h-4 w-4" />,
+            status: severity,
+            meta: frontline.contested ? `Kamp pågår • ${summary.group.name}` : `Støttes av ${summary.group.name}`,
+          });
+        });
+      });
+    }
+
     if (playerForceSummary && playerSnapshot) {
       const readiness = Math.round(playerForceSummary.readiness);
       const readinessStatus: 'normal' | 'warning' | 'critical' =
         readiness <= 35 ? 'critical' : readiness < 55 ? 'warning' : 'normal';
+      const groupBreakdown = playerArmyGroupSummaries
+        .map((summary) => `${summary.group.name}: ${Math.round(summary.readiness)}%`)
+        .join(' • ');
       militaryItems.push({
         id: 'force-readiness',
-        title: `Stridsberedskap ${readiness}%`,
+        title: `Total beredskap ${readiness}%`,
         subtitle: `${playerForceSummary.deployed} deployert • ${playerForceSummary.reserve} i reserve`,
+        description:
+          playerArmyGroupSummaries.length > 0
+            ? `Grupper: ${playerArmyGroupSummaries.length}`
+            : 'Ingen armégrupper organisert',
         icon: <Shield className="h-4 w-4" />,
         status: readinessStatus,
-        meta: readinessStatus !== 'normal' ? 'Vurder å rotere styrker eller reforsterke' : undefined,
+        meta: groupBreakdown || undefined,
       });
     }
 
@@ -11675,6 +11804,7 @@ export default function NoradVector() {
     pandemicState,
     pendingFollowUps,
     playerForceSummary,
+    playerArmyGroupSummaries,
     playerSnapshot,
     researchAllowed,
   ]);
@@ -12945,12 +13075,28 @@ export default function NoradVector() {
                 onOutlinerToggle={handleOutlinerToggle}
                 strategicOutlinerHotkeys={strategicOutlinerHotkeys}
                 outlinerAttentionTick={outlinerAttentionTick}
-                strategicOutlinerRef={strategicOutlinerRef}
+                strategicOutlinerRef={leaderStrategicOutlinerRef}
               />
             </DialogContent>
           </Dialog>
         );
       })()}
+
+      <div className="pointer-events-none fixed top-20 right-4 z-30 flex w-[360px] max-w-full flex-col gap-4 max-h-[calc(100vh-6rem)] overflow-y-auto">
+        <OrderOfBattlePanel
+          groups={playerArmyGroupSummaries}
+          className="pointer-events-auto"
+        />
+        <StrategicOutliner
+          ref={globalStrategicOutlinerRef}
+          groups={strategicOutlinerGroups}
+          collapsed={isOutlinerCollapsed}
+          onToggleCollapse={handleOutlinerToggle}
+          hotkeys={strategicOutlinerHotkeys}
+          attentionPulse={outlinerAttentionTick}
+          className="pointer-events-auto"
+        />
+      </div>
 
       {/* Great Old Ones Campaign UI */}
       {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && (

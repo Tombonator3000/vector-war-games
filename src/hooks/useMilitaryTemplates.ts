@@ -13,6 +13,13 @@ import {
   TemplateValidation,
   CombatModifiers,
   TemplateSize,
+  ArmyGroup,
+  Frontline,
+  ArmyGroupSummary,
+  ArmyGroupPriority,
+  ArmyGroupPosture,
+  FrontlineStatus,
+  FrontlineSupplyState,
 } from '../types/militaryTemplates';
 import { getUnitComponentData, calculateTemplateStats, DEFAULT_TEMPLATES } from '../data/militaryTemplates';
 
@@ -47,6 +54,8 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
         nationId: nation.id,
         templates: defaultTemplates,
         deployedUnits: [],
+        armyGroups: [],
+        frontlines: [],
         isDesignerOpen: false,
         editingTemplateId: null,
       });
@@ -269,6 +278,8 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
         templateId,
         name: unitName || `${template.name} #${template.unitsDeployed + 1}`,
         territoryId,
+        armyGroupId: null,
+        frontlineId: null,
         health: 100,
         organization: 100,
         experience: 0,
@@ -314,6 +325,501 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
       return deployedUnits.get(nationId) || [];
     },
     [deployedUnits]
+  );
+
+  const getArmyGroups = useCallback(
+    (nationId: string): ArmyGroup[] => {
+      const state = templateStates.get(nationId);
+      return state?.armyGroups ?? [];
+    },
+    [templateStates]
+  );
+
+  const getFrontlines = useCallback(
+    (nationId: string): Frontline[] => {
+      const state = templateStates.get(nationId);
+      return state?.frontlines ?? [];
+    },
+    [templateStates]
+  );
+
+  const createArmyGroup = useCallback(
+    (
+      nationId: string,
+      payload: {
+        name: string;
+        theater: string;
+        posture?: ArmyGroupPosture;
+        priority?: ArmyGroupPriority;
+        readiness?: number;
+        supplyLevel?: number;
+        commander?: string;
+        headquarters?: string;
+        notes?: string;
+      }
+    ): { success: boolean; message: string; groupId?: string } => {
+      if (!payload.name || !payload.theater) {
+        return { success: false, message: 'Army group requires name and theater' };
+      }
+
+      const groupId = `${nationId}-army-group-${Date.now()}`;
+      const newGroup: ArmyGroup = {
+        id: groupId,
+        nationId,
+        name: payload.name,
+        theater: payload.theater,
+        posture: payload.posture ?? 'defensive',
+        priority: payload.priority ?? 'standard',
+        readiness: payload.readiness ?? 65,
+        supplyLevel: payload.supplyLevel ?? 70,
+        frontlineIds: [],
+        commander: payload.commander,
+        headquarters: payload.headquarters,
+        notes: payload.notes,
+      };
+
+      let updated = false;
+      setTemplateStates((prev) => {
+        const newStates = new Map(prev);
+        const state = newStates.get(nationId);
+        if (!state) {
+          return prev;
+        }
+
+        updated = true;
+        newStates.set(nationId, {
+          ...state,
+          armyGroups: [...state.armyGroups, newGroup],
+        });
+
+        return newStates;
+      });
+
+      if (!updated) {
+        return { success: false, message: 'Nation not found' };
+      }
+
+      return {
+        success: true,
+        message: `Army group "${payload.name}" created`,
+        groupId,
+      };
+    },
+    []
+  );
+
+  const updateArmyGroup = useCallback(
+    (
+      nationId: string,
+      groupId: string,
+      updates: Partial<
+        Pick<
+          ArmyGroup,
+          'name' | 'theater' | 'posture' | 'priority' | 'readiness' | 'supplyLevel' | 'commander' | 'headquarters' | 'notes'
+        >
+      >
+    ): { success: boolean; message: string } => {
+      let updated = false;
+      setTemplateStates((prev) => {
+        const newStates = new Map(prev);
+        const state = newStates.get(nationId);
+        if (!state) {
+          return prev;
+        }
+
+        const groupIndex = state.armyGroups.findIndex((group) => group.id === groupId);
+        if (groupIndex === -1) {
+          return prev;
+        }
+
+        const nextGroup: ArmyGroup = {
+          ...state.armyGroups[groupIndex]!,
+          ...updates,
+        };
+
+        const armyGroups = [...state.armyGroups];
+        armyGroups[groupIndex] = nextGroup;
+        updated = true;
+
+        newStates.set(nationId, {
+          ...state,
+          armyGroups,
+        });
+
+        return newStates;
+      });
+
+      if (!updated) {
+        return { success: false, message: 'Army group not found' };
+      }
+
+      return { success: true, message: 'Army group updated' };
+    },
+    []
+  );
+
+  const deleteArmyGroup = useCallback(
+    (nationId: string, groupId: string): { success: boolean; message: string } => {
+      let updated = false;
+      let removedFrontlineIds: string[] = [];
+
+      setTemplateStates((prev) => {
+        const newStates = new Map(prev);
+        const state = newStates.get(nationId);
+        if (!state) {
+          return prev;
+        }
+
+        const group = state.armyGroups.find((entry) => entry.id === groupId);
+        if (!group) {
+          return prev;
+        }
+
+        removedFrontlineIds = [...group.frontlineIds];
+        const armyGroups = state.armyGroups.filter((entry) => entry.id !== groupId);
+        const frontlines = state.frontlines.map((frontline) =>
+          frontline.armyGroupId === groupId ? { ...frontline, armyGroupId: null } : frontline
+        );
+
+        updated = true;
+        newStates.set(nationId, {
+          ...state,
+          armyGroups,
+          frontlines,
+        });
+
+        return newStates;
+      });
+
+      if (!updated) {
+        return { success: false, message: 'Army group not found' };
+      }
+
+      setDeployedUnits((prev) => {
+        const newUnits = new Map(prev);
+        const units = newUnits.get(nationId);
+        if (!units) {
+          return prev;
+        }
+
+        const updatedUnits = units.map((unit) => {
+          if (unit.armyGroupId === groupId || (unit.frontlineId && removedFrontlineIds.includes(unit.frontlineId))) {
+            return { ...unit, armyGroupId: null, frontlineId: null };
+          }
+          return unit;
+        });
+
+        newUnits.set(nationId, updatedUnits);
+        return newUnits;
+      });
+
+      return { success: true, message: 'Army group removed' };
+    },
+    []
+  );
+
+  const createFrontline = useCallback(
+    (
+      nationId: string,
+      payload: {
+        name: string;
+        theater: string;
+        axis: string;
+        objective?: string;
+        armyGroupId?: string | null;
+        status?: FrontlineStatus;
+        supplyState?: FrontlineSupplyState;
+        readiness?: number;
+        contested?: boolean;
+      }
+    ): { success: boolean; message: string; frontlineId?: string } => {
+      if (!payload.name || !payload.theater || !payload.axis) {
+        return { success: false, message: 'Frontline requires name, theater, and axis' };
+      }
+
+      const frontlineId = `${nationId}-frontline-${Date.now()}`;
+      const assignedGroupId = payload.armyGroupId ?? null;
+
+      const newFrontline: Frontline = {
+        id: frontlineId,
+        nationId,
+        armyGroupId: assignedGroupId,
+        name: payload.name,
+        theater: payload.theater,
+        axis: payload.axis,
+        objective: payload.objective,
+        status: payload.status ?? 'stable',
+        supplyState: payload.supplyState ?? 'secure',
+        readiness: payload.readiness ?? 60,
+        contested: payload.contested ?? false,
+      };
+
+      let updated = false;
+      setTemplateStates((prev) => {
+        const newStates = new Map(prev);
+        const state = newStates.get(nationId);
+        if (!state) {
+          return prev;
+        }
+
+        const frontlines = [...state.frontlines, newFrontline];
+        const armyGroups = assignedGroupId
+          ? state.armyGroups.map((group) =>
+              group.id === assignedGroupId && !group.frontlineIds.includes(frontlineId)
+                ? { ...group, frontlineIds: [...group.frontlineIds, frontlineId] }
+                : group
+            )
+          : state.armyGroups;
+
+        updated = true;
+        newStates.set(nationId, {
+          ...state,
+          frontlines,
+          armyGroups,
+        });
+
+        return newStates;
+      });
+
+      if (!updated) {
+        return { success: false, message: 'Nation not found' };
+      }
+
+      return {
+        success: true,
+        message: `Frontline "${payload.name}" created`,
+        frontlineId,
+      };
+    },
+    []
+  );
+
+  const updateFrontline = useCallback(
+    (
+      nationId: string,
+      frontlineId: string,
+      updates: Partial<
+        Pick<
+          Frontline,
+          'name' | 'theater' | 'axis' | 'objective' | 'status' | 'supplyState' | 'readiness' | 'contested' | 'armyGroupId'
+        >
+      >
+    ): { success: boolean; message: string } => {
+      let updated = false;
+      setTemplateStates((prev) => {
+        const newStates = new Map(prev);
+        const state = newStates.get(nationId);
+        if (!state) {
+          return prev;
+        }
+
+        const frontlineIndex = state.frontlines.findIndex((frontline) => frontline.id === frontlineId);
+        if (frontlineIndex === -1) {
+          return prev;
+        }
+
+        const currentFrontline = state.frontlines[frontlineIndex]!;
+        const nextGroupId = updates.armyGroupId ?? currentFrontline.armyGroupId;
+        const nextFrontline: Frontline = {
+          ...currentFrontline,
+          ...updates,
+          armyGroupId: nextGroupId ?? null,
+        };
+
+        const frontlines = [...state.frontlines];
+        frontlines[frontlineIndex] = nextFrontline;
+
+        let armyGroups = state.armyGroups;
+        if (updates.armyGroupId !== undefined && updates.armyGroupId !== currentFrontline.armyGroupId) {
+          armyGroups = state.armyGroups.map((group) => {
+            if (group.id === updates.armyGroupId) {
+              const ids = group.frontlineIds.includes(frontlineId)
+                ? group.frontlineIds
+                : [...group.frontlineIds, frontlineId];
+              return { ...group, frontlineIds: ids };
+            }
+            if (group.id === currentFrontline.armyGroupId) {
+              return { ...group, frontlineIds: group.frontlineIds.filter((id) => id !== frontlineId) };
+            }
+            return group;
+          });
+        }
+
+        updated = true;
+        newStates.set(nationId, {
+          ...state,
+          frontlines,
+          armyGroups,
+        });
+
+        return newStates;
+      });
+
+      if (!updated) {
+        return { success: false, message: 'Frontline not found' };
+      }
+
+      return { success: true, message: 'Frontline updated' };
+    },
+    []
+  );
+
+  const deleteFrontline = useCallback(
+    (nationId: string, frontlineId: string): { success: boolean; message: string } => {
+      let updated = false;
+
+      setTemplateStates((prev) => {
+        const newStates = new Map(prev);
+        const state = newStates.get(nationId);
+        if (!state) {
+          return prev;
+        }
+
+        const frontline = state.frontlines.find((entry) => entry.id === frontlineId);
+        if (!frontline) {
+          return prev;
+        }
+
+        const frontlines = state.frontlines.filter((entry) => entry.id !== frontlineId);
+        const armyGroups = frontline.armyGroupId
+          ? state.armyGroups.map((group) =>
+              group.id === frontline.armyGroupId
+                ? { ...group, frontlineIds: group.frontlineIds.filter((id) => id !== frontlineId) }
+                : group
+            )
+          : state.armyGroups;
+
+        updated = true;
+        newStates.set(nationId, {
+          ...state,
+          frontlines,
+          armyGroups,
+        });
+
+        return newStates;
+      });
+
+      if (!updated) {
+        return { success: false, message: 'Frontline not found' };
+      }
+
+      setDeployedUnits((prev) => {
+        const newUnits = new Map(prev);
+        const units = newUnits.get(nationId);
+        if (!units) {
+          return prev;
+        }
+
+        const updatedUnits = units.map((unit) =>
+          unit.frontlineId === frontlineId ? { ...unit, frontlineId: null } : unit
+        );
+
+        newUnits.set(nationId, updatedUnits);
+        return newUnits;
+      });
+
+      return { success: true, message: 'Frontline removed' };
+    },
+    []
+  );
+
+  const assignFrontlineToGroup = useCallback(
+    (
+      nationId: string,
+      frontlineId: string,
+      groupId: string | null
+    ): { success: boolean; message: string } => {
+      return updateFrontline(nationId, frontlineId, { armyGroupId: groupId });
+    },
+    [updateFrontline]
+  );
+
+  const setUnitGrouping = useCallback(
+    (
+      nationId: string,
+      unitId: string,
+      grouping: { armyGroupId?: string | null; frontlineId?: string | null }
+    ): { success: boolean; message: string } => {
+      let resolvedArmyGroupId = grouping.armyGroupId;
+
+      if (grouping.frontlineId !== undefined && grouping.frontlineId !== null) {
+        const state = templateStates.get(nationId);
+        const frontline = state?.frontlines.find((entry) => entry.id === grouping.frontlineId);
+        if (frontline?.armyGroupId && resolvedArmyGroupId === undefined) {
+          resolvedArmyGroupId = frontline.armyGroupId;
+        }
+      }
+
+      let updated = false;
+      setDeployedUnits((prev) => {
+        const newUnits = new Map(prev);
+        const units = newUnits.get(nationId);
+        if (!units) {
+          return prev;
+        }
+
+        const unitIndex = units.findIndex((unit) => unit.id === unitId);
+        if (unitIndex === -1) {
+          return prev;
+        }
+
+        const unit = { ...units[unitIndex]! };
+        if (resolvedArmyGroupId !== undefined) {
+          unit.armyGroupId = resolvedArmyGroupId;
+        }
+        if (grouping.frontlineId !== undefined) {
+          unit.frontlineId = grouping.frontlineId;
+        }
+
+        const updatedUnits = [...units];
+        updatedUnits[unitIndex] = unit;
+        newUnits.set(nationId, updatedUnits);
+        updated = true;
+        return newUnits;
+      });
+
+      if (!updated) {
+        return { success: false, message: 'Unit not found' };
+      }
+
+      return { success: true, message: 'Unit grouping updated' };
+    },
+    [templateStates]
+  );
+
+  const getArmyGroupSummaries = useCallback(
+    (nationId: string): ArmyGroupSummary[] => {
+      const state = templateStates.get(nationId);
+      if (!state) {
+        return [];
+      }
+
+      const units = deployedUnits.get(nationId) ?? [];
+
+      return state.armyGroups.map((group) => {
+        const frontlines = state.frontlines.filter((frontline) => frontline.armyGroupId === group.id);
+        const assignedUnits = units.filter((unit) => unit.armyGroupId === group.id);
+
+        const readiness = assignedUnits.length
+          ? Math.round(
+              assignedUnits.reduce((total, unit) => total + unit.organization, 0) / assignedUnits.length
+            )
+          : Math.round(group.readiness);
+
+        const supplyLevel = assignedUnits.length
+          ? Math.round(assignedUnits.reduce((total, unit) => total + unit.supplyLevel, 0) / assignedUnits.length)
+          : Math.round(group.supplyLevel);
+
+        return {
+          group,
+          frontlines,
+          units: assignedUnits,
+          readiness: Math.max(0, Math.min(100, readiness)),
+          supplyLevel: Math.max(0, Math.min(100, supplyLevel)),
+        };
+      });
+    },
+    [deployedUnits, templateStates]
   );
 
   /**
@@ -495,6 +1001,9 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
     getTemplate,
     getTemplateStats,
     getDeployedUnits,
+    getArmyGroups,
+    getFrontlines,
+    getArmyGroupSummaries,
     calculateCombatEffectiveness,
 
     // Mutations
@@ -503,6 +1012,14 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
     deleteTemplate,
     deployUnit,
     updateUnitStatus,
+    createArmyGroup,
+    updateArmyGroup,
+    deleteArmyGroup,
+    createFrontline,
+    updateFrontline,
+    deleteFrontline,
+    assignFrontlineToGroup,
+    setUnitGrouping,
 
     // Turn processing
     processTurnMaintenance,
