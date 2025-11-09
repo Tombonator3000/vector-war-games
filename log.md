@@ -2907,3 +2907,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Removed the legacy wireframe texture asset in favor of the procedural geometry (`public/textures/earth_wireframe.svg`).
 - Ran the Vitest suite targeting the GlobeScene component to confirm existing behaviors remain stable (`npm run test -- GlobeScene`).
 
+### 2025-11-09T19:05:00Z - Restore wireframe outline visibility ordering
+- Forced the flat globe plane mesh to render before the GeoJSON line segments so the outlines remain visible when depth testing is disabled (`src/components/GlobeScene.tsx`).
+
