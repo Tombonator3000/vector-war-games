@@ -1,6 +1,7 @@
 export type MapVisualStyle = 'flat-realistic';
 export type MapMode = 'standard' | 'diplomatic' | 'intel' | 'resources' | 'unrest';
 
+export const MAP_VISUAL_STYLES: MapVisualStyle[] = ['flat-realistic'];
 export const MAP_MODES: MapMode[] = ['standard', 'diplomatic', 'intel', 'resources', 'unrest'];
 
 export interface MapStyle {
@@ -17,7 +18,13 @@ export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'flat-realistic', mode: 'st
  * Extracted from Index.tsx as part of refactoring effort.
  */
 
-import type { MapMode, MapModeOverlayData, MapVisualStyle } from '@/components/GlobeScene';
+export interface MapModeOverlayData {
+  diplomatic: Record<string, { relationship: number }>;
+  intel: Record<string, { intelLevel: number }>;
+  resources: Record<string, { resourceLevel: number }>;
+  unrest: Record<string, { morale: number; publicOpinion: number; instability: number }>;
+  standard: Record<string, never>;
+}
 import type { ProjectedPoint } from '@/lib/renderingUtils';
 import type { Nation, GameState } from '@/types/game';
 import { MathUtils } from 'three';

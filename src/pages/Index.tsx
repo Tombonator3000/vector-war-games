@@ -47,6 +47,7 @@ import {
   type MapModeOverlayData,
   DEFAULT_MAP_STYLE,
   MAP_MODES,
+  MAP_VISUAL_STYLES,
 } from '@/rendering/worldRenderer';
 import { useFogOfWar } from '@/hooks/useFogOfWar';
 import {
