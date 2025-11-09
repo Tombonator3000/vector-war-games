@@ -147,7 +147,6 @@ function resolveOverlayFillColor(
  * Render the world map with various visual styles
  */
 export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): void {
-  console.log('[MAP DEBUG] drawWorld called, style:', style, 'worldCountries exists:', !!context.worldCountries);
   const {
     ctx,
     worldCountries,
@@ -230,7 +229,6 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
   }
 
   if (worldCountries) {
-    console.log('[MAP DEBUG] Drawing world countries, feature count:', (worldCountries as any).features?.length);
     ctx.save();
     ctx.lineWidth = isWireframe ? 1.5 : 1;
     ctx.lineJoin = 'round';

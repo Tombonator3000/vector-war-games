@@ -2799,10 +2799,8 @@ function productionPhase(rng: SeededRandom) {
 // World map loading
 function loadWorld(): Promise<void> {
   if (worldCountries) {
-    console.log('[MAP DEBUG] World already loaded, features:', (worldCountries as any).features?.length);
     return Promise.resolve();
   }
-  console.log('[MAP DEBUG] Starting world load...');
 
   if (worldLoadPromise) {
     return worldLoadPromise;
