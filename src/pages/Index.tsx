@@ -6871,6 +6871,13 @@ export default function NoradVector() {
       }
       updateDisplay();
     },
+    militaryTemplatesApi: {
+      getTemplate: militaryTemplates.getTemplate,
+      getTemplateStats: militaryTemplates.getTemplateStats,
+    },
+    supplySystemApi: {
+      getTerritorySupply: supplySystem.getTerritorySupply,
+    },
   });
 
   const [globeUnits, setGlobeUnits] = useState<Unit[]>([]);

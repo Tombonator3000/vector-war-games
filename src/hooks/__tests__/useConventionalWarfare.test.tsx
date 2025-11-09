@@ -14,6 +14,8 @@ import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 import { RNGProvider } from '@/contexts/RNGContext';
 import { SeededRandom } from '@/lib/seededRandom';
+import type { MilitaryTemplate } from '@/types/militaryTemplates';
+import type { Territory as SupplyTerritory } from '@/types/supplySystem';
 
 interface MockNation {
   id: string;
@@ -166,6 +168,149 @@ describe('useConventionalWarfare', () => {
     expect(response.success).toBe(false);
     expect(consumeSpy).not.toHaveBeenCalled();
     expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it('reduces combat power for HoI templates under low supply', () => {
+    const hoiStats: MilitaryTemplate['stats'] = {
+      totalManpower: 6750,
+      totalProduction: 480,
+      totalSteel: 260,
+      totalElectronics: 95,
+      softAttack: 180,
+      hardAttack: 28,
+      airAttack: 6,
+      defense: 210,
+      breakthrough: 70,
+      armor: 35,
+      piercing: 40,
+      organization: 80,
+      recovery: 30,
+      reconnaissance: 25,
+      suppression: 18,
+      supplyUse: 70,
+      speed: 6,
+      reliability: 85,
+      combatWidth: 18,
+    };
+
+    const hoiTemplate: MilitaryTemplate = {
+      id: 'hoi-template',
+      nationId: player.id,
+      name: 'HoI Infantry',
+      description: 'Imported infantry formation',
+      icon: '🪖',
+      size: 'division',
+      mainComponents: [],
+      supportComponents: [],
+      stats: hoiStats,
+      createdTurn: 0,
+      isActive: true,
+      isDefault: false,
+      unitsDeployed: 0,
+    };
+
+    const mockMilitaryApi = {
+      getTemplate: (_nationId: string, templateId: string) =>
+        templateId === hoiTemplate.id ? hoiTemplate : undefined,
+      getTemplateStats: (_nationId: string, templateId: string) =>
+        templateId === hoiTemplate.id ? hoiStats : undefined,
+    };
+
+    const makeSupplyTerritory = (
+      id: string,
+      supplyStatus: SupplyTerritory['supplyStatus'],
+      currentSupply: number,
+      supplyDemand: number,
+      controllingNationId: string,
+    ): SupplyTerritory => ({
+      id,
+      controllingNationId,
+      infrastructureLevel: 3,
+      hasPort: false,
+      hasAirbase: false,
+      hasDepot: true,
+      supplyCapacity: 500,
+      supplyDemand,
+      currentSupply,
+      supplyStatus,
+      connectedSupplySources: [],
+      supplyDistance: 0,
+      attritionLevel: 0,
+      stationedUnits: [],
+    });
+
+    const runBattle = (status: SupplyTerritory['supplyStatus']) => {
+      player.production = 200;
+      let state = createDefaultConventionalState([
+        { id: player.id, isPlayer: true },
+        { id: rival.id, isPlayer: false },
+      ]);
+      const supplyLookup = new Map<string, SupplyTerritory>();
+      const supplyApi = {
+        getTerritorySupply: (territoryId: string) => supplyLookup.get(territoryId),
+      };
+
+      const { result, unmount } = renderHook(
+        () =>
+          useConventionalWarfare({
+            initialState: state,
+            currentTurn: 12,
+            getNation,
+            onStateChange: next => {
+              state = next;
+            },
+            militaryTemplatesApi: mockMilitaryApi,
+            supplySystemApi: supplyApi,
+          }),
+        { wrapper },
+      );
+
+      const territoryIds = Object.keys(result.current.state.territories);
+      const attackerTerritory = territoryIds[0];
+      const defenderTerritory = territoryIds[1];
+
+      act(() => {
+        result.current.state.territories[attackerTerritory].controllingNationId = player.id;
+        result.current.state.territories[defenderTerritory].controllingNationId = rival.id;
+        result.current.state.territories[attackerTerritory].armies = 6;
+        result.current.state.territories[defenderTerritory].armies = 5;
+      });
+
+      supplyLookup.set(
+        attackerTerritory,
+        makeSupplyTerritory(
+          attackerTerritory,
+          status,
+          status === 'critical' ? 60 : 220,
+          200,
+          player.id,
+        ),
+      );
+      supplyLookup.set(
+        defenderTerritory,
+        makeSupplyTerritory(defenderTerritory, 'adequate', 220, 180, rival.id),
+      );
+
+      act(() => {
+        result.current.trainUnit(player.id, hoiTemplate.id, attackerTerritory);
+      });
+
+      let resolution: ReturnType<typeof result.current.resolveBorderConflict>;
+      act(() => {
+        resolution = result.current.resolveBorderConflict(attackerTerritory, defenderTerritory, 4);
+      });
+
+      unmount();
+      return resolution!;
+    };
+
+    const adequateSupply = runBattle('adequate');
+    const lowSupply = runBattle('critical');
+
+    expect(adequateSupply.success).toBe(true);
+    expect(lowSupply.success).toBe(true);
+    expect(lowSupply.attackerCombatPower).toBeLessThan(adequateSupply.attackerCombatPower);
+    expect(lowSupply.supply.attacker).toBeLessThan(adequateSupply.supply.attacker);
   });
 });
 

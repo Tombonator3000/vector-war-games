@@ -548,3 +548,5 @@ export function useSupplySystem({ currentTurn, nations }: UseSupplySystemOptions
     initializeSupplySystem,
   };
 }
+
+export type UseSupplySystemApi = ReturnType<typeof useSupplySystem>;

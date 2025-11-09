@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { calculateMoraleRecruitmentModifier } from './useGovernance';
 import { useRNG } from '@/contexts/RNGContext';
 import { safeDivide, safeClamp } from '@/lib/safeMath';
+import type { MilitaryTemplate } from '@/types/militaryTemplates';
+import type { UseMilitaryTemplatesApi } from './useMilitaryTemplates';
+import type { UseSupplySystemApi } from './useSupplySystem';
+import type { Territory as SupplyTerritory } from '@/types/supplySystem';
 
 export type ForceType = 'army' | 'navy' | 'air';
 
@@ -24,6 +28,7 @@ export interface ConventionalUnitTemplate {
   cost: ResourceCost;
   readinessImpact: number;
   requiresResearch?: string;
+  armiesValue?: number;
 }
 
 export interface ConventionalUnitState {
@@ -35,6 +40,7 @@ export interface ConventionalUnitState {
   experience: number;
   locationId: string | null;
   status: 'reserve' | 'deployed';
+  armiesValue?: number;
 }
 
 export interface TerritoryState {
@@ -140,6 +146,8 @@ interface UseConventionalWarfareOptions {
     reason: string,
     currentTurn: number
   ) => void;
+  militaryTemplatesApi?: Pick<UseMilitaryTemplatesApi, 'getTemplate' | 'getTemplateStats'>;
+  supplySystemApi?: Pick<UseSupplySystemApi, 'getTerritorySupply'>;
 }
 
 // Unit to armies conversion (Risk-style)
@@ -194,6 +202,39 @@ const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
     requiresResearch: 'conventional_expeditionary_airframes',
   },
 ];
+
+type TemplateCombatProfile = {
+  attack: number;
+  defense: number;
+  support: number;
+};
+
+type TerritoryCombatSnapshot = TemplateCombatProfile & { supplyModifier: number };
+
+const convertHoIStatsToProfile = (stats: MilitaryTemplate['stats']): TemplateCombatProfile => {
+  const offense = (stats.softAttack + stats.hardAttack) / 20 + stats.breakthrough / 30 + stats.reconnaissance / 40;
+  const defence = stats.defense / 20 + stats.armor / 40 + stats.piercing / 30 + stats.recovery / 40;
+  const support = stats.organization / 50 + stats.suppression / 40;
+  return {
+    attack: offense,
+    defense: defence,
+    support,
+  };
+};
+
+const profileFromTemplate = (template: ConventionalUnitTemplate): TemplateCombatProfile => ({
+  attack: template.attack + template.support * 0.5,
+  defense: template.defense + template.support * 0.5,
+  support: template.support,
+});
+
+const SUPPLY_STATUS_MODIFIERS: Record<SupplyTerritory['supplyStatus'], number> = {
+  oversupplied: 1.15,
+  adequate: 1,
+  low: 0.85,
+  critical: 0.6,
+  none: 0.4,
+};
 
 const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { defaultOwner?: string }> = [
   {
@@ -502,6 +543,7 @@ export function createDefaultConventionalState(nations: Array<{ id: string; isPl
       experience: nation.isPlayer ? 1 : 0,
       locationId: DEFAULT_TERRITORIES.find((territory) => territory.defaultOwner === nation.id)?.id ?? null,
       status: 'reserve',
+      armiesValue: UNIT_ARMIES[template.type],
     };
   });
 
@@ -547,6 +589,8 @@ export function useConventionalWarfare({
   onUpdateDisplay,
   onDefconChange,
   onRelationshipChange,
+  militaryTemplatesApi,
+  supplySystemApi,
 }: UseConventionalWarfareOptions) {
   const { rng } = useRNG();
   const [state, setState] = useState<ConventionalState>(() => initialState ?? createDefaultConventionalState());
@@ -580,6 +624,148 @@ export function useConventionalWarfare({
       return acc;
     }, {});
   }, [state.units]);
+
+  const convertMilitaryTemplate = useCallback(
+    (nationId: string, templateId: string): ConventionalUnitTemplate | null => {
+      if (!militaryTemplatesApi) {
+        return null;
+      }
+
+      const stats = militaryTemplatesApi.getTemplateStats?.(nationId, templateId);
+      if (!stats) {
+        return null;
+      }
+
+      const baseTemplate = militaryTemplatesApi.getTemplate?.(nationId, templateId);
+      const profile = convertHoIStatsToProfile(stats);
+      const armiesValue = Math.max(3, Math.round((stats.totalManpower || 4500) / 1500));
+      const readinessImpact = Math.max(3, Math.round((stats.organization || 200) / 80));
+
+      return {
+        id: templateId,
+        type: 'army',
+        name: baseTemplate?.name ?? 'Field Division',
+        description: baseTemplate?.description ?? 'Imported military template',
+        attack: Number(profile.attack.toFixed(2)),
+        defense: Number(profile.defense.toFixed(2)),
+        support: Number(profile.support.toFixed(2)),
+        cost: {
+          production: Math.max(10, Math.round((stats.totalProduction || 300) / 30)),
+        },
+        readinessImpact,
+        armiesValue,
+      };
+    },
+    [militaryTemplatesApi],
+  );
+
+  const getTemplateProfile = useCallback(
+    (ownerId: string, templateId: string): TemplateCombatProfile => {
+      const militaryStats = militaryTemplatesApi?.getTemplateStats?.(ownerId, templateId);
+      if (militaryStats) {
+        return convertHoIStatsToProfile(militaryStats);
+      }
+
+      const templateFromState = templates[templateId];
+      if (templateFromState) {
+        return profileFromTemplate(templateFromState);
+      }
+
+      const fallback = templateLookup[templateId];
+      if (fallback) {
+        return profileFromTemplate(fallback);
+      }
+
+      return { attack: 0, defense: 0, support: 0 };
+    },
+    [militaryTemplatesApi, templates],
+  );
+
+  const getSupplyModifier = useCallback(
+    (territoryId: string | null, ownerId: string | null) => {
+      if (!territoryId || !ownerId) {
+        return 1;
+      }
+
+      const supplyInfo = supplySystemApi?.getTerritorySupply?.(territoryId);
+      if (!supplyInfo) {
+        return 1;
+      }
+
+      if (supplyInfo.controllingNationId && supplyInfo.controllingNationId !== ownerId) {
+        return 0.75;
+      }
+
+      const statusModifier = SUPPLY_STATUS_MODIFIERS[supplyInfo.supplyStatus] ?? 1;
+      const ratio = supplyInfo.supplyDemand > 0
+        ? safeClamp(supplyInfo.currentSupply / Math.max(1, supplyInfo.supplyDemand), 0.35, 1.25)
+        : 1;
+
+      const combined = statusModifier * ratio;
+      return Number.isFinite(combined) ? Number(combined.toFixed(2)) : 1;
+    },
+    [supplySystemApi],
+  );
+
+  const computeTerritoryCombatProfile = useCallback(
+    (territory: TerritoryState, ownerId: string | null): TerritoryCombatSnapshot => {
+      if (!ownerId) {
+        return {
+          attack: 0,
+          defense: 0,
+          support: 0,
+          supplyModifier: 1,
+        };
+      }
+
+      const territoryUnits = Object.values(state.units).filter(
+        (unit) => unit.locationId === territory.id && unit.status === 'deployed' && unit.ownerId === ownerId,
+      );
+
+      let aggregateAttack = 0;
+      let aggregateDefense = 0;
+      let aggregateSupport = 0;
+
+      if (territoryUnits.length > 0) {
+        territoryUnits.forEach((unit) => {
+          const profile = getTemplateProfile(unit.ownerId, unit.templateId);
+          const readinessFactor = unit.readiness / 100;
+          const experienceBonus = 1 + unit.experience * 0.05;
+          const modifier = readinessFactor * experienceBonus;
+          aggregateAttack += profile.attack * modifier;
+          aggregateDefense += profile.defense * modifier;
+          aggregateSupport += profile.support * modifier;
+        });
+      } else {
+        const totalArmies = Math.max(1, territory.armies);
+        const baseProfile = profileFromTemplate(templateLookup.armored_corps);
+        const armyShare = territory.unitComposition.army / totalArmies;
+        const navyShare = territory.unitComposition.navy / totalArmies;
+        const airShare = territory.unitComposition.air / totalArmies;
+        aggregateAttack =
+          baseProfile.attack * armyShare +
+          baseProfile.attack * 0.9 * navyShare +
+          baseProfile.attack * 1.1 * airShare;
+        aggregateDefense =
+          baseProfile.defense * armyShare +
+          baseProfile.defense * 1.1 * navyShare +
+          baseProfile.defense * 0.9 * airShare;
+        aggregateSupport = baseProfile.support;
+      }
+
+      const supplyModifier = getSupplyModifier(territory.id, ownerId);
+
+      return {
+        attack: aggregateAttack * supplyModifier,
+        defense: aggregateDefense * supplyModifier,
+        support: aggregateSupport * supplyModifier,
+        supplyModifier,
+      };
+    },
+    [getSupplyModifier, getTemplateProfile, state.units],
+  );
+
+  const toDiceBonus = useCallback((value: number) => Math.max(0, Math.min(3, Math.round(value / 4))), []);
 
   const territories = useMemo(() => state.territories, [state.territories]);
 
@@ -693,7 +879,17 @@ export function useConventionalWarfare({
 
   const trainUnit = useCallback(
     (nationId: string, templateId: string, territoryId?: string) => {
-      const template = templates[templateId];
+      let template = templates[templateId] ?? templateLookup[templateId];
+      let templateToPersist: ConventionalUnitTemplate | null = null;
+
+      if (!template) {
+        const converted = convertMilitaryTemplate(nationId, templateId);
+        if (converted) {
+          template = converted;
+          templateToPersist = converted;
+        }
+      }
+
       if (!template) {
         return { success: false, reason: 'Unknown unit template' } as const;
       }
@@ -735,37 +931,86 @@ export function useConventionalWarfare({
         return { success: false, reason: 'Must deploy to controlled territory' } as const;
       }
 
-      // Add armies to territory (Risk-style)
-      const armiesToAdd = UNIT_ARMIES[template.type];
+      const armiesToAdd = template.armiesValue ?? UNIT_ARMIES[template.type];
+      const newUnitId = `${nationId}_${templateId}_${Date.now().toString(36)}`;
+      const territoryKey = targetTerritoryId as string;
+      const initialReadiness = clamp(
+        (nation.conventional?.readiness ?? 70) - template.readinessImpact * 0.5,
+        35,
+        95,
+      );
 
-      syncState((prev) => ({
-        ...prev,
-        territories: {
-          ...prev.territories,
-          [targetTerritoryId]: {
-            ...prev.territories[targetTerritoryId],
-            armies: prev.territories[targetTerritoryId].armies + armiesToAdd,
-            unitComposition: {
-              ...prev.territories[targetTerritoryId].unitComposition,
-              [template.type]: prev.territories[targetTerritoryId].unitComposition[template.type] + armiesToAdd,
-            },
+      const newUnit: ConventionalUnitState = {
+        id: newUnitId,
+        templateId,
+        ownerId: nationId,
+        label: template.name,
+        readiness: initialReadiness,
+        experience: 0,
+        locationId: targetTerritoryId,
+        status: 'deployed',
+        armiesValue: armiesToAdd,
+      };
+
+      const territoryName = territory.name;
+
+      syncState((prev) => {
+        const nextTemplates = templateToPersist && !prev.templates[templateId]
+          ? {
+              ...prev.templates,
+              [templateId]: templateToPersist,
+            }
+          : prev.templates;
+
+        const previousTerritory = prev.territories[territoryKey];
+        const updatedTerritory = {
+          ...previousTerritory,
+          armies: previousTerritory.armies + armiesToAdd,
+          unitComposition: {
+            ...previousTerritory.unitComposition,
+            [template.type]: previousTerritory.unitComposition[template.type] + armiesToAdd,
           },
-        },
-      }));
+        };
+
+        return {
+          ...prev,
+          templates: nextTemplates,
+          territories: {
+            ...prev.territories,
+            [territoryKey]: updatedTerritory,
+          },
+          units: {
+            ...prev.units,
+            [newUnitId]: newUnit,
+          },
+        };
+      });
 
       const profile = nation.conventional ?? createDefaultNationConventionalProfile();
       const moraleModifier = calculateMoraleRecruitmentModifier(nation.morale ?? 50);
       const readinessGain = Math.max(1, Math.round(5 * moraleModifier));
+      const deployedUnits = new Set(profile.deployedUnits);
+      deployedUnits.add(newUnitId);
       nation.conventional = {
         ...profile,
         readiness: clamp(profile.readiness + readinessGain * 0.5, 10, 100),
+        deployedUnits: Array.from(deployedUnits),
       };
 
       onUpdateDisplay?.();
       onConsumeAction?.();
-      return { success: true, territorySummary: `+${armiesToAdd} armies to ${territory.name}` } as const;
+      return { success: true, territorySummary: `+${armiesToAdd} armies to ${territoryName}` } as const;
     },
-    [getNation, onConsumeAction, onUpdateDisplay, spendResources, syncState, templates, territories],
+    [
+      convertMilitaryTemplate,
+      getNation,
+      onConsumeAction,
+      onUpdateDisplay,
+      spendResources,
+      syncState,
+      templates,
+      territories,
+    ],
   );
 
   const deployUnit = useCallback(
@@ -967,9 +1212,13 @@ export function useConventionalWarfare({
         }
       });
 
-      // Get unit composition bonuses
+      // Get unit composition bonuses and template-driven combat strength
       const attackBonuses = getTerritoryBonuses(fromTerritory);
       const defenseBonuses = getTerritoryBonuses(toTerritory);
+      const attackerCombat = computeTerritoryCombatProfile(fromTerritory, attackerId);
+      const defenderCombat = computeTerritoryCombatProfile(toTerritory, defenderId);
+      const effectiveAttackBonus = attackBonuses.attack + toDiceBonus(attackerCombat.attack + attackerCombat.support * 0.5);
+      const effectiveDefenseBonus = defenseBonuses.defense + toDiceBonus(defenderCombat.defense + defenderCombat.support * 0.5);
 
       // Resolve combat using Risk-style dice until one side is eliminated or attacker retreats
       let remainingAttackers = attackingArmies;
@@ -981,8 +1230,8 @@ export function useConventionalWarfare({
         const rollResult = resolveDiceRoll(
           remainingAttackers,
           remainingDefenders,
-          attackBonuses.attack,
-          defenseBonuses.defense,
+          effectiveAttackBonus,
+          effectiveDefenseBonus,
           rng,
         );
 
@@ -1094,6 +1343,12 @@ export function useConventionalWarfare({
         diceRolls,
         attackerLosses,
         defenderLosses,
+        attackerCombatPower: Number((attackerCombat.attack + attackerCombat.support).toFixed(2)),
+        defenderCombatPower: Number((defenderCombat.defense + defenderCombat.support).toFixed(2)),
+        supply: {
+          attacker: attackerCombat.supplyModifier,
+          defender: defenderCombat.supplyModifier,
+        },
       } as const;
     },
     [
@@ -1101,6 +1356,7 @@ export function useConventionalWarfare({
       adjustNationProduction,
       currentTurn,
       getNation,
+      computeTerritoryCombatProfile,
       moveArmies,
       onConsumeAction,
       onUpdateDisplay,
@@ -1119,10 +1375,14 @@ export function useConventionalWarfare({
       }
       const sponsorReadiness = getNation(sponsorId)?.conventional?.readiness ?? 60;
       const opposingReadiness = getNation(opposingId)?.conventional?.readiness ?? 60;
+      const sponsorSupply = getSupplyModifier(territoryId, sponsorId);
+      const opposingSupply = getSupplyModifier(territoryId, opposingId);
 
       const proxyOdds = clamp(0.45 + (sponsorReadiness - opposingReadiness) / 200, 0.2, 0.8);
+      const supplyRatio = safeClamp(sponsorSupply / Math.max(0.35, opposingSupply), 0.5, 1.5);
+      const adjustedOdds = clamp(proxyOdds * supplyRatio, 0.1, 0.9);
       const roll = rng.next();
-      const sponsorSuccess = roll < proxyOdds;
+      const sponsorSuccess = roll < adjustedOdds;
 
       const instabilitySwing = sponsorSuccess ? -territory.instabilityModifier / 2 : territory.instabilityModifier / 3;
       adjustNationInstability(sponsorId, instabilitySwing);
@@ -1175,13 +1435,22 @@ export function useConventionalWarfare({
 
       onUpdateDisplay?.();
       onConsumeAction?.();
-      return { success: true, sponsorSuccess, odds: proxyOdds } as const;
+      return {
+        success: true,
+        sponsorSuccess,
+        odds: adjustedOdds,
+        supply: {
+          sponsor: sponsorSupply,
+          opposing: opposingSupply,
+        },
+      } as const;
     },
     [
       adjustNationInstability,
       adjustNationProduction,
       currentTurn,
       getNation,
+      getSupplyModifier,
       onConsumeAction,
       onUpdateDisplay,
       syncState,

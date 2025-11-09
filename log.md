@@ -2932,3 +2932,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated `src/components/PhaseTransitionOverlay.tsx` so the AI status card anchors to the top-right corner without rendering a fullscreen backdrop.
 - Preserved the `pointer-events-none` container behavior to keep strategic map interactions responsive while status updates remain visible.
 - Launched the dev server to exercise the overlay; headless rendering keeps the globe blank, but the indicator no longer occupies the full viewport.
+## 2025-11-09 - Conventional Warfare Supply Integration
+- [21:32 UTC] Reviewed Hearts of Iron template and supply hook interfaces to plan conventional warfare integration.
+- [21:38 UTC] Extended `useConventionalWarfare`, `useMilitaryTemplates`, and `useSupplySystem` to share template stats and supply modifiers with combat resolution.
+- [21:45 UTC] Added Vitest coverage demonstrating reduced combat power for HoI-trained units under critical supply.
+- [21:47 UTC] Ran `npm run test -- useConventionalWarfare` to verify updated conventional warfare behaviour.

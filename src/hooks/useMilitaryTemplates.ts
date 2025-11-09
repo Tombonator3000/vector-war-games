@@ -80,6 +80,17 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
     [templateStates]
   );
 
+  const getTemplateStats = useCallback(
+    (
+      nationId: string,
+      templateId: string,
+    ): MilitaryTemplate['stats'] | undefined => {
+      const template = getTemplate(nationId, templateId);
+      return template?.stats;
+    },
+    [getTemplate]
+  );
+
   /**
    * Create a new template
    */
@@ -482,6 +493,7 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
     // Queries
     getTemplates,
     getTemplate,
+    getTemplateStats,
     getDeployedUnits,
     calculateCombatEffectiveness,
 
@@ -502,3 +514,5 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
     initializeTemplates,
   };
 }
+
+export type UseMilitaryTemplatesApi = ReturnType<typeof useMilitaryTemplates>;
