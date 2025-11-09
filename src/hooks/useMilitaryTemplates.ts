@@ -4,7 +4,7 @@
  * Manages military unit templates (division designer) and deployed units.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   MilitaryTemplate,
   DeployedUnit,
@@ -24,6 +24,7 @@ interface UseMilitaryTemplatesOptions {
 export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTemplatesOptions) {
   const [templateStates, setTemplateStates] = useState<Map<string, TemplateDesignerState>>(new Map());
   const [deployedUnits, setDeployedUnits] = useState<Map<string, DeployedUnit[]>>(new Map());
+  const initializedRef = useRef(false);
 
   /**
    * Initialize templates for all nations
@@ -467,10 +468,11 @@ export function useMilitaryTemplates({ currentTurn, nations }: UseMilitaryTempla
 
   // Initialize on mount
   useEffect(() => {
-    if (templateStates.size === 0) {
+    if (!initializedRef.current && templateStates.size === 0) {
+      initializedRef.current = true;
       initializeTemplates();
     }
-  }, [initializeTemplates, templateStates.size]);
+  }, [templateStates.size]);
 
   return {
     // State
