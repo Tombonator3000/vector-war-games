@@ -35,6 +35,7 @@ import {
 } from '@/lib/missileTrajectories';
 import {
   createUnitBillboard,
+  disposeUnitVisualization,
   type Unit,
   type UnitVisualization,
 } from '@/lib/unitModels';
@@ -1196,7 +1197,7 @@ function SceneContent({
   useEffect(() => {
     if (!showUnits || units.length === 0) {
       setUnitVisualizations(prevVisualizations => {
-        prevVisualizations.forEach(viz => disposeObject(viz.mesh));
+        prevVisualizations.forEach(viz => disposeUnitVisualization(viz));
         return [];
       });
       return;
@@ -1207,12 +1208,12 @@ function SceneContent({
     );
 
     setUnitVisualizations(prevVisualizations => {
-      prevVisualizations.forEach(viz => disposeObject(viz.mesh));
+      prevVisualizations.forEach(viz => disposeUnitVisualization(viz));
       return visualizations;
     });
 
     return () => {
-      visualizations.forEach(viz => disposeObject(viz.mesh));
+      visualizations.forEach(viz => disposeUnitVisualization(viz));
     };
   }, [units, showUnits, latLonToSceneVector]);
 

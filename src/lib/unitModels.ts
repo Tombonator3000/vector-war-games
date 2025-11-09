@@ -37,8 +37,58 @@ const gltfLoader = new GLTFLoader();
 
 /**
  * Model cache to avoid loading same model multiple times
+ * Limited to prevent unbounded memory growth
  */
+const MAX_CACHE_SIZE = 50;
 const modelCache = new Map<string, THREE.Group>();
+const cacheAccessOrder: string[] = [];
+
+/**
+ * Helper function to dispose a THREE.Group and all its children
+ */
+function disposeModel(model: THREE.Group): void {
+  model.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      if (child.geometry) {
+        child.geometry.dispose();
+      }
+      if (child.material) {
+        if (Array.isArray(child.material)) {
+          child.material.forEach(mat => mat.dispose());
+        } else {
+          child.material.dispose();
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Update LRU cache access order
+ */
+function touchCacheEntry(path: string): void {
+  const index = cacheAccessOrder.indexOf(path);
+  if (index > -1) {
+    cacheAccessOrder.splice(index, 1);
+  }
+  cacheAccessOrder.push(path);
+}
+
+/**
+ * Evict least recently used model from cache if over limit
+ */
+function evictLRUIfNeeded(): void {
+  while (modelCache.size >= MAX_CACHE_SIZE && cacheAccessOrder.length > 0) {
+    const oldestPath = cacheAccessOrder.shift();
+    if (oldestPath) {
+      const model = modelCache.get(oldestPath);
+      if (model) {
+        disposeModel(model);
+        modelCache.delete(oldestPath);
+      }
+    }
+  }
+}
 
 /**
  * Unit type to model path mapping
@@ -102,12 +152,17 @@ export async function loadUnitModel(unitType: string): Promise<THREE.Group> {
 
   // Check cache first
   if (modelCache.has(modelInfo.path)) {
+    touchCacheEntry(modelInfo.path);
     return modelCache.get(modelInfo.path)!.clone();
   }
 
   try {
+    // Evict LRU entries if cache is full
+    evictLRUIfNeeded();
+
     const gltf = await gltfLoader.loadAsync(modelInfo.path);
     modelCache.set(modelInfo.path, gltf.scene);
+    touchCacheEntry(modelInfo.path);
     return gltf.scene.clone();
   } catch (error) {
     console.warn(`Failed to load model for ${unitType}:`, error);
@@ -161,8 +216,43 @@ function createFallbackModel(unitType: string): THREE.Group {
 }
 
 /**
+ * Canvas pool for reusing canvas elements (prevents memory leaks)
+ */
+const canvasPool: HTMLCanvasElement[] = [];
+const MAX_CANVAS_POOL_SIZE = 100;
+
+/**
+ * Get a canvas from pool or create new one
+ */
+function getCanvas(): HTMLCanvasElement {
+  const canvas = canvasPool.pop();
+  if (canvas) {
+    // Clear the canvas
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    return canvas;
+  }
+  const newCanvas = document.createElement('canvas');
+  newCanvas.width = 64;
+  newCanvas.height = 64;
+  return newCanvas;
+}
+
+/**
+ * Return canvas to pool for reuse
+ */
+function returnCanvas(canvas: HTMLCanvasElement): void {
+  if (canvasPool.length < MAX_CANVAS_POOL_SIZE) {
+    canvasPool.push(canvas);
+  }
+}
+
+/**
  * Create billboard sprite for a unit (2D icon in 3D space)
  * More performant than 3D models for large numbers of units
+ * Uses canvas pooling to prevent memory leaks
  */
 export function createUnitBillboard(
   unit: Unit,
@@ -171,10 +261,8 @@ export function createUnitBillboard(
 ): UnitVisualization {
   const position = latLonToVector3(unit.lon, unit.lat, radius + 0.05);
 
-  // Create canvas for icon
-  const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 64;
+  // Get canvas from pool
+  const canvas = getCanvas();
   const ctx = canvas.getContext('2d');
 
   if (ctx) {
@@ -227,12 +315,41 @@ export function createUnitBillboard(
   sprite.position.copy(position);
   sprite.name = `unit-billboard-${unit.id}`;
 
+  // Store canvas reference for cleanup
+  (sprite as { userData: { canvas: HTMLCanvasElement } }).userData = { canvas };
+
   return {
     id: unit.id,
     mesh: sprite,
     position,
     type: 'billboard'
   };
+}
+
+/**
+ * Dispose a unit visualization and return canvas to pool
+ */
+export function disposeUnitVisualization(viz: UnitVisualization): void {
+  if (viz.type === 'billboard' && viz.mesh instanceof THREE.Sprite) {
+    const sprite = viz.mesh;
+    const canvas = (sprite as { userData?: { canvas?: HTMLCanvasElement } }).userData?.canvas;
+
+    // Dispose material and texture
+    if (sprite.material instanceof THREE.SpriteMaterial) {
+      if (sprite.material.map) {
+        sprite.material.map.dispose();
+      }
+      sprite.material.dispose();
+    }
+
+    // Return canvas to pool
+    if (canvas instanceof HTMLCanvasElement) {
+      returnCanvas(canvas);
+    }
+  } else if (viz.type === 'model') {
+    // Dispose 3D model
+    disposeModel(viz.mesh as THREE.Group);
+  }
 }
 
 /**
