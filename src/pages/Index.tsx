@@ -2897,7 +2897,7 @@ function toLonLatLocal(x: number, y: number): [number, number] {
 
 // World rendering - wrapper function that delegates to extracted module
 function drawWorld(style: MapVisualStyle) {
-  const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState(flatRealisticBlendRef.current);
+  const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState();
   const context: WorldRenderContext = {
     ctx,
     worldCountries,
@@ -2925,7 +2925,7 @@ function drawWorldPath(coords: number[][]) {
 
 // Nation rendering - wrapper function that delegates to extracted module
 function drawNations(style: MapVisualStyle) {
-  const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState(flatRealisticBlendRef.current);
+  const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState();
   const context: NationRenderContext = {
     ctx,
     worldCountries,
@@ -2957,7 +2957,7 @@ function drawTerritoriesWrapper() {
   const player = PlayerManager.get();
   if (!player) return;
 
-  const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState(flatRealisticBlendRef.current);
+  const { dayTexture, nightTexture, blend } = getFlatRealisticTextureState();
   const context: TerritoryRenderContext = {
     ctx,
     worldCountries,
