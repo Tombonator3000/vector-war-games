@@ -207,7 +207,8 @@ export function UnifiedDiplomacyPanel({
                 {/* Build Trust */}
                 <Button
                   onClick={() => onProposal?.('build-trust' as ProposalType, selectedNation.id)}
-                  className="w-full justify-start bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30"
+                  disabled={!onProposal}
+                  className="w-full justify-start bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <TrendingUp className="w-4 h-4 mr-2" />
                   <div className="flex-1 text-left">
@@ -219,7 +220,8 @@ export function UnifiedDiplomacyPanel({
                 {/* Grant Favor */}
                 <Button
                   onClick={() => onProposal?.('grant-favor' as ProposalType, selectedNation.id)}
-                  className="w-full justify-start bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30"
+                  disabled={!onProposal}
+                  className="w-full justify-start bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Gift className="w-4 h-4 mr-2" />
                   <div className="flex-1 text-left">
@@ -231,8 +233,8 @@ export function UnifiedDiplomacyPanel({
                 {/* Call in Favor */}
                 <Button
                   onClick={() => onProposal?.('call-favor' as ProposalType, selectedNation.id)}
-                  disabled={getPlayerGrievancesAgainst(selectedNation.id).length === 0}
-                  className="w-full justify-start bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 disabled:opacity-50"
+                  disabled={!onProposal || getPlayerGrievancesAgainst(selectedNation.id).length === 0}
+                  className="w-full justify-start bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <DollarSign className="w-4 h-4 mr-2" />
                   <div className="flex-1 text-left">
@@ -244,7 +246,8 @@ export function UnifiedDiplomacyPanel({
                 {/* Make Promise */}
                 <Button
                   onClick={() => onProposal?.('make-promise' as ProposalType, selectedNation.id)}
-                  className="w-full justify-start bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30"
+                  disabled={!onProposal}
+                  className="w-full justify-start bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
                   <div className="flex-1 text-left">
@@ -256,7 +259,7 @@ export function UnifiedDiplomacyPanel({
                 {/* Alliance */}
                 <Button
                   onClick={() => onProposal?.('alliance', selectedNation.id)}
-                  disabled={hasAlliance(selectedNation.id) || !canFormAlliance(getRelationshipWithPlayer(selectedNation.id))}
+                  disabled={!onProposal || hasAlliance(selectedNation.id) || !canFormAlliance(getRelationshipWithPlayer(selectedNation.id))}
                   className="w-full justify-start bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Handshake className="w-4 h-4 mr-2" />
@@ -273,8 +276,8 @@ export function UnifiedDiplomacyPanel({
                 {/* Truce */}
                 <Button
                   onClick={() => onProposal?.('truce', selectedNation.id, { duration: 10 })}
-                  disabled={hasAlliance(selectedNation.id)}
-                  className="w-full justify-start bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 disabled:opacity-50"
+                  disabled={!onProposal || hasAlliance(selectedNation.id)}
+                  className="w-full justify-start bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Shield className="w-4 h-4 mr-2" />
                   <div className="flex-1 text-left">
@@ -286,7 +289,8 @@ export function UnifiedDiplomacyPanel({
                 {/* Aid */}
                 <Button
                   onClick={() => onProposal?.('aid', selectedNation.id, { resourceAmount: 50 })}
-                  className="w-full justify-start bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30"
+                  disabled={!onProposal}
+                  className="w-full justify-start bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Gift className="w-4 h-4 mr-2" />
                   <div className="flex-1 text-left">
@@ -299,7 +303,8 @@ export function UnifiedDiplomacyPanel({
                 {getRelationshipWithPlayer(selectedNation.id) < RELATIONSHIP_UNFRIENDLY && (
                   <Button
                     onClick={() => onProposal?.('peace', selectedNation.id)}
-                    className="w-full justify-start bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30"
+                    disabled={!onProposal}
+                    className="w-full justify-start bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Heart className="w-4 h-4 mr-2" />
                     <div className="flex-1 text-left">
@@ -361,16 +366,18 @@ export function UnifiedDiplomacyPanel({
                         <div className="grid grid-cols-2 gap-2">
                           <Button
                             onClick={() => onResolveGrievance?.(selectedNation.id, 'apologize')}
+                            disabled={!onResolveGrievance}
                             size="sm"
-                            className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-xs"
+                            className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <MessageSquare className="w-3 h-3 mr-1" />
                             Apologize
                           </Button>
                           <Button
                             onClick={() => onResolveGrievance?.(selectedNation.id, 'reparations')}
+                            disabled={!onResolveGrievance}
                             size="sm"
-                            className="bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-xs"
+                            className="bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <DollarSign className="w-3 h-3 mr-1" />
                             Pay Reparations
