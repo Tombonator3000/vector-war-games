@@ -147,7 +147,7 @@ function executeAggressiveSubversion(
   for (const enemy of enemies) {
     // Try to recruit useful idiots (politicians for destabilization)
     if (nation.intel > 200 && Math.random() < 0.4) {
-      const types: UsefulIdiotType[] = ['politician', 'journalist', 'activist'];
+      const types: UsefulIdiotType[] = ['politician', 'journalist', 'academic'];
       const type = types[Math.floor(Math.random() * types.length)];
 
       // Check if we already have recruitment ongoing

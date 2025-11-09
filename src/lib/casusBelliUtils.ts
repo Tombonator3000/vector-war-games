@@ -45,14 +45,12 @@ export function calculateJustificationFactors(
   );
 
   // Calculate each factor
-  const claimJustification = relevantClaims.reduce((sum, claim) => {
-    return sum + getClaimWarJustification(claim);
-  }, 0);
+  const claimJustification = getClaimWarJustification(attacker, defender.id);
 
   // Grievances: major/severe grievances provide justification
   const grievanceJustification = Math.min(
     50,
-    getTotalGrievanceWeight(relevantGrievances) * 5 // Weight * 5 = justification
+    getTotalGrievanceWeight(attacker, defender.id) * 5 // Weight * 5 = justification
   );
 
   // Threat level: high threat = preemptive strike justification
@@ -63,9 +61,9 @@ export function calculateJustificationFactors(
 
   // Ideological conflict: opposing ideologies provide justification
   let ideologicalConflict = 0;
-  if (attacker.ideology && defender.ideology) {
+  if (attacker.ideologyState && defender.ideologyState) {
     const ideologyDiff = Math.abs(
-      (attacker.ideology.alignment || 0) - (defender.ideology.alignment || 0)
+      (attacker.ideologyState.alignment || 0) - (defender.ideologyState.alignment || 0)
     );
     ideologicalConflict = Math.min(20, ideologyDiff * 2);
   }
@@ -81,11 +79,7 @@ export function calculateJustificationFactors(
   const allyDefense = 0;
 
   // Public opinion: based on claims
-  const avgPublicSupport =
-    relevantClaims.length > 0
-      ? relevantClaims.reduce((sum, c) => sum + getClaimPublicSupport(c), 0) /
-        relevantClaims.length
-      : 50;
+  const avgPublicSupport = getClaimPublicSupport(attacker, defender.id);
   const publicOpinion = (avgPublicSupport - 50) / 2.5; // -20 to +20
 
   const totalJustification =
@@ -155,32 +149,24 @@ export function createCasusBelli(
  * Create Casus Belli from territorial claims
  */
 export function createCasusBelliFromClaims(
-  attackerNationId: string,
-  defenderNationId: string,
+  attacker: Nation,
+  defender: Nation,
   claims: Claim[],
   currentTurn: number
 ): CasusBelli {
   const relevantClaims = claims.filter(
-    (c) => c.onNationId === defenderNationId && !c.renounced
+    (c) => c.onNationId === defender.id && !c.renounced
   );
 
-  const totalJustification = relevantClaims.reduce(
-    (sum, c) => sum + getClaimWarJustification(c),
-    0
-  );
-
-  const avgPublicSupport =
-    relevantClaims.length > 0
-      ? relevantClaims.reduce((sum, c) => sum + getClaimPublicSupport(c), 0) /
-        relevantClaims.length
-      : 50;
+  const totalJustification = getClaimWarJustification(attacker, defender.id);
+  const avgPublicSupport = getClaimPublicSupport(attacker, defender.id);
 
   const claimTypes = relevantClaims.map((c) => c.type).join(', ');
 
   return createCasusBelli(
     'territorial-claim',
-    attackerNationId,
-    defenderNationId,
+    attacker.id,
+    defender.id,
     totalJustification,
     `Territorial claims based on ${claimTypes} grounds`,
     currentTurn,
@@ -195,16 +181,16 @@ export function createCasusBelliFromClaims(
  * Create Casus Belli from grievances
  */
 export function createCasusBelliFromGrievances(
-  attackerNationId: string,
-  defenderNationId: string,
+  attacker: Nation,
+  defender: Nation,
   grievances: Grievance[],
   currentTurn: number
 ): CasusBelli {
   const relevantGrievances = grievances.filter(
-    (g) => g.againstNationId === defenderNationId && !g.resolved
+    (g) => g.againstNationId === defender.id && !g.resolved
   );
 
-  const totalWeight = getTotalGrievanceWeight(relevantGrievances);
+  const totalWeight = getTotalGrievanceWeight(attacker, defender.id);
   const justification = Math.min(50, totalWeight * 5);
 
   const grievanceTypes = [
@@ -221,8 +207,8 @@ export function createCasusBelliFromGrievances(
 
   return createCasusBelli(
     'grievance-retribution',
-    attackerNationId,
-    defenderNationId,
+    attacker.id,
+    defender.id,
     justification,
     `Retaliation for grievances: ${grievanceTypes}`,
     currentTurn,
@@ -316,15 +302,15 @@ export function createHolyWarCB(
   currentTurn: number
 ): CasusBelli {
   let ideologyDiff = 0;
-  if (attacker.ideology && defender.ideology) {
+  if (attacker.ideologyState && defender.ideologyState) {
     ideologyDiff = Math.abs(
-      (attacker.ideology.alignment || 0) - (defender.ideology.alignment || 0)
+      (attacker.ideologyState.alignment || 0) - (defender.ideologyState.alignment || 0)
     );
   }
 
   const justification = Math.min(30, ideologyDiff * 3);
-  const publicSupport = attacker.ideology?.zealotry
-    ? 60 + attacker.ideology.zealotry * 20
+  const publicSupport = attacker.ideologyState?.zealotry
+    ? 60 + attacker.ideologyState.zealotry * 20
     : 50;
 
   return createCasusBelli(
@@ -332,7 +318,7 @@ export function createHolyWarCB(
     attacker.id,
     defender.id,
     justification,
-    `Ideological conflict: ${attacker.ideology?.name || 'unknown'} vs ${defender.ideology?.name || 'unknown'}`,
+    `Ideological conflict: ${attacker.ideologyState?.currentIdeology || 'unknown'} vs ${defender.ideologyState?.currentIdeology || 'unknown'}`,
     currentTurn,
     {
       publicSupport,
@@ -568,7 +554,7 @@ export function generateAutomaticCasusBelli(
   );
   if (relevantClaims.length > 0) {
     newCBs.push(
-      createCasusBelliFromClaims(attacker.id, defender.id, claims, currentTurn)
+      createCasusBelliFromClaims(attacker, defender, claims, currentTurn)
     );
   }
 
@@ -582,8 +568,8 @@ export function generateAutomaticCasusBelli(
   if (severeGrievances.length > 0) {
     newCBs.push(
       createCasusBelliFromGrievances(
-        attacker.id,
-        defender.id,
+        attacker,
+        defender,
         grievances,
         currentTurn
       )

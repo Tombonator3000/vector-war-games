@@ -227,25 +227,26 @@ describe('MultiplayerProvider', () => {
     });
     const ctx = await renderWithProvider();
     const sampleState: MultiplayerSharedState = {
-      gameState: { 
-        turn: 1, 
-        defcon: 5, 
-        phase: 'PLAYER', 
-        actionsRemaining: 1, 
-        paused: false, 
-        gameOver: false, 
-        selectedLeader: null, 
-        selectedDoctrine: null, 
-        missiles: [], 
-        bombers: [], 
-        explosions: [], 
-        particles: [], 
-        radiationZones: [], 
-        empEffects: [], 
-        rings: [], 
+      gameState: {
+        turn: 1,
+        defcon: 5,
+        phase: 'PLAYER',
+        actionsRemaining: 1,
+        paused: false,
+        gameOver: false,
+        selectedLeader: null,
+        selectedDoctrine: null,
+        missiles: [],
+        bombers: [],
+        explosions: [],
+        particles: [],
+        radiationZones: [],
+        empEffects: [],
+        rings: [],
         screenShake: 0,
         falloutMarks: [],
-        satelliteOrbits: []
+        satelliteOrbits: [],
+        nations: []
       },
       nations: [],
       conventionalDeltas: [],

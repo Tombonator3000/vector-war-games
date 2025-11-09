@@ -211,8 +211,7 @@ export function generateCouncilWarIntervention(
     description: `The Council calls for an immediate ceasefire between ${attacker.name} and ${defender.name} due to unjustified aggression.`,
     targetNationId: attacker.id,
     parameters: {
-      ceasefireDuration: 10,
-      enforcementType: 'diplomatic',
+      duration: 10,
     },
   };
 }

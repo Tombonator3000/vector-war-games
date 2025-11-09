@@ -679,4 +679,5 @@ export interface MissionLogEntry {
   sanityChange?: number;
   corruptionChange?: number;
   veilChange?: number;
+  councilUnityChange?: number;
 }
