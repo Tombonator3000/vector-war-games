@@ -6029,6 +6029,7 @@ export default function NoradVector() {
   }, [overlayBanner]);
 
   useEffect(() => {
+    console.log('[INDEX] mapStyle changed:', mapStyle);
     currentMapStyle = mapStyle.visual;
     if (mapStyle.visual === 'flat-realistic' || mapStyle.visual === 'wireframe') {
       const expectedX = (W - W * cam.zoom) / 2;

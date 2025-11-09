@@ -147,6 +147,8 @@ function resolveOverlayFillColor(
  * Render the world map with various visual styles
  */
 export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): void {
+  console.log('[WORLD RENDERER] drawWorld called with style:', style);
+  
   const {
     ctx,
     worldCountries,
@@ -171,9 +173,12 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
 
   const isWireframe = style === 'wireframe';
   const isFlatRealistic = style === 'flat-realistic';
+  
+  console.log('[WORLD RENDERER] isWireframe:', isWireframe, 'isFlatRealistic:', isFlatRealistic, 'worldCountries exists:', !!worldCountries);
 
   // In wireframe mode, don't draw on 2D overlay - the 3D wireframe handles visualization
   if (isWireframe) {
+    console.log('[WORLD RENDERER] Early return due to wireframe mode');
     return;
   }
 
