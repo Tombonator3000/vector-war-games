@@ -634,7 +634,8 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 ];
 
 let currentTheme: ThemeId = 'synthwave';
-let currentMapStyle: MapVisualStyle = 'realistic';
+// NOTE: currentMapStyle is initialized from React state in useEffect - DO NOT hardcode here
+let currentMapStyle: MapVisualStyle = 'flat-realistic';  // Default, will be overridden by React state
 let currentMapMode: MapMode = 'standard';
 let currentMapModeData: MapModeOverlayData | null = null;
 let selectedTargetRefId: string | null = null;
@@ -6052,7 +6053,10 @@ export default function NoradVector() {
 
   useEffect(() => {
     console.log('[INDEX] mapStyle changed:', mapStyle);
+    // CRITICAL: Sync module-level variable with React state
     currentMapStyle = mapStyle.visual;
+    console.log('[MAP SYNC] currentMapStyle synced to:', currentMapStyle);
+    
     if (mapStyle.visual === 'flat-realistic' || mapStyle.visual === 'wireframe') {
       const expectedX = (W - W * cam.zoom) / 2;
       const expectedY = (H - H * cam.zoom) / 2;
@@ -6065,6 +6069,7 @@ export default function NoradVector() {
   }, [cam.x, cam.y, cam.zoom, mapStyle.visual]);
   useEffect(() => {
     currentMapMode = mapStyle.mode;
+    console.log('[MAP SYNC] currentMapMode synced to:', currentMapMode);
   }, [mapStyle.mode]);
   useEffect(() => {
     void Promise.all([preloadFlatRealisticTexture(true), preloadFlatRealisticTexture(false)]);
