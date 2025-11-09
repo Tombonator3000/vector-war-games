@@ -342,6 +342,10 @@ const getLeaderInitials = (name?: string): string => {
 let governanceApiRef: UseGovernanceReturn | null = null;
 let enqueueAIProposalRef: ((proposal: DiplomaticProposal) => void) | null = null;
 let territoryListRef: { current: TerritoryState[] } = { current: [] };
+let selectedTerritoryIdRef: { current: string | null } = { current: null };
+let hoveredTerritoryIdRef: { current: string | null } = { current: null };
+let dragTargetTerritoryIdRef: { current: string | null } = { current: null };
+let draggingArmyRef: { current: { sourceId: string; armies: number } | null } = { current: null };
 
 const PROPOSAL_MAX_AGE = 10;
 
@@ -2977,10 +2981,10 @@ function drawTerritoriesWrapper() {
     modeData: currentMapModeData,
     territories: currentTerritories,
     playerId: player?.id ?? null,
-    selectedTerritoryId,
-    hoveredTerritoryId,
-    draggingTerritoryId: draggingArmy?.sourceId ?? null,
-    dragTargetTerritoryId,
+    selectedTerritoryId: selectedTerritoryIdRef.current,
+    hoveredTerritoryId: hoveredTerritoryIdRef.current,
+    draggingTerritoryId: draggingArmyRef.current?.sourceId ?? null,
+    dragTargetTerritoryId: dragTargetTerritoryIdRef.current,
   };
   renderTerritories(context);
 }
@@ -6252,6 +6256,23 @@ export default function NoradVector() {
   useEffect(() => {
     territoryListRef.current = territoryList;
   }, [territoryList]);
+
+  // Update module-level territory state refs
+  useEffect(() => {
+    selectedTerritoryIdRef.current = selectedTerritoryId;
+  }, [selectedTerritoryId]);
+
+  useEffect(() => {
+    hoveredTerritoryIdRef.current = hoveredTerritoryId;
+  }, [hoveredTerritoryId]);
+
+  useEffect(() => {
+    dragTargetTerritoryIdRef.current = dragTargetTerritoryId;
+  }, [dragTargetTerritoryId]);
+
+  useEffect(() => {
+    draggingArmyRef.current = draggingArmy;
+  }, [draggingArmy]);
 
   const getTerritoryById = useCallback(
     (territoryId: string | null | undefined) => {
