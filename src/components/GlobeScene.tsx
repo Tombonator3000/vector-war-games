@@ -246,82 +246,71 @@ function disposeExplosionGroup(group?: THREE.Group | null) {
   disposeObject(group);
 }
 
-function createWireframeFallbackTexture(): THREE.Texture {
-  if (typeof document !== 'undefined') {
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1024;
-      canvas.height = 512;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = '#020912';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+function collectWireframeSegments(
+  collection?: FeatureCollection<Polygon | MultiPolygon> | null,
+): Float32Array | null {
+  if (!collection?.features?.length) {
+    return null;
+  }
 
-        ctx.strokeStyle = 'rgba(94, 255, 255, 0.35)';
-        ctx.lineWidth = 1;
+  const segments: number[] = [];
 
-        const meridianStep = canvas.width / 24;
-        for (let x = 0; x <= canvas.width; x += meridianStep) {
-          ctx.beginPath();
-          ctx.moveTo(x, 0);
-          ctx.lineTo(x, canvas.height);
-          ctx.stroke();
-        }
+  const pushSegment = (start: readonly [number, number], end: readonly [number, number]) => {
+    const [startLon, startLat] = start;
+    const [endLon, endLat] = end;
 
-        const parallelStep = canvas.height / 12;
-        for (let y = 0; y <= canvas.height; y += parallelStep) {
-          ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(canvas.width, y);
-          ctx.stroke();
-        }
+    if (!Number.isFinite(startLon) || !Number.isFinite(startLat)) {
+      return;
+    }
+    if (!Number.isFinite(endLon) || !Number.isFinite(endLat)) {
+      return;
+    }
 
-        ctx.strokeStyle = 'rgba(94, 255, 255, 0.6)';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+    const startU = THREE.MathUtils.clamp((startLon + 180) / 360, 0, 1);
+    const startV = THREE.MathUtils.clamp((90 - startLat) / 180, 0, 1);
+    const endU = THREE.MathUtils.clamp((endLon + 180) / 360, 0, 1);
+    const endV = THREE.MathUtils.clamp((90 - endLat) / 180, 0, 1);
 
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.colorSpace = THREE.SRGBColorSpace;
-        texture.anisotropy = 4;
-        texture.generateMipmaps = true;
-        texture.minFilter = THREE.LinearMipmapLinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        texture.needsUpdate = true;
-        return texture;
-      }
-    } catch {
-      // Ignore canvas fallback failures and create a data texture instead.
+    segments.push(startU, startV, endU, endV);
+  };
+
+  const appendRing = (ring: readonly number[][]) => {
+    if (!ring || ring.length < 2) {
+      return;
+    }
+
+    for (let i = 1; i < ring.length; i += 1) {
+      pushSegment(ring[i - 1] as [number, number], ring[i] as [number, number]);
+    }
+
+    const first = ring[0] as [number, number];
+    const last = ring[ring.length - 1] as [number, number];
+    if (first[0] !== last[0] || first[1] !== last[1]) {
+      pushSegment(last, first);
+    }
+  };
+
+  const appendPolygon = (polygon: Polygon['coordinates']) => {
+    polygon.forEach(ring => appendRing(ring));
+  };
+
+  for (const feature of collection.features) {
+    if (!feature) continue;
+    const geometry = feature.geometry;
+    if (!geometry) continue;
+
+    if (geometry.type === 'Polygon') {
+      appendPolygon(geometry.coordinates);
+    } else if (geometry.type === 'MultiPolygon') {
+      geometry.coordinates.forEach(polygon => appendPolygon(polygon));
     }
   }
 
-  const size = 8;
-  const data = new Uint8Array(size * size * 4);
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const stride = (y * size + x) * 4;
-      const isMajorLine = x === 0 || y === 0;
-      const isMinorLine = x % 4 === 0 || y % 4 === 0 || x === size - 1 || y === size - 1;
-      const [r, g, b] = isMajorLine
-        ? [94, 255, 255]
-        : isMinorLine
-          ? [24, 128, 160]
-          : [2, 9, 18];
-      data[stride] = r;
-      data[stride + 1] = g;
-      data[stride + 2] = b;
-      data[stride + 3] = 255;
-    }
+  if (!segments.length) {
+    return null;
   }
 
-  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(64, 32);
-  texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearFilter;
-  texture.needsUpdate = true;
-  return texture;
+  return new Float32Array(segments);
 }
 
 interface CityLightInstance {
@@ -572,19 +561,28 @@ function EarthRealistic({
 
 function EarthWireframe({
   earthRef,
-  vectorTexture,
+  worldCountries,
   cam,
 }: {
   earthRef: MutableRefObject<THREE.Mesh | null>;
-  vectorTexture: THREE.Texture | null;
+  worldCountries?: FeatureCollection<Polygon | MultiPolygon> | null;
   cam: GlobeSceneProps['cam'];
 }) {
   const meshRef = earthRef as MutableRefObject<
     THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null
   >;
+  const groupRef = useRef<THREE.Group>(null);
   const { camera, size, gl } = useThree();
   const cameraWorldPosition = useRef(new THREE.Vector3());
   const planeWorldPosition = useRef(new THREE.Vector3());
+  const unprojectTargetRef = useRef(new THREE.Vector3());
+  const directionRef = useRef(new THREE.Vector3());
+  const baseCoordinatesRef = useRef<Float32Array | null>(null);
+  const linePositionsRef = useRef<Float32Array | null>(null);
+  const lineGeometryRef = useRef<THREE.BufferGeometry | null>(null);
+  const lineMaterialRef = useRef<THREE.LineBasicMaterial | null>(null);
+  const lineSegmentsRef = useRef<THREE.LineSegments | null>(null);
+  const prevCamRef = useRef({ x: cam.x, y: cam.y, zoom: cam.zoom });
 
   const cssDimensions = useMemo(
     () =>
@@ -598,37 +596,30 @@ function EarthWireframe({
   const cssWidth = cssDimensions.width;
   const cssHeight = cssDimensions.height;
 
-  const applyTexturePanZoom = useCallback(
-    (texture: THREE.Texture | null) => {
-      if (!texture) return;
-
-      const width = cssWidth || 1;
-      const height = cssHeight || 1;
-      const safeZoom = cam.zoom <= 0 ? 0.0001 : cam.zoom;
-      const inverseZoom = 1 / safeZoom;
-
-      texture.wrapS = THREE.ClampToEdgeWrapping;
-      texture.wrapT = THREE.ClampToEdgeWrapping;
-      texture.repeat.set(inverseZoom, inverseZoom);
-
-      const offsetX = -((cam.x / width) * inverseZoom);
-      const offsetY = -((cam.y / height) * inverseZoom);
-      texture.offset.set(offsetX, offsetY);
-    },
-    [cam.x, cam.y, cam.zoom, cssHeight, cssWidth],
+  const normalizedSegments = useMemo(
+    () => collectWireframeSegments(worldCountries),
+    [worldCountries],
   );
 
-  const syncTexturePanZoom = useCallback(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-
-    const material = mesh.material;
-    if (!material || Array.isArray(material) || !(material instanceof THREE.MeshBasicMaterial)) {
-      return;
+  const disposeLineResources = useCallback(() => {
+    const currentLines = lineSegmentsRef.current;
+    if (currentLines) {
+      groupRef.current?.remove(currentLines);
+      lineSegmentsRef.current = null;
     }
 
-    applyTexturePanZoom(material.map ?? null);
-  }, [applyTexturePanZoom]);
+    if (lineGeometryRef.current) {
+      lineGeometryRef.current.dispose();
+      lineGeometryRef.current = null;
+    }
+
+    if (lineMaterialRef.current) {
+      lineMaterialRef.current.dispose();
+      lineMaterialRef.current = null;
+    }
+
+    linePositionsRef.current = null;
+  }, []);
 
   const updatePlaneScale = useCallback(() => {
     const mesh = meshRef.current;
@@ -656,32 +647,139 @@ function EarthWireframe({
     mesh.scale.set(viewportWidth * overscan, viewportHeight * overscan, 1);
   }, [camera, size.height, size.width]);
 
+  const updateLinePositions = useCallback(() => {
+    const base = baseCoordinatesRef.current;
+    const positions = linePositionsRef.current;
+    const geometry = lineGeometryRef.current;
+    const lines = lineSegmentsRef.current;
+    if (!base || !positions || !geometry || !lines) {
+      return;
+    }
+
+    const perspective = camera as THREE.PerspectiveCamera;
+    if (!perspective.isPerspectiveCamera) return;
+
+    perspective.getWorldPosition(cameraWorldPosition.current);
+    const cameraPosition = cameraWorldPosition.current;
+
+    const width = cssWidth || 1;
+    const height = cssHeight || 1;
+
+    for (let i = 0, v = 0; i < base.length; i += 2, v += 3) {
+      const baseX = base[i] * width;
+      const baseY = base[i + 1] * height;
+
+      const screenX = baseX * cam.zoom + cam.x;
+      const screenY = baseY * cam.zoom + cam.y;
+
+      const ndcX = (screenX / width) * 2 - 1;
+      const ndcY = -(screenY / height) * 2 + 1;
+
+      const target = unprojectTargetRef.current.set(ndcX, ndcY, 0.5).unproject(perspective);
+      const direction = directionRef.current.copy(target).sub(cameraPosition);
+      const dirZ = direction.z;
+
+      let x = target.x;
+      let y = target.y;
+
+      if (dirZ !== 0) {
+        const distance = (FLAT_PLANE_Z - cameraPosition.z) / dirZ;
+        x = cameraPosition.x + direction.x * distance;
+        y = cameraPosition.y + direction.y * distance;
+      }
+
+      positions[v] = x;
+      positions[v + 1] = y;
+      positions[v + 2] = FLAT_PLANE_Z;
+    }
+
+    geometry.attributes.position.needsUpdate = true;
+  }, [cam.x, cam.y, cam.zoom, camera, cssHeight, cssWidth]);
+
+  useEffect(() => {
+    disposeLineResources();
+    baseCoordinatesRef.current = normalizedSegments ?? null;
+
+    if (!normalizedSegments || normalizedSegments.length === 0) {
+      return;
+    }
+
+    const vertexCount = normalizedSegments.length / 2;
+    const positions = new Float32Array(vertexCount * 3);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const material = new THREE.LineBasicMaterial({
+      color: new THREE.Color('#2ef1ff'),
+      transparent: true,
+      opacity: 0.82,
+      toneMapped: false,
+    });
+    material.depthWrite = false;
+    material.depthTest = false;
+
+    const lines = new THREE.LineSegments(geometry, material);
+    lines.frustumCulled = false;
+    lines.renderOrder = -14;
+
+    linePositionsRef.current = positions;
+    lineGeometryRef.current = geometry;
+    lineMaterialRef.current = material;
+    lineSegmentsRef.current = lines;
+
+    groupRef.current?.add(lines);
+
+    updateLinePositions();
+
+    return () => {
+      disposeLineResources();
+    };
+  }, [normalizedSegments, disposeLineResources, updateLinePositions]);
+
+  useEffect(() => {
+    prevCamRef.current = { x: cam.x, y: cam.y, zoom: cam.zoom };
+    updatePlaneScale();
+    updateLinePositions();
+  }, [cam.x, cam.y, cam.zoom, updateLinePositions, updatePlaneScale]);
+
   useEffect(() => {
     updatePlaneScale();
-    syncTexturePanZoom();
-  }, [syncTexturePanZoom, updatePlaneScale, vectorTexture]);
+    updateLinePositions();
+  }, [cssWidth, cssHeight, updatePlaneScale, updateLinePositions]);
 
   useFrame(() => {
     const mesh = meshRef.current;
-    if (!mesh) return;
-    mesh.quaternion.copy(camera.quaternion);
-    updatePlaneScale();
-    syncTexturePanZoom();
+    if (mesh) {
+      mesh.quaternion.copy(camera.quaternion);
+      updatePlaneScale();
+    }
+
+    const lines = lineSegmentsRef.current;
+    if (lines) {
+      lines.quaternion.copy(camera.quaternion);
+    }
+
+    const previous = prevCamRef.current;
+    if (previous.x !== cam.x || previous.y !== cam.y || previous.zoom !== cam.zoom) {
+      prevCamRef.current = { x: cam.x, y: cam.y, zoom: cam.zoom };
+      updateLinePositions();
+    }
   });
 
   return (
-    <mesh ref={meshRef} position={[0, 0, FLAT_PLANE_Z]} renderOrder={-15} frustumCulled={false}>
-      <planeGeometry args={[1, 1]} />
-      <meshBasicMaterial
-        map={vectorTexture ?? undefined}
-        color={vectorTexture ? undefined : '#061021'}
-        transparent
-        opacity={vectorTexture ? 1 : 0.98}
-        toneMapped={false}
-        side={THREE.DoubleSide}
-        depthWrite={false}
-      />
-    </mesh>
+    <group ref={groupRef} renderOrder={-15}>
+      <mesh ref={meshRef} position={[0, 0, FLAT_PLANE_Z]} frustumCulled={false}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial
+          color="#061021"
+          transparent
+          opacity={0.96}
+          toneMapped={false}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
   );
 }
 
@@ -927,7 +1025,6 @@ function FlatEarthBackdrop({
 
 function SceneContent({
   cam,
-  vectorTexture,
   nations,
   territories = [],
   units = [],
@@ -942,9 +1039,9 @@ function SceneContent({
   missilesRef,
   explosionsRef,
   flatMapVariant,
+  worldCountries,
 }: {
   cam: GlobeSceneProps['cam'];
-  vectorTexture: THREE.Texture | null;
   nations: GlobeSceneProps['nations'];
   territories?: TerritoryPolygon[];
   units?: Unit[];
@@ -959,6 +1056,7 @@ function SceneContent({
   missilesRef: MutableRefObject<Map<string, MissileTrajectoryInstance>>;
   explosionsRef: MutableRefObject<Map<string, { group: THREE.Group; startTime: number }>>;
   flatMapVariant?: GlobeSceneProps['flatMapVariant'];
+  worldCountries?: GlobeSceneProps['worldCountries'];
 }) {
   const { camera, size, clock, gl } = useThree();
   const earthRef = useRef<THREE.Mesh | null>(null);
@@ -1192,7 +1290,9 @@ function SceneContent({
           </Suspense>
         );
       case 'wireframe':
-        return <EarthWireframe earthRef={earthRef} vectorTexture={vectorTexture} cam={cam} />;
+        return (
+          <EarthWireframe earthRef={earthRef} worldCountries={worldCountries} cam={cam} />
+        );
       case 'flat-realistic':
         return <FlatEarthBackdrop cam={cam} flatMapVariant={flatMapVariant} />;
       default:
@@ -1337,7 +1437,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   {
     cam,
     nations,
-    worldCountries: _worldCountries,
+    worldCountries,
     territories,
     units,
     showTerritories = false,
@@ -1353,7 +1453,6 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   }: GlobeSceneProps,
   ref,
 ) {
-  void _worldCountries;
   const containerRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -1399,63 +1498,6 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     }
     return 0;
   }, []);
-
-  const wireframeTextureUrl = useMemo(
-    () => resolvePublicAssetPath('textures/earth_wireframe.svg'),
-    [],
-  );
-  const [vectorTexture, setVectorTexture] = useState<THREE.Texture | null>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    let disposed = false;
-    let activeTexture: THREE.Texture | null = null;
-    const loader = new THREE.TextureLoader();
-
-    setVectorTexture(null);
-
-    const handleTextureReady = (texture: THREE.Texture) => {
-      if (disposed) {
-        texture.dispose();
-        return;
-      }
-
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.generateMipmaps = true;
-      texture.minFilter = THREE.LinearFilter;
-      texture.magFilter = THREE.LinearFilter;
-      texture.anisotropy = 8;
-      texture.needsUpdate = true;
-
-      activeTexture = texture;
-      setVectorTexture(texture);
-    };
-
-    const handleError = (error?: unknown) => {
-      if (error) {
-        console.warn('Failed to load earth wireframe texture', error);
-      }
-      const fallback = createWireframeFallbackTexture();
-      if (disposed) {
-        fallback.dispose();
-        return;
-      }
-      activeTexture = fallback;
-      setVectorTexture(fallback);
-    };
-
-    loader.load(wireframeTextureUrl, handleTextureReady, undefined, handleError);
-
-    return () => {
-      disposed = true;
-      if (activeTexture) {
-        activeTexture.dispose();
-      }
-    };
-  }, [wireframeTextureUrl]);
 
   useEffect(() => {
     const missiles = missilesRef.current;
@@ -1681,7 +1723,6 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         >
           <SceneContent
             cam={cam}
-            vectorTexture={vectorTexture}
             nations={nations}
             territories={territories}
             units={units}
@@ -1696,6 +1737,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
             missilesRef={missilesRef}
             explosionsRef={explosionsRef}
             flatMapVariant={flatMapVariant}
+            worldCountries={worldCountries}
           />
         </Canvas>
       )}
