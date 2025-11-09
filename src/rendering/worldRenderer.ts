@@ -172,6 +172,11 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
   const isWireframe = style === 'wireframe';
   const isFlatRealistic = style === 'flat-realistic';
 
+  // In wireframe mode, don't draw on 2D overlay - the 3D wireframe handles visualization
+  if (isWireframe) {
+    return;
+  }
+
   if (isFlatRealistic) {
     if (!flatRealisticDayTexture) {
       void preloadFlatRealisticTexture(true);
