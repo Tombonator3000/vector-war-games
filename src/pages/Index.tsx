@@ -5803,6 +5803,18 @@ export default function NoradVector() {
     dismissFlashpoint,
   } = useFlashpoints();
 
+  // Great Old Ones state - MUST be declared before blockingModalActive useMemo
+  const [greatOldOnesState, setGreatOldOnesState] = useState<GreatOldOnesState | null>(null);
+  const [councilSchismModalOpen, setCouncilSchismModalOpen] = useState(false);
+  const [regionalSanityOverlayVisible, setRegionalSanityOverlayVisible] = useState(false);
+  const [phase2PanelOpen, setPhase2PanelOpen] = useState(false);
+  const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
+  const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
+  const [phase3State, setPhase3State] = useState<Phase3State | null>(null);
+  const [diplomacyPhase3State, setDiplomacyPhase3State] = useState<DiplomacyPhase3SystemState | null>(
+    () => S.diplomacyPhase3 ?? null
+  );
+
   const blockingModalActive = useMemo(
     () =>
       Boolean(
@@ -6220,17 +6232,6 @@ export default function NoradVector() {
   });
   const [activeTrackId, setActiveTrackId] = useState<MusicTrackId | null>(AudioSys.getCurrentTrack());
 
-  // Great Old Ones state
-  const [greatOldOnesState, setGreatOldOnesState] = useState<GreatOldOnesState | null>(null);
-  const [councilSchismModalOpen, setCouncilSchismModalOpen] = useState(false);
-  const [regionalSanityOverlayVisible, setRegionalSanityOverlayVisible] = useState(false);
-  const [phase2PanelOpen, setPhase2PanelOpen] = useState(false);
-  const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
-  const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
-  const [phase3State, setPhase3State] = useState<Phase3State | null>(null);
-  const [diplomacyPhase3State, setDiplomacyPhase3State] = useState<DiplomacyPhase3SystemState | null>(
-    () => S.diplomacyPhase3 ?? null
-  );
   useEffect(() => {
     AudioSys.setMusicEnabled(initialMusicEnabled);
     AudioSys.sfxEnabled = initialSfxEnabled;
