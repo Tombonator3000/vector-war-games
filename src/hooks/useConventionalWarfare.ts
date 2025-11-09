@@ -96,6 +96,8 @@ export interface EngagementLogEntry {
 export interface NationConventionalProfile {
   readiness: number;
   reserve: number;
+  professionalism: number;
+  tradition: number;
   focus: ForceType;
   deployedUnits: string[];
 }
@@ -575,6 +577,8 @@ export function createDefaultNationConventionalProfile(focus: ForceType = 'army'
   return {
     readiness: 75,
     reserve: 2,
+    professionalism: 55,
+    tradition: 55,
     focus,
     deployedUnits: [],
   };
@@ -988,12 +992,19 @@ export function useConventionalWarfare({
 
       const profile = nation.conventional ?? createDefaultNationConventionalProfile();
       const moraleModifier = calculateMoraleRecruitmentModifier(nation.morale ?? 50);
-      const readinessGain = Math.max(1, Math.round(5 * moraleModifier));
+      const trainingIntensity = template.readinessImpact;
+      const professionalismGain = Math.max(2, Math.round(trainingIntensity * Math.max(0.75, moraleModifier)));
+      const readinessPenalty = Math.max(3, Math.round(trainingIntensity * 0.9));
+      const traditionLoss = Math.max(1, Math.round(trainingIntensity * 0.5));
+      const reservePenalty = Math.max(0.5, (armiesToAdd ?? UNIT_ARMIES[template.type]) / 6);
       const deployedUnits = new Set(profile.deployedUnits);
       deployedUnits.add(newUnitId);
       nation.conventional = {
         ...profile,
-        readiness: clamp(profile.readiness + readinessGain * 0.5, 10, 100),
+        readiness: clamp(profile.readiness - readinessPenalty, 10, 100),
+        reserve: Number(Math.max(0, profile.reserve - reservePenalty).toFixed(2)),
+        professionalism: clamp(profile.professionalism + professionalismGain, 0, 100),
+        tradition: clamp(profile.tradition - traditionLoss, 0, 100),
         deployedUnits: Array.from(deployedUnits),
       };
 
@@ -1500,10 +1511,26 @@ export function useConventionalWarfare({
         },
       }));
 
+      const nation = getNation(nationId);
+      if (nation) {
+        const profile = nation.conventional ?? createDefaultNationConventionalProfile();
+        const mobilizationIntensity = Math.max(1, Math.round(count));
+        const readinessBoost = Math.max(2, Math.round(mobilizationIntensity * 1.5));
+        const professionalismPenalty = Math.max(1, Math.round(mobilizationIntensity * 0.8));
+        const traditionBoost = Math.max(1, Math.round(mobilizationIntensity));
+        nation.conventional = {
+          ...profile,
+          readiness: clamp(profile.readiness + readinessBoost, 10, 100),
+          reserve: Number((profile.reserve + mobilizationIntensity * 0.75).toFixed(2)),
+          professionalism: clamp(profile.professionalism - professionalismPenalty, 0, 100),
+          tradition: clamp(profile.tradition + traditionBoost, 0, 100),
+        };
+      }
+
       onUpdateDisplay?.();
       return { success: true } as const;
     },
-    [onUpdateDisplay, syncState, territories],
+    [getNation, onUpdateDisplay, syncState, territories],
   );
 
   const getReinforcements = useCallback(

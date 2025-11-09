@@ -203,6 +203,9 @@ export interface CombatModifiers {
   organizationModifier: number; // 0.5-1.0
   experienceModifier: number; // 1.0-1.5
   veterancyBonus: number; // 0-0.3
+  professionalismModifier: number; // Quality emphasis multiplier
+  traditionModifier: number; // Quantity emphasis multiplier
+  doctrineBalanceModifier: number; // Penalty or bonus for extreme focus
   totalEffectiveness: number; // Combined modifier
 }
 
