@@ -1673,7 +1673,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         dpr={[1, 1.75]}
         camera={{ position: [0, 0, EARTH_RADIUS + 3], fov: 40, near: 0.1, far: 100 }}
         shadows
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}
       >
         <SceneContent
           cam={cam}
@@ -1704,7 +1704,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           width: '100%', 
           height: '100%',
           pointerEvents: 'none',
-          zIndex: 1,
+          zIndex: 10,
           ...(DEBUG_OVERLAY ? { border: '2px solid red' } : {})
         }} 
       />
