@@ -153,4 +153,7 @@ if (typeof window !== 'undefined' && typeof Audio !== 'undefined') {
 
   // Military
   audioManager.preload('rocket-whoosh', '/sfx/rocket-whoosh.mp3');
+
+  // Alerts
+  audioManager.preload('defcon2-siren', '/sfx/defcon2-siren.mp3');
 }

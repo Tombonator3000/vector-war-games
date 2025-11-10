@@ -2972,3 +2972,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-10T08:52:52Z - Surface core economy counters in HUD
 - Added production and intel readouts next to the stockpile widget in `src/pages/Index.tsx`, reusing the monospace styling and wiring IDs so `updateDisplay()` keeps them synchronized.
 - Ran `npm run build` to smoke-test the HUD bundle and confirm the updated layout compiles cleanly.
+
+### 2025-11-10T09:36:26Z - Align DEFCON siren asset mapping
+- Pointed the `defcon` SFX mapping in `src/pages/Index.tsx` at the `defcon2-siren` key so gameplay events trigger the actual siren asset.
+- Preloaded the DEFCON siren through `audioManager.preload` in `src/utils/audioManager.ts` for immediate availability on boot.
+- Updated `public/sfx/README.md` to document the `defcon2-siren.mp3` filename used by runtime loading.

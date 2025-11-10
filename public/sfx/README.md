@@ -36,7 +36,7 @@ Download free sound effects from the sources below and save them with the exact 
   - [Freesound: Warning Siren](https://freesound.org/people/vyclops/sounds/717414/)
 - `alert-critical.mp3` - Critical alert
   - [Freesound: Air Raid Siren](https://freesound.org/people/vyclops/sounds/714426/)
-- `defcon-change.mp3` - DEFCON level change
+- `defcon2-siren.mp3` - DEFCON level change
 - `siren.mp3` - Emergency siren
 
 ### Game Events
