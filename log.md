@@ -3009,6 +3009,9 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Extended overlay notifications in `src/pages/Index.tsx` with tone/sound metadata and optional critical audio playback when emitting cinematic alerts.
 ### 2025-11-10T12:00:47Z - Replace explosion damage pipeline
 - Replaced the linear damage block in `src/pages/Index.tsx` with the multi-stage nuclear impact model, including refugee creation, governance shocks, environmental fallout, and cinematic feedback.
+### 2025-11-10T12:41:02Z - Scale nuclear refugees to individuals
+- Converted refugee totals to individual counts when updating `nation.migrantsThisTurn` and `nation.migrantsTotal` in `src/lib/nuclearDamageModel.ts`.
+
 ### 2025-11-10T12:00:59Z - Tone-aware overlay styling
 - Adjusted the overlay canvas styling in `src/pages/Index.tsx` to respect catastrophic tones with scarlet fills and darker strokes.
 ### 2025-11-10T12:01:22Z - Author nuclear impact unit tests
