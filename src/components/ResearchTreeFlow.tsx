@@ -43,7 +43,7 @@ import {
 } from '@/lib/researchData';
 import { ResearchFlowNode } from './ResearchFlowNode';
 import { TechDetailsDialog } from './TechDetailsDialog';
-import { getLayoutedElements } from '@/lib/evolutionFlowLayout';
+import { getGridLayout, getLayoutedElements } from '@/lib/evolutionFlowLayout';
 import { BioLabTreeFlow } from './BioLabTreeFlow';
 
 interface ResearchTreeFlowProps {
@@ -95,6 +95,7 @@ const DISPLAY_CATEGORY_CONFIG: Record<DisplayCategory, {
   color: string;
   label: string;
   description: string;
+  gridColumns?: number;
 }> = {
   nuclear: {
     icon: ShieldAlert,
@@ -119,12 +120,14 @@ const DISPLAY_CATEGORY_CONFIG: Record<DisplayCategory, {
     color: CATEGORY_COLORS.economy,
     label: 'Economy & Production',
     description: 'Boost industrial throughput and wartime logistics to fuel your war machine.',
+    gridColumns: 5,
   },
   culture: {
     icon: Users,
     color: CATEGORY_COLORS.culture,
     label: 'Culture & Diplomacy',
     description: 'Project soft power, sway global opinion, and secure diplomatic leverage.',
+    gridColumns: 5,
   },
   space: {
     icon: Satellite,
@@ -310,10 +313,17 @@ function CategoryFlowPanel({
     [researchNodes, nation, currentResearch]
   );
 
-  const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
-    () => getLayoutedElements(flowNodes, flowEdges, 'LR'),
-    [flowNodes, flowEdges]
-  );
+  const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => {
+    if (flowEdges.length === 0) {
+      const columns = config.gridColumns ?? 4;
+      return {
+        nodes: getGridLayout(flowNodes, columns),
+        edges: flowEdges,
+      };
+    }
+
+    return getLayoutedElements(flowNodes, flowEdges, 'LR');
+  }, [flowNodes, flowEdges, config.gridColumns]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
