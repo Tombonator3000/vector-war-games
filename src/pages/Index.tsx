@@ -7223,6 +7223,44 @@ export default function NoradVector() {
     calculateSpreadModifiers,
   } = useBioWarfare(addNewsItem);
 
+  const previousLabTierRef = useRef<BioLabTier>(labFacility.tier);
+
+  useEffect(() => {
+    const previousTier = previousLabTierRef.current;
+    const currentTier = labFacility.tier;
+
+    if (currentTier !== previousTier) {
+      const player = PlayerManager.get();
+
+      if (player) {
+        PlayerManager.set({
+          ...player,
+          bioLab: { ...labFacility },
+        });
+      }
+
+      if (
+        currentTier >= 3 &&
+        previousTier < 3 &&
+        pandemicIntegrationEnabled &&
+        bioWarfareEnabled
+      ) {
+        setIsBioWarfareOpen(true);
+        toast({
+          title: 'BioForge Facility Online',
+          description: 'Tier 3 bio-warfare lab activated. Advanced operations unlocked.',
+        });
+        log('BioForge lab Tier 3 activated - advanced operations unlocked', 'success');
+      }
+
+      previousLabTierRef.current = currentTier;
+    }
+  }, [
+    labFacility.tier,
+    bioWarfareEnabled,
+    pandemicIntegrationEnabled,
+  ]);
+
   const handleUseLeaderAbility = useCallback(
     (targetId?: string) => {
       const player = PlayerManager.get();
@@ -13518,6 +13556,34 @@ export default function NoradVector() {
 
         const enemies = nations.filter(n => !n.eliminated && n.id !== player.id);
         const activeBioAttacks = nations.flatMap(n => n.activeBioAttacks || []);
+        const labTier = labFacility.tier as BioLabTier;
+        const advancedEnabled =
+          labTier >= 3 && pandemicIntegrationEnabled && bioWarfareEnabled;
+
+        if (advancedEnabled) {
+          const availableNations = enemies.map(enemy => ({
+            id: enemy.id,
+            name: enemy.name,
+            intelligence: enemy.intel ?? 0,
+          }));
+
+          return (
+            <BioWarfareLab
+              open={isBioWarfareOpen}
+              onOpenChange={setIsBioWarfareOpen}
+              plagueState={plagueState}
+              enabled={advancedEnabled}
+              labTier={labTier}
+              availableNations={availableNations}
+              playerActions={S.actionsRemaining}
+              playerIntel={player.intel ?? 0}
+              onSelectPlagueType={selectPlagueType}
+              onEvolveNode={(nodeId) => evolveNode({ nodeId })}
+              onDevolveNode={(nodeId) => devolveNode({ nodeId })}
+              onDeployBioWeapon={(selections) => deployBioWeapon(selections, S.turn)}
+            />
+          );
+        }
 
         return (
           <SimplifiedBioWarfarePanel
