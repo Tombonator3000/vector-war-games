@@ -2977,3 +2977,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Pointed the `defcon` SFX mapping in `src/pages/Index.tsx` at the `defcon2-siren` key so gameplay events trigger the actual siren asset.
 - Preloaded the DEFCON siren through `audioManager.preload` in `src/utils/audioManager.ts` for immediate availability on boot.
 - Updated `public/sfx/README.md` to document the `defcon2-siren.mp3` filename used by runtime loading.
+### 2025-11-10T09:51:31Z - Introduce ambient alert loop controls
+- Extended `AudioSys` in `src/pages/Index.tsx` with ambient loop management, including gain nodes, buffer caching, DEFCON-aware helpers, and persistence of ambient enable/volume preferences.
+- Updated DEFCON mutation paths to route through the new ambient transition helper and sync the siren loop via `updateDisplay()` so escalations/de-escalations manage looping audio automatically.
+- Added ambient toggles and sliders to `src/components/OptionsMenu.tsx`, threading the new props through the in-game options sheet and local storage for consistency across sessions.
+- Ran `npm run test -- --run --reporter=basic`; suites fail on existing `mapColorUtils` expectations that assert hex strings over the current RGB responses.
