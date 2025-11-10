@@ -1397,7 +1397,8 @@ const TRACK_METADATA: Record<MusicTrackId, MusicTrack> = MUSIC_TRACKS.reduce(
 );
 
 const AMBIENT_CLIPS = [
-  { id: 'defcon-siren', title: 'DEFCON Critical Siren', file: '/sfx/defcon2-siren.mp3' },
+  { id: 'defcon1-siren', title: 'DEFCON 1 Critical Siren', file: '/sfx/defcon1-siren.mp3' },
+  { id: 'defcon2-siren', title: 'DEFCON 2 Standby Siren', file: '/sfx/defcon2-siren.mp3' },
 ] as const;
 
 type AmbientClip = (typeof AMBIENT_CLIPS)[number];
@@ -1756,19 +1757,66 @@ const AudioSys = {
   },
 
   updateAmbientForDefcon(defconLevel: number) {
-    if (defconLevel <= 2) {
-      this.startAmbientLoop('defcon-siren', { forceRestart: false });
-    } else if (this.ambientDesiredClipId === 'defcon-siren') {
+    const targetClip: AmbientClipId | null =
+      defconLevel === 1 ? 'defcon1-siren'
+      : defconLevel === 2 ? 'defcon2-siren'
+      : null;
+
+    if (targetClip) {
+      const shouldRestart = this.ambientDesiredClipId !== targetClip;
+      this.startAmbientLoop(targetClip, { forceRestart: shouldRestart });
+      return;
+    }
+
+    if (
+      this.ambientDesiredClipId === 'defcon1-siren' ||
+      this.ambientDesiredClipId === 'defcon2-siren'
+    ) {
       this.stopAmbientLoop();
     }
   },
 
   handleDefconTransition(previous: number, next: number) {
-    this.playSFX('defcon');
-    if (next <= 2) {
-      this.startAmbientLoop('defcon-siren', { forceRestart: previous > 2 });
-    } else if (previous <= 2) {
+    const targetClip: AmbientClipId | null =
+      next === 1 ? 'defcon1-siren'
+      : next === 2 ? 'defcon2-siren'
+      : null;
+
+    if (targetClip) {
+      const shouldRestart = previous > 2 || this.ambientDesiredClipId !== targetClip;
+      this.startAmbientLoop(targetClip, { forceRestart: shouldRestart });
+    } else if (previous === 1 || previous === 2) {
       this.stopAmbientLoop();
+    }
+
+    if (next !== 1 && next !== 2) {
+      return;
+    }
+
+    const isEscalation = previous === 0 || next < previous;
+    if (!isEscalation) {
+      return;
+    }
+
+    const triggerOscillatorFallback = () => {
+      this.playSFX('defcon');
+    };
+
+    try {
+      import('@/utils/audioManager')
+        .then(({ audioManager }) => {
+          try {
+            const sirenKey = next === 1 ? 'defcon1-siren' : 'defcon2-siren';
+            audioManager.playCritical(sirenKey);
+          } catch (error) {
+            triggerOscillatorFallback();
+          }
+        })
+        .catch(() => {
+          triggerOscillatorFallback();
+        });
+    } catch (error) {
+      triggerOscillatorFallback();
     }
   },
 
@@ -1865,7 +1913,6 @@ const AudioSys = {
         'build': 'build-complete',
         'research': 'research-complete',
         'intel': 'ui-success',
-        'defcon': 'defcon2-siren',
         'endturn': 'turn-start',
       };
       

@@ -2982,3 +2982,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated DEFCON mutation paths to route through the new ambient transition helper and sync the siren loop via `updateDisplay()` so escalations/de-escalations manage looping audio automatically.
 - Added ambient toggles and sliders to `src/components/OptionsMenu.tsx`, threading the new props through the in-game options sheet and local storage for consistency across sessions.
 - Ran `npm run test -- --run --reporter=basic`; suites fail on existing `mapColorUtils` expectations that assert hex strings over the current RGB responses.
+
+### 2025-11-10T10:42:00Z - Differentiate DEFCON siren assets
+- Preloaded the DEFCON 1 siren in `src/utils/audioManager.ts` so the new asset is available alongside the existing DEFCON 2 clip.
+- Split ambient siren handling in `src/pages/Index.tsx` to map DEFCON levels to the correct looping clip and stop playback once the threat eases above DEFCON 2.
+- Updated the DEFCON transition handler to trigger the appropriate siren immediately through `audioManager`, falling back to the synthesized oscillator tone if the asset cannot play.

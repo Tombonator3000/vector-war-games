@@ -155,5 +155,6 @@ if (typeof window !== 'undefined' && typeof Audio !== 'undefined') {
   audioManager.preload('rocket-whoosh', '/sfx/rocket-whoosh.mp3');
 
   // Alerts
+  audioManager.preload('defcon1-siren', '/sfx/defcon1-siren.mp3');
   audioManager.preload('defcon2-siren', '/sfx/defcon2-siren.mp3');
 }
