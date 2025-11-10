@@ -2987,3 +2987,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Preloaded the DEFCON 1 siren in `src/utils/audioManager.ts` so the new asset is available alongside the existing DEFCON 2 clip.
 - Split ambient siren handling in `src/pages/Index.tsx` to map DEFCON levels to the correct looping clip and stop playback once the threat eases above DEFCON 2.
 - Updated the DEFCON transition handler to trigger the appropriate siren immediately through `audioManager`, falling back to the synthesized oscillator tone if the asset cannot play.
+
+### 2025-11-10T11:58:00Z - Route UI clicks through klick1 asset
+- Added an `uiClickKey` helper and `playUIClick` convenience method to the audio manager, preloading `/sfx/klick1.mp3` under that key for immediate button feedback.
+- Updated `AudioSys.playSFX` in `src/pages/Index.tsx` to reference the exported click key when resolving the `'click'` sound mapping so runtime stays aligned with the singleton.
+- Revised `public/sfx/README.md` to note that `klick1.mp3` provides the standard UI click shipped with the project.

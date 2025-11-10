@@ -1903,22 +1903,22 @@ const AudioSys = {
     
     // Try playing real sound effect first
     try {
-      // Map AudioSys types to audioManager keys
-      const soundMap: Record<string, string> = {
-        'explosion': 'nuclear-explosion',
-        'launch': 'missile-launch',
-        'click': 'ui-click',
-        'success': 'research-complete',
-        'error': 'alert-warning',
-        'build': 'build-complete',
-        'research': 'research-complete',
-        'intel': 'ui-success',
-        'endturn': 'turn-start',
-      };
-      
-      const soundKey = soundMap[type];
-      if (soundKey) {
-        import('@/utils/audioManager').then(({ audioManager }) => {
+      import('@/utils/audioManager').then(({ audioManager }) => {
+        // Map AudioSys types to audioManager keys
+        const soundMap: Record<string, string> = {
+          'explosion': 'nuclear-explosion',
+          'launch': 'missile-launch',
+          'click': audioManager.uiClickKey,
+          'success': 'research-complete',
+          'error': 'alert-warning',
+          'build': 'build-complete',
+          'research': 'research-complete',
+          'intel': 'ui-success',
+          'endturn': 'turn-start',
+        };
+
+        const soundKey = soundMap[type];
+        if (soundKey) {
           if (type === 'explosion' || type === 'launch' || type === 'defcon') {
             audioManager.playSFX(soundKey);
           } else if (type === 'error') {
@@ -1926,11 +1926,12 @@ const AudioSys = {
           } else {
             audioManager.playUI(soundKey);
           }
-        }).catch(() => {
-          // Fall through to oscillator backup
-        });
-        return; // Don't use oscillator if we're trying real sound
-      }
+          return; // Don't use oscillator if we're trying real sound
+        }
+      }).catch(() => {
+        // Fall through to oscillator backup
+      });
+      return; // Don't use oscillator if we're trying real sound
     } catch (error) {
       // Fall through to oscillator backup
     }

@@ -9,6 +9,7 @@ class AudioManager {
   private uiVolume: number = 0.3;
   private sfxVolume: number = 0.5;
   private criticalVolume: number = 0.7;
+  readonly uiClickKey: string = 'ui-click';
 
   /**
    * Preload a sound effect
@@ -71,6 +72,10 @@ class AudioManager {
    */
   playUI(key: string): void {
     this.play(key, this.uiVolume);
+  }
+
+  playUIClick(): void {
+    this.playUI(this.uiClickKey);
   }
 
   /**
@@ -147,6 +152,9 @@ export const audioManager = new AudioManager();
 
 if (typeof window !== 'undefined' && typeof Audio !== 'undefined') {
   // Only preload sounds that actually exist in public/sfx/
+  // UI
+  audioManager.preload(audioManager.uiClickKey, '/sfx/klick1.mp3');
+
   // Explosions
   audioManager.preload('nuclear-explosion', '/sfx/nuclear-explosion.mp3');
   audioManager.preload('explosion-blast', '/sfx/explosion-blast.mp3');
