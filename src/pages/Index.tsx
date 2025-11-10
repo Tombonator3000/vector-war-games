@@ -12653,8 +12653,8 @@ export default function NoradVector() {
             </>
           )}
 
-          {/* Events log - minimal bottom left corner */}
-          <div className="fixed bottom-20 left-4 w-80 max-h-32 bg-black/80 border border-cyan-500/30 backdrop-blur-sm pointer-events-auto rounded overflow-hidden">
+          {/* Events log - moved to bottom next to buttons */}
+          <div className="fixed bottom-[72px] sm:bottom-24 left-4 w-80 max-h-32 bg-black/80 border border-cyan-500/30 backdrop-blur-sm pointer-events-auto rounded overflow-hidden">
             <div className="text-[10px] font-mono text-cyan-400 bg-black/60 px-2 py-1 border-b border-cyan-500/30">
               EVENTS
             </div>
@@ -13533,10 +13533,13 @@ export default function NoradVector() {
         onOpenFullDiplomacy={() => setShowEnhancedDiplomacy(true)}
       />
 
-      <GameHelper
-        onRestartModalTutorial={handleRestartModalTutorial}
-        onRestartInteractiveTutorial={handleRestartInteractiveTutorial}
-      />
+      {/* GameHelper moved to bottom right corner */}
+      <div className="fixed bottom-[72px] sm:bottom-24 right-4 z-40">
+        <GameHelper
+          onRestartModalTutorial={handleRestartModalTutorial}
+          onRestartInteractiveTutorial={handleRestartInteractiveTutorial}
+        />
+      </div>
 
       {/* Diplomacy Proposal Overlay */}
       {activeDiplomacyProposal && (() => {

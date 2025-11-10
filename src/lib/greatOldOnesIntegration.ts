@@ -14,8 +14,9 @@ import {
   checkForCounterOperations,
   executeCounterOperation,
 } from './investigationAI';
-import { updateManifestationEvents } from './manifestationEventSystem';
+import { updateManifestationEvents, type ManifestationEvent } from './manifestationEventSystem';
 import { updateGreatOldOnesResources } from './greatOldOnesHelpers';
+import type { CounterOperation } from './investigationAI';
 
 // ============================================================================
 // EXTENDED STATE INTERFACE
@@ -34,6 +35,9 @@ export interface ExtendedGreatOldOnesState extends GreatOldOnesState {
   /** Active counter-operations */
   activeCounterOperations?: CounterOperation[];
 }
+
+// Re-export types for external use
+export type { ManifestationEvent, CounterOperation };
 
 // ============================================================================
 // MASTER UPDATE FUNCTION
