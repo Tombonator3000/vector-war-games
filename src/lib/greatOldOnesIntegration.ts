@@ -4,7 +4,7 @@
  */
 
 import type { GreatOldOnesState } from '../types/greatOldOnes';
-import type { ActCampaignState, ManifestationEvent, CounterOperation } from '../types/actCampaign';
+import type { ActCampaignState } from '../types/actCampaign';
 import { updateActCampaignState, resolveActProgressionVote, initializeActCampaignState, ACT_DEFINITIONS } from './actCampaignSystem';
 import { updateDoctrineDriftPerTurn } from './doctrineDriftIntegration';
 import {

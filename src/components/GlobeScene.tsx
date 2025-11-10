@@ -1519,8 +1519,11 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       const overlay = overlayRef.current;
       const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
 
-      const overlayWidth = overlay && overlay.width > 0 ? overlay.width : undefined;
-      const overlayHeight = overlay && overlay.height > 0 ? overlay.height : undefined;
+      // Get the devicePixelRatio to account for high-DPI scaling
+      const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+      
+      const overlayWidth = overlay && overlay.width > 0 ? overlay.width / dpr : undefined;
+      const overlayHeight = overlay && overlay.height > 0 ? overlay.height / dpr : undefined;
       const width = overlayWidth ?? size?.width ?? 1;
       const height = overlayHeight ?? size?.height ?? 1;
 
@@ -1568,8 +1571,12 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       if (isFlat) {
         const rect = overlay?.getBoundingClientRect() ?? container.getBoundingClientRect();
         const size = sizeRef.current;
-        const overlayWidth = overlay && overlay.width > 0 ? overlay.width : undefined;
-        const overlayHeight = overlay && overlay.height > 0 ? overlay.height : undefined;
+        
+        // Get the devicePixelRatio to account for high-DPI scaling
+        const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+        
+        const overlayWidth = overlay && overlay.width > 0 ? overlay.width / dpr : undefined;
+        const overlayHeight = overlay && overlay.height > 0 ? overlay.height / dpr : undefined;
         const width = overlayWidth ?? size?.width ?? (rect.width || 1);
         const height = overlayHeight ?? size?.height ?? (rect.height || 1);
         const adjustedX = (pointerX - cam.x) / cam.zoom;

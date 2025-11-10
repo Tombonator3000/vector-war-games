@@ -42,7 +42,6 @@ export const DOCTRINE_INCIDENTS: DoctrineIncident[] = [
           globalRelationshipChange: -30,
           instabilityDelta: 25,
           moraleDelta: -15,
-          followUpIncident: 'mad_false_alarm_aftermath',
         },
       },
       {
@@ -471,7 +470,6 @@ export const DOCTRINE_INCIDENTS: DoctrineIncident[] = [
             toward: 'defense',
             amount: 12,
           },
-          followUpIncident: 'firstStrike_intel_followup',
         },
       },
       {
@@ -701,7 +699,6 @@ export const DOCTRINE_INCIDENTS: DoctrineIncident[] = [
             priority: 'critical',
           },
           deterrenceChange: -15,
-          followUpIncident: 'detente_purge_aftermath',
         },
       },
     ],

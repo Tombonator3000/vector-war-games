@@ -184,11 +184,12 @@ export function updateDoctrineDriftPerTurn(
     const driftedState = applyDoctrineDrift(updatedState, driftDoctrine);
 
     // Add mission log entry
-    return addMissionLogEntry(driftedState, {
+    const finalState = addMissionLogEntry(driftedState, {
       category: 'event',
       title: 'Doctrine Drift Detected',
       description: `Your actions have fundamentally changed the Order's approach. The council has shifted to the ${driftDoctrine} doctrine due to your consistent ${driftDoctrine}-aligned operations.`,
     });
+    return finalState;
   }
 
   return updatedState;

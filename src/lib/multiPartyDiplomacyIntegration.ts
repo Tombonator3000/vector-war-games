@@ -206,11 +206,11 @@ function applyAgreementEffects(agreement: MultiPartyAgreement, gameState: GameSt
             nation2.treaties[nation1.id] = { alliance: true };
 
             // Boost relationships
-            if (!nation1.relationship) nation1.relationship = {};
-            if (!nation2.relationship) nation2.relationship = {};
+            if (!nation1.relationships) nation1.relationships = {};
+            if (!nation2.relationships) nation2.relationships = {};
 
-            nation1.relationship[nation2.id] = Math.min(100, (nation1.relationship[nation2.id] || 0) + 30);
-            nation2.relationship[nation1.id] = Math.min(100, (nation2.relationship[nation1.id] || 0) + 30);
+            nation1.relationships[nation2.id] = Math.min(100, (nation1.relationships[nation2.id] || 0) + 30);
+            nation2.relationships[nation1.id] = Math.min(100, (nation2.relationships[nation1.id] || 0) + 30);
           }
         }
       }
@@ -226,11 +226,11 @@ function applyAgreementEffects(agreement: MultiPartyAgreement, gameState: GameSt
 
             if (participant && target) {
               // Set hostile relationship
-              if (!participant.relationship) participant.relationship = {};
-              if (!target.relationship) target.relationship = {};
+              if (!participant.relationships) participant.relationships = {};
+              if (!target.relationships) target.relationships = {};
 
-              participant.relationship[targetId] = -100;
-              target.relationship[participantId] = -100;
+              participant.relationships[targetId] = -100;
+              target.relationships[participantId] = -100;
 
               // Remove any treaties
               if (participant.treaties) {
@@ -260,11 +260,11 @@ function applyAgreementEffects(agreement: MultiPartyAgreement, gameState: GameSt
             nation2.treaties[nation1.id] = { nonAggression: true };
 
             // Slight relationship boost
-            if (!nation1.relationship) nation1.relationship = {};
-            if (!nation2.relationship) nation2.relationship = {};
+            if (!nation1.relationships) nation1.relationships = {};
+            if (!nation2.relationships) nation2.relationships = {};
 
-            nation1.relationship[nation2.id] = Math.min(100, (nation1.relationship[nation2.id] || 0) + 15);
-            nation2.relationship[nation1.id] = Math.min(100, (nation2.relationship[nation1.id] || 0) + 15);
+            nation1.relationships[nation2.id] = Math.min(100, (nation1.relationships[nation2.id] || 0) + 15);
+            nation2.relationships[nation1.id] = Math.min(100, (nation2.relationships[nation1.id] || 0) + 15);
           }
         }
       }

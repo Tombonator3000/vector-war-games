@@ -644,21 +644,8 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
   nations.forEach(n => {
     if (n.population <= 0) return;
 
-    // Initialize intelligence agency if not exists
-    if (!n.intelligenceAgency) {
-      n.intelligenceAgency = createIntelligenceAgency(n.id);
-    }
-
-    // Progress active operations
-    const agency = n.intelligenceAgency;
-    if (agency && agency.activeOperations.length > 0) {
-      agency.activeOperations = agency.activeOperations
-        .map(op => progressIntelOperation(op, S.turn))
-        .filter(op => op.turnsRemaining > 0); // Remove completed operations
-
-      // Update reputation based on completed operations
-      agency.reputation = calculateAgencyReputation(agency);
-    }
+    // Note: Intelligence agency functionality moved to intelligence property
+    // Legacy code removed - intelligence operations handled elsewhere
   });
 
   // Phase 3: Economic Depth (Trade, Refinement, Infrastructure)

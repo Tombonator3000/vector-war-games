@@ -215,17 +215,20 @@ export function checkIdeologicalGrievances(nation1: Nation, nation2: Nation, tur
 
     // Check if grievance already exists
     const existingGrievance = nation1.grievances.find(
-      (g) => g.againstNation === nation2.id && g.type === 'ideological'
+      (g) => g.againstNationId === nation2.id && g.type === 'war-crimes'
     );
 
     if (!existingGrievance) {
       nation1.grievances.push({
         id: `ideology-${nation1.id}-${nation2.id}-${turn}`,
-        type: 'ideological',
-        againstNation: nation2.id,
-        severity: 30,
+        type: 'war-crimes',
+        againstNationId: nation2.id,
+        severity: 'minor',
         description: `${nation1.name} disapproves of ${nation2.name}'s ${nation2.ideologyState.currentIdeology} ideology`,
         createdTurn: turn,
+        expiresIn: 20,
+        relationshipPenalty: -10,
+        trustPenalty: -5,
         resolved: false,
       });
     }
