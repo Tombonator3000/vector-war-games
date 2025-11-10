@@ -7320,26 +7320,42 @@ export default function NoradVector() {
     runAiPlan: runCyberAiPlan,
   } = cyber;
 
+  const governanceNationsRef = useRef(nations);
+  const governanceNationIdsSignatureRef = useRef<string>('');
+  const [governanceNationsVersion, setGovernanceNationsVersion] = useState(0);
+
+  useEffect(() => {
+    governanceNationsRef.current = nations;
+    const signature = nations
+      .map((nation) => nation.id)
+      .sort()
+      .join('|');
+    if (signature !== governanceNationIdsSignatureRef.current) {
+      governanceNationIdsSignatureRef.current = signature;
+      setGovernanceNationsVersion((version) => version + 1);
+    }
+  }, [nations]);
+
   const getGovernanceNations = useCallback(
-    () => nations as unknown as GovernanceNationRef[],
-    [nations],
+    () => governanceNationsRef.current as unknown as GovernanceNationRef[],
+    [],
   );
 
   const handleGovernanceMetricsSync = useCallback(
     (nationId: string, metrics: GovernanceMetrics) => {
-      const nation = getNationById(nations, nationId);
+      const nation = getNationById(governanceNationsRef.current, nationId);
       if (!nation) return;
       nation.morale = metrics.morale;
       nation.publicOpinion = metrics.publicOpinion;
       nation.electionTimer = metrics.electionTimer;
       nation.cabinetApproval = metrics.cabinetApproval;
     },
-    [nations],
+    [],
   );
 
   const handleGovernanceDelta = useCallback(
     (nationId: string, delta: GovernanceDelta) => {
-      const nation = getNationById(nations, nationId);
+      const nation = getNationById(governanceNationsRef.current, nationId);
       if (!nation) return;
       if (typeof delta.instability === 'number') {
         nation.instability = Math.max(0, (nation.instability || 0) + delta.instability);
@@ -7354,7 +7370,7 @@ export default function NoradVector() {
         addStrategicResource(nation, 'uranium', delta.uranium);
       }
     },
-    [nations],
+    [],
   );
 
   const governance = useGovernance({
@@ -7363,6 +7379,7 @@ export default function NoradVector() {
     onMetricsSync: handleGovernanceMetricsSync,
     onApplyDelta: handleGovernanceDelta,
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
+    nationsVersion: governanceNationsVersion,
   });
 
   const playerGovernanceMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;
