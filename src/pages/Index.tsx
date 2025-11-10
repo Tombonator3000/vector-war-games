@@ -7322,7 +7322,7 @@ export default function NoradVector() {
 
   const getGovernanceNations = useCallback(
     () => nations as unknown as GovernanceNationRef[],
-    [],
+    [nations],
   );
 
   const handleGovernanceMetricsSync = useCallback(
@@ -7334,7 +7334,7 @@ export default function NoradVector() {
       nation.electionTimer = metrics.electionTimer;
       nation.cabinetApproval = metrics.cabinetApproval;
     },
-    [],
+    [nations],
   );
 
   const handleGovernanceDelta = useCallback(
@@ -7354,7 +7354,7 @@ export default function NoradVector() {
         addStrategicResource(nation, 'uranium', delta.uranium);
       }
     },
-    [],
+    [nations],
   );
 
   const governance = useGovernance({
