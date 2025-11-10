@@ -3029,3 +3029,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Extended game typings/state initializers to track `falloutEffects` plus per-nation fallout fields, adjusting production penalties and co-op sync plumbing.
 - Updated `drawFalloutMarks` in `src/pages/Index.tsx` to visualize severity bands, pulse siren rings, and toast lethal alerts; new marks now initialize with `alertLevel: 'none'.`
 - Authored `src/lib/__tests__/falloutEffects.test.ts` to validate accumulation, slow decay, and severity tiering of fallout impacts.
+### 2025-11-10T12:29:48Z - Amplify nuclear consequence previews & alerts
+- Enriched `calculateMissileLaunchConsequences` with stat-driven long-term horrors, emotionally charged risk language, and probability-driven warnings tied to yield, alliances, and global radiation.
+- Wired the strike planner in `src/pages/Index.tsx` to surface a dark-styled consequence overlay, trigger sirens, and cascade dread-soaked toasts once launches resolve.
+- Added `src/lib/__tests__/consequenceCalculator.test.ts` to lock in the new narrative beats and verify that probability curves escalate alongside larger warheads.

@@ -77,7 +77,7 @@ import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
 import { LockedFeatureWrapper } from '@/components/LockedFeatureBadge';
 import { FEATURE_UNLOCK_INFO, type EraDefinition, type GameEra } from '@/types/era';
-import type { ActionConsequences } from '@/types/consequences';
+import type { ActionConsequences, ConsequenceCalculationContext } from '@/types/consequences';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { applyRemoteGameStateSync } from '@/lib/coopSync';
 import { calculateNuclearImpact, applyNuclearImpactToNation } from '@/lib/nuclearDamageModel';
@@ -1928,6 +1928,7 @@ const AudioSys = {
         const soundMap: Record<string, string> = {
           'explosion': 'nuclear-explosion',
           'launch': 'missile-launch',
+          'defcon': 'defcon1-siren',
           'click': audioManager.uiClickKey,
           'success': 'research-complete',
           'error': 'alert-warning',
@@ -8679,6 +8680,54 @@ export default function NoradVector() {
     setSelectedDeliveryMethod(null);
   }, []);
 
+  const triggerConsequenceAlerts = useCallback((consequences: ActionConsequences) => {
+    if (!consequences) return;
+
+    AudioSys.playSFX('defcon');
+
+    if (consequences.targetName) {
+      const lingering = consequences.longTerm[1]?.description ?? consequences.longTerm[0]?.description;
+      emitOverlayMessage(
+        `☢️ ${consequences.targetName} is swallowed by irradiated night. ${lingering}`,
+        9000
+      );
+    } else {
+      emitOverlayMessage(
+        '☢️ Nuclear fire blooms across the horizon and the world holds its breath.',
+        9000
+      );
+    }
+
+    const formatProbability = (value?: number) =>
+      value !== undefined ? ` (${Math.round(value)}% chance)` : '';
+
+    const raiseDarkToast = (title: string, description: string) =>
+      toast({
+        title,
+        description,
+        variant: 'destructive',
+        className: 'bg-slate-950 border-red-900 text-red-100 shadow-[0_0_35px_rgba(220,38,38,0.45)]',
+      });
+
+    consequences.longTerm.forEach((entry) => {
+      raiseDarkToast(
+        'Long-term Horror',
+        `${entry.icon ?? '☢️'} ${entry.description}${formatProbability(entry.probability)}`
+      );
+    });
+
+    consequences.risks.forEach((risk) => {
+      raiseDarkToast(
+        'Escalating Risk',
+        `${risk.icon ?? '⚠️'} ${risk.description}${formatProbability(risk.probability)}`
+      );
+    });
+
+    (consequences.warnings ?? []).forEach((warning) => {
+      raiseDarkToast('Warning', warning);
+    });
+  }, []);
+
   const confirmPendingLaunch = useCallback(() => {
     if (!pendingLaunch || selectedWarheadYield === null || !selectedDeliveryMethod) {
       return;
@@ -8730,42 +8779,74 @@ export default function NoradVector() {
       return;
     }
 
-    let launchSucceeded = false;
+    const context: ConsequenceCalculationContext = {
+      playerNation: player as Nation,
+      targetNation: pendingLaunch.target as Nation,
+      allNations: GameStateManager.getNations(),
+      currentDefcon: S.defcon,
+      currentTurn: S.turn,
+      gameState: S as GameState,
+    };
 
-    if (selectedDeliveryMethod === 'missile') {
-      launchSucceeded = launch(player, pendingLaunch.target, selectedWarheadYield);
-    } else {
-      player.warheads = player.warheads || {};
-      const remaining = (player.warheads[selectedWarheadYield] || 0) - 1;
-      if (remaining <= 0) {
-        delete player.warheads[selectedWarheadYield];
+    const consequences = calculateActionConsequences('launch_missile', context, {
+      warheadYield: selectedWarheadYield,
+      deliveryMethod: selectedDeliveryMethod,
+    });
+
+    if (!consequences) {
+      toast({ title: 'Unable to analyze strike', description: 'Consequence system failed to respond.', variant: 'destructive' });
+      return;
+    }
+
+    const executeLaunch = () => {
+      let launchSucceeded = false;
+
+      if (selectedDeliveryMethod === 'missile') {
+        launchSucceeded = launch(player, pendingLaunch.target, selectedWarheadYield);
       } else {
-        player.warheads[selectedWarheadYield] = remaining;
+        player.warheads = player.warheads || {};
+        const remaining = (player.warheads[selectedWarheadYield] || 0) - 1;
+        if (remaining <= 0) {
+          delete player.warheads[selectedWarheadYield];
+        } else {
+          player.warheads[selectedWarheadYield] = remaining;
+        }
+
+        if (selectedDeliveryMethod === 'bomber') {
+          player.bombers = Math.max(0, bomberCount - 1);
+          launchSucceeded = launchBomber(player, pendingLaunch.target, { yield: selectedWarheadYield });
+          if (launchSucceeded) {
+            log(`${player.name} dispatches bomber strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
+            DoomsdayClock.tick(0.3);
+            AudioSys.playSFX('launch');
+          }
+        } else if (selectedDeliveryMethod === 'submarine') {
+          player.submarines = Math.max(0, submarineCount - 1);
+          launchSucceeded = launchSubmarine(player, pendingLaunch.target, selectedWarheadYield);
+          if (launchSucceeded) {
+            log(`${player.name} launches submarine strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
+            DoomsdayClock.tick(0.3);
+          }
+        }
       }
 
-      if (selectedDeliveryMethod === 'bomber') {
-        player.bombers = Math.max(0, bomberCount - 1);
-        launchSucceeded = launchBomber(player, pendingLaunch.target, { yield: selectedWarheadYield });
-        if (launchSucceeded) {
-          log(`${player.name} dispatches bomber strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
-          DoomsdayClock.tick(0.3);
-          AudioSys.playSFX('launch');
-        }
-      } else if (selectedDeliveryMethod === 'submarine') {
-        player.submarines = Math.max(0, submarineCount - 1);
-        launchSucceeded = launchSubmarine(player, pendingLaunch.target, selectedWarheadYield);
-        if (launchSucceeded) {
-          log(`${player.name} launches submarine strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
-          DoomsdayClock.tick(0.3);
-        }
+      if (launchSucceeded) {
+        triggerConsequenceAlerts(consequences);
+        consumeAction();
+        resetLaunchControl();
       }
-    }
+    };
 
-    if (launchSucceeded) {
-      consumeAction();
-      resetLaunchControl();
-    }
-  }, [pendingLaunch, resetLaunchControl, selectedDeliveryMethod, selectedWarheadYield]);
+    setConsequenceCallback(() => executeLaunch);
+    setConsequencePreview(consequences);
+  }, [
+    pendingLaunch,
+    selectedWarheadYield,
+    selectedDeliveryMethod,
+    resetLaunchControl,
+    triggerConsequenceAlerts,
+    consumeAction,
+  ]);
 
   const startGame = useCallback((leaderOverride?: string, doctrineOverride?: string) => {
     const leaderToUse = leaderOverride ?? selectedLeader;
