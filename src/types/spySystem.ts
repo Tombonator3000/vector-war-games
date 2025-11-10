@@ -181,6 +181,12 @@ export interface MissionResult {
   evidenceLeft?: boolean;                // Evidence linking back to home nation
   witnessesEliminated?: number;          // Witnesses eliminated during mission
   civilianCasualties?: number;           // Civilian casualties
+  discoveryDetails?: {                   // Details about how spy was discovered
+    howDiscovered: string;
+    captureMethod?: string;
+    spyFate?: 'executed' | 'imprisoned' | 'exchanged' | 'turned' | 'escaped';
+    diplomaticConsequences?: string[];
+  };
 }
 
 /**
