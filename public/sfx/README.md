@@ -7,8 +7,7 @@ This directory contains game sound effects. All sound effects are integrated via
 Download free sound effects from the sources below and save them with the exact filenames shown:
 
 ### UI Sounds
-- `ui-click.mp3` - Button click
-  - [Freesound: Button Click](https://freesound.org/people/BaggoNotes/sounds/721502/)
+- `klick1.mp3` - Primary button click (shipped with the repository and referenced as the `ui-click` sound effect)
 - `ui-hover.mp3` - Button hover
 - `ui-success.mp3` - Success notification
   - [Freesound: Button Chime](https://freesound.org/people/JustinBW/sounds/80921/)
