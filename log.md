@@ -3001,3 +3001,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Introduced `src/lib/nuclearDamage.ts` with shared helpers to clamp defense, compute diminishing-return mitigation, and simulate blast/fallout damage.
 - Updated `src/pages/Index.tsx` to apply the clamped curve when resolving explosions, cap build-time defense upgrades (including AI and event bonuses), and message when the ABM grid is maxed out.
 - Added `src/lib/__tests__/nuclearDamage.test.ts` to cover the mitigation ceiling and verify that a fortified nation still takes both blast and fallout casualties, and ran `npm run test -- nuclearDamage`.
+
+### 2025-11-10T12:33:33Z - Clamp missile interception odds to mitigation curve
+- Replaced the linear defense-to-intercept conversion in `src/pages/Index.tsx` with the mitigation curve from `calculateDefenseDamageMultiplier`, ensuring stacked defenses never guarantee a stop.
+- Weighted allied support using half-strength mitigation contributions and capped the combined interception probability at 95% to preserve a minimum chance for strikes to land.
+- Ran `npm run test -- nuclearDamage` to confirm regression coverage still passes.
