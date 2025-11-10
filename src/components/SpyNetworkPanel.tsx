@@ -434,7 +434,8 @@ export const SpyNetworkPanel: React.FC<SpyNetworkPanelProps> = ({
 
                         {spy.status === 'active' || spy.status === 'idle' ? (
                           <Button
-                            onClick={() => {
+                            onClick={(event) => {
+                              event.stopPropagation();
                               setSelectedSpy(spy.id);
                               setActiveTab('missions');
                             }}

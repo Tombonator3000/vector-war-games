@@ -2956,3 +2956,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Moved the `defense_grid` tech from the nuclear list into the space research data source, adding a dependency on `space_weapon_platform`.
 - Synced `src/lib/gameConstants.ts` so the aggregated research catalog reflects the space category and prerequisite.
 - Executed `npm run test` to verify the research panel tests still pass and general suites remain green.
+### 2025-11-10T08:18:57Z - Preserve spy selection when launching missions
+- Updated `src/components/SpyNetworkPanel.tsx` to stop the spy card toggle handler from firing when the Assign Mission button is clicked so the selected spy state persists.
+- Added `src/components/__tests__/SpyNetworkPanel.test.tsx` with a React Testing Library scenario covering selecting a spy, opening missions, and verifying mission options stay available.
+- Installed `@testing-library/user-event` for richer interaction simulation and executed `npm run test -- SpyNetworkPanel` to confirm the new coverage passes.
