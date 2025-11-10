@@ -3036,3 +3036,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Enriched `calculateMissileLaunchConsequences` with stat-driven long-term horrors, emotionally charged risk language, and probability-driven warnings tied to yield, alliances, and global radiation.
 - Wired the strike planner in `src/pages/Index.tsx` to surface a dark-styled consequence overlay, trigger sirens, and cascade dread-soaked toasts once launches resolve.
 - Added `src/lib/__tests__/consequenceCalculator.test.ts` to lock in the new narrative beats and verify that probability curves escalate alongside larger warheads.
+
+### 2025-11-10T14:22:00Z - Fix doctrine incident selection errors
+- Implemented `PlayerManager.set` to synchronize updated player nations with `GameStateManager`, preventing runtime errors when confirming doctrine incident choices.
+- Updated modal blocking logic in `src/pages/Index.tsx` so doctrine incidents defer until other high-priority modals close, ensuring only one decision dialog is shown at a time.
