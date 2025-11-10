@@ -17,6 +17,8 @@ import type {
   DiceRollResult,
 } from '@/hooks/useConventionalWarfare';
 import { createDefaultNationConventionalProfile } from '@/hooks/useConventionalWarfare';
+import type { ArmyGroupSummary } from '@/types/militaryTemplates';
+import { OrderOfBattlePanel } from './OrderOfBattlePanel';
 
 export interface ConsolidatedWarModalProps {
   // War Council props
@@ -44,6 +46,7 @@ export interface ConsolidatedWarModalProps {
   getConventionalReinforcements: (nationId: string) => number;
   toast: (options: { title: string; description: string }) => void;
   addNewsItem: (category: string, text: string, importance: string) => void;
+  armyGroups?: ArmyGroupSummary[];
 }
 
 /**
@@ -73,6 +76,7 @@ export function ConsolidatedWarModal({
   getConventionalReinforcements,
   toast,
   addNewsItem,
+  armyGroups = [],
 }: ConsolidatedWarModalProps): ReactNode {
   const [activeTab, setActiveTab] = useState('council');
   const localPlayer = PlayerManager.get() as LocalNation | null;
@@ -374,6 +378,20 @@ export function ConsolidatedWarModal({
                   );
                 })}
               </div>
+            </div>
+          )}
+        </div>
+      </TabsContent>
+
+      {/* Order of Battle Tab */}
+      <TabsContent value="order-of-battle" className="mt-4">
+        <div className="max-h-[60vh] overflow-y-auto">
+          {armyGroups.length > 0 ? (
+            <OrderOfBattlePanel groups={armyGroups} />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No army groups organized yet.</p>
+              <p className="text-sm mt-2">Create groups to follow frontlines and supply status.</p>
             </div>
           )}
         </div>

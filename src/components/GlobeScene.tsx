@@ -11,6 +11,7 @@ import {
 } from 'react';
 import type { MutableRefObject } from 'react';
 import { Canvas, useFrame, useThree, useLoader, type ThreeEvent } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson';
@@ -1430,6 +1431,24 @@ function SceneContent({
           <primitive key={`explosion-${i}`} object={explosion.group} />
         ))}
       </group>
+
+      {/* OrbitControls for pan and zoom */}
+      <OrbitControls 
+        enableRotate={true}
+        enableZoom={true}
+        enablePan={true}
+        minDistance={EARTH_RADIUS + 1.3}
+        maxDistance={EARTH_RADIUS + 5}
+        mouseButtons={{
+          LEFT: THREE.MOUSE.ROTATE,
+          MIDDLE: THREE.MOUSE.DOLLY,
+          RIGHT: THREE.MOUSE.PAN,
+        }}
+        touches={{
+          ONE: THREE.TOUCH.ROTATE,
+          TWO: THREE.TOUCH.DOLLY_PAN,
+        }}
+      />
     </>
   );
 }

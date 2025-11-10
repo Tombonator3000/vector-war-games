@@ -12653,8 +12653,8 @@ export default function NoradVector() {
             </>
           )}
 
-          {/* Events log - moved to bottom next to buttons */}
-          <div className="fixed bottom-[72px] sm:bottom-24 left-4 w-80 max-h-32 bg-black/80 border border-cyan-500/30 backdrop-blur-sm pointer-events-auto rounded overflow-hidden">
+          {/* Events log - moved to bottom-4 next to buttons */}
+          <div className="fixed bottom-4 left-4 w-80 max-h-32 bg-black/80 border border-cyan-500/30 backdrop-blur-sm pointer-events-auto rounded overflow-hidden z-40">
             <div className="text-[10px] font-mono text-cyan-400 bg-black/60 px-2 py-1 border-b border-cyan-500/30">
               EVENTS
             </div>
@@ -13012,6 +13012,7 @@ export default function NoradVector() {
               onRejectPeace={handleRejectPeace}
               conventionalTerritories={conventionalTerritories}
               conventionalTemplatesMap={conventionalTemplatesMap}
+              armyGroups={playerArmyGroupSummaries}
               conventionalLogs={conventionalLogs}
               trainConventionalUnit={trainConventionalUnit}
               resolveConventionalAttack={resolveConventionalAttack}
@@ -13129,10 +13130,6 @@ export default function NoradVector() {
       })()}
 
       <div className="pointer-events-none fixed top-20 right-4 z-30 flex w-[360px] max-w-full flex-col gap-4 max-h-[calc(100vh-6rem)] overflow-y-auto">
-        <OrderOfBattlePanel
-          groups={playerArmyGroupSummaries}
-          className="pointer-events-auto"
-        />
         <StrategicOutliner
           ref={globalStrategicOutlinerRef}
           groups={strategicOutlinerGroups}
