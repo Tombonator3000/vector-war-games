@@ -98,6 +98,7 @@ describe('executeLeaderAbility', () => {
       empEffects: [],
       rings: [],
       falloutMarks: [],
+      falloutEffects: {},
       satelliteOrbits: [],
       nations,
     } as unknown as GameState;

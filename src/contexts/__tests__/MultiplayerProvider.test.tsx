@@ -245,6 +245,7 @@ describe('MultiplayerProvider', () => {
         rings: [],
         screenShake: 0,
         falloutMarks: [],
+        falloutEffects: {},
         satelliteOrbits: [],
         nations: []
       },
