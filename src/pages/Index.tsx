@@ -151,6 +151,7 @@ import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/ty
 import { migrateGameDiplomacy, getRelationship } from '@/lib/unifiedDiplomacyMigration';
 import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from '@/lib/simplifiedBioWarfareLogic';
 import { launchPropagandaCampaign, buildWonder, applyImmigrationPolicy } from '@/lib/streamlinedCultureLogic';
+import { clampDefenseValue, MAX_DEFENSE_LEVEL, calculateDirectNuclearDamage } from '@/lib/nuclearDamage';
 import { processImmigrationAndCultureTurn, initializeNationPopSystem } from '@/lib/immigrationCultureTurnProcessor';
 import { initializeSpyNetwork } from '@/lib/spyNetworkUtils';
 import { getPolicyById } from '@/lib/policyData';
@@ -1015,7 +1016,8 @@ const leaderBonuses: Record<string, LeaderBonus[]> = {
       name: '🛡️ Guerrilla Defense',
       description: '+25% defense effectiveness',
       effect: (nation) => {
-        nation.defense = Math.floor(nation.defense * 1.25);
+        const currentDefense = nation.defense ?? 0;
+        nation.defense = clampDefenseValue(Math.floor(currentDefense * 1.25));
       }
     }
   ],
@@ -1126,7 +1128,8 @@ const leaderBonuses: Record<string, LeaderBonus[]> = {
       name: '🎬 Star Wars Program',
       description: '+30% ABM defense effectiveness',
       effect: (nation) => {
-        nation.defense = Math.floor(nation.defense * 1.30);
+        const currentDefense = nation.defense ?? 0;
+        nation.defense = clampDefenseValue(Math.floor(currentDefense * 1.30));
       }
     },
     {
@@ -1346,7 +1349,7 @@ function applyDoctrineEffects(nation: Nation, doctrineKey?: DoctrineKey) {
       break;
     }
     case 'defense': {
-      nation.defense = Math.max(0, (nation.defense || 0) + 3);
+      nation.defense = clampDefenseValue((nation.defense || 0) + 3);
       nation.missiles = Math.max(0, (nation.missiles || 0) - 1);
       break;
     }
@@ -3033,7 +3036,7 @@ function performImmigration(type: string, target: Nation) {
         target.population = Math.max(0, target.population - amount);
         player.population += amount;
         target.instability = (target.instability || 0) + 15;
-        player.defense = (player.defense || 0) + 1;
+        player.defense = clampDefenseValue((player.defense || 0) + 1);
         pay(player, COSTS.immigration_skilled);
         trackMigrants(player, amount);
         log(`Skilled immigration: +${amount}M talent from ${target.name}`);
@@ -4356,6 +4359,10 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
       variant: 'destructive',
       duration: 8000,
     });
+    const damage = calculateDirectNuclearDamage(yieldMT, target.defense);
+    const oldPopulation = target.population;
+    target.population = Math.max(0, target.population - damage);
+    target.instability = Math.min(100, (target.instability || 0) + yieldMT);
 
     emitOverlayMessage(impact.overlayMessage, 8000, { tone: 'catastrophe', sound: 'explosion-blast' });
 
@@ -5166,9 +5173,10 @@ function aiTurn(n: Nation) {
   
   // 6. BUILD DEFENSE
   if (r < 0.65 + defenseMod) {
-    if (canAfford(n, COSTS.defense) && n.defense < 15) {
+    const currentDefense = n.defense ?? 0;
+    if (canAfford(n, COSTS.defense) && currentDefense < MAX_DEFENSE_LEVEL) {
       pay(n, COSTS.defense);
-      n.defense += 2;
+      n.defense = clampDefenseValue(currentDefense + 2);
       log(`${n.name} upgrades defense`);
       return;
     }
@@ -8976,18 +8984,31 @@ export default function NoradVector() {
     const player = getBuildContext('Defense upgrade');
     if (!player) return;
 
+    const currentDefense = player.defense ?? 0;
+    if (currentDefense >= MAX_DEFENSE_LEVEL) {
+      toast({
+        title: 'Defense grid at capacity',
+        description: `Your ABM network is already at the maximum rating of ${MAX_DEFENSE_LEVEL}.`,
+      });
+      return;
+    }
+
     if (!canAfford(player, COSTS.defense)) {
       toast({ title: 'Insufficient production', description: 'Defense upgrades require 15 production.' });
       return;
     }
 
     pay(player, COSTS.defense);
-    player.defense = (player.defense || 0) + 2;
+    player.defense = clampDefenseValue(currentDefense + 2);
+    const defenseGain = Math.max(0, (player.defense ?? 0) - currentDefense);
+    const defenseGainDisplay = defenseGain >= 1
+      ? Math.round(defenseGain).toString()
+      : defenseGain.toFixed(1).replace(/\.0$/, '');
 
     AudioSys.playSFX('build');
-    log(`${player.name} reinforces continental defense (+2)`);
-    toast({ 
-      title: '🛡️ Defense System Upgraded', 
+    log(`${player.name} reinforces continental defense (+${defenseGainDisplay})`);
+    toast({
+      title: '🛡️ Defense System Upgraded',
       description: `ABM network strength increased to ${player.defense}.`,
     });
     updateDisplay();

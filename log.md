@@ -3019,3 +3019,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Ran `npm run test -- --runTestsByPath src/lib/__tests__/nuclearDamageModel.test.ts` but Vitest rejected the Jest-style flag; will rerun using native filters.
 ### 2025-11-10T12:02:09Z - Run nuclear damage unit tests
 - Executed `npm run test -- nuclearDamageModel` to validate the new nuclear explosion damage routines.
+
+### 2025-11-10T10:49:18Z - Rebalance nuclear defense mitigation curve
+- Introduced `src/lib/nuclearDamage.ts` with shared helpers to clamp defense, compute diminishing-return mitigation, and simulate blast/fallout damage.
+- Updated `src/pages/Index.tsx` to apply the clamped curve when resolving explosions, cap build-time defense upgrades (including AI and event bonuses), and message when the ABM grid is maxed out.
+- Added `src/lib/__tests__/nuclearDamage.test.ts` to cover the mitigation ceiling and verify that a fortified nation still takes both blast and fallout casualties, and ran `npm run test -- nuclearDamage`.
