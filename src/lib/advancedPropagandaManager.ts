@@ -25,6 +25,7 @@ import {
 } from '../types/advancedPropaganda';
 import { GameState, Nation } from '../types/game';
 import { IdeologyType } from '../types/ideology';
+import { getNationById } from '@/lib/nationUtils';
 
 // ============================================================================
 // USEFUL IDIOTS SYSTEM
@@ -98,8 +99,11 @@ export function initiateRecruitment(
   targetNation: string,
   targetType: UsefulIdiotType
 ): RecruitmentOperation | null {
-  const recruiter = gameState.nations[recruiterNation];
-  if (!recruiter) return null;
+  const recruiter = getNationById(gameState.nations, recruiterNation);
+  if (!recruiter) {
+    console.warn(`Recruiter nation ${recruiterNation} not found for useful idiot recruitment.`);
+    return null;
+  }
 
   const baseCost = USEFUL_IDIOT_CONFIG.RECRUITMENT_BASE_COST;
   const typeCost = USEFUL_IDIOT_CONFIG.TYPE_BONUSES[targetType].cost;
@@ -113,7 +117,11 @@ export function initiateRecruitment(
   let successChance = 50;
 
   // Ideology compatibility
-  const targetNationData = gameState.nations[targetNation];
+  const targetNationData = getNationById(gameState.nations, targetNation);
+  if (!targetNationData) {
+    console.warn(`Target nation ${targetNation} not found while calculating recruitment modifiers.`);
+  }
+
   if (targetNationData?.ideologyState) {
     const recruiterIdeology = recruiter.ideologyState?.currentIdeology;
     const targetIdeology = targetNationData.ideologyState.currentIdeology;
@@ -176,15 +184,27 @@ export function processRecruitmentOperations(
   for (const operation of operations) {
     operation.turnsRemaining--;
 
+    const recruiter = getNationById(gameState.nations, operation.recruiterNation);
+    if (!recruiter) {
+      console.warn(`Recruiter nation ${operation.recruiterNation} not found while processing recruitment operation ${operation.id}.`);
+      failed.push(operation);
+      continue;
+    }
+
+    const target = getNationById(gameState.nations, operation.targetNation);
+    if (!target) {
+      console.warn(`Target nation ${operation.targetNation} not found while processing recruitment operation ${operation.id}.`);
+      failed.push(operation);
+      continue;
+    }
+
     // Check for discovery
     const discoveryChance = 10;
     if (Math.random() * 100 < discoveryChance) {
       operation.discovered = true;
 
       // Damage relationship
-      const recruiter = gameState.nations[operation.recruiterNation];
-      const target = gameState.nations[operation.targetNation];
-      if (recruiter && target && recruiter.relationships) {
+      if (recruiter.relationships) {
         recruiter.relationships[operation.targetNation] =
           Math.max(-100, (recruiter.relationships[operation.targetNation] || 0) - 20);
       }
@@ -252,8 +272,11 @@ export function processUsefulIdiots(
       continue; // Skip useless idiots
     }
 
-    const recruiter = gameState.nations[idiot.recruiterNation];
-    if (!recruiter) continue;
+    const recruiter = getNationById(gameState.nations, idiot.recruiterNation);
+    if (!recruiter) {
+      console.warn(`Recruiter nation ${idiot.recruiterNation} not found while processing useful idiot ${idiot.id}.`);
+      continue;
+    }
 
     // Check if recruiter can afford maintenance
     if (recruiter.intel < idiot.intelCostPerTurn) {
@@ -276,7 +299,11 @@ export function processUsefulIdiots(
     idiot.turnsActive++;
 
     // Apply effects to target nation
-    const target = gameState.nations[idiot.nation];
+    const target = getNationById(gameState.nations, idiot.nation);
+    if (!target) {
+      console.warn(`Target nation ${idiot.nation} not found while applying useful idiot effects for ${idiot.id}.`);
+    }
+
     if (target) {
       // Reduce stability
       target.instability = (target.instability || 0) + propagandaValue * 0.1;
@@ -337,8 +364,9 @@ export function performIdiotAction(
   idiot: UsefulIdiot,
   action: UsefulIdiotAction
 ): { success: boolean, narrative: string, cost: number } {
-  const recruiter = gameState.nations[idiot.recruiterNation];
+  const recruiter = getNationById(gameState.nations, idiot.recruiterNation);
   if (!recruiter) {
+    console.warn(`Recruiter nation ${idiot.recruiterNation} not found for useful idiot action ${action}.`);
     return { success: false, narrative: 'Recruiter nation not found', cost: 0 };
   }
 
@@ -375,7 +403,11 @@ export function performIdiotAction(
 
     case 'burn':
       // Deliberately expose for maximum impact
-      const target = gameState.nations[idiot.nation];
+      const target = getNationById(gameState.nations, idiot.nation);
+      if (!target) {
+        console.warn(`Target nation ${idiot.nation} not found while attempting to burn useful idiot ${idiot.id}.`);
+      }
+
       if (target) {
         const impactValue = Math.floor((idiot.influence * idiot.credibility) / 50);
         target.instability = (target.instability || 0) + impactValue;
@@ -384,6 +416,8 @@ export function performIdiotAction(
         idiot.status = 'burned';
         narrative = `${idiot.name} has been deliberately exposed in a spectacular fashion! ${idiot.nation} suffers ${impactValue} instability.`;
         success = true;
+      } else {
+        narrative = 'Target nation not found.';
       }
       break;
 
@@ -420,8 +454,15 @@ export function launchPhobiaCampaign(
   type: PhobiaType,
   intensity: PhobiaIntensity
 ): PhobiaCampaign | null {
-  const source = gameState.nations[sourceNation];
-  if (!source) return null;
+  const source = getNationById(gameState.nations, sourceNation);
+  if (!source) {
+    console.warn(`Source nation ${sourceNation} not found when launching phobia campaign.`);
+    return null;
+  }
+
+  if (!getNationById(gameState.nations, targetNation)) {
+    console.warn(`Target nation ${targetNation} not found when launching phobia campaign.`);
+  }
 
   const cost = PHOBIA_CAMPAIGN_CONFIG.INTENSITY_COSTS[intensity];
 
@@ -465,8 +506,15 @@ export function processPhobiaCampaigns(
   const narratives: string[] = [];
 
   for (const campaign of campaigns) {
-    const source = gameState.nations[campaign.sourceNation];
-    const target = gameState.nations[campaign.targetNation];
+    const source = getNationById(gameState.nations, campaign.sourceNation);
+    if (!source) {
+      console.warn(`Source nation ${campaign.sourceNation} not found while processing phobia campaign ${campaign.id}.`);
+    }
+
+    const target = getNationById(gameState.nations, campaign.targetNation);
+    if (!target) {
+      console.warn(`Target nation ${campaign.targetNation} not found while processing phobia campaign ${campaign.id}.`);
+    }
 
     if (!source || !target) {
       completed.push(campaign);
@@ -600,8 +648,17 @@ export function deployReligiousWeapon(
   targetNations: string[],
   type: ReligiousWeaponType
 ): ReligiousWeapon | null {
-  const source = gameState.nations[sourceNation];
-  if (!source) return null;
+  const source = getNationById(gameState.nations, sourceNation);
+  if (!source) {
+    console.warn(`Source nation ${sourceNation} not found when deploying religious weapon.`);
+    return null;
+  }
+
+  for (const target of targetNations) {
+    if (!getNationById(gameState.nations, target)) {
+      console.warn(`Target nation ${target} not found when deploying religious weapon from ${sourceNation}.`);
+    }
+  }
 
   const cost = RELIGIOUS_WEAPON_CONFIG.BASE_COSTS[type];
 
@@ -661,8 +718,11 @@ export function processReligiousWeapons(
   const narratives: string[] = [];
 
   for (const weapon of weapons) {
-    const source = gameState.nations[weapon.sourceNation];
-    if (!source) continue;
+    const source = getNationById(gameState.nations, weapon.sourceNation);
+    if (!source) {
+      console.warn(`Source nation ${weapon.sourceNation} not found while processing religious weapon ${weapon.id}.`);
+      continue;
+    }
 
     // Check maintenance cost
     if (source.intel < weapon.intelCostPerTurn) {
@@ -688,8 +748,11 @@ export function processReligiousWeapons(
 
     // Apply penalties to target nations
     for (const targetId of weapon.targetNations) {
-      const target = gameState.nations[targetId];
-      if (!target) continue;
+      const target = getNationById(gameState.nations, targetId);
+      if (!target) {
+        console.warn(`Target nation ${targetId} not found while processing religious weapon ${weapon.id}.`);
+        continue;
+      }
 
       if (weapon.destabilizationEffect > 0) {
         target.instability = (target.instability || 0) + weapon.destabilizationEffect * 0.1;
@@ -836,9 +899,12 @@ export function evaluateObjectives(
   operation: IntegratedPropagandaOperation
 ): string[] {
   const newlyCompleted: string[] = [];
-  const target = gameState.nations[operation.targetNation];
+  const target = getNationById(gameState.nations, operation.targetNation);
 
-  if (!target) return newlyCompleted;
+  if (!target) {
+    console.warn(`Target nation ${operation.targetNation} not found while evaluating integrated operation ${operation.id}.`);
+    return newlyCompleted;
+  }
 
   for (const objective of operation.objectives) {
     if (objective.completed) continue;
@@ -932,16 +998,14 @@ export function processAdvancedPropaganda(
   }
 
   // Calculate effects for all nations
-  for (const nationId in gameState.nations) {
-    const nation = gameState.nations[nationId];
-
+  for (const nation of gameState.nations) {
     // Calculate phobia effects
     const phobiaEffects = calculatePhobiaEffects(nation, state.phobiaCampaigns);
-    state.phobiaEffects.set(nationId, phobiaEffects);
+    state.phobiaEffects.set(nation.id, phobiaEffects);
 
     // Calculate religious warfare state
     const religiousState = calculateReligiousWarfareState(nation, state.religiousWeapons);
-    state.religiousWarfareStates.set(nationId, religiousState);
+    state.religiousWarfareStates.set(nation.id, religiousState);
   }
 
   return { narratives, state };
