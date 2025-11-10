@@ -1777,7 +1777,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           left: 0, 
           width: '100%', 
           height: '100%',
-          pointerEvents: 'none',
+          pointerEvents: 'auto',
           zIndex: 10,
           ...(DEBUG_OVERLAY ? { border: '2px solid red' } : {})
         }} 
