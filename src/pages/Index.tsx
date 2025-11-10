@@ -12128,6 +12128,28 @@ export default function NoradVector() {
 
                 return (
                   <div className="flex items-center gap-3 pl-3 ml-3 border-l border-cyan-500/30">
+                    {playerNation && (
+                      <div className="flex items-center gap-3 text-[11px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-cyan-300 tracking-wide">PROD</span>
+                          <span
+                            className="font-mono font-semibold text-neon-green"
+                            id="productionDisplay"
+                          >
+                            {Math.floor(playerNation.production ?? 0)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-cyan-300 tracking-wide">INTEL</span>
+                          <span
+                            className="font-mono font-semibold text-neon-green"
+                            id="intelDisplay"
+                          >
+                            {Math.floor(playerNation.intel ?? 0)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     {hasStockpile && (
                       <ResourceStockpileDisplay nation={playerNation!} compact={true} />
                     )}

@@ -2968,3 +2968,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added strategic resource helpers in `src/lib/territorialResourcesSystem.ts` to centralize stockpile updates and keep legacy uranium fields aligned, plus new unit coverage in `src/lib/__tests__/territorialResourcesSystem.test.ts`.
 - Replaced direct uranium mutations across gameplay modules (Index page actions, conventional warfare, AI bio-warfare, leader abilities, production phase) with the helper utilities.
 - Updated cost evaluation utilities and governance tests to use the stockpile-aware helpers and executed `npm run test -- territorialResourcesSystem`.
+
+### 2025-11-10T08:52:52Z - Surface core economy counters in HUD
+- Added production and intel readouts next to the stockpile widget in `src/pages/Index.tsx`, reusing the monospace styling and wiring IDs so `updateDisplay()` keeps them synchronized.
+- Ran `npm run build` to smoke-test the HUD bundle and confirm the updated layout compiles cleanly.
