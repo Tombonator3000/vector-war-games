@@ -5,6 +5,7 @@
  * Extracted from Index.tsx as part of refactoring effort.
  */
 
+import type { Feature, MultiPolygon, Polygon } from 'geojson';
 import type { MapMode, MapModeOverlayData, MapVisualStyle } from '@/components/GlobeScene';
 import type { ProjectedPoint } from '@/lib/renderingUtils';
 import type { Nation, GameState } from '@/types/game';
@@ -16,6 +17,202 @@ import {
   computeUnrestColor,
   colorToRgba,
 } from '@/lib/mapColorUtils';
+
+type PolygonFeature = Feature<Polygon | MultiPolygon> & { properties?: { name?: string } };
+
+const featureLabelAnchorCache = new WeakMap<object, { lon: number; lat: number }>();
+
+function computeRingCentroid(ring: number[][]): { lon: number; lat: number; area: number } | null {
+  if (!Array.isArray(ring) || ring.length < 3) {
+    return null;
+  }
+
+  let twiceArea = 0;
+  let centroidX = 0;
+  let centroidY = 0;
+
+  for (let i = 0; i < ring.length; i += 1) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[(i + 1) % ring.length];
+    if (!Number.isFinite(x1) || !Number.isFinite(y1) || !Number.isFinite(x2) || !Number.isFinite(y2)) {
+      continue;
+    }
+    const cross = x1 * y2 - x2 * y1;
+    twiceArea += cross;
+    centroidX += (x1 + x2) * cross;
+    centroidY += (y1 + y2) * cross;
+  }
+
+  if (Math.abs(twiceArea) < 1e-9) {
+    const validPoints = ring.filter(point => Number.isFinite(point?.[0]) && Number.isFinite(point?.[1]));
+    if (!validPoints.length) {
+      return null;
+    }
+    const sum = validPoints.reduce(
+      (acc, [lon, lat]) => {
+        return { lon: acc.lon + lon, lat: acc.lat + lat };
+      },
+      { lon: 0, lat: 0 }
+    );
+    const count = validPoints.length;
+    return { lon: sum.lon / count, lat: sum.lat / count, area: 0 };
+  }
+
+  const area = twiceArea / 2;
+  const lon = centroidX / (3 * twiceArea);
+  const lat = centroidY / (3 * twiceArea);
+  return { lon, lat, area };
+}
+
+function computePolygonCentroid(polygon: number[][][]): { lon: number; lat: number; area: number } | null {
+  if (!Array.isArray(polygon) || polygon.length === 0) {
+    return null;
+  }
+
+  let areaSum = 0;
+  let lonSum = 0;
+  let latSum = 0;
+
+  for (const ring of polygon) {
+    const ringCentroid = computeRingCentroid(ring);
+    if (!ringCentroid) continue;
+    lonSum += ringCentroid.lon * ringCentroid.area;
+    latSum += ringCentroid.lat * ringCentroid.area;
+    areaSum += ringCentroid.area;
+  }
+
+  if (Math.abs(areaSum) < 1e-9) {
+    return null;
+  }
+
+  return { lon: lonSum / areaSum, lat: latSum / areaSum, area: areaSum };
+}
+
+function computePolygonAverage(polygon: number[][][]): { lon: number; lat: number } | null {
+  if (!Array.isArray(polygon) || polygon.length === 0) {
+    return null;
+  }
+  const points = polygon[0];
+  if (!Array.isArray(points) || points.length === 0) {
+    return null;
+  }
+
+  const validPoints = points.filter(point => Number.isFinite(point?.[0]) && Number.isFinite(point?.[1]));
+  if (!validPoints.length) {
+    return null;
+  }
+
+  const sum = validPoints.reduce(
+    (acc, [lon, lat]) => ({ lon: acc.lon + lon, lat: acc.lat + lat }),
+    { lon: 0, lat: 0 }
+  );
+
+  return { lon: sum.lon / validPoints.length, lat: sum.lat / validPoints.length };
+}
+
+export function computeFeatureLabelAnchor(feature: PolygonFeature | null | undefined): { lon: number; lat: number } | null {
+  if (!feature || typeof feature !== 'object') {
+    return null;
+  }
+
+  const { geometry } = feature;
+  if (!geometry) {
+    return null;
+  }
+
+  const accumulator = { lon: 0, lat: 0, weight: 0 };
+
+  const accumulate = (polygon: number[][][]) => {
+    const centroid = computePolygonCentroid(polygon);
+    if (centroid && Number.isFinite(centroid.lon) && Number.isFinite(centroid.lat) && Math.abs(centroid.area) > 0) {
+      const weight = Math.abs(centroid.area);
+      accumulator.lon += centroid.lon * weight;
+      accumulator.lat += centroid.lat * weight;
+      accumulator.weight += weight;
+      return;
+    }
+    const fallback = computePolygonAverage(polygon);
+    if (fallback) {
+      accumulator.lon += fallback.lon;
+      accumulator.lat += fallback.lat;
+      accumulator.weight += 1;
+    }
+  };
+
+  if (geometry.type === 'Polygon') {
+    accumulate(geometry.coordinates);
+  } else if (geometry.type === 'MultiPolygon') {
+    for (const polygon of geometry.coordinates) {
+      accumulate(polygon);
+    }
+  } else {
+    return null;
+  }
+
+  if (accumulator.weight <= 0) {
+    return null;
+  }
+
+  return { lon: accumulator.lon / accumulator.weight, lat: accumulator.lat / accumulator.weight };
+}
+
+function getFeatureLabelAnchor(feature: PolygonFeature): { lon: number; lat: number } | null {
+  const cached = featureLabelAnchorCache.get(feature as object);
+  if (cached) {
+    return cached;
+  }
+
+  const computed = computeFeatureLabelAnchor(feature);
+  if (computed) {
+    featureLabelAnchorCache.set(feature as object, computed);
+  }
+  return computed;
+}
+
+function computeProjectedFeatureSize(
+  feature: PolygonFeature,
+  projectLocal: (lon: number, lat: number) => ProjectedPoint
+): number {
+  const geometry = feature.geometry;
+  if (!geometry) {
+    return 0;
+  }
+
+  const updateBounds = (ring: number[][], bounds: { minX: number; maxX: number; minY: number; maxY: number }) => {
+    for (const coord of ring) {
+      if (!Array.isArray(coord) || coord.length < 2) continue;
+      const { x, y, visible } = projectLocal(coord[0], coord[1]);
+      if (!visible || Number.isNaN(x) || Number.isNaN(y)) continue;
+      bounds.minX = Math.min(bounds.minX, x);
+      bounds.maxX = Math.max(bounds.maxX, x);
+      bounds.minY = Math.min(bounds.minY, y);
+      bounds.maxY = Math.max(bounds.maxY, y);
+    }
+  };
+
+  const bounds = { minX: Number.POSITIVE_INFINITY, maxX: Number.NEGATIVE_INFINITY, minY: Number.POSITIVE_INFINITY, maxY: Number.NEGATIVE_INFINITY };
+
+  const processPolygon = (polygon: number[][][]) => {
+    if (!Array.isArray(polygon) || polygon.length === 0) return;
+    updateBounds(polygon[0], bounds);
+  };
+
+  if (geometry.type === 'Polygon') {
+    processPolygon(geometry.coordinates);
+  } else if (geometry.type === 'MultiPolygon') {
+    for (const polygon of geometry.coordinates) {
+      processPolygon(polygon);
+    }
+  }
+
+  if (!Number.isFinite(bounds.minX) || !Number.isFinite(bounds.maxX) || !Number.isFinite(bounds.minY) || !Number.isFinite(bounds.maxY)) {
+    return 0;
+  }
+
+  const width = bounds.maxX - bounds.minX;
+  const height = bounds.maxY - bounds.minY;
+  return Math.max(width, height);
+}
 
 export interface ThemePalette {
   mapOutline: string;
@@ -295,14 +492,22 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
     const overlayFill = !isWireframe && isFlatRealistic ? resolveOverlayFillColor(mapMode, modeData ?? null) : null;
     const baseFill = palette.mapFill;
 
-    (worldCountries as { features: { geometry: { type: string; coordinates: number[][][] } }[] }).features.forEach((feature, index: number) => {
-      ctx.beginPath();
-      const coords = feature.geometry.coordinates;
+    const features = ((worldCountries as { features?: PolygonFeature[] })?.features ?? []) as PolygonFeature[];
 
-      if (feature.geometry.type === 'Polygon') {
+    features.forEach(feature => {
+      ctx.beginPath();
+      const geometry = feature.geometry as Polygon | MultiPolygon | undefined;
+      if (!geometry) return;
+
+      if (geometry.type === 'Polygon') {
+        const coords = geometry.coordinates;
         drawWorldPath(coords[0], ctx, projectLocal);
-      } else if (feature.geometry.type === 'MultiPolygon') {
-        coords.forEach((poly: number[][]) => drawWorldPath(poly[0], ctx, projectLocal));
+      } else if (geometry.type === 'MultiPolygon') {
+        geometry.coordinates.forEach(poly => {
+          if (Array.isArray(poly) && poly[0]) {
+            drawWorldPath(poly[0], ctx, projectLocal);
+          }
+        });
       }
       if (isWireframe) {
         ctx.strokeStyle = 'rgba(80,240,255,0.75)';
@@ -325,6 +530,59 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
 
       ctx.stroke();
     });
+
+    const MIN_LABEL_ZOOM = 1.1;
+    const MIN_FEATURE_SIZE_PX = 28;
+    const SMALL_FEATURE_ZOOM = 2.05;
+
+    if (!isWireframe && cam.zoom >= MIN_LABEL_ZOOM && features.length > 0) {
+      ctx.save();
+      const fontSize = Math.min(26, 12 + (cam.zoom - 1) * 5);
+      ctx.font = `600 ${fontSize}px "Rajdhani", "Segoe UI", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round';
+      ctx.miterLimit = 2.5;
+      ctx.lineWidth = Math.max(2, fontSize * 0.18);
+
+      const baseLabelColor = style === 'flat-realistic' ? 'rgba(244, 250, 255, 0.92)' : (palette.mapOutline || 'rgba(200, 240, 255, 0.9)');
+      const outlineColor = style === 'flat-realistic' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(6, 14, 24, 0.6)';
+
+      ctx.fillStyle = baseLabelColor;
+      ctx.strokeStyle = outlineColor;
+
+      for (const feature of features) {
+        if (!feature?.geometry || (feature.geometry.type !== 'Polygon' && feature.geometry.type !== 'MultiPolygon')) {
+          continue;
+        }
+        const name = feature.properties?.name;
+        if (!name) continue;
+
+        const anchor = getFeatureLabelAnchor(feature);
+        if (!anchor) continue;
+
+        const projectedSize = computeProjectedFeatureSize(feature, projectLocal);
+        if (projectedSize <= 0) {
+          continue;
+        }
+        if (projectedSize < MIN_FEATURE_SIZE_PX && cam.zoom < SMALL_FEATURE_ZOOM) {
+          continue;
+        }
+
+        const { x, y, visible } = projectLocal(anchor.lon, anchor.lat);
+        if (!visible || Number.isNaN(x) || Number.isNaN(y)) {
+          continue;
+        }
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.strokeText(name, 0, 0);
+        ctx.fillText(name, 0, 0);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
 
     ctx.restore();
   }

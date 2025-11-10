@@ -2946,3 +2946,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-09T22:58:13Z - Tune 2D/3D label fade thresholds
 - Updated `src/rendering/worldRenderer.ts` to derive style-aware label visibility thresholds and fade ranges so nation labels remain hidden until the camera zooms beyond the clarity point.
 - Noted that fully validating the fade in both globe and flat map views requires the interactive client; the current headless environment prevents visual confirmation beyond code review.
+### 2025-11-10T07:50:21Z - Add GeoJSON label anchors
+- Implemented cached centroid helper in `src/rendering/worldRenderer.ts` to derive label anchors for polygons and multipolygons.
+- Rendered map feature labels when zoom thresholds and projected sizes permit, harmonizing typography with the current map style.
+- Added Vitest coverage in `src/rendering/__tests__/worldRenderer.test.ts` to validate centroid calculations for representative geometries.
+- Ran `npm run test -- worldRenderer` to confirm helper behaviour.
