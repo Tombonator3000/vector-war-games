@@ -54,6 +54,7 @@ function createTestGameState(nations: Nation[]): GameState {
     events: false,
     diplomacy: undefined,
     falloutMarks: [],
+    falloutEffects: {},
     satelliteOrbits: [],
     nations,
   };

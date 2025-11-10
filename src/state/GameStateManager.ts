@@ -108,6 +108,7 @@ function createInitialState(): LocalGameState {
     rings: [],
     refugeeCamps: [],
     falloutMarks: [],
+    falloutEffects: {},
     satelliteOrbits: [],
     screenShake: 0,
     overlay: null,

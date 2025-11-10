@@ -3001,3 +3001,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Introduced `src/lib/nuclearDamage.ts` with shared helpers to clamp defense, compute diminishing-return mitigation, and simulate blast/fallout damage.
 - Updated `src/pages/Index.tsx` to apply the clamped curve when resolving explosions, cap build-time defense upgrades (including AI and event bonuses), and message when the ABM grid is maxed out.
 - Added `src/lib/__tests__/nuclearDamage.test.ts` to cover the mitigation ceiling and verify that a fortified nation still takes both blast and fallout casualties, and ran `npm run test -- nuclearDamage`.
+### 2025-11-10T13:45:00Z - Wire fallout debuffs into resolution & UI
+- Added `src/lib/falloutEffects.ts` with helpers to translate fallout marks into lingering nation debuffs (sickness, hunger, instability, refugee flow) and applied it from `resolutionPhase`.
+- Extended game typings/state initializers to track `falloutEffects` plus per-nation fallout fields, adjusting production penalties and co-op sync plumbing.
+- Updated `drawFalloutMarks` in `src/pages/Index.tsx` to visualize severity bands, pulse siren rings, and toast lethal alerts; new marks now initialize with `alertLevel: 'none'.`
+- Authored `src/lib/__tests__/falloutEffects.test.ts` to validate accumulation, slow decay, and severity tiering of fallout impacts.
