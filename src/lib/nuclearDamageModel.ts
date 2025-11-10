@@ -261,6 +261,7 @@ export function applyNuclearImpactToNation(nation: Nation, impact: NuclearImpact
     nation.submarines = Math.max(0, nation.submarines - impact.submarineLosses);
   }
   nation.uranium = Math.max(0, nation.uranium - impact.uraniumLoss);
-  nation.migrantsThisTurn = (nation.migrantsThisTurn || 0) + impact.totalRefugees;
-  nation.migrantsTotal = (nation.migrantsTotal || 0) + impact.totalRefugees;
+  const refugeeIndividuals = impact.totalRefugees * 1_000_000;
+  nation.migrantsThisTurn = (nation.migrantsThisTurn || 0) + refugeeIndividuals;
+  nation.migrantsTotal = (nation.migrantsTotal || 0) + refugeeIndividuals;
 }
