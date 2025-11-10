@@ -3040,3 +3040,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-10T14:22:00Z - Fix doctrine incident selection errors
 - Implemented `PlayerManager.set` to synchronize updated player nations with `GameStateManager`, preventing runtime errors when confirming doctrine incident choices.
 - Updated modal blocking logic in `src/pages/Index.tsx` so doctrine incidents defer until other high-priority modals close, ensuring only one decision dialog is shown at a time.
+### 2025-11-10T14:04:47Z - Auto-open BioForge lab on tier unlock
+- Wired `src/pages/Index.tsx` to track lab tier transitions, auto-open the advanced BioWarfare lab at tier 3, and sync the player model for downstream systems.
+- Added coverage in `src/pages/__tests__/Index.test.tsx` using mocked hooks/panels to confirm the advanced lab opens automatically and surfaces the toast.
+- Ran `npm run test -- Index` to exercise the updated integration suite.

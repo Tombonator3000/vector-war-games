@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor, act } from '@testing-library/react';
 import React from 'react';
+import { PlayerManager } from '@/state';
+import { toast } from '@/components/ui/use-toast';
+
+const toastMock = toast as unknown as ReturnType<typeof vi.fn>;
 
 const ensureActionMock = vi.fn(async () => true);
 const registerStateListenerMock = vi.fn(() => vi.fn());
@@ -74,9 +78,137 @@ vi.mock('@/components/PandemicPanel', () => ({
   PandemicPanel: () => <div data-testid="pandemic-panel" />,
 }));
 
-vi.mock('@/components/BioWarfareLab', () => ({
-  BioWarfareLab: () => <div data-testid="bio-warfare-lab" />,
+vi.mock('@/components/BioWarfareLab', () => {
+  const BioWarfareLab = ({ open }: { open: boolean }) => (
+    <div data-testid="bio-warfare-lab" data-open={open ? 'true' : 'false'} />
+  );
+
+  return {
+    BioWarfareLab,
+  };
+});
+
+vi.mock('@/components/SimplifiedBioWarfarePanel', () => ({
+  SimplifiedBioWarfarePanel: () => <div data-testid="simplified-bio-panel" />,
 }));
+
+vi.mock('@/components/ui/use-toast', () => ({
+  toast: vi.fn(),
+}));
+
+vi.mock('@/hooks/useBioWarfare', async () => {
+  const ReactActual = await vi.importActual<typeof React>('react');
+
+  type LabFacility = {
+    tier: number;
+    active: boolean;
+    underConstruction: boolean;
+    constructionProgress: number;
+    constructionTarget: number;
+    targetTier: number;
+    productionInvested: number;
+    uraniumInvested: number;
+    suspicionLevel: number;
+    knownByNations: string[];
+    lastIntelAttempt: number;
+    researchSpeed: number;
+    sabotaged: boolean;
+    sabotageTurnsRemaining: number;
+  };
+
+  const createLabFacility = (tier: number): LabFacility => ({
+    tier,
+    active: tier > 0,
+    underConstruction: false,
+    constructionProgress: 0,
+    constructionTarget: 0,
+    targetTier: tier,
+    productionInvested: 0,
+    uraniumInvested: 0,
+    suspicionLevel: 0,
+    knownByNations: [],
+    lastIntelAttempt: 0,
+    researchSpeed: 1,
+    sabotaged: false,
+    sabotageTurnsRemaining: 0,
+  });
+
+  const basePlagueState = {
+    plagueStarted: false,
+    dnaPoints: 0,
+    calculatedStats: {
+      totalInfectivity: 0,
+      totalSeverity: 0,
+      totalLethality: 0,
+      cureResistance: 0,
+      vaccineAcceleration: 0,
+      radiationMitigation: 0,
+    },
+    unlockedNodes: new Set<string>(),
+    selectedPlagueType: null,
+    deploymentHistory: [],
+    countryInfections: new Map(),
+  };
+
+  let labFacilityState = createLabFacility(2);
+  const labSubscribers = new Set<ReactActual.Dispatch<ReactActual.SetStateAction<LabFacility>>>();
+
+  const selectPlagueType = vi.fn();
+  const evolveNode = vi.fn();
+  const devolveNode = vi.fn();
+  const deployBioWeapon = vi.fn();
+
+  const useBioWarfare = () => {
+    const [labFacility, setLabFacility] = ReactActual.useState<LabFacility>(labFacilityState);
+
+    ReactActual.useEffect(() => {
+      labSubscribers.add(setLabFacility);
+      return () => {
+        labSubscribers.delete(setLabFacility);
+      };
+    }, []);
+
+    return {
+      pandemicState: { outbreaks: [], traits: {}, stage: 'STABLE' },
+      plagueState: basePlagueState,
+      labFacility,
+      applyCountermeasure: vi.fn(),
+      selectPlagueType,
+      evolveNode,
+      devolveNode,
+      addDNAPoints: vi.fn(),
+      startLabConstruction: vi.fn(),
+      cancelLabConstruction: vi.fn(),
+      getConstructionOptions: vi.fn(() => []),
+      deployBioWeapon,
+      triggerBioWarfare: vi.fn(),
+      advanceBioWarfareTurn: vi.fn(),
+      onCountryInfected: vi.fn(),
+      availableNodes: [],
+      calculateSpreadModifiers: vi.fn(),
+    };
+  };
+
+  const setLabTier = (tier: number) => {
+    labFacilityState = { ...labFacilityState, tier };
+    labSubscribers.forEach(setState => {
+      setState(prev => ({ ...prev, tier }));
+    });
+  };
+
+  const resetLabMock = () => {
+    labFacilityState = createLabFacility(2);
+    labSubscribers.forEach(setState => {
+      setState(() => labFacilityState);
+    });
+  };
+
+  return {
+    useBioWarfare,
+    __setLabTier: setLabTier,
+    __resetLabMock: resetLabMock,
+  };
+});
 
 vi.mock('@/components/FlashpointModal', () => ({
   FlashpointModal: () => null,
@@ -301,12 +433,18 @@ vi.mock('@/contexts/MultiplayerProvider', () => ({
 import Index from '@/pages/Index';
 
 describe('Index co-op toggle', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     ensureActionMock.mockClear();
     registerStateListenerMock.mockImplementation(() => vi.fn());
     publishStateMock.mockClear();
     canExecuteMock.mockReturnValue(true);
     window.localStorage.clear();
+    PlayerManager.reset();
+    PlayerManager.setNations([] as any);
+    toastMock.mockClear();
+
+    const bioWarfareModule = await import('@/hooks/useBioWarfare');
+    (bioWarfareModule as any).__resetLabMock?.();
   });
 
   it('bypasses approval requests when co-op is disabled', async () => {
@@ -349,5 +487,35 @@ describe('Index co-op toggle', () => {
       const button = screen.getByRole('button', { name: /activate ability/i }) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
     });
+  });
+
+  it('auto-opens advanced bio lab when facility reaches tier 3', async () => {
+    window.localStorage.setItem('norad_option_coop_enabled', 'false');
+    window.localStorage.setItem('option_pandemic_integration', 'true');
+    window.localStorage.setItem('option_biowarfare_conquest', 'true');
+
+    render(<Index />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /start game/i }));
+    fireEvent.click(await screen.findByText('Ronnie Raygun'));
+
+    await waitFor(() => {
+      expect(PlayerManager.get()).not.toBeNull();
+    });
+
+    const bioWarfareModule = await import('@/hooks/useBioWarfare');
+    const setLabTier = (bioWarfareModule as any).__setLabTier as (tier: number) => void;
+
+    await act(async () => {
+      setLabTier(3);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('bio-warfare-lab')).toHaveAttribute('data-open', 'true');
+    });
+
+    expect(screen.queryByTestId('simplified-bio-panel')).not.toBeInTheDocument();
+    expect(toastMock).toHaveBeenCalled();
+    expect(PlayerManager.get()?.bioLab?.tier).toBe(3);
   });
 });
