@@ -6828,6 +6828,28 @@ export default function NoradVector() {
   const playerNationId =
     PlayerManager.get()?.id ?? nations.find(nation => nation.isPlayer)?.id ?? 'player';
 
+  // Hearts of Iron Phase 2: Military Templates System - MUST be declared before useConventionalWarfare
+  const militaryTemplates = useMilitaryTemplates({
+    currentTurn: S.turn,
+    nations: nations.map(n => ({ id: n.id, name: n.name })),
+  });
+
+  const { templateStates: militaryTemplateStates, deployedUnits: militaryDeployedUnits } = militaryTemplates;
+
+  // Hearts of Iron Phase 2: Supply System - MUST be declared before useConventionalWarfare
+  const supplySystem = useSupplySystem({
+    currentTurn: S.turn,
+    nations: nations.map(n => ({
+      id: n.id,
+      name: n.name,
+      territories: conventionalState?.territories
+        ? Object.keys(conventionalState.territories).filter(
+            tid => conventionalState.territories[tid]?.controllingNationId === n.id
+          )
+        : []
+    })),
+  });
+
   const conventional = useConventionalWarfare({
     initialState: conventionalState,
     currentTurn: S.turn,
@@ -6960,28 +6982,6 @@ export default function NoradVector() {
     S.turn,
     playerNationId
   );
-
-  // Hearts of Iron Phase 2: Military Templates System
-  const militaryTemplates = useMilitaryTemplates({
-    currentTurn: S.turn,
-    nations: nations.map(n => ({ id: n.id, name: n.name })),
-  });
-
-  const { templateStates: militaryTemplateStates, deployedUnits: militaryDeployedUnits } = militaryTemplates;
-
-  // Hearts of Iron Phase 2: Supply System
-  const supplySystem = useSupplySystem({
-    currentTurn: S.turn,
-    nations: nations.map(n => ({
-      id: n.id,
-      name: n.name,
-      territories: conventionalState?.territories
-        ? Object.keys(conventionalState.territories).filter(
-            tid => conventionalState.territories[tid]?.controllingNationId === n.id
-          )
-        : []
-    })),
-  });
 
   useEffect(() => {
     spyNetworkApi = spyNetwork;
