@@ -1670,7 +1670,7 @@ const AudioSys = {
         'build': 'build-complete',
         'research': 'research-complete',
         'intel': 'ui-success',
-        'defcon': 'defcon-change',
+        'defcon': 'defcon2-siren',
         'endturn': 'turn-start',
       };
       
