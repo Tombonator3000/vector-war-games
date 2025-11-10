@@ -1798,6 +1798,10 @@ const AudioSys = {
       return;
     }
 
+    if (!this.sfxEnabled) {
+      return;
+    }
+
     const triggerOscillatorFallback = () => {
       this.playSFX('defcon');
     };
