@@ -2996,3 +2996,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-10T10:36:14Z - Refresh governance hook dependencies
 - Added `nations` to the dependency arrays for governance callbacks in `src/pages/Index.tsx` so they update once the initialization populates nation state.
 - Ensured governance metrics and delta handlers receive the latest nation references, allowing the player's metrics to appear after the initial sync.
+
+### 2025-11-10T10:49:18Z - Rebalance nuclear defense mitigation curve
+- Introduced `src/lib/nuclearDamage.ts` with shared helpers to clamp defense, compute diminishing-return mitigation, and simulate blast/fallout damage.
+- Updated `src/pages/Index.tsx` to apply the clamped curve when resolving explosions, cap build-time defense upgrades (including AI and event bonuses), and message when the ABM grid is maxed out.
+- Added `src/lib/__tests__/nuclearDamage.test.ts` to cover the mitigation ceiling and verify that a fortified nation still takes both blast and fallout casualties, and ran `npm run test -- nuclearDamage`.
