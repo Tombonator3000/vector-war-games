@@ -2996,6 +2996,9 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-10T10:36:14Z - Refresh governance hook dependencies
 - Added `nations` to the dependency arrays for governance callbacks in `src/pages/Index.tsx` so they update once the initialization populates nation state.
 - Ensured governance metrics and delta handlers receive the latest nation references, allowing the player's metrics to appear after the initial sync.
+### 2025-11-10T12:45:00Z - Stabilize governance callbacks and refresh cycle
+- Replaced governance nation handlers in `src/pages/Index.tsx` with ref-backed callbacks and tracked a `nationsVersion` counter so governance logic refreshes only when the nation roster changes.
+- Extended `useGovernance` to accept the version token, skipping drift recalculations when the turn is unchanged while still seeding new nations without decaying existing metrics.
 ### 2025-11-10T11:54:23Z - Assess nuclear explosion rework requirements
 - Reviewed repository instructions and located existing `explode` implementation within `src/pages/Index.tsx`.
 - Surveyed test coverage in `src/pages/__tests__/Index.test.tsx` to plan new assertions for expanded nuclear effects.

@@ -106,6 +106,7 @@ export interface UseGovernanceOptions {
   onMetricsSync?: (nationId: string, metrics: GovernanceMetrics) => void;
   onApplyDelta?: (nationId: string, delta: GovernanceDelta) => void;
   onAddNewsItem?: (category: 'governance' | 'crisis' | 'diplomatic', text: string, priority: 'routine' | 'important' | 'critical') => void;
+  nationsVersion?: number;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -187,6 +188,7 @@ export function useGovernance({
   onMetricsSync,
   onApplyDelta,
   onAddNewsItem,
+  nationsVersion = 0,
 }: UseGovernanceOptions): UseGovernanceReturn {
   const { rng } = useRNG();
   const [metrics, setMetrics] = useState<Record<string, GovernanceMetrics>>(() => {
@@ -199,6 +201,8 @@ export function useGovernance({
 
   const [activeEvent, setActiveEvent] = useState<GovernanceEventState | null>(null);
   const eventTurnHistoryRef = useRef<Map<string, Map<string, number>>>(new Map());
+  const lastProcessedTurnRef = useRef<number | null>(null);
+  const lastProcessedVersionRef = useRef<number | null>(null);
 
   const recordEventTurn = useCallback((nationId: string, eventId: string, turn: number) => {
     let nationEvents = eventTurnHistoryRef.current.get(nationId);
@@ -266,10 +270,21 @@ export function useGovernance({
   );
 
   useEffect(() => {
+    const turnChanged = lastProcessedTurnRef.current !== currentTurn;
+    const versionChanged = lastProcessedVersionRef.current !== nationsVersion;
+
+    if (!turnChanged && !versionChanged) {
+      return;
+    }
+
+    lastProcessedTurnRef.current = currentTurn;
+    lastProcessedVersionRef.current = nationsVersion;
+
+    const nations = getNations();
     const updates: Array<{ id: string; metrics: GovernanceMetrics }> = [];
     setMetrics((prev) => {
       const next = { ...prev };
-      getNations().forEach((nation) => {
+      nations.forEach((nation) => {
         const isFirstTime = !prev[nation.id];
         const current = prev[nation.id] ?? seedMetrics(nation);
 
@@ -298,7 +313,7 @@ export function useGovernance({
           console.log(`[Governance Debug] Turn ${currentTurn}, preserving metrics for ${nation.id}:`, current);
           next[nation.id] = current;
           updates.push({ id: nation.id, metrics: current });
-        } else {
+        } else if (turnChanged) {
           // Apply normal drift calculations for existing nations on subsequent turns
           const moraleDecay = 1 + Math.max(0, (nation.instability ?? 0) - 40) * 0.02;
           const cabinetSupport = (current.cabinetApproval - 50) * 0.02;
@@ -319,6 +334,9 @@ export function useGovernance({
 
           next[nation.id] = nextMetrics;
           updates.push({ id: nation.id, metrics: nextMetrics });
+        } else {
+          next[nation.id] = current;
+          updates.push({ id: nation.id, metrics: current });
         }
       });
       return next;
@@ -327,7 +345,7 @@ export function useGovernance({
     updates.forEach(({ id, metrics: snapshot }) => {
       onMetricsSync?.(id, snapshot);
     });
-  }, [currentTurn, getNations, onMetricsSync]);
+  }, [currentTurn, getNations, nationsVersion, onMetricsSync]);
 
   const autoResolve = useCallback(
     (nation: GovernanceNationRef, definition: PoliticalEventDefinition) => {
