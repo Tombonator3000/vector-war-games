@@ -48,6 +48,19 @@ export interface UseSpyNetworkOptions {
   getGameState: () => GameState;
   onLog?: (message: string, tone?: 'normal' | 'warning' | 'success' | 'alert') => void;
   onToast?: (payload: { title: string; description: string; variant?: 'default' | 'destructive' }) => void;
+  onMissionResult?: (result: {
+    spyName: string;
+    missionType: string;
+    targetNation: string;
+    success: boolean;
+    discovered: boolean;
+    spyCaught: boolean;
+    spyEliminated: boolean;
+    coverBlown: boolean;
+    narrative: string;
+    rewards?: any;
+    discoveryDetails?: any;
+  }) => void;
 }
 
 /**
@@ -63,6 +76,7 @@ export function useSpyNetwork(options: UseSpyNetworkOptions) {
     getGameState,
     onLog,
     onToast,
+    onMissionResult,
   } = options;
 
   // ============================================================================
@@ -274,33 +288,9 @@ export function useSpyNetwork(options: UseSpyNetworkOptions) {
         // Execute mission
         const result = executeMission(mission, spy, target, nation, currentTurn, gameState);
 
-        // Log results
-        if (result.spyEliminated) {
-          onLog?.(`💀 ${spy.name} was eliminated in ${target.name}`, 'alert');
-          onToast?.({
-            title: 'Spy Eliminated',
-            description: result.narrative,
-            variant: 'destructive',
-          });
-        } else if (result.spyCaught) {
-          onLog?.(`🚨 ${spy.name} was captured in ${target.name}`, 'warning');
-          onToast?.({
-            title: 'Spy Captured',
-            description: result.narrative,
-            variant: 'destructive',
-          });
-        } else if (result.discovered) {
-          onLog?.(`⚠️ ${spy.name} was discovered but escaped`, 'warning');
-        } else if (result.success) {
-          onLog?.(`✓ ${spy.name} completed mission successfully`, 'success');
-          onToast?.({
-            title: 'Mission Success',
-            description: result.narrative,
-            variant: 'default',
-          });
-        } else {
-          onLog?.(`✗ ${spy.name} failed mission`, 'warning');
-        }
+        // Prepare reward information for modal
+        let rewardInfo = result.rewards;
+        let effectMessages: string[] = [];
 
         // Apply mission rewards if successful
         if (result.success && result.rewards) {
@@ -323,10 +313,46 @@ export function useSpyNetwork(options: UseSpyNetworkOptions) {
             ...rewardResult.updatedTargetNation,
           });
 
+          // Store effect messages for modal
+          effectMessages = rewardResult.effectMessages;
+
           // Log reward messages
           rewardResult.effectMessages.forEach((msg) => {
             onLog?.(msg, 'success');
           });
+        }
+
+        // Trigger modal with detailed mission result
+        onMissionResult?.({
+          spyName: spy.name,
+          missionType: mission.type,
+          targetNation: target.name,
+          success: result.success,
+          discovered: result.discovered,
+          spyCaught: result.spyCaught,
+          spyEliminated: result.spyEliminated,
+          coverBlown: result.coverBlown,
+          narrative: result.narrative || '',
+          rewards: result.success && rewardInfo ? {
+            intel: rewardInfo.intelGained,
+            production: rewardInfo.resourcesStolen?.production,
+            technology: rewardInfo.techStolen,
+            effectMessages,
+          } : undefined,
+          discoveryDetails: result.discoveryDetails,
+        });
+
+        // Log results
+        if (result.spyEliminated) {
+          onLog?.(`💀 ${spy.name} was eliminated in ${target.name}`, 'alert');
+        } else if (result.spyCaught) {
+          onLog?.(`🚨 ${spy.name} was captured in ${target.name}`, 'warning');
+        } else if (result.discovered) {
+          onLog?.(`⚠️ ${spy.name} was discovered but escaped`, 'warning');
+        } else if (result.success) {
+          onLog?.(`✓ ${spy.name} completed mission successfully`, 'success');
+        } else {
+          onLog?.(`✗ ${spy.name} failed mission`, 'warning');
         }
 
         // Handle diplomatic consequences if discovered
@@ -428,7 +454,7 @@ export function useSpyNetwork(options: UseSpyNetworkOptions) {
     if (updates.size > 0) {
       updateNations(updates);
     }
-  }, [currentTurn, getNations, getNation, getGameState, updateNations, onLog, onToast]);
+  }, [currentTurn, getNations, getNation, getGameState, updateNations, onLog, onToast, onMissionResult]);
 
   // ============================================================================
   // COUNTER-INTELLIGENCE

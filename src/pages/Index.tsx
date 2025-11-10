@@ -40,6 +40,7 @@ import type { BioLabTier } from '@/types/bioLab';
 import type { EvolutionNodeId } from '@/types/biowarfare';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import { FlashpointOutcomeModal } from '@/components/FlashpointOutcomeModal';
+import { SpyMissionResultModal, type SpyMissionResultData } from '@/components/spy/SpyMissionResultModal';
 import GlobeScene, {
   type GlobeSceneHandle,
   PickerFn,
@@ -5802,6 +5803,7 @@ export default function NoradVector() {
   // News ticker and flashpoints - MUST be declared before blockingModalActive useMemo
   const { newsItems, addNewsItem } = useNewsManager();
   const [currentFlashpointOutcome, setCurrentFlashpointOutcome] = useState<FlashpointOutcome | null>(null);
+  const [currentSpyMissionResult, setCurrentSpyMissionResult] = useState<SpyMissionResultData | null>(null);
   const {
     activeFlashpoint,
     pendingFollowUps,
@@ -5837,6 +5839,7 @@ export default function NoradVector() {
       Boolean(
         activeFlashpoint ||
           currentFlashpointOutcome ||
+          currentSpyMissionResult ||
           phase2PanelOpen ||
           councilSchismModalOpen ||
           showEnhancedDiplomacy ||
@@ -5855,6 +5858,7 @@ export default function NoradVector() {
     [
       activeFlashpoint,
       currentFlashpointOutcome,
+      currentSpyMissionResult,
       phase2PanelOpen,
       councilSchismModalOpen,
       showEnhancedDiplomacy,
@@ -6978,6 +6982,9 @@ export default function NoradVector() {
     getGameState: () => GameStateManager.getState(),
     onLog: (message, tone) => log(message, tone),
     onToast: (payload) => toast(payload),
+    onMissionResult: (result) => {
+      setCurrentSpyMissionResult(result as SpyMissionResultData);
+    },
   });
 
   // Hearts of Iron Phase 3: Economic Depth System
@@ -13484,6 +13491,13 @@ export default function NoradVector() {
         <FlashpointOutcomeModal
           outcome={currentFlashpointOutcome}
           onClose={() => setCurrentFlashpointOutcome(null)}
+        />
+      )}
+
+      {currentSpyMissionResult && (
+        <SpyMissionResultModal
+          result={currentSpyMissionResult}
+          onClose={() => setCurrentSpyMissionResult(null)}
         />
       )}
 
