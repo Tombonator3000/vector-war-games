@@ -49,11 +49,11 @@ interface LedgerRow {
 }
 
 const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
-  { value: 'all', label: 'Alle' },
-  { value: 'allies', label: 'Allierte' },
-  { value: 'enemies', label: 'Fiender' },
-  { value: 'neutrals', label: 'Nøytrale' },
-  { value: 'top5', label: 'Topp 5 styrke' },
+  { value: 'all', label: 'All' },
+  { value: 'allies', label: 'Allies' },
+  { value: 'enemies', label: 'Enemies' },
+  { value: 'neutrals', label: 'Neutrals' },
+  { value: 'top5', label: 'Top 5 Power' },
 ];
 
 const moraleColor = (value: number) => {
@@ -109,16 +109,16 @@ const LedgerTableComponent: React.FC<LedgerTableProps> = ({
         : 'neutral';
 
       const statusLabel = isPlayer
-        ? 'Egen nasjon'
+        ? 'Own Nation'
         : allied
-        ? 'Alliert'
+        ? 'Allied'
         : truceTurns > 0
-        ? `Våpenhvile (${truceTurns})`
+        ? `Truce (${truceTurns})`
         : relationshipScore <= -40 || threatScore > 0
-        ? 'Fiendtlig'
+        ? 'Hostile'
         : relationshipScore >= 40
-        ? 'Vennlig'
-        : 'Nøytral';
+        ? 'Friendly'
+        : 'Neutral';
 
       const militaryPower = calculateMilitaryPower(nation);
       const powerShare = playerMilitaryPower > 0
@@ -228,22 +228,22 @@ const LedgerTableComponent: React.FC<LedgerTableProps> = ({
 
   const renderStatusBadge = (row: LedgerRow) => {
     if (row.isPlayer) {
-      return <Badge className="bg-cyan-600/40 text-cyan-200">Spiller</Badge>;
+      return <Badge className="bg-cyan-600/40 text-cyan-200">Player</Badge>;
     }
 
     if (row.category === 'ally') {
-      return <Badge className="bg-emerald-500/20 text-emerald-300">Alliert</Badge>;
+      return <Badge className="bg-emerald-500/20 text-emerald-300">Allied</Badge>;
     }
 
     if (row.category === 'truce') {
-      return <Badge className="bg-blue-500/20 text-blue-300">Våpenhvile</Badge>;
+      return <Badge className="bg-blue-500/20 text-blue-300">Truce</Badge>;
     }
 
     if (row.category === 'enemy') {
-      return <Badge className="bg-red-500/20 text-red-300">Fiendtlig</Badge>;
+      return <Badge className="bg-red-500/20 text-red-300">Hostile</Badge>;
     }
 
-    return <Badge variant="outline" className="border-gray-600 text-gray-300">Nøytral</Badge>;
+    return <Badge variant="outline" className="border-gray-600 text-gray-300">Neutral</Badge>;
   };
 
   return (
@@ -255,11 +255,11 @@ const LedgerTableComponent: React.FC<LedgerTableProps> = ({
           </div>
           <div>
             <h3 className="text-lg font-bold text-cyan-200">Global Ledger</h3>
-            <p className="text-xs text-gray-400">Sorter og filtrer for rask makro-oversikt.</p>
+            <p className="text-xs text-gray-400">Sort and filter for quick macro overview.</p>
           </div>
         </div>
         <Badge variant="outline" className="border-gray-700 bg-gray-900/70 text-gray-300">
-          {filteredRows.length} / {ledgerRows.length} nasjoner synlig
+          {filteredRows.length} / {ledgerRows.length} nations visible
         </Badge>
       </div>
 
@@ -393,13 +393,13 @@ const LedgerTableComponent: React.FC<LedgerTableProps> = ({
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-white">{row.name}</span>
-                          {row.isPlayer && <Badge className="bg-cyan-600/30 text-cyan-200">Deg</Badge>}
+                          {row.isPlayer && <Badge className="bg-cyan-600/30 text-cyan-200">You</Badge>}
                           {isTopFive && !row.isPlayer && (
-                            <Badge className="bg-purple-500/20 text-purple-200">Topp 5</Badge>
+                            <Badge className="bg-purple-500/20 text-purple-200">Top 5</Badge>
                           )}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {row.leader} • {row.doctrine ?? 'Ukjent doktrine'}
+                          {row.leader} • {row.doctrine ?? 'Unknown doctrine'}
                         </div>
                       </div>
                     </div>
@@ -442,7 +442,7 @@ const LedgerTableComponent: React.FC<LedgerTableProps> = ({
             {filteredRows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} className="py-6 text-center text-sm text-gray-400">
-                  Ingen nasjoner matcher filtrene akkurat nå.
+                  No nations match the current filters.
                 </TableCell>
               </TableRow>
             )}
