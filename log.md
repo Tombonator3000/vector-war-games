@@ -2959,3 +2959,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 
 ### 2025-11-10T08:25:32Z - Delay alien armada flashpoint
 - Added a `minYear: 2025` constraint to the "CONTACT REPORT: EXTRATERRESTRIAL ARMADA" flashpoint in `src/hooks/useFlashpoints.ts` so it cannot trigger early in the campaign.
+### 2025-11-10T08:18:57Z - Preserve spy selection when launching missions
+- Updated `src/components/SpyNetworkPanel.tsx` to stop the spy card toggle handler from firing when the Assign Mission button is clicked so the selected spy state persists.
+- Added `src/components/__tests__/SpyNetworkPanel.test.tsx` with a React Testing Library scenario covering selecting a spy, opening missions, and verifying mission options stay available.
+- Installed `@testing-library/user-event` for richer interaction simulation and executed `npm run test -- SpyNetworkPanel` to confirm the new coverage passes.
