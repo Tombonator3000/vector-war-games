@@ -50,7 +50,15 @@ export function LeaderAbilityPanel({
   const [selectedTargetId, setSelectedTargetId] = useState<string | undefined>(undefined);
 
   const { ability } = abilityState;
-  const { canUse, reason } = canUseAbility(ability, nation, { nations: allNations, turn: currentTurn } as any, selectedTargetId);
+  const { canUse, reason } = canUseAbility(
+    ability,
+    nation,
+    { nations: allNations, turn: currentTurn } as any,
+    selectedTargetId,
+  );
+  const canActivate =
+    canUse ||
+    (ability.targetType === 'single-nation' && reason === 'Must select a target nation');
 
   // Get available targets
   const availableTargets = allNations.filter(n => n.id !== nation.id && !n.eliminated);
@@ -200,9 +208,9 @@ export function LeaderAbilityPanel({
         <CardFooter>
           <Button
             onClick={handleUseClick}
-            disabled={!canUse}
+            disabled={!canActivate}
             className="w-full"
-            variant={canUse ? 'default' : 'secondary'}
+            variant={canActivate ? 'default' : 'secondary'}
           >
             <Zap className="h-4 w-4 mr-2" />
             Activate Ability
