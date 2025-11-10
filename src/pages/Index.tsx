@@ -1388,6 +1388,29 @@ const MUSIC_TRACKS = [
 type MusicTrack = (typeof MUSIC_TRACKS)[number];
 type MusicTrackId = MusicTrack['id'];
 
+const TRACK_METADATA: Record<MusicTrackId, MusicTrack> = MUSIC_TRACKS.reduce(
+  (acc, track) => {
+    acc[track.id] = track;
+    return acc;
+  },
+  {} as Record<MusicTrackId, MusicTrack>
+);
+
+const AMBIENT_CLIPS = [
+  { id: 'defcon-siren', title: 'DEFCON Critical Siren', file: '/sfx/defcon2-siren.mp3' },
+] as const;
+
+type AmbientClip = (typeof AMBIENT_CLIPS)[number];
+type AmbientClipId = AmbientClip['id'];
+
+const AMBIENT_METADATA: Record<AmbientClipId, AmbientClip> = AMBIENT_CLIPS.reduce(
+  (acc, clip) => {
+    acc[clip.id] = clip;
+    return acc;
+  },
+  {} as Record<AmbientClipId, AmbientClip>
+);
+
 const AudioSys = {
   audioContext: null as AudioContext | null,
   musicEnabled: true,
@@ -1403,6 +1426,16 @@ const AudioSys = {
   userInteractionPrimed: false,
   trackListeners: new Set<(trackId: MusicTrackId | null) => void>(),
   audioSupported: true,
+  TRACK_METADATA,
+  AMBIENT_METADATA,
+  ambientEnabled: true,
+  ambientVolume: 0.45,
+  ambientGainNode: null as GainNode | null,
+  ambientSource: null as AudioBufferSourceNode | null,
+  ambientClipId: null as AmbientClipId | null,
+  ambientDesiredClipId: null as AmbientClipId | null,
+  ambientCache: new Map<AmbientClipId, AudioBuffer>(),
+  ambientPromises: new Map<AmbientClipId, Promise<AudioBuffer>>(),
 
   init() {
     if (typeof window === 'undefined') return;
@@ -1431,6 +1464,17 @@ const AudioSys = {
       this.musicGainNode.connect(this.audioContext.destination);
     }
     return this.musicGainNode;
+  },
+
+  ensureAmbientGain() {
+    if (!this.audioContext) this.init();
+    if (!this.audioContext) return null;
+    if (!this.ambientGainNode) {
+      this.ambientGainNode = this.audioContext.createGain();
+      this.ambientGainNode.gain.value = this.ambientVolume;
+      this.ambientGainNode.connect(this.audioContext.destination);
+    }
+    return this.ambientGainNode;
   },
 
   async resumeContext() {
@@ -1476,6 +1520,40 @@ const AudioSys = {
     })();
 
     this.trackPromises.set(trackId, loadPromise);
+    return loadPromise;
+  },
+
+  async loadAmbientClip(clipId: AmbientClipId) {
+    if (this.ambientCache.has(clipId)) {
+      return this.ambientCache.get(clipId)!;
+    }
+    if (this.ambientPromises.has(clipId)) {
+      return this.ambientPromises.get(clipId)!;
+    }
+
+    const clip = AMBIENT_METADATA[clipId];
+    if (!clip) {
+      throw new Error(`Unknown ambient clip ${clipId}`);
+    }
+
+    const loadPromise = (async () => {
+      try {
+        const response = await fetch(clip.file);
+        if (!response.ok) {
+          throw new Error(`Failed to load ambient clip: ${response.status} ${response.statusText}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        if (!this.audioContext) this.init();
+        if (!this.audioContext) throw new Error('Audio context unavailable');
+        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer.slice(0));
+        this.ambientCache.set(clipId, audioBuffer);
+        return audioBuffer;
+      } finally {
+        this.ambientPromises.delete(clipId);
+      }
+    })();
+
+    this.ambientPromises.set(clipId, loadPromise);
     return loadPromise;
   },
 
@@ -1579,12 +1657,129 @@ const AudioSys = {
     this.notifyTrackListeners(null);
   },
 
+  stopAmbientLoop() {
+    this.ambientDesiredClipId = null;
+    if (this.ambientSource) {
+      try {
+        this.ambientSource.stop();
+      } catch (error) {
+        // Stop failed - already stopped or disposed
+      }
+      try {
+        this.ambientSource.disconnect();
+      } catch (error) {
+        // Disconnect failed - already disconnected
+      }
+    }
+    this.ambientSource = null;
+    this.ambientClipId = null;
+  },
+
+  async ensureAmbientPlayback({ forceRestart = false }: { forceRestart?: boolean } = {}) {
+    const targetClip = this.ambientDesiredClipId;
+    if (!targetClip) {
+      this.stopAmbientLoop();
+      return;
+    }
+
+    if (!this.ambientEnabled) {
+      return;
+    }
+
+    if (!this.audioContext) this.init();
+    if (!this.audioContext) {
+      return;
+    }
+
+    if (!this.userInteractionPrimed) {
+      await this.resumeContext();
+      if (this.audioContext?.state === 'running') {
+        this.userInteractionPrimed = true;
+      }
+    }
+
+    if (!this.userInteractionPrimed) {
+      return;
+    }
+
+    if (!forceRestart && this.ambientSource && this.ambientClipId === targetClip) {
+      return;
+    }
+
+    try {
+      await this.resumeContext();
+      const buffer = await this.loadAmbientClip(targetClip);
+      if (!buffer) return;
+      if (!this.ambientEnabled || this.ambientDesiredClipId !== targetClip) return;
+
+      const gainNode = this.ensureAmbientGain();
+      if (!gainNode) return;
+
+      this.stopAmbientLoop();
+
+      const source = this.audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(gainNode);
+      source.start();
+
+      this.ambientSource = source;
+      this.ambientClipId = targetClip;
+    } catch (error) {
+      // Ambient playback failed - expected in some environments
+    }
+  },
+
+  startAmbientLoop(clipId: AmbientClipId, { forceRestart = false }: { forceRestart?: boolean } = {}) {
+    this.ambientDesiredClipId = clipId;
+    void this.ensureAmbientPlayback({ forceRestart });
+  },
+
+  setAmbientEnabled(enabled: boolean) {
+    this.ambientEnabled = enabled;
+    if (!enabled) {
+      this.stopAmbientLoop();
+    } else {
+      void this.ensureAmbientPlayback({ forceRestart: true });
+    }
+  },
+
+  setAmbientVolume(volume: number) {
+    this.ambientVolume = volume;
+    if (this.ambientGainNode && this.audioContext) {
+      try {
+        this.ambientGainNode.gain.setTargetAtTime(volume, this.audioContext.currentTime, 0.05);
+      } catch (error) {
+        this.ambientGainNode.gain.value = volume;
+      }
+    }
+  },
+
+  updateAmbientForDefcon(defconLevel: number) {
+    if (defconLevel <= 2) {
+      this.startAmbientLoop('defcon-siren', { forceRestart: false });
+    } else if (this.ambientDesiredClipId === 'defcon-siren') {
+      this.stopAmbientLoop();
+    }
+  },
+
+  handleDefconTransition(previous: number, next: number) {
+    this.playSFX('defcon');
+    if (next <= 2) {
+      this.startAmbientLoop('defcon-siren', { forceRestart: previous > 2 });
+    } else if (previous <= 2) {
+      this.stopAmbientLoop();
+    }
+  },
+
   handleUserInteraction() {
     if (this.userInteractionPrimed) {
+      void this.ensureAmbientPlayback({ forceRestart: false });
       return;
     }
     this.userInteractionPrimed = true;
     void this.playPreferredTrack({ forceRestart: true });
+    void this.ensureAmbientPlayback({ forceRestart: false });
   },
 
   setPreferredTrack(trackId: MusicTrackId | null) {
@@ -4878,19 +5073,21 @@ function aiTurn(n: Nation) {
   // 8. ESCALATION - Reduce DEFCON
   if (r < 0.90 + aggressionMod) {
     if (S.defcon > 1 && Math.random() < 0.4) {
+      const previousDefcon = S.defcon;
       S.defcon--;
-      AudioSys.playSFX('defcon');
+      AudioSys.handleDefconTransition(previousDefcon, S.defcon);
       log(`${n.name} escalates to DEFCON ${S.defcon}`);
       maybeBanter(n, 0.4);
       return;
     }
   }
-  
+
   // 9. DIPLOMACY - Occasionally de-escalate if defensive
   if (n.ai === 'defensive' || n.ai === 'balanced') {
     if (S.defcon < 5 && Math.random() < 0.1) {
+      const previousDefcon = S.defcon;
       S.defcon++;
-      AudioSys.playSFX('defcon');
+      AudioSys.handleDefconTransition(previousDefcon, S.defcon);
       log(`${n.name} proposes de-escalation to DEFCON ${S.defcon}`);
       return;
     }
@@ -5533,6 +5730,7 @@ function updateDisplay() {
   
   const defconEl = document.getElementById('defcon');
   if (defconEl) defconEl.textContent = S.defcon.toString();
+  AudioSys.updateAmbientForDefcon(S.defcon);
   
   const turnEl = document.getElementById('turn');
   if (turnEl) turnEl.textContent = S.turn.toString();
@@ -6217,8 +6415,20 @@ export default function NoradVector() {
   const initialMusicEnabled = storedMusicEnabled === 'true' ? true : storedMusicEnabled === 'false' ? false : AudioSys.musicEnabled;
   const storedSfxEnabled = Storage.getItem('audio_sfx_enabled');
   const initialSfxEnabled = storedSfxEnabled === 'true' ? true : storedSfxEnabled === 'false' ? false : AudioSys.sfxEnabled;
+  const storedAmbientEnabled = Storage.getItem('audio_ambient_enabled');
+  const initialAmbientEnabled = storedAmbientEnabled === 'true' ? true : storedAmbientEnabled === 'false' ? false : AudioSys.ambientEnabled;
   // Always start at 30% volume
   const initialMusicVolume = 0.3;
+  const storedAmbientVolume = Storage.getItem('audio_ambient_volume');
+  const initialAmbientVolume = (() => {
+    if (storedAmbientVolume) {
+      const parsed = parseFloat(storedAmbientVolume);
+      if (!Number.isNaN(parsed)) {
+        return Math.min(1, Math.max(0, parsed));
+      }
+    }
+    return AudioSys.ambientVolume;
+  })();
   const storedMusicTrack = Storage.getItem('audio_music_track');
   const initialMusicSelection: string = (() => {
     if (storedMusicTrack === 'random') {
@@ -6235,7 +6445,9 @@ export default function NoradVector() {
 
   const [musicEnabled, setMusicEnabled] = useState(initialMusicEnabled);
   const [sfxEnabled, setSfxEnabled] = useState(initialSfxEnabled);
+  const [ambientEnabled, setAmbientEnabled] = useState(initialAmbientEnabled);
   const [musicVolume, setMusicVolume] = useState(initialMusicVolume);
+  const [ambientVolume, setAmbientVolume] = useState(initialAmbientVolume);
   const [musicSelection, setMusicSelection] = useState<string>(initialMusicSelection);
   const [dayNightAutoCycleEnabled, setDayNightAutoCycleEnabled] = useState(() => {
     const stored = Storage.getItem('map_daynight_autocycle');
@@ -6257,6 +6469,9 @@ export default function NoradVector() {
     AudioSys.setMusicEnabled(initialMusicEnabled);
     AudioSys.sfxEnabled = initialSfxEnabled;
     AudioSys.setMusicVolume(initialMusicVolume);
+    AudioSys.setAmbientEnabled(initialAmbientEnabled);
+    AudioSys.setAmbientVolume(initialAmbientVolume);
+    AudioSys.updateAmbientForDefcon(S.defcon);
     if (initialMusicSelection === 'random') {
       AudioSys.setPreferredTrack(null);
     } else {
@@ -6869,7 +7084,7 @@ export default function NoradVector() {
       const previous = S.defcon;
       S.defcon = Math.max(1, Math.min(5, S.defcon + delta));
       if (S.defcon !== previous) {
-        AudioSys.playSFX('defcon');
+        AudioSys.handleDefconTransition(previous, S.defcon);
         const message = delta < 0
           ? `DEFCON ${S.defcon}: Military tensions escalate from territorial conflict`
           : `DEFCON ${S.defcon}: Global tensions ease`;
@@ -6965,7 +7180,7 @@ export default function NoradVector() {
       const previous = S.defcon;
       S.defcon = Math.max(1, Math.min(5, S.defcon + delta));
       if (S.defcon !== previous) {
-        AudioSys.playSFX('defcon');
+        AudioSys.handleDefconTransition(previous, S.defcon);
         log(reason, delta < 0 ? 'warning' : 'success');
         addNewsItem('intel', reason, delta < 0 ? 'critical' : 'important');
         updateDisplay();
@@ -7962,11 +8177,27 @@ export default function NoradVector() {
     setSfxEnabled(checked);
   }, []);
 
+  const handleAmbientToggle = useCallback((checked: boolean) => {
+    AudioSys.setAmbientEnabled(checked);
+    Storage.setItem('audio_ambient_enabled', String(checked));
+    setAmbientEnabled(checked);
+    if (checked) {
+      AudioSys.updateAmbientForDefcon(S.defcon);
+    }
+  }, []);
+
   const handleMusicVolumeChange = useCallback((volume: number) => {
     const normalizedVolume = Math.min(1, Math.max(0, volume));
     AudioSys.setMusicVolume(normalizedVolume);
     // Don't save to storage - always reset to 30% on page load
     setMusicVolume(normalizedVolume);
+  }, []);
+
+  const handleAmbientVolumeChange = useCallback((volume: number) => {
+    const normalizedVolume = Math.min(1, Math.max(0, volume));
+    AudioSys.setAmbientVolume(normalizedVolume);
+    Storage.setItem('audio_ambient_volume', normalizedVolume.toString());
+    setAmbientVolume(normalizedVolume);
   }, []);
 
   const handleMusicTrackChange = useCallback((selection: string) => {
@@ -12729,8 +12960,12 @@ export default function NoradVector() {
             onMusicToggle={handleMusicToggle}
             sfxEnabled={sfxEnabled}
             onSfxToggle={handleSfxToggle}
+            ambientEnabled={ambientEnabled}
+            onAmbientToggle={handleAmbientToggle}
             musicVolume={musicVolume}
             onMusicVolumeChange={handleMusicVolumeChange}
+            ambientVolume={ambientVolume}
+            onAmbientVolumeChange={handleAmbientVolumeChange}
             musicSelection={musicSelection}
             onMusicTrackChange={handleMusicTrackChange}
             onNextTrack={handleNextTrack}
@@ -13359,8 +13594,9 @@ export default function NoradVector() {
             }
             
             if (outcome.defcon) {
+              const previousDefcon = S.defcon;
               S.defcon = Math.max(1, Math.min(5, outcome.defcon));
-              AudioSys.playSFX('defcon');
+              AudioSys.handleDefconTransition(previousDefcon, S.defcon);
               addNewsItem('crisis', `DEFCON ${S.defcon}: Flashpoint resolved - ${result.success ? 'Success' : 'Failure'}`, 'critical');
             }
             

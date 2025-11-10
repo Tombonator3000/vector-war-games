@@ -53,6 +53,8 @@ const MUSIC_TRACKS = [
 export type MusicTrack = (typeof MUSIC_TRACKS)[number];
 export type MusicTrackId = MusicTrack['id'];
 
+const DEFAULT_AMBIENT_VOLUME = 0.45;
+
 const themeOptions: { id: ThemeId; label: string }[] = [
   { id: 'synthwave', label: 'Synthwave' },
   { id: 'wargames', label: 'WARGAMES' }
@@ -158,8 +160,12 @@ export interface OptionsMenuProps {
   onMusicToggle?: (enabled: boolean) => void;
   sfxEnabled?: boolean;
   onSfxToggle?: (enabled: boolean) => void;
+  ambientEnabled?: boolean;
+  onAmbientToggle?: (enabled: boolean) => void;
   musicVolume?: number;
   onMusicVolumeChange?: (volume: number) => void;
+  ambientVolume?: number;
+  onAmbientVolumeChange?: (volume: number) => void;
   musicSelection?: string;
   onMusicTrackChange?: (selection: string) => void;
   onNextTrack?: () => void;
@@ -181,8 +187,12 @@ export function OptionsMenu({
   onMusicToggle,
   sfxEnabled: controlledSfxEnabled,
   onSfxToggle,
+  ambientEnabled: controlledAmbientEnabled,
+  onAmbientToggle,
   musicVolume: controlledMusicVolume,
   onMusicVolumeChange,
+  ambientVolume: controlledAmbientVolume,
+  onAmbientVolumeChange,
   musicSelection: controlledMusicSelection,
   onMusicTrackChange,
   onNextTrack,
@@ -302,8 +312,24 @@ export function OptionsMenu({
     return stored !== 'false';
   });
 
+  const [ambientEnabled, setAmbientEnabled] = useState(() => {
+    const stored = Storage.getItem('audio_ambient_enabled');
+    return stored !== 'false';
+  });
+
   // Always start at 30% volume
   const [musicVolume, setMusicVolume] = useState(0.3);
+
+  const [ambientVolume, setAmbientVolume] = useState(() => {
+    const stored = Storage.getItem('audio_ambient_volume');
+    if (stored) {
+      const parsed = parseFloat(stored);
+      if (!Number.isNaN(parsed)) {
+        return Math.min(1, Math.max(0, parsed));
+      }
+    }
+    return DEFAULT_AMBIENT_VOLUME;
+  });
 
   const [musicSelection, setMusicSelection] = useState(() => {
     const stored = Storage.getItem('audio_music_track');
@@ -312,12 +338,16 @@ export function OptionsMenu({
 
   const isMusicControlled = typeof controlledMusicEnabled === 'boolean';
   const isSfxControlled = typeof controlledSfxEnabled === 'boolean';
+  const isAmbientControlled = typeof controlledAmbientEnabled === 'boolean';
   const isVolumeControlled = typeof controlledMusicVolume === 'number';
+  const isAmbientVolumeControlled = typeof controlledAmbientVolume === 'number';
   const isSelectionControlled = typeof controlledMusicSelection === 'string';
 
   const resolvedMusicEnabled = isMusicControlled ? controlledMusicEnabled : musicEnabled;
   const resolvedSfxEnabled = isSfxControlled ? controlledSfxEnabled : sfxEnabled;
+  const resolvedAmbientEnabled = isAmbientControlled ? controlledAmbientEnabled : ambientEnabled;
   const resolvedMusicVolume = isVolumeControlled ? controlledMusicVolume : musicVolume;
+  const resolvedAmbientVolume = isAmbientVolumeControlled ? controlledAmbientVolume : ambientVolume;
   const resolvedMusicSelection = isSelectionControlled ? controlledMusicSelection : musicSelection;
   const availableMusicTracks = musicTracks ?? MUSIC_TRACKS;
 
@@ -353,6 +383,22 @@ export function OptionsMenu({
     }
   }, [isSfxControlled, onSfxToggle, onChange]);
 
+  const handleAmbientToggle = useCallback((checked: boolean) => {
+    if (!isAmbientControlled) {
+      setAmbientEnabled(checked);
+      Storage.setItem('audio_ambient_enabled', String(checked));
+    }
+    toast({
+      title: checked ? 'Ambient alerts enabled' : 'Ambient alerts muted',
+    });
+    if (onAmbientToggle) {
+      onAmbientToggle(checked);
+    }
+    if (onChange) {
+      onChange();
+    }
+  }, [isAmbientControlled, onAmbientToggle, onChange]);
+
   const handleMusicVolumeChange = useCallback((value: number[]) => {
     const rawValue = value[0] ?? 0;
     const volume = Math.min(1, Math.max(0, rawValue / 100));
@@ -367,6 +413,21 @@ export function OptionsMenu({
       onChange();
     }
   }, [isVolumeControlled, onMusicVolumeChange, onChange]);
+
+  const handleAmbientVolumeChangeInternal = useCallback((value: number[]) => {
+    const rawValue = value[0] ?? 0;
+    const volume = Math.min(1, Math.max(0, rawValue / 100));
+    if (!isAmbientVolumeControlled) {
+      setAmbientVolume(volume);
+      Storage.setItem('audio_ambient_volume', volume.toString());
+    }
+    if (onAmbientVolumeChange) {
+      onAmbientVolumeChange(volume);
+    }
+    if (onChange) {
+      onChange();
+    }
+  }, [isAmbientVolumeControlled, onAmbientVolumeChange, onChange]);
 
   const handleMusicTrackChange = useCallback((value: string) => {
     if (!isSelectionControlled) {
@@ -640,6 +701,10 @@ export function OptionsMenu({
           <span>SOUND FX</span>
           <Switch checked={resolvedSfxEnabled} onCheckedChange={handleSfxToggle} aria-label="Toggle sound effects" />
         </div>
+        <div className="options-toggle">
+          <span>AMBIENT ALERTS</span>
+          <Switch checked={resolvedAmbientEnabled} onCheckedChange={handleAmbientToggle} aria-label="Toggle ambient alerts" />
+        </div>
         <div className="options-slider">
           <div className="options-slider__label">
             <span>MUSIC GAIN</span>
@@ -653,6 +718,21 @@ export function OptionsMenu({
             onValueChange={handleMusicVolumeChange}
             disabled={!resolvedMusicEnabled}
             aria-label="Adjust music volume"
+          />
+        </div>
+        <div className="options-slider">
+          <div className="options-slider__label">
+            <span>AMBIENT GAIN</span>
+            <span>{Math.round(resolvedAmbientVolume * 100)}%</span>
+          </div>
+          <Slider
+            value={[resolvedAmbientVolume * 100]}
+            min={0}
+            max={100}
+            step={5}
+            onValueChange={handleAmbientVolumeChangeInternal}
+            disabled={!resolvedAmbientEnabled}
+            aria-label="Adjust ambient volume"
           />
         </div>
         <div className="mt-4 space-y-2">
