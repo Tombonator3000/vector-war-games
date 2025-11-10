@@ -2951,3 +2951,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Rendered map feature labels when zoom thresholds and projected sizes permit, harmonizing typography with the current map style.
 - Added Vitest coverage in `src/rendering/__tests__/worldRenderer.test.ts` to validate centroid calculations for representative geometries.
 - Ran `npm run test -- worldRenderer` to confirm helper behaviour.
+
+### 2025-11-10T08:02:19Z - Reclassify Orbital Defense Grid
+- Moved the `defense_grid` tech from the nuclear list into the space research data source, adding a dependency on `space_weapon_platform`.
+- Synced `src/lib/gameConstants.ts` so the aggregated research catalog reflects the space category and prerequisite.
+- Executed `npm run test` to verify the research panel tests still pass and general suites remain green.

@@ -111,17 +111,6 @@ export const NUCLEAR_RESEARCH: ResearchNode[] = [
       nation.researched.stealth = true;
     }
   },
-  {
-    id: 'defense_grid',
-    name: 'Orbital Defense Grid',
-    description: 'Integrate lasers and interceptors for +2 permanent defense.',
-    category: 'defense',
-    turns: 4,
-    cost: { production: 45, intel: 20 },
-    onComplete: nation => {
-      nation.defense += 2;
-    }
-  },
 ];
 
 // ==================== CYBER WARFARE TREE ====================
@@ -531,6 +520,18 @@ export const SPACE_RESEARCH: ResearchNode[] = [
       nation.researched = nation.researched || {};
       nation.researched.space_gps_warfare = true;
       nation.enemyMissileAccuracyReduction = (nation.enemyMissileAccuracyReduction || 0) + 0.20;
+    }
+  },
+  {
+    id: 'defense_grid',
+    name: 'Orbital Defense Grid',
+    description: 'Integrate lasers and interceptors for +2 permanent defense.',
+    category: 'space',
+    turns: 4,
+    cost: { production: 45, intel: 20 },
+    prerequisites: ['space_weapon_platform'],
+    onComplete: nation => {
+      nation.defense += 2;
     }
   },
 ];
