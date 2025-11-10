@@ -13418,7 +13418,7 @@ export default function NoradVector() {
         />
       ) : null}
 
-      <Dialog open={Boolean(pendingLaunch)} onOpenChange={(open) => { if (!open) resetLaunchControl(); }}>
+      <Dialog open={Boolean(pendingLaunch) && !consequencePreview} onOpenChange={(open) => { if (!open) resetLaunchControl(); }}>
         <DialogContent className="max-w-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm">
           <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
             <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider">Launch Control</DialogTitle>
@@ -13426,7 +13426,7 @@ export default function NoradVector() {
               Confirm strategic strike parameters before authorizing launch.
             </DialogDescription>
           </DialogHeader>
-          {pendingLaunch && (
+          {pendingLaunch && !consequencePreview && (
             <div className="space-y-6">
               <div className="rounded border border-cyan-500/40 bg-cyan-950/20 p-4 text-sm">
                 <div className="flex items-center justify-between">
@@ -13526,7 +13526,7 @@ export default function NoradVector() {
             </Button>
             <Button
               onClick={confirmPendingLaunch}
-              disabled={!pendingLaunch || selectedWarheadYield === null || !selectedDeliveryMethod}
+              disabled={!pendingLaunch || consequencePreview !== null || selectedWarheadYield === null || !selectedDeliveryMethod}
               className="bg-cyan-500 text-black hover:bg-cyan-400 disabled:opacity-50"
             >
               Confirm Launch
