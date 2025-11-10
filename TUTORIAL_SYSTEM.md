@@ -1,241 +1,241 @@
 # Tutorial and Database System
 
-## Oversikt
+## Overview
 
-Dette dokumentet beskriver det nye omfattende tutorial- og database-systemet for Vector War Games.
+This document describes the comprehensive tutorial and database system for Vector War Games.
 
-## Nye Funksjoner
+## New Features
 
-### 1. **Spill-database** (GameDatabase)
+### 1. **Game Database** (GameDatabase)
 
-En komplett referanse-database som dekker alle spillmekanikker og systemer.
+A complete reference database covering all game mechanics and systems.
 
-#### Funksjoner:
-- **40+ detaljerte oppføringer** som dekker alle spillsystemer
-- **14 kategorier**: Grunnleggende, Atomvåpen, Forsvar, Forskning, Diplomati, Konvensjonell Krigføring, Cyberkrigføring, Bio-krigføring, Pandemier, Styresett, Etterretning, Seiersbetingelser, Spesielle Moduser, og Strategi
-- **Søkefunksjon**: Søk etter mekanikker, våpen, eller strategier
-- **Låsesystem**: Funksjoner låses opp progressivt basert på spillets runde
-- **Kryssreferanser**: Relaterte emner lenket sammen
-- **Praktiske tips**: Strategiske tips og advarsler for hver mekanikk
+#### Features:
+- **40+ detailed entries** covering all game systems
+- **14 categories**: Basics, Nuclear Weapons, Defense, Research, Diplomacy, Conventional Warfare, Cyber Warfare, Bio Warfare, Pandemics, Governance, Intelligence, Victory Conditions, Special Modes, and Strategy
+- **Search function**: Search for mechanics, weapons, or strategies
+- **Lock system**: Features unlock progressively based on game turn
+- **Cross-references**: Related topics linked together
+- **Practical tips**: Strategic tips and warnings for each mechanic
 
-#### Innhold inkluderer:
-- Ressurssystem (Produksjon, Uran, Intel)
-- DEFCON-system og krigsberedskap
-- Atomvåpen (ICBMs, Bombefly, Stridshoder, Ubåter)
-- Forsvarssystemer (Missilforsvar, Orbital Defense, Kraftfelt)
-- Forskningssystem og teknologitre
-- Diplomatisystem (Allianser, Tillit, Favører)
-- Konvensjonell krigføring (Hærer, Flåter, Territorial kontroll)
-- Cyberkrigføring (Hacking, Sabotasje, False-flag)
-- Bio-krigføring (Plague-typer, Evolusjonstre, DNA Points)
-- Pandemisystem
-- Styresett og moral
-- Etterretning og spionasje
-- Alle 6 seiersbetingelser
-- Great Old Ones kampanje
-- Avanserte strategier
+#### Content includes:
+- Resource system (Production, Uranium, Intel)
+- DEFCON system and war readiness
+- Nuclear weapons (ICBMs, Bombers, Warheads, Submarines)
+- Defense systems (Missile Defense, Orbital Defense, Force Fields)
+- Research system and technology tree
+- Diplomacy system (Alliances, Trust, Favors)
+- Conventional warfare (Armies, Fleets, Territorial control)
+- Cyber warfare (Hacking, Sabotage, False-flag)
+- Bio warfare (Plague types, Evolution tree, DNA Points)
+- Pandemic system
+- Governance and morale
+- Intelligence and espionage
+- All 6 victory conditions
+- Great Old Ones campaign
+- Advanced strategies
 
-#### Tilgang:
-Åpne **Options-menyen** og klikk på **"Spill-database"** under "TUTORIALS & REFERENCE".
+#### Access:
+Open the **Options menu** and click on **"Game Database"** under "TUTORIALS & REFERENCE".
 
-### 2. **Komplett Tutorial** (ComprehensiveTutorial)
+### 2. **Comprehensive Tutorial** (ComprehensiveTutorial)
 
-Et interaktivt tutorial-system som guider spillere gjennom alle spillmekanikker trinn for trinn.
+An interactive tutorial system that guides players through all game mechanics step by step.
 
-#### Funksjoner:
-- **11 hovedseksjoner** med 30+ detaljerte leksjoner
-- **Progressiv læring**: Låser opp basert på spillets runde
-- **Fremdriftssporing**: Se hvilke leksjoner du har fullført
-- **Praktiske oppgaver**: Øvingsoppgaver for hver leksjon
-- **Pro-tips**: Avanserte strategier og ekspert-råd
-- **Advarsler**: Viktige ting å unngå
-- **Nøkkelpunkter**: Kortfattet oppsummering av hver leksjon
+#### Features:
+- **11 main sections** with 30+ detailed lessons
+- **Progressive learning**: Unlocks based on game turn
+- **Progress tracking**: See which lessons you have completed
+- **Practice tasks**: Exercise tasks for each lesson
+- **Pro tips**: Advanced strategies and expert advice
+- **Warnings**: Important things to avoid
+- **Key points**: Concise summary of each lesson
 
-#### Seksjoner:
+#### Sections:
 
-1. **Grunnleggende Mekanikker** (Runde 1+)
-   - Velkommen til Vector War Games
-   - Ressurssystemet
-   - DEFCON-systemet
-   - Rundestruktur og Timing
+1. **Basic Mechanics** (Turn 1+)
+   - Welcome to Vector War Games
+   - Resource System
+   - DEFCON System
+   - Turn Structure and Timing
 
-2. **Atomvåpen og Strategisk Krigføring** (Runde 1+)
+2. **Nuclear Weapons and Strategic Warfare** (Turn 1+)
    - ICBMs
-   - Strategiske Bombefly
-   - Atomstridshoder
-   - Atomubåter
+   - Strategic Bombers
+   - Nuclear Warheads
+   - Nuclear Submarines
 
-3. **Forsvarssystemer** (Runde 1+)
-   - Missilforsvar
+3. **Defense Systems** (Turn 1+)
+   - Missile Defense
    - Orbital Defense Grid
-   - Befolkningsforsvar og Bunkers
+   - Population Defense and Bunkers
 
-4. **Forskning og Teknologi** (Runde 6+)
-   - Grunnleggende Forskningsmekanikk
-   - Forskningsprioriteringer
+4. **Research and Technology** (Turn 6+)
+   - Basic Research Mechanics
+   - Research Priorities
 
-5. **Diplomati og Allianser** (Runde 1+)
-   - Grunnleggende Diplomati
-   - Allianser og Traktater
-   - Tillit og Favørsystemet
+5. **Diplomacy and Alliances** (Turn 1+)
+   - Basic Diplomacy
+   - Alliances and Treaties
+   - Trust and Favor System
 
-6. **Konvensjonell Krigføring** (Runde 11+)
-   - Introduksjon til Konvensjonell Krigføring
-   - Territorial Kontroll og Okkupasjon
+6. **Conventional Warfare** (Turn 11+)
+   - Introduction to Conventional Warfare
+   - Territorial Control and Occupation
 
-7. **Cyberkrigføring** (Runde 11+)
-   - Introduksjon til Cyber-operasjoner
+7. **Cyber Warfare** (Turn 11+)
+   - Introduction to Cyber Operations
 
-8. **Biologisk Krigføring** (Runde 26+)
-   - Introduksjon til Bio-krigføring
-   - Evolusjonstre og DNA Points
+8. **Biological Warfare** (Turn 26+)
+   - Introduction to Bio Warfare
+   - Evolution Tree and DNA Points
 
-9. **Etterretning og Spionasje** (Runde 1+)
-   - Grunnleggende Etterretning
+9. **Intelligence and Espionage** (Turn 1+)
+   - Basic Intelligence
 
-10. **Seiersbetingelser** (Runde 1+)
-    - Oversikt over Seiersbetingelser
-    - Diplomatisk Seier - Detaljert Guide
+10. **Victory Conditions** (Turn 1+)
+    - Overview of Victory Conditions
+    - Diplomatic Victory - Detailed Guide
 
-11. **Styresett og Moral** (Runde 1+)
-    - Befolkningstilfredshet og Moral
+11. **Governance and Morale** (Turn 1+)
+    - Population Satisfaction and Morale
 
-#### Tilgang:
-Åpne **Options-menyen** og klikk på **"Komplett Tutorial"** under "TUTORIALS & REFERENCE".
+#### Access:
+Open the **Options menu** and click on **"Comprehensive Tutorial"** under "TUTORIALS & REFERENCE".
 
-### 3. **Strategic Outliner & Makro-handlinger**
+### 3. **Strategic Outliner & Macro Actions**
 
-Et neon-belyst kontrollpanel som til enhver tid viser hvilke makrosystemer som trenger oppmerksomhet.
+A neon-lit control panel that shows at all times which macro systems need attention.
 
-#### Funksjoner:
-- **Grupperte seksjoner** for Produksjon & Militær, Diplomati & Styresett, samt Etterretning & Krise.
-- **Makrostatus**: tydelige indikatorer for BUILD, RESEARCH, INTEL, BIO, CULTURE og DIPLOMACY – spesielt nyttig i co-op når roller låser handlinger.
-- **Live varsler** for DEFCON, governance events, pandemier og aktive flashpoints. Kritiske kort blinker rødt.
-- **Hurtigtaster**: `O` skjuler/viser panelet, mens `Shift+O` åpner det umiddelbart og pulserer rammen for rask orientering.
-- **Konfliktlogg**: de siste konvensjonelle engagementene oppdateres fortløpende slik at du ser hvor styrker tappes.
+#### Features:
+- **Grouped sections** for Production & Military, Diplomacy & Governance, and Intelligence & Crisis.
+- **Macro status**: Clear indicators for BUILD, RESEARCH, INTEL, BIO, CULTURE and DIPLOMACY – especially useful in co-op when roles lock actions.
+- **Live alerts** for DEFCON, governance events, pandemics and active flashpoints. Critical cards flash red.
+- **Hotkeys**: `O` hides/shows the panel, while `Shift+O` opens it immediately and pulses the frame for quick orientation.
+- **Conflict log**: The latest conventional engagements update continuously so you can see where forces are being depleted.
 
-#### Tilgang:
-- Panelet er montert ved siden av `PoliticalStatusWidget` og Approval Queue på toppstangen.
-- Hurtigtastene fungerer globalt så lenge fokus ikke ligger i et tekstfelt.
+#### Access:
+- The panel is mounted next to the `PoliticalStatusWidget` and Approval Queue on the top bar.
+- The hotkeys work globally as long as focus is not in a text field.
 
-### 4. **Strategisk Ledger**
+### 4. **Strategic Ledger**
 
-Et data-drevet register i CivilizationInfoPanel som viser alle kjente nasjoner i én tabell, slik at du raskt kan sammenligne ressurser, militær styrke og diplomatiske forhold.
+A data-driven register in CivilizationInfoPanel that shows all known nations in one table, allowing you to quickly compare resources, military strength and diplomatic relations.
 
-#### Funksjoner:
-- **Filtrerbar oversikt**: Chips for Allierte, Fiender, Nøytrale og Topp 5 gir deg et øyeblikksbilde av relevante blokker.
-- **Sorterbare kolonner**: Klikk på kolonneoverskrifter for å prioritere det som betyr mest – produksjon, uran, intel eller ren militær kraft.
-- **Detaljkobling**: Et radklikk åpner det samme detaljerte etterretningskortet som Enemy Nations-fanen, uten å forlate ledgeren.
-- **Statusmerker**: Fargede badges viser tydelig hvem som er alliert, fiendtlig eller under våpenhvile.
+#### Features:
+- **Filterable overview**: Chips for Allies, Enemies, Neutrals and Top 5 give you a snapshot of relevant blocs.
+- **Sortable columns**: Click on column headers to prioritize what matters most – production, uranium, intel or pure military power.
+- **Detail linking**: A row click opens the same detailed intelligence card as the Enemy Nations tab, without leaving the ledger.
+- **Status badges**: Colored badges clearly show who is allied, hostile or under truce.
 
-#### Tilgang:
-- Åpne CivilizationInfoPanel og velg fanen **"Strategic Ledger"**.
-- Hurtigtast: `Shift+L` hopper direkte til ledger-fanen når panelet er åpent.
+#### Access:
+- Open CivilizationInfoPanel and select the **"Strategic Ledger"** tab.
+- Hotkey: `Shift+L` jumps directly to the ledger tab when the panel is open.
 
-## Integrasjon med Spillet
+## Integration with the Game
 
 ### Options Menu
-Begge systemene er integrert i Options-menyen under en ny seksjon kalt **"TUTORIALS & REFERENCE"**.
+Both systems are integrated into the Options menu under a new section called **"TUTORIALS & REFERENCE"**.
 
-- **Spill-database**: Klikk for å åpne den omfattende referanse-databasen
-- **Komplett Tutorial**: Klikk for å starte den interaktive tutorialen
+- **Game Database**: Click to open the comprehensive reference database
+- **Comprehensive Tutorial**: Click to start the interactive tutorial
 
 ### Progressive Unlocking
-Både databasen og tutorialen bruker spillets nåværende runde for å låse opp innhold progressivt:
+Both the database and tutorial use the game's current turn to unlock content progressively:
 
-- **Runde 1**: Grunnleggende systemer tilgjengelige
-- **Runde 6**: Forskningssystemer låses opp
-- **Runde 11**: Konvensjonell og cyber-krigføring
-- **Runde 26**: Bio-krigføring systemer
+- **Turn 1**: Basic systems available
+- **Turn 6**: Research systems unlock
+- **Turn 11**: Conventional and cyber warfare
+- **Turn 26**: Bio warfare systems
 
-Dette sikrer at spillere ikke overveldes av informasjon tidlig i spillet.
+This ensures that players are not overwhelmed by information early in the game.
 
-## Teknisk Implementering
+## Technical Implementation
 
-### Nye Komponenter
+### New Components
 
 1. **`src/components/GameDatabase.tsx`**
-   - Omfattende database-komponent
-   - 40+ database-oppføringer
-   - Søk- og filtreringsfunksjonalitet
-   - Responsive design med tabs og kategorier
+   - Comprehensive database component
+   - 40+ database entries
+   - Search and filtering functionality
+   - Responsive design with tabs and categories
 
 2. **`src/components/ComprehensiveTutorial.tsx`**
-   - Interaktivt tutorial-system
-   - 11 seksjoner, 30+ leksjoner
-   - Fremdriftssporing med localStorage
-   - Sidebar-navigasjon
+   - Interactive tutorial system
+   - 11 sections, 30+ lessons
+   - Progress tracking with localStorage
+   - Sidebar navigation
 
-3. **Oppdatert `src/components/OptionsMenu.tsx`**
-   - Ny "TUTORIALS & REFERENCE" seksjon
-   - Integrering av database og tutorial
-   - Sender `currentTurn` prop for feature unlocking
+3. **Updated `src/components/OptionsMenu.tsx`**
+   - New "TUTORIALS & REFERENCE" section
+   - Integration of database and tutorial
+   - Passes `currentTurn` prop for feature unlocking
 
-### UI-komponenter brukt
-- Dialog (for modaler)
-- Sheet (for sidepaneler)
-- Tabs (for kategorisering)
-- Accordion (for kollapsbare seksjoner)
-- Progress (for fremdriftsindikatorer)
-- ScrollArea (for scrollbare områder)
-- Input (for søkefunksjonalitet)
-- Button, Badge, Separator (for UI-elementer)
+### UI Components Used
+- Dialog (for modals)
+- Sheet (for side panels)
+- Tabs (for categorization)
+- Accordion (for collapsible sections)
+- Progress (for progress indicators)
+- ScrollArea (for scrollable areas)
+- Input (for search functionality)
+- Button, Badge, Separator (for UI elements)
 
-## Bruksanvisning for Spillere
+## User Guide for Players
 
-### For Nybegynnere
-1. Start spillet
-2. Åpne **Options** (⚙️ ikon)
-3. Scroll ned til **"TUTORIALS & REFERENCE"**
-4. Klikk på **"Komplett Tutorial"**
-5. Gå gjennom seksjonene i rekkefølge
+### For Beginners
+1. Start the game
+2. Open **Options** (⚙️ icon)
+3. Scroll down to **"TUTORIALS & REFERENCE"**
+4. Click on **"Comprehensive Tutorial"**
+5. Go through the sections in order
 
-### For Erfarne Spillere
-1. Åpne **Options** under spilling
-2. Klikk på **"Spill-database"**
-3. Bruk søkefunksjonen eller kategoriene for å finne spesifikk informasjon
-4. Klikk på et emne for detaljert informasjon
+### For Experienced Players
+1. Open **Options** during gameplay
+2. Click on **"Game Database"**
+3. Use the search function or categories to find specific information
+4. Click on a topic for detailed information
 
 ### Tips
-- **Database**: Perfekt som hurtigreferanse under spilling
-- **Tutorial**: Best for læring før/mellom spillsesjoner
-- **Søk**: Bruk søkefunksjonen i databasen for rask tilgang
-- **Relaterte emner**: Klikk på relaterte emner for å utforske sammenkoblede konsepter
+- **Database**: Perfect as a quick reference during gameplay
+- **Tutorial**: Best for learning before/between game sessions
+- **Search**: Use the search function in the database for quick access
+- **Related topics**: Click on related topics to explore interconnected concepts
 
-## Fremtidig Utvikling
+## Future Development
 
-Mulige forbedringer:
-- [ ] Legg til flere leksjoner for Great Old Ones kampanje
-- [ ] Video-tutorials integrert i systemet
-- [ ] Interaktive quizzer for å teste kunnskap
-- [ ] Spillerens notater/bokmerker i databasen
-- [ ] Eksport av database til PDF/Markdown
-- [ ] Flerspråklig støtte (engelsk, norsk, etc.)
-- [ ] In-game kontekstuell hjelp (hover over elementer)
-- [ ] Achievements for tutorial-fullføring
+Possible improvements:
+- [ ] Add more lessons for Great Old Ones campaign
+- [ ] Video tutorials integrated into the system
+- [ ] Interactive quizzes to test knowledge
+- [ ] Player notes/bookmarks in the database
+- [ ] Export database to PDF/Markdown
+- [ ] Multi-language support (English, Norwegian, etc.)
+- [ ] In-game contextual help (hover over elements)
+- [ ] Achievements for tutorial completion
 
-## Vedlikehold
+## Maintenance
 
-### Legge til ny database-oppføring
-1. Åpne `src/components/GameDatabase.tsx`
-2. Legg til ny oppføring i `DATABASE_ENTRIES` array
-3. Følg eksisterende struktur med nødvendige felt
-4. Legg til i riktig kategori
+### Adding a New Database Entry
+1. Open `src/components/GameDatabase.tsx`
+2. Add new entry to `DATABASE_ENTRIES` array
+3. Follow existing structure with necessary fields
+4. Add to correct category
 
-### Legge til ny tutorial-leksjon
-1. Åpne `src/components/ComprehensiveTutorial.tsx`
-2. Finn riktig seksjon i `TUTORIAL_SECTIONS` array
-3. Legg til ny leksjon i `lessons` array
-4. Inkluder alle nødvendige felt (title, content, keyPoints, etc.)
+### Adding a New Tutorial Lesson
+1. Open `src/components/ComprehensiveTutorial.tsx`
+2. Find the correct section in `TUTORIAL_SECTIONS` array
+3. Add new lesson to `lessons` array
+4. Include all necessary fields (title, content, keyPoints, etc.)
 
-## Support og Feedback
+## Support and Feedback
 
-For spørsmål, feil, eller forslag:
-- Åpne et issue på GitHub
-- Kontakt utviklingsteamet
+For questions, bugs, or suggestions:
+- Open an issue on GitHub
+- Contact the development team
 
 ---
 
-**Versjon**: 1.0
-**Sist oppdatert**: 2025-11-02
-**Forfatter**: Claude AI via Vector War Games Development Team
+**Version**: 1.0
+**Last Updated**: 2025-11-02
+**Author**: Claude AI via Vector War Games Development Team

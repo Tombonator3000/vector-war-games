@@ -1,8 +1,8 @@
 /**
  * ComprehensiveTutorial Component
  *
- * Detaljert, interaktiv tutorial-system som dekker alle spillmekanikker.
- * Progressiv læring med praktiske eksempler og øvingsoppgaver.
+ * Detailed, interactive tutorial system covering all game mechanics.
+ * Progressive learning with practical examples and practice tasks.
  */
 
 import { useState } from 'react';
@@ -42,114 +42,114 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   // SECTION 1: BASICS
   {
     id: 'basics',
-    title: 'Grunnleggende Mekanikker',
+    title: 'Basic Mechanics',
     icon: <Target className="h-5 w-5" />,
-    description: 'Lær grunnleggende spillmekanikker og kontroller',
+    description: 'Learn basic game mechanics and controls',
     unlockTurn: 1,
     lessons: [
       {
         id: 'welcome',
-        title: 'Velkommen til Vector War Games',
-        content: 'Du er kommandør for en supermakt i den kalde krigens atomtidsalder. Ditt mål er å overleve og dominere gjennom militær makt, diplomati, eller økonomisk styrke. Spillet foregår i runder hvor du og AI-motstandere tar handlinger, etterfulgt av oppgjør og ressursproduksjon.',
+        title: 'Welcome to Vector War Games',
+        content: 'You are the commander of a superpower in the nuclear age of the Cold War. Your goal is to survive and dominate through military might, diplomacy, or economic strength. The game proceeds in turns where you and AI opponents take actions, followed by resolution and resource production.',
         keyPoints: [
-          'Hver runde består av: Spiller-fase → AI-fase → Oppgjør → Produksjon',
-          'Du har begrenset antall handlinger per runde',
-          'Planlegg nøye - AI-motstandere reagerer på dine handlinger',
-          'Spillet har progressive faser med nye funksjoner som låses opp'
+          'Each turn consists of: Player phase → AI phase → Resolution → Production',
+          'You have a limited number of actions per turn',
+          'Plan carefully - AI opponents react to your actions',
+          'The game has progressive phases with new features that unlock'
         ],
-        practiceTask: 'Gjennomfør din første runde ved å observere UI og tilgjengelige knapper',
+        practiceTask: 'Complete your first turn by observing the UI and available buttons',
         proTips: [
-          'Lagre ofte - spillet kan være uforutsigbart',
-          'Bruk pause-funksjonen (ESC) for å planlegge',
-          'Les alle meldinger nøye - de gir viktig informasjon'
+          'Save often - the game can be unpredictable',
+          'Use the pause function (ESC) to plan',
+          'Read all messages carefully - they provide important information'
         ]
       },
       {
         id: 'resources',
-        title: 'Ressurssystemet',
-        content: 'Tre hovedressurser driver din nasjon: Produksjon (gul), Uran (grønn), og Intel (blå). Hver ressurs har spesifikke bruksområder og regenereres hver runde.',
+        title: 'Resource System',
+        content: 'Three main resources drive your nation: Production (yellow), Uranium (green), and Intel (blue). Each resource has specific uses and regenerates each turn.',
         keyPoints: [
-          'PRODUKSJON: Bygg raketter, bombefly, forsvar og konvensjonelle styrker',
-          'URAN: Nødvendig for å skape atomstridshoder (10MT til 200MT)',
-          'INTEL: Forskning, spionasje, satellitter og cyber-operasjoner',
-          'Ressurser akkumuleres hvis de ikke brukes',
-          'Produksjonsrate avhenger av nasjonens kapasitet og hendelser'
+          'PRODUCTION: Build missiles, bombers, defenses, and conventional forces',
+          'URANIUM: Required to create nuclear warheads (10MT to 200MT)',
+          'INTEL: Research, espionage, satellites, and cyber operations',
+          'Resources accumulate if not used',
+          'Production rate depends on nation capacity and events'
         ],
-        practiceTask: 'Observer ressurspanelet øverst i skjermen. Prøv å bruke noen ressurser og se hvordan de regenereres neste runde.',
+        practiceTask: 'Observe the resource panel at the top of the screen. Try using some resources and see how they regenerate next turn.',
         warningTips: [
-          'Ikke bruk ALT på én ressurs - balanser bruken',
-          'Visse hendelser kan redusere ressursproduksjon',
-          'Atomic-angrep kan ødelegge produksjonskapasitet'
+          'Don\'t spend ALL on one resource - balance usage',
+          'Certain events can reduce resource production',
+          'Nuclear attacks can destroy production capacity'
         ],
         proTips: [
-          'Spar ressurser for nødsituasjoner',
-          'Counterintelligence-forskning øker Intel-produksjon',
-          'Erobrede byer øker Produksjon'
+          'Save resources for emergencies',
+          'Counterintelligence research increases Intel production',
+          'Captured cities increase Production'
         ]
       },
       {
         id: 'defcon',
-        title: 'DEFCON-systemet',
-        content: 'DEFCON (Defense Condition) måler krigsberedskap fra 5 (fred) til 1 (nukleær krig). Dette systemet påvirker hvilke våpen du kan deployere og hvordan andre nasjoner reagerer.',
+        title: 'DEFCON System',
+        content: 'DEFCON (Defense Condition) measures war readiness from 5 (peace) to 1 (nuclear war). This system affects which weapons you can deploy and how other nations react.',
         keyPoints: [
-          'DEFCON 5: Fred - normal produksjon, full diplomati mulig',
-          'DEFCON 4: Økt beredskap - overvåking og spionasje aktivert',
-          'DEFCON 3: Høy beredskap - diplomatiske straffer begynner',
-          'DEFCON 2: Krigstilstand nær - strategiske våpen låses opp',
-          'DEFCON 1: Nukleær krig - alle våpen tilgjengelige, diplomati umulig'
+          'DEFCON 5: Peace - normal production, full diplomacy available',
+          'DEFCON 4: Increased readiness - surveillance and espionage activated',
+          'DEFCON 3: High alert - diplomatic penalties begin',
+          'DEFCON 2: War imminent - strategic weapons unlocked',
+          'DEFCON 1: Nuclear war - all weapons available, diplomacy impossible'
         ],
-        practiceTask: 'Observer DEFCON-indikatoren. Merk hvordan den endres basert på handlinger.',
+        practiceTask: 'Observe the DEFCON indicator. Note how it changes based on actions.',
         warningTips: [
-          'Lavere DEFCON = dårligere relasjoner med andre nasjoner',
-          'Diplomatisk seier krever DEFCON ≥4 i 4+ runder',
-          'DEFCON 1 betyr total krig - forvent massive tap'
+          'Lower DEFCON = worse relations with other nations',
+          'Diplomatic victory requires DEFCON ≥4 for 4+ turns',
+          'DEFCON 1 means total war - expect massive casualties'
         ],
         proTips: [
-          'Overvåk andre nasjoners DEFCON-nivå',
-          'Bruk diplomati for å heve DEFCON',
-          'DEFCON 2 kreves for å deployere tyngste våpen'
+          'Monitor other nations\' DEFCON levels',
+          'Use diplomacy to raise DEFCON',
+          'DEFCON 2 required to deploy heaviest weapons'
         ]
       },
       {
         id: 'turn-structure',
-        title: 'Rundestruktur og Timing',
-        content: 'Forstå hvordan hver runde fungerer er kritisk for suksess. Timing av handlinger og forståelse av sekvensen gir deg strategisk fordel.',
+        title: 'Turn Structure and Timing',
+        content: 'Understanding how each turn works is critical for success. Timing of actions and understanding the sequence gives you strategic advantage.',
         keyPoints: [
-          'SPILLER-FASE: Ta dine handlinger (bygg, angrip, forsk, diplomat)',
-          'AI-FASE: AI-nasjoner tar sine handlinger',
-          'OPPGJØR: Angrep løses, skader beregnes, effekter anvendes',
-          'PRODUKSJON: Ressurser regenereres, effekter avtar'
+          'PLAYER PHASE: Take your actions (build, attack, research, diplomacy)',
+          'AI PHASE: AI nations take their actions',
+          'RESOLUTION: Attacks resolve, damage calculated, effects applied',
+          'PRODUCTION: Resources regenerate, effects decay'
         ],
-        practiceTask: 'Observer nøye hver fase i én fullstendig runde. Merk timing og sekvens.',
+        practiceTask: 'Carefully observe each phase in one complete turn. Note timing and sequence.',
         warningTips: [
-          'AI kan reagere på dine handlinger i samme runde',
-          'Visse handlinger tar flere runder å fullføre',
-          'Planlegg alltid minst 3-5 runder frem'
+          'AI can react to your actions in the same turn',
+          'Certain actions take multiple turns to complete',
+          'Always plan at least 3-5 turns ahead'
         ],
         proTips: [
-          'Bruk "END TURN" kun når du er helt sikker',
-          'Sjekk alle systemer før du bekrefter',
-          'Koordiner flere handlinger for maksimal effekt'
+          'Use "END TURN" only when you\'re completely sure',
+          'Check all systems before confirming',
+          'Coordinate multiple actions for maximum effect'
         ]
       },
       {
         id: 'map-modes',
-        title: 'Kartmodus & Operasjonelle Overlays',
-        content: 'MapModeBar under topplinjen lar deg bytte mellom strategiske kartlag: Standard, Diplomatisk, Etterretning, Ressurser og Uro. Hver modus kombinerer samme estetiske kartstil med ulike datasett, slik at du kan analysere verden fra flere vinkler uten å åpne ekstra paneler.',
+        title: 'Map Modes & Operational Overlays',
+        content: 'The MapModeBar under the top bar lets you switch between strategic map layers: Standard, Diplomatic, Intelligence, Resources, and Unrest. Each mode combines the same aesthetic map style with different data sets, allowing you to analyze the world from multiple angles without opening extra panels.',
         keyPoints: [
-          'Alt + 1–5 bytter direkte mellom kartmoduser (Standard, Diplomatisk, Etterretning, Ressurser, Uro)',
-          'Diplomatisk modus fargekoder nasjoner etter relasjon til din regjering; Etterretning viser overvåkings- og rekognoseringsnivå',
-          'Uro-modusen aktiverer Political Stability Overlay med morale, opinion og instabilitet fra governance-systemet',
-          'Kartmodus er uavhengig av visuell stil – du kan vise ressursmodusen i både Realistisk og Natt-stil uten å miste data'
+          'Alt + 1–5 switches directly between map modes (Standard, Diplomatic, Intelligence, Resources, Unrest)',
+          'Diplomatic mode color-codes nations by relation to your government; Intelligence shows surveillance and reconnaissance levels',
+          'Unrest mode activates Political Stability Overlay with morale, opinion, and instability from the governance system',
+          'Map mode is independent of visual style – you can display resource mode in both Realistic and Night styles without losing data'
         ],
-        practiceTask: 'Hold Alt og trykk 1-5 i rekkefølge for å skanne alle moduser. Noter hvordan diplomati-, intel- og governanceverdier endres på kartet.',
+        practiceTask: 'Hold Alt and press 1-5 in sequence to scan all modes. Note how diplomacy, intel, and governance values change on the map.',
         warningTips: [
-          'Diplomatisk modus baserer seg på sist kjente relasjonsdata – bruk etterretning for å holde informasjonen fersk',
-          'Etterretningsoverlegget avslører bare områder du faktisk har dekning på; svarte soner krever satellitter eller spionasje'
+          'Diplomatic mode is based on last-known relations data – use intelligence to keep information fresh',
+          'Intelligence overlay only reveals areas you actually have coverage on; black zones require satellites or espionage'
         ],
         proTips: [
-          'Kombiner Ressurser-modusen med nattstilen for å se bylys mot industriklynger',
-          'Bruk Uro-modusen etter governance-beslutninger for å bekrefte at morale og opinion beveger seg riktig vei'
+          'Combine Resource mode with night style to see city lights against industrial clusters',
+          'Use Unrest mode after governance decisions to confirm morale and opinion are moving in the right direction'
         ]
       }
     ]
@@ -158,102 +158,102 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   // SECTION 2: NUCLEAR WARFARE
   {
     id: 'nuclear',
-    title: 'Atomvåpen og Strategisk Krigføring',
+    title: 'Nuclear Weapons and Strategic Warfare',
     icon: <Skull className="h-5 w-5" />,
-    description: 'Lær om ICBMs, bombefly, stridshoder og nukleær strategi',
+    description: 'Learn about ICBMs, bombers, warheads, and nuclear strategy',
     unlockTurn: 1,
     lessons: [
       {
         id: 'icbms',
-        title: 'ICBMs - Interkontinentale Ballistiske Missiler',
-        content: 'ICBMs er dine primære angrepsvåpen. De kan nå ethvert mål på jorden og leverer atomstridshoder med enorm kraft.',
+        title: 'ICBMs - Intercontinental Ballistic Missiles',
+        content: 'ICBMs are your primary attack weapons. They can reach any target on Earth and deliver nuclear warheads with enormous force.',
         keyPoints: [
-          'Kostnad: 30 Produksjon + Uran (avhengig av stridshode)',
-          'Rekkevidde: Global - kan nå ethvert mål',
-          'Hastighet: Rask - treffer samme runde',
-          'Kan avskjæres: Fiendens missilforsvar kan stoppe raketter',
-          'Stridshoder: 10MT, 20MT, 50MT, 100MT, 200MT (krever forskning)'
+          'Cost: 30 Production + Uranium (depending on warhead)',
+          'Range: Global - can reach any target',
+          'Speed: Fast - hits same turn',
+          'Can be intercepted: Enemy missile defense can stop missiles',
+          'Warheads: 10MT, 20MT, 50MT, 100MT, 200MT (requires research)'
         ],
-        practiceTask: 'Bygg din første ICBM med et 10MT stridshode. Observer kostnadene og deployment-prosessen.',
+        practiceTask: 'Build your first ICBM with a 10MT warhead. Observe costs and deployment process.',
         warningTips: [
-          'ICBMs kan IKKE kalles tilbake etter avfyring',
-          'Forvent gjengjeldelse - bygg forsvar først',
-          'Større stridshoder = mer Uran-kostnad',
-          'Missilforsvar kan stoppe 70-90% av angrep'
+          'ICBMs CANNOT be recalled after launch',
+          'Expect retaliation - build defenses first',
+          'Larger warheads = more Uranium cost',
+          'Missile defense can stop 70-90% of attacks'
         ],
         proTips: [
-          'Koordiner flere ICBMs for å overvelde forsvar',
-          'Target fiendtlige baser for å redusere gjengjeldelsesevne',
-          '200MT "Planet Cracker" kan ødelegge flere mål'
+          'Coordinate multiple ICBMs to overwhelm defenses',
+          'Target enemy bases to reduce retaliation capability',
+          '200MT "Planet Cracker" can destroy multiple targets'
         ]
       },
       {
         id: 'bombers',
-        title: 'Strategiske Bombefly',
-        content: 'Bombefly er saktere enn raketter men tilbyr fleksibilitet - de kan kalles tilbake og gjenbrukes.',
+        title: 'Strategic Bombers',
+        content: 'Bombers are slower than missiles but offer flexibility - they can be recalled and reused.',
         keyPoints: [
-          'Kostnad: 40 Produksjon + Uran for stridshode',
-          'Hastighet: Sakte - 2-3 runder til mål',
-          'Kan kalles tilbake: Før målet er nådd',
-          'Gjenbrukbare: Hvis de overlever kan de returnere og gjenbrukes',
-          'Kan avskjæres: Av luftforsvar og jagerfly'
+          'Cost: 40 Production + Uranium for warhead',
+          'Speed: Slow - 2-3 turns to target',
+          'Can be recalled: Before target is reached',
+          'Reusable: If they survive they can return and be reused',
+          'Can be intercepted: By air defense and fighters'
         ],
-        practiceTask: 'Deploy ett bombefly. Observer hvordan det beveger seg mot målet over flere runder.',
+        practiceTask: 'Deploy one bomber. Observe how it moves toward the target over multiple turns.',
         warningTips: [
-          'Tar flere runder å nå mål - fienden kan forberede seg',
-          'Luftforsvar kan skyte ned bombefly',
-          'Må returnere til base for å gjenbrukes'
+          'Takes multiple turns to reach target - enemy can prepare',
+          'Air defense can shoot down bombers',
+          'Must return to base to be reused'
         ],
         proTips: [
-          'Bruk bombefly for diplomatiske situasjoner hvor du kan kalle dem tilbake',
-          'Koordiner med rakett-angrep for å overvelde forsvar',
-          'Bombefly kan bære de tyngste stridshoder'
+          'Use bombers for diplomatic situations where you can recall them',
+          'Coordinate with missile attacks to overwhelm defenses',
+          'Bombers can carry the heaviest warheads'
         ]
       },
       {
         id: 'warheads',
-        title: 'Atomstridshoder og Ødeleggelseskraft',
-        content: 'Stridshoder bestemmer ødeleggelseskraften til dine våpen. Fra 10MT grunnstridshoder til 200MT "Planet Crackers".',
+        title: 'Nuclear Warheads and Destructive Power',
+        content: 'Warheads determine the destructive power of your weapons. From 10MT basic warheads to 200MT "Planet Crackers".',
         keyPoints: [
-          '10MT: 5 Uran - Grunnleggende, tilgjengelig fra start',
-          '20MT: 10 Uran - Dobbel kraft, moderat kostnad',
-          '50MT: 25 Uran - Kraftig, krever forskning',
-          '100MT: 50 Uran - Strategisk, krever avansert forskning',
-          '200MT: 100 Uran - "Planet Cracker", kan ødelegge flere mål'
+          '10MT: 5 Uranium - Basic, available from start',
+          '20MT: 10 Uranium - Double power, moderate cost',
+          '50MT: 25 Uranium - Powerful, requires research',
+          '100MT: 50 Uranium - Strategic, requires advanced research',
+          '200MT: 100 Uranium - "Planet Cracker", can destroy multiple targets'
         ],
-        practiceTask: 'Sammenlign kostnader for ulike stridshoder. Planlegg hvilke du vil bruke tidlig vs sent i spillet.',
+        practiceTask: 'Compare costs for different warheads. Plan which ones to use early vs late in the game.',
         warningTips: [
-          'Større stridshoder bruker MYE mer Uran',
-          '200MT krever omfattende forskning',
-          'Overdriven kraft kan være bortkastet på små mål'
+          'Larger warheads use MUCH more Uranium',
+          '200MT requires extensive research',
+          'Excessive power can be wasted on small targets'
         ],
         proTips: [
-          'Start med 10-20MT for kostnadseffektivitet',
-          'Forsk frem 50MT rundt midten av spillet',
-          '200MT er beste for å eliminere flere trusler samtidig'
+          'Start with 10-20MT for cost-effectiveness',
+          'Research 50MT around mid-game',
+          '200MT is best for eliminating multiple threats simultaneously'
         ]
       },
       {
         id: 'submarines',
-        title: 'Atomubåter - Skjulte Andregangs-angrep',
-        content: 'Ubåter gir en skjult andregangs-angrepskapasitet. De er vanskeligere å oppdage og avskjære.',
+        title: 'Nuclear Submarines - Hidden Second-Strike',
+        content: 'Submarines provide a hidden second-strike capability. They are harder to detect and intercept.',
         keyPoints: [
-          'Kostnad: 60 Produksjon + Uran for stridshoder',
-          'Deteksjonssjanse: Kun 30% (vs 90% for ICBMs)',
-          'Avskjæringsrate: Betydelig redusert',
-          'Kan bære multiple stridshoder',
-          'Låses opp: Krever forskning (tilgjengelig rundt tur 15)'
+          'Cost: 60 Production + Uranium for warheads',
+          'Detection chance: Only 30% (vs 90% for ICBMs)',
+          'Interception rate: Significantly reduced',
+          'Can carry multiple warheads',
+          'Unlocked: Requires research (available around turn 15)'
         ],
-        practiceTask: 'Når tilgjengelig, bygg en atomubåt og sammenlign dens evner med ICBMs.',
+        practiceTask: 'When available, build a nuclear submarine and compare its capabilities with ICBMs.',
         warningTips: [
-          'Dyrere enn ICBMs',
-          'Krever forskning for å låse opp',
-          'Kan fortsatt oppdages og avskjæres (bare mindre sjanse)'
+          'More expensive than ICBMs',
+          'Requires research to unlock',
+          'Can still be detected and intercepted (just lower chance)'
         ],
         proTips: [
-          'Ubåter er beste forsikring mot første-angrep',
-          'Kombiner med landbaserte systemer for total avskrekking',
-          'Invester i ubåter for overlevelsesstrategier'
+          'Submarines are best insurance against first-strike',
+          'Combine with land-based systems for total deterrence',
+          'Invest in submarines for survival strategies'
         ]
       }
     ]
@@ -262,77 +262,77 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   // SECTION 3: DEFENSE SYSTEMS
   {
     id: 'defense',
-    title: 'Forsvarssystemer',
+    title: 'Defense Systems',
     icon: <Shield className="h-5 w-5" />,
-    description: 'Lær om missilforsvar, Orbital Defense og overlevelse',
+    description: 'Learn about missile defense, Orbital Defense, and survival',
     unlockTurn: 1,
     lessons: [
       {
         id: 'missile-defense',
-        title: 'Missilforsvar',
-        content: 'Missilforsvar er kritisk for overlevelse. Hvert system kan avskjære ett innkommende angrep.',
+        title: 'Missile Defense',
+        content: 'Missile defense is critical for survival. Each system can intercept one incoming attack.',
         keyPoints: [
-          'Kostnad: 25 Produksjon per enhet',
-          'Avskjæringsrate: 70-90% avhengig av teknologi',
-          'Forbrukes ved bruk: Må bygges på nytt etter avskjæring',
-          'Avskjærer både raketter og bombefly',
-          'Kan forbedres gjennom forskning'
+          'Cost: 25 Production per unit',
+          'Interception rate: 70-90% depending on technology',
+          'Consumed when used: Must be rebuilt after interception',
+          'Intercepts both missiles and bombers',
+          'Can be improved through research'
         ],
-        practiceTask: 'Bygg 3-5 misselforsvarssystemer. Beregn hvor mange du trenger for å overleve et angrep.',
+        practiceTask: 'Build 3-5 missile defense systems. Calculate how many you need to survive an attack.',
         warningTips: [
-          'Forsvar forbrukes når de avskjærer angrep',
-          'Ikke 100% pålitelige - bygg ekstra',
-          'Massive angrep kan overvelde forsvar'
+          'Defenses are consumed when they intercept attacks',
+          'Not 100% reliable - build extras',
+          'Massive attacks can overwhelm defenses'
         ],
         proTips: [
-          'Bygg forsvar TIDLIG - du vil bli angrepet',
-          'Beregn: (antall fiendtlige våpen × 1.5) = forsvar du trenger',
-          'Kombiner med Orbital Defense for best beskyttelse'
+          'Build defenses EARLY - you will be attacked',
+          'Calculate: (number of enemy weapons × 1.5) = defenses you need',
+          'Combine with Orbital Defense for best protection'
         ]
       },
       {
         id: 'orbital-defense',
         title: 'Orbital Defense Grid',
-        content: 'Det ultimate forsvarssystemet. Satellitt-basert, permanent beskyttelse som ikke forbrukes.',
+        content: 'The ultimate defense system. Satellite-based, permanent protection that is not consumed.',
         keyPoints: [
-          'Kostnad: 200 Produksjon + 100 Intel (engangs)',
-          'Avskjæringsrate: 85% permanent',
-          'Forbrukes IKKE ved bruk',
-          'Beskytter mot alle typer angrep',
-          'Krever avansert forskning (tilgjengelig rundt tur 20)'
+          'Cost: 200 Production + 100 Intel (one-time)',
+          'Interception rate: 85% permanent',
+          'NOT consumed when used',
+          'Protects against all types of attacks',
+          'Requires advanced research (available around turn 20)'
         ],
-        practiceTask: 'Planlegg når du skal investere i Orbital Defense. Regn ut payback-perioden.',
+        practiceTask: 'Plan when to invest in Orbital Defense. Calculate the payback period.',
         warningTips: [
-          'Meget dyr - krever langsiktig planlegging',
-          'Krever omfattende forskning først',
-          'Ikke 100% - kombiner med annet forsvar'
+          'Very expensive - requires long-term planning',
+          'Requires extensive research first',
+          'Not 100% - combine with other defenses'
         ],
         proTips: [
-          'Prioriter denne forskningen i midten av spillet',
-          'Investeringen lønner seg etter 3-5 runder',
-          'Kombinér med konvensjonelt forsvar for nær-uovervinnelighet'
+          'Prioritize this research in mid-game',
+          'Investment pays off after 3-5 turns',
+          'Combine with conventional defense for near-invincibility'
         ]
       },
       {
         id: 'bunkers',
-        title: 'Befolkningsforsvar og Bunkers',
-        content: 'Beskytt din sivilbefolkning mot atomeksplosjoner og radiasjon.',
+        title: 'Population Defense and Bunkers',
+        content: 'Protect your civilian population from nuclear explosions and radiation.',
         keyPoints: [
-          'Bunkerbygging: Reduserer sivilbefolkning-tap',
-          'Evakueringsplaner: Gir ekstra tid ved angrep',
-          'Forurensningskontroll: Reduserer langtidseffekter',
-          'Medisinsk beredskap: Behandler strålingsofre'
+          'Bunker construction: Reduces civilian casualties',
+          'Evacuation plans: Provides extra time during attacks',
+          'Pollution control: Reduces long-term effects',
+          'Medical preparedness: Treats radiation victims'
         ],
-        practiceTask: 'Observer befolkningspanelet. Planlegg beskyttelsestiltak.',
+        practiceTask: 'Observe the population panel. Plan protection measures.',
         warningTips: [
-          'Befolkningstap kan føre til regime-skifte',
-          '50M befolkning kreves for overlevelsesseier',
-          'Radiasjon har langtidseffekter'
+          'Population losses can lead to regime change',
+          '50M population required for survival victory',
+          'Radiation has long-term effects'
         ],
         proTips: [
-          'Bygg bunkers tidlig i spillet',
-          'Evakueringsplaner må være på plass før krig',
-          'Kombinér med medisinsk forskning'
+          'Build bunkers early in the game',
+          'Evacuation plans must be in place before war',
+          'Combine with medical research'
         ]
       }
     ]
@@ -341,55 +341,55 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   // SECTION 4: RESEARCH & TECHNOLOGY
   {
     id: 'research',
-    title: 'Forskning og Teknologi',
+    title: 'Research and Technology',
     icon: <Radio className="h-5 w-5" />,
-    description: 'Lær å forske frem avanserte våpen og teknologier',
+    description: 'Learn to research advanced weapons and technologies',
     unlockTurn: 6,
     lessons: [
       {
         id: 'research-basics',
-        title: 'Grunnleggende Forskningsmekanikk',
-        content: 'Forskning bruker Intel-ressurser over flere runder for å låse opp nye teknologier.',
+        title: 'Basic Research Mechanics',
+        content: 'Research uses Intel resources over multiple turns to unlock new technologies.',
         keyPoints: [
-          'Klikk på RESEARCH-knappen for å åpne forskningsmenyen',
-          'Hver teknologi koster Intel og tar flere runder',
-          'Kun én forskning om gangen',
-          'Noen teknologier krever forutgående forskning',
-          'Forskning kan ikke avbrytes når startet'
+          'Click the RESEARCH button to open the research menu',
+          'Each technology costs Intel and takes multiple turns',
+          'Only one research at a time',
+          'Some technologies require prerequisite research',
+          'Research cannot be canceled once started'
         ],
-        practiceTask: 'Åpne Research-menyen. Utforsk tech-tree og planlegg din forskningsvei.',
+        practiceTask: 'Open the Research menu. Explore the tech tree and plan your research path.',
         warningTips: [
-          'Forskning binder opp Intel-ressurser',
-          'Planlegg nøye - du kan ikke avbryte',
-          'Noen teknologier tar 6-8 runder'
+          'Research ties up Intel resources',
+          'Plan carefully - you cannot cancel',
+          'Some technologies take 6-8 turns'
         ],
         proTips: [
-          'Planlegg hele forskningsveien fra start',
-          'Prioriter basert på din strategi',
-          'Counterintelligence tidlig øker Intel-produksjon'
+          'Plan entire research path from the start',
+          'Prioritize based on your strategy',
+          'Counterintelligence early increases Intel production'
         ]
       },
       {
         id: 'research-priority',
-        title: 'Forskningsprioriteringer',
-        content: 'Velg forskning basert på din strategi og motstanders trusler.',
+        title: 'Research Priorities',
+        content: 'Choose research based on your strategy and opponent threats.',
         keyPoints: [
-          'Offensiv strategi: 50MT → 100MT → 200MT stridshoder',
-          'Defensiv strategi: Missile Defense → Orbital Defense',
-          'Økonomisk strategi: Produksjonsforbedringer → Handelsteknologi',
-          'Diplomatisk strategi: Propaganda → Kulturell innflytelse',
-          'Balansert: Kombiner forsvar og angrep'
+          'Offensive strategy: 50MT → 100MT → 200MT warheads',
+          'Defensive strategy: Missile Defense → Orbital Defense',
+          'Economic strategy: Production improvements → Trade technology',
+          'Diplomatic strategy: Propaganda → Cultural influence',
+          'Balanced: Combine defense and offense'
         ],
-        practiceTask: 'Velg din strategi og planlegg de første 5 forskningene.',
+        practiceTask: 'Choose your strategy and plan the first 5 researches.',
         warningTips: [
-          'Ikke forsøm forsvar selv med offensiv strategi',
-          'Visse teknologier krever andre først',
-          'Fiender vil forske også - hold tritt'
+          'Don\'t neglect defense even with offensive strategy',
+          'Certain technologies require others first',
+          'Enemies will research too - keep pace'
         ],
         proTips: [
-          '50MT rundt tur 6-8 er god timing',
-          'Orbital Defense rundt tur 20 er kritisk',
-          'Counterintelligence først øker total Intel'
+          '50MT around turn 6-8 is good timing',
+          'Orbital Defense around turn 20 is critical',
+          'Counterintelligence first increases total Intel'
         ]
       }
     ]
@@ -398,78 +398,78 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   // SECTION 5: DIPLOMACY
   {
     id: 'diplomacy',
-    title: 'Diplomati og Allianser',
+    title: 'Diplomacy and Alliances',
     icon: <Users className="h-5 w-5" />,
-    description: 'Lær å forme allianser og bruke diplomati effektivt',
+    description: 'Learn to form alliances and use diplomacy effectively',
     unlockTurn: 1,
     lessons: [
       {
         id: 'diplomacy-basics',
-        title: 'Grunnleggende Diplomati',
-        content: 'Diplomati lar deg forhandle med andre nasjoner uten å ty til våpen.',
+        title: 'Basic Diplomacy',
+        content: 'Diplomacy allows you to negotiate with other nations without resorting to weapons.',
         keyPoints: [
-          'Åpne Diplomacy-menyen for å se relasjoner',
-          'Hver nasjon har et forhold til deg (-100 til +100)',
-          'Positive handlinger øker relasjoner',
-          'Negative handlinger (angrep, trusler) reduserer relasjoner',
-          'Visse handlinger krever minimum relasjonsnivå'
+          'Open the Diplomacy menu to view relations',
+          'Each nation has a relationship with you (-100 to +100)',
+          'Positive actions increase relations',
+          'Negative actions (attacks, threats) reduce relations',
+          'Certain actions require minimum relationship level'
         ],
-        practiceTask: 'Åpne Diplomacy-menyen. Observer relasjoner og tilgjengelige handlinger.',
+        practiceTask: 'Open the Diplomacy menu. Observe relations and available actions.',
         warningTips: [
-          'Brudd på avtaler straffer relasjoner kraftig (-50)',
-          'Lavt DEFCON gjør diplomati vanskeligere',
-          'AI husker dine handlinger permanent'
+          'Breaking agreements severely penalizes relations (-50)',
+          'Low DEFCON makes diplomacy harder',
+          'AI remembers your actions permanently'
         ],
         proTips: [
-          'Bygg relasjoner tidlig, før du trenger dem',
-          'Small favors (små favører) bygger tillit over tid',
-          'Overvåk relasjoner mellom andre nasjoner'
+          'Build relations early, before you need them',
+          'Small favors build trust over time',
+          'Monitor relations between other nations'
         ]
       },
       {
         id: 'alliances',
-        title: 'Allianser og Traktater',
-        content: 'Form allianser for gjensidig beskyttelse og samarbeid.',
+        title: 'Alliances and Treaties',
+        content: 'Form alliances for mutual protection and cooperation.',
         keyPoints: [
-          'Militær allianse: Gjensidig forsvar mot angrep',
-          'Økonomisk allianse: Ressursdeling og handelsbonuser',
-          'Forskningsallianse: Delt teknologiutvikling',
-          'Allierte forsvarer hverandre automatisk',
-          'Diplomatisk seier krever 60% av nasjoner i allianser'
+          'Military alliance: Mutual defense against attacks',
+          'Economic alliance: Resource sharing and trade bonuses',
+          'Research alliance: Shared technology development',
+          'Allies defend each other automatically',
+          'Diplomatic victory requires 60% of nations in alliances'
         ],
-        practiceTask: 'Form din første allianse med en nøytral eller vennlig nasjon.',
+        practiceTask: 'Form your first alliance with a neutral or friendly nation.',
         warningTips: [
-          'Brudd på allianse = massive relasjonstraff',
-          'Allierte kan dra deg inn i kriger',
-          'Overvåk alliertes handlinger'
+          'Breaking alliance = massive relations penalty',
+          'Allies can drag you into wars',
+          'Monitor allies\' actions'
         ],
         proTips: [
-          'Form allianser med nasjoner nær dine fiender',
-          'Spesialiserte allianser gir unike bonuser',
-          'Tre sterke allianser bedre enn fem svake'
+          'Form alliances with nations near your enemies',
+          'Specialized alliances provide unique bonuses',
+          'Three strong alliances better than five weak ones'
         ]
       },
       {
         id: 'trust-favors',
-        title: 'Tillit og Favørsystemet',
-        content: 'Relasjoner styres av tillit (0-100) og favører (gjeld/kreditt).',
+        title: 'Trust and Favor System',
+        content: 'Relations are governed by trust (0-100) and favors (debt/credit).',
         keyPoints: [
-          'Tillit: 0-100 skala, påvirker diplomati-suksessrate',
-          'Favører: Gjeld/kreditt-system mellom nasjoner',
-          'Be om favør: Få ressurser eller hjelp (øker gjeld)',
-          'Innfri favør: Hjelp alliert (øker tillit)',
-          'Høy tillit = lettere forhandlinger'
+          'Trust: 0-100 scale, affects diplomacy success rate',
+          'Favors: Debt/credit system between nations',
+          'Request favor: Get resources or help (increases debt)',
+          'Fulfill favor: Help ally (increases trust)',
+          'High trust = easier negotiations'
         ],
-        practiceTask: 'Observer Trust & Favors-panelet. Identifiser hvem som stoler på deg.',
+        practiceTask: 'Observe the Trust & Favors panel. Identify who trusts you.',
         warningTips: [
-          'Ikke be om for mange favører - det reduserer tillit',
-          'Innfri favører raskt for å bygge gode relasjoner',
-          'Brudd på favøravtaler ødelegger relasjoner'
+          'Don\'t request too many favors - it reduces trust',
+          'Fulfill favors quickly to build good relations',
+          'Breaking favor agreements destroys relations'
         ],
         proTips: [
-          'Gjør små favører tidlig for å bygge tillit',
-          'Høy tillit gir bedre handelsbetingelser',
-          'Bruk favørsystemet for å isolere fiender'
+          'Do small favors early to build trust',
+          'High trust gives better trade terms',
+          'Use favor system to isolate enemies'
         ]
       }
     ]
@@ -478,55 +478,55 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   // SECTION 6: CONVENTIONAL WARFARE
   {
     id: 'conventional',
-    title: 'Konvensjonell Krigføring',
+    title: 'Conventional Warfare',
     icon: <Sword className="h-5 w-5" />,
-    description: 'Lær om hærer, flåter og territorial erobring',
+    description: 'Learn about armies, navies, and territorial conquest',
     unlockTurn: 11,
     lessons: [
       {
         id: 'conventional-basics',
-        title: 'Introduksjon til Konvensjonell Krigføring',
-        content: 'Fra tur 11 kan du bygge konvensjonelle styrker for å erobre territorier uten atomvåpen.',
+        title: 'Introduction to Conventional Warfare',
+        content: 'From turn 11 you can build conventional forces to conquer territories without nuclear weapons.',
         keyPoints: [
-          'HÆRER: Landbaserte styrker for erobring',
-          'FLÅTER: Sjømakt for maritim kontroll',
-          'LUFTSTYRKER: Luftherredømme og støtte',
-          'Erobring: Ta kontroll over byer og territorier',
-          'Garnisjoner: Behold erobret territorium'
+          'ARMIES: Land-based forces for conquest',
+          'NAVIES: Naval power for maritime control',
+          'AIR FORCES: Air superiority and support',
+          'Conquest: Take control of cities and territories',
+          'Garrisons: Retain conquered territory'
         ],
-        practiceTask: 'Bygg din første hær. Observer kostnader og deploymentmuligheter.',
+        practiceTask: 'Build your first army. Observe costs and deployment options.',
         warningTips: [
-          'Konvensjonelle styrker er sårbare for atomvåpen',
-          'Erobring uten garnisjoner fører til gjenerobring',
-          'Luftherredømme er kritisk for suksess'
+          'Conventional forces are vulnerable to nuclear weapons',
+          'Conquest without garrisons leads to reconquest',
+          'Air superiority is critical for success'
         ],
         proTips: [
-          'Kombiner konvensjonelle og atomvåpen',
-          'Erobre ressurs-rike byer først',
-          'Etabler forsyningslinjer'
+          'Combine conventional and nuclear weapons',
+          'Conquer resource-rich cities first',
+          'Establish supply lines'
         ]
       },
       {
         id: 'territory-control',
-        title: 'Territorial Kontroll og Okkupasjon',
-        content: 'Erobre og administrer byer for ressurser og seiersbetingelser.',
+        title: 'Territorial Control and Occupation',
+        content: 'Conquer and administer cities for resources and victory conditions.',
         keyPoints: [
-          'Hver by gir ressurser og befolkning',
-          'Erobring krever hærer og evt. luftstøtte',
-          'Garnisjoner holder erobret land',
-          'Okkupasjon krever administrasjon',
-          '10+ byer kreves for økonomisk seier'
+          'Each city provides resources and population',
+          'Conquest requires armies and possibly air support',
+          'Garrisons hold conquered land',
+          'Occupation requires administration',
+          '10+ cities required for economic victory'
         ],
-        practiceTask: 'Planlegg hvilke byer du vil erobre. Prioriter basert på ressurser.',
+        practiceTask: 'Plan which cities to conquer. Prioritize based on resources.',
         warningTips: [
-          'Okkupasjon senker moral hos erobret befolkning',
-          'Oppstand kan forekomme uten garnisjoner',
-          'Overutvidelse kan svekke forsvaret hjemme'
+          'Occupation lowers morale in conquered population',
+          'Rebellion can occur without garrisons',
+          'Overextension can weaken home defense'
         ],
         proTips: [
-          'Prioriter strategisk viktige byer',
-          'Kystbyer gir havnetilgang',
-          'Grensebyer letter videre ekspansjon'
+          'Prioritize strategically important cities',
+          'Coastal cities provide port access',
+          'Border cities facilitate further expansion'
         ]
       }
     ]
@@ -535,32 +535,32 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   // SECTION 7: CYBER WARFARE
   {
     id: 'cyber',
-    title: 'Cyberkrigføring',
+    title: 'Cyber Warfare',
     icon: <Network className="h-5 w-5" />,
-    description: 'Lær om hacking, sabotasje og digitale angrep',
+    description: 'Learn about hacking, sabotage, and digital attacks',
     unlockTurn: 11,
     lessons: [
       {
         id: 'cyber-basics',
-        title: 'Introduksjon til Cyber-operasjoner',
-        content: 'Cyber-angrep er billigere enn militære angrep og kan svekke fiender uten direkte vold.',
+        title: 'Introduction to Cyber Operations',
+        content: 'Cyber attacks are cheaper than military attacks and can weaken enemies without direct violence.',
         keyPoints: [
-          'INTRUSION: Stjel data og hemmeligheter',
-          'SABOTAGE: Ødelegg infrastruktur og produksjon',
-          'FALSE-FLAG: Skyld på andre nasjoner',
-          'Deteksjon: 40-70% sjanse for å bli oppdaget',
-          'Attributering: Fiender kan spore angrep tilbake'
+          'INTRUSION: Steal data and secrets',
+          'SABOTAGE: Destroy infrastructure and production',
+          'FALSE-FLAG: Blame other nations',
+          'Detection: 40-70% chance of being detected',
+          'Attribution: Enemies can trace attacks back'
         ],
-        practiceTask: 'Utfør din første cyber-intrusion. Observer resultat og deteksjonsrisiko.',
+        practiceTask: 'Perform your first cyber intrusion. Observe result and detection risk.',
         warningTips: [
-          'Deteksjon reduserer relasjoner',
-          'False-flag kan mislykkes og avsløre deg',
-          'Motfiender kan gjengjelde med cyber-angrep'
+          'Detection reduces relations',
+          'False-flag can fail and expose you',
+          'Enemies can retaliate with cyber attacks'
         ],
         proTips: [
-          'Invester i cyber-forsvar for å beskytte deg',
-          'Bruk false-flag for å starte kriger mellom andre',
-          'Cyber-sabotasje før militært angrep svekker fienden'
+          'Invest in cyber defense to protect yourself',
+          'Use false-flag to start wars between others',
+          'Cyber sabotage before military attack weakens enemy'
         ]
       }
     ]
@@ -569,56 +569,56 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   // SECTION 8: BIO-WARFARE
   {
     id: 'bio',
-    title: 'Biologisk Krigføring',
+    title: 'Biological Warfare',
     icon: <Biohazard className="h-5 w-5" />,
-    description: 'Lær om biologiske våpen og pandemi-mekanikk',
+    description: 'Learn about biological weapons and pandemic mechanics',
     unlockTurn: 26,
     lessons: [
       {
         id: 'bio-basics',
-        title: 'Introduksjon til Bio-krigføring',
-        content: 'Fra tur 26 kan du utvikle biologiske våpen i Plague Inc.-stil. Utvikle patogener og deploy mot fiender.',
+        title: 'Introduction to Bio-Warfare',
+        content: 'From turn 26 you can develop biological weapons in Plague Inc. style. Develop pathogens and deploy against enemies.',
         keyPoints: [
-          '7 plague-typer: Bacteria, Virus, Fungus, Parasite, Prion, Nano-virus, Bio-weapon',
-          'DNA Points: Valuta for evolusjon',
-          'Transmission: Hvordan patogenet sprer seg',
-          'Symptoms: Effekter på smittede',
-          'Deployment: Multi-nasjons deployment med attributering'
+          '7 plague types: Bacteria, Virus, Fungus, Parasite, Prion, Nano-virus, Bio-weapon',
+          'DNA Points: Currency for evolution',
+          'Transmission: How the pathogen spreads',
+          'Symptoms: Effects on infected',
+          'Deployment: Multi-nation deployment with attribution'
         ],
-        practiceTask: 'Åpne Bio-Warfare Lab. Utforsk plague-typer og evolusjonstre.',
+        practiceTask: 'Open Bio-Warfare Lab. Explore plague types and evolution tree.',
         warningTips: [
-          'Bio-våpen kan spre seg ukontrollert',
-          'For dødelige symptomer tidlig trekker oppmerksomhet',
-          'Kureutvikl ing kan nøytralisere ditt våpen'
+          'Bio-weapons can spread uncontrollably',
+          'Too deadly symptoms early draws attention',
+          'Cure development can neutralize your weapon'
         ],
         proTips: [
-          'Start med Bacteria - lettest å bruke',
-          'Evolve transmission først for spredning',
-          'Vent med dødelige symptomer til bred infeksjon',
-          'Bruk false-flag deployment for å skjule ansvar'
+          'Start with Bacteria - easiest to use',
+          'Evolve transmission first for spreading',
+          'Wait with deadly symptoms until broad infection',
+          'Use false-flag deployment to hide responsibility'
         ]
       },
       {
         id: 'evolution-tree',
-        title: 'Evolusjonstre og DNA Points',
-        content: 'Bruk DNA Points for å utvikle ditt biologiske våpen.',
+        title: 'Evolution Tree and DNA Points',
+        content: 'Use DNA Points to develop your biological weapon.',
         keyPoints: [
-          'TRANSMISSION: Luft, vann, blod, insekt, fugl, gnager',
-          'SYMPTOMS: Mild til dødelig alvorlighet',
-          'ABILITIES: Resistens, genetisk hardening',
-          'DNA Points opptjenes ved infeksjon',
-          'Evolusjoner kan ikke refunderes'
+          'TRANSMISSION: Air, water, blood, insect, bird, rodent',
+          'SYMPTOMS: Mild to deadly severity',
+          'ABILITIES: Resistance, genetic hardening',
+          'DNA Points earned through infection',
+          'Evolutions cannot be refunded'
         ],
-        practiceTask: 'Planlegg din første evolusjonssekvens. Balanser spredning og dødelighet.',
+        practiceTask: 'Plan your first evolution sequence. Balance spreading and lethality.',
         warningTips: [
-          'DNA Points er begrenset - bruk klokt',
-          'Evolusjoner øker kostnaden',
-          'Total lethality stopper spredning'
+          'DNA Points are limited - use wisely',
+          'Evolutions increase cost',
+          'Total lethality stops spreading'
         ],
         proTips: [
-          'Prioriter transmission tidlig (3-4 evolusjoner)',
-          'Abilities beskytter mot motstiltak',
-          'Kombiner bio-våpen med konvensjonell krigføring'
+          'Prioritize transmission early (3-4 evolutions)',
+          'Abilities protect against countermeasures',
+          'Combine bio-weapons with conventional warfare'
         ]
       }
     ]
@@ -627,32 +627,32 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   // SECTION 9: INTELLIGENCE
   {
     id: 'intelligence',
-    title: 'Etterretning og Spionasje',
+    title: 'Intelligence and Espionage',
     icon: <Eye className="h-5 w-5" />,
-    description: 'Lær om overvåking, satellitter og spionasje',
+    description: 'Learn about surveillance, satellites, and espionage',
     unlockTurn: 1,
     lessons: [
       {
         id: 'intel-basics',
-        title: 'Grunnleggende Etterretning',
-        content: 'Etterretning gir deg informasjon om fienders planer og kapasitet.',
+        title: 'Basic Intelligence',
+        content: 'Intelligence provides you with information about enemy plans and capacity.',
         keyPoints: [
-          'OVERVÅKING: Engangsspionasje på én nasjon',
-          'SATELLITTER: Permanent overvåking',
-          'SABOTAGE: Reduser fiendtlig produksjon',
-          'COUNTERINTEL: Beskytt mot fiendtlig spionasje',
-          'Kostnad: 20-80 Intel per operasjon'
+          'SURVEILLANCE: One-time espionage on one nation',
+          'SATELLITES: Permanent surveillance',
+          'SABOTAGE: Reduce enemy production',
+          'COUNTERINTEL: Protect against enemy espionage',
+          'Cost: 20-80 Intel per operation'
         ],
-        practiceTask: 'Overvåk din største trussel. Analyser informasjonen du får.',
+        practiceTask: 'Surveil your biggest threat. Analyze the information you receive.',
         warningTips: [
-          'Overvåking er engangs - satellitter er permanente',
-          'Counterintel reduserer fiendtlig suksessrate',
-          'Visse nasjoner har bedre spionasje'
+          'Surveillance is one-time - satellites are permanent',
+          'Counterintel reduces enemy success rate',
+          'Certain nations have better espionage'
         ],
         proTips: [
-          'Deploy satellitter tidlig over største trusler',
-          'Overvåk før store offensive operasjoner',
-          'Counterintel-forskning øker Intel-produksjon også'
+          'Deploy satellites early over biggest threats',
+          'Surveil before major offensive operations',
+          'Counterintel research also increases Intel production'
         ]
       }
     ]
@@ -661,57 +661,57 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   // SECTION 10: VICTORY CONDITIONS
   {
     id: 'victory',
-    title: 'Seiersbetingelser',
+    title: 'Victory Conditions',
     icon: <Trophy className="h-5 w-5" />,
-    description: 'Lær om alle seks seiersbetingelser',
+    description: 'Learn about all six victory conditions',
     unlockTurn: 1,
     lessons: [
       {
         id: 'victory-overview',
-        title: 'Oversikt over Seiersbetingelser',
-        content: 'Det finnes 6 forskjellige måter å vinne spillet på. Velg din strategi tidlig.',
+        title: 'Victory Conditions Overview',
+        content: 'There are 6 different ways to win the game. Choose your strategy early.',
         keyPoints: [
-          '1. DIPLOMATISK: 60% allianser, DEFCON ≥4, 120+ innflytelse (tur 10+)',
-          '2. DOMINANS: Eliminer alle fiender (når som helst)',
-          '3. ØKONOMISK: 10+ byer, 4+ handelsruter, +50 ressurser/runde (tur 11+)',
-          '4. DEMOGRAFISK: 60% global befolkning, <30 ustabilitet (tur 15+)',
-          '5. OVERLEVELSE: Overlev 50 runder, 50M+ befolkning',
-          '6. KULTURELL: Propaganda-teknologi, konverter fiender (tur 26+)'
+          '1. DIPLOMATIC: 60% alliances, DEFCON ≥4, 120+ influence (turn 10+)',
+          '2. DOMINATION: Eliminate all enemies (anytime)',
+          '3. ECONOMIC: 10+ cities, 4+ trade routes, +50 resources/turn (turn 11+)',
+          '4. DEMOGRAPHIC: 60% global population, <30 instability (turn 15+)',
+          '5. SURVIVAL: Survive 50 turns, 50M+ population',
+          '6. CULTURAL: Propaganda technology, convert enemies (turn 26+)'
         ],
-        practiceTask: 'Velg din primære og sekundære seiersstrategi. Planlegg veien dit.',
+        practiceTask: 'Choose your primary and secondary victory strategy. Plan the path there.',
         warningTips: [
-          'Noen seiere krever spesifikke runder (tidligst)',
-          'Fiender vil aktivt motarbeide din seiersstrategi',
-          'Ha alltid en backup-plan'
+          'Some victories require specific turns (earliest)',
+          'Enemies will actively work against your victory strategy',
+          'Always have a backup plan'
         ],
         proTips: [
-          'Diplomatisk seier er raskest (tur 10+)',
-          'Overlevelse er enklest men tar lengst tid',
-          'Kombinér strategier for fleksibilitet'
+          'Diplomatic victory is fastest (turn 10+)',
+          'Survival is easiest but takes longest',
+          'Combine strategies for flexibility'
         ]
       },
       {
         id: 'victory-diplomatic',
-        title: 'Diplomatisk Seier - Detaljert Guide',
-        content: 'Vinn gjennom allianser og diplomati uten krig.',
+        title: 'Diplomatic Victory - Detailed Guide',
+        content: 'Win through alliances and diplomacy without war.',
         keyPoints: [
-          'KRAV: Allianser med 60% av nasjoner',
-          'Hold DEFCON ≥4 i minimum 4 runder',
-          'Oppnå 120+ global innflytelse',
-          'Tidligst: Tur 10',
-          'Bonus: Ingen militære tap'
+          'REQUIREMENTS: Alliances with 60% of nations',
+          'Maintain DEFCON ≥4 for minimum 4 turns',
+          'Achieve 120+ global influence',
+          'Earliest: Turn 10',
+          'Bonus: No military casualties'
         ],
-        practiceTask: 'Åpne Victory Progress-panelet. Spor fremgang mot diplomatisk seier.',
+        practiceTask: 'Open the Victory Progress panel. Track progress toward diplomatic victory.',
         warningTips: [
-          'Aggressive handlinger senker DEFCON',
-          'Brudd på avtaler ødelegger diplomati permanent',
-          'AI kan bryte allianser hvis provosert'
+          'Aggressive actions lower DEFCON',
+          'Breaking agreements destroys diplomacy permanently',
+          'AI can break alliances if provoked'
         ],
         proTips: [
-          'Form allianser fra tur 1',
-          'Små favører tidlig bygger tillit',
-          'Beskytt allierte mot aggresjon',
-          'Unngå konflikter helt - fokuser på diplomati'
+          'Form alliances from turn 1',
+          'Small favors early build trust',
+          'Protect allies from aggression',
+          'Avoid conflicts entirely - focus on diplomacy'
         ]
       }
     ]
@@ -720,32 +720,32 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   // SECTION 11: GOVERNANCE
   {
     id: 'governance',
-    title: 'Styresett og Moral',
+    title: 'Governance and Morale',
     icon: <Vote className="h-5 w-5" />,
-    description: 'Lær å administrere befolkning og moral',
+    description: 'Learn to manage population and morale',
     unlockTurn: 1,
     lessons: [
       {
         id: 'governance-basics',
-        title: 'Befolkningstilfredshet og Moral',
-        content: 'Din befolkning reagerer på dine handlinger. Lav moral kan føre til regime-skifte.',
+        title: 'Population Satisfaction and Morale',
+        content: 'Your population reacts to your actions. Low morale can lead to regime change.',
         keyPoints: [
-          'Moral: 0-100 skala',
-          'Påvirkes av: Militære tap, økonomisk suksess, trusler',
-          'Lav moral (<30): Risiko for regime change',
-          'Valg: Hver 12. runde (>40% approval kreves)',
-          'Game over: Hvis du mister valg eller regime change'
+          'Morale: 0-100 scale',
+          'Affected by: Military casualties, economic success, threats',
+          'Low morale (<30): Risk of regime change',
+          'Elections: Every 12 turns (>40% approval required)',
+          'Game over: If you lose election or regime change'
         ],
-        practiceTask: 'Observer moral-panelet. Identifiser hva som påvirker moralen.',
+        practiceTask: 'Observe the morale panel. Identify what affects morale.',
         warningTips: [
-          'Massive tap senker moral kraftig',
+          'Massive casualties drastically lower morale',
           'Regime change = game over',
-          'Tapte valg = game over'
+          'Lost elections = game over'
         ],
         proTips: [
-          'Hold moral over 50 for stabilitet',
-          'Forsvar befolkningen aktivt',
-          'Diplomatiske seire øker moral'
+          'Keep morale above 50 for stability',
+          'Actively defend the population',
+          'Diplomatic victories increase morale'
         ]
       }
     ]
@@ -811,15 +811,15 @@ export function ComprehensiveTutorial({ open, onClose }: { open: boolean; onClos
               <div className="flex items-center gap-3">
                 <BookOpen className="h-6 w-6 text-primary" />
                 <div>
-                  <DialogTitle className="text-2xl">Komplett Tutorial</DialogTitle>
+                  <DialogTitle className="text-2xl">Complete Tutorial</DialogTitle>
                   <DialogDescription className="mt-1">
-                    Lær alle spillmekanikker trinn for trinn
+                    Learn all game mechanics step by step
                   </DialogDescription>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-sm text-muted-foreground">
-                  {completedCount} / {totalLessons} leksjoner fullført
+                  {completedCount} / {totalLessons} lessons completed
                 </div>
                 <Button variant="ghost" size="icon" onClick={onClose}>
                   <X className="h-5 w-5" />
@@ -873,7 +873,7 @@ export function ComprehensiveTutorial({ open, onClose }: { open: boolean; onClos
                             </span>
                           </div>
                           <Badge variant="outline" className="text-xs mt-2">
-                            Tur {sec.unlockTurn}+
+                            Turn {sec.unlockTurn}+
                           </Badge>
                         </div>
                       </div>
@@ -892,12 +892,12 @@ export function ComprehensiveTutorial({ open, onClose }: { open: boolean; onClos
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <Badge variant="outline">
-                          Leksjon {currentLesson + 1} av {section.lessons.length}
+                          Lesson {currentLesson + 1} of {section.lessons.length}
                         </Badge>
                         {completedLessons.has(lesson.id) ? (
                           <Badge className="bg-green-500">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Fullført
+                            Completed
                           </Badge>
                         ) : (
                           <Button
@@ -906,7 +906,7 @@ export function ComprehensiveTutorial({ open, onClose }: { open: boolean; onClos
                             onClick={handleMarkComplete}
                           >
                             <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Marker som fullført
+                            Mark as complete
                           </Button>
                         )}
                       </div>
@@ -922,7 +922,7 @@ export function ComprehensiveTutorial({ open, onClose }: { open: boolean; onClos
                     <div className="bg-muted p-4 rounded-lg">
                       <h3 className="font-semibold mb-3 flex items-center gap-2">
                         <Target className="h-4 w-4 text-primary" />
-                        Nøkkelpunkter
+                        Key Points
                       </h3>
                       <ul className="space-y-2">
                         {lesson.keyPoints.map((point, idx) => (
@@ -939,7 +939,7 @@ export function ComprehensiveTutorial({ open, onClose }: { open: boolean; onClos
                       <div className="border-l-4 border-primary bg-primary/5 p-4 rounded-r-lg">
                         <h3 className="font-semibold mb-2 flex items-center gap-2">
                           <PlayCircle className="h-4 w-4 text-primary" />
-                          Øvingsoppgave
+                          Practice Task
                         </h3>
                         <p className="text-sm">{lesson.practiceTask}</p>
                       </div>
@@ -950,7 +950,7 @@ export function ComprehensiveTutorial({ open, onClose }: { open: boolean; onClos
                       <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-lg">
                         <h3 className="font-semibold mb-3 flex items-center gap-2 text-yellow-600 dark:text-yellow-500">
                           <AlertTriangle className="h-4 w-4" />
-                          Viktige Advarsler
+                          Important Warnings
                         </h3>
                         <ul className="space-y-2">
                           {lesson.warningTips.map((tip, idx) => (
@@ -968,7 +968,7 @@ export function ComprehensiveTutorial({ open, onClose }: { open: boolean; onClos
                       <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-lg">
                         <h3 className="font-semibold mb-3 flex items-center gap-2 text-blue-600 dark:text-blue-500">
                           <Zap className="h-4 w-4" />
-                          Pro-tips
+                          Pro Tips
                         </h3>
                         <ul className="space-y-2">
                           {lesson.proTips.map((tip, idx) => (
@@ -992,20 +992,20 @@ export function ComprehensiveTutorial({ open, onClose }: { open: boolean; onClos
                   disabled={isFirstLesson}
                 >
                   <ChevronLeft className="h-4 w-4 mr-2" />
-                  Forrige
+                  Previous
                 </Button>
 
                 <div className="text-sm text-muted-foreground">
-                  Seksjon {currentSection + 1} / {TUTORIAL_SECTIONS.length}
+                  Section {currentSection + 1} / {TUTORIAL_SECTIONS.length}
                 </div>
 
                 {isLastLesson ? (
                   <Button onClick={onClose}>
-                    Fullfør Tutorial
+                    Complete Tutorial
                   </Button>
                 ) : (
                   <Button onClick={handleNext}>
-                    Neste
+                    Next
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
                 )}

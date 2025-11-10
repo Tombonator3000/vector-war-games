@@ -13,68 +13,68 @@ interface TutorialStep {
 
 const tutorialSteps: TutorialStep[] = [
   {
-    title: 'Velkommen til NORAD Command',
-    description: 'Du er kommandør for en supermakt i atomtidsalderen. Ditt mål er å overleve og dominere gjennom strategi, diplomati og militær makt.',
+    title: 'Welcome to NORAD Command',
+    description: 'You are the commander of a superpower in the atomic age. Your goal is to survive and dominate through strategy, diplomacy, and military power.',
     icon: <Target className="h-12 w-12" />,
     tips: [
-      'Følg DEFCON-nivået - jo lavere, jo nærmere krig',
-      'Hver runde har ulike faser: Spiller → AI → Oppgjør',
-      'Ressurser er nøkkelen til suksess'
+      'Follow the DEFCON level - the lower, the closer to war',
+      'Each round has different phases: Player → AI → Resolution',
+      'Resources are the key to success'
     ]
   },
   {
-    title: 'Ressurser og Produksjon',
-    description: 'Tre hovedressurser driver din nasjon: Produksjon (bygge våpen), Uran (lage stridshoder) og Intel (spionasje og forskning).',
+    title: 'Resources and Production',
+    description: 'Three main resources drive your nation: Production (build weapons), Uranium (create warheads), and Intel (espionage and research).',
     icon: <Factory className="h-12 w-12" />,
     tips: [
-      'Produksjon: Bygg raketter, bomber og forsvar',
-      'Uran: Nødvendig for atomstridshoder',
-      'Intel: Forskning og spionasjeoppdrag',
-      'Ressurser regenereres hver runde'
+      'Production: Build missiles, bombers, and defense',
+      'Uranium: Necessary for nuclear warheads',
+      'Intel: Research and espionage missions',
+      'Resources regenerate each round'
     ]
   },
   {
-    title: 'Militær Styrke',
-    description: 'Ditt arsenal består av raketter, bombefly og forsvarsssystemer. Strategisk plassering og timing er kritisk.',
+    title: 'Military Power',
+    description: 'Your arsenal consists of missiles, bombers, and defense systems. Strategic placement and timing are critical.',
     icon: <Zap className="h-12 w-12" />,
     tips: [
-      'Raketter: Langtrekkende angrep, men kan avskjæres',
-      'Bombefly: Trege men kraftige, kan returnere',
-      'Forsvar: Avskjærer fiendtlige angrep',
-      'Stridshoder: Fra 10MT til 200MT - større = mer ødeleggelse'
+      'Missiles: Long-range attacks, but can be intercepted',
+      'Bombers: Slow but powerful, can return',
+      'Defense: Intercepts enemy attacks',
+      'Warheads: From 10MT to 200MT - larger = more destruction'
     ]
   },
   {
-    title: 'Forskning og Teknologi',
-    description: 'Forsk frem mektigere våpen og forsvarsssystemer. Hver teknologi tar flere runder å fullføre.',
+    title: 'Research and Technology',
+    description: 'Research more powerful weapons and defense systems. Each technology takes several rounds to complete.',
     icon: <Radio className="h-12 w-12" />,
     tips: [
-      'Start med små stridshoder (10-20MT)',
-      'Forsk deg opp til 200MT "Planet Cracker"',
-      'Orbital Defense Grid gir permanent forsvar',
-      'Counterintelligence øker intel-produksjon'
+      'Start with small warheads (10-20MT)',
+      'Research up to 200MT "Planet Cracker"',
+      'Orbital Defense Grid provides permanent defense',
+      'Counterintelligence increases intel production'
     ]
   },
   {
-    title: 'Diplomati og Strategi',
-    description: 'Ikke alle konflikter løses med atomvåpen. Bruk diplomati, spionasje og allianser for å få overtaket.',
+    title: 'Diplomacy and Strategy',
+    description: 'Not all conflicts are resolved with nuclear weapons. Use diplomacy, espionage, and alliances to gain the upper hand.',
     icon: <Users className="h-12 w-12" />,
     tips: [
-      'Overvåk fiendtlige nasjoner',
-      'Bygg allianser gjennom traktater',
-      'Sabotér fiendtlig produksjon',
-      'Vær obs på DEFCON - lav = høy spenning'
+      'Monitor hostile nations',
+      'Build alliances through treaties',
+      'Sabotage enemy production',
+      'Watch DEFCON - low = high tension'
     ]
   },
   {
-    title: 'Vinn Spillet',
-    description: 'Utkonkurrér motstanderne ved å kombinere militær makt, teknologi og strategi. Overlev nukleær vinter og eliminér trusler.',
+    title: 'Win the Game',
+    description: 'Outcompete opponents by combining military power, technology, and strategy. Survive nuclear winter and eliminate threats.',
     icon: <Shield className="h-12 w-12" />,
     tips: [
-      'Beskytt din sivilbefolkning',
-      'Eliminer fiender før de blir for sterke',
-      'Balanser angrep og forsvar',
-      'Vær forberedt på gjengjeldelseslag'
+      'Protect your civilian population',
+      'Eliminate enemies before they become too strong',
+      'Balance offense and defense',
+      'Be prepared for retaliatory strikes'
     ]
   }
 ];
@@ -126,11 +126,11 @@ export function TutorialGuide({ open, onClose }: TutorialGuideProps) {
 
         <div className="space-y-4 py-4">
           <div className="flex items-center gap-2 mb-4">
-            <Badge variant="outline">Steg {currentStep + 1} av {tutorialSteps.length}</Badge>
+            <Badge variant="outline">Step {currentStep + 1} of {tutorialSteps.length}</Badge>
           </div>
 
           <div className="space-y-2">
-            <h4 className="font-semibold text-sm uppercase tracking-wide opacity-70">Viktige tips</h4>
+            <h4 className="font-semibold text-sm uppercase tracking-wide opacity-70">Important Tips</h4>
             <ul className="space-y-2">
               {step?.tips.map((tip, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
@@ -149,7 +149,7 @@ export function TutorialGuide({ open, onClose }: TutorialGuideProps) {
             disabled={currentStep === 0}
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
-            Forrige
+            Previous
           </Button>
 
           <div className="flex gap-1">
@@ -165,12 +165,12 @@ export function TutorialGuide({ open, onClose }: TutorialGuideProps) {
 
           {currentStep < tutorialSteps.length - 1 ? (
             <Button onClick={handleNext}>
-              Neste
+              Next
               <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
             <Button onClick={handleClose}>
-              Start Spillet
+              Start Game
             </Button>
           )}
         </div>
