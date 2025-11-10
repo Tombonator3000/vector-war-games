@@ -11053,8 +11053,8 @@ export default function NoradVector() {
         // Try to zoom towards focal point if it's visible
         const focalProjection = projectLocal(focalLon, focalLat);
 
-        // Auto-center in bounded flat projections when at default zoom
-        if (isBoundedFlatProjection() && newZoom <= 1.05) {
+        // Auto-center in bounded flat projections only when at exact minimum zoom
+        if (isBoundedFlatProjection() && Math.abs(newZoom - minZoom) < 0.01) {
           cam.x = (W - W * cam.zoom) / 2;
           cam.y = (H - H * cam.zoom) / 2;
         } else if (focalProjection.visible) {
@@ -11123,8 +11123,8 @@ export default function NoradVector() {
             cam.targetZoom = newZoom;
             cam.zoom = newZoom;
             
-            // Auto-center in bounded flat projections when at default zoom
-            if (isBoundedFlatProjection() && newZoom <= 1.05) {
+            // Auto-center in bounded flat projections only when at exact minimum zoom
+            if (isBoundedFlatProjection() && Math.abs(newZoom - minZoom) < 0.01) {
               cam.x = (W - W * cam.zoom) / 2;
               cam.y = (H - H * cam.zoom) / 2;
             } else {
