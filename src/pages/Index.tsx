@@ -6246,7 +6246,10 @@ export default function NoradVector() {
   const [isSpyPanelOpen, setIsSpyPanelOpen] = useState(false);
   const [isWarCouncilOpen, setIsWarCouncilOpen] = useState(false);
 
-  const blockingModalActive = useMemo(
+  const activeDoctrineIncident = S.doctrineIncidentState?.activeIncident ?? null;
+  const doctrineIncidentActive = Boolean(activeDoctrineIncident);
+
+  const otherBlockingModalActive = useMemo(
     () =>
       Boolean(
         activeFlashpoint ||
@@ -6287,6 +6290,8 @@ export default function NoradVector() {
       civInfoPanelOpen,
     ],
   );
+
+  const blockingModalActive = doctrineIncidentActive || otherBlockingModalActive;
 
   // AI-Initiated Negotiations state (Phase 4)
   const [aiInitiatedNegotiations, setAiInitiatedNegotiations] = useState<any[]>([]);
@@ -14365,9 +14370,9 @@ export default function NoradVector() {
       })()}
 
       {/* Doctrine Incident Modal */}
-      {S.doctrineIncidentState?.activeIncident && (
+      {doctrineIncidentActive && !otherBlockingModalActive && activeDoctrineIncident && (
         <DoctrineIncidentModal
-          incident={S.doctrineIncidentState.activeIncident}
+          incident={activeDoctrineIncident}
           onChoose={handleDoctrineIncidentChoice}
         />
       )}

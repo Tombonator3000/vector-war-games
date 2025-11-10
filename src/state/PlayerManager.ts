@@ -8,6 +8,7 @@
  */
 
 import type { Nation } from '@/types/game';
+import GameStateManager from '@/state/GameStateManager';
 
 /**
  * PlayerManager singleton
@@ -55,6 +56,40 @@ class PlayerManager {
     }
 
     return null;
+  }
+
+  /**
+   * Updates the cached player nation and keeps global state in sync
+   * @param nation - Updated player nation data
+   */
+  static set(nation: Nation | null): void {
+    if (!nation) {
+      this._cached = null;
+      return;
+    }
+
+    const updatedNation = GameStateManager.updateNation(
+      nation.id,
+      (current) => ({ ...current, ...nation })
+    );
+
+    if (updatedNation) {
+      // Ensure our local references stay aligned with the authoritative state
+      this._nationsArray = GameStateManager.getNations();
+      this._cached = updatedNation;
+      return;
+    }
+
+    // Fallback for cases where the nation has not yet been registered
+    const existingIndex = this._nationsArray.findIndex((n) => n?.id === nation.id);
+    if (existingIndex !== -1) {
+      this._nationsArray[existingIndex] = { ...this._nationsArray[existingIndex], ...nation };
+    } else {
+      this._nationsArray = [...this._nationsArray, nation];
+    }
+
+    GameStateManager.setNations(this._nationsArray as any);
+    this._cached = nation;
   }
 
   /**
