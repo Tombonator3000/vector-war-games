@@ -143,9 +143,10 @@ export const RESEARCH_TREE: ResearchProject[] = [
     id: 'defense_grid',
     name: 'Orbital Defense Grid',
     description: 'Integrate lasers and interceptors for +2 permanent defense.',
-    category: 'defense',
+    category: 'space',
     turns: 4,
     cost: { production: 45, intel: 20 },
+    prerequisites: ['space_weapon_platform'],
     onComplete: nation => {
       nation.defense += 2;
     }
