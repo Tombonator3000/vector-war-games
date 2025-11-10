@@ -7804,20 +7804,36 @@ export default function NoradVector() {
       return;
     }
 
+    // Calculate device pixel ratio for sharp rendering on high-DPI displays
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    
+    // Set display size (CSS pixels)
     element.style.width = '100%';
     element.style.height = '100%';
 
-    const sizeChanged = element.width !== width || element.height !== height;
+    // Set internal resolution (actual pixels)
+    const internalWidth = Math.floor(width * dpr);
+    const internalHeight = Math.floor(height * dpr);
+
+    const sizeChanged = element.width !== internalWidth || element.height !== internalHeight;
     if (sizeChanged) {
-      element.width = width;
-      element.height = height;
+      element.width = internalWidth;
+      element.height = internalHeight;
+      
+      // Re-get context and scale after resizing canvas (resizing resets context state)
+      const context = element.getContext('2d', { alpha: true });
+      if (context) {
+        ctx = context;
+        context.scale(dpr, dpr);
+      }
+      
       W = width;
       H = height;
       cam.x = (W - W * cam.zoom) / 2;
       cam.y = (H - H * cam.zoom) / 2;
     } else {
-      W = element.width;
-      H = element.height;
+      W = width;
+      H = height;
     }
   }, [screenResolution]);
 
@@ -7829,7 +7845,13 @@ export default function NoradVector() {
         const retryElement = globeSceneRef.current?.overlayCanvas;
         if (retryElement) {
           canvas = retryElement;
-          ctx = retryElement.getContext('2d', { alpha: true })!;
+          const context = retryElement.getContext('2d', { alpha: true });
+          if (context) {
+            ctx = context;
+            // Apply devicePixelRatio scaling
+            const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+            context.scale(dpr, dpr);
+          }
           resizeCanvas();
 
           const shouldStartLoop = isGameplayLoopEnabled || isAttractModeActive || isGameStarted;
@@ -7844,7 +7866,13 @@ export default function NoradVector() {
     }
 
     canvas = element;
-    ctx = element.getContext('2d', { alpha: true })!;
+    const context = element.getContext('2d', { alpha: true });
+    if (context) {
+      ctx = context;
+      // Apply devicePixelRatio scaling
+      const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+      context.scale(dpr, dpr);
+    }
 
     resizeCanvas();
 
