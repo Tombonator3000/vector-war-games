@@ -19,6 +19,7 @@ import type {
 import { createDefaultNationConventionalProfile } from '@/hooks/useConventionalWarfare';
 import type { ArmyGroupSummary } from '@/types/militaryTemplates';
 import { OrderOfBattlePanel } from './OrderOfBattlePanel';
+import { StrategicOutliner, type StrategicOutlinerGroup } from './StrategicOutliner';
 
 export interface ConsolidatedWarModalProps {
   // War Council props
@@ -47,6 +48,9 @@ export interface ConsolidatedWarModalProps {
   toast: (options: { title: string; description: string }) => void;
   addNewsItem: (category: string, text: string, importance: string) => void;
   armyGroups?: ArmyGroupSummary[];
+  strategicOutlinerGroups?: StrategicOutlinerGroup[];
+  isOutlinerCollapsed?: boolean;
+  onOutlinerToggle?: () => void;
 }
 
 /**
@@ -77,6 +81,9 @@ export function ConsolidatedWarModal({
   toast,
   addNewsItem,
   armyGroups = [],
+  strategicOutlinerGroups = [],
+  isOutlinerCollapsed = false,
+  onOutlinerToggle = () => {},
 }: ConsolidatedWarModalProps): ReactNode {
   const [activeTab, setActiveTab] = useState('council');
   const localPlayer = PlayerManager.get() as LocalNation | null;
@@ -164,13 +171,13 @@ export function ConsolidatedWarModal({
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-3 bg-slate-900/80 border border-cyan-500/30 mb-6">
+      <TabsList className="grid w-full grid-cols-5 bg-slate-900/80 border border-cyan-500/30 mb-6">
         <TabsTrigger
           value="council"
           className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-100 relative"
         >
           <ScrollText className="h-4 w-4 mr-2" />
-          <span className="font-mono">WAR COUNCIL</span>
+          <span className="font-mono text-xs">COUNCIL</span>
           {(activeWarsCount > 0 || unreadPeaceOffers > 0) && (
             <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center animate-pulse">
               {activeWarsCount + unreadPeaceOffers}
@@ -182,14 +189,28 @@ export function ConsolidatedWarModal({
           className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-100"
         >
           <Shield className="h-4 w-4 mr-2" />
-          <span className="font-mono">CONVENTIONAL</span>
+          <span className="font-mono text-xs">CONV</span>
+        </TabsTrigger>
+        <TabsTrigger
+          value="order-of-battle"
+          className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-100"
+        >
+          <Swords className="h-4 w-4 mr-2" />
+          <span className="font-mono text-xs">OOB</span>
+        </TabsTrigger>
+        <TabsTrigger
+          value="outliner"
+          className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-100"
+        >
+          <ScrollText className="h-4 w-4 mr-2" />
+          <span className="font-mono text-xs">OUTLINER</span>
         </TabsTrigger>
         <TabsTrigger
           value="summary"
           className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-100"
         >
           <Swords className="h-4 w-4 mr-2" />
-          <span className="font-mono">SUMMARY</span>
+          <span className="font-mono text-xs">SUMMARY</span>
         </TabsTrigger>
       </TabsList>
 
@@ -392,6 +413,24 @@ export function ConsolidatedWarModal({
             <div className="text-center py-8 text-muted-foreground">
               <p>No army groups organized yet.</p>
               <p className="text-sm mt-2">Create groups to follow frontlines and supply status.</p>
+            </div>
+          )}
+        </div>
+      </TabsContent>
+
+      {/* Strategic Outliner Tab */}
+      <TabsContent value="outliner" className="mt-4">
+        <div className="max-h-[60vh] overflow-y-auto">
+          {strategicOutlinerGroups.length > 0 ? (
+            <StrategicOutliner
+              groups={strategicOutlinerGroups}
+              collapsed={isOutlinerCollapsed}
+              onToggleCollapse={onOutlinerToggle}
+              hotkeys={{ toggle: 'O', focus: 'Shift+O' }}
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No strategic overview available.</p>
             </div>
           )}
         </div>

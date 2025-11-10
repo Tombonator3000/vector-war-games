@@ -13013,6 +13013,9 @@ export default function NoradVector() {
               conventionalTerritories={conventionalTerritories}
               conventionalTemplatesMap={conventionalTemplatesMap}
               armyGroups={playerArmyGroupSummaries}
+              strategicOutlinerGroups={strategicOutlinerGroups}
+              isOutlinerCollapsed={isOutlinerCollapsed}
+              onOutlinerToggle={handleOutlinerToggle}
               conventionalLogs={conventionalLogs}
               trainConventionalUnit={trainConventionalUnit}
               resolveConventionalAttack={resolveConventionalAttack}
@@ -13129,17 +13132,7 @@ export default function NoradVector() {
         );
       })()}
 
-      <div className="pointer-events-none fixed top-20 right-4 z-30 flex w-[360px] max-w-full flex-col gap-4 max-h-[calc(100vh-6rem)] overflow-y-auto">
-        <StrategicOutliner
-          ref={globalStrategicOutlinerRef}
-          groups={strategicOutlinerGroups}
-          collapsed={isOutlinerCollapsed}
-          onToggleCollapse={handleOutlinerToggle}
-          hotkeys={strategicOutlinerHotkeys}
-          attentionPulse={outlinerAttentionTick}
-          className="pointer-events-auto"
-        />
-      </div>
+      {/* Remove Strategic Outliner from fixed position - now inside Warfare Command modal */}
 
       {/* Great Old Ones Campaign UI */}
       {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && (
