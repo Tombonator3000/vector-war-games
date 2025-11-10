@@ -2996,6 +2996,29 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-10T10:36:14Z - Refresh governance hook dependencies
 - Added `nations` to the dependency arrays for governance callbacks in `src/pages/Index.tsx` so they update once the initialization populates nation state.
 - Ensured governance metrics and delta handlers receive the latest nation references, allowing the player's metrics to appear after the initial sync.
+### 2025-11-10T11:54:23Z - Assess nuclear explosion rework requirements
+- Reviewed repository instructions and located existing `explode` implementation within `src/pages/Index.tsx`.
+- Surveyed test coverage in `src/pages/__tests__/Index.test.tsx` to plan new assertions for expanded nuclear effects.
+### 2025-11-10T11:59:08Z - Draft nuclear damage model helper
+- Added `src/lib/nuclearDamageModel.ts` with deterministic multi-stage impact calculations and mutation helper used to update nations after a nuclear strike.
+### 2025-11-10T11:59:17Z - Extend overlay state typing
+- Updated `GameState.overlay` typing in `src/types/game.ts` to carry optional tone and sound metadata for cinematic alerts.
+### 2025-11-10T11:59:29Z - Wire nuclear model into index imports
+- Added `calculateNuclearImpact` and `applyNuclearImpactToNation` imports within `src/pages/Index.tsx` for use in the new explosion sequence.
+### 2025-11-10T11:59:40Z - Upgrade overlay broadcaster
+- Extended overlay notifications in `src/pages/Index.tsx` with tone/sound metadata and optional critical audio playback when emitting cinematic alerts.
+### 2025-11-10T12:00:47Z - Replace explosion damage pipeline
+- Replaced the linear damage block in `src/pages/Index.tsx` with the multi-stage nuclear impact model, including refugee creation, governance shocks, environmental fallout, and cinematic feedback.
+### 2025-11-10T12:00:59Z - Tone-aware overlay styling
+- Adjusted the overlay canvas styling in `src/pages/Index.tsx` to respect catastrophic tones with scarlet fills and darker strokes.
+### 2025-11-10T12:01:22Z - Author nuclear impact unit tests
+- Added `src/lib/__tests__/nuclearDamageModel.test.ts` verifying stage breakdowns and mutation helpers for the explosion pipeline.
+### 2025-11-10T12:01:37Z - Tighten nuclear tests expectations
+- Strengthened refugee and defense assertions in `src/lib/__tests__/nuclearDamageModel.test.ts` to guarantee measurable fallout in simulations.
+### 2025-11-10T12:01:50Z - Attempt targeted vitest run
+- Ran `npm run test -- --runTestsByPath src/lib/__tests__/nuclearDamageModel.test.ts` but Vitest rejected the Jest-style flag; will rerun using native filters.
+### 2025-11-10T12:02:09Z - Run nuclear damage unit tests
+- Executed `npm run test -- nuclearDamageModel` to validate the new nuclear explosion damage routines.
 
 ### 2025-11-10T10:49:18Z - Rebalance nuclear defense mitigation curve
 - Introduced `src/lib/nuclearDamage.ts` with shared helpers to clamp defense, compute diminishing-return mitigation, and simulate blast/fallout damage.

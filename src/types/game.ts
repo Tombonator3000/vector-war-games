@@ -328,7 +328,7 @@ export interface GameState {
   rings: Ring[];
   refugeeCamps?: RefugeeCamp[];
   screenShake: number;
-  overlay?: { text: string; ttl: number } | null;
+  overlay?: { text: string; ttl: number; tone?: 'info' | 'warning' | 'catastrophe'; sound?: string } | null;
   fx?: number;
   nuclearWinterLevel?: number;
   globalRadiation?: number;
