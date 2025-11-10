@@ -30,7 +30,8 @@ import {
   processNationResources,
   processResourceTrades,
   initializeResourceStockpile,
-  assignTerritoryResources
+  assignTerritoryResources,
+  addStrategicResource,
 } from '@/lib/territorialResourcesSystem';
 import {
   initializeResourceMarket,
@@ -362,7 +363,8 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
     const moraleMultiplier = calculateMoraleProductionMultiplier(n.morale ?? 0);
     n.production += Math.floor(baseProd * prodMult * economyProdMult * moraleMultiplier);
-    n.uranium += Math.floor(baseUranium * uranMult * moraleMultiplier) + economyUraniumBonus;
+    const uraniumGain = Math.floor(baseUranium * uranMult * moraleMultiplier) + economyUraniumBonus;
+    addStrategicResource(n, 'uranium', uraniumGain);
     n.intel += Math.floor(baseIntel * moraleMultiplier);
 
     // Instability effects

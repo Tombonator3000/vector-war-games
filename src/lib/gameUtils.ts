@@ -6,17 +6,25 @@
  */
 
 import type { Nation } from '@/types/game';
+import type { StrategyResourceType } from '@/types/territorialResources';
+import {
+  initializeResourceStockpile,
+  spendStrategicResource,
+} from '@/lib/territorialResourcesSystem';
+
+const STRATEGIC_RESOURCES: StrategyResourceType[] = ['oil', 'uranium', 'rare_earths', 'food'];
 
 /**
  * Check if a nation can afford a given resource cost
  * Handles both traditional resources (production, intel, uranium) and strategic resources (oil, rare_earths, food)
  */
 export function canAfford(nation: Nation, cost: Record<string, number>): boolean {
+  initializeResourceStockpile(nation);
   return Object.entries(cost).every(([resource, amount]) => {
     // Strategic resources are in resourceStockpile
-    if (resource === 'oil' || resource === 'rare_earths' || resource === 'food') {
+    if (STRATEGIC_RESOURCES.includes(resource as StrategyResourceType)) {
       const stockpile = nation.resourceStockpile || { oil: 0, uranium: 0, rare_earths: 0, food: 0 };
-      return (stockpile[resource] || 0) >= amount;
+      return (stockpile[resource as StrategyResourceType] || 0) >= amount;
     }
 
     // Traditional resources (production, intel, uranium)
@@ -30,13 +38,11 @@ export function canAfford(nation: Nation, cost: Record<string, number>): boolean
  * Handles both traditional resources (production, intel, uranium) and strategic resources (oil, rare_earths, food)
  */
 export function pay(nation: Nation, cost: Record<string, number>): void {
+  initializeResourceStockpile(nation);
   Object.entries(cost).forEach(([resource, amount]) => {
     // Strategic resources are in resourceStockpile
-    if (resource === 'oil' || resource === 'rare_earths' || resource === 'food') {
-      if (!nation.resourceStockpile) {
-        nation.resourceStockpile = { oil: 0, uranium: 0, rare_earths: 0, food: 0 };
-      }
-      nation.resourceStockpile[resource] = (nation.resourceStockpile[resource] || 0) - amount;
+    if (STRATEGIC_RESOURCES.includes(resource as StrategyResourceType)) {
+      spendStrategicResource(nation, resource as StrategyResourceType, amount);
     } else {
       // Traditional resources (production, intel, uranium)
       const key = resource as keyof Nation;

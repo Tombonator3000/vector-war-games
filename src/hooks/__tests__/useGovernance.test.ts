@@ -4,6 +4,8 @@ import { createElement, type ReactNode } from 'react';
 import { RNGProvider } from '@/contexts/RNGContext';
 
 import { useGovernance, type GovernanceNationRef } from '../useGovernance';
+import { addStrategicResource } from '@/lib/territorialResourcesSystem';
+import type { Nation } from '@/types/game';
 
 interface MockNation extends GovernanceNationRef {
   instability?: number;
@@ -79,7 +81,7 @@ describe('useGovernance', () => {
       nation.intel = Math.max(0, nation.intel + delta.intel);
     }
     if (typeof delta.uranium === 'number') {
-      nation.uranium = Math.max(0, nation.uranium + delta.uranium);
+      addStrategicResource(nation as unknown as Nation, 'uranium', delta.uranium);
     }
   };
 

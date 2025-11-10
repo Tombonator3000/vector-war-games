@@ -6,6 +6,10 @@ import type { MilitaryTemplate } from '@/types/militaryTemplates';
 import type { UseMilitaryTemplatesApi } from './useMilitaryTemplates';
 import type { UseSupplySystemApi } from './useSupplySystem';
 import type { Territory as SupplyTerritory } from '@/types/supplySystem';
+import {
+  initializeResourceStockpile,
+  spendStrategicResource,
+} from '@/lib/territorialResourcesSystem';
 
 export type ForceType = 'army' | 'navy' | 'air';
 
@@ -847,14 +851,16 @@ export function useConventionalWarfare({
       if ((cost.intel ?? 0) > (nation.intel ?? 0)) {
         return false;
       }
-      if ((cost.uranium ?? 0) > (nation.uranium ?? 0)) {
+      initializeResourceStockpile(nation);
+      const stockpile = nation.resourceStockpile!;
+      if ((cost.uranium ?? 0) > (stockpile.uranium || 0)) {
         return false;
       }
       // Check strategic resources
-      if (cost.oil && (!nation.resourceStockpile || nation.resourceStockpile.oil < cost.oil)) {
+      if (cost.oil && (stockpile.oil || 0) < cost.oil) {
         return false;
       }
-      if (cost.rare_earths && (!nation.resourceStockpile || nation.resourceStockpile.rare_earths < cost.rare_earths)) {
+      if (cost.rare_earths && (stockpile.rare_earths || 0) < cost.rare_earths) {
         return false;
       }
 
@@ -862,18 +868,16 @@ export function useConventionalWarfare({
       if (typeof nation.intel === 'number') {
         nation.intel = Math.max(0, nation.intel - (cost.intel ?? 0));
       }
-      if (typeof nation.uranium === 'number') {
-        nation.uranium = Math.max(0, nation.uranium - (cost.uranium ?? 0));
+      if (cost.uranium) {
+        spendStrategicResource(nation, 'uranium', cost.uranium);
       }
 
       // Deduct strategic resources
-      if (nation.resourceStockpile) {
-        if (cost.oil) {
-          nation.resourceStockpile.oil = Math.max(0, nation.resourceStockpile.oil - cost.oil);
-        }
-        if (cost.rare_earths) {
-          nation.resourceStockpile.rare_earths = Math.max(0, nation.resourceStockpile.rare_earths - cost.rare_earths);
-        }
+      if (cost.oil) {
+        spendStrategicResource(nation, 'oil', cost.oil);
+      }
+      if (cost.rare_earths) {
+        spendStrategicResource(nation, 'rare_earths', cost.rare_earths);
       }
 
       return true;

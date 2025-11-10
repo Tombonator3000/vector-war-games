@@ -13,6 +13,10 @@ import type {
 } from '@/types/leaderAbilities';
 import { useAbility } from '@/types/leaderAbilities';
 import PlayerManager from '@/state/PlayerManager';
+import {
+  addStrategicResource,
+  initializeResourceStockpile,
+} from '@/lib/territorialResourcesSystem';
 
 /**
  * Execute a leader ability
@@ -355,6 +359,13 @@ function executeRealityWarp(
 ): AbilityEffectResult[] {
   const results: AbilityEffectResult[] = [];
 
+  initializeResourceStockpile(nation);
+  const getUranium = () => nation.resourceStockpile?.uranium ?? 0;
+  const setUranium = (amount: number) => {
+    const current = getUranium();
+    addStrategicResource(nation, 'uranium', amount - current);
+  };
+
   // Handle special reality warp effects
   if (ability.effect.metadata?.extraTurn) {
     // Yog-Sothoth: Extra turn
@@ -373,7 +384,7 @@ function executeRealityWarp(
       nation.gold = (nation.gold || 0) * 2;
       nation.production = Math.floor(nation.production * 2);
       nation.intel = Math.floor(nation.intel * 2);
-      nation.uranium = Math.floor(nation.uranium * 2);
+      setUranium(Math.floor(getUranium() * 2));
 
       // Boost all relationships
       if (nation.relationships) {
@@ -392,7 +403,7 @@ function executeRealityWarp(
       nation.gold = Math.floor((nation.gold || 0) / 2);
       nation.production = Math.floor(nation.production / 2);
       nation.intel = Math.floor(nation.intel / 2);
-      nation.uranium = Math.floor(nation.uranium / 2);
+      setUranium(Math.floor(getUranium() / 2));
 
       results.push({
         targetId: nation.id,
@@ -478,7 +489,7 @@ function executeRealityWarp(
         });
         break;
       case 5:
-        nation.uranium *= 2;
+        setUranium(getUranium() * 2);
         nation.intel *= 2;
         results.push({
           targetId: nation.id,

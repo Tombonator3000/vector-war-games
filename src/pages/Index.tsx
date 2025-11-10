@@ -158,7 +158,11 @@ import {
   applyIdeologyBonusesForProduction,
   generateIdeologicalGrievances,
 } from '@/lib/ideologyIntegration';
-import { initializeResourceStockpile } from '@/lib/territorialResourcesSystem';
+import {
+  addStrategicResource,
+  initializeResourceStockpile,
+  spendStrategicResource,
+} from '@/lib/territorialResourcesSystem';
 import {
   useCyberWarfare,
   createDefaultNationCyberProfile,
@@ -5079,7 +5083,7 @@ function endTurn() {
           player.gold = Math.max(0, (player.gold || 0) + effects.goldPerTurn);
         }
         if (effects.uraniumPerTurn) {
-          player.uranium = Math.max(0, (player.uranium || 0) + effects.uraniumPerTurn);
+          addStrategicResource(player, 'uranium', effects.uraniumPerTurn);
         }
         if (effects.intelPerTurn) {
           player.intel = Math.max(0, (player.intel || 0) + effects.intelPerTurn);
@@ -7077,7 +7081,7 @@ export default function NoradVector() {
         nation.intel = Math.max(0, (nation.intel || 0) + delta.intel);
       }
       if (typeof delta.uranium === 'number') {
-        nation.uranium = Math.max(0, (nation.uranium || 0) + delta.uranium);
+        addStrategicResource(nation, 'uranium', delta.uranium);
       }
     },
     [],
@@ -8956,9 +8960,12 @@ export default function NoradVector() {
 
         case 'asat_strike':
           if (!target) return false;
-          if ((commander.intel || 0) < 15 || (commander.uranium || 0) < 5) {
-            toast({ title: 'Insufficient resources', description: 'You need 15 INTEL and 5 URANIUM for ASAT strike.' });
-            return false;
+          {
+            const availableUranium = commander.resourceStockpile?.uranium ?? commander.uranium ?? 0;
+            if ((commander.intel || 0) < 15 || availableUranium < 5) {
+              toast({ title: 'Insufficient resources', description: 'You need 15 INTEL and 5 URANIUM for ASAT strike.' });
+              return false;
+            }
           }
           {
             // Only count non-expired satellites
@@ -8976,7 +8983,7 @@ export default function NoradVector() {
               delete target.satellites[randomSat];
             }
             commander.intel -= 15;
-            commander.uranium -= 5;
+            spendStrategicResource(commander, 'uranium', 5);
             log(`ASAT strike destroys ${target.name}'s satellite!`, 'alert');
             adjustThreat(target, commander.id, 15);
           }
@@ -8986,9 +8993,12 @@ export default function NoradVector() {
 
         case 'orbital_strike':
           if (!target) return false;
-          if ((commander.intel || 0) < 50 || (commander.uranium || 0) < 30) {
-            toast({ title: 'Insufficient resources', description: 'You need 50 INTEL and 30 URANIUM for orbital strike.' });
-            return false;
+          {
+            const availableUranium = commander.resourceStockpile?.uranium ?? commander.uranium ?? 0;
+            if ((commander.intel || 0) < 50 || availableUranium < 30) {
+              toast({ title: 'Insufficient resources', description: 'You need 50 INTEL and 30 URANIUM for orbital strike.' });
+              return false;
+            }
           }
           if ((commander.orbitalStrikesAvailable || 0) <= 0) {
             toast({ title: 'No strikes available', description: 'No orbital strikes remaining.' });
@@ -9020,7 +9030,7 @@ export default function NoradVector() {
             }
 
             commander.intel -= 50;
-            commander.uranium -= 30;
+            spendStrategicResource(commander, 'uranium', 30);
             commander.orbitalStrikesAvailable = (commander.orbitalStrikesAvailable || 1) - 1;
 
             log(`☄️ ORBITAL STRIKE devastates ${target.name}: ${popLoss}M casualties, ${warheadsDestroyed} warheads destroyed!`, 'alert');
@@ -13354,7 +13364,7 @@ export default function NoradVector() {
             }
 
             if (outcome.uranium) {
-              player.uranium = Math.max(0, player.uranium + outcome.uranium);
+              addStrategicResource(player, 'uranium', outcome.uranium);
             }
 
             if (typeof outcome.population === 'number') {

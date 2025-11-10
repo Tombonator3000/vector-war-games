@@ -18,6 +18,7 @@ import {
   shouldDeploy,
   type AIBioStrategy,
 } from './aiBioWarfare';
+import { spendStrategicResource } from '@/lib/territorialResourcesSystem';
 
 function advanceAINationCountryInfections(
   plagueState: PlagueState,
@@ -227,7 +228,7 @@ export function processAIBioWarfareTurn(
 
       // Deduct resources
       nation.production -= tierDef.productionCost;
-      nation.uranium -= tierDef.uraniumCost;
+      spendStrategicResource(nation, 'uranium', tierDef.uraniumCost);
 
       // Start construction
       lab.underConstruction = true;
