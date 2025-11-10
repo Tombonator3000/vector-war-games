@@ -1944,6 +1944,7 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'blackswan',
     severity: 'catastrophic',
     timeLimit: 90,
+    minYear: 2025,
     options: [
       {
         id: 'first_contact',
