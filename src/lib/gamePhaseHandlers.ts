@@ -26,6 +26,7 @@ import { updatePhase2PerTurn } from '@/lib/diplomacyPhase2Integration';
 import { applyDIPIncome, updateDIPIncome } from '@/lib/diplomaticCurrencyUtils';
 import { applyIdeologyBonusesForProduction } from '@/lib/ideologyIntegration';
 import { updateDoctrineIncidentSystem } from '@/lib/doctrineIncidentSystem';
+import { updateFalloutImpacts } from '@/lib/falloutEffects';
 import {
   processNationResources,
   processResourceTrades,
@@ -238,6 +239,9 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
   // Clear completed missiles
   S.missiles = S.missiles.filter((m: any) => m.t < 1);
 
+  // Update fallout impacts for each nation based on lingering radiation
+  updateFalloutImpacts(S, nations, projectLocal, log);
+
   const radiationMitigation = typeof window !== 'undefined'
     ? window.__bioDefenseStats?.radiationMitigation ?? 0
     : 0;
@@ -339,6 +343,25 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     // Apply green shift debuff if active
     let prodMult = 1;
     let uranMult = 1;
+    const hungerPenalty = Math.min(0.95, (n.falloutHunger ?? 0) / 100);
+    if (hungerPenalty > 0) {
+      prodMult *= 1 - hungerPenalty;
+      if (n === PlayerManager.get() && hungerPenalty > 0.5) {
+        log(`${n.name} agricultural collapse: fallout starvation cripples output`, 'warning');
+      }
+    }
+
+    const sicknessPenalty = Math.min(0.75, (n.radiationSickness ?? 0) / 130);
+    if (sicknessPenalty > 0) {
+      const penaltyFactor = 1 - sicknessPenalty;
+      prodMult *= penaltyFactor;
+      uranMult *= Math.max(0.1, penaltyFactor - 0.1 * sicknessPenalty);
+    }
+
+    if (n.refugeeFlow && n.refugeeFlow > 0) {
+      const laborLoss = Math.min(0.4, n.refugeeFlow / Math.max(1, n.population + n.refugeeFlow));
+      prodMult *= 1 - laborLoss;
+    }
     if (n.greenShiftTurns && n.greenShiftTurns > 0) {
       prodMult = 0.7;
       uranMult = 0.5;

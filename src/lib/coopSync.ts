@@ -13,6 +13,14 @@ export function applyRemoteGameStateSync(remoteState: Partial<LocalGameState>): 
     falloutMarks: Array.isArray(remoteState.falloutMarks)
       ? remoteState.falloutMarks.map(mark => ({ ...mark }))
       : [],
+    falloutEffects: remoteState.falloutEffects
+      ? Object.fromEntries(
+          Object.entries(remoteState.falloutEffects).map(([id, effect]) => [
+            id,
+            { ...effect },
+          ])
+        )
+      : {},
     satelliteOrbits: Array.isArray(remoteState.satelliteOrbits)
       ? remoteState.satelliteOrbits.map(orbit => ({ ...orbit }))
       : [],
@@ -24,6 +32,10 @@ export function applyRemoteGameStateSync(remoteState: Partial<LocalGameState>): 
 
   if (!Array.isArray(sanitizedState.falloutMarks)) {
     sanitizedState.falloutMarks = [];
+  }
+
+  if (!sanitizedState.falloutEffects) {
+    sanitizedState.falloutEffects = {};
   }
 
   GameStateManager.setState(sanitizedState);

@@ -81,6 +81,7 @@ import type { ActionConsequences } from '@/types/consequences';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { applyRemoteGameStateSync } from '@/lib/coopSync';
 import { calculateNuclearImpact, applyNuclearImpactToNation } from '@/lib/nuclearDamageModel';
+import { getFalloutSeverityLevel } from '@/lib/falloutEffects';
 import { loadTerritoryData, type TerritoryPolygon } from '@/lib/territoryPolygons';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { ResourceStockpileDisplay } from '@/components/ResourceStockpileDisplay';
@@ -3902,9 +3903,22 @@ function drawFalloutMarks(deltaMs: number) {
   const now = Date.now();
   const deltaSeconds = Math.max(0.016, deltaMs / 1000);
   const updatedMarks: FalloutMark[] = [];
+  const getNearestNationName = (x: number, y: number, radius: number): string | null => {
+    let best: { name: string; dist: number } | null = null;
+    nations.forEach(nation => {
+      if (nation.population <= 0) return;
+      const { x: nx, y: ny } = projectLocal(nation.lon, nation.lat);
+      const dist = Math.hypot(nx - x, ny - y);
+      if (dist <= radius && (!best || dist < best.dist)) {
+        best = { name: nation.name, dist };
+      }
+    });
+    return best?.name ?? null;
+  };
 
   for (const mark of S.falloutMarks) {
     const next: FalloutMark = { ...mark };
+    const previousAlertLevel = mark.alertLevel ?? 'none';
 
     const growthFactor = Math.min(1, next.growthRate * deltaSeconds);
     if (next.radius < next.targetRadius) {
@@ -3939,6 +3953,9 @@ function drawFalloutMarks(deltaMs: number) {
       continue;
     }
 
+    const severityLevel = getFalloutSeverityLevel(next.intensity);
+    next.alertLevel = severityLevel;
+
     updatedMarks.push(next);
 
     ctx.save();
@@ -3954,9 +3971,70 @@ function drawFalloutMarks(deltaMs: number) {
     ctx.fill();
     ctx.restore();
 
-    drawIcon(radiationIcon, px, py, 0, RADIATION_ICON_BASE_SCALE, {
+    if (severityLevel !== 'none') {
+      const strokeColor =
+        severityLevel === 'deadly'
+          ? 'rgba(248,113,113,0.8)'
+          : severityLevel === 'severe'
+            ? 'rgba(250,204,21,0.75)'
+            : 'rgba(56,189,248,0.6)';
+      const label =
+        severityLevel === 'deadly'
+          ? '☢️ DEADLY FALLOUT'
+          : severityLevel === 'severe'
+            ? '⚠️ SEVERE FALLOUT'
+            : '☢️ FALLOUT ZONE';
+
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.9, next.intensity + 0.2);
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = Math.max(1.5, Math.min(4, next.radius * 0.08));
+      ctx.setLineDash([8, 6]);
+      ctx.beginPath();
+      ctx.arc(px, py, next.radius * 1.08, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.95, next.intensity + 0.25);
+      ctx.fillStyle = strokeColor;
+      ctx.font = `600 ${Math.max(12, Math.min(22, next.radius * 0.55))}px var(--font-sans, 'Orbitron', sans-serif)`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(label, px, py - next.radius - 8);
+      ctx.restore();
+    }
+
+    const iconScale =
+      severityLevel === 'deadly'
+        ? RADIATION_ICON_BASE_SCALE * 1.4
+        : severityLevel === 'severe'
+          ? RADIATION_ICON_BASE_SCALE * 1.2
+          : RADIATION_ICON_BASE_SCALE;
+    drawIcon(radiationIcon, px, py, 0, iconScale, {
       alpha: Math.min(0.9, next.intensity + 0.15),
     });
+
+    if (severityLevel === 'deadly' && previousAlertLevel !== 'deadly') {
+      const impactedNation = getNearestNationName(px, py, next.radius * 1.4);
+      const description = impactedNation
+        ? `${impactedNation} reports lethal fallout. Immediate evacuation required.`
+        : 'A fallout zone has intensified to lethal levels.';
+      toast({
+        title: '☢️ Deadly Fallout Detected',
+        description,
+        variant: 'destructive',
+      });
+      if (typeof window !== 'undefined' && window.__gameAddNewsItem) {
+        window.__gameAddNewsItem(
+          'environment',
+          impactedNation
+            ? `${impactedNation} overwhelmed by deadly fallout levels!`
+            : 'Deadly fallout detected over irradiated wasteland!',
+          'critical'
+        );
+      }
+    }
   }
 
   if (updatedMarks.length > MAX_FALLOUT_MARKS) {
@@ -4021,6 +4099,7 @@ function upsertFalloutMark(x: number, y: number, lon: number, lat: number, yield
       growthRate,
       decayDelayMs: decayDelay,
       decayRate,
+      alertLevel: 'none',
     };
     S.falloutMarks.push(newMark);
   }

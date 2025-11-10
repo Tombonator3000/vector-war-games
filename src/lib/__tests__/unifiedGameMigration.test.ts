@@ -49,6 +49,7 @@ function createTestGameState(): GameState {
     rings: [],
     screenShake: 0,
     falloutMarks: [],
+    falloutEffects: {},
     satelliteOrbits: [],
   };
 }
