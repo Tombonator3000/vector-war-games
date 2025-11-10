@@ -80,6 +80,7 @@ import { FEATURE_UNLOCK_INFO, type EraDefinition, type GameEra } from '@/types/e
 import type { ActionConsequences } from '@/types/consequences';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { applyRemoteGameStateSync } from '@/lib/coopSync';
+import { calculateNuclearImpact, applyNuclearImpactToNation } from '@/lib/nuclearDamageModel';
 import { loadTerritoryData, type TerritoryPolygon } from '@/lib/territoryPolygons';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { ResourceStockpileDisplay } from '@/components/ResourceStockpileDisplay';
@@ -683,7 +684,8 @@ let militaryTemplatesApi: ReturnType<typeof useMilitaryTemplates> | null = null;
 let supplySystemApi: ReturnType<typeof useSupplySystem> | null = null;
 let triggerNationsUpdate: (() => void) | null = null;
 
-type OverlayNotification = { text: string; expiresAt: number };
+type OverlayTone = 'info' | 'warning' | 'catastrophe';
+type OverlayNotification = { text: string; expiresAt: number; tone?: OverlayTone; sound?: string };
 type OverlayListener = (message: OverlayNotification | null) => void;
 let overlayListener: OverlayListener | null = null;
 let overlayTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -692,19 +694,33 @@ function registerOverlayListener(listener: OverlayListener | null) {
   overlayListener = listener;
 }
 
-function emitOverlayMessage(text: string, ttl: number) {
-  S.overlay = { text, ttl };
+function emitOverlayMessage(text: string, ttl: number, options?: { tone?: OverlayTone; sound?: string }) {
+  S.overlay = { text, ttl, tone: options?.tone, sound: options?.sound };
 
   if (overlayTimeout) {
     clearTimeout(overlayTimeout);
     overlayTimeout = null;
   }
 
-  overlayListener?.({ text, expiresAt: Date.now() + ttl });
+  overlayListener?.({ text, expiresAt: Date.now() + ttl, tone: options?.tone, sound: options?.sound });
   overlayTimeout = setTimeout(() => {
     overlayListener?.(null);
     overlayTimeout = null;
   }, ttl);
+
+  if (options?.sound) {
+    try {
+      import('@/utils/audioManager')
+        .then(({ audioManager }) => {
+          audioManager.playCritical(options.sound!);
+        })
+        .catch(() => {
+          /* ignore audio load failures */
+        });
+    } catch (error) {
+      // Ignore audio import errors in non-browser contexts
+    }
+  }
 }
 
 type PhaseTransitionListener = (active: boolean) => void;
@@ -4143,8 +4159,19 @@ function drawFX() {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.font = 'bold 28px monospace';
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    const tone = S.overlay.tone || 'warning';
+    const fillMap: Record<OverlayTone, string> = {
+      info: 'rgba(200,240,255,0.9)',
+      warning: 'rgba(255,255,255,0.9)',
+      catastrophe: 'rgba(255,120,120,0.95)'
+    };
+    const strokeMap: Record<OverlayTone, string> = {
+      info: 'rgba(0,40,60,0.6)',
+      warning: 'rgba(0,0,0,0.6)',
+      catastrophe: 'rgba(30,0,0,0.7)'
+    };
+    ctx.fillStyle = fillMap[tone];
+    ctx.strokeStyle = strokeMap[tone];
     ctx.lineWidth = 4;
     ctx.strokeText(S.overlay.text, W / 2, H / 2);
     ctx.fillText(S.overlay.text, W / 2, H / 2);
@@ -4254,69 +4281,94 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
     });
   }
 
-  S.radiationZones.push({
-    x, y,
-    radius: Math.sqrt(yieldMT) * 8,
-    intensity: yieldMT / 100
+  const impact = calculateNuclearImpact({
+    yieldMT,
+    defense: target?.defense ?? 0,
+    population: target?.population ?? 0,
+    cities: target?.cities ?? 0,
+    production: target?.production ?? 0,
+    missiles: target?.missiles ?? 0,
+    bombers: target?.bombers ?? 0,
+    submarines: target?.submarines ?? 0,
+    uranium: target?.uranium ?? 0,
+    nationName: target?.name,
   });
 
-  // Nuclear winter accumulation
-  if (yieldMT >= 50) {
-    S.nuclearWinterLevel = (S.nuclearWinterLevel || 0) + (yieldMT || 0) / 100;
-    S.globalRadiation = (S.globalRadiation || 0) + (yieldMT || 0) / 200;
+  S.radiationZones.push({
+    x,
+    y,
+    radius: Math.sqrt(yieldMT) * 8 * (1 + impact.severity * 0.3),
+    intensity: yieldMT / 100 + impact.radiationDelta / 15
+  });
+
+  const smokeBursts = Math.max(0, Math.round((impact.severity + impact.totalCityLosses * 0.6) * 12));
+  for (let s = 0; s < smokeBursts; s++) {
+    const ang = Math.random() * Math.PI * 2;
+    const rad = Math.random() * 12;
+    S.particles.push({
+      x: x + Math.cos(ang) * rad,
+      y: y + Math.sin(ang) * rad,
+      vx: (Math.random() - 0.5) * 0.35,
+      vy: -0.6 - Math.random() * 0.5,
+      life: 900 + Math.random() * 800,
+      max: 1600,
+      type: 'smoke'
+    });
   }
 
-  if (yieldMT >= 50) {
-    // Mushroom smoke
-    for (let s = 0; s < 20 * (S.fx || 1); s++) {
-      const ang = Math.random() * Math.PI * 2;
-      const rad = Math.random() * 8;
-      S.particles.push({
-        x: x + Math.cos(ang) * rad,
-        y: y + Math.sin(ang) * rad,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: -0.6 - Math.random() * 0.4,
-        life: 900 + Math.random() * 600,
-        max: 1500,
-        type: 'smoke'
-      });
-    }
-
+  if (impact.severity >= 1 || yieldMT >= 40) {
     S.empEffects.push({
-      x, y,
-      radius: Math.sqrt(yieldMT) * 15,
+      x,
+      y,
+      radius: Math.sqrt(yieldMT) * 15 * (1 + impact.severity * 0.2),
       duration: 30
     });
-    
+
     nations.forEach(n => {
       const { x: nx, y: ny } = projectLocal(n.lon, n.lat);
       const dist = Math.hypot(nx - x, ny - y);
-      if (dist < Math.sqrt(yieldMT) * 15) {
-        n.defense = Math.max(0, n.defense - 3);
-        n.missiles = Math.max(0, n.missiles - 2);
+      if (dist < Math.sqrt(yieldMT) * 15 * (1 + impact.severity * 0.1)) {
+        const defenseLoss = Math.min(5, Math.round(impact.severity * 2));
+        const missileLoss = Math.max(0, Math.round(impact.severity));
+        n.defense = Math.max(0, n.defense - defenseLoss);
+        n.missiles = Math.max(0, n.missiles - missileLoss);
         log(`⚡ EMP disabled ${n.name}'s electronics!`, 'warning');
       }
     });
   }
 
-  S.screenShake = Math.max(S.screenShake || 0, Math.min(20, yieldMT / 5));
-  
+  S.screenShake = Math.max(S.screenShake || 0, Math.min(25, yieldMT / 5 + impact.severity * 3));
+
   if (target) {
-    const reduction = Math.max(0, 1 - target.defense * 0.05);
-    const damage = yieldMT * reduction;
-    const oldPopulation = target.population;
-    target.population = Math.max(0, target.population - damage);
-    target.instability = Math.min(100, (target.instability || 0) + yieldMT);
+    const previousPopulation = target.population;
+    applyNuclearImpactToNation(target, impact);
 
-    log(`💥 ${yieldMT}MT detonation at ${target.name}! -${Math.floor(damage)}M`, "alert");
+    log(`💥 ${yieldMT}MT detonation at ${target.name}! ${impact.humanitarianSummary}`, 'alert');
+    impact.stageReports.forEach(stage => {
+      if (stage.summary) {
+        log(`☢️ ${stage.summary}`, 'warning');
+      }
+    });
 
-    // Track statistics
+    toast({
+      title: `☢️ ${target.name} Devastated`,
+      description: `${impact.humanitarianSummary} ${impact.environmentalSummary}`,
+      variant: 'destructive',
+      duration: 8000,
+    });
+
+    emitOverlayMessage(impact.overlayMessage, 8000, { tone: 'catastrophe', sound: 'explosion-blast' });
+
+    if (typeof window !== 'undefined' && window.__gameAddNewsItem) {
+      window.__gameAddNewsItem('crisis', `${target.name} suffers nuclear annihilation: ${impact.humanitarianSummary}`, 'critical');
+    }
+
     if (target.isPlayer) {
       if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
       S.statistics.nukesReceived++;
     }
-    // Track if target was destroyed by this nuke
-    if (oldPopulation > 0 && target.population <= 0 && !target.isPlayer) {
+
+    if (previousPopulation > 0 && target.population <= 0 && !target.isPlayer) {
       const player = PlayerManager.get();
       if (player) {
         if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
@@ -4324,9 +4376,35 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
       }
     }
 
-    if (yieldMT >= 50) {
-      DoomsdayClock.tick(0.5);
+    if (impact.totalRefugees > 0) {
+      const refugeeId = `nuke-${target.id}-${Date.now()}`;
+      S.refugeeCamps = S.refugeeCamps || [];
+      S.refugeeCamps.push({ id: refugeeId, nationId: target.id, displaced: impact.totalRefugees, ttl: Math.max(5, Math.round(impact.severity * 10)) });
+      log(`🚨 ${impact.totalRefugees.toFixed(1)}M refugees flee ${target.name}.`, 'warning');
     }
+
+    if (governanceApiRef) {
+      const moraleDelta = -Math.round(Math.max(2, impact.severity * 10));
+      const opinionDelta = -Math.round(Math.max(1, impact.severity * 8));
+      const cabinetDelta = -Math.round(Math.max(1, impact.severity * 6));
+      governanceApiRef.applyGovernanceDelta(target.id, {
+        morale: moraleDelta,
+        publicOpinion: opinionDelta,
+        cabinetApproval: cabinetDelta,
+      }, `${target.name} reels from nuclear devastation.`);
+    }
+
+    if (impact.severity >= 1.2) {
+      DoomsdayClock.tick(0.5 + impact.severity * 0.1);
+    }
+  }
+
+  S.nuclearWinterLevel = (S.nuclearWinterLevel || 0) + impact.winterDelta;
+  S.globalRadiation = (S.globalRadiation || 0) + impact.radiationDelta;
+
+  if (impact.totalRefugees > 0 && !target) {
+    S.refugeeCamps = S.refugeeCamps || [];
+    S.refugeeCamps.push({ id: `nuke-unknown-${Date.now()}`, nationId: 'unknown', displaced: impact.totalRefugees, ttl: Math.max(5, Math.round(impact.severity * 10)) });
   }
 
   checkVictory();
