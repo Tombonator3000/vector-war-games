@@ -2992,3 +2992,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added an `uiClickKey` helper and `playUIClick` convenience method to the audio manager, preloading `/sfx/klick1.mp3` under that key for immediate button feedback.
 - Updated `AudioSys.playSFX` in `src/pages/Index.tsx` to reference the exported click key when resolving the `'click'` sound mapping so runtime stays aligned with the singleton.
 - Revised `public/sfx/README.md` to note that `klick1.mp3` provides the standard UI click shipped with the project.
+
+### 2025-11-10T10:36:14Z - Refresh governance hook dependencies
+- Added `nations` to the dependency arrays for governance callbacks in `src/pages/Index.tsx` so they update once the initialization populates nation state.
+- Ensured governance metrics and delta handlers receive the latest nation references, allowing the player's metrics to appear after the initial sync.
