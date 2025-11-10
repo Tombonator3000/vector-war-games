@@ -29,15 +29,77 @@ import type { ResourceMarket } from '@/lib/resourceMarketSystem';
 /**
  * Initialize resource stockpile for a nation
  */
+function syncLegacyStrategicResourceField(
+  nation: Nation,
+  resource: StrategyResourceType
+): void {
+  if (resource === 'uranium') {
+    nation.uranium = nation.resourceStockpile?.uranium ?? 0;
+  }
+}
+
+function syncAllLegacyStrategicResourceFields(nation: Nation): void {
+  const mirroredResources: StrategyResourceType[] = ['uranium'];
+  mirroredResources.forEach(resource => {
+    syncLegacyStrategicResourceField(nation, resource);
+  });
+}
+
 export function initializeResourceStockpile(nation: Nation): void {
   if (!nation.resourceStockpile) {
     nation.resourceStockpile = {
       oil: 50,
-      uranium: nation.uranium || 30,  // Migrate existing uranium
+      uranium: nation.uranium || 30, // Migrate existing uranium
       rare_earths: 40,
       food: 60,
     };
   }
+  syncAllLegacyStrategicResourceFields(nation);
+}
+
+export function addStrategicResource(
+  nation: Nation,
+  resource: StrategyResourceType,
+  amount: number
+): number {
+  initializeResourceStockpile(nation);
+  if (amount === 0) {
+    return nation.resourceStockpile![resource] ?? 0;
+  }
+
+  if (amount < 0) {
+    spendStrategicResource(nation, resource, Math.abs(amount));
+    return nation.resourceStockpile![resource] ?? 0;
+  }
+
+  const stockpile = nation.resourceStockpile!;
+  const current = stockpile[resource] ?? 0;
+  stockpile[resource] = current + amount;
+  syncLegacyStrategicResourceField(nation, resource);
+  return stockpile[resource];
+}
+
+export function spendStrategicResource(
+  nation: Nation,
+  resource: StrategyResourceType,
+  amount: number
+): boolean {
+  if (amount <= 0) {
+    return true;
+  }
+  initializeResourceStockpile(nation);
+  const stockpile = nation.resourceStockpile!;
+  const current = stockpile[resource] ?? 0;
+
+  if (current >= amount) {
+    stockpile[resource] = current - amount;
+    syncLegacyStrategicResourceField(nation, resource);
+    return true;
+  }
+
+  stockpile[resource] = 0;
+  syncLegacyStrategicResourceField(nation, resource);
+  return false;
 }
 
 /**
@@ -216,10 +278,10 @@ export function processNationResources(
     });
 
   // Apply generation and trade income
-  nation.resourceStockpile!.oil += generation.oil + tradeIncome.oil;
-  nation.resourceStockpile!.uranium += generation.uranium + tradeIncome.uranium;
-  nation.resourceStockpile!.rare_earths += generation.rare_earths + tradeIncome.rare_earths;
-  nation.resourceStockpile!.food += generation.food + tradeIncome.food;
+  addStrategicResource(nation, 'oil', generation.oil + tradeIncome.oil);
+  addStrategicResource(nation, 'uranium', generation.uranium + tradeIncome.uranium);
+  addStrategicResource(nation, 'rare_earths', generation.rare_earths + tradeIncome.rare_earths);
+  addStrategicResource(nation, 'food', generation.food + tradeIncome.food);
 
   // Attempt to consume resources
   const shortages: ResourceShortage[] = [];
@@ -231,7 +293,7 @@ export function processNationResources(
 
     if (available >= needed) {
       // Sufficient resources
-      nation.resourceStockpile![resource] -= needed;
+      spendStrategicResource(nation, resource, needed);
     } else {
       // Shortage!
       const shortage = calculateResourceShortage(
@@ -243,7 +305,9 @@ export function processNationResources(
         shortages.push(shortage);
       }
       // Consume what's available
-      nation.resourceStockpile![resource] = 0;
+      if (available > 0) {
+        spendStrategicResource(nation, resource, available);
+      }
     }
   });
 
@@ -259,15 +323,14 @@ export function processNationResources(
     }
   });
 
-  // Synchronize legacy uranium field
-  nation.uranium = nation.resourceStockpile!.uranium;
-
   // Cap resources at reasonable maximums
   const RESOURCE_CAPS = { oil: 500, uranium: 300, rare_earths: 400, food: 600 };
   nation.resourceStockpile!.oil = Math.min(nation.resourceStockpile!.oil, RESOURCE_CAPS.oil);
   nation.resourceStockpile!.uranium = Math.min(nation.resourceStockpile!.uranium, RESOURCE_CAPS.uranium);
   nation.resourceStockpile!.rare_earths = Math.min(nation.resourceStockpile!.rare_earths, RESOURCE_CAPS.rare_earths);
   nation.resourceStockpile!.food = Math.min(nation.resourceStockpile!.food, RESOURCE_CAPS.food);
+
+  syncAllLegacyStrategicResourceFields(nation);
 
   return { generation, consumption, shortages, tradeIncome };
 }
@@ -317,6 +380,9 @@ export function processResourceTrades(
 
     if (!fromNation || !toNation) return;  // Nation eliminated
 
+    initializeResourceStockpile(fromNation);
+    initializeResourceStockpile(toNation);
+
     // Check if nations are at war (cancels trade)
     const relationship = fromNation.relationships?.[toNation.id] || 0;
     if (relationship < -50) {
@@ -334,8 +400,11 @@ export function processResourceTrades(
     const pricePerTurn = dynamicPrice ?? trade.pricePerTurn;
 
     // Deduct from sender (handled in processNationResources for receiver)
-    if (fromNation.resourceStockpile && fromNation.resourceStockpile[trade.resource] >= trade.amountPerTurn) {
-      fromNation.resourceStockpile[trade.resource] -= trade.amountPerTurn;
+    if (
+      fromNation.resourceStockpile &&
+      (fromNation.resourceStockpile[trade.resource] || 0) >= trade.amountPerTurn
+    ) {
+      spendStrategicResource(fromNation, trade.resource, trade.amountPerTurn);
 
       // Apply payment if any
       if (pricePerTurn && toNation.production >= pricePerTurn) {

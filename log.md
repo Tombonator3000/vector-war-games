@@ -2963,3 +2963,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated `src/components/SpyNetworkPanel.tsx` to stop the spy card toggle handler from firing when the Assign Mission button is clicked so the selected spy state persists.
 - Added `src/components/__tests__/SpyNetworkPanel.test.tsx` with a React Testing Library scenario covering selecting a spy, opening missions, and verifying mission options stay available.
 - Installed `@testing-library/user-event` for richer interaction simulation and executed `npm run test -- SpyNetworkPanel` to confirm the new coverage passes.
+
+### 2025-11-10T08:46:40Z - Sync uranium stockpile flows with legacy fields
+- Added strategic resource helpers in `src/lib/territorialResourcesSystem.ts` to centralize stockpile updates and keep legacy uranium fields aligned, plus new unit coverage in `src/lib/__tests__/territorialResourcesSystem.test.ts`.
+- Replaced direct uranium mutations across gameplay modules (Index page actions, conventional warfare, AI bio-warfare, leader abilities, production phase) with the helper utilities.
+- Updated cost evaluation utilities and governance tests to use the stockpile-aware helpers and executed `npm run test -- territorialResourcesSystem`.
