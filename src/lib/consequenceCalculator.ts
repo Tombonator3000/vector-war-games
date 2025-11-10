@@ -26,6 +26,43 @@ export function calculateMissileLaunchConsequences(
   const interceptionChance = Math.min(75, defenseStrength * 2); // Max 75% intercept
   const successProbability = 100 - interceptionChance;
 
+  const retaliationCapacity =
+    (targetNation.missiles || 0) + (targetNation.bombers || 0) + (targetNation.submarines || 0);
+  const alliedCount = targetNation.alliances?.length ?? 0;
+  const averageInstability =
+    allNations.length > 0
+      ? allNations.reduce((sum, nation) => sum + (nation.instability ?? 0), 0) / allNations.length
+      : 0;
+  const populationPressure = safePercentage(targetNation.population, 1500, 0);
+  const globalRadiation = context.gameState?.globalRadiation ?? 0;
+  const nuclearWinterLevel = context.gameState?.nuclearWinterLevel ?? 0;
+
+  const retaliationProbability = Math.min(95, 35 + retaliationCapacity * 8 + Math.round(warheadYield * 2));
+  const radiationHellProbability = Math.min(
+    100,
+    50 + Math.round(warheadYield * 4) + Math.round(populationPressure / 2)
+  );
+  const healthCollapseProbability = Math.min(
+    95,
+    30 + Math.round(warheadYield * 3) + Math.max(0, Math.round(averageInstability / 2))
+  );
+  const famineProbability = Math.min(
+    90,
+    15 + Math.round(warheadYield * 2.5) + Math.round(nuclearWinterLevel * 20) + Math.round(globalRadiation * 15)
+  );
+  const diplomaticCollapseChance = Math.min(
+    95,
+    25 + alliedCount * 10 + Math.round(retaliationCapacity * 5) + (context.currentDefcon <= 2 ? 20 : 0)
+  );
+  const environmentalMeltdownChance = Math.min(
+    90,
+    20 + Math.round(warheadYield * 3.5) + Math.round(globalRadiation * 25) + Math.round(nuclearWinterLevel * 25)
+  );
+  const civilUnrestChance = Math.min(
+    85,
+    20 + Math.round((playerNation.instability ?? 0) * 5) + Math.round(warheadYield * 2)
+  );
+
   // Calculate casualties
   const estimatedCasualties = Math.floor(warheadYield * 1000000 * (1 + Math.random() * 0.5));
   const casualtyRange = {
@@ -79,30 +116,49 @@ export function calculateMissileLaunchConsequences(
 
   const longTerm: Consequence[] = [
     {
-      description: `${targetNation.name} will likely retaliate`,
+      description: `${targetNation.name} will lash back with whatever nuclear fire survives—retaliatory launches are almost certain`,
       severity: 'critical',
-      probability: (targetNation.missiles || 0) > 5 ? 90 : 50,
+      probability: retaliationProbability,
       icon: '☢️',
     },
     {
-      description: 'Radiation zone created for 10-15 turns',
+      description: 'Radiation burns will flay survivors alive; field hospitals drown in screams and melted flesh',
+      severity: 'critical',
+      probability: radiationHellProbability,
+      icon: '🔥',
+    },
+    {
+      description: `${targetNation.name}'s health system collapses as doctors triage in blacked-out corridors and supplies run dry`,
       severity: 'negative',
-      icon: '☢️',
+      probability: healthCollapseProbability,
+      icon: '🚑',
     },
     {
-      description: 'Nuclear winter effect may spread',
+      description: 'Ash-choked skies poison harvests—the world staggers toward synchronized famine and ration riots',
       severity: 'critical',
-      probability: warheadYield >= 10 ? 40 : 10,
-      icon: '❄️',
+      probability: famineProbability,
+      icon: '🌍',
     },
   ];
 
   const risks: Consequence[] = [
     {
-      description: `${targetNation.name} alliances may break with you`,
-      severity: 'negative',
-      probability: 60,
+      description: `Diplomatic collapse looms—alliances fracture and neutral states spit venom at ${playerNation.name}`,
+      severity: 'critical',
+      probability: diplomaticCollapseChance,
       icon: '💔',
+    },
+    {
+      description: 'Environmental catastrophe kindles: black rain, toxic seas, and choking fallout storms',
+      severity: 'critical',
+      probability: environmentalMeltdownChance,
+      icon: '🌪️',
+    },
+    {
+      description: `${playerNation.name} may erupt in civil unrest as terrified citizens flood the streets and demand answers`,
+      severity: 'negative',
+      probability: civilUnrestChance,
+      icon: '🔥',
     },
   ];
 
@@ -125,6 +181,16 @@ export function calculateMissileLaunchConsequences(
   if ((playerNation.defense || 0) < 10) {
     warnings.push('Your defense is weak - expect heavy retaliation casualties!');
   }
+  if (diplomaticCollapseChance >= 50) {
+    warnings.push('Diplomatic backchannels are shattering—ambassadors are calling for evacuations in tears.');
+  }
+  if (environmentalMeltdownChance >= 45) {
+    warnings.push('Scientists whisper about black rain and poisoned oceans—this launch could make their nightmares real.');
+  }
+  if (civilUnrestChance >= 40) {
+    warnings.push(`${playerNation.name} faces riots and candlelight vigils collapsing into chaos once the sirens wail.`);
+  }
+
 
   return {
     actionType: 'launch_missile',
