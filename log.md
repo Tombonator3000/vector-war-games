@@ -2999,3 +2999,40 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-10T12:45:00Z - Stabilize governance callbacks and refresh cycle
 - Replaced governance nation handlers in `src/pages/Index.tsx` with ref-backed callbacks and tracked a `nationsVersion` counter so governance logic refreshes only when the nation roster changes.
 - Extended `useGovernance` to accept the version token, skipping drift recalculations when the turn is unchanged while still seeding new nations without decaying existing metrics.
+### 2025-11-10T11:54:23Z - Assess nuclear explosion rework requirements
+- Reviewed repository instructions and located existing `explode` implementation within `src/pages/Index.tsx`.
+- Surveyed test coverage in `src/pages/__tests__/Index.test.tsx` to plan new assertions for expanded nuclear effects.
+### 2025-11-10T11:59:08Z - Draft nuclear damage model helper
+- Added `src/lib/nuclearDamageModel.ts` with deterministic multi-stage impact calculations and mutation helper used to update nations after a nuclear strike.
+### 2025-11-10T11:59:17Z - Extend overlay state typing
+- Updated `GameState.overlay` typing in `src/types/game.ts` to carry optional tone and sound metadata for cinematic alerts.
+### 2025-11-10T11:59:29Z - Wire nuclear model into index imports
+- Added `calculateNuclearImpact` and `applyNuclearImpactToNation` imports within `src/pages/Index.tsx` for use in the new explosion sequence.
+### 2025-11-10T11:59:40Z - Upgrade overlay broadcaster
+- Extended overlay notifications in `src/pages/Index.tsx` with tone/sound metadata and optional critical audio playback when emitting cinematic alerts.
+### 2025-11-10T12:00:47Z - Replace explosion damage pipeline
+- Replaced the linear damage block in `src/pages/Index.tsx` with the multi-stage nuclear impact model, including refugee creation, governance shocks, environmental fallout, and cinematic feedback.
+### 2025-11-10T12:00:59Z - Tone-aware overlay styling
+- Adjusted the overlay canvas styling in `src/pages/Index.tsx` to respect catastrophic tones with scarlet fills and darker strokes.
+### 2025-11-10T12:01:22Z - Author nuclear impact unit tests
+- Added `src/lib/__tests__/nuclearDamageModel.test.ts` verifying stage breakdowns and mutation helpers for the explosion pipeline.
+### 2025-11-10T12:01:37Z - Tighten nuclear tests expectations
+- Strengthened refugee and defense assertions in `src/lib/__tests__/nuclearDamageModel.test.ts` to guarantee measurable fallout in simulations.
+### 2025-11-10T12:01:50Z - Attempt targeted vitest run
+- Ran `npm run test -- --runTestsByPath src/lib/__tests__/nuclearDamageModel.test.ts` but Vitest rejected the Jest-style flag; will rerun using native filters.
+### 2025-11-10T12:02:09Z - Run nuclear damage unit tests
+- Executed `npm run test -- nuclearDamageModel` to validate the new nuclear explosion damage routines.
+
+### 2025-11-10T10:49:18Z - Rebalance nuclear defense mitigation curve
+- Introduced `src/lib/nuclearDamage.ts` with shared helpers to clamp defense, compute diminishing-return mitigation, and simulate blast/fallout damage.
+- Updated `src/pages/Index.tsx` to apply the clamped curve when resolving explosions, cap build-time defense upgrades (including AI and event bonuses), and message when the ABM grid is maxed out.
+- Added `src/lib/__tests__/nuclearDamage.test.ts` to cover the mitigation ceiling and verify that a fortified nation still takes both blast and fallout casualties, and ran `npm run test -- nuclearDamage`.
+### 2025-11-10T13:45:00Z - Wire fallout debuffs into resolution & UI
+- Added `src/lib/falloutEffects.ts` with helpers to translate fallout marks into lingering nation debuffs (sickness, hunger, instability, refugee flow) and applied it from `resolutionPhase`.
+- Extended game typings/state initializers to track `falloutEffects` plus per-nation fallout fields, adjusting production penalties and co-op sync plumbing.
+- Updated `drawFalloutMarks` in `src/pages/Index.tsx` to visualize severity bands, pulse siren rings, and toast lethal alerts; new marks now initialize with `alertLevel: 'none'.`
+- Authored `src/lib/__tests__/falloutEffects.test.ts` to validate accumulation, slow decay, and severity tiering of fallout impacts.
+### 2025-11-10T12:29:48Z - Amplify nuclear consequence previews & alerts
+- Enriched `calculateMissileLaunchConsequences` with stat-driven long-term horrors, emotionally charged risk language, and probability-driven warnings tied to yield, alliances, and global radiation.
+- Wired the strike planner in `src/pages/Index.tsx` to surface a dark-styled consequence overlay, trigger sirens, and cascade dread-soaked toasts once launches resolve.
+- Added `src/lib/__tests__/consequenceCalculator.test.ts` to lock in the new narrative beats and verify that probability curves escalate alongside larger warheads.

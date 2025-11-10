@@ -38,103 +38,103 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // BASIC MECHANICS
   {
     id: 'resources',
-    title: 'Ressurssystem',
+    title: 'Resource System',
     category: 'basics',
     icon: <Factory className="h-5 w-5" />,
-    summary: 'Tre hovedressurser driver din nasjon: Produksjon, Uran og Intel.',
-    details: 'Ressurser regenereres hver runde basert på din nasjons produksjonskapasitet. Produksjon brukes til å bygge militærutstyr, Uran for å skape atomstridshoder, og Intel for forskning og spionasje.',
+    summary: 'Three main resources power your nation: Production, Uranium, and Intel.',
+    details: 'Resources regenerate each turn based on your nation\'s production capacity. Production is used to build military equipment, Uranium to create nuclear warheads, and Intel for research and espionage.',
     mechanics: [
-      'Produksjon: 50-200 per runde avhengig av nasjon',
-      'Uran: 10-50 per runde, nødvendig for stridshoder',
-      'Intel: 20-100 per runde, brukes til forskning og operasjoner',
-      'Ressurser akkumuleres hvis de ikke brukes',
-      'Visse hendelser kan redusere ressursproduksjon'
+      'Production: 50-200 per turn depending on nation',
+      'Uranium: 10-50 per turn, necessary for warheads',
+      'Intel: 20-100 per turn, used for research and operations',
+      'Resources accumulate if not used',
+      'Certain events can reduce resource production'
     ],
     tips: [
-      'Balanser ressursbruk - ikke bruk alt på én type våpen',
-      'Spar ressurser for nødsituasjoner',
-      'Forsk frem teknologier som øker ressursproduksjon'
+      'Balance resource spending - don\'t spend everything on one weapon type',
+      'Save resources for emergencies',
+      'Research technologies that increase resource production'
     ]
   },
   {
     id: 'defcon',
-    title: 'DEFCON-system',
+    title: 'DEFCON System',
     category: 'basics',
     icon: <AlertTriangle className="h-5 w-5" />,
-    summary: 'DEFCON (Defense Condition) måler krigsberedskap fra 5 (fred) til 1 (nukleær krig).',
-    details: 'DEFCON-nivået påvirker hvilke våpen du kan deployere, hvordan andre nasjoner reagerer, og seiersbetingelsene. Aggressive handlinger senker DEFCON, mens diplomati kan heve det.',
+    summary: 'DEFCON (Defense Condition) measures war readiness from 5 (peace) to 1 (nuclear war).',
+    details: 'DEFCON level affects which weapons you can deploy, how other nations react, and victory conditions. Aggressive actions lower DEFCON, while diplomacy can raise it.',
     mechanics: [
-      'DEFCON 5: Fred - normal produksjon, full diplomati',
-      'DEFCON 4: Økt beredskap - overvåking aktivert',
-      'DEFCON 3: Høy beredskap - diplomatiske straffer',
-      'DEFCON 2: Krigstilstand nær - strategiske våpen låst opp',
-      'DEFCON 1: Nukleær krig - alle våpen tilgjengelige'
+      'DEFCON 5: Peace - normal production, full diplomacy',
+      'DEFCON 4: Increased readiness - surveillance activated',
+      'DEFCON 3: High readiness - diplomatic penalties',
+      'DEFCON 2: War imminent - strategic weapons unlocked',
+      'DEFCON 1: Nuclear war - all weapons available'
     ],
     tips: [
-      'Hold DEFCON høyt for diplomatisk seier',
-      'DEFCON 2 kreves for å deployere tyngste våpen',
-      'Overvåk andre nasjoners DEFCON-nivå',
-      'Hvert DEFCON-nivå har unike konsekvenser'
+      'Keep DEFCON high for diplomatic victory',
+      'DEFCON 2 required to deploy heaviest weapons',
+      'Monitor other nations\' DEFCON levels',
+      'Each DEFCON level has unique consequences'
     ],
     relatedTopics: ['diplomacy', 'victory-diplomatic']
   },
   {
     id: 'turn-structure',
-    title: 'Rundestruktur',
+    title: 'Turn Structure',
     category: 'basics',
     icon: <Target className="h-5 w-5" />,
-    summary: 'Hver runde består av fire faser: Spiller, AI, Oppgjør og Produksjon.',
-    details: 'Spillet går fremover i strukturerte runder hvor hver nasjon får mulighet til å handle, etterfulgt av oppgjør av alle handlinger og regenerering av ressurser.',
+    summary: 'Each turn consists of four phases: Player, AI, Resolution, and Production.',
+    details: 'The game progresses in structured turns where each nation gets an opportunity to act, followed by resolution of all actions and regeneration of resources.',
     mechanics: [
-      'SPILLER-fase: Du tar dine handlinger (bygg, angrip, forsk, etc.)',
-      'AI-fase: Alle AI-nasjoner tar sine handlinger',
-      'OPPGJØR-fase: Angrep løses, skader beregnes, effekter anvendes',
-      'PRODUKSJONS-fase: Ressurser regenereres, effekter avtar'
+      'PLAYER phase: You take your actions (build, attack, research, etc.)',
+      'AI phase: All AI nations take their actions',
+      'RESOLUTION phase: Attacks are resolved, damage calculated, effects applied',
+      'PRODUCTION phase: Resources regenerate, effects decay'
     ],
     tips: [
-      'Planlegg handlinger før du bekrefter runden',
-      'AI kan reagere på dine handlinger',
-      'Visse handlinger tar flere runder å fullføre'
+      'Plan actions before confirming the turn',
+      'AI can react to your actions',
+      'Certain actions take multiple turns to complete'
     ]
   },
   {
     id: 'strategic-ledger',
-    title: 'Strategisk Ledger',
+    title: 'Strategic Ledger',
     category: 'basics',
     icon: <ListTree className="h-5 w-5" />,
-    summary: 'Tabellarisk makrooversikt over alle nasjoner, med ressurser, militær styrke og diplomatiske bånd i én skjerm.',
-    details: 'Ledger-fanen i CivilizationInfoPanel kombinerer all tilgjengelig etterretning i et sortérbart og filtrerbart oppsett. Klikk på en rad for å hente samme detaljerte kort som Enemy Nations-fanen, eller bruk hurtigtasten Shift + L for å hoppe direkte til oversikten når panelet er åpent.',
+    summary: 'Tabular macro overview of all nations, with resources, military strength, and diplomatic ties in one screen.',
+    details: 'The Ledger tab in CivilizationInfoPanel combines all available intelligence in a sortable and filterable layout. Click on a row to retrieve the same detailed card as the Enemy Nations tab, or use the Shift + L hotkey to jump directly to the overview when the panel is open.',
     mechanics: [
-      'Viser alle kjente nasjoner med sanntidsverdier for produksjon, uran, intel og militær styrke',
-      'Filterchips isolerer allierte, fiender, nøytrale stater eller de 5 sterkeste militærmaktene',
-      'Kolonneoverskrifter kan klikkes for å sortere stigende/synkende, og innstillingen beholdes til panelet lukkes',
-      'Radklikk låser opp detaljerte etterretningskort uten å forlate ledgeren',
-      'Shift + L fungerer som hurtigtast for å åpne ledger-fanen når CivilizationInfoPanel allerede er aktiv'
+      'Shows all known nations with real-time values for production, uranium, intel, and military strength',
+      'Filter chips isolate allies, enemies, neutral states, or the top 5 military powers',
+      'Column headers can be clicked to sort ascending/descending, and the setting persists until the panel closes',
+      'Row clicks unlock detailed intelligence cards without leaving the ledger',
+      'Shift + L functions as a hotkey to open the ledger tab when CivilizationInfoPanel is already active'
     ],
     tips: [
-      'Bruk ledgeren før offensiver for å kontrollere om motstandere matcher din styrke eller ressurser',
-      'Filtrer på “Topp 5 styrke” for raskt å identifisere hvem som kan true deg på kort sikt',
-      'Hold øye med relasjonskolonnen for å reagere på diplomatiske svingninger uten å bytte til diplomatifanen'
+      'Use the ledger before offensives to check if opponents match your strength or resources',
+      'Filter on "Top 5 strength" to quickly identify who can threaten you in the short term',
+      'Keep an eye on the relations column to react to diplomatic shifts without switching to the diplomacy tab'
     ]
   },
   {
     id: 'map-modes',
-    title: 'Kartmodus & Overlays',
+    title: 'Map Modes & Overlays',
     category: 'basics',
     icon: <Globe className="h-5 w-5" />,
-    summary: 'MapModeBar under topplinjen bytter mellom visuelle operasjonslag for diplomati, etterretning, ressurser og uro.',
-    details: 'Kartmoduser kombinerer funksjonelle overlays med valgt estetikk. MapModeBar (eller hurtigtaster Alt + 1–5) veksler mellom Standard, Diplomatisk, Etterretning, Ressurser og Uro. Dataene trekkes fra diplomati-, etterretnings- og styringssystemene i sanntid, og fungerer både på Three.js-globen og Cesium-visningen.',
+    summary: 'MapModeBar below the top bar switches between visual operation layers for diplomacy, intelligence, resources, and unrest.',
+    details: 'Map modes combine functional overlays with selected aesthetics. MapModeBar (or hotkeys Alt + 1–5) toggles between Standard, Diplomatic, Intelligence, Resources, and Unrest. Data is pulled from diplomacy, intelligence, and governance systems in real-time, and works on both the Three.js globe and Cesium view.',
     mechanics: [
-      'Alt + 1: Standard – klassisk kart med markører, DEFCON-rutenett og krystallklar natt/dag-estetikk',
-      'Alt + 2: Diplomatisk – territorier fargekodes etter relasjonen til din regjering, med hurtig oversikt over venn/fiende',
-      'Alt + 3: Etterretning – viser overvåkingsdekning, rekognoseringsnivå og satellittnettverkets status',
-      'Alt + 4: Ressurser – fremhever strategiske reserver, produksjonsknutepunkter og markedspress',
-      'Alt + 5: Uro – aktiverer Political Stability Overlay og markerer morale, opinion og instabilitet pr. nasjon'
+      'Alt + 1: Standard – classic map with markers, DEFCON grid, and crystal-clear day/night aesthetics',
+      'Alt + 2: Diplomatic – territories color-coded by relationship to your government, with quick friend/foe overview',
+      'Alt + 3: Intelligence – shows surveillance coverage, reconnaissance level, and satellite network status',
+      'Alt + 4: Resources – highlights strategic reserves, production hubs, and market pressure',
+      'Alt + 5: Unrest – activates Political Stability Overlay and marks morale, opinion, and instability per nation'
     ],
     tips: [
-      'Kartmoduser kan kombineres med enhver visuell stil (Realistisk, Natt, Vector osv.) uten å miste data-overlays',
-      'Hold Alt nede og trykk på tallene i rekkefølge for rask scanning av globale situasjoner',
-      'Uro-modusen oppdateres når governance-metrikker endres – bruk den etter politiske beslutninger for å se effekt umiddelbart'
+      'Map modes can be combined with any visual style (Realistic, Night, Vector, etc.) without losing data overlays',
+      'Hold Alt and press numbers in sequence for quick scanning of global situations',
+      'Unrest mode updates when governance metrics change – use it after political decisions to see effect immediately'
     ],
     relatedTopics: ['diplomacy', 'intel-operations', 'governance']
   },
@@ -142,112 +142,112 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // NUCLEAR WARFARE
   {
     id: 'icbms',
-    title: 'ICBMs (Interkontinentale Ballistiske Missiler)',
+    title: 'ICBMs (Intercontinental Ballistic Missiles)',
     category: 'nuclear',
     icon: <Rocket className="h-5 w-5" />,
-    summary: 'Langtrekkende atomraketter som kan nå ethvert mål globalt.',
-    details: 'ICBMs er dine primære angrepsvåpen. De kan utstyres med stridshoder fra 10MT til 200MT. Større stridshoder gjør mer skade men koster mer Uran.',
+    summary: 'Long-range nuclear missiles that can reach any target globally.',
+    details: 'ICBMs are your primary offensive weapons. They can be equipped with warheads from 10MT to 200MT. Larger warheads deal more damage but cost more Uranium.',
     mechanics: [
-      'Kostnad: 30 Produksjon + Uran (avhengig av stridshode)',
-      'Rekkevidde: Global',
-      'Hastighet: Rask (treffer samme runde)',
-      'Kan avskjæres av misselforsvar',
-      'Stridshoder: 10MT, 20MT, 50MT, 100MT, 200MT'
+      'Cost: 30 Production + Uranium (depending on warhead)',
+      'Range: Global',
+      'Speed: Fast (hits same turn)',
+      'Can be intercepted by missile defense',
+      'Warheads: 10MT, 20MT, 50MT, 100MT, 200MT'
     ],
     tips: [
-      'Bygg misselforsvar før du angriper - forvent gjengjeldelse',
-      'Større stridshoder = mer ødeleggelse = mer Uran',
-      'ICBMs kan ikke returneres etter avfyring',
-      '200MT "Planet Cracker" krever avansert forskning'
+      'Build missile defense before attacking - expect retaliation',
+      'Larger warheads = more destruction = more Uranium',
+      'ICBMs cannot be recalled after launch',
+      '200MT "Planet Cracker" requires advanced research'
     ],
     relatedTopics: ['warheads', 'missile-defense', 'research-nuclear']
   },
   {
     id: 'bombers',
-    title: 'Strategiske Bombefly',
+    title: 'Strategic Bombers',
     category: 'nuclear',
     icon: <Bomb className="h-5 w-5" />,
-    summary: 'Atomvåpenbærende fly som kan returnere til base.',
-    details: 'Bombefly er saktere enn raketter men kan kalles tilbake og gjenbrukes. De kan også bære tunge stridshoder.',
+    summary: 'Nuclear weapon-carrying aircraft that can return to base.',
+    details: 'Bombers are slower than missiles but can be recalled and reused. They can also carry heavy warheads.',
     mechanics: [
-      'Kostnad: 40 Produksjon + Uran for stridshode',
-      'Hastighet: Sakte (2-3 runder til mål)',
-      'Kan kalles tilbake før målet nås',
-      'Kan avskjæres av luftforsvar',
-      'Kan gjenbrukes hvis de overlever'
+      'Cost: 40 Production + Uranium for warhead',
+      'Speed: Slow (2-3 turns to target)',
+      'Can be recalled before reaching target',
+      'Can be intercepted by air defense',
+      'Can be reused if they survive'
     ],
     tips: [
-      'Bruk bombefly for fleksibilitet',
-      'Kall tilbake hvis fienden kapitulerer',
-      'Bombefly kan koordineres med rakett-angrep',
-      'Forsvar mot fiendtlig luftforsvar'
+      'Use bombers for flexibility',
+      'Recall if enemy surrenders',
+      'Bombers can be coordinated with missile attacks',
+      'Defend against enemy air defense'
     ],
     relatedTopics: ['icbms', 'air-defense', 'warheads']
   },
   {
     id: 'warheads',
-    title: 'Atomstridshoder',
+    title: 'Nuclear Warheads',
     category: 'nuclear',
     icon: <Skull className="h-5 w-5" />,
-    summary: 'Atomladninger fra 10MT til 200MT som monteres på våpen.',
-    details: 'Stridshoder bestemmer et våpens ødeleggelseskraft. Større stridshoder krever mer Uran og avansert forskning.',
+    summary: 'Nuclear charges from 10MT to 200MT that are mounted on weapons.',
+    details: 'Warheads determine a weapon\'s destructive power. Larger warheads require more Uranium and advanced research.',
     mechanics: [
-      '10MT: 5 Uran - Grunnleggende stridshode',
-      '20MT: 10 Uran - Forbedret ødeleggelse',
-      '50MT: 25 Uran - Kraftig stridshode (krever forskning)',
-      '100MT: 50 Uran - Strategisk stridshode (krever forskning)',
-      '200MT: 100 Uran - "Planet Cracker" (krever avansert forskning)'
+      '10MT: 5 Uranium - Basic warhead',
+      '20MT: 10 Uranium - Enhanced destruction',
+      '50MT: 25 Uranium - Powerful warhead (requires research)',
+      '100MT: 50 Uranium - Strategic warhead (requires research)',
+      '200MT: 100 Uranium - "Planet Cracker" (requires advanced research)'
     ],
     tips: [
-      'Start med 10-20MT stridshoder',
-      'Forsk deg opp til større stridshoder',
-      '200MT kan ødelegge flere mål samtidig',
-      'Balanser kraft mot kostnad'
+      'Start with 10-20MT warheads',
+      'Research your way up to larger warheads',
+      '200MT can destroy multiple targets simultaneously',
+      'Balance power against cost'
     ],
     relatedTopics: ['research-nuclear', 'icbms', 'bombers'],
     unlockTurn: 1
   },
   {
     id: 'missile-defense',
-    title: 'Missilforsvar',
+    title: 'Missile Defense',
     category: 'nuclear',
     icon: <ShieldAlert className="h-5 w-5" />,
-    summary: 'Forsvarssystemer som avskjærer innkommende raketter og bombefly.',
-    details: 'Missilforsvar er kritisk for overlevelse. Hvert forsvarssystem kan avskjære ett angrep per runde.',
+    summary: 'Defense systems that intercept incoming missiles and bombers.',
+    details: 'Missile defense is critical for survival. Each defense system can intercept one attack per turn.',
     mechanics: [
-      'Kostnad: 25 Produksjon per enhet',
-      'Avskjæringsrate: 70-90% avhengig av teknologi',
-      'Kan avskjære raketter og bombefly',
-      'Forbrukes ved bruk (må bygges på nytt)',
-      'Orbital Defense Grid gir permanent forsvar'
+      'Cost: 25 Production per unit',
+      'Intercept rate: 70-90% depending on technology',
+      'Can intercept missiles and bombers',
+      'Consumed on use (must be rebuilt)',
+      'Orbital Defense Grid provides permanent defense'
     ],
     tips: [
-      'Bygg forsvar tidlig - du vil bli angrepet',
-      'Beregn hvor mye forsvar du trenger',
-      'Orbital Defense Grid er beste langsiktige investering',
-      'Forsvar beskytter også mot fiendtlig gjengjeldelse'
+      'Build defense early - you will be attacked',
+      'Calculate how much defense you need',
+      'Orbital Defense Grid is best long-term investment',
+      'Defense also protects against enemy retaliation'
     ],
     relatedTopics: ['orbital-defense', 'research-defense', 'icbms']
   },
   {
     id: 'submarines',
-    title: 'Atomubåter',
+    title: 'Nuclear Submarines',
     category: 'nuclear',
     icon: <Target className="h-5 w-5" />,
-    summary: 'Ubåter utstyrt med atomraketter, vanskeligere å oppdage og avskjære.',
-    details: 'Atomubåter gir en skjult andregangs-angrepskapasitet. De er vanskeligere å oppdage og avskjære enn landbaserte raketter.',
+    summary: 'Submarines equipped with nuclear missiles, harder to detect and intercept.',
+    details: 'Nuclear submarines provide a hidden second-strike capability. They are harder to detect and intercept than land-based missiles.',
     mechanics: [
-      'Kostnad: 60 Produksjon + Uran for stridshode',
-      'Deteksjonssjanse: 30% (vs 90% for ICBMs)',
-      'Avskjæringsrate: Redusert',
-      'Kan bære multiple stridshoder',
-      'Krever forskning å låse opp'
+      'Cost: 60 Production + Uranium for warhead',
+      'Detection chance: 30% (vs 90% for ICBMs)',
+      'Intercept rate: Reduced',
+      'Can carry multiple warheads',
+      'Requires research to unlock'
     ],
     tips: [
-      'Ubåter er beste forsikring mot første-angrep',
-      'Vanskeligere for fienden å forsvare seg mot',
-      'Invester i ubåter for overlevelses-strategi',
-      'Kombinér med landbaserte systemer'
+      'Submarines are best insurance against first strike',
+      'Harder for enemy to defend against',
+      'Invest in submarines for survival strategy',
+      'Combine with land-based systems'
     ],
     relatedTopics: ['icbms', 'research-nuclear'],
     unlockTurn: 15
@@ -259,43 +259,43 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
     title: 'Orbital Defense Grid',
     category: 'defense',
     icon: <Satellite className="h-5 w-5" />,
-    summary: 'Satellitt-basert forsvarssystem som gir permanent beskyttelse.',
-    details: 'Det ultimate forsvarssystemet. Når det er bygget, gir det permanent missilavskjæring uten å forbrukes.',
+    summary: 'Satellite-based defense system that provides permanent protection.',
+    details: 'The ultimate defense system. Once built, it provides permanent missile interception without being consumed.',
     mechanics: [
-      'Kostnad: 200 Produksjon, 100 Intel (engangs)',
-      'Avskjæringsrate: 85% permanent',
-      'Forbrukes ikke ved bruk',
-      'Beskytter mot alle typer angrep',
-      'Krever avansert forskning'
+      'Cost: 200 Production, 100 Intel (one-time)',
+      'Intercept rate: 85% permanent',
+      'Not consumed on use',
+      'Protects against all types of attacks',
+      'Requires advanced research'
     ],
     tips: [
-      'Prioriter denne forskningen i midten av spillet',
-      'Investeringen betaler seg over tid',
-      'Kombinér med konvensjonelt forsvar',
-      'Beskytter mot både raketter og bombefly'
+      'Prioritize this research in mid-game',
+      'Investment pays off over time',
+      'Combine with conventional defense',
+      'Protects against both missiles and bombers'
     ],
     relatedTopics: ['missile-defense', 'research-defense'],
     unlockTurn: 20
   },
   {
     id: 'force-fields',
-    title: 'Kraftfelt-teknologi',
+    title: 'Force Field Technology',
     category: 'defense',
     icon: <Shield className="h-5 w-5" />,
-    summary: 'Avansert energi-skjold som kan blokkere atomeksplosjoner.',
-    details: 'Den mest avanserte forsvarsteknologien. Kraftfelt kan delvis absorbere atomeksplosjoner.',
+    summary: 'Advanced energy shield that can block nuclear explosions.',
+    details: 'The most advanced defense technology. Force fields can partially absorb nuclear explosions.',
     mechanics: [
-      'Kostnad: 300 Produksjon, 150 Intel',
-      'Skadeabsorpsjon: 50%',
-      'Virker mot alle typer angrep',
-      'Permanent når bygget',
-      'Krever meget avansert forskning'
+      'Cost: 300 Production, 150 Intel',
+      'Damage absorption: 50%',
+      'Works against all types of attacks',
+      'Permanent once built',
+      'Requires very advanced research'
     ],
     tips: [
-      'Sene-spill teknologi',
-      'Kombinér med Orbital Defense',
-      'Kan gjøre deg nær usårbar',
-      'Prioriter hvis du planlegger lang krig'
+      'Late-game technology',
+      'Combine with Orbital Defense',
+      'Can make you nearly invulnerable',
+      'Prioritize if planning long war'
     ],
     relatedTopics: ['orbital-defense', 'research-defense'],
     unlockTurn: 30
@@ -304,87 +304,87 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // RESEARCH & TECHNOLOGY
   {
     id: 'research-system',
-    title: 'Forskningssystem',
+    title: 'Research System',
     category: 'research',
     icon: <Radio className="h-5 w-5" />,
-    summary: 'Lås opp avanserte våpen, forsvar og evner gjennom forskning.',
-    details: 'Forskning bruker Intel-ressurser over flere runder for å låse opp nye teknologier. Noen teknologier krever forutgående forskning.',
+    summary: 'Unlock advanced weapons, defenses, and abilities through research.',
+    details: 'Research uses Intel resources over multiple turns to unlock new technologies. Some technologies require prerequisite research.',
     mechanics: [
-      'Kostnad: Varierer (50-300 Intel)',
-      'Varighet: 2-8 runder',
-      'Kan kun forske én ting om gangen',
-      'Noen teknologier har forutsetninger',
-      'Forskning kan ikke avbrytes'
+      'Cost: Varies (50-300 Intel)',
+      'Duration: 2-8 turns',
+      'Can only research one thing at a time',
+      'Some technologies have prerequisites',
+      'Research cannot be canceled'
     ],
     tips: [
-      'Planlegg forskningsveien din tidlig',
-      'Prioriter basert på din strategi',
-      'Counterintelligence øker Intel-produksjon',
-      'Ikke forsøm forsvar-forskning'
+      'Plan your research path early',
+      'Prioritize based on your strategy',
+      'Counterintelligence increases Intel production',
+      'Don\'t neglect defense research'
     ],
     relatedTopics: ['research-nuclear', 'research-defense', 'research-cyber'],
     unlockTurn: 6
   },
   {
     id: 'research-nuclear',
-    title: 'Atomvåpen-forskning',
+    title: 'Nuclear Weapons Research',
     category: 'research',
     icon: <Skull className="h-5 w-5" />,
-    summary: 'Forsk frem større og mer effektive atomvåpen.',
-    details: 'Atomvåpen-forskning låser opp større stridshoder, forbedret nøyaktighet, og spesialiserte våpensystemer.',
+    summary: 'Research larger and more effective nuclear weapons.',
+    details: 'Nuclear weapons research unlocks larger warheads, improved accuracy, and specialized weapon systems.',
     mechanics: [
-      '50MT Warhead (100 Intel, 3 runder)',
-      '100MT Warhead (150 Intel, 4 runder, krever 50MT)',
-      '200MT Planet Cracker (250 Intel, 6 runder, krever 100MT)',
-      'Forbedret rakettmotorer (80 Intel, 2 runder)',
-      'Ubåt-teknologi (120 Intel, 4 runder)'
+      '50MT Warhead (100 Intel, 3 turns)',
+      '100MT Warhead (150 Intel, 4 turns, requires 50MT)',
+      '200MT Planet Cracker (250 Intel, 6 turns, requires 100MT)',
+      'Improved rocket engines (80 Intel, 2 turns)',
+      'Submarine technology (120 Intel, 4 turns)'
     ],
     tips: [
-      'Start med 50MT forskning rundt tur 6-8',
-      '200MT er spillendrende - prioriter i mid-game',
-      'Ubåter gir andregangs-angrepskapasitet'
+      'Start with 50MT research around turn 6-8',
+      '200MT is game-changing - prioritize in mid-game',
+      'Submarines provide second-strike capability'
     ],
     relatedTopics: ['research-system', 'warheads', 'submarines'],
     unlockTurn: 6
   },
   {
     id: 'research-defense',
-    title: 'Forsvarsforskning',
+    title: 'Defense Research',
     category: 'research',
     icon: <Shield className="h-5 w-5" />,
-    summary: 'Forbedr forsvarssystemer og overlevelsesevne.',
-    details: 'Forsvarsforskning øker missilavskjæringsrate, låser opp Orbital Defense, og gir beskyttelse mot angrep.',
+    summary: 'Improve defense systems and survivability.',
+    details: 'Defense research increases missile intercept rate, unlocks Orbital Defense, and provides protection against attacks.',
     mechanics: [
-      'Forbedret Missile Defense (80 Intel, 2 runder)',
-      'Orbital Defense Grid (200 Intel, 5 runder)',
-      'Force Field teknologi (300 Intel, 7 runder, krever Orbital Defense)',
-      'Bunkerbygging (60 Intel, 2 runder)'
+      'Improved Missile Defense (80 Intel, 2 turns)',
+      'Orbital Defense Grid (200 Intel, 5 turns)',
+      'Force Field technology (300 Intel, 7 turns, requires Orbital Defense)',
+      'Bunker construction (60 Intel, 2 turns)'
     ],
     tips: [
-      'Forsvar-forskning er like viktig som angrep',
-      'Prioriter Orbital Defense Grid tidlig',
-      'Force Fields er ultimate forsvar'
+      'Defense research is as important as offense',
+      'Prioritize Orbital Defense Grid early',
+      'Force Fields are ultimate defense'
     ],
     relatedTopics: ['research-system', 'orbital-defense', 'force-fields'],
     unlockTurn: 6
   },
   {
     id: 'research-cyber',
-    title: 'Cyber-forskning',
+    title: 'Cyber Research',
     category: 'research',
     icon: <Network className="h-5 w-5" />,
-    summary: 'Lås opp cyber-angrep og digital forsvar.',
-    details: 'Cyber-forskning gir tilgang til hacking, sabotasje, og digitalt forsvar.',
+    summary: 'Unlock cyber attacks and digital defense.',
+    details: 'Cyber research provides access to hacking, sabotage, and digital defense.',
     mechanics: [
-      'Basic Cyber Ops (100 Intel, 3 runder) - Låser opp cyber-angrep',
-      'Advanced Firewalls (120 Intel, 3 runder)',
-      'AI Defense Systems (180 Intel, 4 runder)',
-      'Cyber Superweapons (250 Intel, 6 runder)'
+      'Basic Cyber Ops (100 Intel, 3 turns) - Unlocks cyber attacks',
+      'Advanced Firewalls (120 Intel, 3 turns)',
+      'AI Defense Systems (180 Intel, 4 turns)',
+      'Cyber Superweapons (250 Intel, 6 turns)'
     ],
     tips: [
-      'Cyber-angrep er billigere enn militære angrep',
-      'Kan sabotere fiendtlig produksjon',
-      'Forsvar deg mot fiendtlige cyber-angrep'
+      'Cyber attacks are cheaper than military attacks',
+      'Can sabotage enemy production',
+      'Defend against enemy cyber attacks'
     ],
     relatedTopics: ['research-system', 'cyber-warfare'],
     unlockTurn: 11
@@ -393,71 +393,71 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // DIPLOMACY
   {
     id: 'diplomacy',
-    title: 'Diplomatisystem',
+    title: 'Diplomacy System',
     category: 'diplomacy',
     icon: <Users className="h-5 w-5" />,
-    summary: 'Bruk diplomati for å forme allianser, traktater og fredelig sameksistens.',
-    details: 'Diplomati lar deg forhandle med andre nasjoner, forme allianser, inngå traktater, og påvirke globale relasjoner.',
+    summary: 'Use diplomacy to form alliances, treaties, and peaceful coexistence.',
+    details: 'Diplomacy allows you to negotiate with other nations, form alliances, enter treaties, and influence global relations.',
     mechanics: [
-      'Fredsforslag: Midlertidig våpenhvile',
-      'Allianser: Militært samarbeid',
-      'Ikke-angrepspakter: Gjensidig beskyttelse',
-      'Økonomisk bistand: Ressursdeling',
-      'Sansjoner: Økonomiske straffer',
-      'Kapitulasjonskrav: Tvinge overgivelse'
+      'Peace proposals: Temporary ceasefire',
+      'Alliances: Military cooperation',
+      'Non-aggression pacts: Mutual protection',
+      'Economic aid: Resource sharing',
+      'Sanctions: Economic penalties',
+      'Capitulation demands: Force surrender'
     ],
     tips: [
-      'Bygg tillit over tid',
-      'Bryt ikke løfter - det reduserer tillit permanent',
-      'Allianser kan vinne spillet',
-      'Overvåk andre nasjoners relasjoner'
+      'Build trust over time',
+      'Don\'t break promises - it reduces trust permanently',
+      'Alliances can win the game',
+      'Monitor other nations\' relationships'
     ],
     relatedTopics: ['victory-diplomatic', 'trust-system', 'alliances'],
     unlockTurn: 1
   },
   {
     id: 'trust-system',
-    title: 'Tillit og Favører',
+    title: 'Trust and Favors',
     category: 'diplomacy',
     icon: <Users className="h-5 w-5" />,
-    summary: 'Relasjoner mellom nasjoner måles i tillit (0-100) og favører (gjeld/kreditt).',
-    details: 'Hver nasjon har et tillitsnivå til andre nasjoner. Høy tillit gjør diplomati lettere, lav tillit gjør det vanskeligere.',
+    summary: 'Relations between nations are measured in trust (0-100) and favors (debt/credit).',
+    details: 'Each nation has a trust level with other nations. High trust makes diplomacy easier, low trust makes it harder.',
     mechanics: [
-      'Tillit: 0-100 skala per nasjon',
-      'Positive handlinger øker tillit',
-      'Negative handlinger reduserer tillit',
-      'Favører: Gjeld/kreditt-system',
-      'Be om favører for å få hjelp',
-      'Innfri favører for å bygge tillit'
+      'Trust: 0-100 scale per nation',
+      'Positive actions increase trust',
+      'Negative actions reduce trust',
+      'Favors: Debt/credit system',
+      'Ask for favors to get help',
+      'Fulfill favors to build trust'
     ],
     tips: [
-      'Høy tillit = lettere diplomati',
-      'Ikke bryt løfter - tilliten faller drastisk',
-      'Gjør favører for å bygge allianser',
-      'Overvåk hvem som skylder hvem'
+      'High trust = easier diplomacy',
+      'Don\'t break promises - trust drops drastically',
+      'Do favors to build alliances',
+      'Monitor who owes whom'
     ],
     relatedTopics: ['diplomacy', 'alliances'],
     unlockTurn: 16
   },
   {
     id: 'alliances',
-    title: 'Allianser',
+    title: 'Alliances',
     category: 'diplomacy',
     icon: <Users className="h-5 w-5" />,
-    summary: 'Form militære, økonomiske eller forsknings-allianser med andre nasjoner.',
-    details: 'Allianser gir bonuser og beskyttelse. Spesialiserte allianser gir unike fordeler.',
+    summary: 'Form military, economic, or research alliances with other nations.',
+    details: 'Alliances provide bonuses and protection. Specialized alliances provide unique advantages.',
     mechanics: [
-      'Militær allianse: Gjensidig forsvar',
-      'Økonomisk allianse: Ressursdeling',
-      'Forsknings-allianse: Delt teknologi',
-      'Allianse-medlemmer forsvarer hverandre',
-      'Brudd på allianse straffer tillit kraftig'
+      'Military alliance: Mutual defense',
+      'Economic alliance: Resource sharing',
+      'Research alliance: Shared technology',
+      'Alliance members defend each other',
+      'Breaking alliance severely penalizes trust'
     ],
     tips: [
-      'Form allianser tidlig for diplomatisk seier',
-      'Spesialiserte allianser gir unike bonuser',
-      'Beskytt allierte - de beskytte deg',
-      'Kreves for diplomatisk seier (60% av nasjoner)'
+      'Form alliances early for diplomatic victory',
+      'Specialized alliances provide unique bonuses',
+      'Protect allies - they protect you',
+      'Required for diplomatic victory (60% of nations)'
     ],
     relatedTopics: ['diplomacy', 'trust-system', 'victory-diplomatic'],
     unlockTurn: 10
@@ -466,200 +466,200 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // CONVENTIONAL WARFARE
   {
     id: 'conventional-warfare',
-    title: 'Konvensjonell Krigføring',
+    title: 'Conventional Warfare',
     category: 'conventional',
     icon: <Sword className="h-5 w-5" />,
-    summary: 'Ikke-atomvåpen krigføring med hærer, flåter og luftstyrker for å erobre territorier.',
-    details: 'Fra tur 11 kan du bygge konvensjonelle militære enheter og erobre territorier. Spillet bruker 8 globale territorier organisert i Risk-stil med nabolandsmekanikk. Du starter med ett territorium (North America) og kan ekspandere ved å angripe naboland med armies.',
+    summary: 'Non-nuclear warfare with armies, navies, and air forces to conquer territories.',
+    details: 'From turn 11, you can build conventional military units and conquer territories. The game uses 8 global territories organized Risk-style with neighbor mechanics. You start with one territory (North America) and can expand by attacking neighboring lands with armies.',
     mechanics: [
-      'Tre enhetstyper: Armored Corps (army), Carrier Strike Group (navy), Expeditionary Air Wing (air)',
-      'Enheter deployes som "armies" til territorier',
+      'Three unit types: Armored Corps (army), Carrier Strike Group (navy), Expeditionary Air Wing (air)',
+      'Units are deployed as "armies" to territories',
       'Armored Corps: 12 prod + 5 oil = 5 armies (Attack: 7, Defense: 5)',
-      'Carrier Strike Group: 16 prod + 2 uran + 6 oil = 4 armies (Attack: 6, Defense: 8, +1 defense die)',
+      'Carrier Strike Group: 16 prod + 2 uranium + 6 oil = 4 armies (Attack: 6, Defense: 8, +1 defense die)',
       'Expeditionary Air Wing: 14 prod + 4 intel + 4 oil + 2 rare earths = 3 armies (Attack: 8, Defense: 4, +1 attack die)',
-      'Border Conflict: Angrip naboland med Risk-style terningkamp',
-      'Erobring: Eliminer alle forsvarerens armies for å ta territoriet',
-      'Army Movement: Flytt armies mellom dine egne tilgrensende territorier'
+      'Border Conflict: Attack neighboring lands with Risk-style dice combat',
+      'Conquest: Eliminate all defender\'s armies to take the territory',
+      'Army Movement: Move armies between your own adjacent territories'
     ],
     tips: [
-      'Angrip nøytrale territorier først (arctic_circle, atlantic_corridor)',
-      'Krever 2:1 army-fordel for sikker seier',
-      'La alltid minst 1 army bli igjen i kildeområdet',
-      'Luftenheter gir +1 angrepsterning per 3 enheter',
-      'Marineenheter gir +1 forsvarsterning per 2 enheter',
-      'Erobrede territorier gir produksjonsbonus og strategiske ressurser',
-      'Kombinér konvensjonelle og atomvåpen for maksimal effekt'
+      'Attack neutral territories first (arctic_circle, atlantic_corridor)',
+      'Requires 2:1 army advantage for safe victory',
+      'Always leave at least 1 army in source territory',
+      'Air units give +1 attack die per 3 units',
+      'Navy units give +1 defense die per 2 units',
+      'Conquered territories provide production bonus and strategic resources',
+      'Combine conventional and nuclear weapons for maximum effect'
     ],
     relatedTopics: ['military-units', 'territory-control', 'combat-system', 'reinforcements', 'victory-economic'],
     unlockTurn: 11
   },
   {
     id: 'territory-control',
-    title: 'Territorial Kontroll',
+    title: 'Territory Control',
     category: 'conventional',
     icon: <Globe className="h-5 w-5" />,
-    summary: 'Erobre og kontroller territorier ved å eliminere forsvarerens armies.',
-    details: 'Spillet har 8 globale territorier i Risk-stil. Hvert territorium har armies, naboland, strategisk verdi, og produksjonsbonus. Du erobrer territorier ved å angripe naboland og vinne terningkamper. Erobrede territorier gir produksjonsbonus, strategiske ressurser, og forsterkninger hver runde.',
+    summary: 'Conquer and control territories by eliminating the defender\'s armies.',
+    details: 'The game has 8 global territories in Risk-style. Each territory has armies, neighbors, strategic value, and production bonus. You conquer territories by attacking neighbors and winning dice battles. Conquered territories provide production bonus, strategic resources, and reinforcements each turn.',
     mechanics: [
-      '8 territorier: north_america, eastern_bloc, indo_pacific, southern_front, equatorial_belt, proxy_middle_east, arctic_circle, atlantic_corridor',
-      'Naboland: Kun tilgrensende territorier kan angripes',
-      'Armies: Numerisk styrke i hvert territorium (fra enheter)',
-      'Production Bonus: +2-4 produksjon per runde fra kontrollerte territorier',
-      'Strategic Value: 2-5 (påvirker AI-prioriteringer)',
-      'Erobring: Eliminer alle forsvarerens armies i Border Conflict',
-      'Eierskapsendring: Erobrede territorier bytter controllingNationId',
-      'Diplomatiske konsekvenser: -25 relasjon med forsvarer, -15 med allierte'
+      '8 territories: north_america, eastern_bloc, indo_pacific, southern_front, equatorial_belt, proxy_middle_east, arctic_circle, atlantic_corridor',
+      'Neighbors: Only adjacent territories can be attacked',
+      'Armies: Numerical strength in each territory (from units)',
+      'Production Bonus: +2-4 production per turn from controlled territories',
+      'Strategic Value: 2-5 (affects AI priorities)',
+      'Conquest: Eliminate all defender\'s armies in Border Conflict',
+      'Ownership change: Conquered territories switch controllingNationId',
+      'Diplomatic consequences: -25 relation with defender, -15 with allies'
     ],
     tips: [
-      'Start med nøytrale territorier (arctic_circle, atlantic_corridor)',
-      'Kontroller nabolandskart før angrep',
-      'Prioriter territorier med høy produksjonsbonus',
-      'Komplett regioner for regionbonuser (+2-3 armies per runde)',
-      'Behold minst 1 army i hvert territorium for forsvar',
-      'Erobring senker din Readiness med 8 (seier) eller 15 (tap)',
-      'Planlegg erobringsrute for kontinentbonus'
+      'Start with neutral territories (arctic_circle, atlantic_corridor)',
+      'Check neighbor map before attacking',
+      'Prioritize territories with high production bonus',
+      'Complete regions for region bonuses (+2-3 armies per turn)',
+      'Keep at least 1 army in each territory for defense',
+      'Conquest lowers your Readiness by 8 (victory) or 15 (defeat)',
+      'Plan conquest route for continent bonus'
     ],
     relatedTopics: ['conventional-warfare', 'combat-system', 'reinforcements', 'strategic-resources-territories', 'victory-economic'],
     unlockTurn: 11
   },
   {
     id: 'military-units',
-    title: 'Militære Enheter',
+    title: 'Military Units',
     category: 'conventional',
     icon: <Sword className="h-5 w-5" />,
-    summary: 'Tre typer konvensjonelle enheter: Armored Corps, Carrier Strike Groups, og Expeditionary Air Wings.',
-    details: 'Militære enheter deployes som "armies" til territorier. Hver enhetstype har unik kostnad, army-styrke, og kampbonuser. Enheter krever strategiske ressurser (oil, uranium, rare earths) i tillegg til produksjon.',
+    summary: 'Three types of conventional units: Armored Corps, Carrier Strike Groups, and Expeditionary Air Wings.',
+    details: 'Military units are deployed as "armies" to territories. Each unit type has unique cost, army strength, and combat bonuses. Units require strategic resources (oil, uranium, rare earths) in addition to production.',
     mechanics: [
       'ARMORED CORPS (army): 12 prod + 5 oil → 5 armies',
       '  Attack: 7, Defense: 5',
-      '  Standard landbasert styrke',
-      'CARRIER STRIKE GROUP (navy): 16 prod + 2 uran + 6 oil → 4 armies',
+      '  Standard land-based force',
+      'CARRIER STRIKE GROUP (navy): 16 prod + 2 uranium + 6 oil → 4 armies',
       '  Attack: 6, Defense: 8',
-      '  Bonus: +1 defense die per 2 navy units i territoriet',
-      '  Styrke i sjøterritorier',
+      '  Bonus: +1 defense die per 2 navy units in territory',
+      '  Strength in sea territories',
       'EXPEDITIONARY AIR WING (air): 14 prod + 4 intel + 4 oil + 2 rare earths → 3 armies',
       '  Attack: 8, Defense: 4',
-      '  Bonus: +1 attack die per 3 air units i territoriet',
-      '  Høyeste angrepsverdi',
-      'Unit Composition: Armies teller proporsjonal enhetstype',
-      'Strategic Resources: Krever oil, uranium, rare earths fra territorier'
+      '  Bonus: +1 attack die per 3 air units in territory',
+      '  Highest attack value',
+      'Unit Composition: Armies count proportional unit type',
+      'Strategic Resources: Requires oil, uranium, rare earths from territories'
     ],
     tips: [
-      'Armored Corps = beste kostnad/army-ratio (5 armies)',
-      'Air Wings = beste angrepsverdi (Attack 8 + bonus)',
-      'Carrier Groups = beste forsvar (Defense 8 + bonus)',
-      'Kombinér enhetstyper for balanced styrke',
-      'Air Wings gir attack dice bonuser i kamp',
-      'Navy gir defense dice bonuser i kamp',
-      'Krev strategiske ressurser - erobre ressursterritorier først'
+      'Armored Corps = best cost/army ratio (5 armies)',
+      'Air Wings = best attack value (Attack 8 + bonus)',
+      'Carrier Groups = best defense (Defense 8 + bonus)',
+      'Combine unit types for balanced strength',
+      'Air Wings provide attack dice bonuses in combat',
+      'Navy provides defense dice bonuses in combat',
+      'Require strategic resources - conquer resource territories first'
     ],
     relatedTopics: ['conventional-warfare', 'combat-system', 'strategic-resources-territories'],
     unlockTurn: 11
   },
   {
     id: 'combat-system',
-    title: 'Kampsystem (Risk-stil)',
+    title: 'Combat System (Risk-style)',
     category: 'conventional',
     icon: <Target className="h-5 w-5" />,
-    summary: 'Border Conflicts bruker Risk-stil terningkamp for å avgjøre territorielle erobringer.',
-    details: 'Når du angriper et naboland, løses kampen med terningkast. Angriper og forsvarer kaster terninger (1d6) basert på armies. Høyeste terninger sammenlignes, og taperen mister armies. Kampen fortsetter til angriper trekker seg tilbake eller forsvarer elimineres.',
+    summary: 'Border Conflicts use Risk-style dice combat to determine territorial conquests.',
+    details: 'When you attack a neighboring land, combat is resolved with dice rolls. Attacker and defender roll dice (1d6) based on armies. Highest dice are compared, and the loser loses armies. Combat continues until attacker retreats or defender is eliminated.',
     mechanics: [
-      'TERNINGKAST:',
-      '  Angriper: Opptil 3 terninger (basert på attacking armies)',
-      '  Forsvarer: Opptil 2 terninger (basert på defending armies)',
-      '  Hver terning = 1d6 (1-6)',
-      'BONUSER FRA ENHETER:',
+      'DICE ROLLS:',
+      '  Attacker: Up to 3 dice (based on attacking armies)',
+      '  Defender: Up to 2 dice (based on defending armies)',
+      '  Each die = 1d6 (1-6)',
+      'BONUSES FROM UNITS:',
       '  Air units: +1 attack die per 3 air units',
       '  Navy units: +1 defense die per 2 navy units',
-      'SAMMENLIGNING:',
-      '  Høyeste vs høyeste terning',
-      '  Nest-høyeste vs nest-høyeste (hvis begge har 2+)',
-      '  Uavgjort = forsvarer vinner',
-      'TAP:',
-      '  Taper av hver sammenligning mister 1 army',
-      '  Kampen fortsetter til slutt-betingelse',
-      'SLUTT-BETINGELSER:',
-      '  Angriper vinner: Forsvarer armies = 0 → Territorium erobret',
-      '  Angriper taper: Angriper armies = 0 → Angrep mislyktes'
+      'COMPARISON:',
+      '  Highest vs highest die',
+      '  Second-highest vs second-highest (if both have 2+)',
+      '  Tie = defender wins',
+      'LOSSES:',
+      '  Loser of each comparison loses 1 army',
+      '  Combat continues until end condition',
+      'END CONDITIONS:',
+      '  Attacker wins: Defender armies = 0 → Territory conquered',
+      '  Attacker loses: Attacker armies = 0 → Attack failed'
     ],
     tips: [
-      'GYLNE REGEL: 2:1 eller 3:1 fordel anbefales',
-      'Uavgjort favoriserer alltid forsvareren',
-      'Enhetskomposisjon gir terningbonuser',
-      'Mange terninger = høyere sjanse for høye kast',
-      'Beregn forventet tap før angrep',
-      'AI krever ofte 2:1 fordel før angrep',
-      'Readiness påvirkes av utfall (-8 ved seier, -15 ved tap)'
+      'GOLDEN RULE: 2:1 or 3:1 advantage recommended',
+      'Ties always favor the defender',
+      'Unit composition provides dice bonuses',
+      'More dice = higher chance of high rolls',
+      'Calculate expected losses before attacking',
+      'AI often requires 2:1 advantage before attacking',
+      'Readiness affected by outcome (-8 on victory, -15 on defeat)'
     ],
     relatedTopics: ['conventional-warfare', 'military-units', 'territory-control'],
     unlockTurn: 11
   },
   {
     id: 'reinforcements',
-    title: 'Forsterkningssystem',
+    title: 'Reinforcement System',
     category: 'conventional',
     icon: <Shield className="h-5 w-5" />,
-    summary: 'Motta gratis armies hver runde basert på antall territorier du kontrollerer.',
-    details: 'Lik Risk-mekanikk: Du får forsterkninger basert på territoriecount delt på 3, pluss regionbonuser hvis du kontrollerer hele regioner. Forsterkninger kan plasseres i hvilken som helst kontrollert territorium.',
+    summary: 'Receive free armies each turn based on number of territories you control.',
+    details: 'Like Risk mechanics: You receive reinforcements based on territory count divided by 3, plus region bonuses if you control entire regions. Reinforcements can be placed in any controlled territory.',
     mechanics: [
-      'BEREGNING:',
-      '  Base reinforcements = Math.max(3, territorier / 3)',
-      '  Minimum = 3 armies selv med 1 territorium',
-      '  Eksempel: 6 territorier = Math.max(3, 6/3) = 3 armies',
-      'REGIONBONUSER (hvis kontrollerer alle territorier i region):',
+      'CALCULATION:',
+      '  Base reinforcements = Math.max(3, territories / 3)',
+      '  Minimum = 3 armies even with 1 territory',
+      '  Example: 6 territories = Math.max(3, 6/3) = 3 armies',
+      'REGION BONUSES (if controlling all territories in region):',
       '  Western Hemisphere: +2 armies',
       '  Europe & Siberia: +3 armies',
       '  Pacific: +2 armies',
       '  Atlantic: +1 army',
       '  Arctic: +1 army',
-      'PLASSERING:',
-      '  Velg hvilket territorium armies plasseres i',
-      '  Kan fordeles på flere territorier',
-      '  Styrker forsvar eller forbereder angrep'
+      'PLACEMENT:',
+      '  Choose which territory armies are placed in',
+      '  Can be distributed across multiple territories',
+      '  Strengthens defense or prepares attack'
     ],
     tips: [
-      'Prioriter å fullføre regioner for bonuser',
-      'Plasser forsterkninger strategisk (grenseområder)',
-      'Flere territorier = mer armies per runde',
-      '3 territorier = 3 armies, 6 territorier = 3 armies (samme!)',
-      '9 territorier = 4 armies (breakpoint)',
-      'Regionbonuser gir betydelig fordel',
-      'Kombiner med produserte enheter for rask ekspansjon'
+      'Prioritize completing regions for bonuses',
+      'Place reinforcements strategically (border areas)',
+      'More territories = more armies per turn',
+      '3 territories = 3 armies, 6 territories = 3 armies (same!)',
+      '9 territories = 4 armies (breakpoint)',
+      'Region bonuses provide significant advantage',
+      'Combine with produced units for rapid expansion'
     ],
     relatedTopics: ['territory-control', 'conventional-warfare'],
     unlockTurn: 11
   },
   {
     id: 'strategic-resources-territories',
-    title: 'Strategiske Ressurser fra Territorier',
+    title: 'Strategic Resources from Territories',
     category: 'conventional',
     icon: <Factory className="h-5 w-5" />,
-    summary: 'Territorier gir produksjonsbonus og strategiske ressurser (oil, uranium, rare earths, intel).',
-    details: 'Kontrollerte territorier genererer ressurser hver runde. Production bonus øker din produksjonsrate. Strategiske ressurser (oil, uranium, rare earths, intel) kreves for å bygge avanserte militære enheter. Erobring av ressurs-rike territorier er kritisk for militær utvikling.',
+    summary: 'Territories provide production bonus and strategic resources (oil, uranium, rare earths, intel).',
+    details: 'Controlled territories generate resources each turn. Production bonus increases your production rate. Strategic resources (oil, uranium, rare earths, intel) are required to build advanced military units. Conquering resource-rich territories is critical for military development.',
     mechanics: [
-      'PRODUCTION BONUS: +2-4 produksjon per runde fra hvert territorium',
-      'STRATEGISKE RESSURSER per territorium:',
-      '  Oil: Kreves for Armored Corps (5) og Carrier Groups (6)',
-      '  Uranium: Kreves for Carrier Groups (2)',
-      '  Rare Earths: Kreves for Air Wings (2)',
-      '  Intel: Kreves for Air Wings (4)',
-      'RESSURS-AKKUMULERING:',
-      '  Ressurser akkumuleres hver runde',
-      '  Kan lagres for fremtidige enheter',
-      '  Manglende ressurs = kan ikke bygge enhet',
-      'EROBRINGSEFFEKT:',
-      '  Umiddelbar tilgang til territoriets ressurser',
-      '  Økt produksjonskapasitet',
-      '  Kan låse fienden ute fra kritiske ressurser'
+      'PRODUCTION BONUS: +2-4 production per turn from each territory',
+      'STRATEGIC RESOURCES per territory:',
+      '  Oil: Required for Armored Corps (5) and Carrier Groups (6)',
+      '  Uranium: Required for Carrier Groups (2)',
+      '  Rare Earths: Required for Air Wings (2)',
+      '  Intel: Required for Air Wings (4)',
+      'RESOURCE ACCUMULATION:',
+      '  Resources accumulate each turn',
+      '  Can be stored for future units',
+      '  Missing resource = cannot build unit',
+      'CONQUEST EFFECT:',
+      '  Immediate access to territory\'s resources',
+      '  Increased production capacity',
+      '  Can lock enemies out of critical resources'
     ],
     tips: [
-      'Identifiser hvilke territorier har hvilke ressurser',
-      'Prioriter oil-territorier tidlig (kreves for de fleste enheter)',
-      'Rare earths og intel kreves for Air Wings - erobre disse for luftdominans',
-      'Kontroller ressurs-chokepoints for å blokkere fiender',
-      'Produksjonsbonus akkumuleres - flere territorier = mer produksjon',
-      'Strategiske ressurser gir militær fleksibilitet',
-      'Tap av ressursterritorium kan lamme militærproduksjon'
+      'Identify which territories have which resources',
+      'Prioritize oil territories early (required for most units)',
+      'Rare earths and intel required for Air Wings - conquer these for air dominance',
+      'Control resource chokepoints to block enemies',
+      'Production bonus accumulates - more territories = more production',
+      'Strategic resources provide military flexibility',
+      'Loss of resource territory can cripple military production'
     ],
     relatedTopics: ['territory-control', 'military-units', 'conventional-warfare'],
     unlockTurn: 11
@@ -668,23 +668,23 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // CYBER WARFARE
   {
     id: 'cyber-warfare',
-    title: 'Cyberkrigføring',
+    title: 'Cyber Warfare',
     category: 'cyber',
     icon: <Network className="h-5 w-5" />,
-    summary: 'Digitale angrep for å stjele data, sabotere infrastruktur, og villlede fiender.',
-    details: 'Fra tur 11 kan du utføre cyber-angrep. Disse er billigere enn militære angrep men har sine egne risikoer.',
+    summary: 'Digital attacks to steal data, sabotage infrastructure, and mislead enemies.',
+    details: 'From turn 11, you can conduct cyber attacks. These are cheaper than military attacks but have their own risks.',
     mechanics: [
-      'Intrusion: Stjel data og hemmeligheter',
-      'Sabotasje: Ødelegg infrastruktur',
-      'False-flag: Skyld på andre nasjoner',
-      'Deteksjon: 40-70% sjanse for å bli oppdaget',
-      'Attributering: Fiender kan spore angrep tilbake'
+      'Intrusion: Steal data and secrets',
+      'Sabotage: Destroy infrastructure',
+      'False-flag: Blame other nations',
+      'Detection: 40-70% chance of being detected',
+      'Attribution: Enemies can trace attacks back'
     ],
     tips: [
-      'Cyber-angrep er billigere enn militære angrep',
-      'False-flag kan starte kriger mellom andre',
-      'Invester i cyber-forsvar',
-      'Kombiner med konvensjonell krigføring'
+      'Cyber attacks are cheaper than military attacks',
+      'False-flag can start wars between others',
+      'Invest in cyber defense',
+      'Combine with conventional warfare'
     ],
     relatedTopics: ['research-cyber', 'intelligence'],
     unlockTurn: 11
@@ -693,73 +693,73 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // BIO-WARFARE
   {
     id: 'bio-warfare',
-    title: 'Biologisk Krigføring',
+    title: 'Biological Warfare',
     category: 'bio',
     icon: <Biohazard className="h-5 w-5" />,
-    summary: 'Utvikle og deploy biologiske våpen for å ødelegge fiendtlige nasjoner.',
-    details: 'Fra tur 26 kan du forske frem biologiske våpen i Plague Inc.-stil. Utvikle patogener, evolve symptomer, og deploy mot fiender.',
+    summary: 'Develop and deploy biological weapons to destroy enemy nations.',
+    details: 'From turn 26, you can research biological weapons in Plague Inc. style. Develop pathogens, evolve symptoms, and deploy against enemies.',
     mechanics: [
-      'Plague-typer: Bacteria, Virus, Fungus, Parasite, Prion, Nano-virus, Bio-weapon',
-      'DNA Points: Valuta for å kjøpe evolusjoner',
-      'Transmission: Luft, vann, blod, insekt, fugl, gnager',
-      'Symptoms: Mild til dødelig alvorlighet',
-      'Abilities: Resistens, genetisk hardening',
-      'Deployment: Multi-nasjons deployment med attributering'
+      'Plague types: Bacteria, Virus, Fungus, Parasite, Prion, Nano-virus, Bio-weapon',
+      'DNA Points: Currency to buy evolutions',
+      'Transmission: Air, water, blood, insect, bird, rodent',
+      'Symptoms: Mild to lethal severity',
+      'Abilities: Resistance, genetic hardening',
+      'Deployment: Multi-nation deployment with attribution'
     ],
     tips: [
-      'Start med Bacteria - lettest å bruke',
-      'Evolve transmission tidlig for spredning',
-      'Unngå for dødelige symptomer tidlig - det trekker oppmerksomhet',
-      'False-flag deployment kan skjule din rolle',
-      'Combine med konvensjonelle og atomvåpen'
+      'Start with Bacteria - easiest to use',
+      'Evolve transmission early for spread',
+      'Avoid lethal symptoms early - it draws attention',
+      'False-flag deployment can hide your role',
+      'Combine with conventional and nuclear weapons'
     ],
     relatedTopics: ['plague-types', 'evolution-tree', 'dna-points'],
     unlockTurn: 26
   },
   {
     id: 'plague-types',
-    title: 'Plague-typer',
+    title: 'Plague Types',
     category: 'bio',
     icon: <Biohazard className="h-5 w-5" />,
-    summary: 'Syv typer biologiske våpen, hver med unike egenskaper.',
-    details: 'Hver plague-type har egne styrker, svakheter, og evolusjonsmønstre.',
+    summary: 'Seven types of biological weapons, each with unique properties.',
+    details: 'Each plague type has its own strengths, weaknesses, and evolution patterns.',
     mechanics: [
-      'Bacteria: Balansert, lett å bruke, god for nybegynnere',
-      'Virus: Hurtig mutasjon, vanskeligere å kontrollere',
-      'Fungus: Langsom spredning, men vanskelig å kurere',
-      'Parasite: Subtil, vanskeligere å oppdage',
-      'Prion: Ekstrem langsomhet, nesten umulig å kurere',
-      'Nano-virus: Hurtig men ustabil, krever konstant evolusjon',
-      'Bio-weapon: Dødeligst, men trekker massiv oppmerksomhet'
+      'Bacteria: Balanced, easy to use, good for beginners',
+      'Virus: Rapid mutation, harder to control',
+      'Fungus: Slow spread, but difficult to cure',
+      'Parasite: Subtle, harder to detect',
+      'Prion: Extreme slowness, nearly impossible to cure',
+      'Nano-virus: Fast but unstable, requires constant evolution',
+      'Bio-weapon: Most lethal, but draws massive attention'
     ],
     tips: [
-      'Start med Bacteria for å lære systemet',
-      'Virus er beste for hurtig eliminering',
-      'Prion er beste for stealth-approach',
-      'Bio-weapon for total annihilering'
+      'Start with Bacteria to learn the system',
+      'Virus is best for rapid elimination',
+      'Prion is best for stealth approach',
+      'Bio-weapon for total annihilation'
     ],
     relatedTopics: ['bio-warfare', 'evolution-tree'],
     unlockTurn: 26
   },
   {
     id: 'evolution-tree',
-    title: 'Evolusjonstre',
+    title: 'Evolution Tree',
     category: 'bio',
     icon: <Radio className="h-5 w-5" />,
-    summary: 'Utvikle dine biologiske våpen med transmission, symptomer, og evner.',
-    details: 'Bruk DNA Points for å kjøpe evolusjoner i tre kategorier: Transmission, Symptoms, og Abilities.',
+    summary: 'Develop your biological weapons with transmission, symptoms, and abilities.',
+    details: 'Use DNA Points to buy evolutions in three categories: Transmission, Symptoms, and Abilities.',
     mechanics: [
-      'Transmission: Hvordan patogenet sprer seg (luft, vann, insekt, etc.)',
-      'Symptoms: Effekter på smittede (mild til dødelig)',
-      'Abilities: Resistens og defensive evner',
-      'DNA Points: Opptjen ved infeksjon og spredning',
-      'Evolution-cost: Øker med hvert nivå'
+      'Transmission: How the pathogen spreads (air, water, insect, etc.)',
+      'Symptoms: Effects on infected (mild to lethal)',
+      'Abilities: Resistance and defensive capabilities',
+      'DNA Points: Earned by infection and spread',
+      'Evolution cost: Increases with each level'
     ],
     tips: [
-      'Prioriter transmission tidlig',
-      'Vent med dødelige symptomer til bred spredning',
-      'Abilities beskytter mot motstiltak',
-      'Balanser spredning og dødelighet'
+      'Prioritize transmission early',
+      'Wait for lethal symptoms until widespread',
+      'Abilities protect against countermeasures',
+      'Balance spread and lethality'
     ],
     relatedTopics: ['bio-warfare', 'dna-points', 'plague-types'],
     unlockTurn: 26
@@ -769,20 +769,20 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
     title: 'DNA Points',
     category: 'bio',
     icon: <Target className="h-5 w-5" />,
-    summary: 'Valuta for å kjøpe evolusjoner i biologiske våpen.',
-    details: 'DNA Points opptjenes ved å infisere mennesker, spre patogenet, og nå milepæler.',
+    summary: 'Currency to buy evolutions in biological weapons.',
+    details: 'DNA Points are earned by infecting people, spreading the pathogen, and reaching milestones.',
     mechanics: [
-      'Opptjen: 1-5 DNA per infeksjon',
-      'Bonus: Første infeksjon i nytt land',
-      'Milestones: 100, 1000, 10000 infeksjoner',
-      'Kostnad: Evolusjoner koster 5-50 DNA',
-      'Ikke kan refunderes - velg klokt'
+      'Earn: 1-5 DNA per infection',
+      'Bonus: First infection in new country',
+      'Milestones: 100, 1000, 10000 infections',
+      'Cost: Evolutions cost 5-50 DNA',
+      'Cannot be refunded - choose wisely'
     ],
     tips: [
-      'Spre til mange land for bonuser',
-      'Spar DNA til kritiske evolusjoner',
-      'Evolve transmission tidlig for mer DNA',
-      'Planlegg evolusjonsveien din'
+      'Spread to many countries for bonuses',
+      'Save DNA for critical evolutions',
+      'Evolve transmission early for more DNA',
+      'Plan your evolution path'
     ],
     relatedTopics: ['bio-warfare', 'evolution-tree'],
     unlockTurn: 26
@@ -791,23 +791,23 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // PANDEMIC SYSTEM
   {
     id: 'pandemic',
-    title: 'Pandemisystem',
+    title: 'Pandemic System',
     category: 'pandemic',
     icon: <Biohazard className="h-5 w-5" />,
-    summary: 'Globale sykdommer kan spre seg naturlig eller som våpen.',
-    details: 'Pandemier kan oppstå naturlig eller som resultat av bio-våpen. De påvirker befolkning, produksjon, og stabilitet.',
+    summary: 'Global diseases can spread naturally or as weapons.',
+    details: 'Pandemics can occur naturally or as a result of bio-weapons. They affect population, production, and stability.',
     mechanics: [
-      'Naturlige pandemier: Tilfeldig spredning',
-      'Våpeniserte pandemier: Bevisst deployment',
-      'Spredning: Land til land basert på handel og reise',
-      'Mutasjon: Sykdommer kan mutere',
-      'Countermeasures: Vaksiner, karantener, forskning'
+      'Natural pandemics: Random spread',
+      'Weaponized pandemics: Deliberate deployment',
+      'Spread: Country to country based on trade and travel',
+      'Mutation: Diseases can mutate',
+      'Countermeasures: Vaccines, quarantines, research'
     ],
     tips: [
-      'Pandemier kan ødelegge fiendens økonomi',
-      'Beskytt din egen befolkning med motstiltak',
-      'Naturlige pandemier er uforutsigbare',
-      'Vaccine-forskning tar tid - start tidlig'
+      'Pandemics can destroy enemy economy',
+      'Protect your own population with countermeasures',
+      'Natural pandemics are unpredictable',
+      'Vaccine research takes time - start early'
     ],
     relatedTopics: ['bio-warfare', 'governance'],
     unlockTurn: 20
@@ -816,46 +816,46 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // GOVERNANCE
   {
     id: 'governance',
-    title: 'Styresett og Moral',
+    title: 'Governance and Morale',
     category: 'governance',
     icon: <Vote className="h-5 w-5" />,
-    summary: 'Administrer din nasjon gjennom valg, opinion, og stabilitet.',
-    details: 'Din befolkning reagerer på dine handlinger. Lav moral kan føre til regime-skifte og game over.',
+    summary: 'Manage your nation through elections, opinion, and stability.',
+    details: 'Your population reacts to your actions. Low morale can lead to regime change and game over.',
     mechanics: [
-      'Moral: 0-100 befolkningstilfredshet',
-      'Valg: Hver 12. runde',
-      'Cabinet approval: Regjeringens støtte',
-      'Regime change: Hvis moral < 30',
-      'Immigration: Påvirket av leveforhold'
+      'Morale: 0-100 population satisfaction',
+      'Elections: Every 12 turns',
+      'Cabinet approval: Government support',
+      'Regime change: If morale < 30',
+      'Immigration: Affected by living conditions'
     ],
     tips: [
-      'Hold moral over 50 for stabilitet',
-      'Aggressive handlinger senker moral',
-      'Forsvar befolkningen for å øke moral',
-      'Valg kan fjerne deg fra makten'
+      'Keep morale above 50 for stability',
+      'Aggressive actions lower morale',
+      'Defend population to increase morale',
+      'Elections can remove you from power'
     ],
     relatedTopics: ['elections', 'stability'],
     unlockTurn: 1
   },
   {
     id: 'elections',
-    title: 'Valg',
+    title: 'Elections',
     category: 'governance',
     icon: <Vote className="h-5 w-5" />,
-    summary: 'Demokratiske nasjoner holder valg hver 12. runde.',
-    details: 'Hvis din popularitet er for lav, kan du miste valget og game over.',
+    summary: 'Democratic nations hold elections every 12 turns.',
+    details: 'If your popularity is too low, you can lose the election and game over.',
     mechanics: [
-      'Frekvens: Hver 12. runde',
-      'Threshold: >40% approval for å vinne',
-      'Påvirket av: Moral, militære tap, økonomisk suksess',
-      'Konsekvens: Tap = game over',
-      'Unngåelse: Høy moral og suksess'
+      'Frequency: Every 12 turns',
+      'Threshold: >40% approval to win',
+      'Affected by: Morale, military losses, economic success',
+      'Consequence: Loss = game over',
+      'Avoidance: High morale and success'
     ],
     tips: [
-      'Overvåk approval ratings',
-      'Unngå store tap før valg',
-      'Diplomatiske seiere øker popularitet',
-      'Beskytt befolkningen'
+      'Monitor approval ratings',
+      'Avoid major losses before elections',
+      'Diplomatic victories increase popularity',
+      'Protect the population'
     ],
     relatedTopics: ['governance', 'stability'],
     unlockTurn: 12
@@ -864,46 +864,46 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // INTELLIGENCE
   {
     id: 'intelligence',
-    title: 'Etterretning og Spionasje',
+    title: 'Intelligence and Espionage',
     category: 'intelligence',
     icon: <Eye className="h-5 w-5" />,
-    summary: 'Overvåk fiender, sabotér produksjon, og stjel hemmeligheter.',
-    details: 'Intel-operasjoner gir deg informasjon om fiendtlige planer og kan svekke deres kapasitet.',
+    summary: 'Monitor enemies, sabotage production, and steal secrets.',
+    details: 'Intel operations give you information about enemy plans and can weaken their capacity.',
     mechanics: [
-      'Overvåking: Avslør fiendtlige planer',
-      'Satellitter: Permanent overvåking',
-      'Sabotasje: Reduser fiendtlig produksjon',
-      'Counterintelligence: Beskytt mot spionasje',
-      'Kostnad: 20-80 Intel per operasjon'
+      'Surveillance: Reveal enemy plans',
+      'Satellites: Permanent surveillance',
+      'Sabotage: Reduce enemy production',
+      'Counterintelligence: Protect against espionage',
+      'Cost: 20-80 Intel per operation'
     ],
     tips: [
-      'Overvåk største trussel',
-      'Satellitter gir kontinuerlig info',
-      'Sabotasje før store angrep',
-      'Counterintelligence beskytter deg'
+      'Monitor biggest threat',
+      'Satellites provide continuous info',
+      'Sabotage before major attacks',
+      'Counterintelligence protects you'
     ],
     relatedTopics: ['satellites', 'cyber-warfare'],
     unlockTurn: 1
   },
   {
     id: 'satellites',
-    title: 'Spionasjesatellitter',
+    title: 'Spy Satellites',
     category: 'intelligence',
     icon: <Satellite className="h-5 w-5" />,
-    summary: 'Satellitter gir permanent overvåking av fiendtlige nasjoner.',
-    details: 'Når en satellitt er i bane, får du kontinuerlig informasjon om målnasjonen.',
+    summary: 'Satellites provide permanent surveillance of enemy nations.',
+    details: 'When a satellite is in orbit, you get continuous information about the target nation.',
     mechanics: [
-      'Kostnad: 40 Intel',
-      'Overvåking: Permanent til satellitten ødelegges',
-      'Informasjon: Militær styrke, ressurser, planer',
-      'Kan ødelegges: Fienden kan skyte ned satellitter',
-      'Multippel deployment: Overvåk flere nasjoner'
+      'Cost: 40 Intel',
+      'Surveillance: Permanent until satellite is destroyed',
+      'Information: Military strength, resources, plans',
+      'Can be destroyed: Enemy can shoot down satellites',
+      'Multiple deployment: Monitor multiple nations'
     ],
     tips: [
-      'Deploy satellitter tidlig',
-      'Overvåk største trusler',
-      'Erstatning hvis ødelagt',
-      'Kombinér med andre intel-operasjoner'
+      'Deploy satellites early',
+      'Monitor biggest threats',
+      'Replace if destroyed',
+      'Combine with other intel operations'
     ],
     relatedTopics: ['intelligence', 'research-system'],
     unlockTurn: 8
@@ -912,89 +912,89 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // VICTORY CONDITIONS - STREAMLINED (4 PATHS)
   {
     id: 'victory-diplomatic',
-    title: 'Diplomatisk Seier',
+    title: 'Diplomatic Victory',
     category: 'victory',
     icon: <Trophy className="h-5 w-5" />,
-    summary: 'Vinn gjennom diplomati og fred.',
-    details: 'Form allianser med 60% av levende nasjoner og oppretthold fred i 5 runder.',
+    summary: 'Win through diplomacy and peace.',
+    details: 'Form alliances with 60% of living nations and maintain peace for 5 turns.',
     mechanics: [
-      'Krever: Alliert med 60% av levende nasjoner',
-      'DEFCON: ≥4 i 5+ sammenhengende runder',
-      'Tidligst: Tur 5',
-      'Bonus: Fredelig seier uten militære tap'
+      'Requires: Allied with 60% of living nations',
+      'DEFCON: ≥4 for 5+ consecutive turns',
+      'Earliest: Turn 5',
+      'Bonus: Peaceful victory without military losses'
     ],
     tips: [
-      'Form allianser tidlig og ofte',
-      'Unngå aggresjon - hold DEFCON høyt',
-      'Bygg tillit med alle nasjoner',
-      'Mest fredelig seiersvei'
+      'Form alliances early and often',
+      'Avoid aggression - keep DEFCON high',
+      'Build trust with all nations',
+      'Most peaceful victory path'
     ],
     relatedTopics: ['diplomacy', 'alliances', 'trust-system'],
     unlockTurn: 1
   },
   {
     id: 'victory-domination',
-    title: 'Total Dominans',
+    title: 'Total Domination',
     category: 'victory',
     icon: <Skull className="h-5 w-5" />,
-    summary: 'Eliminer alle rivaliserende nasjoner.',
-    details: 'Beseir alle fiender gjennom militær makt - atomvåpen, konvensjonelle styrker, eller bio-våpen.',
+    summary: 'Eliminate all rival nations.',
+    details: 'Defeat all enemies through military power - nuclear weapons, conventional forces, or bio-weapons.',
     mechanics: [
-      'Krever: Eliminering av alle fiender',
-      'Metoder: Atomvåpen, konvensjonell krigføring, bio-våpen',
-      'Ingen tidsbegrensning',
-      'Vanskeligst: Høy risiko for gjengjeldelse',
-      'Konsekvens: Massive tap'
+      'Requires: Elimination of all enemies',
+      'Methods: Nuclear weapons, conventional warfare, bio-weapons',
+      'No time limit',
+      'Hardest: High risk of retaliation',
+      'Consequence: Massive casualties'
     ],
     tips: [
-      'Bygg sterkt forsvar først',
-      'Eliminer svakeste fiender først',
-      'Kombiner angrepsmetoder',
-      'Forvent massive gjengjeldelsesangrep'
+      'Build strong defense first',
+      'Eliminate weakest enemies first',
+      'Combine attack methods',
+      'Expect massive retaliatory attacks'
     ],
     relatedTopics: ['icbms', 'conventional-warfare', 'bio-warfare'],
     unlockTurn: 1
   },
   {
     id: 'victory-economic',
-    title: 'Økonomisk Seier',
+    title: 'Economic Victory',
     category: 'victory',
     icon: <Factory className="h-5 w-5" />,
-    summary: 'Dominer globalt gjennom økonomisk makt.',
-    details: 'Kontroller 10+ byer og oppretthold 200+ produksjon per runde.',
+    summary: 'Dominate globally through economic power.',
+    details: 'Control 10+ cities and maintain 200+ production per turn.',
     mechanics: [
-      'Krever: Kontroll over 10+ byer',
-      'Produksjon: ≥200 per runde',
-      'Tidligst: Tur 10',
-      'Bonus: Kan oppnås med eller uten krig'
+      'Requires: Control over 10+ cities',
+      'Production: ≥200 per turn',
+      'Earliest: Turn 10',
+      'Bonus: Can be achieved with or without war'
     ],
     tips: [
-      'Bruk konvensjonelle styrker for erobring',
-      'Prioriter by-erobring',
-      'Bygg fabrikker for produksjon',
-      'Beskytt dine økonomiske interesser'
+      'Use conventional forces for conquest',
+      'Prioritize city conquest',
+      'Build factories for production',
+      'Protect your economic interests'
     ],
     relatedTopics: ['conventional-warfare', 'territory-control'],
     unlockTurn: 1
   },
   {
     id: 'victory-survival',
-    title: 'Overlevelsesseier',
+    title: 'Survival Victory',
     category: 'victory',
     icon: <Shield className="h-5 w-5" />,
-    summary: 'Overlev 50 runder med 50M+ befolkning.',
-    details: 'Enkleste seiersbetingelse - bare overlev og beskytt befolkningen.',
+    summary: 'Survive 50 turns with 50M+ population.',
+    details: 'Simplest victory condition - just survive and protect the population.',
     mechanics: [
-      'Krever: Overleve til runde 50',
-      'Befolkning: ≥50 millioner',
-      'Ingen andre krav',
-      'Bonus: Kan oppnås passivt'
+      'Requires: Survive until turn 50',
+      'Population: ≥50 million',
+      'No other requirements',
+      'Bonus: Can be achieved passively'
     ],
     tips: [
-      'Fokuser på forsvar',
-      'Unngå konflikter når mulig',
-      'Beskytt befolkningen',
-      'Bygg bunkers og forsvarssystemer'
+      'Focus on defense',
+      'Avoid conflicts when possible',
+      'Protect the population',
+      'Build bunkers and defense systems'
     ],
     relatedTopics: ['missile-defense', 'governance'],
     unlockTurn: 1
@@ -1003,24 +1003,24 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // GREAT OLD ONES (BONUS CAMPAIGN)
   {
     id: 'great-old-ones',
-    title: 'Great Old Ones Kampanje',
+    title: 'Great Old Ones Campaign',
     category: 'special',
     icon: <Eye className="h-5 w-5" />,
-    summary: 'Alternativ kampanje med Lovecraftian horror-tema.',
-    details: 'Spill som en kult som forsøker å bringe tilbake Great Old Ones. Helt annen spillstil med unike mekanikker.',
+    summary: 'Alternative campaign with Lovecraftian horror theme.',
+    details: 'Play as a cult trying to bring back the Great Old Ones. Completely different gameplay with unique mechanics.',
     mechanics: [
-      'Tre doktriner: Domination, Corruption, Convergence',
-      'Sanity harvesting: Høst galskap fra befolkningen',
-      'Veil integrity: Hvor godt du skjuler deg',
-      'Ritual sites: Bestemme steder for ritualer',
-      'Investigator spawning: Motstandere som må håndteres',
-      'Summoning: Kall frem entities og monstre'
+      'Three doctrines: Domination, Corruption, Convergence',
+      'Sanity harvesting: Harvest madness from the population',
+      'Veil integrity: How well you hide yourself',
+      'Ritual sites: Designate locations for rituals',
+      'Investigator spawning: Opponents that must be handled',
+      'Summoning: Call forth entities and monsters'
     ],
     tips: [
-      'Helt annen spillopplevelse enn hovedkampanjen',
-      'Fokus på stealth og subversjon',
-      'Balanser Veil integrity - ikke bli oppdaget',
-      'Hver doktrine har unik spillstil'
+      'Completely different experience from main campaign',
+      'Focus on stealth and subversion',
+      'Balance Veil integrity - don\'t get detected',
+      'Each doctrine has unique playstyle'
     ],
     relatedTopics: [],
     unlockTurn: 1
@@ -1028,25 +1028,25 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
 
   {
     id: 'strategic-outliner',
-    title: 'Strategic Outliner & Makro-kommandoer',
+    title: 'Strategic Outliner & Macro Commands',
     category: 'strategy',
     icon: <Sparkles className="h-5 w-5" />,
-    summary: 'Neon-panel som grupperer produksjon, diplomati og krisevarsler i sanntid.',
+    summary: 'Neon panel that groups production, diplomacy, and crisis alerts in real-time.',
     details:
-      'Outlineren gir et komprimert overblikk over nasjonens makronivå-status: militær beredskap, ressurspuljer, DEFCON, ' +
-      'pågående governance-hendelser og globale kriser. Panelet blinker ved kritiske hendelser og speiler kooperative makro-låser ' +
-      'slik at du vet hvilke handlinger som er blokkert.',
+      'The Outliner provides a compressed overview of the nation\'s macro-level status: military readiness, resource pools, DEFCON, ' +
+      'ongoing governance events, and global crises. The panel blinks at critical events and mirrors cooperative macro-locks ' +
+      'so you know which actions are blocked.',
     mechanics: [
-      'Toggle med O – Shift+O åpner og fokuserer panelet umiddelbart.',
-      'Produksjon & Militær viser readiness, tilgjengelige MAKROER (BUILD/RESEARCH) og siste slaglogg.',
-      'Diplomati & Styresett sporer DEFCON, moral/opinion, regjeringskriser og status for DIPLOMACY/CULTURE-makroer.',
-      'Etterretning & Krise fremhever aktive flashpoints, pandemiforløp og om INTEL/BIO makroene er klare.',
-      'Kritiske kort pulserer rødt for å signalisere handling med høy prioritet.',
+      'Toggle with O – Shift+O opens and focuses the panel immediately.',
+      'Production & Military shows readiness, available MACROS (BUILD/RESEARCH), and latest battle log.',
+      'Diplomacy & Governance tracks DEFCON, morale/opinion, government crises, and status of DIPLOMACY/CULTURE macros.',
+      'Intelligence & Crisis highlights active flashpoints, pandemic progress, and whether INTEL/BIO macros are ready.',
+      'Critical cards pulse red to signal high-priority action.',
     ],
     tips: [
-      'Bruk Shift+O når nyhetene blinker for å hoppe direkte til panelet.',
-      'Koordiner med Approval Queue hvis en makro er låst – outlineren viser hvilke roller som holder tilbake.',
-      'Hold øye med ressurspostene: lav produksjon kombinert med rødt readiness-kort betyr at du bør hvile eller reforsterke.',
+      'Use Shift+O when news blinks to jump directly to the panel.',
+      'Coordinate with Approval Queue if a macro is locked – the outliner shows which roles are holding back.',
+      'Watch resource entries: low production combined with red readiness card means you should rest or reinforce.',
     ],
     relatedTopics: ['defcon', 'resources', 'governance'],
   },
@@ -1054,25 +1054,25 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
   // ADVANCED TIPS
   {
     id: 'advanced-strategy',
-    title: 'Avansert Strategi',
+    title: 'Advanced Strategy',
     category: 'strategy',
     icon: <Target className="h-5 w-5" />,
-    summary: 'Avanserte tips for erfarne spillere.',
-    details: 'Mestrings-tips for å dominere spillet.',
+    summary: 'Advanced tips for experienced players.',
+    details: 'Mastery tips to dominate the game.',
     mechanics: [
-      'Action economy: Maksimer handlinger per runde',
-      'Timing: Når å angripe og når å vente',
-      'Diplomacy chains: Påvirk flere nasjoner samtidig',
-      'False-flag ops: Få fiender til å sloss mot hverandre',
-      'Resource management: Optimal ressursbruk',
-      'Tech timing: Når å forske hva'
+      'Action economy: Maximize actions per turn',
+      'Timing: When to attack and when to wait',
+      'Diplomacy chains: Influence multiple nations simultaneously',
+      'False-flag ops: Get enemies to fight each other',
+      'Resource management: Optimal resource usage',
+      'Tech timing: When to research what'
     ],
     tips: [
-      'Kombiner flere angrepstyper samtidig',
-      'Bruk false-flag cyber-angrep for å starte kriger',
-      'Bygg forsvar før du angriper',
-      'Planlegg 5-10 runder frem i tid',
-      'Kombiner diplomatiske og militære strategier'
+      'Combine multiple attack types simultaneously',
+      'Use false-flag cyber attacks to start wars',
+      'Build defense before attacking',
+      'Plan 5-10 turns ahead',
+      'Combine diplomatic and military strategies'
     ],
     relatedTopics: [],
     unlockTurn: 1
@@ -1080,20 +1080,20 @@ const DATABASE_ENTRIES: DatabaseEntry[] = [
 ];
 
 const CATEGORIES = [
-  { id: 'basics', label: 'Grunnleggende', icon: <Target className="h-4 w-4" /> },
-  { id: 'nuclear', label: 'Atomvåpen', icon: <Skull className="h-4 w-4" /> },
-  { id: 'defense', label: 'Forsvar', icon: <Shield className="h-4 w-4" /> },
-  { id: 'research', label: 'Forskning', icon: <Radio className="h-4 w-4" /> },
-  { id: 'diplomacy', label: 'Diplomati', icon: <Users className="h-4 w-4" /> },
-  { id: 'conventional', label: 'Konvensjonell Krigføring', icon: <Sword className="h-4 w-4" /> },
-  { id: 'cyber', label: 'Cyberkrigføring', icon: <Network className="h-4 w-4" /> },
-  { id: 'bio', label: 'Bio-krigføring', icon: <Biohazard className="h-4 w-4" /> },
-  { id: 'pandemic', label: 'Pandemier', icon: <Biohazard className="h-4 w-4" /> },
-  { id: 'governance', label: 'Styresett', icon: <Vote className="h-4 w-4" /> },
-  { id: 'intelligence', label: 'Etterretning', icon: <Eye className="h-4 w-4" /> },
-  { id: 'victory', label: 'Seiersbetingelser', icon: <Trophy className="h-4 w-4" /> },
-  { id: 'special', label: 'Spesielle Moduser', icon: <Flame className="h-4 w-4" /> },
-  { id: 'strategy', label: 'Strategi', icon: <Target className="h-4 w-4" /> },
+  { id: 'basics', label: 'Basics', icon: <Target className="h-4 w-4" /> },
+  { id: 'nuclear', label: 'Nuclear Weapons', icon: <Skull className="h-4 w-4" /> },
+  { id: 'defense', label: 'Defense', icon: <Shield className="h-4 w-4" /> },
+  { id: 'research', label: 'Research', icon: <Radio className="h-4 w-4" /> },
+  { id: 'diplomacy', label: 'Diplomacy', icon: <Users className="h-4 w-4" /> },
+  { id: 'conventional', label: 'Conventional Warfare', icon: <Sword className="h-4 w-4" /> },
+  { id: 'cyber', label: 'Cyber Warfare', icon: <Network className="h-4 w-4" /> },
+  { id: 'bio', label: 'Bio-Warfare', icon: <Biohazard className="h-4 w-4" /> },
+  { id: 'pandemic', label: 'Pandemics', icon: <Biohazard className="h-4 w-4" /> },
+  { id: 'governance', label: 'Governance', icon: <Vote className="h-4 w-4" /> },
+  { id: 'intelligence', label: 'Intelligence', icon: <Eye className="h-4 w-4" /> },
+  { id: 'victory', label: 'Victory Conditions', icon: <Trophy className="h-4 w-4" /> },
+  { id: 'special', label: 'Special Modes', icon: <Flame className="h-4 w-4" /> },
+  { id: 'strategy', label: 'Strategy', icon: <Target className="h-4 w-4" /> },
 ];
 
 interface GameDatabaseProps {
@@ -1152,9 +1152,9 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
                 <div className="flex items-center gap-3">
                   <BookOpen className="h-6 w-6 text-primary" />
                   <div>
-                    <SheetTitle className="text-2xl">Spill-database</SheetTitle>
+                    <SheetTitle className="text-2xl">Game Database</SheetTitle>
                     <SheetDescription className="mt-1">
-                      Komplett referanse for alle spillmekanikker og systemer
+                      Complete reference for all game mechanics and systems
                     </SheetDescription>
                   </div>
                 </div>
@@ -1167,7 +1167,7 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
               <div className="mt-4 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Søk etter mekanikker, våpen, strategier..."
+                  placeholder="Search for mechanics, weapons, strategies..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -1182,7 +1182,7 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
                     value="all"
                     className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                   >
-                    Alle
+                    All
                   </TabsTrigger>
                   {CATEGORIES.map(cat => (
                     <TabsTrigger
@@ -1226,12 +1226,12 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
                                     </h4>
                                     {isLocked(entry) && (
                                       <Badge variant="outline" className="text-xs">
-                                        Låses opp runde {entry.unlockTurn}
+                                        Unlocks turn {entry.unlockTurn}
                                       </Badge>
                                     )}
                                   </div>
                                   <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                    {isLocked(entry) ? 'Denne funksjonen er ikke låst opp ennå.' : entry.summary}
+                                    {isLocked(entry) ? 'This feature is not unlocked yet.' : entry.summary}
                                   </p>
                                 </div>
                               </div>
@@ -1243,8 +1243,8 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
                     {filteredEntries.length === 0 && (
                       <div className="text-center py-12 text-muted-foreground">
                         <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>Ingen resultater funnet</p>
-                        <p className="text-sm mt-1">Prøv et annet søk eller kategori</p>
+                        <p>No results found</p>
+                        <p className="text-sm mt-1">Try a different search or category</p>
                       </div>
                     )}
                   </div>
@@ -1269,12 +1269,12 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
                               </h4>
                               {isLocked(entry) && (
                                 <Badge variant="outline" className="text-xs">
-                                  Låses opp runde {entry.unlockTurn}
+                                  Unlocks turn {entry.unlockTurn}
                                 </Badge>
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
-                              {isLocked(entry) ? 'Denne funksjonen er ikke låst opp ennå.' : entry.summary}
+                              {isLocked(entry) ? 'This feature is not unlocked yet.' : entry.summary}
                             </p>
                           </div>
                         </div>
@@ -1283,7 +1283,7 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
                     {filteredEntries.length === 0 && (
                       <div className="text-center py-12 text-muted-foreground">
                         <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>Ingen innlegg i denne kategorien</p>
+                        <p>No entries in this category</p>
                       </div>
                     )}
                   </div>
@@ -1309,7 +1309,7 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
                   {isLocked(selectedEntry) && (
                     <Badge variant="outline" className="mb-2">
                       <Lock className="h-3 w-3 mr-1" />
-                      Låses opp runde {selectedEntry.unlockTurn}
+                      Unlocks turn {selectedEntry.unlockTurn}
                     </Badge>
                   )}
                   <SheetDescription>{selectedEntry.summary}</SheetDescription>
@@ -1326,7 +1326,7 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
                   {/* Details */}
                   <div>
                     <h3 className="font-semibold text-sm uppercase tracking-wide opacity-70 mb-2">
-                      Detaljer
+                      Details
                     </h3>
                     <p className="text-sm leading-relaxed">{selectedEntry.details}</p>
                   </div>
@@ -1335,7 +1335,7 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
                   {selectedEntry.mechanics && selectedEntry.mechanics.length > 0 && (
                     <div>
                       <h3 className="font-semibold text-sm uppercase tracking-wide opacity-70 mb-2">
-                        Mekanikker
+                        Mechanics
                       </h3>
                       <ul className="space-y-2">
                         {selectedEntry.mechanics.map((mechanic, idx) => (
@@ -1353,7 +1353,7 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
                     <div className="bg-muted p-4 rounded-lg">
                       <h3 className="font-semibold text-sm uppercase tracking-wide flex items-center gap-2 mb-3">
                         <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                        Strategiske Tips
+                        Strategic Tips
                       </h3>
                       <ul className="space-y-2">
                         {selectedEntry.tips.map((tip, idx) => (
@@ -1370,7 +1370,7 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
                   {selectedEntry.relatedTopics && selectedEntry.relatedTopics.length > 0 && (
                     <div>
                       <h3 className="font-semibold text-sm uppercase tracking-wide opacity-70 mb-2">
-                        Relaterte Emner
+                        Related Topics
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {selectedEntry.relatedTopics.map(topicId => {
@@ -1401,16 +1401,16 @@ export function GameDatabase({ open, onClose, currentTurn = 1 }: GameDatabasePro
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   <Lock className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-semibold mb-2">Funksjon Låst</p>
-                  <p>Denne funksjonen låses opp i runde {selectedEntry.unlockTurn}.</p>
-                  <p className="text-sm mt-1">Nåværende runde: {currentTurn}</p>
+                  <p className="text-lg font-semibold mb-2">Feature Locked</p>
+                  <p>This feature unlocks in turn {selectedEntry.unlockTurn}.</p>
+                  <p className="text-sm mt-1">Current turn: {currentTurn}</p>
                 </div>
               )}
             </div>
 
             <div className="border-t p-4">
               <Button variant="outline" onClick={handleBackToList} className="w-full">
-                Tilbake til oversikt
+                Back to overview
               </Button>
             </div>
           </div>

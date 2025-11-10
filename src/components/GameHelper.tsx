@@ -16,76 +16,76 @@ interface HelpTopic {
 const helpTopics: HelpTopic[] = [
   {
     id: 'resources',
-    title: 'Ressurser',
+    title: 'Resources',
     icon: <Factory className="h-5 w-5" />,
-    content: 'Produksjon, Uran og Intel er dine hovedressurser. Bruk dem klokt for å bygge din militærmakt.',
+    content: 'Production, Uranium and Intelligence are your main resources. Use them wisely to build your military power.',
     tips: [
-      'Produksjon brukes til raketter, bomber og forsvar',
-      'Uran er nødvendig for atomstridshoder',
-      'Intel brukes til forskning og spionasje',
-      'Ressurser regenereres automatisk hver runde'
+      'Production is used for missiles, bombers and defense',
+      'Uranium is necessary for nuclear warheads',
+      'Intelligence is used for research and espionage',
+      'Resources regenerate automatically each round'
     ]
   },
   {
     id: 'combat',
-    title: 'Kamp og Våpen',
+    title: 'Combat and Weapons',
     icon: <Zap className="h-5 w-5" />,
-    content: 'Ditt arsenal inkluderer raketter, bombefly og forsvarsssystemer. Hver har sine styrker og svakheter.',
+    content: 'Your arsenal includes missiles, bombers and defense systems. Each has its strengths and weaknesses.',
     tips: [
-      'Raketter er raske men kan avskjæres',
-      'Bombefly er saktere men kan returnere til base',
-      'Forsvarsssystemer avskjærer innkommende angrep',
-      'Større stridshoder gjør mer skade men koster mer uran'
+      'Missiles are fast but can be intercepted',
+      'Bombers are slower but can return to base',
+      'Defense systems intercept incoming attacks',
+      'Larger warheads do more damage but cost more uranium'
     ]
   },
   {
     id: 'research',
-    title: 'Forskning',
+    title: 'Research',
     icon: <Radio className="h-5 w-5" />,
-    content: 'Forsk frem avanserte våpen og forsvarsssystemer. Prioriter basert på din strategi.',
+    content: 'Research advanced weapons and defense systems. Prioritize based on your strategy.',
     tips: [
-      'Forskning tar flere runder å fullføre',
-      'Noen teknologier krever forutgående forskning',
-      'Større stridshoder gir mer ødeleggelseskraft',
-      'Defense Grid gir permanent forsvarbonus'
+      'Research takes multiple rounds to complete',
+      'Some technologies require previous research',
+      'Larger warheads provide more destructive power',
+      'Defense Grid provides permanent defense bonus'
     ]
   },
   {
     id: 'diplomacy',
-    title: 'Diplomati',
+    title: 'Diplomacy',
     icon: <Users className="h-5 w-5" />,
-    content: 'Bruk diplomati for å få strategiske fordeler uten å ty til våpen.',
+    content: 'Use diplomacy to gain strategic advantages without resorting to weapons.',
     tips: [
-      'Overvåk fiendtlige nasjoner for å avsløre deres planer',
-      'Inngå traktater for å sikre fred eller allianser',
-      'Sabotasje kan svekke motstandere',
-      'Pass på internasjonale relasjoner'
+      'Monitor hostile nations to reveal their plans',
+      'Negotiate treaties to secure peace or alliances',
+      'Sabotage can weaken opponents',
+      'Watch international relations'
     ]
   },
   {
     id: 'defcon',
     title: 'DEFCON System',
     icon: <AlertTriangle className="h-5 w-5" />,
-    content: 'DEFCON-nivået indikerer krigsberedskap. DEFCON 5 er fred, DEFCON 1 er krig.',
+    content: 'The DEFCON level indicates combat readiness. DEFCON 5 is peace, DEFCON 1 is war.',
     tips: [
-      'DEFCON 5: Normal tid - full produksjon',
-      'DEFCON 4: Økt beredskap - overvåk fiender',
-      'DEFCON 3: Høy beredskap - forbered forsvar',
-      'DEFCON 2: Krigstilstand nær - klar til angrep',
-      'DEFCON 1: Nukleær krig - alle våpen aktivert'
+      'DEFCON 5: Peacetime - full production',
+      'DEFCON 4: Increased readiness - monitor enemies',
+      'DEFCON 3: High alert - prepare defense',
+      'DEFCON 2: War imminent - ready to attack',
+      'DEFCON 1: Nuclear war - all weapons active'
     ]
   },
   {
     id: 'strategy',
-    title: 'Vinnerstrategi',
+    title: 'Winning Strategy',
     icon: <Target className="h-5 w-5" />,
-    content: 'Balanser militær styrke, forskning og diplomati for å dominere.',
+    content: 'Balance military strength, research and diplomacy to dominate.',
     tips: [
-      'Beskytt din befolkning med forsvarssystemer',
-      'Forsk tidlig for å få teknologisk forsprang',
-      'Ikke angrip før du har nok forsvar',
-      'Overvåk fiender og svar på trusler',
-      'Nukleær vinter kan ødelegge alle - vær forsiktig'
+      'Protect your population with defense systems',
+      'Research early to gain a technological advantage',
+      'Do not attack until you have sufficient defense',
+      'Monitor enemies and respond to threats',
+      'Nuclear winter can destroy everyone - be careful'
     ]
   }
 ];
@@ -125,7 +125,7 @@ export function GameHelper({
           size="icon"
           onClick={() => setOpen(true)}
           className="fixed bottom-4 left-4 z-50 h-12 w-12 rounded-full shadow-lg"
-          title="Hjelp"
+          title="Help"
         >
           <HelpCircle className="h-6 w-6" />
         </Button>
@@ -136,10 +136,10 @@ export function GameHelper({
           <SheetHeader>
             <SheetTitle className="text-2xl flex items-center gap-2">
               <Shield className="h-6 w-6 text-primary" />
-              Spillguide
+              Game Guide
             </SheetTitle>
             <SheetDescription>
-              Rask tilgang til viktige spillmekanikker og strategier
+              Quick access to important game mechanics and strategies
             </SheetDescription>
           </SheetHeader>
 
@@ -177,10 +177,10 @@ export function GameHelper({
               <div className="space-y-3">
                 <h4 className="font-semibold flex items-center gap-2">
                   <GraduationCap className="h-4 w-4 text-primary" />
-                  Tutorial Opsjoner
+                  Tutorial Options
                 </h4>
                 <p className="text-sm text-muted-foreground">
-                  Start guidene på nytt for å lære spillmekanikkene igjen
+                  Restart the guides to learn the game mechanics again
                 </p>
                 <div className="space-y-2">
                   {onRestartModalTutorial && (
@@ -190,7 +190,7 @@ export function GameHelper({
                       onClick={handleRestartModal}
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
-                      Start innledende tutorial på nytt
+                      Restart introductory tutorial
                     </Button>
                   )}
                   {onRestartInteractiveTutorial && (
@@ -200,7 +200,7 @@ export function GameHelper({
                       onClick={handleRestartInteractive}
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
-                      Start interaktiv guide på nytt
+                      Restart interactive guide
                     </Button>
                   )}
                 </div>
@@ -211,13 +211,13 @@ export function GameHelper({
           <div className="mt-6 p-4 rounded-lg bg-muted">
             <h4 className="font-semibold mb-2 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-yellow-500" />
-              Hurtigtips
+              Quick Tips
             </h4>
             <ul className="space-y-1 text-sm text-muted-foreground">
-              <li>• Trykk ESC for å pause spillet</li>
-              <li>• Klikk på nasjoner for å se deres status</li>
-              <li>• Overvåk DEFCON-nivået øverst</li>
-              <li>• Lagre ofte - spillet kan være uforutsigbart!</li>
+              <li>• Press ESC to pause the game</li>
+              <li>• Click on nations to see their status</li>
+              <li>• Monitor the DEFCON level at the top</li>
+              <li>• Save often - the game can be unpredictable!</li>
             </ul>
           </div>
         </SheetContent>

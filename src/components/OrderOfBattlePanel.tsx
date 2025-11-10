@@ -163,11 +163,11 @@ const OrderOfBattlePanelComponent = ({ groups, className }: OrderOfBattlePanelPr
             <span className="text-xs font-semibold uppercase tracking-[0.45em] text-cyan-200/90">
               Order of Battle
             </span>
-            <span className="text-[11px] text-cyan-200/60">Teateroversikt</span>
+            <span className="text-[11px] text-cyan-200/60">Theater Overview</span>
           </div>
         </div>
         <span className="text-[10px] font-mono uppercase tracking-[0.35em] text-cyan-200/60">
-          {groups.length} grupper
+          {groups.length} groups
         </span>
       </div>
 

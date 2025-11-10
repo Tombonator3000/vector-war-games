@@ -77,9 +77,11 @@ import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
 import { LockedFeatureWrapper } from '@/components/LockedFeatureBadge';
 import { FEATURE_UNLOCK_INFO, type EraDefinition, type GameEra } from '@/types/era';
-import type { ActionConsequences } from '@/types/consequences';
+import type { ActionConsequences, ConsequenceCalculationContext } from '@/types/consequences';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { applyRemoteGameStateSync } from '@/lib/coopSync';
+import { calculateNuclearImpact, applyNuclearImpactToNation } from '@/lib/nuclearDamageModel';
+import { getFalloutSeverityLevel } from '@/lib/falloutEffects';
 import { loadTerritoryData, type TerritoryPolygon } from '@/lib/territoryPolygons';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
 import { ResourceStockpileDisplay } from '@/components/ResourceStockpileDisplay';
@@ -150,6 +152,7 @@ import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/ty
 import { migrateGameDiplomacy, getRelationship } from '@/lib/unifiedDiplomacyMigration';
 import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from '@/lib/simplifiedBioWarfareLogic';
 import { launchPropagandaCampaign, buildWonder, applyImmigrationPolicy } from '@/lib/streamlinedCultureLogic';
+import { clampDefenseValue, MAX_DEFENSE_LEVEL, calculateDirectNuclearDamage } from '@/lib/nuclearDamage';
 import { processImmigrationAndCultureTurn, initializeNationPopSystem } from '@/lib/immigrationCultureTurnProcessor';
 import { initializeSpyNetwork } from '@/lib/spyNetworkUtils';
 import { getPolicyById } from '@/lib/policyData';
@@ -683,7 +686,8 @@ let militaryTemplatesApi: ReturnType<typeof useMilitaryTemplates> | null = null;
 let supplySystemApi: ReturnType<typeof useSupplySystem> | null = null;
 let triggerNationsUpdate: (() => void) | null = null;
 
-type OverlayNotification = { text: string; expiresAt: number };
+type OverlayTone = 'info' | 'warning' | 'catastrophe';
+type OverlayNotification = { text: string; expiresAt: number; tone?: OverlayTone; sound?: string };
 type OverlayListener = (message: OverlayNotification | null) => void;
 let overlayListener: OverlayListener | null = null;
 let overlayTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -692,19 +696,33 @@ function registerOverlayListener(listener: OverlayListener | null) {
   overlayListener = listener;
 }
 
-function emitOverlayMessage(text: string, ttl: number) {
-  S.overlay = { text, ttl };
+function emitOverlayMessage(text: string, ttl: number, options?: { tone?: OverlayTone; sound?: string }) {
+  S.overlay = { text, ttl, tone: options?.tone, sound: options?.sound };
 
   if (overlayTimeout) {
     clearTimeout(overlayTimeout);
     overlayTimeout = null;
   }
 
-  overlayListener?.({ text, expiresAt: Date.now() + ttl });
+  overlayListener?.({ text, expiresAt: Date.now() + ttl, tone: options?.tone, sound: options?.sound });
   overlayTimeout = setTimeout(() => {
     overlayListener?.(null);
     overlayTimeout = null;
   }, ttl);
+
+  if (options?.sound) {
+    try {
+      import('@/utils/audioManager')
+        .then(({ audioManager }) => {
+          audioManager.playCritical(options.sound!);
+        })
+        .catch(() => {
+          /* ignore audio load failures */
+        });
+    } catch (error) {
+      // Ignore audio import errors in non-browser contexts
+    }
+  }
 }
 
 type PhaseTransitionListener = (active: boolean) => void;
@@ -999,7 +1017,8 @@ const leaderBonuses: Record<string, LeaderBonus[]> = {
       name: '🛡️ Guerrilla Defense',
       description: '+25% defense effectiveness',
       effect: (nation) => {
-        nation.defense = Math.floor(nation.defense * 1.25);
+        const currentDefense = nation.defense ?? 0;
+        nation.defense = clampDefenseValue(Math.floor(currentDefense * 1.25));
       }
     }
   ],
@@ -1110,7 +1129,8 @@ const leaderBonuses: Record<string, LeaderBonus[]> = {
       name: '🎬 Star Wars Program',
       description: '+30% ABM defense effectiveness',
       effect: (nation) => {
-        nation.defense = Math.floor(nation.defense * 1.30);
+        const currentDefense = nation.defense ?? 0;
+        nation.defense = clampDefenseValue(Math.floor(currentDefense * 1.30));
       }
     },
     {
@@ -1330,7 +1350,7 @@ function applyDoctrineEffects(nation: Nation, doctrineKey?: DoctrineKey) {
       break;
     }
     case 'defense': {
-      nation.defense = Math.max(0, (nation.defense || 0) + 3);
+      nation.defense = clampDefenseValue((nation.defense || 0) + 3);
       nation.missiles = Math.max(0, (nation.missiles || 0) - 1);
       break;
     }
@@ -1908,6 +1928,7 @@ const AudioSys = {
         const soundMap: Record<string, string> = {
           'explosion': 'nuclear-explosion',
           'launch': 'missile-launch',
+          'defcon': 'defcon1-siren',
           'click': audioManager.uiClickKey,
           'success': 'research-complete',
           'error': 'alert-warning',
@@ -3017,7 +3038,7 @@ function performImmigration(type: string, target: Nation) {
         target.population = Math.max(0, target.population - amount);
         player.population += amount;
         target.instability = (target.instability || 0) + 15;
-        player.defense = (player.defense || 0) + 1;
+        player.defense = clampDefenseValue((player.defense || 0) + 1);
         pay(player, COSTS.immigration_skilled);
         trackMigrants(player, amount);
         log(`Skilled immigration: +${amount}M talent from ${target.name}`);
@@ -3883,9 +3904,22 @@ function drawFalloutMarks(deltaMs: number) {
   const now = Date.now();
   const deltaSeconds = Math.max(0.016, deltaMs / 1000);
   const updatedMarks: FalloutMark[] = [];
+  const getNearestNationName = (x: number, y: number, radius: number): string | null => {
+    let best: { name: string; dist: number } | null = null;
+    nations.forEach(nation => {
+      if (nation.population <= 0) return;
+      const { x: nx, y: ny } = projectLocal(nation.lon, nation.lat);
+      const dist = Math.hypot(nx - x, ny - y);
+      if (dist <= radius && (!best || dist < best.dist)) {
+        best = { name: nation.name, dist };
+      }
+    });
+    return best?.name ?? null;
+  };
 
   for (const mark of S.falloutMarks) {
     const next: FalloutMark = { ...mark };
+    const previousAlertLevel = mark.alertLevel ?? 'none';
 
     const growthFactor = Math.min(1, next.growthRate * deltaSeconds);
     if (next.radius < next.targetRadius) {
@@ -3920,6 +3954,9 @@ function drawFalloutMarks(deltaMs: number) {
       continue;
     }
 
+    const severityLevel = getFalloutSeverityLevel(next.intensity);
+    next.alertLevel = severityLevel;
+
     updatedMarks.push(next);
 
     ctx.save();
@@ -3935,9 +3972,70 @@ function drawFalloutMarks(deltaMs: number) {
     ctx.fill();
     ctx.restore();
 
-    drawIcon(radiationIcon, px, py, 0, RADIATION_ICON_BASE_SCALE, {
+    if (severityLevel !== 'none') {
+      const strokeColor =
+        severityLevel === 'deadly'
+          ? 'rgba(248,113,113,0.8)'
+          : severityLevel === 'severe'
+            ? 'rgba(250,204,21,0.75)'
+            : 'rgba(56,189,248,0.6)';
+      const label =
+        severityLevel === 'deadly'
+          ? '☢️ DEADLY FALLOUT'
+          : severityLevel === 'severe'
+            ? '⚠️ SEVERE FALLOUT'
+            : '☢️ FALLOUT ZONE';
+
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.9, next.intensity + 0.2);
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = Math.max(1.5, Math.min(4, next.radius * 0.08));
+      ctx.setLineDash([8, 6]);
+      ctx.beginPath();
+      ctx.arc(px, py, next.radius * 1.08, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.95, next.intensity + 0.25);
+      ctx.fillStyle = strokeColor;
+      ctx.font = `600 ${Math.max(12, Math.min(22, next.radius * 0.55))}px var(--font-sans, 'Orbitron', sans-serif)`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(label, px, py - next.radius - 8);
+      ctx.restore();
+    }
+
+    const iconScale =
+      severityLevel === 'deadly'
+        ? RADIATION_ICON_BASE_SCALE * 1.4
+        : severityLevel === 'severe'
+          ? RADIATION_ICON_BASE_SCALE * 1.2
+          : RADIATION_ICON_BASE_SCALE;
+    drawIcon(radiationIcon, px, py, 0, iconScale, {
       alpha: Math.min(0.9, next.intensity + 0.15),
     });
+
+    if (severityLevel === 'deadly' && previousAlertLevel !== 'deadly') {
+      const impactedNation = getNearestNationName(px, py, next.radius * 1.4);
+      const description = impactedNation
+        ? `${impactedNation} reports lethal fallout. Immediate evacuation required.`
+        : 'A fallout zone has intensified to lethal levels.';
+      toast({
+        title: '☢️ Deadly Fallout Detected',
+        description,
+        variant: 'destructive',
+      });
+      if (typeof window !== 'undefined' && window.__gameAddNewsItem) {
+        window.__gameAddNewsItem(
+          'environment',
+          impactedNation
+            ? `${impactedNation} overwhelmed by deadly fallout levels!`
+            : 'Deadly fallout detected over irradiated wasteland!',
+          'critical'
+        );
+      }
+    }
   }
 
   if (updatedMarks.length > MAX_FALLOUT_MARKS) {
@@ -4002,6 +4100,7 @@ function upsertFalloutMark(x: number, y: number, lon: number, lat: number, yield
       growthRate,
       decayDelayMs: decayDelay,
       decayRate,
+      alertLevel: 'none',
     };
     S.falloutMarks.push(newMark);
   }
@@ -4143,8 +4242,19 @@ function drawFX() {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.font = 'bold 28px monospace';
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    const tone = S.overlay.tone || 'warning';
+    const fillMap: Record<OverlayTone, string> = {
+      info: 'rgba(200,240,255,0.9)',
+      warning: 'rgba(255,255,255,0.9)',
+      catastrophe: 'rgba(255,120,120,0.95)'
+    };
+    const strokeMap: Record<OverlayTone, string> = {
+      info: 'rgba(0,40,60,0.6)',
+      warning: 'rgba(0,0,0,0.6)',
+      catastrophe: 'rgba(30,0,0,0.7)'
+    };
+    ctx.fillStyle = fillMap[tone];
+    ctx.strokeStyle = strokeMap[tone];
     ctx.lineWidth = 4;
     ctx.strokeText(S.overlay.text, W / 2, H / 2);
     ctx.fillText(S.overlay.text, W / 2, H / 2);
@@ -4254,69 +4364,98 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
     });
   }
 
-  S.radiationZones.push({
-    x, y,
-    radius: Math.sqrt(yieldMT) * 8,
-    intensity: yieldMT / 100
+  const impact = calculateNuclearImpact({
+    yieldMT,
+    defense: target?.defense ?? 0,
+    population: target?.population ?? 0,
+    cities: target?.cities ?? 0,
+    production: target?.production ?? 0,
+    missiles: target?.missiles ?? 0,
+    bombers: target?.bombers ?? 0,
+    submarines: target?.submarines ?? 0,
+    uranium: target?.uranium ?? 0,
+    nationName: target?.name,
   });
 
-  // Nuclear winter accumulation
-  if (yieldMT >= 50) {
-    S.nuclearWinterLevel = (S.nuclearWinterLevel || 0) + (yieldMT || 0) / 100;
-    S.globalRadiation = (S.globalRadiation || 0) + (yieldMT || 0) / 200;
+  S.radiationZones.push({
+    x,
+    y,
+    radius: Math.sqrt(yieldMT) * 8 * (1 + impact.severity * 0.3),
+    intensity: yieldMT / 100 + impact.radiationDelta / 15
+  });
+
+  const smokeBursts = Math.max(0, Math.round((impact.severity + impact.totalCityLosses * 0.6) * 12));
+  for (let s = 0; s < smokeBursts; s++) {
+    const ang = Math.random() * Math.PI * 2;
+    const rad = Math.random() * 12;
+    S.particles.push({
+      x: x + Math.cos(ang) * rad,
+      y: y + Math.sin(ang) * rad,
+      vx: (Math.random() - 0.5) * 0.35,
+      vy: -0.6 - Math.random() * 0.5,
+      life: 900 + Math.random() * 800,
+      max: 1600,
+      type: 'smoke'
+    });
   }
 
-  if (yieldMT >= 50) {
-    // Mushroom smoke
-    for (let s = 0; s < 20 * (S.fx || 1); s++) {
-      const ang = Math.random() * Math.PI * 2;
-      const rad = Math.random() * 8;
-      S.particles.push({
-        x: x + Math.cos(ang) * rad,
-        y: y + Math.sin(ang) * rad,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: -0.6 - Math.random() * 0.4,
-        life: 900 + Math.random() * 600,
-        max: 1500,
-        type: 'smoke'
-      });
-    }
-
+  if (impact.severity >= 1 || yieldMT >= 40) {
     S.empEffects.push({
-      x, y,
-      radius: Math.sqrt(yieldMT) * 15,
+      x,
+      y,
+      radius: Math.sqrt(yieldMT) * 15 * (1 + impact.severity * 0.2),
       duration: 30
     });
-    
+
     nations.forEach(n => {
       const { x: nx, y: ny } = projectLocal(n.lon, n.lat);
       const dist = Math.hypot(nx - x, ny - y);
-      if (dist < Math.sqrt(yieldMT) * 15) {
-        n.defense = Math.max(0, n.defense - 3);
-        n.missiles = Math.max(0, n.missiles - 2);
+      if (dist < Math.sqrt(yieldMT) * 15 * (1 + impact.severity * 0.1)) {
+        const defenseLoss = Math.min(5, Math.round(impact.severity * 2));
+        const missileLoss = Math.max(0, Math.round(impact.severity));
+        n.defense = Math.max(0, n.defense - defenseLoss);
+        n.missiles = Math.max(0, n.missiles - missileLoss);
         log(`⚡ EMP disabled ${n.name}'s electronics!`, 'warning');
       }
     });
   }
 
-  S.screenShake = Math.max(S.screenShake || 0, Math.min(20, yieldMT / 5));
-  
+  S.screenShake = Math.max(S.screenShake || 0, Math.min(25, yieldMT / 5 + impact.severity * 3));
+
   if (target) {
-    const reduction = Math.max(0, 1 - target.defense * 0.05);
-    const damage = yieldMT * reduction;
+    const previousPopulation = target.population;
+    applyNuclearImpactToNation(target, impact);
+
+    log(`💥 ${yieldMT}MT detonation at ${target.name}! ${impact.humanitarianSummary}`, 'alert');
+    impact.stageReports.forEach(stage => {
+      if (stage.summary) {
+        log(`☢️ ${stage.summary}`, 'warning');
+      }
+    });
+
+    toast({
+      title: `☢️ ${target.name} Devastated`,
+      description: `${impact.humanitarianSummary} ${impact.environmentalSummary}`,
+      variant: 'destructive',
+      duration: 8000,
+    });
+    const damage = calculateDirectNuclearDamage(yieldMT, target.defense);
     const oldPopulation = target.population;
     target.population = Math.max(0, target.population - damage);
     target.instability = Math.min(100, (target.instability || 0) + yieldMT);
 
-    log(`💥 ${yieldMT}MT detonation at ${target.name}! -${Math.floor(damage)}M`, "alert");
+    emitOverlayMessage(impact.overlayMessage, 8000, { tone: 'catastrophe', sound: 'explosion-blast' });
 
-    // Track statistics
+    if (typeof window !== 'undefined' && window.__gameAddNewsItem) {
+      window.__gameAddNewsItem('crisis', `${target.name} suffers nuclear annihilation: ${impact.humanitarianSummary}`, 'critical');
+    }
+
     if (target.isPlayer) {
       if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
       S.statistics.nukesReceived++;
     }
-    // Track if target was destroyed by this nuke
-    if (oldPopulation > 0 && target.population <= 0 && !target.isPlayer) {
+
+    if (previousPopulation > 0 && target.population <= 0 && !target.isPlayer) {
       const player = PlayerManager.get();
       if (player) {
         if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
@@ -4324,9 +4463,35 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
       }
     }
 
-    if (yieldMT >= 50) {
-      DoomsdayClock.tick(0.5);
+    if (impact.totalRefugees > 0) {
+      const refugeeId = `nuke-${target.id}-${Date.now()}`;
+      S.refugeeCamps = S.refugeeCamps || [];
+      S.refugeeCamps.push({ id: refugeeId, nationId: target.id, displaced: impact.totalRefugees, ttl: Math.max(5, Math.round(impact.severity * 10)) });
+      log(`🚨 ${impact.totalRefugees.toFixed(1)}M refugees flee ${target.name}.`, 'warning');
     }
+
+    if (governanceApiRef) {
+      const moraleDelta = -Math.round(Math.max(2, impact.severity * 10));
+      const opinionDelta = -Math.round(Math.max(1, impact.severity * 8));
+      const cabinetDelta = -Math.round(Math.max(1, impact.severity * 6));
+      governanceApiRef.applyGovernanceDelta(target.id, {
+        morale: moraleDelta,
+        publicOpinion: opinionDelta,
+        cabinetApproval: cabinetDelta,
+      }, `${target.name} reels from nuclear devastation.`);
+    }
+
+    if (impact.severity >= 1.2) {
+      DoomsdayClock.tick(0.5 + impact.severity * 0.1);
+    }
+  }
+
+  S.nuclearWinterLevel = (S.nuclearWinterLevel || 0) + impact.winterDelta;
+  S.globalRadiation = (S.globalRadiation || 0) + impact.radiationDelta;
+
+  if (impact.totalRefugees > 0 && !target) {
+    S.refugeeCamps = S.refugeeCamps || [];
+    S.refugeeCamps.push({ id: `nuke-unknown-${Date.now()}`, nationId: 'unknown', displaced: impact.totalRefugees, ttl: Math.max(5, Math.round(impact.severity * 10)) });
   }
 
   checkVictory();
@@ -5088,9 +5253,10 @@ function aiTurn(n: Nation) {
   
   // 6. BUILD DEFENSE
   if (r < 0.65 + defenseMod) {
-    if (canAfford(n, COSTS.defense) && n.defense < 15) {
+    const currentDefense = n.defense ?? 0;
+    if (canAfford(n, COSTS.defense) && currentDefense < MAX_DEFENSE_LEVEL) {
       pay(n, COSTS.defense);
-      n.defense += 2;
+      n.defense = clampDefenseValue(currentDefense + 2);
       log(`${n.name} upgrades defense`);
       return;
     }
@@ -8531,6 +8697,54 @@ export default function NoradVector() {
     setSelectedDeliveryMethod(null);
   }, []);
 
+  const triggerConsequenceAlerts = useCallback((consequences: ActionConsequences) => {
+    if (!consequences) return;
+
+    AudioSys.playSFX('defcon');
+
+    if (consequences.targetName) {
+      const lingering = consequences.longTerm[1]?.description ?? consequences.longTerm[0]?.description;
+      emitOverlayMessage(
+        `☢️ ${consequences.targetName} is swallowed by irradiated night. ${lingering}`,
+        9000
+      );
+    } else {
+      emitOverlayMessage(
+        '☢️ Nuclear fire blooms across the horizon and the world holds its breath.',
+        9000
+      );
+    }
+
+    const formatProbability = (value?: number) =>
+      value !== undefined ? ` (${Math.round(value)}% chance)` : '';
+
+    const raiseDarkToast = (title: string, description: string) =>
+      toast({
+        title,
+        description,
+        variant: 'destructive',
+        className: 'bg-slate-950 border-red-900 text-red-100 shadow-[0_0_35px_rgba(220,38,38,0.45)]',
+      });
+
+    consequences.longTerm.forEach((entry) => {
+      raiseDarkToast(
+        'Long-term Horror',
+        `${entry.icon ?? '☢️'} ${entry.description}${formatProbability(entry.probability)}`
+      );
+    });
+
+    consequences.risks.forEach((risk) => {
+      raiseDarkToast(
+        'Escalating Risk',
+        `${risk.icon ?? '⚠️'} ${risk.description}${formatProbability(risk.probability)}`
+      );
+    });
+
+    (consequences.warnings ?? []).forEach((warning) => {
+      raiseDarkToast('Warning', warning);
+    });
+  }, []);
+
   const confirmPendingLaunch = useCallback(() => {
     if (!pendingLaunch || selectedWarheadYield === null || !selectedDeliveryMethod) {
       return;
@@ -8582,42 +8796,74 @@ export default function NoradVector() {
       return;
     }
 
-    let launchSucceeded = false;
+    const context: ConsequenceCalculationContext = {
+      playerNation: player as Nation,
+      targetNation: pendingLaunch.target as Nation,
+      allNations: GameStateManager.getNations(),
+      currentDefcon: S.defcon,
+      currentTurn: S.turn,
+      gameState: S as GameState,
+    };
 
-    if (selectedDeliveryMethod === 'missile') {
-      launchSucceeded = launch(player, pendingLaunch.target, selectedWarheadYield);
-    } else {
-      player.warheads = player.warheads || {};
-      const remaining = (player.warheads[selectedWarheadYield] || 0) - 1;
-      if (remaining <= 0) {
-        delete player.warheads[selectedWarheadYield];
+    const consequences = calculateActionConsequences('launch_missile', context, {
+      warheadYield: selectedWarheadYield,
+      deliveryMethod: selectedDeliveryMethod,
+    });
+
+    if (!consequences) {
+      toast({ title: 'Unable to analyze strike', description: 'Consequence system failed to respond.', variant: 'destructive' });
+      return;
+    }
+
+    const executeLaunch = () => {
+      let launchSucceeded = false;
+
+      if (selectedDeliveryMethod === 'missile') {
+        launchSucceeded = launch(player, pendingLaunch.target, selectedWarheadYield);
       } else {
-        player.warheads[selectedWarheadYield] = remaining;
+        player.warheads = player.warheads || {};
+        const remaining = (player.warheads[selectedWarheadYield] || 0) - 1;
+        if (remaining <= 0) {
+          delete player.warheads[selectedWarheadYield];
+        } else {
+          player.warheads[selectedWarheadYield] = remaining;
+        }
+
+        if (selectedDeliveryMethod === 'bomber') {
+          player.bombers = Math.max(0, bomberCount - 1);
+          launchSucceeded = launchBomber(player, pendingLaunch.target, { yield: selectedWarheadYield });
+          if (launchSucceeded) {
+            log(`${player.name} dispatches bomber strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
+            DoomsdayClock.tick(0.3);
+            AudioSys.playSFX('launch');
+          }
+        } else if (selectedDeliveryMethod === 'submarine') {
+          player.submarines = Math.max(0, submarineCount - 1);
+          launchSucceeded = launchSubmarine(player, pendingLaunch.target, selectedWarheadYield);
+          if (launchSucceeded) {
+            log(`${player.name} launches submarine strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
+            DoomsdayClock.tick(0.3);
+          }
+        }
       }
 
-      if (selectedDeliveryMethod === 'bomber') {
-        player.bombers = Math.max(0, bomberCount - 1);
-        launchSucceeded = launchBomber(player, pendingLaunch.target, { yield: selectedWarheadYield });
-        if (launchSucceeded) {
-          log(`${player.name} dispatches bomber strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
-          DoomsdayClock.tick(0.3);
-          AudioSys.playSFX('launch');
-        }
-      } else if (selectedDeliveryMethod === 'submarine') {
-        player.submarines = Math.max(0, submarineCount - 1);
-        launchSucceeded = launchSubmarine(player, pendingLaunch.target, selectedWarheadYield);
-        if (launchSucceeded) {
-          log(`${player.name} launches submarine strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
-          DoomsdayClock.tick(0.3);
-        }
+      if (launchSucceeded) {
+        triggerConsequenceAlerts(consequences);
+        consumeAction();
+        resetLaunchControl();
       }
-    }
+    };
 
-    if (launchSucceeded) {
-      consumeAction();
-      resetLaunchControl();
-    }
-  }, [pendingLaunch, resetLaunchControl, selectedDeliveryMethod, selectedWarheadYield]);
+    setConsequenceCallback(() => executeLaunch);
+    setConsequencePreview(consequences);
+  }, [
+    pendingLaunch,
+    selectedWarheadYield,
+    selectedDeliveryMethod,
+    resetLaunchControl,
+    triggerConsequenceAlerts,
+    consumeAction,
+  ]);
 
   const startGame = useCallback((leaderOverride?: string, doctrineOverride?: string) => {
     const leaderToUse = leaderOverride ?? selectedLeader;
@@ -8915,18 +9161,31 @@ export default function NoradVector() {
     const player = getBuildContext('Defense upgrade');
     if (!player) return;
 
+    const currentDefense = player.defense ?? 0;
+    if (currentDefense >= MAX_DEFENSE_LEVEL) {
+      toast({
+        title: 'Defense grid at capacity',
+        description: `Your ABM network is already at the maximum rating of ${MAX_DEFENSE_LEVEL}.`,
+      });
+      return;
+    }
+
     if (!canAfford(player, COSTS.defense)) {
       toast({ title: 'Insufficient production', description: 'Defense upgrades require 15 production.' });
       return;
     }
 
     pay(player, COSTS.defense);
-    player.defense = (player.defense || 0) + 2;
+    player.defense = clampDefenseValue(currentDefense + 2);
+    const defenseGain = Math.max(0, (player.defense ?? 0) - currentDefense);
+    const defenseGainDisplay = defenseGain >= 1
+      ? Math.round(defenseGain).toString()
+      : defenseGain.toFixed(1).replace(/\.0$/, '');
 
     AudioSys.playSFX('build');
-    log(`${player.name} reinforces continental defense (+2)`);
-    toast({ 
-      title: '🛡️ Defense System Upgraded', 
+    log(`${player.name} reinforces continental defense (+${defenseGainDisplay})`);
+    toast({
+      title: '🛡️ Defense System Upgraded',
       description: `ABM network strength increased to ${player.defense}.`,
     });
     updateDisplay();

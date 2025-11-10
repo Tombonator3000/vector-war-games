@@ -53,7 +53,7 @@ const MUSIC_TRACKS = [
 export type MusicTrack = (typeof MUSIC_TRACKS)[number];
 export type MusicTrackId = MusicTrack['id'];
 
-const DEFAULT_AMBIENT_VOLUME = 0.45;
+const DEFAULT_AMBIENT_VOLUME = 0.55;
 
 const themeOptions: { id: ThemeId; label: string }[] = [
   { id: 'synthwave', label: 'Synthwave' },
@@ -317,8 +317,8 @@ export function OptionsMenu({
     return stored !== 'false';
   });
 
-  // Always start at 30% volume
-  const [musicVolume, setMusicVolume] = useState(0.3);
+  // Always start at 10% volume
+  const [musicVolume, setMusicVolume] = useState(0.10);
 
   const [ambientVolume, setAmbientVolume] = useState(() => {
     const stored = Storage.getItem('audio_ambient_volume');
@@ -808,9 +808,9 @@ export function OptionsMenu({
           >
             <BookOpen className="h-5 w-5" />
             <div className="flex flex-col text-left">
-              <span className="font-semibold">Spill-database</span>
+              <span className="font-semibold">Game Database</span>
               <span className="text-xs text-cyan-300/80 font-normal">
-                Komplett referanse for alle spillmekanikker, våpen, og strategier
+                Complete reference for all game mechanics, weapons, and strategies
               </span>
             </div>
           </Button>
@@ -822,9 +822,9 @@ export function OptionsMenu({
           >
             <GraduationCap className="h-5 w-5" />
             <div className="flex flex-col text-left">
-              <span className="font-semibold">Komplett Tutorial</span>
+              <span className="font-semibold">Complete Tutorial</span>
               <span className="text-xs text-cyan-300/80 font-normal">
-                Interaktiv trinn-for-trinn guide gjennom alle spillsystemer
+                Interactive step-by-step guide through all game systems
               </span>
             </div>
           </Button>
@@ -832,8 +832,8 @@ export function OptionsMenu({
 
         <div className="mt-4 p-3 rounded border border-cyan-500/40 bg-black/40">
           <p className="text-xs text-cyan-200">
-            <strong>Tips:</strong> Bruk databasen som oppslagsverk under spilling.
-            Tutorialen dekker alt fra grunnleggende mekanikker til avanserte strategier.
+            <strong>Tip:</strong> Use the database as a reference during gameplay.
+            The tutorial covers everything from basic mechanics to advanced strategies.
           </p>
         </div>
       </div>
