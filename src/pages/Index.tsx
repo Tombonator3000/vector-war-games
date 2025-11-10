@@ -150,7 +150,12 @@ import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/ty
 import { migrateGameDiplomacy, getRelationship } from '@/lib/unifiedDiplomacyMigration';
 import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from '@/lib/simplifiedBioWarfareLogic';
 import { launchPropagandaCampaign, buildWonder, applyImmigrationPolicy } from '@/lib/streamlinedCultureLogic';
-import { clampDefenseValue, MAX_DEFENSE_LEVEL, calculateDirectNuclearDamage } from '@/lib/nuclearDamage';
+import {
+  clampDefenseValue,
+  MAX_DEFENSE_LEVEL,
+  calculateDirectNuclearDamage,
+  calculateDefenseDamageMultiplier,
+} from '@/lib/nuclearDamage';
 import { processImmigrationAndCultureTurn, initializeNationPopSystem } from '@/lib/immigrationCultureTurnProcessor';
 import { initializeSpyNetwork } from '@/lib/spyNetworkUtils';
 import { getPolicyById } from '@/lib/policyData';
@@ -3590,14 +3595,19 @@ function drawMissiles() {
       if (m.t >= 0.95 && !m.interceptChecked) {
         m.interceptChecked = true;
         const allies = nations.filter(n => n.treaties?.[m.target.id]?.alliance && n.defense > 0);
-        let totalIntercept = (m.target.defense || 0) / 16;
+
+        const targetMitigation = 1 - calculateDefenseDamageMultiplier(m.target.defense);
+        let totalIntercept = targetMitigation;
         allies.forEach(ally => {
-          const allyIntercept = (ally.defense || 0) / 32;
+          const allyMitigation = 1 - calculateDefenseDamageMultiplier(ally.defense);
+          const allyIntercept = allyMitigation * 0.5;
           totalIntercept += allyIntercept;
           if (Math.random() < allyIntercept) {
             log(`${ally.name} helps defend ${m.target.name}!`, 'success');
           }
         });
+
+        totalIntercept = Math.min(0.95, Math.max(0, totalIntercept));
 
         if (Math.random() < totalIntercept) {
           S.missiles.splice(i, 1);
