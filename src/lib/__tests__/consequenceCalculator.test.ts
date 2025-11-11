@@ -23,6 +23,10 @@ const createContext = (overrides?: Partial<Nation>): ConsequenceCalculationConte
     intel: 40,
     warheads: { 5: 2, 10: 1 },
     alliances: ['Ally One'],
+    morale: 70,
+    publicOpinion: 60,
+    electionTimer: 0,
+    cabinetApproval: 65,
   };
 
   const targetNation: Nation = {
@@ -44,6 +48,10 @@ const createContext = (overrides?: Partial<Nation>): ConsequenceCalculationConte
     intel: 25,
     warheads: { 5: 3, 15: 1 },
     alliances: ['Bloc One', 'Bloc Two', 'Bloc Three'],
+    morale: 65,
+    publicOpinion: 55,
+    electionTimer: 0,
+    cabinetApproval: 60,
     ...overrides,
   };
 
@@ -66,6 +74,10 @@ const createContext = (overrides?: Partial<Nation>): ConsequenceCalculationConte
     intel: 18,
     warheads: { 5: 1 },
     alliances: ['Bloc Two'],
+    morale: 72,
+    publicOpinion: 68,
+    electionTimer: 0,
+    cabinetApproval: 70,
   };
 
   const gameState = {

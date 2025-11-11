@@ -453,13 +453,20 @@ function handleAItoAINegotiation(
   if (willAccept) {
     // Execute the deal immediately
     try {
-      applyNegotiationDeal(
+      const result = applyNegotiationDeal(
         negotiation.proposedDeal,
         initiatorNation,
         targetNation,
         allNations,
         currentTurn
       );
+      
+      // Update nations array with modified nations
+      const nationIndex = allNations.findIndex(n => n.id === result.initiator.id);
+      if (nationIndex >= 0) allNations[nationIndex] = result.initiator;
+      
+      const targetIndex = allNations.findIndex(n => n.id === result.respondent.id);
+      if (targetIndex >= 0) allNations[targetIndex] = result.respondent;
 
       if (logFn) {
         logFn(

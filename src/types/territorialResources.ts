@@ -210,51 +210,47 @@ export const RESOURCE_DEPOSIT_TEMPLATES: Record<string, ResourceDeposit[]> = {
   middle_east_oil: [
     { type: 'oil', amount: 20, richness: 1.8 },
     { type: 'uranium', amount: 5, richness: 1.0 },
-    { type: 'rare_earths', amount: 3, richness: 1.0 },
   ],
   russia_oil: [
     { type: 'oil', amount: 15, richness: 1.5 },
-    { type: 'rare_earths', amount: 12, richness: 1.3 },
+    { type: 'rare_earths', amount: 8, richness: 1.3 },
   ],
 
   // Uranium producers
   australia_uranium: [
     { type: 'uranium', amount: 15, richness: 2.0 },
-    { type: 'rare_earths', amount: 15, richness: 1.5 },
+    { type: 'rare_earths', amount: 10, richness: 1.5 },
   ],
   kazakhstan_uranium: [
     { type: 'uranium', amount: 12, richness: 1.8 },
     { type: 'oil', amount: 8, richness: 1.2 },
-    { type: 'rare_earths', amount: 5, richness: 1.2 },
   ],
 
   // Rare earth producers
   china_rare_earths: [
-    { type: 'rare_earths', amount: 25, richness: 2.0 },
-    { type: 'food', amount: 20, richness: 1.2 },
+    { type: 'rare_earths', amount: 20, richness: 2.0 },
+    { type: 'food', amount: 15, richness: 1.2 },
   ],
 
   // Food producers
   usa_food: [
-    { type: 'food', amount: 35, richness: 1.8 },
+    { type: 'food', amount: 25, richness: 1.8 },
     { type: 'oil', amount: 10, richness: 1.3 },
-    { type: 'rare_earths', amount: 5, richness: 1.0 },
   ],
   brazil_food: [
-    { type: 'food', amount: 30, richness: 1.6 },
-    { type: 'rare_earths', amount: 8, richness: 1.0 },
+    { type: 'food', amount: 20, richness: 1.6 },
+    { type: 'rare_earths', amount: 5, richness: 1.0 },
   ],
 
-  // Balanced territories (increased food and added rare earths)
+  // Balanced territories
   balanced: [
     { type: 'oil', amount: 5, richness: 1.0 },
-    { type: 'food', amount: 18, richness: 1.0 },
-    { type: 'rare_earths', amount: 3, richness: 1.0 },
+    { type: 'food', amount: 8, richness: 1.0 },
   ],
 
   // Poor territories
   barren: [
-    { type: 'food', amount: 8, richness: 0.8 },
+    { type: 'food', amount: 3, richness: 0.8 },
   ],
 };
 
