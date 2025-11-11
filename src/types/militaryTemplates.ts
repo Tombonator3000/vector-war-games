@@ -68,8 +68,6 @@ export interface UnitComponentData {
   // Costs
   manpower: number;
   production: number;
-  steel: number;
-  electronics?: number;
 
   // Combat stats
   softAttack: number; // vs infantry
@@ -116,8 +114,6 @@ export interface MilitaryTemplate {
   stats: {
     totalManpower: number;
     totalProduction: number;
-    totalSteel: number;
-    totalElectronics: number;
 
     // Combat
     softAttack: number;
