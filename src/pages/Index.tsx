@@ -6808,6 +6808,26 @@ export default function NoradVector() {
     [],
   );
 
+  const moveConventionalArmiesWithAnimation = useCallback(
+    (fromTerritoryId: string, toTerritoryId: string, count: number) => {
+      const fromTerritory = conventionalTerritories[fromTerritoryId];
+      const result = moveConventionalArmies(fromTerritoryId, toTerritoryId, count);
+
+      if (result.success && fromTerritory?.controllingNationId) {
+        registerConventionalMovement({
+          unitId: `move_${Date.now()}`,
+          templateId: 'armored_corps',
+          ownerId: fromTerritory.controllingNationId,
+          fromTerritoryId,
+          toTerritoryId,
+        });
+      }
+
+      return result;
+    },
+    [conventionalTerritories, moveConventionalArmies, registerConventionalMovement],
+  );
+
   const handleWarfareMove = useCallback(
     (fromTerritoryId: string, toTerritoryId: string, count: number) => {
       const source = territoryMap.get(fromTerritoryId);
@@ -8151,26 +8171,6 @@ export default function NoradVector() {
       return resolveConventionalAttack(attackerTerritory.id, territoryId, attackingArmies);
     },
     [conventionalTerritories, resolveConventionalAttack],
-  );
-
-  const moveConventionalArmiesWithAnimation = useCallback(
-    (fromTerritoryId: string, toTerritoryId: string, count: number) => {
-      const fromTerritory = conventionalTerritories[fromTerritoryId];
-      const result = moveConventionalArmies(fromTerritoryId, toTerritoryId, count);
-
-      if (result.success && fromTerritory?.controllingNationId) {
-        registerConventionalMovement({
-          unitId: `move_${Date.now()}`,
-          templateId: 'armored_corps',
-          ownerId: fromTerritory.controllingNationId,
-          fromTerritoryId,
-          toTerritoryId,
-        });
-      }
-
-      return result;
-    },
-    [conventionalTerritories, moveConventionalArmies, registerConventionalMovement],
   );
 
   useEffect(() => {
