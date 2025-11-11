@@ -3076,3 +3076,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-11T22:07:21Z - Added Pandemic 2020 scenario configuration
 - Introduced the `pandemic2020` campaign in `src/types/scenario.ts` with modern election pressure, DEFCON 3 alert, and BioForge systems unlocked from turn one.
 - Documented the new scenario in `docs/2025-comprehensive-audit-roadmap.md` so planning materials list the pandemic campaign alongside existing options.
+
+### 2025-11-11T22:33:32Z - Adjusted BioForge modal behavior for pandemic campaign
+- Defaulted the BioForge modal to open when loading the Pandemic 2020 scenario and ensured tier-three labs reopen it after scenario switches in `src/pages/Index.tsx`.
+- Tightened the tier upgrade notification guard so the BioForge toast only fires on upward transitions past tier three in `src/pages/Index.tsx`.

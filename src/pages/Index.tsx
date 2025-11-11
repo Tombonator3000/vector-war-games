@@ -6337,7 +6337,7 @@ export default function NoradVector() {
   );
 
   // Modal and panel states - MUST be declared before blockingModalActive useMemo
-  const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(false);
+  const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(() => selectedScenarioId === 'pandemic2020');
   const [isCulturePanelOpen, setIsCulturePanelOpen] = useState(false);
   const [showGovernanceDetails, setShowGovernanceDetails] = useState(false);
   const [showPolicyPanel, setShowPolicyPanel] = useState(false);
@@ -7340,6 +7340,7 @@ export default function NoradVector() {
       }
 
       if (
+        currentTier > previousTier &&
         currentTier >= 3 &&
         previousTier < 3 &&
         pandemicIntegrationEnabled &&
@@ -7356,6 +7357,22 @@ export default function NoradVector() {
       previousLabTierRef.current = currentTier;
     }
   }, [
+    labFacility.tier,
+    bioWarfareEnabled,
+    pandemicIntegrationEnabled,
+  ]);
+
+  useEffect(() => {
+    if (
+      selectedScenarioId === 'pandemic2020' &&
+      labFacility.tier >= 3 &&
+      pandemicIntegrationEnabled &&
+      bioWarfareEnabled
+    ) {
+      setIsBioWarfareOpen(true);
+    }
+  }, [
+    selectedScenarioId,
     labFacility.tier,
     bioWarfareEnabled,
     pandemicIntegrationEnabled,
