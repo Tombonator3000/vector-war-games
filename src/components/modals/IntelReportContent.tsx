@@ -98,7 +98,7 @@ export function IntelReportContent({ player, nations, onClose }: IntelReportCont
                         <span className="text-gray-400">Doctrine:</span>
                         <span className="text-cyan-300">{nation.doctrine || 'Unknown'}</span>
                         <span className="text-gray-400 ml-4">Personality:</span>
-                        <span className="text-cyan-300">{nation.ai || 'Unknown'}</span>
+                        <span className="text-cyan-300">{nation.aiPersonality || 'Unknown'}</span>
                       </div>
                       <div className="flex gap-4">
                         <span className="text-gray-400">Tech:</span>

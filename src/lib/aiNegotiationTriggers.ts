@@ -77,7 +77,7 @@ export function checkThreatTrigger(
   const maxThreat = Math.max(...Object.values(threats));
 
   // ENHANCED: Personality affects threat threshold
-  const aiType = aiNation.ai || 'balanced';
+  const aiType = aiNation.aiPersonality || 'balanced';
   let threatThreshold = 50;
 
   switch (aiType) {
@@ -494,7 +494,7 @@ export function checkMutualBenefitTrigger(
   }
 
   // Defensive AIs are more likely to seek alliances
-  const personalityBonus = aiNation.ai === 'defensive' ? 25 : 0;
+  const personalityBonus = aiNation.aiPersonality === 'defensive' ? 25 : 0;
 
   result.shouldTrigger = true;
   result.urgency = 'medium';
@@ -558,7 +558,7 @@ export function checkWarningTrigger(
   }
 
   // Aggressive AIs more likely to issue warnings
-  const personalityBonus = aiNation.ai === 'aggressive' ? 20 : 0;
+  const personalityBonus = aiNation.aiPersonality === 'aggressive' ? 20 : 0;
 
   result.shouldTrigger = true;
   result.urgency = 'high';

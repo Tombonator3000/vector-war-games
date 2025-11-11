@@ -493,7 +493,7 @@ export function getPersonalizedMessage(
   purpose: NegotiationPurpose,
   context: string
 ): string {
-  const personality = aiNation.ai || 'balanced';
+  const personality = aiNation.aiPersonality || 'balanced';
   const relationship = getRelationship(aiNation, targetNation.id);
 
   let tone = '';
