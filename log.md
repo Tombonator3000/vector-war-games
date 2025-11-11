@@ -3067,3 +3067,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Extended `GlobeScene` map modes/types, injected pandemic overlays, and added computePandemicColor gradient utility.
 - Built `PandemicSpreadOverlay` component, updated Index map mode wiring, and synced 2D renderer plus MapModeBar ordering.
 - Ran `npm run lint` (fails due to legacy repo-wide lint issues unrelated to new changes).
+
+### 2025-11-11T22:07:21Z - Added Pandemic 2020 scenario configuration
+- Introduced the `pandemic2020` campaign in `src/types/scenario.ts` with modern election pressure, DEFCON 3 alert, and BioForge systems unlocked from turn one.
+- Documented the new scenario in `docs/2025-comprehensive-audit-roadmap.md` so planning materials list the pandemic campaign alongside existing options.

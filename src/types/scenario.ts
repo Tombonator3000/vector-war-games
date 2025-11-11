@@ -189,6 +189,57 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
     startingDefcon: 5,
   },
 
+  pandemic2020: {
+    id: 'pandemic2020',
+    name: 'Pandemic 2020',
+    description:
+      'January 2020: COVID-19 erupts into a global crisis. Juggle lockdown debates, supply chain collapse, disinformation wars, and mounting casualties as BioForge systems race to contain the escalation.',
+    timeConfig: {
+      unit: 'month',
+      unitsPerTurn: 3,
+      startYear: 2020,
+      startMonth: 1,
+      displayFormat: 'MMM YYYY',
+    },
+    electionConfig: {
+      interval: 4, // Elections every 12 months (4 turns)
+      enabled: true,
+      minMoraleThreshold: 60,
+      minPublicOpinionThreshold: 65,
+      actionInfluenceMultiplier: 1.8,
+      foreignInfluenceEnabled: true,
+      loseElectionConsequence: 'instability',
+    },
+    startingDefcon: 3,
+    modifiers: {
+      electionDifficultyMultiplier: 1.25,
+    },
+    eraOverrides: {
+      early: {
+        unlockedFeatures: [
+          'nuclear_missiles',
+          'nuclear_bombers',
+          'defense_systems',
+          'basic_diplomacy',
+          'basic_research',
+          'conventional_warfare',
+          'territory_control',
+          'cyber_warfare',
+          'advanced_diplomacy',
+          'bio_warfare',
+          'bio_lab',
+          'submarines',
+          'satellites',
+          'space_weapons',
+          'ai_systems',
+          'economic_warfare',
+          'propaganda_victory',
+          'advanced_research',
+        ],
+      },
+    },
+  },
+
   longGame: {
     id: 'longGame',
     name: 'Long Game',
