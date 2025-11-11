@@ -13,8 +13,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   icbm: {
     type: 'icbm',
-    name: 'ICBM',
-    description: 'Intercontinental Ballistic Missile. Long-range nuclear delivery system.',
+    name: 'Stellar Alignment Ritual',
+    description: 'Apocalyptic ritual channeling cosmic energies. Rains eldritch devastation across continents.',
     category: 'military',
     icon: '🚀',
     baseTurnsToComplete: 3,
@@ -27,8 +27,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   slbm: {
     type: 'slbm',
-    name: 'SLBM',
-    description: 'Submarine-Launched Ballistic Missile. Mobile nuclear deterrent.',
+    name: 'Abyssal Apocalypse Sigil',
+    description: 'Deep-sea ritual launcher. Summons destruction from the ocean depths.',
     category: 'military',
     icon: '🎯',
     baseTurnsToComplete: 4,
@@ -42,8 +42,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   nuclear_submarine: {
     type: 'nuclear_submarine',
-    name: 'Nuclear Submarine',
-    description: 'Ballistic missile submarine. Can launch SLBMs from anywhere.',
+    name: 'Deep One Host',
+    description: 'Abyssal leviathan carrying apocalypse sigils. Strikes from the crushing depths.',
     category: 'special',
     icon: '🚢',
     baseTurnsToComplete: 12,
@@ -59,8 +59,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   army: {
     type: 'army',
-    name: 'Army Division',
-    description: 'Conventional ground forces for territorial conquest.',
+    name: 'Cultist Horde',
+    description: 'Fanatic cultists driven by eldritch madness. Swarm enemies with unholy fervor.',
     category: 'military',
     icon: '⚔️',
     baseTurnsToComplete: 5,
@@ -73,8 +73,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   air_wing: {
     type: 'air_wing',
-    name: 'Air Wing',
-    description: 'Fighter and bomber squadrons for air superiority.',
+    name: 'Night-Gaunt Swarm',
+    description: 'Winged horrors from beyond. Blot out the sun with their terrible wings.',
     category: 'military',
     icon: '✈️',
     baseTurnsToComplete: 4,
@@ -87,8 +87,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   naval_fleet: {
     type: 'naval_fleet',
-    name: 'Naval Fleet',
-    description: 'Surface naval forces for power projection.',
+    name: 'Abyssal Vessel Fleet',
+    description: 'Corrupted warships crewed by the drowned. Project eldritch power across the seas.',
     category: 'military',
     icon: '⚓',
     baseTurnsToComplete: 8,
@@ -106,8 +106,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   abm_system: {
     type: 'abm_system',
-    name: 'ABM System',
-    description: 'Anti-Ballistic Missile defense system. Intercepts incoming nuclear missiles.',
+    name: 'Protective Ward Network',
+    description: 'Arcane barrier system. Disrupts incoming eldritch rituals with counter-sigils.',
     category: 'military',
     icon: '🛡️',
     baseTurnsToComplete: 6,
@@ -119,8 +119,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   radar_station: {
     type: 'radar_station',
-    name: 'Radar Station',
-    description: 'Early warning radar network. Increases missile interception chance.',
+    name: 'Scrying Station',
+    description: 'Crystal orb network. Detects approaching cosmic horrors and provides early warning.',
     category: 'military',
     icon: '📡',
     baseTurnsToComplete: 4,
@@ -132,8 +132,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   bunker: {
     type: 'bunker',
-    name: 'Hardened Bunker',
-    description: 'Protective bunker for civilian population. Reduces nuclear damage.',
+    name: 'Eldritch Sanctum',
+    description: 'Reality-anchored shelter for cult followers. Reduces apocalyptic ritual damage.',
     category: 'military',
     icon: '🏰',
     baseTurnsToComplete: 5,
@@ -149,8 +149,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   factory: {
     type: 'factory',
-    name: 'Factory',
-    description: 'Industrial factory. Adds +1 production line and +5% production output.',
+    name: 'Essence Forge',
+    description: 'Profane manufactory extracting life force. Adds +1 production line and +5% essence output.',
     category: 'infrastructure',
     icon: '🏭',
     baseTurnsToComplete: 5,
@@ -162,8 +162,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   research_lab: {
     type: 'research_lab',
-    name: 'Research Laboratory',
-    description: 'Advanced research facility. +15% research speed.',
+    name: 'Forbidden Archive',
+    description: 'Library of unspeakable tomes. +15% forbidden knowledge acquisition speed.',
     category: 'infrastructure',
     icon: '🔬',
     baseTurnsToComplete: 6,
@@ -176,8 +176,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   intel_facility: {
     type: 'intel_facility',
-    name: 'Intelligence Facility',
-    description: 'Intelligence agency headquarters. +10 intel per turn.',
+    name: 'Shadow Temple',
+    description: 'Dark sanctuary for spies and seers. +10 corruption points per turn.',
     category: 'infrastructure',
     icon: '🕵️',
     baseTurnsToComplete: 7,
@@ -194,8 +194,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   satellite: {
     type: 'satellite',
-    name: 'Spy Satellite',
-    description: 'Orbital surveillance network. Reveals enemy territories and movements.',
+    name: 'All-Seeing Eye',
+    description: 'Orbital scrying orb network. Gazes upon enemy domains and cultist movements.',
     category: 'special',
     icon: '🛰️',
     baseTurnsToComplete: 10,
@@ -210,8 +210,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   bio_facility: {
     type: 'bio_facility',
-    name: 'Bio-Weapons Facility',
-    description: 'Biological warfare research and production facility.',
+    name: 'Plague Pit',
+    description: 'Pestilence breeding ground. Cultivates horrific contagions from beyond.',
     category: 'special',
     icon: '☣️',
     baseTurnsToComplete: 8,
@@ -226,8 +226,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
 
   cyber_center: {
     type: 'cyber_center',
-    name: 'Cyber Warfare Center',
-    description: 'Advanced cyber operations facility. +20 cyber attack/defense.',
+    name: 'Mind Control Nexus',
+    description: 'Psychic domination facility. +20 mental corruption attack/defense.',
     category: 'special',
     icon: '💻',
     baseTurnsToComplete: 7,

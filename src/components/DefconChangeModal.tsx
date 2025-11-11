@@ -14,7 +14,7 @@ export function DefconChangeModal({ event, onClose }: DefconChangeModalProps) {
   const iconColor = isEscalation ? 'text-red-400' : 'text-green-400';
   const borderColor = isEscalation ? 'border-red-500/60 bg-red-900/20' : 'border-green-500/60 bg-green-900/20';
   const titleColor = isEscalation ? 'text-red-400' : 'text-green-400';
-  const title = isEscalation ? 'DEFCON ESCALATION' : 'DEFCON DE-ESCALATION';
+  const title = isEscalation ? 'VEIL FRACTURING' : 'VEIL STABILIZING';
 
   const getDefconColor = (defcon: number) => {
     if (defcon === 1) return 'text-red-500';
@@ -26,11 +26,11 @@ export function DefconChangeModal({ event, onClose }: DefconChangeModalProps) {
 
   const getDefconLabel = (defcon: number) => {
     const labels: Record<number, string> = {
-      1: 'NUCLEAR WAR',
-      2: 'FAST PACE',
-      3: 'ROUND HOUSE',
-      4: 'DOUBLE TAKE',
-      5: 'FADE OUT'
+      1: 'APOTHEOSIS',
+      2: 'VEIL SHATTERED',
+      3: 'VEIL FRACTURING',
+      4: 'VEIL THINNING',
+      5: 'VEIL INTACT'
     };
     return labels[defcon] || 'UNKNOWN';
   };
@@ -63,11 +63,11 @@ export function DefconChangeModal({ event, onClose }: DefconChangeModalProps) {
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* DEFCON Change Display */}
+          {/* Veil Integrity Change Display */}
           <div className={`border ${isEscalation ? 'border-red-500/30 bg-red-900/20' : 'border-green-500/30 bg-green-900/20'} rounded-lg p-4`}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs uppercase tracking-widest text-gray-400 font-semibold">
-                Alert Level Change:
+                Veil Integrity Change:
               </span>
             </div>
             <div className="flex items-center justify-center gap-4">
@@ -125,8 +125,8 @@ export function DefconChangeModal({ event, onClose }: DefconChangeModalProps) {
               </div>
               <div className="text-sm text-amber-200">
                 {event.newDefcon === 1
-                  ? 'Nuclear war is imminent. All military forces are authorized to engage.'
-                  : 'Situation critical. Armed forces ready. Further escalation may be imminent.'}
+                  ? 'The Old Ones awaken. Reality unravels. All cultist hordes are empowered to enact the final ritual.'
+                  : 'The Veil trembles. Eldritch entities manifest. Reality fractures imminent.'}
               </div>
             </div>
           )}
