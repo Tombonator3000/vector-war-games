@@ -42,6 +42,16 @@ export interface RelationshipEvent {
   newValue: number;
 }
 
+export interface DefconChangeEvent {
+  turn: number;
+  previousDefcon: number;
+  newDefcon: number;
+  reason: string;
+  category: 'escalation' | 'de-escalation';
+  triggeredBy: 'player' | 'ai' | 'event' | 'system';
+  timestamp: number;
+}
+
 export interface NationCyberProfile {
   readiness: number;
   maxReadiness: number;
@@ -309,6 +319,7 @@ export interface DiplomacyState {
 export interface GameState {
   turn: number;
   defcon: number;
+  defconHistory?: DefconChangeEvent[];
   phase: 'PLAYER' | 'AI' | 'RESOLUTION' | 'PRODUCTION';
   actionsRemaining: number;
   paused: boolean;

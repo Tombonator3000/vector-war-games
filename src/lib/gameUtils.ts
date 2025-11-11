@@ -5,12 +5,13 @@
  * Extracted from Index.tsx as part of refactoring effort.
  */
 
-import type { Nation } from '@/types/game';
+import type { Nation, DefconChangeEvent } from '@/types/game';
 import type { StrategyResourceType } from '@/types/territorialResources';
 import {
   initializeResourceStockpile,
   spendStrategicResource,
 } from '@/lib/territorialResourcesSystem';
+import { GameStateManager } from '@/state/GameStateManager';
 
 const STRATEGIC_RESOURCES: StrategyResourceType[] = ['oil', 'uranium', 'rare_earths', 'food'];
 
@@ -123,5 +124,81 @@ export function isEligibleEnemyTarget(player: Nation | null, target: Nation): bo
   if (target.isPlayer) return false;
   if (target.population <= 0) return false;
   if (hasActivePeaceTreaty(player, target)) return false;
+  return true;
+}
+
+/**
+ * Interface for DEFCON change callbacks
+ */
+export interface DefconChangeCallbacks {
+  onAudioTransition?: (previousDefcon: number, newDefcon: number) => void;
+  onLog?: (message: string, type: 'warning' | 'success') => void;
+  onNewsItem?: (category: string, message: string, importance: 'critical' | 'important') => void;
+  onUpdateDisplay?: () => void;
+  onShowModal?: (event: DefconChangeEvent) => void;
+}
+
+/**
+ * Centralized DEFCON change handler
+ * Handles DEFCON changes with history tracking, audio, logging, and modal display
+ */
+export function handleDefconChange(
+  delta: number,
+  reason: string,
+  triggeredBy: 'player' | 'ai' | 'event' | 'system',
+  callbacks?: DefconChangeCallbacks
+): boolean {
+  const previousDefcon = GameStateManager.getDefcon();
+  const newDefcon = Math.max(1, Math.min(5, previousDefcon + delta));
+
+  // No change, return early
+  if (newDefcon === previousDefcon) {
+    return false;
+  }
+
+  // Update DEFCON
+  GameStateManager.setDefcon(newDefcon);
+
+  // Create history event
+  const event: DefconChangeEvent = {
+    turn: GameStateManager.getTurn(),
+    previousDefcon,
+    newDefcon,
+    reason,
+    category: delta < 0 ? 'escalation' : 'de-escalation',
+    triggeredBy,
+    timestamp: Date.now(),
+  };
+
+  // Add to history
+  GameStateManager.addDefconChangeEvent(event);
+
+  // Execute callbacks
+  if (callbacks?.onAudioTransition) {
+    callbacks.onAudioTransition(previousDefcon, newDefcon);
+  }
+
+  if (callbacks?.onLog) {
+    const message = delta < 0
+      ? `DEFCON ${newDefcon}: ${reason}`
+      : `DEFCON ${newDefcon}: ${reason}`;
+    callbacks.onLog(message, delta < 0 ? 'warning' : 'success');
+  }
+
+  if (callbacks?.onNewsItem) {
+    const message = delta < 0
+      ? `DEFCON ${newDefcon}: ${reason}`
+      : `DEFCON ${newDefcon}: ${reason}`;
+    callbacks.onNewsItem('military', message, delta < 0 ? 'critical' : 'important');
+  }
+
+  if (callbacks?.onUpdateDisplay) {
+    callbacks.onUpdateDisplay();
+  }
+
+  if (callbacks?.onShowModal) {
+    callbacks.onShowModal(event);
+  }
+
   return true;
 }

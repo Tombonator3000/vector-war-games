@@ -319,6 +319,23 @@ class GameStateManager {
   }
 
   /**
+   * Gets the DEFCON change history
+   */
+  static getDefconHistory(): import('@/types/game').DefconChangeEvent[] {
+    return this._state.defconHistory || [];
+  }
+
+  /**
+   * Adds a DEFCON change event to the history
+   */
+  static addDefconChangeEvent(event: import('@/types/game').DefconChangeEvent): void {
+    if (!this._state.defconHistory) {
+      this._state.defconHistory = [];
+    }
+    this._state.defconHistory.push(event);
+  }
+
+  /**
    * Gets actions remaining
    */
   static getActionsRemaining(): number {

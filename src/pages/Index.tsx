@@ -40,6 +40,7 @@ import type { BioLabTier } from '@/types/bioLab';
 import type { EvolutionNodeId } from '@/types/biowarfare';
 import { FlashpointModal } from '@/components/FlashpointModal';
 import { FlashpointOutcomeModal } from '@/components/FlashpointOutcomeModal';
+import { DefconChangeModal } from '@/components/DefconChangeModal';
 import { SpyMissionResultModal, type SpyMissionResultData } from '@/components/spy/SpyMissionResultModal';
 import GlobeScene, {
   type GlobeSceneHandle,
@@ -195,7 +196,7 @@ import { enhancedAIActions } from '@/lib/aiActionEnhancements';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 import { IntroScreen } from '@/components/setup/IntroScreen';
 import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen';
-import { canAfford, pay, getCityCost, getCityBuildTime, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget } from '@/lib/gameUtils';
+import { canAfford, pay, getCityCost, getCityBuildTime, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget, handleDefconChange } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
 import { modifyRelationship, canFormAlliance, RELATIONSHIP_ALLIED } from '@/lib/relationshipUtils';
 import {
@@ -5287,10 +5288,13 @@ function aiTurn(n: Nation) {
   // 8. ESCALATION - Reduce DEFCON
   if (r < 0.90 + aggressionMod) {
     if (S.defcon > 1 && Math.random() < 0.4) {
-      const previousDefcon = S.defcon;
-      S.defcon--;
-      AudioSys.handleDefconTransition(previousDefcon, S.defcon);
-      log(`${n.name} escalates to DEFCON ${S.defcon}`);
+      handleDefconChange(-1, `${n.name} escalates tensions through aggressive posturing`, 'ai', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onNewsItem: addNewsItem,
+        onUpdateDisplay: updateDisplay,
+        onShowModal: setDefconChangeEvent,
+      });
       maybeBanter(n, 0.4);
       return;
     }
@@ -5299,10 +5303,13 @@ function aiTurn(n: Nation) {
   // 9. DIPLOMACY - Occasionally de-escalate if defensive
   if (n.ai === 'defensive' || n.ai === 'balanced') {
     if (S.defcon < 5 && Math.random() < 0.1) {
-      const previousDefcon = S.defcon;
-      S.defcon++;
-      AudioSys.handleDefconTransition(previousDefcon, S.defcon);
-      log(`${n.name} proposes de-escalation to DEFCON ${S.defcon}`);
+      handleDefconChange(1, `${n.name} proposes diplomatic de-escalation`, 'ai', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onNewsItem: addNewsItem,
+        onUpdateDisplay: updateDisplay,
+        onShowModal: setDefconChangeEvent,
+      });
       return;
     }
   }
@@ -6229,6 +6236,7 @@ export default function NoradVector() {
   const [councilSchismModalOpen, setCouncilSchismModalOpen] = useState(false);
   const [regionalSanityOverlayVisible, setRegionalSanityOverlayVisible] = useState(false);
   const [phase2PanelOpen, setPhase2PanelOpen] = useState(false);
+  const [defconChangeEvent, setDefconChangeEvent] = useState<import('@/types/game').DefconChangeEvent | null>(null);
   const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
   const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
   const [phase3State, setPhase3State] = useState<Phase3State | null>(null);
@@ -7338,17 +7346,17 @@ export default function NoradVector() {
     onConsumeAction: consumeAction,
     onUpdateDisplay: updateDisplay,
     onDefconChange: (delta) => {
-      const previous = S.defcon;
-      S.defcon = Math.max(1, Math.min(5, S.defcon + delta));
-      if (S.defcon !== previous) {
-        AudioSys.handleDefconTransition(previous, S.defcon);
-        const message = delta < 0
-          ? `DEFCON ${S.defcon}: Military tensions escalate from territorial conflict`
-          : `DEFCON ${S.defcon}: Global tensions ease`;
-        log(message, delta < 0 ? 'warning' : 'success');
-        addNewsItem('military', message, delta < 0 ? 'critical' : 'important');
-        updateDisplay();
-      }
+      const reason = delta < 0
+        ? 'Military tensions escalate from territorial conflict'
+        : 'Global tensions ease from resolved territorial disputes';
+
+      handleDefconChange(delta, reason, 'system', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onNewsItem: addNewsItem,
+        onUpdateDisplay: updateDisplay,
+        onShowModal: setDefconChangeEvent,
+      });
     },
     onRelationshipChange: (nationId1, nationId2, delta, reason, currentTurn) => {
       const index1 = nations.findIndex(nation => nation.id === nationId1);
@@ -7434,14 +7442,13 @@ export default function NoradVector() {
     onToast: payload => toast(payload),
     onNews: addNewsItem,
     onDefconShift: (delta, reason) => {
-      const previous = S.defcon;
-      S.defcon = Math.max(1, Math.min(5, S.defcon + delta));
-      if (S.defcon !== previous) {
-        AudioSys.handleDefconTransition(previous, S.defcon);
-        log(reason, delta < 0 ? 'warning' : 'success');
-        addNewsItem('intel', reason, delta < 0 ? 'critical' : 'important');
-        updateDisplay();
-      }
+      handleDefconChange(delta, reason, 'system', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onNewsItem: addNewsItem,
+        onUpdateDisplay: updateDisplay,
+        onShowModal: setDefconChangeEvent,
+      });
     },
   });
 
@@ -8984,7 +8991,13 @@ export default function NoradVector() {
       // Handle special effects
       if (result.triggeredWar) {
         log('⚔️ Your decision has triggered war!', 'alert');
-        S.defcon = Math.max(1, S.defcon - 1);
+        handleDefconChange(-1, 'Your decision has triggered war!', 'player', {
+          onAudioTransition: AudioSys.handleDefconTransition,
+          onLog: log,
+          onNewsItem: addNewsItem,
+          onUpdateDisplay: updateDisplay,
+          onShowModal: setDefconChangeEvent,
+        });
       }
 
       if (result.brokeTreaties) {
@@ -9640,7 +9653,13 @@ export default function NoradVector() {
 
             log(`☄️ ORBITAL STRIKE devastates ${target.name}: ${popLoss}M casualties, ${warheadsDestroyed} warheads destroyed!`, 'alert');
             adjustThreat(target, commander.id, 35);
-            S.defcon = Math.max(1, S.defcon - 1);
+            handleDefconChange(-1, `Orbital strike against ${target.name} escalates global tensions`, 'player', {
+              onAudioTransition: AudioSys.handleDefconTransition,
+              onLog: log,
+              onNewsItem: addNewsItem,
+              onUpdateDisplay: updateDisplay,
+              onShowModal: setDefconChangeEvent,
+            });
           }
           updateDisplay();
           consumeAction();
@@ -13990,9 +14009,18 @@ export default function NoradVector() {
             
             if (outcome.defcon) {
               const previousDefcon = S.defcon;
-              S.defcon = Math.max(1, Math.min(5, outcome.defcon));
-              AudioSys.handleDefconTransition(previousDefcon, S.defcon);
-              addNewsItem('crisis', `DEFCON ${S.defcon}: Flashpoint resolved - ${result.success ? 'Success' : 'Failure'}`, 'critical');
+              const newDefcon = Math.max(1, Math.min(5, outcome.defcon));
+              const delta = newDefcon - previousDefcon;
+              if (delta !== 0) {
+                const reason = `Flashpoint resolved - ${result.success ? 'Success' : 'Failure'}`;
+                handleDefconChange(delta, reason, 'event', {
+                  onAudioTransition: AudioSys.handleDefconTransition,
+                  onLog: log,
+                  onNewsItem: addNewsItem,
+                  onUpdateDisplay: updateDisplay,
+                  onShowModal: setDefconChangeEvent,
+                });
+              }
             }
             
             if (player && player.id) {
@@ -14099,10 +14127,28 @@ export default function NoradVector() {
 
             if (outcome.madCounterstrikeInitiated) {
               addNewsItem('crisis', 'MAD COUNTERSTRIKE AUTHORIZED - RETALIATORY LAUNCHES UNDERWAY', 'critical');
-              S.defcon = 1;
+              const delta = 1 - S.defcon;
+              if (delta !== 0) {
+                handleDefconChange(delta, 'MAD COUNTERSTRIKE AUTHORIZED - RETALIATORY LAUNCHES UNDERWAY', 'event', {
+                  onAudioTransition: AudioSys.handleDefconTransition,
+                  onLog: log,
+                  onNewsItem: addNewsItem,
+                  onUpdateDisplay: updateDisplay,
+                  onShowModal: setDefconChangeEvent,
+                });
+              }
             } else if (outcome.nuclearWar || outcome.worldEnds) {
               addNewsItem('crisis', 'NUCLEAR WAR INITIATED', 'critical');
-              S.defcon = 1;
+              const delta = 1 - S.defcon;
+              if (delta !== 0) {
+                handleDefconChange(delta, 'NUCLEAR WAR INITIATED', 'event', {
+                  onAudioTransition: AudioSys.handleDefconTransition,
+                  onLog: log,
+                  onNewsItem: addNewsItem,
+                  onUpdateDisplay: updateDisplay,
+                  onShowModal: setDefconChangeEvent,
+                });
+              }
             } else if (result.success) {
               addNewsItem('diplomatic', `Crisis resolved: ${option.text}`, 'important');
             } else {
@@ -14122,6 +14168,13 @@ export default function NoradVector() {
         <FlashpointOutcomeModal
           outcome={currentFlashpointOutcome}
           onClose={() => setCurrentFlashpointOutcome(null)}
+        />
+      )}
+
+      {defconChangeEvent && (
+        <DefconChangeModal
+          event={defconChangeEvent}
+          onClose={() => setDefconChangeEvent(null)}
         />
       )}
 
