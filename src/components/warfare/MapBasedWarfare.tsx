@@ -82,7 +82,7 @@ function TerritoryDropZone({
       ref={setNodeRef}
       data-testid={`warfare-drop-${territory.id}`}
       className={
-        'absolute -translate-x-1/2 -translate-y-1/2 rounded-full border transition-colors duration-150'
+        'pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 rounded-full border transition-colors duration-150'
       }
       style={{
         left: `${position.x}px`,
@@ -139,7 +139,7 @@ function TerritoryMarker({
 
   return (
     <div
-      className="absolute"
+      className="pointer-events-none absolute"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -152,7 +152,7 @@ function TerritoryMarker({
         {...listeners}
         {...attributes}
         data-testid={`warfare-token-${territory.id}`}
-        className={`flex h-12 w-12 items-center justify-center rounded-full border-2 text-sm font-bold shadow-lg transition ${
+        className={`pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 text-sm font-bold shadow-lg transition ${
           disabled
             ? 'cursor-not-allowed border-slate-600 bg-slate-800/80 text-slate-300'
             : isDragging
@@ -169,7 +169,7 @@ function TerritoryMarker({
         <Button
           size="icon"
           variant="secondary"
-          className="mt-1 h-6 w-6 border border-green-400/50 bg-green-500/20 text-green-200 hover:bg-green-500/30"
+          className="pointer-events-auto mt-1 h-6 w-6 border border-green-400/50 bg-green-500/20 text-green-200 hover:bg-green-500/30"
           onClick={() => onPlaceReinforcements(territory.id, Math.min(availableReinforcements, 3))}
         >
           +
@@ -179,7 +179,7 @@ function TerritoryMarker({
         <Button
           size="sm"
           variant="outline"
-          className="mt-2 h-7 border-purple-500/40 bg-purple-500/10 px-2 text-[10px] uppercase tracking-widest text-purple-100 hover:bg-purple-500/20"
+          className="pointer-events-auto mt-2 h-7 border-purple-500/40 bg-purple-500/10 px-2 text-[10px] uppercase tracking-widest text-purple-100 hover:bg-purple-500/20"
           onClick={() => onProxyEngagement(territory.id, territory.controllingNationId!)}
         >
           Proxy Ops
@@ -465,7 +465,7 @@ export function MapBasedWarfare({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div ref={rootRef} className={`pointer-events-auto absolute inset-0 ${className ?? ''}`}>
+      <div ref={rootRef} className={`pointer-events-none absolute inset-0 ${className ?? ''}`}>
         {territories.map(territory => {
           const position = projectedPositions.map.get(territory.id) ?? { x: 0, y: 0, visible: false };
           return (

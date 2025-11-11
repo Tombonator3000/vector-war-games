@@ -3048,3 +3048,9 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-10T15:11:44Z - Hide launch control while consequence preview is active
 - Updated the Launch Control dialog in `src/pages/Index.tsx` to only open when a launch is pending and no consequence preview is visible, preventing overlapping modals.
 - Guarded dialog content and controls against active consequence previews so players only see and interact with the preview until it is dismissed.
+- Ran `npm run test -- Index` to exercise the updated integration suite.
+
+### 2025-11-11T08:21:04Z - Restore map interaction beneath warfare overlay
+- Set the warfare overlay root container to `pointer-events-none` and re-enabled pointer events on draggable tokens and drop zones so globe navigation remains available while the overlay renders.
+- Updated overlay control buttons to opt-in to pointer events, ensuring reinforcement placement and proxy operations remain clickable without blocking the underlying scene.
+- Attempted `npm run test -- MapBasedWarfare`, which failed locally due to missing `@dnd-kit/core` resolution in the Vitest environment.
