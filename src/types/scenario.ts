@@ -213,8 +213,8 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
 
   greatOldOnes: {
     id: 'greatOldOnes',
-    name: 'Great Old Ones Conversion Crisis',
-    description: 'May 2025: Cultists awaken eldritch entities. Prevent the conversion of humanity before reality itself unravels.',
+    name: 'Rise of the Old Ones',
+    description: 'May 2025: Ancient cults vie for power as eldritch entities stir. A Lovecraftian reskin where nations become cults, armies become hordes, and diplomacy becomes dark pacts.',
     timeConfig: {
       unit: 'day',
       unitsPerTurn: 1,

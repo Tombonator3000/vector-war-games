@@ -14180,6 +14180,7 @@ export default function NoradVector() {
       {defconChangeEvent && (
         <DefconChangeModal
           event={defconChangeEvent}
+          scenario={S.scenario}
           onClose={() => setDefconChangeEvent(null)}
         />
       )}
