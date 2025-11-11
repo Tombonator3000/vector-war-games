@@ -17,7 +17,7 @@ import { onTreatyBroken, onSanctionHarm, formSpecializedAlliance, breakSpecializ
 import { checkAllTriggers } from '@/lib/aiNegotiationTriggers';
 import { generateAINegotiationDeal } from '@/lib/aiNegotiationContentGenerator';
 import { evaluateNegotiation } from '@/lib/aiNegotiationEvaluator';
-import { executeNegotiationDeal } from '@/lib/negotiationUtils';
+import { applyNegotiationDeal } from '@/lib/negotiationUtils';
 
 /**
  * Log diplomacy message
@@ -453,13 +453,20 @@ function handleAItoAINegotiation(
   if (willAccept) {
     // Execute the deal immediately
     try {
-      executeNegotiationDeal(
+      const result = applyNegotiationDeal(
         negotiation.proposedDeal,
         initiatorNation,
         targetNation,
         allNations,
         currentTurn
       );
+      
+      // Update nations array with modified nations
+      const nationIndex = allNations.findIndex(n => n.id === result.initiator.id);
+      if (nationIndex >= 0) allNations[nationIndex] = result.initiator;
+      
+      const targetIndex = allNations.findIndex(n => n.id === result.respondent.id);
+      if (targetIndex >= 0) allNations[targetIndex] = result.respondent;
 
       if (logFn) {
         logFn(
