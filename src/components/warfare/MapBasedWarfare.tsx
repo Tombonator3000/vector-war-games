@@ -5,15 +5,12 @@ import {
   DragMoveEvent,
   DragStartEvent,
   PointerSensor,
-  KeyboardSensor,
-  type KeyboardCoordinateGetter,
   useDroppable,
   useDraggable,
   useSensor,
   useSensors,
   DragOverlay,
 } from '@dnd-kit/core';
-import { keyboardCoordinates } from '@dnd-kit/modifiers';
 import type { TerritoryState } from '@/hooks/useConventionalWarfare';
 import { Button } from '@/components/ui/button';
 
@@ -313,58 +310,11 @@ export function MapBasedWarfare({
     setProjectorOffline(projectedPositions.projectorFailed);
   }, [projectedPositions.projectorFailed]);
 
-  const keyboardCycleRef = useRef<Map<string, number>>(new Map());
-
-  const keyboardCoordinateGetter = useCallback<KeyboardCoordinateGetter>(
-    (event, { currentCoordinates, context }) => {
-      const activeId = context?.active?.id;
-      if (!activeId) {
-        return currentCoordinates;
-      }
-
-      const sourceId = String(activeId);
-
-      if (event.code === 'Escape' || event.code === 'Space') {
-        keyboardCycleRef.current.delete(sourceId);
-        return currentCoordinates;
-      }
-
-      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) {
-        return currentCoordinates;
-      }
-
-      event.preventDefault();
-
-      const neighbors = territoryMap.get(sourceId)?.neighbors ?? [];
-      if (neighbors.length === 0) {
-        return currentCoordinates;
-      }
-
-      const cycleIndex = keyboardCycleRef.current.get(sourceId) ?? -1;
-      const nextIndex = (cycleIndex + 1) % neighbors.length;
-      keyboardCycleRef.current.set(sourceId, nextIndex);
-      const targetId = neighbors[nextIndex];
-      const point = projectedPositions.map.get(targetId);
-      if (!point || !point.visible) {
-        return currentCoordinates;
-      }
-
-      return {
-        x: point.x,
-        y: point.y,
-      };
-    },
-    [projectedPositions.map, territoryMap],
-  );
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 4,
       },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: keyboardCoordinateGetter ?? keyboardCoordinates,
     }),
   );
 
