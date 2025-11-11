@@ -4,7 +4,7 @@
  * Manages supply sources, distribution, and logistics for military units.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   SupplySource,
   Territory,
@@ -30,6 +30,7 @@ export function useSupplySystem({ currentTurn, nations }: UseSupplySystemOptions
   const [routes, setRoutes] = useState<Map<string, SupplyRoute>>(new Map());
   const [infrastructureProjects, setInfrastructureProjects] = useState<InfrastructureProject[]>([]);
   const [attritionEffects, setAttritionEffects] = useState<AttritionEffect[]>([]);
+  const isInitialized = useRef(false);
 
   /**
    * Initialize supply system for all nations
@@ -516,10 +517,12 @@ export function useSupplySystem({ currentTurn, nations }: UseSupplySystemOptions
 
   // Initialize on mount
   useEffect(() => {
-    if (sources.size === 0) {
+    if (!isInitialized.current) {
       initializeSupplySystem();
+      isInitialized.current = true;
     }
-  }, [initializeSupplySystem, sources.size]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     // State
