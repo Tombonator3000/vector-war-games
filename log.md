@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-11T22:19:27Z - Pandemic scenario bio-warfare overrides
+- Threaded scenario parameters through `useBioWarfare`, `useBioLab`, and `useEvolutionTree` so the Pandemic 2020 campaign starts with a tier-4 lab and all evolution nodes unlocked.
+- Updated `Index` wiring and hook tests to pass explicit scenarios and validate the Pandemic baseline behavior.
+- Ran `npm run test -- useBioWarfare` to verify the hook integration.
+
 ### 2025-11-11T20:53:32Z - Submarine research integration
 - Added the `Ballistic Submarine Program` delivery project to `src/lib/gameConstants.ts` so players can unlock SLBMs and nuclear submarines after researching MIRVs.
 - Mirrored the submarine research node in `src/lib/researchData.ts` for the React Flow tech tree so UI previews and dependency edges show the new requirement.

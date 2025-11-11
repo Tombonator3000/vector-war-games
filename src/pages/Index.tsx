@@ -7321,7 +7321,7 @@ export default function NoradVector() {
     onCountryInfected,
     availableNodes,
     calculateSpreadModifiers,
-  } = useBioWarfare(addNewsItem);
+  } = useBioWarfare(addNewsItem, selectedScenario);
 
   const previousLabTierRef = useRef<BioLabTier>(labFacility.tier);
 

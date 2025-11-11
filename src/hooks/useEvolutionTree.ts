@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type {
   PlagueState,
   EvolutionNodeId,
@@ -16,19 +16,23 @@ import {
   getNodeById,
   canUnlockNode,
   getPlagueTypeById,
+  PLAGUE_TYPES,
 } from '@/lib/evolutionData';
 import type { NewsItem } from '@/components/NewsTicker';
+import type { ScenarioConfig } from '@/types/scenario';
 
 type AddNewsItem = (category: NewsItem['category'], text: string, priority: NewsItem['priority']) => void;
 
 const INITIAL_DNA_POINTS = 15;
 const DEVOLVE_REFUND_PERCENTAGE = 0.5; // 50% refund
 
-const INITIAL_PLAGUE_STATE: PlagueState = {
+const DEFAULT_UNLOCKED_PLAGUE_TYPES: PlagueTypeId[] = ['bacteria', 'virus'];
+
+const createBasePlagueState = (): PlagueState => ({
   selectedPlagueType: null,
   plagueStarted: false,
   dnaPoints: INITIAL_DNA_POINTS,
-  unlockedNodes: new Set(),
+  unlockedNodes: new Set<EvolutionNodeId>(),
   activeTransmissions: [],
   activeSymptoms: [],
   activeAbilities: [],
@@ -52,17 +56,134 @@ const INITIAL_PLAGUE_STATE: PlagueState = {
   attributionAttempts: 0,
   cureProgress: 0,
   cureActive: false,
-  unlockedPlagueTypes: new Set(['bacteria', 'virus'] as PlagueTypeId[]), // Bacteria and Virus unlocked by default
-  completedPlagues: new Set(),
+  unlockedPlagueTypes: new Set<PlagueTypeId>(DEFAULT_UNLOCKED_PLAGUE_TYPES),
+  completedPlagues: new Set<PlagueTypeId>(),
   plagueCompletionStats: {
     totalKills: 0,
     peakInfection: 0,
     nationsInfected: 0,
   },
+});
+
+const computeStatsForNodes = (
+  unlockedNodes: Set<EvolutionNodeId>,
+  selectedPlagueTypeId: PlagueTypeId | null
+) => {
+  const stats = {
+    totalInfectivity: 0,
+    totalSeverity: 0,
+    totalLethality: 0,
+    cureResistance: 0,
+    coldResistance: 0,
+    heatResistance: 0,
+    drugResistance: 0,
+    geneticHardening: 0,
+    vaccineAcceleration: 0,
+    radiationMitigation: 0,
+  };
+
+  const plagueType = selectedPlagueTypeId ? getPlagueTypeById(selectedPlagueTypeId) : null;
+
+  unlockedNodes.forEach((nodeId) => {
+    const node = getNodeById(nodeId);
+    if (!node) return;
+
+    let effectMultiplier = 1.0;
+
+    // Apply plague-type specific modifiers
+    if (plagueType && node.plagueTypeModifier) {
+      const modifier = node.plagueTypeModifier[plagueType.id];
+      if (modifier?.disabled) return; // Skip disabled nodes
+      if (modifier?.effectsMultiplier) {
+        effectMultiplier = modifier.effectsMultiplier;
+      }
+    }
+
+    // Add effects
+    if (node.effects.infectivity) {
+      stats.totalInfectivity += node.effects.infectivity * effectMultiplier;
+    }
+    if (node.effects.severity) {
+      stats.totalSeverity += node.effects.severity * effectMultiplier;
+    }
+    if (node.effects.lethality) {
+      stats.totalLethality += node.effects.lethality * effectMultiplier;
+    }
+    if (node.effects.cureResistance) {
+      stats.cureResistance += node.effects.cureResistance * effectMultiplier;
+    }
+
+    if (node.defenseEffects?.vaccineProgress) {
+      stats.vaccineAcceleration += node.defenseEffects.vaccineProgress * effectMultiplier;
+    }
+    if (node.defenseEffects?.radiationMitigation) {
+      stats.radiationMitigation = Math.min(
+        1,
+        stats.radiationMitigation + node.defenseEffects.radiationMitigation * effectMultiplier
+      );
+    }
+
+    // Track specific resistances
+    if (nodeId === 'cold-resistance-1') stats.coldResistance = 1;
+    if (nodeId === 'cold-resistance-2') stats.coldResistance = 2;
+    if (nodeId === 'heat-resistance-1') stats.heatResistance = 1;
+    if (nodeId === 'heat-resistance-2') stats.heatResistance = 2;
+    if (nodeId === 'drug-resistance-1') stats.drugResistance = 1;
+    if (nodeId === 'drug-resistance-2') stats.drugResistance = 2;
+    if (nodeId === 'drug-resistance-3') stats.drugResistance = 3;
+    if (nodeId === 'genetic-hardening-1') stats.geneticHardening = 1;
+    if (nodeId === 'genetic-hardening-2') stats.geneticHardening = 2;
+    if (nodeId === 'genetic-hardening-3') stats.geneticHardening = 3;
+  });
+
+  // Apply plague type base modifiers
+  if (plagueType) {
+    stats.totalInfectivity += plagueType.baseTransmission * 2;
+    stats.totalSeverity += plagueType.baseSeverity * 2;
+    stats.totalLethality += plagueType.baseLethality * 2;
+  }
+
+  return stats;
 };
 
-export function useEvolutionTree(addNewsItem: AddNewsItem) {
-  const [plagueState, setPlagueState] = useState<PlagueState>(INITIAL_PLAGUE_STATE);
+const createPandemicPlagueState = (): PlagueState => {
+  const unlockedNodes = new Set<EvolutionNodeId>(
+    ALL_EVOLUTION_NODES.map((node) => node.id as EvolutionNodeId)
+  );
+
+  const activeTransmissions = ALL_EVOLUTION_NODES
+    .filter((node) => node.category === 'transmission')
+    .map((node) => node.id as TransmissionId);
+
+  const activeSymptoms = ALL_EVOLUTION_NODES
+    .filter((node) => node.category === 'symptom')
+    .map((node) => node.id as SymptomId);
+
+  const activeAbilities = ALL_EVOLUTION_NODES
+    .filter((node) => node.category === 'ability')
+    .map((node) => node.id as AbilityId);
+
+  const unlockedPlagueTypes = new Set<PlagueTypeId>(PLAGUE_TYPES.map((type) => type.id));
+
+  const baseState = createBasePlagueState();
+
+  return {
+    ...baseState,
+    dnaPoints: 0,
+    unlockedNodes,
+    activeTransmissions,
+    activeSymptoms,
+    activeAbilities,
+    unlockedPlagueTypes,
+    calculatedStats: computeStatsForNodes(unlockedNodes, null),
+  };
+};
+
+export function useEvolutionTree(addNewsItem: AddNewsItem, scenario?: ScenarioConfig) {
+  const [plagueState, setPlagueState] = useState<PlagueState>(() =>
+    scenario?.id === 'pandemic2020' ? createPandemicPlagueState() : createBasePlagueState()
+  );
+  const previousScenarioIdRef = useRef<string | undefined>(undefined);
 
   // Select plague type (beginning of game)
   const selectPlagueType = useCallback((plagueTypeId: PlagueTypeId) => {
@@ -103,86 +224,46 @@ export function useEvolutionTree(addNewsItem: AddNewsItem) {
   }, [addNewsItem]);
 
   // Calculate stats from unlocked nodes
-  const recalculateStats = useCallback((
-    unlockedNodes: Set<EvolutionNodeId>,
-    selectedPlagueTypeId: PlagueTypeId | null
-  ) => {
-    const stats = {
-      totalInfectivity: 0,
-      totalSeverity: 0,
-      totalLethality: 0,
-      cureResistance: 0,
-      coldResistance: 0,
-      heatResistance: 0,
-      drugResistance: 0,
-      geneticHardening: 0,
-      vaccineAcceleration: 0,
-      radiationMitigation: 0,
-    };
+  const recalculateStats = useCallback(
+    (
+      unlockedNodes: Set<EvolutionNodeId>,
+      selectedPlagueTypeId: PlagueTypeId | null,
+    ) => computeStatsForNodes(unlockedNodes, selectedPlagueTypeId),
+    [],
+  );
 
-    const plagueType = selectedPlagueTypeId ? getPlagueTypeById(selectedPlagueTypeId) : null;
+  useEffect(() => {
+    const scenarioId = scenario?.id;
+    const previousScenarioId = previousScenarioIdRef.current;
 
-    unlockedNodes.forEach((nodeId) => {
-      const node = getNodeById(nodeId);
-      if (!node) return;
-
-      let effectMultiplier = 1.0;
-
-      // Apply plague-type specific modifiers
-      if (plagueType && node.plagueTypeModifier) {
-        const modifier = node.plagueTypeModifier[plagueType.id];
-        if (modifier?.disabled) return; // Skip disabled nodes
-        if (modifier?.effectsMultiplier) {
-          effectMultiplier = modifier.effectsMultiplier;
-        }
-      }
-
-      // Add effects
-      if (node.effects.infectivity) {
-        stats.totalInfectivity += node.effects.infectivity * effectMultiplier;
-      }
-      if (node.effects.severity) {
-        stats.totalSeverity += node.effects.severity * effectMultiplier;
-      }
-      if (node.effects.lethality) {
-        stats.totalLethality += node.effects.lethality * effectMultiplier;
-      }
-      if (node.effects.cureResistance) {
-        stats.cureResistance += node.effects.cureResistance * effectMultiplier;
-      }
-
-      if (node.defenseEffects?.vaccineProgress) {
-        stats.vaccineAcceleration += node.defenseEffects.vaccineProgress * effectMultiplier;
-      }
-      if (node.defenseEffects?.radiationMitigation) {
-        stats.radiationMitigation = Math.min(
-          1,
-          stats.radiationMitigation + node.defenseEffects.radiationMitigation * effectMultiplier
-        );
-      }
-
-      // Track specific resistances
-      if (nodeId === 'cold-resistance-1') stats.coldResistance = 1;
-      if (nodeId === 'cold-resistance-2') stats.coldResistance = 2;
-      if (nodeId === 'heat-resistance-1') stats.heatResistance = 1;
-      if (nodeId === 'heat-resistance-2') stats.heatResistance = 2;
-      if (nodeId === 'drug-resistance-1') stats.drugResistance = 1;
-      if (nodeId === 'drug-resistance-2') stats.drugResistance = 2;
-      if (nodeId === 'drug-resistance-3') stats.drugResistance = 3;
-      if (nodeId === 'genetic-hardening-1') stats.geneticHardening = 1;
-      if (nodeId === 'genetic-hardening-2') stats.geneticHardening = 2;
-      if (nodeId === 'genetic-hardening-3') stats.geneticHardening = 3;
-    });
-
-    // Apply plague type base modifiers
-    if (plagueType) {
-      stats.totalInfectivity += plagueType.baseTransmission * 2;
-      stats.totalSeverity += plagueType.baseSeverity * 2;
-      stats.totalLethality += plagueType.baseLethality * 2;
+    if (previousScenarioId === scenarioId) {
+      return;
     }
 
-    return stats;
-  }, []);
+    previousScenarioIdRef.current = scenarioId;
+
+    if (scenarioId === 'pandemic2020') {
+      setPlagueState(() => createPandemicPlagueState());
+    } else {
+      setPlagueState((prev) => {
+        const isAlreadyBase =
+          prev.unlockedNodes.size === 0 &&
+          prev.activeTransmissions.length === 0 &&
+          prev.activeSymptoms.length === 0 &&
+          prev.activeAbilities.length === 0 &&
+          prev.dnaPoints === INITIAL_DNA_POINTS &&
+          prev.plagueStarted === false &&
+          prev.unlockedPlagueTypes.size === DEFAULT_UNLOCKED_PLAGUE_TYPES.length &&
+          DEFAULT_UNLOCKED_PLAGUE_TYPES.every((typeId) => prev.unlockedPlagueTypes.has(typeId));
+
+        if (isAlreadyBase) {
+          return prev;
+        }
+
+        return createBasePlagueState();
+      });
+    }
+  }, [scenario?.id]);
 
   // Evolve a node (spend DNA)
   const evolveNode = useCallback((payload: EvolveNodePayload) => {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { BioLabFacility, BioLabTier, BioLabConstructionOption } from '@/types/bioLab';
 import {
   BIO_LAB_TIERS,
@@ -8,6 +8,7 @@ import {
   hasPrerequisitesForTier,
 } from '@/types/bioLab';
 import type { NewsItem } from '@/components/NewsTicker';
+import type { ScenarioConfig } from '@/types/scenario';
 
 type AddNewsItem = (category: NewsItem['category'], text: string, priority: NewsItem['priority']) => void;
 
@@ -28,8 +29,89 @@ const INITIAL_LAB: BioLabFacility = {
   sabotageTurnsRemaining: 0,
 };
 
-export function useBioLab(addNewsItem: AddNewsItem) {
-  const [labFacility, setLabFacility] = useState<BioLabFacility>(INITIAL_LAB);
+const createDefaultLabFacility = (): BioLabFacility => ({
+  ...INITIAL_LAB,
+  knownByNations: [],
+});
+
+const createPandemicLabFacility = (): BioLabFacility => {
+  const tierDefinition = getBioLabTierDefinition(4);
+
+  return {
+    tier: 4,
+    active: true,
+    underConstruction: false,
+    constructionProgress: 0,
+    constructionTarget: 0,
+    targetTier: 4,
+    productionInvested: tierDefinition.productionCost,
+    uraniumInvested: tierDefinition.uraniumCost,
+    suspicionLevel: 0,
+    knownByNations: [],
+    lastIntelAttempt: 0,
+    researchSpeed: tierDefinition.researchSpeedBonus,
+    sabotaged: false,
+    sabotageTurnsRemaining: 0,
+  };
+};
+
+const resolveInitialLabFacility = (scenario?: ScenarioConfig): BioLabFacility => {
+  if (scenario?.id === 'pandemic2020') {
+    return createPandemicLabFacility();
+  }
+
+  return createDefaultLabFacility();
+};
+
+export function useBioLab(addNewsItem: AddNewsItem, scenario?: ScenarioConfig) {
+  const [labFacility, setLabFacility] = useState<BioLabFacility>(() => resolveInitialLabFacility(scenario));
+  const previousScenarioIdRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    const scenarioId = scenario?.id;
+
+    if (previousScenarioIdRef.current === scenarioId) {
+      return;
+    }
+
+    previousScenarioIdRef.current = scenarioId;
+
+    if (scenarioId === 'pandemic2020') {
+      let overrideApplied = false;
+      setLabFacility((prev) => {
+        if (prev.tier === 4 && prev.active && !prev.underConstruction) {
+          return prev;
+        }
+
+        overrideApplied = true;
+        return createPandemicLabFacility();
+      });
+
+      if (overrideApplied) {
+        addNewsItem(
+          'science',
+          'Pandemic scenario: Genetic Engineering Complex operational from day one.',
+          'important'
+        );
+      }
+    } else {
+      setLabFacility((prev) => {
+        const next = resolveInitialLabFacility(scenario);
+
+        if (
+          prev.tier === next.tier &&
+          prev.active === next.active &&
+          prev.underConstruction === next.underConstruction &&
+          prev.targetTier === next.targetTier &&
+          prev.researchSpeed === next.researchSpeed
+        ) {
+          return prev;
+        }
+
+        return next;
+      });
+    }
+  }, [scenario?.id, addNewsItem, scenario]);
 
   /**
    * Start construction of a new tier
