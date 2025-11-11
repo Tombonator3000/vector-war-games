@@ -1739,6 +1739,7 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     description: 'CIA reports terrorists seized 20kg of weapons-grade plutonium. They threaten to detonate a device in New York City within 72 hours.',
     category: 'terrorist',
     severity: 'catastrophic',
+    minYear: 1980,
     timeLimit: 90,
     options: [
       {
@@ -3070,6 +3071,379 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
         },
         successNarrative: 'Unprecedented investment produces vaccines in under a year - scientific triumph. Mass vaccination begins. Pandemic eventually controlled. Economy recovers. Biotech revolution accelerated. Preparedness improved.',
         failureNarrative: 'Vaccine development succeeds but distribution fails. Variants emerge. Pandemic becomes endemic. Multiple booster campaigns needed. Virus permanently part of life. Initial investment insufficient for long haul.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'BREAKTHROUGH: Cold Fusion Success',
+    description: 'Scientists at Oak Ridge National Laboratory report achieving stable cold fusion reaction. If verified, this could revolutionize energy production and shift global power dynamics. USSR demanding shared research.',
+    category: 'blackswan',
+    severity: 'major',
+    minYear: 1970,
+    timeLimit: 90,
+    options: [
+      {
+        id: 'share',
+        text: 'Share Technology Globally',
+        description: 'Release findings to international scientific community',
+        advisorSupport: ['science', 'diplomatic'],
+        advisorOppose: ['military', 'intel'],
+        outcome: {
+          probability: 0.7,
+          success: { morale: +15, production: +30, reputation: 'visionary', globalTension: -2 },
+          failure: { intel: -10, militaryAdvantage: 'lost', morale: -5 }
+        },
+        successNarrative: 'Your decision to share cold fusion technology triggers unprecedented global cooperation. Energy crisis solved worldwide. US recognized as leader in new energy era. Relations with USSR improve dramatically. Nobel Prize awarded to team.',
+        failureNarrative: 'Sharing technology allows adversaries to catch up militarily. Soviet Union weaponizes the research faster than expected. US strategic advantage evaporates. Critics condemn naive idealism.'
+      },
+      {
+        id: 'classify',
+        text: 'Classify as Top Secret',
+        description: 'Military control, weaponization research priority',
+        advisorSupport: ['military', 'intel'],
+        advisorOppose: ['science', 'diplomatic'],
+        outcome: {
+          probability: 0.6,
+          success: { production: +50, militaryPower: +20, morale: +10 },
+          failure: { reputation: 'selfish', scientists: 'defect', leak: true }
+        },
+        successNarrative: 'Classified research yields massive military advantage. New fusion-powered weapons and systems deployed. US energy independence achieved. Economic boom from unlimited clean energy. Global dominance secured.',
+        failureNarrative: 'Secrecy backfires when lead scientist defects to USSR in protest. Technology leaks through espionage. International condemnation for hoarding cure to energy crisis. Scientific community loses trust.'
+      },
+      {
+        id: 'verify',
+        text: 'Cautious Verification',
+        description: 'Independent peer review before any decisions',
+        advisorSupport: ['science'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.9,
+          success: { credibility: 'maintained', production: +10, time: 'bought' },
+          failure: { hoax: 'revealed', morale: -15, scientists: 'embarrassed' }
+        },
+        successNarrative: 'Careful verification confirms breakthrough is real but requires refinement. Measured approach allows time for policy development. International patent filed. US leads new energy revolution without diplomatic fallout.',
+        failureNarrative: 'Exhaustive testing reveals initial results cannot be replicated. Cold fusion was measurement error. National embarrassment. Scientific credibility damaged. USSR mocks American "miracle" that never was.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'INTELLIGENCE LEAK: Top Secret Documents Exposed',
+    description: 'Former NSA analyst has stolen thousands of classified documents revealing surveillance programs, covert operations, and diplomatic embarrassments. Media preparing to publish. Whistleblower demands asylum abroad.',
+    category: 'rogue',
+    severity: 'critical',
+    minYear: 1965,
+    timeLimit: 75,
+    options: [
+      {
+        id: 'prosecute',
+        text: 'Full Prosecution',
+        description: 'Charge with espionage, demand extradition',
+        advisorSupport: ['military', 'intel'],
+        advisorOppose: ['pr'],
+        outcome: {
+          probability: 0.5,
+          success: { intel: 'protected', morale: -10, allies: 'strained' },
+          failure: { reputation: 'authoritarian', intel: 'exposed_anyway', morale: -20 }
+        },
+        successNarrative: 'Aggressive prosecution deters future leaks. Extradition secured. Trial sends strong message. But global press coverage exposes many secrets anyway. Allies upset by revealed surveillance. Domestic civil liberties debate intensifies.',
+        failureNarrative: 'Heavy-handed approach backfires spectacularly. Whistleblower becomes international hero. Documents published worldwide. US portrayed as oppressive. Surveillance programs shut down by courts. Intelligence capability crippled.'
+      },
+      {
+        id: 'damage_control',
+        text: 'Damage Control & Reform',
+        description: 'Acknowledge problems, promise reforms, limited amnesty',
+        advisorSupport: ['diplomatic', 'pr'],
+        advisorOppose: ['intel', 'military'],
+        outcome: {
+          probability: 0.7,
+          success: { morale: +5, transparency: 'improved', intel: -5, allies: 'reassured' },
+          failure: { weakness: 'perceived', morale: -15, moreLeaks: true }
+        },
+        successNarrative: 'Balanced response acknowledges legitimate concerns. Surveillance oversight reforms implemented. Whistleblower given lenient sentence. Crisis defused. Democratic credibility restored. Some intelligence capabilities preserved.',
+        failureNarrative: 'Conciliatory approach seen as weakness. More leakers emerge emboldened. Intelligence community in revolt. Reforms paralyze operations. Adversaries exploit window of vulnerability.'
+      },
+      {
+        id: 'suppress',
+        text: 'Media Suppression',
+        description: 'National security injunctions, pressure publishers',
+        advisorSupport: [],
+        advisorOppose: ['pr', 'diplomatic', 'science'],
+        outcome: {
+          probability: 0.3,
+          success: { secrets: 'protected', intel: +5, morale: -25, freedom: 'questioned' },
+          failure: { streisand: 'effect', reputation: 'authoritarian', morale: -30 }
+        },
+        successNarrative: 'Legal injunctions prevent most damaging revelations from publishing. Secrets stay protected. Intelligence operations continue. But authoritarian precedent set. Press freedom groups outraged. International criticism mounting.',
+        failureNarrative: 'Attempted suppression backfires catastrophically. Documents spread faster through underground channels. US accused of censorship. Domestic outrage over First Amendment. Streisand effect ensures maximum publicity for leaks.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'DIPLOMATIC OPPORTUNITY: Peace Overture',
+    description: 'Soviet Premier sends secret message through back channels. Proposes summit meeting to discuss nuclear arms reduction, space cooperation, and normalization of relations. Could be genuine or propaganda trap.',
+    category: 'blackswan',
+    severity: 'major',
+    minYear: 1955,
+    maxYear: 1990,
+    timeLimit: 90,
+    options: [
+      {
+        id: 'accept_summit',
+        text: 'Accept Summit',
+        description: 'Engage in good faith, test sincerity',
+        advisorSupport: ['diplomatic', 'pr'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.65,
+          success: { morale: +20, defcon: -1, production: +15, treaties: 'signed' },
+          failure: { propaganda: 'defeat', morale: -10, credibility: -5 }
+        },
+        successNarrative: 'Historic summit produces breakthrough arms control treaty. 30% reduction in nuclear arsenals. Cultural exchange programs launched. Space cooperation announced. Tensions ease dramatically. Nobel Peace Prize awarded. Hope for lasting détente.',
+        failureNarrative: 'Summit collapses into propaganda disaster. Soviets make unreasonable demands, then blame US intransigence when talks fail. Global media portrays America as warmonger. No agreements reached. Relations worse than before.'
+      },
+      {
+        id: 'conditional',
+        text: 'Conditional Acceptance',
+        description: 'Demand concrete concessions before summit',
+        advisorSupport: ['diplomatic', 'intel'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.55,
+          success: { morale: +10, intel: +5, defcon: -1, credibility: 'strengthened' },
+          failure: { opportunity: 'lost', hardliners: 'empowered', morale: -5 }
+        },
+        successNarrative: 'Tough negotiating stance pays off. Soviets make preliminary concessions on Berlin and regional conflicts. Summit proceeds with US in stronger position. Limited but meaningful agreements reached. Respect earned through firmness.',
+        failureNarrative: 'Demanding preconditions gives Soviet hardliners ammunition to cancel overture. Peace faction loses credibility in Kremlin. Window closes. Opportunity for breakthrough wasted. Cold War continues unabated.'
+      },
+      {
+        id: 'reject',
+        text: 'Reject as Propaganda',
+        description: 'Refuse engagement, maintain pressure',
+        advisorSupport: ['military'],
+        advisorOppose: ['diplomatic', 'pr'],
+        outcome: {
+          probability: 0.4,
+          success: { militaryReadiness: +10, morale: +5, sovietWeakness: 'exposed' },
+          failure: { morale: -15, allies: 'concerned', reputation: 'warmonger' }
+        },
+        successNarrative: 'Rejecting overture as propaganda proves correct when KGB documents reveal it was trap. Continued pressure causes Soviet economic crisis to worsen. Hardline stance vindicated. Military preparedness maintained.',
+        failureNarrative: 'Rejection of genuine peace offer shocks world. Allies question US commitment to peace. Domestic anti-war movement energized. Soviets exploit propaganda victory. Missed historic opportunity for reconciliation.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'TRIUMPH: First Moon Landing Achieved',
+    description: 'Apollo mission successfully lands on lunar surface. Astronauts transmitting live from the Moon. Entire world watching. Tremendous propaganda victory in Space Race. How to capitalize on this achievement?',
+    category: 'blackswan',
+    severity: 'major',
+    minYear: 1969,
+    maxYear: 1969,
+    timeLimit: 60,
+    options: [
+      {
+        id: 'peace_gesture',
+        text: 'Gesture for All Mankind',
+        description: 'Emphasize peaceful exploration, offer cooperation',
+        advisorSupport: ['diplomatic', 'science', 'pr'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.85,
+          success: { morale: +30, production: +20, reputation: 'enlightened', globalPrestige: +25 },
+          failure: { morale: +20, production: +10, militaryOpportunity: 'missed' }
+        },
+        successNarrative: 'Message of peace resonates globally. "One small step for man, one giant leap for mankind" becomes defining moment. US prestige soars. Even Soviet Union acknowledges achievement. Space cooperation proposals emerge. Scientific triumph transcends Cold War.',
+        failureNarrative: 'Peaceful message well-received but military hardliners argue we should have emphasized strategic dominance. Still massive morale boost and scientific victory, but missed chance for maximum leverage. Positive outcome overall.'
+      },
+      {
+        id: 'strategic_dominance',
+        text: 'Assert Strategic Superiority',
+        description: 'Emphasize technological dominance over Soviets',
+        advisorSupport: ['military', 'intel'],
+        advisorOppose: ['diplomatic'],
+        outcome: {
+          probability: 0.6,
+          success: { morale: +25, militaryPrestige: +20, production: +25, sovietMorale: -15 },
+          failure: { morale: +15, spaceRace: 'militarized', tensions: +1 }
+        },
+        successNarrative: 'Framing as US victory in technological competition demoralizes Soviet leadership. Space superiority translates to perceived military superiority. Massive boost to defense programs. Adversaries intimidated by demonstrated capability.',
+        failureNarrative: 'Triumphalist rhetoric triggers Soviet military escalation. Space race becomes explicitly militarized. UN condemns weaponization of space. Still inspiring achievement but creates new tensions. Arms race extends to lunar bases.'
+      },
+      {
+        id: 'commercial_focus',
+        text: 'Commercial Space Age',
+        description: 'Pivot to economic opportunities, space industry',
+        advisorSupport: ['economic', 'science'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.75,
+          success: { morale: +20, production: +35, spaceIndustry: 'boom', innovation: +15 },
+          failure: { morale: +15, production: +20, militaryPrestige: -5 }
+        },
+        successNarrative: 'Lunar success catalyzes commercial space industry. Satellite communications, GPS, space manufacturing. Massive economic benefits. Tech sector boom. Moon landing pays for itself many times over through innovation spillovers.',
+        failureNarrative: 'Commercial pivot successful economically but critics argue we surrendered strategic high ground. Soviets pursue military space programs while US focuses on profits. Still strong economic gains.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'ECONOMIC CRISIS: Stock Market Crash',
+    description: 'Wall Street in freefall. Dow Jones drops 22% in single day. Banks freezing credit. Panic spreading. Economists warning of potential depression. Immediate intervention required to prevent total collapse.',
+    category: 'blackswan',
+    severity: 'critical',
+    minYear: 1970,
+    timeLimit: 60,
+    options: [
+      {
+        id: 'bailout',
+        text: 'Emergency Bailout',
+        description: 'Massive government intervention, liquidity injection',
+        advisorSupport: ['economic'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.7,
+          success: { economy: 'stabilized', production: -10, morale: -5, debt: +50 },
+          failure: { economy: 'depression', production: -40, morale: -25, debt: +100 }
+        },
+        successNarrative: 'Swift government action prevents total meltdown. Federal Reserve floods system with liquidity. Major banks saved. Market stabilizes after several volatile weeks. Recession avoided but taxpayer burden heavy. Moral hazard concerns raised.',
+        failureNarrative: 'Bailout attempts fail to restore confidence. Panic continues despite intervention. Recession becomes depression. Unemployment skyrockets. Government debt explodes with nothing to show. Political backlash severe.'
+      },
+      {
+        id: 'austerity',
+        text: 'Market Discipline',
+        description: 'Let market correct itself, no intervention',
+        advisorSupport: [],
+        advisorOppose: ['economic', 'pr'],
+        outcome: {
+          probability: 0.4,
+          success: { economy: 'purged', production: -20, morale: -15, recovery: 'stronger' },
+          failure: { economy: 'depression', production: -50, morale: -35, socialUnrest: true }
+        },
+        successNarrative: 'Painful but necessary correction purges excess from system. After brutal year, economy emerges leaner and more efficient. No moral hazard created. Free market principles vindicated. Recovery built on solid foundation.',
+        failureNarrative: 'Laissez-faire approach triggers catastrophic downward spiral. Bank runs. Mass unemployment. Soup lines. Social unrest. 1929 repeating itself. Public demands government action. Economic ideology proved disastrous.'
+      },
+      {
+        id: 'targeted',
+        text: 'Targeted Intervention',
+        description: 'Save critical infrastructure, let speculation fail',
+        advisorSupport: ['economic', 'intel'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.65,
+          success: { economy: 'stabilized', production: -15, morale: -8, credibility: 'maintained' },
+          failure: { contagion: 'spreads', production: -30, morale: -20 }
+        },
+        successNarrative: 'Surgical intervention saves critical institutions while allowing speculative excess to collapse. Banks secured. Main Street protected. Wall Street takes losses. Balanced approach prevents depression without rewarding recklessness.',
+        failureNarrative: 'Attempt to pick winners and losers fails as contagion spreads unexpectedly. Critical connections missed. Domino effect continues. Partial intervention proves insufficient. Should have gone all-in or stayed out.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'NATURAL DISASTER: Catastrophic Earthquake',
+    description: 'Magnitude 8.5 earthquake devastates California. Thousands dead, hundreds of thousands homeless. Critical infrastructure destroyed. Nuclear power plant damaged. National Guard deployed. International aid offered.',
+    category: 'accident',
+    severity: 'major',
+    minYear: 1950,
+    timeLimit: 75,
+    options: [
+      {
+        id: 'federal_response',
+        text: 'Full Federal Response',
+        description: 'Massive disaster relief, military deployment',
+        advisorSupport: ['military', 'pr'],
+        advisorOppose: ['economic'],
+        outcome: {
+          probability: 0.8,
+          success: { morale: +10, production: -15, unity: 'strengthened', casualties: 'minimized' },
+          failure: { production: -20, bureaucracy: 'overwhelmed', morale: -5 }
+        },
+        successNarrative: 'Swift federal action saves thousands of lives. Military logistics excellence. Emergency services coordinated. Reconstruction begins immediately. National unity emerges from tragedy. Government effectiveness demonstrated.',
+        failureNarrative: 'Federal response well-intentioned but bureaucratic delays cost lives. Local authorities frustrated by red tape. Still significant help provided but coordination failures prevent optimal outcome.'
+      },
+      {
+        id: 'accept_aid',
+        text: 'Accept International Aid',
+        description: 'Welcome foreign assistance, coordinate globally',
+        advisorSupport: ['diplomatic', 'pr'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.85,
+          success: { morale: +15, production: -10, reputation: 'humble', globalUnity: +10 },
+          failure: { morale: +5, production: -15, sovereignty: 'questioned' }
+        },
+        successNarrative: 'Accepting international help showcases American humility. Soviet, European, Japanese rescue teams work alongside US forces. Humanitarian moment transcends politics. Faster recovery. Goodwill generated worldwide.',
+        failureNarrative: 'International aid helpful but optics problematic. Critics question American strength. "Superpower needs foreign help?" Still better recovery than alone but some prestige cost.'
+      },
+      {
+        id: 'self_reliance',
+        text: 'Self-Reliant Recovery',
+        description: 'Decline foreign aid, demonstrate American resilience',
+        advisorSupport: ['military'],
+        advisorOppose: ['diplomatic', 'economic'],
+        outcome: {
+          probability: 0.6,
+          success: { morale: +20, production: -20, resilience: 'proven', pride: 'restored' },
+          failure: { casualties: 'higher', production: -30, morale: -10, stubborn: 'perceived' }
+        },
+        successNarrative: 'Self-reliant response proves American capability. Military and civilian cooperation exemplary. Rebuilding becomes symbol of national character. Pride and morale soar despite economic cost. "We take care of our own."',
+        failureNarrative: 'Prideful rejection of help leads to preventable deaths. Recovery slower than necessary. International community offended by rebuff. Stubborn nationalism criticized. Tragedy compounded by poor judgment.'
+      }
+    ],
+    consequences: {}
+  },
+  {
+    title: 'INTELLIGENCE BREAKTHROUGH: Enemy Codes Cracked',
+    description: 'NSA cryptanalysts achieve breakthrough - adversary\'s encrypted communications compromised. Can read diplomatic cables and military orders in real-time. Ultimate intelligence advantage but only if secrecy maintained.',
+    category: 'blackswan',
+    severity: 'major',
+    minYear: 1960,
+    timeLimit: 90,
+    options: [
+      {
+        id: 'exploit_quietly',
+        text: 'Silent Exploitation',
+        description: 'Use intelligence carefully, protect source at all costs',
+        advisorSupport: ['intel', 'military'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.75,
+          success: { intel: +25, strategicAdvantage: +20, defcon: -1, morale: +10 },
+          failure: { compromised: true, intel: -10, advantage: 'lost' }
+        },
+        successNarrative: 'Disciplined exploitation yields years of strategic advantage. Crisis after crisis defused through foreknowledge. Arms negotiations won. Military operations optimized. Enemy never suspects. Intelligence crown jewel protected.',
+        failureNarrative: 'Despite precautions, adversaries detect pattern in our responses. Counter-intelligence investigation reveals code break. They switch encryption. Golden source lost. Should have been even more careful.'
+      },
+      {
+        id: 'tactical_wins',
+        text: 'Aggressive Exploitation',
+        description: 'Maximum use for immediate tactical advantages',
+        advisorSupport: ['military'],
+        advisorOppose: ['intel'],
+        outcome: {
+          probability: 0.5,
+          success: { militaryVictories: +15, morale: +15, intel: +10, duration: 'shorter' },
+          failure: { compromised: 'quickly', intel: -15, opportunity: 'wasted' }
+        },
+        successNarrative: 'Aggressive use delivers spectacular short-term victories. Covert operations succeed perfectly. Military engagements won decisively. Enemy baffled by our prescience. Worth it even though eventually detected and countermeasures deployed.',
+        failureNarrative: 'Reckless overuse burns source within months. Enemy detects impossible coincidences. Encryption changed. Massive intelligence advantage squandered for minor tactical wins. Cryptanalysts furious at waste.'
+      },
+      {
+        id: 'strategic_deception',
+        text: 'Deception Operations',
+        description: 'Feed false intelligence, manipulate enemy decisions',
+        advisorSupport: ['intel'],
+        advisorOppose: [],
+        outcome: {
+          probability: 0.65,
+          success: { strategicDeception: 'masterful', enemyMisled: true, intel: +20, morale: +15 },
+          failure: { backfire: true, credibility: -10, intel: -5 }
+        },
+        successNarrative: 'Sophisticated deception campaign manipulates adversary into strategic blunders. They trust their own communications, never realizing we read and influence them. Enemy maneuvered into disadvantageous positions. Intelligence warfare perfected.',
+        failureNarrative: 'Deception attempt too clever by half. Enemy becomes suspicious of their own communications. Launches internal purge. Accidentally discovers encryption weakness during investigation. Scheme backfires completely.'
       }
     ],
     consequences: {}
