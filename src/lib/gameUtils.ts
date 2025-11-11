@@ -11,7 +11,7 @@ import {
   initializeResourceStockpile,
   spendStrategicResource,
 } from '@/lib/territorialResourcesSystem';
-import { GameStateManager } from '@/state/GameStateManager';
+import GameStateManager from '@/state/GameStateManager';
 
 const STRATEGIC_RESOURCES: StrategyResourceType[] = ['oil', 'uranium', 'rare_earths', 'food'];
 
