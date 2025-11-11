@@ -205,6 +205,12 @@ export function calculateResourceShortage(
 /**
  * Resource deposit templates for different territory types
  */
+const BALANCED_TERRITORY_TEMPLATE: ResourceDeposit[] = [
+  { type: 'oil', amount: 5, richness: 1.0 },
+  { type: 'food', amount: 18, richness: 1.0 },
+  { type: 'rare_earths', amount: 3, richness: 1.0 },
+];
+
 export const RESOURCE_DEPOSIT_TEMPLATES: Record<string, ResourceDeposit[]> = {
   // Major oil producers
   middle_east_oil: [
@@ -243,11 +249,7 @@ export const RESOURCE_DEPOSIT_TEMPLATES: Record<string, ResourceDeposit[]> = {
   ],
 
   // Balanced territories
-  balanced: [
-    { type: 'oil', amount: 5, richness: 1.0 },
-    { type: 'food', amount: 18, richness: 1.0 },
-    { type: 'rare_earths', amount: 3, richness: 1.0 },
-  ],
+  balanced: BALANCED_TERRITORY_TEMPLATE,
 
   // Poor territories
   barren: [

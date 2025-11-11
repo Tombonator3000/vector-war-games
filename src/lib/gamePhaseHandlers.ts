@@ -49,6 +49,15 @@ import {
 } from '@/lib/intelligenceAgencyUtils';
 import type { SeededRandom } from '@/lib/seededRandom';
 
+const BASE_PRODUCTION_POP_RATIO = 0.2;
+const BASE_PRODUCTION_PER_CITY = 20;
+const BASE_URANIUM_POP_RATIO = 0.025;
+const BASE_URANIUM_PER_CITY = 4;
+const BASE_INTEL_POP_RATIO = 0.04;
+const BASE_INTEL_PER_CITY = 3;
+const MAX_FALLOUT_HUNGER_PENALTY = 0.5;
+const MAX_RADIATION_SICKNESS_PENALTY = 0.4;
+
 // Types for dependencies that will be injected
 export interface LaunchDependencies {
   S: GameState;
@@ -335,15 +344,16 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     if (n.population <= 0) return;
 
     // Base production - balanced for all nations
-    const baseProduction = Math.floor(n.population * 0.20);
-    const baseProd = baseProduction + (n.cities || 1) * 20;
-    const baseUranium = Math.floor(n.population * 0.025) + (n.cities || 1) * 4;
-    const baseIntel = Math.floor(n.population * 0.04) + (n.cities || 1) * 3;
+    const cities = n.cities || 1;
+    const baseProduction = Math.floor(n.population * BASE_PRODUCTION_POP_RATIO);
+    const baseProd = baseProduction + cities * BASE_PRODUCTION_PER_CITY;
+    const baseUranium = Math.floor(n.population * BASE_URANIUM_POP_RATIO) + cities * BASE_URANIUM_PER_CITY;
+    const baseIntel = Math.floor(n.population * BASE_INTEL_POP_RATIO) + cities * BASE_INTEL_PER_CITY;
 
     // Apply green shift debuff if active
     let prodMult = 1;
     let uranMult = 1;
-    const hungerPenalty = Math.min(0.50, (n.falloutHunger ?? 0) / 100);
+    const hungerPenalty = Math.min(MAX_FALLOUT_HUNGER_PENALTY, (n.falloutHunger ?? 0) / 100);
     if (hungerPenalty > 0) {
       prodMult *= 1 - hungerPenalty;
       if (n === PlayerManager.get() && hungerPenalty > 0.5) {
@@ -351,7 +361,10 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       }
     }
 
-    const sicknessPenalty = Math.min(0.40, (n.radiationSickness ?? 0) / 130);
+    const sicknessPenalty = Math.min(
+      MAX_RADIATION_SICKNESS_PENALTY,
+      (n.radiationSickness ?? 0) / 130
+    );
     if (sicknessPenalty > 0) {
       const penaltyFactor = 1 - sicknessPenalty;
       prodMult *= penaltyFactor;
