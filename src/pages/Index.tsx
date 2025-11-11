@@ -178,6 +178,7 @@ import { GovernanceEventDialog } from '@/components/governance/GovernanceEventDi
 import { GovernanceDetailPanel } from '@/components/governance/GovernanceDetailPanel';
 import { PolicySelectionPanel } from '@/components/governance/PolicySelectionPanel';
 import { PoliticalStabilityOverlay } from '@/components/governance/PoliticalStabilityOverlay';
+import { PandemicSpreadOverlay } from '@/components/pandemic/PandemicSpreadOverlay';
 import { MapModeBar } from '@/components/MapModeBar';
 import { usePolicySystem } from '@/hooks/usePolicySystem';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
@@ -420,6 +421,10 @@ const MAP_MODE_DESCRIPTIONS: Record<MapMode, { label: string; description: strin
     label: 'Uro',
     description: 'Avdekker politisk stabilitet, opinion og krisesoner.',
   },
+  pandemic: {
+    label: 'Pandemi',
+    description: 'Visualiserer global infeksjon, varme og laboratoriedeteksjon.',
+  },
 };
 
 const MAP_MODE_HOTKEYS: Record<MapMode, string> = {
@@ -428,6 +433,7 @@ const MAP_MODE_HOTKEYS: Record<MapMode, string> = {
   intel: 'Alt+3',
   resources: 'Alt+4',
   unrest: 'Alt+5',
+  pandemic: 'Alt+6',
 };
 
 const isVisualStyleValue = (value: unknown): value is MapVisualStyle =>
@@ -7613,8 +7619,26 @@ export default function NoradVector() {
     const intelLevels: Record<string, number> = {};
     const resourceTotals: Record<string, number> = {};
     const unrest: Record<string, { morale: number; publicOpinion: number; instability: number }> = {};
+    const pandemicOverlay = {
+      infections: {} as Record<string, number>,
+      heat: {} as Record<string, number>,
+      casualties: {} as Record<string, number>,
+      detections: {} as Record<string, boolean>,
+      stage: pandemicState.stage,
+      globalInfection: pandemicState.globalInfection,
+      globalCasualties: pandemicState.casualtyTally,
+      vaccineProgress: pandemicState.vaccineProgress,
+    };
+
+    const nationById = new Map<string, Nation>();
+    const nationByName = new Map<string, Nation>();
 
     nations.forEach(nation => {
+      nationById.set(nation.id, nation);
+      if (typeof nation.name === 'string') {
+        nationByName.set(nation.name.toLowerCase(), nation);
+      }
+
       relationships[nation.id] = playerNation
         ? playerNation.relationships?.[nation.id] ?? nation.relationships?.[playerNation.id] ?? (nation.isPlayer ? 100 : 0)
         : 0;
@@ -7645,8 +7669,72 @@ export default function NoradVector() {
           };
     });
 
-    return { playerId, relationships, intelLevels, resourceTotals, unrest };
-  }, [governance.metrics, nations]);
+    if (pandemicIntegrationEnabled) {
+      pandemicState.outbreaks.forEach(outbreak => {
+        if (!outbreak) return;
+        const regionKey = typeof outbreak.region === 'string' ? outbreak.region : '';
+        const match = nationById.get(regionKey) ?? nationByName.get(regionKey.toLowerCase());
+        if (!match) return;
+
+        const infectionValue = Number.isFinite(outbreak.infection)
+          ? Math.max(0, Math.min(100, outbreak.infection))
+          : 0;
+        const heatValue = Number.isFinite(outbreak.heat)
+          ? Math.max(0, Math.min(100, outbreak.heat))
+          : 0;
+
+        if (infectionValue > 0) {
+          pandemicOverlay.infections[match.id] = Math.max(pandemicOverlay.infections[match.id] ?? 0, infectionValue);
+        }
+        if (heatValue > 0) {
+          pandemicOverlay.heat[match.id] = Math.max(pandemicOverlay.heat[match.id] ?? 0, heatValue);
+        }
+      });
+    }
+
+    if (pandemicIntegrationEnabled && bioWarfareEnabled) {
+      plagueState.countryInfections.forEach((infection, nationId) => {
+        const infectionLevel = Number.isFinite(infection?.infectionLevel)
+          ? Math.max(0, Math.min(100, infection.infectionLevel))
+          : 0;
+        const suspicion = Number.isFinite(infection?.suspicionLevel)
+          ? Math.max(0, Math.min(100, infection.suspicionLevel))
+          : 0;
+        const deaths = Number.isFinite(infection?.deaths)
+          ? Math.max(0, infection.deaths)
+          : 0;
+
+        if (infectionLevel > 0) {
+          pandemicOverlay.infections[nationId] = Math.max(pandemicOverlay.infections[nationId] ?? 0, infectionLevel);
+        }
+        if (suspicion > 0) {
+          pandemicOverlay.heat[nationId] = Math.max(pandemicOverlay.heat[nationId] ?? 0, suspicion);
+        }
+        if (deaths > 0) {
+          pandemicOverlay.casualties[nationId] = Math.max(pandemicOverlay.casualties[nationId] ?? 0, deaths);
+        }
+        if (infection?.detectedBioWeapon) {
+          pandemicOverlay.detections[nationId] = true;
+        }
+      });
+    }
+
+    return {
+      playerId,
+      relationships,
+      intelLevels,
+      resourceTotals,
+      unrest,
+      pandemic: pandemicIntegrationEnabled ? pandemicOverlay : undefined,
+    };
+  }, [
+    bioWarfareEnabled,
+    governance.metrics,
+    nations,
+    pandemicIntegrationEnabled,
+    pandemicState,
+    plagueState.countryInfections,
+  ]);
 
   useEffect(() => {
     currentMapModeData = mapModeData;
@@ -12021,6 +12109,10 @@ export default function NoradVector() {
               e.preventDefault();
               handleMapModeChange('unrest');
               return;
+            case '6':
+              e.preventDefault();
+              handleMapModeChange('pandemic');
+              return;
             default:
               break;
           }
@@ -12716,6 +12808,21 @@ export default function NoradVector() {
             canvasWidth={overlayCanvas.width}
             canvasHeight={overlayCanvas.height}
             visible={mapStyle.mode === 'unrest'}
+          />
+        )}
+
+        {overlayCanvas && mapStyle.mode === 'pandemic' && mapModeData.pandemic && (
+          <PandemicSpreadOverlay
+            nations={nations.map(n => ({
+              id: n.id,
+              name: n.name,
+              lon: n.lon || 0,
+              lat: n.lat || 0,
+            }))}
+            canvasWidth={overlayCanvas.width}
+            canvasHeight={overlayCanvas.height}
+            visible={mapStyle.mode === 'pandemic'}
+            pandemic={mapModeData.pandemic}
           />
         )}
 

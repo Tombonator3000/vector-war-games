@@ -15,6 +15,9 @@ const INTEL_COLOR_START = new Color('#1d4ed8'); // Deep blue
 const INTEL_COLOR_END = new Color('#38bdf8');   // Light blue
 const RESOURCE_COLOR_START = new Color('#f97316'); // Orange
 const RESOURCE_COLOR_END = new Color('#facc15');   // Yellow
+const PANDEMIC_COLOR_START = new Color('#fee2e2'); // Light rose
+const PANDEMIC_COLOR_MID = new Color('#f87171');   // Soft crimson
+const PANDEMIC_COLOR_END = new Color('#991b1b');   // Deep blood red
 
 /**
  * Compute diplomatic relationship color based on relationship score
@@ -76,6 +79,28 @@ export function computeUnrestColor(stability: number): string {
   if (stability >= 65) return '#22c55e';  // Green - Stable
   if (stability >= 45) return '#facc15';  // Yellow - Tense
   return '#f87171';                       // Red - Crisis
+}
+
+/**
+ * Compute pandemic infection color based on infection intensity
+ *
+ * Uses a three-stop gradient that starts as a pale crimson when
+ * infection is low, deepens into saturated red for mid-tier outbreaks,
+ * and culminates in a dark blood-red for catastrophic spread.
+ *
+ * @param normalized - Infection intensity normalized between 0 and 1
+ * @returns Hex color string representing infection severity
+ */
+export function computePandemicColor(normalized: number): string {
+  const clamped = MathUtils.clamp(normalized, 0, 1);
+
+  if (clamped <= 0.5) {
+    const t = clamped / 0.5;
+    return PANDEMIC_COLOR_START.clone().lerp(PANDEMIC_COLOR_MID, t).getStyle();
+  }
+
+  const t = (clamped - 0.5) / 0.5;
+  return PANDEMIC_COLOR_MID.clone().lerp(PANDEMIC_COLOR_END, t).getStyle();
 }
 
 /**
