@@ -13,7 +13,7 @@ import type {
   ConventionalUnitTemplate,
   EngagementLogEntry,
   NationConventionalProfile,
-  DiceRollResult,
+  BorderConflictSuccessPayload,
 } from '@/hooks/useConventionalWarfare';
 import { createDefaultNationConventionalProfile } from '@/hooks/useConventionalWarfare';
 import type { ArmyGroupSummary } from '@/types/militaryTemplates';
@@ -58,7 +58,7 @@ export interface ConsolidatedWarModalProps {
  *
  * Combines:
  * - War Council (Casus Belli, war declarations, peace negotiations)
- * - Conventional Forces (Risk-style territorial warfare)
+ * - Conventional Forces (strength-based territorial warfare)
  * - War Summary (overview of all conflicts)
  */
 export function ConsolidatedWarModal({
@@ -88,7 +88,7 @@ export function ConsolidatedWarModal({
   const [activeTab, setActiveTab] = useState('council');
   const localPlayer = PlayerManager.get() as LocalNation | null;
   const [lastBattleResult, setLastBattleResult] = useState<{
-    diceRolls: DiceRollResult[];
+    report: BorderConflictSuccessPayload;
     attackerName: string;
     defenderName: string;
     territory: string;
@@ -180,16 +180,16 @@ export function ConsolidatedWarModal({
 
   const handleAttack = (fromTerritoryId: string, toTerritoryId: string, armies: number) => {
     const result = resolveConventionalAttack(fromTerritoryId, toTerritoryId, armies);
-    if (result?.success && result?.diceRolls) {
+    if (result?.success) {
       const from = conventionalTerritories[fromTerritoryId];
       const to = conventionalTerritories[toTerritoryId];
       const attackerNation = nations.find(n => n.id === from?.controllingNationId);
       const defenderNation = nations.find(n => n.id === to?.controllingNationId);
 
       setLastBattleResult({
-        diceRolls: result.diceRolls,
+        report: result,
         attackerName: attackerNation?.name || 'Unknown',
-        defenderName: defenderNation?.name || 'Unknown',
+        defenderName: defenderNation?.name || to?.controllingNationId || 'Unknown',
         territory: to?.name || 'Unknown Territory',
       });
     }
@@ -284,7 +284,7 @@ export function ConsolidatedWarModal({
                 </button>
               </div>
               <BattleResultDisplay
-                diceRolls={lastBattleResult.diceRolls}
+                report={lastBattleResult.report}
                 attackerName={lastBattleResult.attackerName}
                 defenderName={lastBattleResult.defenderName}
               />
@@ -347,8 +347,12 @@ export function ConsolidatedWarModal({
                       </div>
                       <div className="text-slate-400 mt-1">
                         Casualties: Attacker {log.attackerCasualties} | Defender {log.defenderCasualties}
-                        {log.rounds && ` • ${log.rounds} rounds`}
                       </div>
+                      {log.combatStrength && (
+                        <div className="text-cyan-300/80 mt-1 font-mono">
+                          ⚖️ {Math.round(log.combatStrength.attackerStrength)} vs {Math.round(log.combatStrength.defenderStrength)} (ratio {log.combatStrength.ratio.toFixed(2)})
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -443,6 +447,11 @@ export function ConsolidatedWarModal({
                         Casualties: {log.attackerCasualties + log.defenderCasualties} total
                         {log.outcome && ` • ${log.outcome}`}
                       </div>
+                      {log.combatStrength && (
+                        <div className="text-cyan-300/80 mt-1 font-mono">
+                          ⚖️ {Math.round(log.combatStrength.attackerStrength)} vs {Math.round(log.combatStrength.defenderStrength)} (ratio {log.combatStrength.ratio.toFixed(2)})
+                        </div>
+                      )}
                     </div>
                   );
                 })}

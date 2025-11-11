@@ -9,7 +9,7 @@ import type {
   ConventionalUnitTemplate,
   EngagementLogEntry,
   NationConventionalProfile,
-  DiceRollResult,
+  BorderConflictSuccessPayload,
 } from '@/hooks/useConventionalWarfare';
 import { createDefaultNationConventionalProfile } from '@/hooks/useConventionalWarfare';
 import MapBasedWarfare, { type ProjectedPoint } from '@/components/warfare/MapBasedWarfare';
@@ -33,12 +33,12 @@ export interface MilitaryModalProps {
 }
 
 /**
- * MilitaryModal - Risk-style conventional warfare command interface
+ * MilitaryModal - Strength-based conventional warfare command interface
  *
  * Displays:
  * - Conventional forces panel (training, deployment)
  * - Territory map with army counts and actions
- * - Battle results with dice rolls
+ * - Battle results with deterministic strength reports
  * - Recent engagement logs
  */
 export function MilitaryModal({
@@ -56,7 +56,7 @@ export function MilitaryModal({
 }: MilitaryModalProps): ReactNode {
   const player = PlayerManager.get() as LocalNation | null;
   const [lastBattleResult, setLastBattleResult] = useState<{
-    diceRolls: DiceRollResult[];
+    report: BorderConflictSuccessPayload;
     attackerName: string;
     defenderName: string;
     territory: string;
@@ -167,30 +167,39 @@ export function MilitaryModal({
       return;
     }
 
-    // Show dice roll results
-    if (result.diceRolls && result.diceRolls.length > 0) {
+    if (result.success) {
+      const defenderName = toTerritory.controllingNationId || 'Neutral';
       setLastBattleResult({
-        diceRolls: result.diceRolls,
+        report: result,
         attackerName: player.name,
-        defenderName: toTerritory.controllingNationId || 'Neutral',
+        defenderName,
         territory: toTerritory.name,
       });
+
+      const strengthSummary = `Strength ${result.attackerStrength.toFixed(0)} vs ${result.defenderStrength.toFixed(0)} (ratio ${result.strengthRatio.toFixed(2)})`;
+      const baseDescription = `${strengthSummary}. Losses: ${result.attackerLosses} attacker • ${result.defenderLosses} defender.`;
+
+      const title = result.outcome === 'attacker'
+        ? '🎯 Territory secured!'
+        : result.outcome === 'stalemate'
+          ? '⚔️ Assault bogged down'
+          : '❌ Attack repelled';
+
+      toast({
+        title,
+        description: baseDescription,
+      });
+
+      addNewsItem(
+        'military',
+        result.outcome === 'attacker'
+          ? `${player.name} captures ${toTerritory.name} (ratio ${result.strengthRatio.toFixed(2)})`
+          : result.outcome === 'stalemate'
+            ? `${player.name} locked in stalemate at ${toTerritory.name}`
+            : `${player.name} fails to take ${toTerritory.name}`,
+        result.outcome === 'attacker' ? 'critical' : 'urgent'
+      );
     }
-
-    toast({
-      title: result.attackerVictory ? '🎯 Territory conquered!' : '❌ Attack repelled',
-      description: result.attackerVictory
-        ? `${toTerritory.name} captured after ${result.diceRolls?.length || 0} rounds! Lost ${result.attackerLosses} armies.`
-        : `Failed to capture ${toTerritory.name}. Lost ${result.attackerLosses} armies.`,
-    });
-
-    addNewsItem(
-      'military',
-      result.attackerVictory
-        ? `${player.name} conquers ${toTerritory.name} (${result.diceRolls?.length || 0} rounds)`
-        : `${player.name} fails to take ${toTerritory.name}`,
-      result.attackerVictory ? 'critical' : 'urgent'
-    );
   };
 
   const handleMove = (fromTerritoryId: string, toTerritoryId: string, count: number) => {
@@ -262,7 +271,7 @@ export function MilitaryModal({
             </button>
           </div>
           <BattleResultDisplay
-            diceRolls={lastBattleResult.diceRolls}
+            report={lastBattleResult.report}
             attackerName={lastBattleResult.attackerName}
             defenderName={lastBattleResult.defenderName}
           />
@@ -320,9 +329,9 @@ export function MilitaryModal({
                 <span>{logEntry.summary}</span>
                 <span className="text-gray-400">Turn {logEntry.turn}</span>
               </div>
-              {logEntry.diceRolls && logEntry.diceRolls.length > 0 && (
+              {logEntry.combatStrength && (
                 <div className="mt-2 text-xs text-cyan-400">
-                  🎲 {logEntry.diceRolls.length} combat rounds
+                  ⚖️ {Math.round(logEntry.combatStrength.attackerStrength)} vs {Math.round(logEntry.combatStrength.defenderStrength)} (ratio {logEntry.combatStrength.ratio.toFixed(2)})
                 </div>
               )}
               <div className="mt-2 text-xs text-gray-500">
