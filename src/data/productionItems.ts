@@ -309,8 +309,6 @@ export function canAffordProduction(
   availableResources: {
     production: number;
     uranium: number;
-    electronics: number;
-    steel: number;
     intel: number;
   }
 ): { canAfford: boolean; missing: string[] } {
@@ -322,17 +320,6 @@ export function canAffordProduction(
 
   if (template.resourceCosts.uranium && availableResources.uranium < template.resourceCosts.uranium) {
     missing.push('uranium');
-  }
-
-  if (
-    template.resourceCosts.electronics &&
-    availableResources.electronics < template.resourceCosts.electronics
-  ) {
-    missing.push('electronics');
-  }
-
-  if (template.resourceCosts.steel && availableResources.steel < template.resourceCosts.steel) {
-    missing.push('steel');
   }
 
   if (template.resourceCosts.intel && availableResources.intel < template.resourceCosts.intel) {

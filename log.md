@@ -7,6 +7,23 @@
 
 ---
 
+## 2025-11-11 - Resource Generation Rebalance Restoration
+
+**Timestamp:** 2025-11-11 10:27:47Z
+**Branch:** `work`
+**Status:** ✅ COMPLETED
+
+### Summary
+- Reapplied missing resource rebalance numbers for territorial generation and national production handling after restore regression.
+- Removed obsolete electronics/steel requirements from production item cost checks.
+
+### Files Updated
+- `src/lib/gamePhaseHandlers.ts`
+- `src/lib/territorialResourcesSystem.ts`
+- `src/types/territorialResources.ts`
+- `src/types/production.ts`
+- `src/data/productionItems.ts`
+
 ## 2025-11-07 - Cesium Deprecation Phase 2: Port Critical Features to Three.js
 
 **Branch:** `claude/port-cesium-phase-2-011CUt9LBDmdTG66hwrkjEmg`

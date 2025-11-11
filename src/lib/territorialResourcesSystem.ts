@@ -26,6 +26,9 @@ import {
 } from '@/types/territorialResources';
 import type { ResourceMarket } from '@/lib/resourceMarketSystem';
 
+const MORALE_MODIFIER_MIN = 0.7;
+const MORALE_MODIFIER_MAX = 1.3;
+
 /**
  * Initialize resource stockpile for a nation
  */
@@ -190,7 +193,11 @@ export function calculateNationResourceGeneration(
   });
 
   // Apply nation-wide modifiers (morale, technology, etc.)
-  const moraleModifier = Math.max(0.7, Math.min(1.3, (nation.morale || 50) / 50));
+  const morale = nation.morale ?? 50;
+  const moraleModifier = Math.max(
+    MORALE_MODIFIER_MIN,
+    Math.min(MORALE_MODIFIER_MAX, morale / 50)
+  );
 
   generation.oil = Math.floor(generation.oil * moraleModifier);
   generation.uranium = Math.floor(generation.uranium * moraleModifier);
