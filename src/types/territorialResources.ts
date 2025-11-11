@@ -265,27 +265,27 @@ export const RESOURCE_INFO: Record<StrategyResourceType, {
   color: string;
 }> = {
   oil: {
-    name: 'Blood Ichor',
+    name: 'Oil',
     icon: '🛢️',
-    description: 'Crimson fuel for cultist hordes and corrupted machinery',
-    color: '#8b0000',
+    description: 'Required for training and maintaining armies',
+    color: '#2c2c2c',
   },
   uranium: {
-    name: 'Void Crystals',
+    name: 'Uranium',
     icon: '☢️',
-    description: 'Cosmic shards powering eldritch rituals and forbidden research',
-    color: '#9400d3',
+    description: 'Required for nuclear weapons and advanced research',
+    color: '#00ff00',
   },
   rare_earths: {
-    name: 'Star Shards',
+    name: 'Rare Earths',
     icon: '💎',
-    description: 'Alien minerals required for mind control and reality manipulation',
-    color: '#4b0082',
+    description: 'Required for advanced technology and cyber warfare',
+    color: '#9b59b6',
   },
   food: {
-    name: 'Life Essence',
+    name: 'Food',
     icon: '🌾',
-    description: 'Vital energy harvested from sacrifices to sustain cult populations',
-    color: '#8b4513',
+    description: 'Required for population growth and stability',
+    color: '#f39c12',
   },
 };

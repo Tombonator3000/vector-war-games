@@ -34,14 +34,14 @@ export interface VictoryConditionCheck {
 export const VICTORY_PATHS: VictoryPathDefinition[] = [
   {
     type: 'diplomatic',
-    name: 'Elder Council',
-    description: 'Unite 60% of cults through unholy pacts and maintain reality stability',
+    name: 'Diplomatic Victory',
+    description: 'Form alliances with 60% of nations and maintain peace',
     icon: '🤝',
     color: 'text-blue-500',
     conditions: [
       {
         id: 'alliance-ratio',
-        description: 'Bound by dark pacts with 60% of living cults',
+        description: 'Allied with 60% of living nations',
         check: (player, nations) => {
           const livingNations = nations.filter((n) => !n.eliminated && !n.isPlayer);
           if (livingNations.length === 0) return false;
@@ -58,13 +58,13 @@ export const VICTORY_PATHS: VictoryPathDefinition[] = [
           return {
             current: alliedNations.length,
             required: Math.ceil(livingNations.length * 0.6),
-            unit: 'cults',
+            unit: 'nations',
           };
         },
       },
       {
         id: 'peace-duration',
-        description: 'Maintain Veil Thinning or better for 5 consecutive turns',
+        description: 'Maintain DEFCON 4+ for 5 consecutive turns',
         check: (player, nations, gameState) => {
           const peaceTurns = gameState.diplomacy?.peaceTurns || 0;
           return peaceTurns >= 5 && gameState.defcon >= 4;
@@ -82,14 +82,14 @@ export const VICTORY_PATHS: VictoryPathDefinition[] = [
   },
   {
     type: 'domination',
-    name: 'Cosmic Supremacy',
-    description: 'Annihilate all rival cults',
+    name: 'Domination Victory',
+    description: 'Eliminate all enemy nations',
     icon: '💀',
     color: 'text-red-500',
     conditions: [
       {
         id: 'eliminate-all',
-        description: 'All rival cults destroyed',
+        description: 'All enemy nations eliminated',
         check: (player, nations) => {
           const livingEnemies = nations.filter((n) => !n.eliminated && !n.isPlayer);
           return livingEnemies.length === 0;
@@ -100,7 +100,7 @@ export const VICTORY_PATHS: VictoryPathDefinition[] = [
           return {
             current: eliminatedEnemies,
             required: totalEnemies,
-            unit: 'cults destroyed',
+            unit: 'nations eliminated',
           };
         },
       },
@@ -108,14 +108,14 @@ export const VICTORY_PATHS: VictoryPathDefinition[] = [
   },
   {
     type: 'economic',
-    name: 'Essence Dominion',
-    description: 'Control 10 corrupted domains and maintain 200 essence per turn',
+    name: 'Economic Victory',
+    description: 'Control 10 cities and maintain 200 production per turn',
     icon: '💰',
     color: 'text-yellow-500',
     conditions: [
       {
         id: 'city-count',
-        description: 'Control 10 or more corrupted domains',
+        description: 'Control 10 or more cities',
         check: (player) => {
           return (player.cities || 0) >= 10;
         },
@@ -123,13 +123,13 @@ export const VICTORY_PATHS: VictoryPathDefinition[] = [
           return {
             current: player.cities || 0,
             required: 10,
-            unit: 'domains',
+            unit: 'cities',
           };
         },
       },
       {
         id: 'production-capacity',
-        description: 'Generate 200+ essence per turn',
+        description: 'Generate 200+ production per turn',
         check: (player) => {
           return player.production >= 200;
         },
@@ -137,7 +137,7 @@ export const VICTORY_PATHS: VictoryPathDefinition[] = [
           return {
             current: Math.floor(player.production),
             required: 200,
-            unit: 'essence/turn',
+            unit: 'production/turn',
           };
         },
       },
@@ -145,14 +145,14 @@ export const VICTORY_PATHS: VictoryPathDefinition[] = [
   },
   {
     type: 'survival',
-    name: 'Awakening',
-    description: 'Complete the summoning ritual in 50 turns with 50M+ cultists',
+    name: 'Survival Victory',
+    description: 'Survive 50 turns with 50M+ population',
     icon: '🛡️',
     color: 'text-green-500',
     conditions: [
       {
         id: 'turn-count',
-        description: 'Complete the ritual by turn 50',
+        description: 'Survive to turn 50',
         check: (player, nations, gameState) => {
           return gameState.turn >= 50;
         },
@@ -166,7 +166,7 @@ export const VICTORY_PATHS: VictoryPathDefinition[] = [
       },
       {
         id: 'population-threshold',
-        description: 'Maintain 50M+ devoted cultists',
+        description: 'Maintain 50M+ population',
         check: (player) => {
           return player.population >= 50;
         },

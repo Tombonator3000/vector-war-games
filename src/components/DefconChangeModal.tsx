@@ -2,19 +2,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { TrendingDown, TrendingUp, AlertTriangle, Shield } from 'lucide-react';
 import type { DefconChangeEvent } from '@/types/game';
+import type { ScenarioConfig } from '@/types/scenario';
 
 interface DefconChangeModalProps {
   event: DefconChangeEvent;
   onClose: () => void;
+  scenario?: ScenarioConfig;
 }
 
-export function DefconChangeModal({ event, onClose }: DefconChangeModalProps) {
+export function DefconChangeModal({ event, onClose, scenario }: DefconChangeModalProps) {
   const isEscalation = event.category === 'escalation';
   const Icon = isEscalation ? TrendingDown : TrendingUp;
   const iconColor = isEscalation ? 'text-red-400' : 'text-green-400';
   const borderColor = isEscalation ? 'border-red-500/60 bg-red-900/20' : 'border-green-500/60 bg-green-900/20';
   const titleColor = isEscalation ? 'text-red-400' : 'text-green-400';
-  const title = isEscalation ? 'VEIL FRACTURING' : 'VEIL STABILIZING';
+
+  // Conditional naming based on scenario
+  const isGreatOldOnes = scenario?.id === 'greatOldOnes';
+  const title = isEscalation
+    ? (isGreatOldOnes ? 'VEIL FRACTURING' : 'DEFCON ESCALATION')
+    : (isGreatOldOnes ? 'VEIL STABILIZING' : 'DEFCON DE-ESCALATION');
 
   const getDefconColor = (defcon: number) => {
     if (defcon === 1) return 'text-red-500';
@@ -25,14 +32,25 @@ export function DefconChangeModal({ event, onClose }: DefconChangeModalProps) {
   };
 
   const getDefconLabel = (defcon: number) => {
-    const labels: Record<number, string> = {
-      1: 'APOTHEOSIS',
-      2: 'VEIL SHATTERED',
-      3: 'VEIL FRACTURING',
-      4: 'VEIL THINNING',
-      5: 'VEIL INTACT'
+    if (isGreatOldOnes) {
+      const lovecraftLabels: Record<number, string> = {
+        1: 'APOTHEOSIS',
+        2: 'VEIL SHATTERED',
+        3: 'VEIL FRACTURING',
+        4: 'VEIL THINNING',
+        5: 'VEIL INTACT'
+      };
+      return lovecraftLabels[defcon] || 'UNKNOWN';
+    }
+
+    const normalLabels: Record<number, string> = {
+      1: 'NUCLEAR WAR',
+      2: 'FAST PACE',
+      3: 'ROUND HOUSE',
+      4: 'DOUBLE TAKE',
+      5: 'FADE OUT'
     };
-    return labels[defcon] || 'UNKNOWN';
+    return normalLabels[defcon] || 'UNKNOWN';
   };
 
   const getTriggerDescription = () => {
@@ -63,11 +81,11 @@ export function DefconChangeModal({ event, onClose }: DefconChangeModalProps) {
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Veil Integrity Change Display */}
+          {/* DEFCON/Veil Integrity Change Display */}
           <div className={`border ${isEscalation ? 'border-red-500/30 bg-red-900/20' : 'border-green-500/30 bg-green-900/20'} rounded-lg p-4`}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs uppercase tracking-widest text-gray-400 font-semibold">
-                Veil Integrity Change:
+                {isGreatOldOnes ? 'Veil Integrity Change:' : 'Alert Level Change:'}
               </span>
             </div>
             <div className="flex items-center justify-center gap-4">
@@ -124,9 +142,15 @@ export function DefconChangeModal({ event, onClose }: DefconChangeModalProps) {
                 </div>
               </div>
               <div className="text-sm text-amber-200">
-                {event.newDefcon === 1
-                  ? 'The Old Ones awaken. Reality unravels. All cultist hordes are empowered to enact the final ritual.'
-                  : 'The Veil trembles. Eldritch entities manifest. Reality fractures imminent.'}
+                {isGreatOldOnes ? (
+                  event.newDefcon === 1
+                    ? 'The Old Ones awaken. Reality unravels. All cultist hordes are empowered to enact the final ritual.'
+                    : 'The Veil trembles. Eldritch entities manifest. Reality fractures imminent.'
+                ) : (
+                  event.newDefcon === 1
+                    ? 'Nuclear war is imminent. All military forces are authorized to engage.'
+                    : 'Situation critical. Armed forces ready. Further escalation may be imminent.'
+                )}
               </div>
             </div>
           )}
