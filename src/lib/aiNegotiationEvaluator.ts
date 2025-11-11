@@ -186,7 +186,7 @@ export function evaluateNegotiation(
   if (finalScore < ACCEPTANCE_THRESHOLDS.LIKELY &&
       finalScore > ACCEPTANCE_THRESHOLDS.UNLIKELY) {
     // Consider counter-offer
-    if (shouldMakeCounterOffer(finalScore, aiNation.ai || 'balanced', relationship, trust)) {
+    if (shouldMakeCounterOffer(finalScore, aiNation.aiPersonality || 'balanced', relationship, trust)) {
       counterOffer = generateCounterOffer(
         negotiation,
         aiNation,
@@ -274,7 +274,7 @@ function calculatePersonalityBonus(
   negotiation: NegotiationState,
   aiNation: Nation
 ): number {
-  const personality = aiNation.ai || 'balanced';
+  const personality = aiNation.aiPersonality || 'balanced';
   const modifiers = PERSONALITY_MODIFIERS[personality as keyof typeof PERSONALITY_MODIFIERS] || PERSONALITY_MODIFIERS.balanced;
 
   let bonus = 0;

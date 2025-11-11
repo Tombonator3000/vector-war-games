@@ -18,9 +18,11 @@ import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson';
 import {
   computeDiplomaticColor,
   computeIntelColor,
+  computePandemicColor,
   computeResourceColor,
   computeUnrestColor,
 } from '@/lib/mapColorUtils';
+import type { PandemicStage } from '@/hooks/usePandemic';
 import {
   loadTerritoryData,
   createTerritoryBoundaries,
@@ -67,9 +69,9 @@ export type MapVisualStyle = 'realistic' | 'wireframe' | 'flat-realistic';
 
 export const MAP_VISUAL_STYLES: MapVisualStyle[] = ['realistic', 'wireframe', 'flat-realistic'];
 
-export type MapMode = 'standard' | 'diplomatic' | 'intel' | 'resources' | 'unrest';
+export type MapMode = 'standard' | 'diplomatic' | 'intel' | 'resources' | 'unrest' | 'pandemic';
 
-export const MAP_MODES: MapMode[] = ['standard', 'diplomatic', 'intel', 'resources', 'unrest'];
+export const MAP_MODES: MapMode[] = ['standard', 'diplomatic', 'intel', 'resources', 'unrest', 'pandemic'];
 
 export interface MapStyle {
   visual: MapVisualStyle;
@@ -82,6 +84,16 @@ export interface MapModeOverlayData {
   intelLevels: Record<string, number>;
   resourceTotals: Record<string, number>;
   unrest: Record<string, { morale: number; publicOpinion: number; instability: number }>;
+  pandemic?: {
+    infections: Record<string, number>;
+    heat: Record<string, number>;
+    casualties: Record<string, number>;
+    detections: Record<string, boolean>;
+    stage: PandemicStage;
+    globalInfection: number;
+    globalCasualties: number;
+    vaccineProgress: number;
+  };
 }
 
 export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'flat-realistic', mode: 'standard' };
@@ -1157,6 +1169,12 @@ function SceneContent({
     return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
   }, [modeData]);
 
+  const maxPandemicInfection = useMemo(() => {
+    if (!modeData?.pandemic) return 1;
+    const values = Object.values(modeData.pandemic.infections ?? {});
+    return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
+  }, [modeData]);
+
   // Color computation functions now imported from @/lib/mapColorUtils
   // This eliminates duplication with worldRenderer.ts
 
@@ -1322,6 +1340,12 @@ function SceneContent({
             let overlayScale = 0.28;
             let overlayOpacity = 0.35;
 
+            const pandemicData = modeData?.pandemic;
+            const infectionValue = pandemicData?.infections?.[overlayKey] ?? 0;
+            const normalizedPandemic = infectionValue > 0 ? infectionValue / (maxPandemicInfection || 1) : 0;
+            const heatValue = pandemicData?.heat?.[overlayKey] ?? 0;
+            const normalizedHeat = heatValue > 0 ? THREE.MathUtils.clamp(heatValue / 100, 0, 1) : normalizedPandemic;
+
             if (modeData && currentMode !== 'standard') {
               switch (currentMode) {
                 case 'diplomatic': {
@@ -1363,18 +1387,31 @@ function SceneContent({
                   }
                   break;
                 }
+                case 'pandemic': {
+                  if (normalizedPandemic > 0) {
+                    overlayColor = computePandemicColor(normalizedPandemic);
+                    overlayScale = 0.22 + normalizedPandemic * 0.55;
+                    overlayOpacity = 0.28 + normalizedHeat * 0.5;
+                  }
+                  break;
+                }
                 default:
                   break;
               }
             }
 
             const baseColor = nation.color || '#ff6b6b';
+            const pandemicColor = currentMode === 'pandemic' && normalizedPandemic > 0
+              ? computePandemicColor(normalizedPandemic)
+              : null;
             const markerColor =
               nation.isPlayer
                 ? '#7cff6b'
-                : currentMode !== 'standard' && overlayColor
-                  ? overlayColor
-                  : baseColor;
+                : pandemicColor
+                  ? pandemicColor
+                  : currentMode !== 'standard' && overlayColor
+                    ? overlayColor
+                    : baseColor;
 
             return (
               <group key={nation.id}>

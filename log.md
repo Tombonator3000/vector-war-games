@@ -3056,3 +3056,18 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Defaulted cultural power calculations in `src/lib/immigrationCultureTurnProcessor.ts` to treat missing intel or population as zero, preventing `NaN` results for edge-case nations.
 - Added `src/lib/immigrationCultureTurnProcessor.test.ts` to cover initialization when intel is omitted and confirm the computed cultural power remains finite.
 - Ran `npm run test -- immigrationCultureTurnProcessor` to verify the new coverage passes.
+### 2025-11-11T21:29:06Z - Prepare pandemic map mode implementation
+- Reviewed repository guidelines in root `AGENTS.md` and noted logging requirements.
+- Inspected project directory for nested agent instructions and confirmed none under `src/`.
+- Established baseline for upcoming pandemic overlay changes across globe and map renderers.
+### 2025-11-11T21:32:35Z - Implement pandemic map overlay systems
+- Reviewed GlobeScene, MapModeBar, Index page, and world renderer files to identify map mode extension points.
+- Gathered pandemic state and bio-warfare infection data structures to plan overlay payload wiring.
+### 2025-11-11T21:39:07Z - Wired pandemic map overlays and lint attempt
+- Extended `GlobeScene` map modes/types, injected pandemic overlays, and added computePandemicColor gradient utility.
+- Built `PandemicSpreadOverlay` component, updated Index map mode wiring, and synced 2D renderer plus MapModeBar ordering.
+- Ran `npm run lint` (fails due to legacy repo-wide lint issues unrelated to new changes).
+
+### 2025-11-11T22:07:21Z - Added Pandemic 2020 scenario configuration
+- Introduced the `pandemic2020` campaign in `src/types/scenario.ts` with modern election pressure, DEFCON 3 alert, and BioForge systems unlocked from turn one.
+- Documented the new scenario in `docs/2025-comprehensive-audit-roadmap.md` so planning materials list the pandemic campaign alongside existing options.

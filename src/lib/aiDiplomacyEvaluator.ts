@@ -69,7 +69,7 @@ function calculateEvaluationFactors(
   const relationshipScore = calculateRelationshipScore(aiNation, proposerNation);
 
   // Personality bias based on AI type
-  const personalityBias = getPersonalityBias(aiNation.ai || 'balanced', proposal.type);
+  const personalityBias = getPersonalityBias(aiNation.aiPersonality || 'balanced', proposal.type);
 
   // Strategic value of this specific proposal
   const strategicValue = calculateStrategicValue(proposal, aiNation, proposerNation, allNations);
@@ -494,7 +494,7 @@ function shouldAIInitiateProposalLegacy(
   const threatLevel = aiNation.threats?.[playerNation.id] || 0;
   const hasAlliance = aiNation.treaties?.[playerNation.id]?.alliance;
   const hasTruce = (aiNation.treaties?.[playerNation.id]?.truceTurns || 0) > 0;
-  const aiType = aiNation.ai || 'balanced';
+  const aiType = aiNation.aiPersonality || 'balanced';
 
   // Don't propose if already allied
   if (hasAlliance) return null;

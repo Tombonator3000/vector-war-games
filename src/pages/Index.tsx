@@ -178,6 +178,7 @@ import { GovernanceEventDialog } from '@/components/governance/GovernanceEventDi
 import { GovernanceDetailPanel } from '@/components/governance/GovernanceDetailPanel';
 import { PolicySelectionPanel } from '@/components/governance/PolicySelectionPanel';
 import { PoliticalStabilityOverlay } from '@/components/governance/PoliticalStabilityOverlay';
+import { PandemicSpreadOverlay } from '@/components/pandemic/PandemicSpreadOverlay';
 import { MapModeBar } from '@/components/MapModeBar';
 import { usePolicySystem } from '@/hooks/usePolicySystem';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
@@ -420,6 +421,10 @@ const MAP_MODE_DESCRIPTIONS: Record<MapMode, { label: string; description: strin
     label: 'Uro',
     description: 'Avdekker politisk stabilitet, opinion og krisesoner.',
   },
+  pandemic: {
+    label: 'Pandemi',
+    description: 'Visualiserer global infeksjon, varme og laboratoriedeteksjon.',
+  },
 };
 
 const MAP_MODE_HOTKEYS: Record<MapMode, string> = {
@@ -428,6 +433,7 @@ const MAP_MODE_HOTKEYS: Record<MapMode, string> = {
   intel: 'Alt+3',
   resources: 'Alt+4',
   unrest: 'Alt+5',
+  pandemic: 'Alt+6',
 };
 
 const isVisualStyleValue = (value: unknown): value is MapVisualStyle =>
@@ -2987,8 +2993,8 @@ function maybeBanter(nation: Nation, chance: number, pool?: string) {
   if (typeof window !== 'undefined' && window.banterSay) {
     try {
       // Determine pool based on context if not specified
-      if (!pool && nation.ai) {
-        pool = nation.ai; // Use AI personality as default pool
+      if (!pool && nation.aiPersonality) {
+        pool = nation.aiPersonality; // Use AI personality as default pool
       }
       window.banterSay(pool || 'default', nation, 1);
       return;
@@ -4941,8 +4947,8 @@ function log(msg: string, type: string = 'normal') {
 function aiTurn(n: Nation) {
   emitOverlayMessage('AI: ' + (n.leader || n.name), 800);
   if (n.population <= 0) return;
-  
-  maybeBanter(n, 0.3);
+
+  maybeBanter(n, 0.5); // Increased visibility
   
   // Determine AI personality modifiers
   let aggressionMod = 0;
@@ -4950,7 +4956,7 @@ function aiTurn(n: Nation) {
   let economicMod = 0;
   let intelMod = 0;
   
-  switch (n.ai) {
+  switch (n.aiPersonality) {
     case 'aggressive':
       aggressionMod = 0.3;
       defenseMod = -0.1;
@@ -5023,7 +5029,7 @@ function aiTurn(n: Nation) {
   }
 
   // UNIFIED DIPLOMACY: AI proactive diplomacy actions
-  const diplomacyBias = 0.18 + Math.max(0, defenseMod * 0.5) + (n.ai === 'defensive' ? 0.1 : 0) + (n.ai === 'balanced' ? 0.05 : 0);
+  const diplomacyBias = 0.18 + Math.max(0, defenseMod * 0.5) + (n.aiPersonality === 'defensive' ? 0.1 : 0) + (n.aiPersonality === 'balanced' ? 0.05 : 0);
   if (Math.random() < diplomacyBias) {
     // Try unified diplomacy first
     const potentialTargets = nations.filter(t => t !== n && !t.eliminated);
@@ -5086,11 +5092,11 @@ function aiTurn(n: Nation) {
     if (availableResearch.length > 0) {
       const project = availableResearch.sort((a, b) => {
         // Prioritize warheads for aggressive AI
-        if (a.category === 'warhead' && n.ai === 'aggressive') return -1;
-        if (b.category === 'warhead' && n.ai === 'aggressive') return 1;
+        if (a.category === 'warhead' && n.aiPersonality === 'aggressive') return -1;
+        if (b.category === 'warhead' && n.aiPersonality === 'aggressive') return 1;
         // Prioritize defense for defensive AI
-        if (a.category === 'defense' && n.ai === 'defensive') return -1;
-        if (b.category === 'defense' && n.ai === 'defensive') return 1;
+        if (a.category === 'defense' && n.aiPersonality === 'defensive') return -1;
+        if (b.category === 'defense' && n.aiPersonality === 'defensive') return 1;
         return 0;
       })[0];
       
@@ -5202,7 +5208,7 @@ function aiTurn(n: Nation) {
       const compute = (t: Nation) => {
         const threat = n.threats ? (n.threats[t.id] || 0) : 0;
         let score = threat;
-        const aiType = n.ai || '';
+        const aiType = n.aiPersonality || '';
         if (aiType === 'balanced') score *= 1.0;
         else if (aiType === 'isolationist') score *= 1.5;
         else if (aiType === 'aggressive') score *= 1.2;
@@ -5226,9 +5232,9 @@ function aiTurn(n: Nation) {
     if (yieldMT !== undefined && n.missiles > 0) {
       const launchSucceeded = launch(n, target, yieldMT);
       if (launchSucceeded) {
-        maybeBanter(n, 0.7);
+        maybeBanter(n, 0.9, 'launch'); // Increased with specific pool
         if (target.isPlayer) {
-          maybeBanter(n, 0.5);
+          maybeBanter(n, 0.8, 'reactive_hit'); // Increased with specific pool
         }
         return;
       }
@@ -5258,7 +5264,7 @@ function aiTurn(n: Nation) {
       pay(n, COSTS.missile);
       n.missiles++;
       log(`${n.name} builds missile`);
-      maybeBanter(n, 0.2);
+      maybeBanter(n, 0.5, 'build'); // Increased with specific pool
       return;
     }
     
@@ -5284,7 +5290,7 @@ function aiTurn(n: Nation) {
   
   // 7. ECONOMIC EXPANSION
   if (r < 0.80 + economicMod) {
-    const maxCities = n.ai === 'isolationist' ? 5 : n.ai === 'balanced' ? 4 : 3;
+    const maxCities = n.aiPersonality === 'isolationist' ? 5 : n.aiPersonality === 'balanced' ? 4 : 3;
     if ((n.cities || 1) < maxCities) {
       const cityCost = getCityCost(n);
       if (canAfford(n, cityCost)) {
@@ -5296,9 +5302,9 @@ function aiTurn(n: Nation) {
         const newLat = n.lat + Math.sin(angle) * spread;
         const newLon = n.lon + Math.cos(angle) * spread;
         CityLights.addCity(newLat, newLon, 1.0);
-        
+
         log(`${n.name} builds city #${n.cities}`);
-        maybeBanter(n, 0.3);
+        maybeBanter(n, 0.6, 'build'); // Increased with specific pool
         return;
       }
     }
@@ -5337,7 +5343,7 @@ function aiTurn(n: Nation) {
         onUpdateDisplay: updateDisplay,
         onShowModal: setDefconChangeEvent,
       });
-      maybeBanter(n, 0.4);
+      maybeBanter(n, 0.7); // Increased visibility
       return;
     }
   }
@@ -5378,6 +5384,10 @@ function aiTurn(n: Nation) {
     // Escalate if poor relations
     else if (playerRelationship < -30 && S.defcon > 1 && Math.random() < 0.25) {
       handleDefconChange(-1, `${n.name} responds to perceived threats with increased military readiness`, 'ai', {
+  // 9. DIPLOMACY - Occasionally de-escalate if defensive
+  if (n.aiPersonality === 'defensive' || n.aiPersonality === 'balanced') {
+    if (S.defcon < 5 && Math.random() < 0.1) {
+      handleDefconChange(1, `${n.name} proposes diplomatic de-escalation`, 'ai', {
         onAudioTransition: AudioSys.handleDefconTransition,
         onLog: log,
         onNewsItem: addNewsItem,
@@ -5881,15 +5891,16 @@ function endTurn() {
           false // We'd need to track failed elections to pass true here
         );
 
-        if (shouldChange && nation.ai) {
+        if (shouldChange && nation.aiPersonality) {
           const result = executeRegimeChange(
-            nation.ai as AIPersonality,
+            nation.aiPersonality as AIPersonality,
             nation.leader,
             nation.instability || 0
           );
 
           if (result.occurred && result.newPersonality && result.newLeader && result.newMetrics) {
             // Apply regime change
+            nation.aiPersonality = result.newPersonality;
             nation.ai = result.newPersonality;
             nation.leader = result.newLeader;
 
@@ -5954,7 +5965,7 @@ function endTurn() {
               publicOpinion: metrics?.publicOpinion || 60,
               cabinetApproval: metrics?.cabinetApproval || 60,
               instability: n.instability || 0,
-              ai: (n.ai || 'balanced') as AIPersonality,
+              ai: (n.aiPersonality || 'balanced') as AIPersonality,
               isPlayer: n.isPlayer,
             };
           });
@@ -7688,8 +7699,26 @@ export default function NoradVector() {
     const intelLevels: Record<string, number> = {};
     const resourceTotals: Record<string, number> = {};
     const unrest: Record<string, { morale: number; publicOpinion: number; instability: number }> = {};
+    const pandemicOverlay = {
+      infections: {} as Record<string, number>,
+      heat: {} as Record<string, number>,
+      casualties: {} as Record<string, number>,
+      detections: {} as Record<string, boolean>,
+      stage: pandemicState.stage,
+      globalInfection: pandemicState.globalInfection,
+      globalCasualties: pandemicState.casualtyTally,
+      vaccineProgress: pandemicState.vaccineProgress,
+    };
+
+    const nationById = new Map<string, Nation>();
+    const nationByName = new Map<string, Nation>();
 
     nations.forEach(nation => {
+      nationById.set(nation.id, nation);
+      if (typeof nation.name === 'string') {
+        nationByName.set(nation.name.toLowerCase(), nation);
+      }
+
       relationships[nation.id] = playerNation
         ? playerNation.relationships?.[nation.id] ?? nation.relationships?.[playerNation.id] ?? (nation.isPlayer ? 100 : 0)
         : 0;
@@ -7720,8 +7749,72 @@ export default function NoradVector() {
           };
     });
 
-    return { playerId, relationships, intelLevels, resourceTotals, unrest };
-  }, [governance.metrics, nations]);
+    if (pandemicIntegrationEnabled) {
+      pandemicState.outbreaks.forEach(outbreak => {
+        if (!outbreak) return;
+        const regionKey = typeof outbreak.region === 'string' ? outbreak.region : '';
+        const match = nationById.get(regionKey) ?? nationByName.get(regionKey.toLowerCase());
+        if (!match) return;
+
+        const infectionValue = Number.isFinite(outbreak.infection)
+          ? Math.max(0, Math.min(100, outbreak.infection))
+          : 0;
+        const heatValue = Number.isFinite(outbreak.heat)
+          ? Math.max(0, Math.min(100, outbreak.heat))
+          : 0;
+
+        if (infectionValue > 0) {
+          pandemicOverlay.infections[match.id] = Math.max(pandemicOverlay.infections[match.id] ?? 0, infectionValue);
+        }
+        if (heatValue > 0) {
+          pandemicOverlay.heat[match.id] = Math.max(pandemicOverlay.heat[match.id] ?? 0, heatValue);
+        }
+      });
+    }
+
+    if (pandemicIntegrationEnabled && bioWarfareEnabled) {
+      plagueState.countryInfections.forEach((infection, nationId) => {
+        const infectionLevel = Number.isFinite(infection?.infectionLevel)
+          ? Math.max(0, Math.min(100, infection.infectionLevel))
+          : 0;
+        const suspicion = Number.isFinite(infection?.suspicionLevel)
+          ? Math.max(0, Math.min(100, infection.suspicionLevel))
+          : 0;
+        const deaths = Number.isFinite(infection?.deaths)
+          ? Math.max(0, infection.deaths)
+          : 0;
+
+        if (infectionLevel > 0) {
+          pandemicOverlay.infections[nationId] = Math.max(pandemicOverlay.infections[nationId] ?? 0, infectionLevel);
+        }
+        if (suspicion > 0) {
+          pandemicOverlay.heat[nationId] = Math.max(pandemicOverlay.heat[nationId] ?? 0, suspicion);
+        }
+        if (deaths > 0) {
+          pandemicOverlay.casualties[nationId] = Math.max(pandemicOverlay.casualties[nationId] ?? 0, deaths);
+        }
+        if (infection?.detectedBioWeapon) {
+          pandemicOverlay.detections[nationId] = true;
+        }
+      });
+    }
+
+    return {
+      playerId,
+      relationships,
+      intelLevels,
+      resourceTotals,
+      unrest,
+      pandemic: pandemicIntegrationEnabled ? pandemicOverlay : undefined,
+    };
+  }, [
+    bioWarfareEnabled,
+    governance.metrics,
+    nations,
+    pandemicIntegrationEnabled,
+    pandemicState,
+    plagueState.countryInfections,
+  ]);
 
   useEffect(() => {
     currentMapModeData = mapModeData;
@@ -12268,6 +12361,10 @@ export default function NoradVector() {
               e.preventDefault();
               handleMapModeChange('unrest');
               return;
+            case '6':
+              e.preventDefault();
+              handleMapModeChange('pandemic');
+              return;
             default:
               break;
           }
@@ -12963,6 +13060,21 @@ export default function NoradVector() {
             canvasWidth={overlayCanvas.width}
             canvasHeight={overlayCanvas.height}
             visible={mapStyle.mode === 'unrest'}
+          />
+        )}
+
+        {overlayCanvas && mapStyle.mode === 'pandemic' && mapModeData.pandemic && (
+          <PandemicSpreadOverlay
+            nations={nations.map(n => ({
+              id: n.id,
+              name: n.name,
+              lon: n.lon || 0,
+              lat: n.lat || 0,
+            }))}
+            canvasWidth={overlayCanvas.width}
+            canvasHeight={overlayCanvas.height}
+            visible={mapStyle.mode === 'pandemic'}
+            pandemic={mapModeData.pandemic}
           />
         )}
 

@@ -33,14 +33,23 @@ export function evaluateProposal(
 ): { accept: boolean; reason: string } {
   const relationship = getRelationship(aiNation, proposer.id, allNations);
   const acceptanceModifier = getAcceptanceModifier(relationship);
+  const personality = aiNation.aiPersonality || 'balanced';
 
   switch (proposalType) {
     case 'alliance': {
+      // Personality affects alliance threshold
+      let allianceThreshold = RELATIONSHIP_ALLIED;
+      if (personality === 'defensive') {
+        allianceThreshold = RELATIONSHIP_FRIENDLY; // More eager for alliances
+      } else if (personality === 'aggressive' || personality === 'isolationist') {
+        allianceThreshold = RELATIONSHIP_ALLIED + 10; // Higher bar
+      }
+
       // Requires friendly relationship
-      if (relationship < RELATIONSHIP_ALLIED) {
+      if (relationship < allianceThreshold) {
         return {
           accept: false,
-          reason: `Our relationship (${relationship}) is not strong enough for an alliance. We need at least ${RELATIONSHIP_ALLIED}.`,
+          reason: `Our relationship (${relationship}) is not strong enough for an alliance. We need at least ${allianceThreshold}.`,
         };
       }
 
@@ -70,7 +79,17 @@ export function evaluateProposal(
 
     case 'truce': {
       // More lenient than alliance
-      const baseChance = 0.5;
+      let baseChance = 0.5;
+
+      // Personality affects willingness to accept truce
+      if (personality === 'defensive' || personality === 'balanced') {
+        baseChance = 0.6; // More likely to accept truce
+      } else if (personality === 'aggressive' || personality === 'chaotic') {
+        baseChance = 0.3; // Less likely to accept truce
+      } else if (personality === 'isolationist') {
+        baseChance = 0.7; // Very likely to accept truce
+      }
+
       const relationshipBonus = relationship / 100; // -1.0 to +1.0
       const acceptChance = baseChance + relationshipBonus;
 
@@ -170,9 +189,20 @@ export function considerDiplomaticAction(
   }
 
   const relationship = getRelationship(aiNation, targetNation.id, allNations);
+  const personality = aiNation.aiPersonality || 'balanced';
 
   // Consider alliance if relationship is very high
-  if (relationship >= RELATIONSHIP_ALLIED && !aiNation.alliances?.includes(targetNation.id)) {
+  // Personality affects eagerness to form alliances
+  let allianceThreshold = RELATIONSHIP_ALLIED;
+  if (personality === 'defensive') {
+    allianceThreshold = RELATIONSHIP_FRIENDLY; // More eager for alliances
+  } else if (personality === 'isolationist') {
+    allianceThreshold = RELATIONSHIP_ALLIED + 20; // Very reluctant
+  } else if (personality === 'aggressive') {
+    allianceThreshold = RELATIONSHIP_ALLIED + 10; // Somewhat reluctant
+  }
+
+  if (relationship >= allianceThreshold && !aiNation.alliances?.includes(targetNation.id)) {
     return {
       action: 'alliance',
       reason: `Excellent relationship (${relationship}) warrants an alliance`,
@@ -181,7 +211,18 @@ export function considerDiplomaticAction(
 
   // Consider aid if relationship is positive and AI is strong
   const isStrong = aiNation.production > 100;
-  if (isStrong && relationship > RELATIONSHIP_NEUTRAL && Math.random() < 0.1) {
+  let aidChance = 0.1;
+
+  // Personality affects willingness to give aid
+  if (personality === 'balanced' || personality === 'defensive') {
+    aidChance = 0.15; // More generous
+  } else if (personality === 'aggressive' || personality === 'isolationist') {
+    aidChance = 0.05; // Less generous
+  } else if (personality === 'trickster') {
+    aidChance = 0.12; // Moderate, might have ulterior motives
+  }
+
+  if (isStrong && relationship > RELATIONSHIP_NEUTRAL && Math.random() < aidChance) {
     return {
       action: 'aid',
       reason: 'Strengthen relationship through aid',
@@ -190,7 +231,19 @@ export function considerDiplomaticAction(
 
   // Consider peace if at war and AI is weak
   const isWeak = aiNation.missiles < 10 || (aiNation.cities || 0) <= 2;
-  if (isWeak && relationship < RELATIONSHIP_UNFRIENDLY) {
+
+  // Personality affects willingness to seek peace
+  let seeksPeace = isWeak && relationship < RELATIONSHIP_UNFRIENDLY;
+
+  if (personality === 'defensive' || personality === 'balanced') {
+    // These personalities seek peace even when not desperately weak
+    seeksPeace = seeksPeace || (aiNation.missiles < 15 && relationship < RELATIONSHIP_NEUTRAL);
+  } else if (personality === 'aggressive' || personality === 'chaotic') {
+    // These personalities only seek peace when truly desperate
+    seeksPeace = isWeak && aiNation.missiles < 5;
+  }
+
+  if (seeksPeace) {
     return {
       action: 'peace',
       reason: 'Need peace to recover',

@@ -228,7 +228,7 @@ export function assignAgendas(
 ): Nation {
   const primaryAgendas = getPrimaryAgendas();
   const hiddenAgendas = getHiddenAgendas();
-  const personality = nation.ai || 'balanced';
+  const personality = nation.aiPersonality || 'balanced';
   const leaderName = nation.leader;
 
   let primary: Agenda;
