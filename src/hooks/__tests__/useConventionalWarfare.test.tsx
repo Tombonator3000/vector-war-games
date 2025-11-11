@@ -309,8 +309,11 @@ describe('useConventionalWarfare', () => {
 
     expect(adequateSupply.success).toBe(true);
     expect(lowSupply.success).toBe(true);
-    expect(lowSupply.attackerCombatPower).toBeLessThan(adequateSupply.attackerCombatPower);
-    expect(lowSupply.supply.attacker).toBeLessThan(adequateSupply.supply.attacker);
+    if (adequateSupply.success && 'attackerCombatPower' in adequateSupply && 
+        lowSupply.success && 'attackerCombatPower' in lowSupply) {
+      expect(lowSupply.attackerCombatPower).toBeLessThan(adequateSupply.attackerCombatPower);
+      expect(lowSupply.supply.attacker).toBeLessThan(adequateSupply.supply.attacker);
+    }
   });
 });
 
