@@ -670,7 +670,7 @@ export function processAIProactiveDiplomacy(
     if (aiNation.eliminated) continue;
 
     // Get updated version of aiNation from updatedNations
-    const currentAiNation = updatedNations.find(n => n.id === aiNation.id) || aiNation;
+    let currentAiNation = updatedNations.find(n => n.id === aiNation.id) || aiNation;
 
     // Check if AI wants to initiate negotiation with player
     // Separate limit for player negotiations (max 8 per turn across all AI)
@@ -767,6 +767,10 @@ export function processAIProactiveDiplomacy(
               currentTurn,
               logFn
             );
+
+            // Refresh the initiating AI nation with the latest resource state
+            currentAiNation =
+              updatedNations.find(nation => nation.id === currentAiNation.id) || currentAiNation;
 
             aiToAiNegotiationCount++;
             aiNegotiationsThisTurn++;
