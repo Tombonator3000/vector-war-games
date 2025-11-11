@@ -203,6 +203,15 @@ export interface Nation {
   // Diplomatic Reputation System (Phase 4)
   diplomaticReputation?: any; // Legacy type - to be migrated
 
+  // DEFCON Peace Initiative System (Phase 2 Enhancement)
+  lastAggressiveAction?: number;  // Turn number of last aggressive action (war, nukes, orbital strikes)
+  lastPeaceInitiative?: number;   // Turn number of last peace initiative (cooldown tracking)
+  activeTreaties?: Array<{        // Active peace treaties
+    withNationId: string;
+    expiryTurn: number;
+    type: 'truce' | 'peace';
+  }>;
+
   // Agenda System (Leader personality traits)
   agendas?: import('./negotiation').Agenda[]; // Primary, hidden, and situational agendas
   hasEmbassyWith?: Record<string, boolean>; // Track which nations have established embassies
