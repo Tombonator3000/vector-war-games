@@ -384,6 +384,57 @@ export function aiAttemptDiplomacy(
 // ============================================================================
 
 /**
+ * Check if negotiation would be a duplicate or too recent
+ */
+function shouldBlockDuplicateNegotiation(
+  actor: Nation,
+  targetNation: Nation,
+  purpose: string,
+  currentTurn: number
+): boolean {
+  // Check if already have an active treaty/alliance of the same type
+  if (purpose === 'offer-alliance' || purpose === 'mutual-defense') {
+    if (actor.alliances?.includes(targetNation.id)) {
+      return true; // Already allied
+    }
+  }
+
+  if (purpose === 'peace-offer' || purpose === 'reconciliation') {
+    const treaty = actor.treaties?.[targetNation.id];
+    if (treaty?.truceTurns && treaty.truceTurns > 0) {
+      return true; // Already have active truce
+    }
+  }
+
+  // Check cooldown tracking (stored in nation's aiDiplomacyCooldowns)
+  const cooldowns = (actor as any).aiDiplomacyCooldowns || {};
+  const key = `${targetNation.id}:${purpose}`;
+  const lastNegotiation = cooldowns[key];
+
+  if (lastNegotiation && currentTurn - lastNegotiation < 5) {
+    return true; // Too recent (within 5 turns)
+  }
+
+  return false;
+}
+
+/**
+ * Record negotiation for cooldown tracking
+ */
+function recordNegotiationCooldown(
+  actor: Nation,
+  targetNation: Nation,
+  purpose: string,
+  currentTurn: number
+): void {
+  if (!(actor as any).aiDiplomacyCooldowns) {
+    (actor as any).aiDiplomacyCooldowns = {};
+  }
+  const key = `${targetNation.id}:${purpose}`;
+  (actor as any).aiDiplomacyCooldowns[key] = currentTurn;
+}
+
+/**
  * Check if AI should initiate negotiation with player or other nations
  * Returns AI-initiated negotiation if triggered, null otherwise
  *
@@ -414,6 +465,11 @@ export function aiCheckProactiveNegotiation(
     return null;
   }
 
+  // Check for duplicates and cooldowns
+  if (shouldBlockDuplicateNegotiation(actor, targetNation, triggerResult.purpose, currentTurn)) {
+    return null;
+  }
+
   // Generate the AI-initiated negotiation deal
   const aiNegotiation = generateAINegotiationDeal(
     actor,
@@ -423,12 +479,83 @@ export function aiCheckProactiveNegotiation(
     currentTurn
   );
 
+  // Record this negotiation for cooldown tracking
+  recordNegotiationCooldown(actor, targetNation, triggerResult.purpose, currentTurn);
+
   return aiNegotiation;
+}
+
+/**
+ * Validate negotiation before execution
+ * Returns validation result with detailed errors if invalid
+ */
+function validateNegotiationBeforeExecution(
+  negotiation: AIInitiatedNegotiation,
+  initiator: Nation,
+  target: Nation
+): { valid: boolean; reason?: string } {
+  // Check nations are still alive
+  if (initiator.eliminated || target.eliminated) {
+    return { valid: false, reason: 'One or both nations eliminated' };
+  }
+
+  // Validate based on negotiation purpose
+  const deal = negotiation.proposedDeal;
+
+  // Check if initiator can afford offered items
+  for (const item of deal.offerItems || []) {
+    if (item.type === 'gold' || item.type === 'production') {
+      if ((initiator.production || 0) < (item.amount || 0)) {
+        return {
+          valid: false,
+          reason: `${initiator.name} cannot afford ${item.amount} production (has ${initiator.production})`
+        };
+      }
+    }
+    if (item.type === 'intel') {
+      if ((initiator.intel || 0) < (item.amount || 0)) {
+        return {
+          valid: false,
+          reason: `${initiator.name} cannot afford ${item.amount} intel (has ${initiator.intel})`
+        };
+      }
+    }
+  }
+
+  // Check if target can afford requested items
+  for (const item of deal.requestItems || []) {
+    if (item.type === 'gold' || item.type === 'production') {
+      if ((target.production || 0) < (item.amount || 0)) {
+        return {
+          valid: false,
+          reason: `${target.name} cannot afford ${item.amount} production (has ${target.production})`
+        };
+      }
+    }
+    if (item.type === 'intel') {
+      if ((target.intel || 0) < (item.amount || 0)) {
+        return {
+          valid: false,
+          reason: `${target.name} cannot afford ${item.amount} intel (has ${target.intel})`
+        };
+      }
+    }
+  }
+
+  // Check for logical inconsistencies
+  if (negotiation.purpose === 'offer-alliance' || negotiation.purpose === 'mutual-defense') {
+    if (initiator.alliances?.includes(target.id)) {
+      return { valid: false, reason: 'Nations are already allied' };
+    }
+  }
+
+  return { valid: true };
 }
 
 /**
  * Handle AI auto-response to AI-to-AI negotiation
  * AI automatically evaluates and responds to negotiations from other AI
+ * Returns updated nations array if changes were made
  */
 function handleAItoAINegotiation(
   negotiation: AIInitiatedNegotiation,
@@ -437,7 +564,20 @@ function handleAItoAINegotiation(
   allNations: Nation[],
   currentTurn: number,
   logFn?: (msg: string, type?: string) => void
-): void {
+): Nation[] {
+  // Validate negotiation before proceeding
+  const validation = validateNegotiationBeforeExecution(negotiation, initiatorNation, targetNation);
+  if (!validation.valid) {
+    if (logFn) {
+      logFn(
+        `${initiatorNation.name}'s ${negotiation.purpose} with ${targetNation.name} failed validation: ${validation.reason}`,
+        'diplomacy'
+      );
+    }
+    console.warn('AI-to-AI negotiation validation failed:', validation.reason);
+    return allNations; // Return unchanged nations
+  }
+
   // Target AI evaluates the negotiation
   const evaluation = evaluateNegotiation(
     negotiation.proposedDeal,
@@ -460,44 +600,54 @@ function handleAItoAINegotiation(
         allNations,
         currentTurn
       );
-      
-      // Update nations array with modified nations
-      const nationIndex = allNations.findIndex(n => n.id === result.initiator.id);
-      if (nationIndex >= 0) allNations[nationIndex] = result.initiator;
-      
-      const targetIndex = allNations.findIndex(n => n.id === result.respondent.id);
-      if (targetIndex >= 0) allNations[targetIndex] = result.respondent;
+
+      // Return the updated nations array from the result
+      if (logFn) {
+        logFn(
+          `${targetNation.name} accepts ${negotiation.purpose} from ${initiatorNation.name} (probability: ${Math.round(evaluation.acceptanceProbability)}%)`,
+          'diplomacy'
+        );
+      }
+
+      return result.allNations;
+    } catch (error) {
+      // If execution fails, log the actual error with full details
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : '';
 
       if (logFn) {
         logFn(
-          `${targetNation.name} accepts ${negotiation.purpose} from ${initiatorNation.name}`,
+          `${targetNation.name} tried to accept ${initiatorNation.name}'s ${negotiation.purpose} but execution failed: ${errorMsg}`,
           'diplomacy'
         );
       }
-    } catch (error) {
-      // If execution fails, log but don't crash
-      if (logFn) {
-        logFn(
-          `${targetNation.name} tried to accept ${initiatorNation.name}'s ${negotiation.purpose} but execution failed`,
-          'diplomacy'
-        );
-      }
+
+      console.error('AI-to-AI negotiation execution failed:', {
+        error: errorMsg,
+        stack: errorStack,
+        negotiation,
+        initiator: initiatorNation.name,
+        target: targetNation.name
+      });
+
+      return allNations; // Return unchanged nations on error
     }
   } else {
     // AI rejects the deal
     if (logFn) {
       const reason = evaluation.rejectionReasons?.[0] || 'terms unacceptable';
       logFn(
-        `${targetNation.name} rejects ${negotiation.purpose} from ${initiatorNation.name} (${reason})`,
+        `${targetNation.name} rejects ${negotiation.purpose} from ${initiatorNation.name} (${reason}, probability: ${Math.round(evaluation.acceptanceProbability)}%)`,
         'diplomacy'
       );
     }
+    return allNations; // Return unchanged nations on rejection
   }
 }
 
 /**
  * Process AI proactive diplomacy for all AI nations
- * Returns array of AI-initiated negotiations
+ * Returns object with AI-initiated negotiations and updated nations array
  *
  * PHASE 3: Called during AI turn processing
  */
@@ -507,8 +657,11 @@ export function processAIProactiveDiplomacy(
   allNations: Nation[],
   currentTurn: number,
   logFn?: (msg: string, type?: string) => void
-): AIInitiatedNegotiation[] {
+): { negotiations: AIInitiatedNegotiation[]; updatedNations: Nation[] } {
   const aiNegotiations: AIInitiatedNegotiation[] = [];
+  let updatedNations = [...allNations]; // Work with a copy that we'll update
+  let playerNegotiationCount = 0;
+  let aiToAiNegotiationCount = 0;
 
   // Shuffle AI nations to randomize who goes first
   const shuffledAI = [...aiNations].sort(() => Math.random() - 0.5);
@@ -516,43 +669,66 @@ export function processAIProactiveDiplomacy(
   for (const aiNation of shuffledAI) {
     if (aiNation.eliminated) continue;
 
-    // Check if AI wants to initiate negotiation with player
-    const negotiationWithPlayer = aiCheckProactiveNegotiation(
-      aiNation,
-      playerNation,
-      allNations,
-      currentTurn,
-      aiNegotiations.length
-    );
+    // Get updated version of aiNation from updatedNations
+    const currentAiNation = updatedNations.find(n => n.id === aiNation.id) || aiNation;
 
-    if (negotiationWithPlayer) {
-      aiNegotiations.push(negotiationWithPlayer);
-      if (logFn) {
-        logFn(`${aiNation.name} initiates ${negotiationWithPlayer.purpose} with ${playerNation.name}`, 'diplomacy');
+    // Check if AI wants to initiate negotiation with player
+    // Separate limit for player negotiations (max 8 per turn across all AI)
+    if (playerNegotiationCount < 8) {
+      const currentPlayer = updatedNations.find(n => n.id === playerNation.id) || playerNation;
+      const negotiationWithPlayer = aiCheckProactiveNegotiation(
+        currentAiNation,
+        currentPlayer,
+        updatedNations,
+        currentTurn,
+        aiNegotiations.length
+      );
+
+      if (negotiationWithPlayer) {
+        aiNegotiations.push(negotiationWithPlayer);
+        playerNegotiationCount++;
+        if (logFn) {
+          logFn(`${currentAiNation.name} initiates ${negotiationWithPlayer.purpose} with ${currentPlayer.name}`, 'diplomacy');
+        }
       }
     }
 
     // Check with other AI nations (AI-to-AI diplomacy enabled)
-    // AI can now conduct diplomacy with other AI nations using the same rules as with players
-    if (aiNegotiations.length < 5) { // Increased limit to allow more AI-to-AI negotiations
-      const otherAI = allNations.filter(n =>
+    // Separate limit for AI-to-AI negotiations (max 15 per turn total)
+    // Each AI can do up to 2 AI-to-AI negotiations per turn
+    if (aiToAiNegotiationCount < 15) {
+      const otherAI = updatedNations.filter(n =>
         !n.isPlayer &&
         !n.eliminated &&
-        n.id !== aiNation.id
+        n.id !== currentAiNation.id
       );
 
       if (otherAI.length > 0) {
         // Sort other AI by priority (relationship, threats, etc.)
         const sortedTargets = otherAI.sort((a, b) => {
           // Prioritize based on relationship strength and threat level
-          const relA = Math.abs(aiNation.relationships?.[a.id] || 0);
-          const relB = Math.abs(aiNation.relationships?.[b.id] || 0);
-          const threatA = aiNation.threats?.[a.id] || 0;
-          const threatB = aiNation.threats?.[b.id] || 0;
+          const relA = currentAiNation.relationships?.[a.id] || 0; // Removed Math.abs()
+          const relB = currentAiNation.relationships?.[b.id] || 0;
+          const threatA = currentAiNation.threats?.[a.id] || 0;
+          const threatB = currentAiNation.threats?.[b.id] || 0;
 
-          // Higher priority: strong relationships or high threats
-          const priorityA = relA + (threatA * 0.5);
-          const priorityB = relB + (threatB * 0.5);
+          // Different priority logic for positive vs negative relationships
+          let priorityA = 0;
+          let priorityB = 0;
+
+          // Positive relationships (allies): prioritize strong positive relations
+          if (relA > 0) {
+            priorityA = relA * 1.5; // Boost positive relationships
+          } else if (relA < -30) {
+            // Negative relationships (enemies): prioritize if also high threat
+            priorityA = Math.abs(relA) * 0.3 + (threatA * 0.7);
+          }
+
+          if (relB > 0) {
+            priorityB = relB * 1.5;
+          } else if (relB < -30) {
+            priorityB = Math.abs(relB) * 0.3 + (threatB * 0.7);
+          }
 
           return priorityB - priorityA;
         });
@@ -560,14 +736,17 @@ export function processAIProactiveDiplomacy(
         // Check top 3 potential AI targets (or all if fewer than 3)
         const targetsToCheck = sortedTargets.slice(0, Math.min(3, sortedTargets.length));
 
+        let aiNegotiationsThisTurn = 0;
         for (const targetAI of targetsToCheck) {
-          // Stop if we've reached the negotiation limit
-          if (aiNegotiations.length >= 5) break;
+          // Stop if we've reached limits
+          if (aiToAiNegotiationCount >= 15 || aiNegotiationsThisTurn >= 2) break;
+
+          const currentTargetAI = updatedNations.find(n => n.id === targetAI.id) || targetAI;
 
           const negotiationWithAI = aiCheckProactiveNegotiation(
-            aiNation,
-            targetAI,
-            allNations,
+            currentAiNation,
+            currentTargetAI,
+            updatedNations,
             currentTurn,
             aiNegotiations.length
           );
@@ -575,26 +754,27 @@ export function processAIProactiveDiplomacy(
           if (negotiationWithAI) {
             // AI-to-AI negotiation: Process immediately (no UI needed)
             if (logFn) {
-              logFn(`${aiNation.name} initiates ${negotiationWithAI.purpose} with ${targetAI.name}`, 'diplomacy');
+              logFn(`${currentAiNation.name} initiates ${negotiationWithAI.purpose} with ${currentTargetAI.name}`, 'diplomacy');
             }
 
             // Target AI automatically evaluates and responds
-            handleAItoAINegotiation(
+            // This returns updated nations array
+            updatedNations = handleAItoAINegotiation(
               negotiationWithAI,
-              aiNation,
-              targetAI,
-              allNations,
+              currentAiNation,
+              currentTargetAI,
+              updatedNations,
               currentTurn,
               logFn
             );
 
-            // Only one negotiation per AI per turn to prevent spam
-            break;
+            aiToAiNegotiationCount++;
+            aiNegotiationsThisTurn++;
           }
         }
       }
     }
   }
 
-  return aiNegotiations;
+  return { negotiations: aiNegotiations, updatedNations };
 }
