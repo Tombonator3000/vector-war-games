@@ -63,7 +63,7 @@ export function ResourceStockpileDisplay({ nation, compact = false }: ResourceSt
 
   return (
     <div className="space-y-2">
-      <div className="text-sm font-semibold text-amber-300">Strategic Resources</div>
+      <div className="text-sm font-semibold text-amber-300">Occult Resources</div>
       {resources.map((resource) => {
         const info = RESOURCE_INFO[resource];
         const amount = nation.resourceStockpile![resource];
@@ -162,7 +162,7 @@ export function ResourceCostDisplay({ cost }: { cost: Partial<Record<StrategyRes
       {entries.map(([resource, amount]) => {
         if (resource === 'production') {
           return (
-            <span key={resource} className="flex items-center gap-1">
+            <span key={resource} className="flex items-center gap-1" title="Essence - Life force production">
               <span>🏭</span>
               <span className="font-mono">{amount}</span>
             </span>
@@ -170,7 +170,7 @@ export function ResourceCostDisplay({ cost }: { cost: Partial<Record<StrategyRes
         }
         if (resource === 'intel') {
           return (
-            <span key={resource} className="flex items-center gap-1">
+            <span key={resource} className="flex items-center gap-1" title="Corruption - Shadow knowledge">
               <span>🔍</span>
               <span className="font-mono">{amount}</span>
             </span>
