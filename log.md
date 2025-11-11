@@ -3052,3 +3052,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Defaulted cultural power calculations in `src/lib/immigrationCultureTurnProcessor.ts` to treat missing intel or population as zero, preventing `NaN` results for edge-case nations.
 - Added `src/lib/immigrationCultureTurnProcessor.test.ts` to cover initialization when intel is omitted and confirm the computed cultural power remains finite.
 - Ran `npm run test -- immigrationCultureTurnProcessor` to verify the new coverage passes.
+### 2025-11-11T21:09:21Z - Refresh AI negotiation initiator state
+- Updated `processAIProactiveDiplomacy` in `src/lib/aiDiplomacyActions.ts` to reacquire the acting AI nation after each AI-to-AI deal so affordability checks use current resources.
+- Confirmed loop continues using the refreshed nation context to prevent negative resource balances when multiple negotiations resolve consecutively.
