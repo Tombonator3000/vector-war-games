@@ -307,10 +307,22 @@ export function ActionConsequencePreview({
                 <Button
                   onClick={onConfirm}
                   disabled={consequences.blockedReasons && consequences.blockedReasons.length > 0}
-                  className="flex-1 bg-cyan-500 text-black hover:bg-cyan-400 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`flex-1 font-bold disabled:opacity-50 disabled:cursor-not-allowed ${
+                    consequences.blockedReasons && consequences.blockedReasons.length > 0
+                      ? 'bg-gray-500 text-gray-300'
+                      : consequences.actionTitle.toLowerCase().includes('launch') ||
+                        consequences.actionTitle.toLowerCase().includes('nuclear') ||
+                        consequences.actionTitle.toLowerCase().includes('missile')
+                      ? 'bg-red-600 text-white hover:bg-red-500 border-2 border-red-400 shadow-lg shadow-red-500/50 uppercase text-lg'
+                      : 'bg-cyan-500 text-black hover:bg-cyan-400'
+                  }`}
                 >
                   {consequences.blockedReasons && consequences.blockedReasons.length > 0
                     ? 'Action Blocked'
+                    : consequences.actionTitle.toLowerCase().includes('launch') ||
+                      consequences.actionTitle.toLowerCase().includes('nuclear') ||
+                      consequences.actionTitle.toLowerCase().includes('missile')
+                    ? '🚀 LAUNCH'
                     : 'Confirm Action'}
                 </Button>
               </div>
