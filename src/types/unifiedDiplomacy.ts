@@ -59,7 +59,8 @@ export type ProposalType =
   | 'truce'             // Temporary peace (10 turns)
   | 'aid'               // Economic assistance
   | 'joint-war'         // Declare war together
-  | 'peace';            // End conflict
+  | 'peace'             // End conflict
+  | 'peace-initiative'; // Global peace initiative (costs resources, improves all relations, +1 DEFCON)
 
 export interface DiplomaticProposal {
   id: string;

@@ -3145,6 +3145,25 @@ function productionPhase(rng: SeededRandom) {
     rng,
   };
   runProductionPhase(deps);
+
+  // Automatic de-escalation during peaceful periods
+  const player = PlayerManager.get();
+  const currentDefcon = GameStateManager.getDefcon();
+
+  if (player && currentDefcon < 5) {
+    const lastAggression = player.lastAggressiveAction || 0;
+    const peacefulTurns = S.turn - lastAggression;
+    const peacefulThreshold = 5; // Must be peaceful for 5 turns
+
+    // Every 3rd turn of peaceful behavior, reduce tensions
+    if (peacefulTurns >= peacefulThreshold && S.turn % 3 === 0) {
+      handleDefconChange(1, 'Prolonged peace reduces global tensions', 'system', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onUpdateDisplay: updateDisplay,
+      });
+    }
+  }
 }
 
 // World map loading
@@ -5291,10 +5310,33 @@ function aiTurn(n: Nation) {
     }
   }
   
-  // 8. ESCALATION - Reduce DEFCON
-  if (r < 0.90 + aggressionMod) {
-    if (S.defcon > 1 && Math.random() < 0.4) {
-      handleDefconChange(-1, `${n.name} escalates tensions through aggressive posturing`, 'ai', {
+  // 8. ENHANCED DEFCON MANAGEMENT - Personality-based escalation/de-escalation
+  const playerRelationship = getRelationship(n, PlayerManager.get()?.id || '', nations);
+  const aiPersonality = n.ai || 'balanced';
+
+  // CRITICAL: Emergency peace proposals at DEFCON 1
+  if (S.defcon === 1 && !n.atWar && Math.random() < 0.6) {
+    handleDefconChange(1, `${n.name} makes desperate plea for de-escalation to avoid nuclear war`, 'ai', {
+      onAudioTransition: AudioSys.handleDefconTransition,
+      onLog: log,
+      onNewsItem: (cat, msg, pri) => addNewsItem(cat, msg, 'breaking'),
+      onUpdateDisplay: updateDisplay,
+      onShowModal: setDefconChangeEvent,
+    });
+    log(`☮️ ${n.name} urgently proposes peace talks to avert catastrophe!`, 'diplomatic');
+    return;
+  }
+
+  // Aggressive AI: More likely to escalate, especially if relationships are poor
+  if (aiPersonality === 'aggressive' && S.defcon > 1) {
+    const escalationChance = playerRelationship < -30 ? 0.35 : 0.25;
+    if (r < 0.90 + aggressionMod && Math.random() < escalationChance) {
+      const messages = [
+        `${n.name} conducts aggressive military exercises`,
+        `${n.name} escalates tensions with provocative maneuvers`,
+        `${n.name} demonstrates military strength through saber-rattling`,
+      ];
+      handleDefconChange(-1, messages[Math.floor(Math.random() * messages.length)], 'ai', {
         onAudioTransition: AudioSys.handleDefconTransition,
         onLog: log,
         onNewsItem: addNewsItem,
@@ -5306,6 +5348,42 @@ function aiTurn(n: Nation) {
     }
   }
 
+  // Defensive/Peaceful AI: Actively tries to de-escalate at low DEFCON
+  if ((aiPersonality === 'defensive' || aiPersonality === 'isolationist') && S.defcon <= 3) {
+    const deescalationChance = S.defcon <= 2 ? 0.5 : 0.3;
+    if (Math.random() < deescalationChance) {
+      const messages = [
+        `${n.name} proposes emergency peace talks`,
+        `${n.name} signals willingness to reduce military readiness`,
+        `${n.name} calls for diplomatic crisis resolution`,
+      ];
+      handleDefconChange(1, messages[Math.floor(Math.random() * messages.length)], 'ai', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onNewsItem: (cat, msg) => addNewsItem(cat, msg, S.defcon <= 2 ? 'urgent' : 'important'),
+        onUpdateDisplay: updateDisplay,
+        onShowModal: setDefconChangeEvent,
+      });
+      return;
+    }
+  }
+
+  // Balanced AI: Context-dependent behavior
+  if (aiPersonality === 'balanced') {
+    // Try to de-escalate if good relations and low DEFCON
+    if (playerRelationship > 50 && S.defcon <= 3 && Math.random() < 0.4) {
+      handleDefconChange(1, `${n.name} leverages good relations to reduce tensions`, 'ai', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onNewsItem: addNewsItem,
+        onUpdateDisplay: updateDisplay,
+        onShowModal: setDefconChangeEvent,
+      });
+      return;
+    }
+    // Escalate if poor relations
+    else if (playerRelationship < -30 && S.defcon > 1 && Math.random() < 0.25) {
+      handleDefconChange(-1, `${n.name} responds to perceived threats with increased military readiness`, 'ai', {
   // 9. DIPLOMACY - Occasionally de-escalate if defensive
   if (n.aiPersonality === 'defensive' || n.aiPersonality === 'balanced') {
     if (S.defcon < 5 && Math.random() < 0.1) {
@@ -5316,6 +5394,7 @@ function aiTurn(n: Nation) {
         onUpdateDisplay: updateDisplay,
         onShowModal: setDefconChangeEvent,
       });
+      maybeBanter(n, 0.3);
       return;
     }
   }
@@ -9086,6 +9165,13 @@ export default function NoradVector() {
       // Handle special effects
       if (result.triggeredWar) {
         log('⚔️ Your decision has triggered war!', 'alert');
+
+        // Mark as aggressive action
+        const player = PlayerManager.get();
+        if (player) {
+          player.lastAggressiveAction = S.turn;
+        }
+
         handleDefconChange(-1, 'Your decision has triggered war!', 'player', {
           onAudioTransition: AudioSys.handleDefconTransition,
           onLog: log,
@@ -9746,6 +9832,9 @@ export default function NoradVector() {
             spendStrategicResource(commander, 'uranium', 30);
             commander.orbitalStrikesAvailable = (commander.orbitalStrikesAvailable || 1) - 1;
 
+            // Mark as aggressive action
+            commander.lastAggressiveAction = S.turn;
+
             log(`☄️ ORBITAL STRIKE devastates ${target.name}: ${popLoss}M casualties, ${warheadsDestroyed} warheads destroyed!`, 'alert');
             adjustThreat(target, commander.id, 35);
             handleDefconChange(-1, `Orbital strike against ${target.name} escalates global tensions`, 'player', {
@@ -9990,10 +10079,27 @@ export default function NoradVector() {
       nations = updatedNations;
       GameStateManager.setNations(updatedNations);
       PlayerManager.setNations(updatedNations);
-      toast({
-        title: 'Aid Sent',
-        description: `Sent ${terms.resourceAmount} production to ${target.name}. Relationship improved by +10.`,
-      });
+
+      // Significant aid demonstrates goodwill and reduces tensions
+      if (terms.resourceAmount >= 50) {
+        handleDefconChange(1, `Generous aid to ${target.name} demonstrates goodwill and eases tensions`, 'player', {
+          onAudioTransition: AudioSys.handleDefconTransition,
+          onLog: log,
+          onNewsItem: addNewsItem,
+          onUpdateDisplay: updateDisplay,
+          onShowModal: setDefconChangeEvent,
+        });
+
+        toast({
+          title: 'Aid Sent',
+          description: `Sent ${terms.resourceAmount} production to ${target.name}. Relationship improved by +10. Global tensions reduced.`,
+        });
+      } else {
+        toast({
+          title: 'Aid Sent',
+          description: `Sent ${terms.resourceAmount} production to ${target.name}. Relationship improved by +10.`,
+        });
+      }
     } else if (type === 'alliance') {
       // Check if relationship is high enough
       const relationship = getRelationship(player, targetId, nations);
@@ -10021,12 +10127,157 @@ export default function NoradVector() {
       GameStateManager.setNations(updatedNations);
       PlayerManager.setNations(updatedNations);
       log(`Alliance formed between ${player.name} and ${target.name}!`, 'diplomatic');
+
+      // Alliance formation reduces global tensions
+      handleDefconChange(1, `Alliance between ${player.name} and ${target.name} reduces global tensions`, 'player', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onNewsItem: addNewsItem,
+        onUpdateDisplay: updateDisplay,
+        onShowModal: setDefconChangeEvent,
+      });
+
       toast({
         title: 'Alliance Formed',
-        description: `You are now allied with ${target.name}.`,
+        description: `You are now allied with ${target.name}. Global tensions reduced.`,
+      });
+    } else if (type === 'truce') {
+      // Establish temporary peace treaty
+      const truceDuration = terms?.duration || 10; // Default 10 turns
+      const truceExpiryTurn = S.turn + truceDuration;
+
+      // Add truce to both nations
+      const updatedNations = nations.map(n => {
+        if (n.id === player.id) {
+          const activeTreaties = n.activeTreaties || [];
+          return {
+            ...n,
+            activeTreaties: [
+              ...activeTreaties,
+              { withNationId: targetId, expiryTurn: truceExpiryTurn, type: 'truce' as const }
+            ],
+          };
+        }
+        if (n.id === targetId) {
+          const activeTreaties = n.activeTreaties || [];
+          return {
+            ...n,
+            activeTreaties: [
+              ...activeTreaties,
+              { withNationId: player.id, expiryTurn: truceExpiryTurn, type: 'truce' as const }
+            ],
+            relationships: {
+              ...n.relationships,
+              [player.id]: Math.min(100, (n.relationships?.[player.id] || 0) + 15),
+            },
+          };
+        }
+        return n;
+      });
+
+      nations = updatedNations;
+      GameStateManager.setNations(updatedNations);
+      PlayerManager.setNations(updatedNations);
+      log(`Truce established between ${player.name} and ${target.name} for ${truceDuration} turns`, 'diplomatic');
+
+      // Truce has stronger de-escalation effect at critical DEFCON levels
+      const currentDefcon = GameStateManager.getDefcon();
+      const defconBonus = currentDefcon <= 2 ? 2 : 1; // Larger impact at crisis levels
+      handleDefconChange(
+        defconBonus,
+        `Truce agreement between ${player.name} and ${target.name} de-escalates conflict`,
+        'player',
+        {
+          onAudioTransition: AudioSys.handleDefconTransition,
+          onLog: log,
+          onNewsItem: addNewsItem,
+          onUpdateDisplay: updateDisplay,
+          onShowModal: setDefconChangeEvent,
+        }
+      );
+
+      toast({
+        title: 'Truce Established',
+        description: `${truceDuration}-turn peace treaty with ${target.name}. Global tensions significantly reduced.`,
+      });
+    } else if (type === 'peace-initiative') {
+      // Global peace initiative - costs resources, improves relations with ALL nations, +1 DEFCON
+      const peaceCost = { production: 100, intel: 50 };
+
+      // Check resources
+      if (player.production < peaceCost.production || player.intel < peaceCost.intel) {
+        toast({
+          title: 'Insufficient Resources',
+          description: `Peace Initiative requires ${peaceCost.production} production and ${peaceCost.intel} intel.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Check cooldown (can only be used every 5 turns)
+      const cooldownTurns = 5;
+      if (player.lastPeaceInitiative && (S.turn - player.lastPeaceInitiative) < cooldownTurns) {
+        const turnsRemaining = cooldownTurns - (S.turn - player.lastPeaceInitiative);
+        toast({
+          title: 'Initiative Not Ready',
+          description: `Peace Initiative can be used again in ${turnsRemaining} turns.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Check if player has been aggressive recently (blocks if attacked in last 3 turns)
+      if (player.lastAggressiveAction && (S.turn - player.lastAggressiveAction) < 3) {
+        toast({
+          title: 'Initiative Rejected',
+          description: 'Recent aggressive actions make peace initiatives implausible. Wait 3 turns after hostilities.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Deduct resources
+      player.production = Math.max(0, player.production - peaceCost.production);
+      player.intel = Math.max(0, player.intel - peaceCost.intel);
+      player.lastPeaceInitiative = S.turn;
+
+      // Improve relations with ALL living nations
+      const updatedNations = nations.map(n => {
+        if (n.id === player.id) {
+          return { ...player };
+        }
+        if (!n.eliminated && n.id !== player.id) {
+          return {
+            ...n,
+            relationships: {
+              ...n.relationships,
+              [player.id]: Math.min(100, (n.relationships?.[player.id] || 0) + 15),
+            },
+          };
+        }
+        return n;
+      });
+
+      nations = updatedNations;
+      GameStateManager.setNations(updatedNations);
+      PlayerManager.setNations(updatedNations);
+      log(`${player.name} launches global peace initiative`, 'diplomatic');
+
+      // Peace initiative always provides +1 DEFCON
+      handleDefconChange(1, `${player.name}'s peace initiative reduces global tensions`, 'player', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onNewsItem: addNewsItem,
+        onUpdateDisplay: updateDisplay,
+        onShowModal: setDefconChangeEvent,
+      });
+
+      toast({
+        title: 'Peace Initiative Launched',
+        description: `All nations respond positively (+15 relations). Global tensions reduced. Next initiative available in ${cooldownTurns} turns.`,
       });
     }
-  }, [nations, log, toast]);
+  }, [nations, log, toast, S.turn, addNewsItem, updateDisplay]);
 
   // Simplified Bio-Warfare Handlers
   const handleBioWeaponResearch = useCallback(() => {

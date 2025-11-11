@@ -155,6 +155,9 @@ export function launch(
   AudioSys.playSFX('launch');
   DoomsdayClock.tick(0.3);
 
+  // Mark as aggressive action
+  from.lastAggressiveAction = S.turn;
+
   // Track statistics - removed (not part of core GameState)
   if (from.isPlayer) {
 
