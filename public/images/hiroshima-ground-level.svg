@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">Stylised city ruins inspired by Hiroshima aftermath</title>
+  <desc id="desc">A sombre gradient sky above a shattered skyline with a surviving dome building and fallen power lines.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="60%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#ef4444" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ash" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#64748b" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="groundMask">
+      <rect x="0" y="320" width="960" height="220" rx="8"/>
+    </clipPath>
+  </defs>
+  <rect width="960" height="540" fill="url(#sky)"/>
+  <rect width="960" height="540" fill="url(#glow)" opacity="0.6"/>
+  <g opacity="0.55">
+    <circle cx="780" cy="110" r="180" fill="#f97316" fill-opacity="0.18"/>
+    <circle cx="780" cy="120" r="120" fill="#f59e0b" fill-opacity="0.1"/>
+  </g>
+  <g clip-path="url(#groundMask)">
+    <rect x="0" y="320" width="960" height="220" fill="#0f172a"/>
+    <rect x="0" y="320" width="960" height="220" fill="#111827" opacity="0.3"/>
+    <g fill="#1f2937">
+      <path d="M60 420h80v120H60z"/>
+      <path d="M160 360h70v180h-70z"/>
+      <path d="M250 330h95v210h-95z"/>
+      <path d="M370 300h60v240h-60z"/>
+    </g>
+    <g fill="#0f172a">
+      <path d="M140 460h120v80H140z"/>
+      <path d="M300 430h90v110h-90z"/>
+      <path d="M430 380h140v160H430z"/>
+    </g>
+    <g fill="#eab308" opacity="0.2">
+      <rect x="280" y="340" width="20" height="80"/>
+      <rect x="520" y="360" width="26" height="110"/>
+      <rect x="600" y="370" width="18" height="90"/>
+    </g>
+  </g>
+  <g fill="#020617" opacity="0.75">
+    <path d="M620 410h36v150h-36z"/>
+    <path d="M656 360h32v200h-32z"/>
+    <path d="M688 330h55v230h-55z"/>
+  </g>
+  <g fill="#f3f4f6" opacity="0.2">
+    <rect x="612" y="390" width="80" height="12"/>
+    <rect x="630" y="420" width="52" height="10"/>
+  </g>
+  <g transform="translate(760 310)" fill="#94a3b8">
+    <path d="M0 0h18v130H0z" opacity="0.45"/>
+    <path d="M18 0h18v130H18z" opacity="0.3"/>
+    <path d="M36 0h18v130H36z" opacity="0.5"/>
+  </g>
+  <g transform="translate(470 250)" fill="#cbd5f5">
+    <ellipse cx="40" cy="110" rx="40" ry="110" fill="#94a3b8" opacity="0.4"/>
+    <path d="M0 150c0-44 30-80 68-80s68 36 68 80v110H0z" fill="#1e293b"/>
+    <path d="M34 112c0-20 14-36 32-36s32 16 32 36v148H34z" fill="#0f172a"/>
+    <rect x="20" y="94" width="96" height="18" fill="#1e293b"/>
+    <rect x="16" y="132" width="104" height="18" fill="#1e293b"/>
+  </g>
+  <g stroke="#94a3b8" stroke-width="4" stroke-linecap="round" opacity="0.6">
+    <path d="M120 260l140 50"/>
+    <path d="M80 300l172 60"/>
+    <path d="M40 340l200 72"/>
+  </g>
+  <g opacity="0.3">
+    <path d="M120 240l-14 46 22-10-8-36z" fill="#e2e8f0"/>
+    <path d="M220 280l-18 38 34-16-16-22z" fill="#e2e8f0"/>
+    <path d="M180 260l-10 30 28-14-18-16z" fill="#e2e8f0"/>
+  </g>
+  <rect x="0" y="280" width="960" height="260" fill="url(#ash)"/>
+</svg>

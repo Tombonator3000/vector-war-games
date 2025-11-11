@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">Stylised mushroom cloud inspired by Hiroshima detonation</title>
+  <desc id="desc">An ominous nuclear cloud rises over a devastated river delta rendered in vector gradients.</desc>
+  <defs>
+    <radialGradient id="burst" cx="0.55" cy="0.25" r="0.6">
+      <stop offset="0%" stop-color="#facc15"/>
+      <stop offset="35%" stop-color="#f97316"/>
+      <stop offset="70%" stop-color="#fb7185"/>
+      <stop offset="100%" stop-color="#1f2937"/>
+    </radialGradient>
+    <linearGradient id="horizon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="river" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.15"/>
+    </linearGradient>
+    <filter id="noise" x="-0.02" y="-0.02" width="1.04" height="1.04">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.15"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="960" height="540" fill="url(#horizon)"/>
+  <g opacity="0.22" filter="url(#noise)">
+    <rect width="960" height="540" fill="#f8fafc"/>
+  </g>
+  <g transform="translate(140 60)">
+    <ellipse cx="360" cy="200" rx="320" ry="180" fill="url(#burst)" opacity="0.92"/>
+    <ellipse cx="360" cy="130" rx="220" ry="110" fill="#fcd34d" opacity="0.6"/>
+    <ellipse cx="360" cy="170" rx="260" ry="150" fill="#fb923c" opacity="0.45"/>
+    <ellipse cx="360" cy="210" rx="300" ry="180" fill="#f97316" opacity="0.3"/>
+    <path d="M250 180c-60 70-20 140 10 190s30 110-10 150h260c-40-40-60-100-10-150s70-120 10-190c-70-70-210-70-270 0z" fill="#fbbf24" opacity="0.35"/>
+    <path d="M300 210c-30 30-10 74 4 102 14 28 22 72-4 110h120c-26-38-18-82-4-110 14-28 34-72 4-102-36-36-96-36-120 0z" fill="#1f2937" opacity="0.8"/>
+  </g>
+  <g transform="translate(0 300)">
+    <rect x="0" y="0" width="960" height="240" fill="#020617"/>
+    <rect x="0" y="0" width="960" height="160" fill="#0f172a" opacity="0.6"/>
+    <path d="M0 120c120-60 220-60 340 0s240 60 360 0 180-60 260 0v120H0z" fill="#1f2937"/>
+    <path d="M0 130c120-50 220-50 340 0s240 50 360 0 180-50 260 0v20H0z" fill="url(#river)" opacity="0.5"/>
+    <g fill="#93c5fd" opacity="0.35">
+      <path d="M80 60c40-12 76-12 116 0v34H80z"/>
+      <path d="M260 72c48-16 92-16 140 0v30H260z"/>
+      <path d="M480 64c50-18 96-18 146 0v40H480z"/>
+      <path d="M700 68c46-18 88-18 134 0v36H700z"/>
+    </g>
+    <g fill="#e2e8f0" opacity="0.18">
+      <path d="M40 150l80-22v62H40z"/>
+      <path d="M220 140l96-24v76h-96z"/>
+      <path d="M440 132l110-28v88H440z"/>
+      <path d="M680 146l120-36v100H680z"/>
+    </g>
+  </g>
+  <g opacity="0.35" fill="#fda4af">
+    <circle cx="760" cy="120" r="18"/>
+    <circle cx="720" cy="90" r="12"/>
+    <circle cx="820" cy="100" r="10"/>
+    <circle cx="700" cy="130" r="8"/>
+    <circle cx="840" cy="150" r="6"/>
+  </g>
+</svg>

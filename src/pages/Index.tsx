@@ -198,6 +198,9 @@ import { IntroScreen } from '@/components/setup/IntroScreen';
 import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen';
 import { canAfford, pay, getCityCost, getCityBuildTime, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget, handleDefconChange } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
+import { useNuclearAftermath, DEFAULT_NUCLEAR_AFTERMATH_DELAY } from '@/hooks/useNuclearAftermath';
+import { NuclearAftermathModal } from '@/components/modals/NuclearAftermathModal';
+import { emitNuclearAftermathEvent } from '@/state/nuclearAftermathEvents';
 import { modifyRelationship, canFormAlliance, RELATIONSHIP_ALLIED } from '@/lib/relationshipUtils';
 import {
   project,
@@ -4451,6 +4454,22 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
       window.__gameAddNewsItem('crisis', `${target.name} suffers nuclear annihilation: ${impact.humanitarianSummary}`, 'critical');
     }
 
+    const stageSummaries = impact.stageReports
+      .map(stage => stage.summary)
+      .filter((summary): summary is string => Boolean(summary));
+
+    emitNuclearAftermathEvent({
+      nationId: target.id,
+      nationName: target.name,
+      humanitarianSummary: impact.humanitarianSummary,
+      environmentalSummary: impact.environmentalSummary,
+      stageSummaries,
+      severity: impact.severity,
+      falloutSeverity: getFalloutSeverityLevel(Math.min(1, Math.abs(impact.radiationDelta))),
+      totalRefugees: impact.totalRefugees,
+      turnCreated: S.turn ?? 0,
+    });
+
     if (target.isPlayer) {
       if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
       S.statistics.nukesReceived++;
@@ -5539,6 +5558,8 @@ function endTurn() {
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
 
+      nuclearAftermath.advanceTurn(S.turn);
+
       // Update formal war state and espionage systems for the new turn
       const casusUpdatedNations = updateCasusBelliForAllNations(nations, S.turn) as LocalNation[];
       nations = casusUpdatedNations;
@@ -6130,6 +6151,26 @@ export default function NoradVector() {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [civInfoPanelOpen, setCivInfoPanelOpen] = useState(false);
   const [civInfoDefaultTab, setCivInfoDefaultTab] = useState<'own-status' | 'enemy-status' | 'diplomacy' | 'research'>('own-status');
+  const nuclearAftermathDelay = useMemo(() => {
+    const stored = Storage.getItem('nuclear_aftermath_delay');
+    const storedValue = stored ? Number.parseInt(stored, 10) : Number.NaN;
+    if (Number.isFinite(storedValue) && storedValue >= 0) {
+      return Math.floor(storedValue);
+    }
+
+    const scenarioDelay = (S?.scenario as any)?.nuclearAftermathDelay;
+    if (typeof scenarioDelay === 'number' && Number.isFinite(scenarioDelay) && scenarioDelay >= 0) {
+      return Math.floor(scenarioDelay);
+    }
+
+    const settingsDelay = (S as any)?.settings?.nuclearAftermathDelay;
+    if (typeof settingsDelay === 'number' && Number.isFinite(settingsDelay) && settingsDelay >= 0) {
+      return Math.floor(settingsDelay);
+    }
+
+    return DEFAULT_NUCLEAR_AFTERMATH_DELAY;
+  }, []);
+  const nuclearAftermath = useNuclearAftermath({ delay: nuclearAftermathDelay });
   const [activeDiplomacyProposal, setActiveDiplomacyProposal] = useState<DiplomacyProposal | null>(null);
   const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
   const [showEnhancedDiplomacy, setShowEnhancedDiplomacy] = useState(false);
@@ -14126,8 +14167,14 @@ export default function NoradVector() {
         />
       )}
 
-      <TutorialGuide 
-        open={showTutorial} 
+      <NuclearAftermathModal
+        open={Boolean(nuclearAftermath.activeAftermath)}
+        aftermath={nuclearAftermath.activeAftermath}
+        onClose={nuclearAftermath.dismissActiveAftermath}
+      />
+
+      <TutorialGuide
+        open={showTutorial}
         onClose={() => {
           setShowTutorial(false);
           Storage.setItem('has_seen_tutorial', 'true');

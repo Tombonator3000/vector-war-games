@@ -3055,3 +3055,14 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Adjusted conventional warfare tests for deterministic results, added stalemate coverage, and ran `npm run test -- useConventionalWarfare` to verify scenarios.
 ### 2025-11-11T08:03:24Z - Refresh UI after nuclear strikes
 - Added an `updateDisplay()` call at the end of the nuclear detonation handler so population and scoreboard values refresh immediately after resolving a strike.
+### 2025-11-11T08:25:30Z - Draft nuclear aftermath queue system
+- Created `src/state/nuclearAftermathEvents.ts` and `src/hooks/useNuclearAftermath.ts` to capture detonation telemetry, delay reveal by configurable turns, and expose modal-ready entries.
+- Added `src/hooks/__tests__/useNuclearAftermath.test.ts` verifying queue delay handling and modal promotion timing.
+### 2025-11-11T08:34:42Z - Integrate aftermath workflow into main game loop
+- Updated `src/pages/Index.tsx` to emit aftermath events during nuclear resolution, tick the queue each turn, and surface the new `NuclearAftermathModal` once entries mature.
+### 2025-11-11T08:38:57Z - Ship visual briefing assets and presentation
+- Added Hiroshima public-domain imagery under `public/images/` and built `src/components/modals/NuclearAftermathModal.tsx` to render humanitarian and environmental briefings with accessibility captions.
+
+### 2025-11-11T09:22:00Z - Swap aftermath imagery to vector illustrations
+- Replaced binary Hiroshima photographs with internally created SVG illustrations to keep the repo free of large binary blobs while retaining respectful visual storytelling.
+- Updated `NuclearAftermathModal` defaults to reference the new vector assets with refreshed accessibility captions.
