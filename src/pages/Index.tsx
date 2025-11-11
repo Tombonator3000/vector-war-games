@@ -5624,7 +5624,7 @@ function endTurn() {
         const aiNations = nations.filter(n => !n.isPlayer && !n.eliminated);
 
         // Use the proper integrated function for AI proactive diplomacy
-        const newNegotiations = processAIProactiveDiplomacy(
+        const diplomacyResult = processAIProactiveDiplomacy(
           aiNations,
           player,
           nations,
@@ -5632,11 +5632,17 @@ function endTurn() {
           log
         );
 
+        // CRITICAL: Apply updated nations from AI-to-AI negotiations
+        // AI-to-AI negotiations modify nation states (alliances, resources, etc.)
+        nations = diplomacyResult.updatedNations;
+        GameStateManager.setNations(nations);
+        PlayerManager.setNations(nations);
+
         // Add new negotiations to state
         // NOTE: AI negotiations UI temporarily disabled during refactoring
         /*
-        if (newNegotiations.length > 0) {
-          setAiInitiatedNegotiations(prev => [...prev, ...newNegotiations]);
+        if (diplomacyResult.negotiations.length > 0) {
+          setAiInitiatedNegotiations(prev => [...prev, ...diplomacyResult.negotiations]);
         }
         */
       }
