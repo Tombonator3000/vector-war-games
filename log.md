@@ -3048,3 +3048,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-10T15:11:44Z - Hide launch control while consequence preview is active
 - Updated the Launch Control dialog in `src/pages/Index.tsx` to only open when a launch is pending and no consequence preview is visible, preventing overlapping modals.
 - Guarded dialog content and controls against active consequence previews so players only see and interact with the preview until it is dismissed.
+### 2025-11-11T08:03:24Z - Refresh UI after nuclear strikes
+- Added an `updateDisplay()` call at the end of the nuclear detonation handler so population and scoreboard values refresh immediately after resolving a strike.

@@ -4497,6 +4497,7 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
 
   checkVictory();
   checkVictoryProgress();
+  updateDisplay();
 }
 
 // Launch submarine
