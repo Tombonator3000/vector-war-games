@@ -335,15 +335,15 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     if (n.population <= 0) return;
 
     // Base production - balanced for all nations
-    const baseProduction = Math.floor(n.population * 0.12);
-    const baseProd = baseProduction + (n.cities || 1) * 12;
+    const baseProduction = Math.floor(n.population * 0.20);
+    const baseProd = baseProduction + (n.cities || 1) * 20;
     const baseUranium = Math.floor(n.population * 0.025) + (n.cities || 1) * 4;
     const baseIntel = Math.floor(n.population * 0.04) + (n.cities || 1) * 3;
 
     // Apply green shift debuff if active
     let prodMult = 1;
     let uranMult = 1;
-    const hungerPenalty = Math.min(0.95, (n.falloutHunger ?? 0) / 100);
+    const hungerPenalty = Math.min(0.50, (n.falloutHunger ?? 0) / 100);
     if (hungerPenalty > 0) {
       prodMult *= 1 - hungerPenalty;
       if (n === PlayerManager.get() && hungerPenalty > 0.5) {
@@ -351,7 +351,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       }
     }
 
-    const sicknessPenalty = Math.min(0.75, (n.radiationSickness ?? 0) / 130);
+    const sicknessPenalty = Math.min(0.40, (n.radiationSickness ?? 0) / 130);
     if (sicknessPenalty > 0) {
       const penaltyFactor = 1 - sicknessPenalty;
       prodMult *= penaltyFactor;

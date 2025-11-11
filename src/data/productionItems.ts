@@ -19,9 +19,8 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '🚀',
     baseTurnsToComplete: 3,
     resourceCosts: {
-      production: 120,
+      production: 80,
       uranium: 15,
-      electronics: 8,
     },
     unlocks: 'nuclear_missile',
   },
@@ -36,7 +35,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     resourceCosts: {
       production: 150,
       uranium: 18,
-      electronics: 10,
     },
     requiresResearch: ['submarine_tech'],
     unlocks: 'slbm_missile',
@@ -52,8 +50,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     resourceCosts: {
       production: 500,
       uranium: 40,
-      electronics: 25,
-      steel: 80,
     },
     requiresResearch: ['submarine_tech'],
     requiresBuilding: ['naval_base'],
@@ -69,9 +65,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '⚔️',
     baseTurnsToComplete: 5,
     resourceCosts: {
-      production: 180,
-      steel: 30,
-      electronics: 5,
+      production: 120,
     },
     minTurn: 11,
     unlocks: 'army_unit',
@@ -86,8 +80,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     baseTurnsToComplete: 4,
     resourceCosts: {
       production: 150,
-      steel: 25,
-      electronics: 10,
     },
     minTurn: 11,
     unlocks: 'air_unit',
@@ -102,8 +94,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     baseTurnsToComplete: 8,
     resourceCosts: {
       production: 300,
-      steel: 60,
-      electronics: 15,
     },
     requiresBuilding: ['naval_base'],
     minTurn: 11,
@@ -123,8 +113,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     baseTurnsToComplete: 6,
     resourceCosts: {
       production: 200,
-      electronics: 20,
-      steel: 15,
     },
     unlocks: 'abm_defense',
   },
@@ -138,7 +126,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     baseTurnsToComplete: 4,
     resourceCosts: {
       production: 100,
-      electronics: 15,
     },
     unlocks: 'radar_building',
   },
@@ -152,7 +139,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     baseTurnsToComplete: 5,
     resourceCosts: {
       production: 120,
-      steel: 40,
     },
     unlocks: 'bunker_building',
   },
@@ -169,8 +155,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '🏭',
     baseTurnsToComplete: 5,
     resourceCosts: {
-      production: 150,
-      steel: 20,
+      production: 100,
     },
     unlocks: 'factory_building',
   },
@@ -184,7 +169,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     baseTurnsToComplete: 6,
     resourceCosts: {
       production: 180,
-      electronics: 20,
     },
     requiresFocus: ['research_investment'],
     unlocks: 'research_lab_building',
@@ -199,7 +183,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     baseTurnsToComplete: 7,
     resourceCosts: {
       production: 200,
-      electronics: 25,
     },
     requiresFocus: ['intelligence_agency'],
     unlocks: 'intel_facility_building',
@@ -218,7 +201,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     baseTurnsToComplete: 10,
     resourceCosts: {
       production: 350,
-      electronics: 40,
       uranium: 10,
     },
     requiresFocus: ['satellite_network'],
@@ -235,7 +217,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     baseTurnsToComplete: 8,
     resourceCosts: {
       production: 250,
-      electronics: 15,
       intel: 30,
     },
     requiresResearch: ['bio_weapons'],
@@ -252,7 +233,6 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     baseTurnsToComplete: 7,
     resourceCosts: {
       production: 220,
-      electronics: 35,
       intel: 20,
     },
     requiresFocus: ['cyber_warfare_division'],

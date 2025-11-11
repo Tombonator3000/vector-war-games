@@ -190,7 +190,7 @@ export function calculateNationResourceGeneration(
   });
 
   // Apply nation-wide modifiers (morale, technology, etc.)
-  const moraleModifier = Math.max(0.5, Math.min(1.5, (nation.morale || 50) / 50));
+  const moraleModifier = Math.max(0.7, Math.min(1.3, (nation.morale || 50) / 50));
 
   generation.oil = Math.floor(generation.oil * moraleModifier);
   generation.uranium = Math.floor(generation.uranium * moraleModifier);
