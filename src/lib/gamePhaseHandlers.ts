@@ -335,29 +335,27 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     if (n.population <= 0) return;
 
     // Base production - balanced for all nations
-    const baseProduction = Math.floor(n.population * 0.20);
-    const baseProd = baseProduction + (n.cities || 1) * 20;
-    // NOTE: Uranium now comes ONLY from territorial resources (no double generation)
+    const baseProduction = Math.floor(n.population * 0.12);
+    const baseProd = baseProduction + (n.cities || 1) * 12;
+    const baseUranium = Math.floor(n.population * 0.025) + (n.cities || 1) * 4;
     const baseIntel = Math.floor(n.population * 0.04) + (n.cities || 1) * 3;
 
     // Apply green shift debuff if active
     let prodMult = 1;
     let uranMult = 1;
-    // Reduced fallout hunger penalty from 95% max to 50% max
-    const hungerPenalty = Math.min(0.50, (n.falloutHunger ?? 0) / 200);
+    const hungerPenalty = Math.min(0.95, (n.falloutHunger ?? 0) / 100);
     if (hungerPenalty > 0) {
       prodMult *= 1 - hungerPenalty;
-      if (n === PlayerManager.get() && hungerPenalty > 0.3) {
+      if (n === PlayerManager.get() && hungerPenalty > 0.5) {
         log(`${n.name} agricultural collapse: fallout starvation cripples output`, 'warning');
       }
     }
 
-    // Reduced radiation sickness penalty from 75% max to 40% max
-    const sicknessPenalty = Math.min(0.40, (n.radiationSickness ?? 0) / 325);
+    const sicknessPenalty = Math.min(0.75, (n.radiationSickness ?? 0) / 130);
     if (sicknessPenalty > 0) {
       const penaltyFactor = 1 - sicknessPenalty;
       prodMult *= penaltyFactor;
-      uranMult *= Math.max(0.5, penaltyFactor);
+      uranMult *= Math.max(0.1, penaltyFactor - 0.1 * sicknessPenalty);
     }
 
     if (n.refugeeFlow && n.refugeeFlow > 0) {
@@ -388,10 +386,8 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
     const moraleMultiplier = calculateMoraleProductionMultiplier(n.morale ?? 0);
     n.production += Math.floor(baseProd * prodMult * economyProdMult * moraleMultiplier);
-    // Uranium now comes from territorial resources only (except tech bonuses)
-    if (economyUraniumBonus > 0) {
-      addStrategicResource(n, 'uranium', economyUraniumBonus);
-    }
+    const uraniumGain = Math.floor(baseUranium * uranMult * moraleMultiplier) + economyUraniumBonus;
+    addStrategicResource(n, 'uranium', uraniumGain);
     n.intel += Math.floor(baseIntel * moraleMultiplier);
 
     // Instability effects

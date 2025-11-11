@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Swords, Shield, ScrollText } from 'lucide-react';
 import WarCouncilPanel from '@/components/WarCouncilPanel';
@@ -6,6 +6,7 @@ import type { Nation } from '@/types/game';
 import type { LocalNation } from '@/state';
 import { PlayerManager } from '@/state';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
+import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 import { BattleResultDisplay } from '@/components/DiceRoller';
 import { RESEARCH_LOOKUP } from '@/lib/gameConstants';
 import type {
@@ -13,13 +14,12 @@ import type {
   ConventionalUnitTemplate,
   EngagementLogEntry,
   NationConventionalProfile,
-  BorderConflictSuccessPayload,
+  DiceRollResult,
 } from '@/hooks/useConventionalWarfare';
 import { createDefaultNationConventionalProfile } from '@/hooks/useConventionalWarfare';
 import type { ArmyGroupSummary } from '@/types/militaryTemplates';
 import { OrderOfBattlePanel } from './OrderOfBattlePanel';
 import { StrategicOutliner, type StrategicOutlinerGroup } from './StrategicOutliner';
-import MapBasedWarfare, { type ProjectedPoint } from '@/components/warfare/MapBasedWarfare';
 
 export interface ConsolidatedWarModalProps {
   // War Council props
@@ -58,7 +58,7 @@ export interface ConsolidatedWarModalProps {
  *
  * Combines:
  * - War Council (Casus Belli, war declarations, peace negotiations)
- * - Conventional Forces (strength-based territorial warfare)
+ * - Conventional Forces (Risk-style territorial warfare)
  * - War Summary (overview of all conflicts)
  */
 export function ConsolidatedWarModal({
@@ -88,7 +88,7 @@ export function ConsolidatedWarModal({
   const [activeTab, setActiveTab] = useState('council');
   const localPlayer = PlayerManager.get() as LocalNation | null;
   const [lastBattleResult, setLastBattleResult] = useState<{
-    report: BorderConflictSuccessPayload;
+    diceRolls: DiceRollResult[];
     attackerName: string;
     defenderName: string;
     territory: string;
@@ -101,48 +101,6 @@ export function ConsolidatedWarModal({
   const territoryList = Object.values(conventionalTerritories);
   const templates = Object.values(conventionalTemplatesMap);
   const recentLogs = [...conventionalLogs].slice(-6).reverse();
-
-  const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const [mapDimensions, setMapDimensions] = useState<{ width: number; height: number }>({
-    width: 0,
-    height: 0,
-  });
-
-  useEffect(() => {
-    const node = mapContainerRef.current;
-    if (!node) {
-      return;
-    }
-
-    const updateSize = () => {
-      const next = { width: node.clientWidth, height: node.clientHeight };
-      setMapDimensions(prev =>
-        prev.width === next.width && prev.height === next.height ? prev : next,
-      );
-    };
-
-    updateSize();
-
-    if (typeof ResizeObserver === 'undefined') {
-      return;
-    }
-
-    const observer = new ResizeObserver(() => updateSize());
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
-  const modalProjector = useCallback(
-    (lon: number, lat: number): ProjectedPoint => {
-      if (mapDimensions.width <= 0 || mapDimensions.height <= 0) {
-        return { x: 0, y: 0, visible: false };
-      }
-      const x = ((lon + 180) / 360) * mapDimensions.width;
-      const y = ((90 - lat) / 180) * mapDimensions.height;
-      return { x, y, visible: true };
-    },
-    [mapDimensions.height, mapDimensions.width],
-  );
 
   const playerTerritories = territoryList.filter(t => t.controllingNationId === localPlayer.id);
   const totalArmies = playerTerritories.reduce((sum, t) => sum + t.armies, 0);
@@ -180,16 +138,16 @@ export function ConsolidatedWarModal({
 
   const handleAttack = (fromTerritoryId: string, toTerritoryId: string, armies: number) => {
     const result = resolveConventionalAttack(fromTerritoryId, toTerritoryId, armies);
-    if (result?.success) {
+    if (result?.success && result?.diceRolls) {
       const from = conventionalTerritories[fromTerritoryId];
       const to = conventionalTerritories[toTerritoryId];
       const attackerNation = nations.find(n => n.id === from?.controllingNationId);
       const defenderNation = nations.find(n => n.id === to?.controllingNationId);
 
       setLastBattleResult({
-        report: result,
+        diceRolls: result.diceRolls,
         attackerName: attackerNation?.name || 'Unknown',
-        defenderName: defenderNation?.name || to?.controllingNationId || 'Unknown',
+        defenderName: defenderNation?.name || 'Unknown',
         territory: to?.name || 'Unknown Territory',
       });
     }
@@ -284,7 +242,7 @@ export function ConsolidatedWarModal({
                 </button>
               </div>
               <BattleResultDisplay
-                report={lastBattleResult.report}
+                diceRolls={lastBattleResult.diceRolls}
                 attackerName={lastBattleResult.attackerName}
                 defenderName={lastBattleResult.defenderName}
               />
@@ -302,21 +260,15 @@ export function ConsolidatedWarModal({
             playerId={localPlayer.id}
           />
 
-          <div
-            ref={mapContainerRef}
-            className="relative h-[420px] overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/40"
-          >
-            <MapBasedWarfare
-              territories={territoryList}
-              playerId={localPlayer.id}
-              projector={modalProjector}
-              onAttack={handleAttack}
-              onMove={handleMove}
-              onProxyEngagement={handleProxyEngagement}
-              availableReinforcements={availableReinforcements}
-              onPlaceReinforcements={handlePlaceReinforcements}
-            />
-          </div>
+          <TerritoryMapPanel
+            territories={territoryList}
+            onAttack={handleAttack}
+            onMove={handleMove}
+            onProxyEngagement={handleProxyEngagement}
+            availableReinforcements={availableReinforcements}
+            onPlaceReinforcements={handlePlaceReinforcements}
+            playerId={localPlayer.id}
+          />
 
           {recentLogs.length > 0 && (
             <div className="rounded-lg border border-cyan-500/30 bg-slate-900/60 p-4">
@@ -347,12 +299,8 @@ export function ConsolidatedWarModal({
                       </div>
                       <div className="text-slate-400 mt-1">
                         Casualties: Attacker {log.attackerCasualties} | Defender {log.defenderCasualties}
+                        {log.rounds && ` • ${log.rounds} rounds`}
                       </div>
-                      {log.combatStrength && (
-                        <div className="text-cyan-300/80 mt-1 font-mono">
-                          ⚖️ {Math.round(log.combatStrength.attackerStrength)} vs {Math.round(log.combatStrength.defenderStrength)} (ratio {log.combatStrength.ratio.toFixed(2)})
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -447,11 +395,6 @@ export function ConsolidatedWarModal({
                         Casualties: {log.attackerCasualties + log.defenderCasualties} total
                         {log.outcome && ` • ${log.outcome}`}
                       </div>
-                      {log.combatStrength && (
-                        <div className="text-cyan-300/80 mt-1 font-mono">
-                          ⚖️ {Math.round(log.combatStrength.attackerStrength)} vs {Math.round(log.combatStrength.defenderStrength)} (ratio {log.combatStrength.ratio.toFixed(2)})
-                        </div>
-                      )}
                     </div>
                   );
                 })}

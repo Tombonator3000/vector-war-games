@@ -132,7 +132,7 @@ import {
 } from '@/hooks/useConventionalWarfare';
 import { makeAITurn as makeConventionalAITurn } from '@/lib/conventionalAI';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
-import MapBasedWarfare from '@/components/warfare/MapBasedWarfare';
+import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 import { UnifiedIntelOperationsPanel } from '@/components/UnifiedIntelOperationsPanel';
 import { SpyNetworkPanel } from '@/components/SpyNetworkPanel';
 import WarCouncilPanel from '@/components/WarCouncilPanel';
@@ -4497,7 +4497,6 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
 
   checkVictory();
   checkVictoryProgress();
-  updateDisplay();
 }
 
 // Launch submarine
@@ -6735,6 +6734,7 @@ export default function NoradVector() {
   const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null);
   const [hoveredTerritoryId, setHoveredTerritoryId] = useState<string | null>(null);
   const [draggingArmy, setDraggingArmy] = useState<{ sourceId: string; armies: number } | null>(null);
+  const [draggingArmyPosition, setDraggingArmyPosition] = useState<{ x: number; y: number } | null>(null);
   const [dragTargetTerritoryId, setDragTargetTerritoryId] = useState<string | null>(null);
   const [conventionalState, setConventionalState] = useState<ConventionalState>(() => {
     const stored = Storage.getItem('conventional_state');
@@ -6792,22 +6792,6 @@ export default function NoradVector() {
     draggingArmyRef.current = draggingArmy;
   }, [draggingArmy]);
 
-  const handleWarfareHoverChange = useCallback((territoryId: string | null) => {
-    setHoveredTerritoryId(territoryId);
-  }, []);
-
-  const handleWarfareSelectionChange = useCallback((territoryId: string | null) => {
-    setSelectedTerritoryId(territoryId);
-  }, []);
-
-  const handleWarfareDragStateChange = useCallback(
-    ({ sourceId, targetId, armies }: { sourceId: string | null; targetId: string | null; armies: number }) => {
-      setDraggingArmy(sourceId ? { sourceId, armies } : null);
-      setDragTargetTerritoryId(targetId);
-    },
-    [],
-  );
-
   const getTerritoryById = useCallback(
     (territoryId: string | null | undefined) => {
       if (!territoryId) {
@@ -6817,6 +6801,13 @@ export default function NoradVector() {
     },
     [territoryMap],
   );
+
+  const dragTargetName = useMemo(() => {
+    if (!dragTargetTerritoryId) {
+      return null;
+    }
+    return territoryMap.get(dragTargetTerritoryId)?.name ?? null;
+  }, [dragTargetTerritoryId, territoryMap]);
 
   const [territoryPolygons, setTerritoryPolygons] = useState<TerritoryPolygon[]>([]);
 
@@ -7837,26 +7828,6 @@ export default function NoradVector() {
     getReinforcements: getConventionalReinforcements,
   } = conventional;
 
-  const moveConventionalArmiesWithAnimation = useCallback(
-    (fromTerritoryId: string, toTerritoryId: string, count: number) => {
-      const fromTerritory = conventionalTerritories[fromTerritoryId];
-      const result = moveConventionalArmies(fromTerritoryId, toTerritoryId, count);
-
-      if (result.success && fromTerritory?.controllingNationId) {
-        registerConventionalMovement({
-          unitId: `move_${Date.now()}`,
-          templateId: 'armored_corps',
-          ownerId: fromTerritory.controllingNationId,
-          fromTerritoryId,
-          toTerritoryId,
-        });
-      }
-
-      return result;
-    },
-    [conventionalTerritories, moveConventionalArmies, registerConventionalMovement],
-  );
-
   const playerSnapshot = useMemo(() => {
     if (!player) {
       return null;
@@ -8086,6 +8057,26 @@ export default function NoradVector() {
       return resolveConventionalAttack(attackerTerritory.id, territoryId, attackingArmies);
     },
     [conventionalTerritories, resolveConventionalAttack],
+  );
+
+  const moveConventionalArmiesWithAnimation = useCallback(
+    (fromTerritoryId: string, toTerritoryId: string, count: number) => {
+      const fromTerritory = conventionalTerritories[fromTerritoryId];
+      const result = moveConventionalArmies(fromTerritoryId, toTerritoryId, count);
+
+      if (result.success && fromTerritory?.controllingNationId) {
+        registerConventionalMovement({
+          unitId: `move_${Date.now()}`,
+          templateId: 'armored_corps',
+          ownerId: fromTerritory.controllingNationId,
+          fromTerritoryId,
+          toTerritoryId,
+        });
+      }
+
+      return result;
+    },
+    [conventionalTerritories, moveConventionalArmies, registerConventionalMovement],
   );
 
   useEffect(() => {
@@ -11381,8 +11372,11 @@ export default function NoradVector() {
       let touching = false;
       let touchStart = { x: 0, y: 0 };
       let zoomedIn = false;
-      type PointerMode = 'none' | 'map-pan';
+      type PointerMode = 'none' | 'map-pan' | 'unit-drag';
       let pointerMode: PointerMode = 'none';
+      let dragSourceTerritoryId: string | null = null;
+      let dragArmiesCount = 0;
+      let dragTargetId: string | null = null;
       let lastHoverId: string | null = null;
 
       const getTerritories = () => territoryListRef.current ?? [];
@@ -11392,6 +11386,17 @@ export default function NoradVector() {
           lastHoverId = territoryId;
           setHoveredTerritoryId(territoryId);
         }
+      };
+
+      const resetUnitDragState = () => {
+        dragSourceTerritoryId = null;
+        dragArmiesCount = 0;
+        dragTargetId = null;
+        pointerMode = 'none';
+        setDraggingArmy(null);
+        setDraggingArmyPosition(null);
+        setDragTargetTerritoryId(null);
+        updateHover(null);
       };
 
       const isBoundedFlatProjection = () => currentMapStyle === 'flat-realistic';
@@ -11447,17 +11452,120 @@ export default function NoradVector() {
         }
         activePointerId = null;
 
+        if (pointerMode === 'unit-drag') {
+          const player = PlayerManager.get();
+          const territories = getTerritories();
+          const source = territories.find(entry => entry.id === dragSourceTerritoryId) ?? null;
+          const target = dragTargetId ? territories.find(entry => entry.id === dragTargetId) ?? null : null;
+
+          if (player && source && source.controllingNationId === player.id) {
+            const maxAvailable = Math.max(1, source.armies - 1);
+            const armiesToSend = Math.min(maxAvailable, Math.max(1, dragArmiesCount));
+
+            if (armiesToSend < 1) {
+              AudioSys.playSFX('error');
+              toast({ title: 'Cannot move armies', description: 'At least one army must remain behind.', variant: 'destructive' });
+            } else if (target && source.neighbors.includes(target.id)) {
+              if (!target.controllingNationId || target.controllingNationId === player.id) {
+                const result = moveArmiesRef.current?.(source.id, target.id, armiesToSend);
+                if (result?.success) {
+                  AudioSys.playSFX('success');
+                  toast({
+                    title: 'Armies redeployed',
+                    description: `Moved ${armiesToSend} armies from ${source.name} to ${target.name}.`,
+                  });
+                  setSelectedTerritoryId(target.id);
+                } else if (result && !result.success) {
+                  AudioSys.playSFX('error');
+                  toast({ title: 'Cannot move armies', description: result.reason, variant: 'destructive' });
+                  setSelectedTerritoryId(source.id);
+                }
+              } else {
+                const result = resolveBorderConflictRef.current?.(source.id, target.id, armiesToSend);
+                if (result?.success) {
+                  AudioSys.playSFX('success');
+                  toast({
+                    title: 'Assault initiated',
+                    description: `Launching ${armiesToSend} armies into ${target.name}.`,
+                  });
+                  setSelectedTerritoryId(null);
+                } else if (result && !result.success) {
+                  AudioSys.playSFX('error');
+                  toast({ title: 'Cannot launch attack', description: result.reason, variant: 'destructive' });
+                  setSelectedTerritoryId(source.id);
+                }
+              }
+            } else if (dragTargetId) {
+              AudioSys.playSFX('error');
+              toast({ title: 'Invalid target', description: 'Armies can only move to adjacent territories.', variant: 'destructive' });
+              setSelectedTerritoryId(source.id);
+            }
+          }
+
+          resetUnitDragState();
+        }
+
         isDragging = false;
         dragButton = null;
-        pointerMode = 'none';
+        if (pointerMode !== 'unit-drag') {
+          pointerMode = 'none';
+        }
       };
 
       const handlePointerDown = (e: PointerEvent) => {
         if (e.button !== 0 && e.button !== 2) return;
 
+        const rect = canvas?.getBoundingClientRect();
+        const territories = getTerritories();
+        const player = PlayerManager.get();
+
+        if (
+          e.button === 0 &&
+          !S.gameOver &&
+          rect &&
+          player &&
+          territories.length > 0
+        ) {
+          const mx = e.clientX - rect.left;
+          const my = e.clientY - rect.top;
+
+          for (const territory of territories) {
+            const { x: tx, y: ty, visible } = projectLocal(territory.anchorLon, territory.anchorLat);
+            if (!visible) {
+              continue;
+            }
+            const dist = Math.hypot(mx - tx, my - ty);
+            if (dist < 25 && territory.controllingNationId === player.id && territory.armies > 1) {
+              pointerMode = 'unit-drag';
+              isDragging = true;
+              dragButton = e.button;
+              dragStart = { x: e.clientX, y: e.clientY };
+              dragSourceTerritoryId = territory.id;
+              const maxAvailable = Math.max(1, territory.armies - 1);
+              const desiredCount = e.shiftKey
+                ? 1
+                : e.altKey
+                ? Math.max(1, Math.floor(territory.armies / 2))
+                : maxAvailable;
+              dragArmiesCount = Math.min(maxAvailable, desiredCount);
+              dragTargetId = null;
+              updateHover(null);
+              setSelectedTerritoryId(territory.id);
+              setDraggingArmy({ sourceId: territory.id, armies: dragArmiesCount });
+              setDraggingArmyPosition({ x: mx, y: my });
+              setDragTargetTerritoryId(null);
+              activePointerId = e.pointerId;
+              canvas?.setPointerCapture(e.pointerId);
+              AudioSys.playSFX('click');
+              return;
+            }
+          }
+        }
+
         pointerMode = 'map-pan';
         setDragTargetTerritoryId(null);
         setDraggingArmy(null);
+        setDraggingArmyPosition(null);
         isDragging = true;
         dragButton = e.button;
         dragStart = { x: e.clientX, y: e.clientY };
@@ -11468,7 +11576,7 @@ export default function NoradVector() {
       const handlePointerMove = (e: PointerEvent) => {
         const rect = canvas?.getBoundingClientRect();
 
-        if (!isDragging) {
+        if (!isDragging && pointerMode !== 'unit-drag') {
           if (rect) {
             const mx = e.clientX - rect.left;
             const my = e.clientY - rect.top;
@@ -11486,6 +11594,42 @@ export default function NoradVector() {
             }
             updateHover(nextHover);
           }
+        }
+
+        if (pointerMode === 'unit-drag') {
+          if (!rect) return;
+          const mx = e.clientX - rect.left;
+          const my = e.clientY - rect.top;
+          setDraggingArmyPosition({ x: mx, y: my });
+
+          const territories = getTerritories();
+          const source = territories.find(entry => entry.id === dragSourceTerritoryId) ?? null;
+          let nextTarget: string | null = null;
+
+          if (source) {
+            for (const territory of territories) {
+              if (territory.id === source.id) continue;
+              const { x: tx, y: ty, visible } = projectLocal(territory.anchorLon, territory.anchorLat);
+              if (!visible) {
+                continue;
+              }
+              const dist = Math.hypot(mx - tx, my - ty);
+              if (dist < 28) {
+                nextTarget = territory.id;
+                break;
+              }
+            }
+            if (nextTarget && !source.neighbors.includes(nextTarget)) {
+              nextTarget = null;
+            }
+          }
+
+          if (dragTargetId !== nextTarget) {
+            dragTargetId = nextTarget;
+            setDragTargetTerritoryId(nextTarget);
+            updateHover(nextTarget);
+          }
+          return;
         }
 
         if (!isDragging) return;
@@ -11514,6 +11658,9 @@ export default function NoradVector() {
           canvas.releasePointerCapture(activePointerId);
         }
         activePointerId = null;
+        if (pointerMode === 'unit-drag') {
+          resetUnitDragState();
+        }
         isDragging = false;
         dragButton = null;
         pointerMode = 'none';
@@ -11717,7 +11864,7 @@ export default function NoradVector() {
               if (sourceTerritory && sourceTerritory.id !== territory.id) {
                 if (sourceTerritory.neighbors.includes(territory.id)) {
                   const isAttack = territory.controllingNationId !== player.id;
-                  // Actions now handled by MapBasedWarfare drag callbacks
+                  // Actions will be handled through TerritoryMapPanel callbacks
                   if (!isAttack) {
                     setDragTargetTerritoryId(territory.id);
                   }
@@ -12508,9 +12655,6 @@ export default function NoradVector() {
   );
 
   const overlayCanvas = globeSceneRef.current?.overlayCanvas ?? null;
-  const playerReinforcements = playerNationId
-    ? getConventionalReinforcements(playerNationId)
-    : 0;
 
   return (
     <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity}`}>
@@ -12534,21 +12678,21 @@ export default function NoradVector() {
           flatMapVariant={isFlatMapDay}
         />
 
-        {playerNationId && territoryList.length > 0 && (
-          <div className="absolute inset-0 z-30">
-            <MapBasedWarfare
-              territories={territoryList}
-              playerId={playerNationId}
-              projector={projectLocal}
-              onAttack={handleWarfareAttack}
-              onMove={handleWarfareMove}
-              onProxyEngagement={handleWarfareProxyEngagement}
-              availableReinforcements={playerReinforcements}
-              onPlaceReinforcements={handleWarfareReinforcements}
-              onHoverChange={handleWarfareHoverChange}
-              onSelectionChange={handleWarfareSelectionChange}
-              onDragStateChange={handleWarfareDragStateChange}
-            />
+        {draggingArmy && draggingArmyPosition && (
+          <div className="pointer-events-none absolute inset-0 z-30">
+            <div
+              className="pointer-events-none flex flex-col items-center"
+              style={{ transform: `translate(${draggingArmyPosition.x - 24}px, ${draggingArmyPosition.y - 24}px)` }}
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-cyan-400 bg-cyan-500/30 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.65)] backdrop-blur-sm">
+                <span className="text-sm font-bold">{draggingArmy.armies}</span>
+              </div>
+              {dragTargetName && (
+                <div className="mt-1 rounded bg-black/70 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide text-yellow-300 shadow-lg">
+                  Drop on {dragTargetName}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

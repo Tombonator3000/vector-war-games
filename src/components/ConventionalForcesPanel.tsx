@@ -183,9 +183,9 @@ export function ConventionalForcesPanel({
 
                 {/* Combat bonuses */}
                 <div className="mt-2 text-[10px] font-mono text-cyan-300/70">
-                  {template.type === 'air' && <p>✈️ Air superiority boosts strike strength</p>}
-                  {template.type === 'navy' && <p>⚓ Fleet screens bolster defensive strength</p>}
-                  {template.type === 'army' && <p>🎖️ Balanced combined-arms baseline</p>}
+                  {template.type === 'air' && <p>✈️ +1 attack dice bonus</p>}
+                  {template.type === 'navy' && <p>⚓ +1 defense dice bonus</p>}
+                  {template.type === 'army' && <p>🎖️ Standard units</p>}
                 </div>
 
                 {template.requiresResearch && !unlocked && (
