@@ -16,6 +16,8 @@ import { getNationById, ensureTreatyRecord, adjustThreat } from '@/lib/nationUti
 import { onTreatyBroken, onSanctionHarm, formSpecializedAlliance, breakSpecializedAlliance } from '@/lib/diplomacyPhase2Integration';
 import { checkAllTriggers } from '@/lib/aiNegotiationTriggers';
 import { generateAINegotiationDeal } from '@/lib/aiNegotiationContentGenerator';
+import { evaluateNegotiation } from '@/lib/aiNegotiationEvaluator';
+import { executeNegotiationDeal } from '@/lib/negotiationUtils';
 
 /**
  * Log diplomacy message
@@ -425,6 +427,68 @@ export function aiCheckProactiveNegotiation(
 }
 
 /**
+ * Handle AI auto-response to AI-to-AI negotiation
+ * AI automatically evaluates and responds to negotiations from other AI
+ */
+function handleAItoAINegotiation(
+  negotiation: AIInitiatedNegotiation,
+  initiatorNation: Nation,
+  targetNation: Nation,
+  allNations: Nation[],
+  currentTurn: number,
+  logFn?: (msg: string, type?: string) => void
+): void {
+  // Target AI evaluates the negotiation
+  const evaluation = evaluateNegotiation(
+    negotiation.proposedDeal,
+    targetNation,
+    initiatorNation,
+    allNations,
+    currentTurn
+  );
+
+  // Decide based on acceptance probability
+  const willAccept = Math.random() * 100 < evaluation.acceptanceProbability;
+
+  if (willAccept) {
+    // Execute the deal immediately
+    try {
+      executeNegotiationDeal(
+        negotiation.proposedDeal,
+        initiatorNation,
+        targetNation,
+        allNations,
+        currentTurn
+      );
+
+      if (logFn) {
+        logFn(
+          `${targetNation.name} accepts ${negotiation.purpose} from ${initiatorNation.name}`,
+          'diplomacy'
+        );
+      }
+    } catch (error) {
+      // If execution fails, log but don't crash
+      if (logFn) {
+        logFn(
+          `${targetNation.name} tried to accept ${initiatorNation.name}'s ${negotiation.purpose} but execution failed`,
+          'diplomacy'
+        );
+      }
+    }
+  } else {
+    // AI rejects the deal
+    if (logFn) {
+      const reason = evaluation.rejectionReasons?.[0] || 'terms unacceptable';
+      logFn(
+        `${targetNation.name} rejects ${negotiation.purpose} from ${initiatorNation.name} (${reason})`,
+        'diplomacy'
+      );
+    }
+  }
+}
+
+/**
  * Process AI proactive diplomacy for all AI nations
  * Returns array of AI-initiated negotiations
  *
@@ -461,8 +525,9 @@ export function processAIProactiveDiplomacy(
       }
     }
 
-    // Optionally check with other AI nations (less frequent)
-    if (Math.random() < 0.3 && aiNegotiations.length < 2) {
+    // Check with other AI nations (AI-to-AI diplomacy enabled)
+    // AI can now conduct diplomacy with other AI nations using the same rules as with players
+    if (aiNegotiations.length < 5) { // Increased limit to allow more AI-to-AI negotiations
       const otherAI = allNations.filter(n =>
         !n.isPlayer &&
         !n.eliminated &&
@@ -470,19 +535,54 @@ export function processAIProactiveDiplomacy(
       );
 
       if (otherAI.length > 0) {
-        const randomTarget = otherAI[Math.floor(Math.random() * otherAI.length)];
-        const negotiationWithAI = aiCheckProactiveNegotiation(
-          aiNation,
-          randomTarget,
-          allNations,
-          currentTurn,
-          aiNegotiations.length
-        );
+        // Sort other AI by priority (relationship, threats, etc.)
+        const sortedTargets = otherAI.sort((a, b) => {
+          // Prioritize based on relationship strength and threat level
+          const relA = Math.abs(aiNation.relationships?.[a.id] || 0);
+          const relB = Math.abs(aiNation.relationships?.[b.id] || 0);
+          const threatA = aiNation.threats?.[a.id] || 0;
+          const threatB = aiNation.threats?.[b.id] || 0;
 
-        if (negotiationWithAI) {
-          aiNegotiations.push(negotiationWithAI);
-          if (logFn) {
-            logFn(`${aiNation.name} initiates ${negotiationWithAI.purpose} with ${randomTarget.name}`, 'diplomacy');
+          // Higher priority: strong relationships or high threats
+          const priorityA = relA + (threatA * 0.5);
+          const priorityB = relB + (threatB * 0.5);
+
+          return priorityB - priorityA;
+        });
+
+        // Check top 3 potential AI targets (or all if fewer than 3)
+        const targetsToCheck = sortedTargets.slice(0, Math.min(3, sortedTargets.length));
+
+        for (const targetAI of targetsToCheck) {
+          // Stop if we've reached the negotiation limit
+          if (aiNegotiations.length >= 5) break;
+
+          const negotiationWithAI = aiCheckProactiveNegotiation(
+            aiNation,
+            targetAI,
+            allNations,
+            currentTurn,
+            aiNegotiations.length
+          );
+
+          if (negotiationWithAI) {
+            // AI-to-AI negotiation: Process immediately (no UI needed)
+            if (logFn) {
+              logFn(`${aiNation.name} initiates ${negotiationWithAI.purpose} with ${targetAI.name}`, 'diplomacy');
+            }
+
+            // Target AI automatically evaluates and responds
+            handleAItoAINegotiation(
+              negotiationWithAI,
+              aiNation,
+              targetAI,
+              allNations,
+              currentTurn,
+              logFn
+            );
+
+            // Only one negotiation per AI per turn to prevent spam
+            break;
           }
         }
       }
