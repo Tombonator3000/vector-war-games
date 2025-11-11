@@ -6808,111 +6808,6 @@ export default function NoradVector() {
     [],
   );
 
-  const moveConventionalArmiesWithAnimation = useCallback(
-    (fromTerritoryId: string, toTerritoryId: string, count: number) => {
-      const fromTerritory = conventionalTerritories[fromTerritoryId];
-      const result = moveConventionalArmies(fromTerritoryId, toTerritoryId, count);
-
-      if (result.success && fromTerritory?.controllingNationId) {
-        registerConventionalMovement({
-          unitId: `move_${Date.now()}`,
-          templateId: 'armored_corps',
-          ownerId: fromTerritory.controllingNationId,
-          fromTerritoryId,
-          toTerritoryId,
-        });
-      }
-
-      return result;
-    },
-    [conventionalTerritories, moveConventionalArmies, registerConventionalMovement],
-  );
-
-  const handleWarfareMove = useCallback(
-    (fromTerritoryId: string, toTerritoryId: string, count: number) => {
-      const source = territoryMap.get(fromTerritoryId);
-      const target = territoryMap.get(toTerritoryId);
-      const result = moveConventionalArmiesWithAnimation(fromTerritoryId, toTerritoryId, count);
-      if (!result.success) {
-        toast({ title: 'Movement failed', description: result.reason ?? 'Unable to reposition armies.' });
-        return;
-      }
-      toast({
-        title: 'Armies repositioned',
-        description: `Moved ${count} armies from ${source?.name ?? fromTerritoryId} to ${target?.name ?? toTerritoryId}.`,
-      });
-    },
-    [moveConventionalArmiesWithAnimation, territoryMap, toast],
-  );
-
-  const handleWarfareAttack = useCallback(
-    (fromTerritoryId: string, toTerritoryId: string, armies: number) => {
-      const source = territoryMap.get(fromTerritoryId);
-      const target = territoryMap.get(toTerritoryId);
-      const result = resolveConventionalAttack(fromTerritoryId, toTerritoryId, armies);
-      if (!result.success) {
-        toast({ title: 'Attack aborted', description: result.reason ?? 'Unable to launch this assault.' });
-        return;
-      }
-
-      const targetName = target?.name ?? toTerritoryId;
-      if (result.attackerVictory) {
-        toast({
-          title: 'Territory captured',
-          description: `${source?.name ?? fromTerritoryId} seized ${targetName} with ${armies} armies.`,
-        });
-      } else {
-        toast({
-          title: 'Attack repelled',
-          description: `${source?.name ?? fromTerritoryId} failed to take ${targetName}.`,
-        });
-      }
-    },
-    [resolveConventionalAttack, territoryMap, toast],
-  );
-
-  const handleWarfareReinforcements = useCallback(
-    (territoryId: string, count: number) => {
-      const playerId = PlayerManager.get()?.id;
-      if (!playerId) {
-        return;
-      }
-      const territory = territoryMap.get(territoryId);
-      const result = placeConventionalReinforcements(playerId, territoryId, count);
-      if (!result.success) {
-        toast({ title: 'Reinforcements denied', description: result.reason ?? 'Unable to deploy reinforcements.' });
-        return;
-      }
-      toast({
-        title: 'Reinforcements deployed',
-        description: `Deployed ${count} armies to ${territory?.name ?? territoryId}.`,
-      });
-    },
-    [placeConventionalReinforcements, territoryMap, toast],
-  );
-
-  const handleWarfareProxyEngagement = useCallback(
-    (territoryId: string, opposingId: string) => {
-      const playerId = PlayerManager.get()?.id;
-      if (!playerId) {
-        return;
-      }
-      const territory = territoryMap.get(territoryId);
-      const result = resolveConventionalProxyEngagement(territoryId, playerId, opposingId);
-      if (!result.success) {
-        toast({ title: 'Proxy operation failed', description: 'Unable to influence this theatre.' });
-        return;
-      }
-      toast({
-        title: result.sponsorSuccess ? 'Proxy gains' : 'Proxy setback',
-        description: result.sponsorSuccess
-          ? `${territory?.name ?? territoryId} swings toward our influence.`
-          : `${territory?.name ?? territoryId} resists our influence.`,
-      });
-    },
-    [resolveConventionalProxyEngagement, territoryMap, toast],
-  );
-
   const getTerritoryById = useCallback(
     (territoryId: string | null | undefined) => {
       if (!territoryId) {
@@ -7941,6 +7836,26 @@ export default function NoradVector() {
     placeReinforcements: placeConventionalReinforcements,
     getReinforcements: getConventionalReinforcements,
   } = conventional;
+
+  const moveConventionalArmiesWithAnimation = useCallback(
+    (fromTerritoryId: string, toTerritoryId: string, count: number) => {
+      const fromTerritory = conventionalTerritories[fromTerritoryId];
+      const result = moveConventionalArmies(fromTerritoryId, toTerritoryId, count);
+
+      if (result.success && fromTerritory?.controllingNationId) {
+        registerConventionalMovement({
+          unitId: `move_${Date.now()}`,
+          templateId: 'armored_corps',
+          ownerId: fromTerritory.controllingNationId,
+          fromTerritoryId,
+          toTerritoryId,
+        });
+      }
+
+      return result;
+    },
+    [conventionalTerritories, moveConventionalArmies, registerConventionalMovement],
+  );
 
   const playerSnapshot = useMemo(() => {
     if (!player) {
