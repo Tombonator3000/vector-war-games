@@ -81,8 +81,6 @@ export type RefineryType =
   | "oil"
   | "uranium"
   | "rareEarths"
-  | "steel"
-  | "electronics"
   | "food";
 
 export interface RefineryConversionRate {

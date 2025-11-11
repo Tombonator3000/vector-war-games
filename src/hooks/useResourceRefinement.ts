@@ -28,18 +28,6 @@ const BASE_CONVERSION: Record<RefineryType, RefineryConversionRate> = {
     baseYield: 3,
     bonusDescription: "+20% research speed",
   },
-  steel: {
-    input: ["iron", "coal"],
-    output: "steel",
-    baseYield: 4,
-    bonusDescription: "+15% production",
-  },
-  electronics: {
-    input: ["rareEarths", "steel"],
-    output: "electronics",
-    baseYield: 3,
-    bonusDescription: "+30% cyber attack",
-  },
   food: {
     input: ["food"],
     output: "processedFood",
@@ -52,8 +40,6 @@ const BASE_BONUSES: RefinementBonus[] = [
   { id: "fuel", description: "+15% military effectiveness", value: 0.15 },
   { id: "enrichedUranium", description: "+25% nuclear damage", value: 0.25 },
   { id: "advancedMaterials", description: "+20% research speed", value: 0.2 },
-  { id: "steel", description: "+15% production", value: 0.15 },
-  { id: "electronics", description: "+30% cyber attack", value: 0.3 },
   { id: "processedFood", description: "+10 morale", value: 0.1 },
 ];
 

@@ -135,6 +135,7 @@ export function assignTerritoryResources(
       deposits = [
         { type: 'oil', amount: 10, richness: 1.5 },
         { type: 'uranium', amount: 6, richness: 1.2 },
+        { type: 'rare_earths', amount: 4, richness: 1.1 },
       ];
     } else if (territory.name.includes('Proxy') || territory.name.includes('Battleground')) {
       // Contested territories have valuable resources (reason for conflict!)

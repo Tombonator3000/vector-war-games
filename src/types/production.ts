@@ -27,8 +27,6 @@ export type ProductionCategory = 'military' | 'infrastructure' | 'special';
 export interface ResourceCosts {
   production: number; // Base production cost
   uranium?: number;
-  electronics?: number;
-  steel?: number;
   intel?: number;
 }
 
