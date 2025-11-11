@@ -13,6 +13,7 @@ import { MathUtils } from 'three';
 import {
   computeDiplomaticColor,
   computeIntelColor,
+  computePandemicColor,
   computeResourceColor,
   computeUnrestColor,
   colorToRgba,
@@ -334,6 +335,16 @@ function resolveOverlayFillColor(
       if (!stabilityValues.length) return null;
       const average = stabilityValues.reduce((sum, value) => sum + value, 0) / stabilityValues.length;
       return colorToRgba(computeUnrestColor(average), 0.3);
+    }
+    case 'pandemic': {
+      const infections = Object.values(modeData.pandemic?.infections ?? {})
+        .filter(value => Number.isFinite(value))
+        .map(value => Number(value));
+      if (!infections.length) return null;
+      const max = Math.max(0, ...infections);
+      if (max <= 0) return null;
+      const normalized = infections.reduce((sum, value) => sum + value, 0) / (infections.length * max || 1);
+      return colorToRgba(computePandemicColor(normalized || 0), 0.26);
     }
     default:
       return null;
@@ -676,12 +687,16 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
 
   const intelValues = modeData ? Object.values(modeData.intelLevels ?? {}) : [];
   const resourceValues = modeData ? Object.values(modeData.resourceTotals ?? {}) : [];
+  const pandemicValues = modeData?.pandemic ? Object.values(modeData.pandemic.infections ?? {}) : [];
 
   const maxIntelLevel = intelValues.length
     ? Math.max(1, ...intelValues.map(value => (Number.isFinite(value) ? Number(value) : 0)))
     : 1;
   const maxResourceTotal = resourceValues.length
     ? Math.max(1, ...resourceValues.map(value => (Number.isFinite(value) ? Number(value) : 0)))
+    : 1;
+  const maxPandemicInfection = pandemicValues.length
+    ? Math.max(1, ...pandemicValues.map(value => (Number.isFinite(value) ? Number(value) : 0)))
     : 1;
 
   nations.forEach(n => {
@@ -690,11 +705,19 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
     const { x, y, visible } = projectLocal(n.lon, n.lat);
     if (!visible || Number.isNaN(x) || Number.isNaN(y)) return;
 
+    let overlayColor: string | null = null;
+    let overlayScale = 0;
+    let overlayOpacity = 0;
+    let normalizedPandemicForMarker = 0;
+
     if (overlayEnabled) {
       const overlayKey = n.id;
-      let overlayColor: string | null = null;
-      let overlayScale = 0;
-      let overlayOpacity = 0;
+      const pandemicData = modeData?.pandemic;
+      const pandemicInfection = pandemicData?.infections?.[overlayKey] ?? 0;
+      const normalizedPandemic = pandemicInfection > 0 ? pandemicInfection / (maxPandemicInfection || 1) : 0;
+      const heatValue = pandemicData?.heat?.[overlayKey] ?? pandemicInfection;
+      const normalizedHeat = heatValue > 0 ? Math.min(1, Math.max(0, heatValue / 100)) : normalizedPandemic;
+      normalizedPandemicForMarker = normalizedPandemic;
 
       switch (currentMode) {
         case 'diplomatic': {
@@ -736,6 +759,14 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
           }
           break;
         }
+        case 'pandemic': {
+          if (normalizedPandemic > 0) {
+            overlayColor = computePandemicColor(normalizedPandemic);
+            overlayScale = 0.22 + normalizedPandemic * 0.55;
+            overlayOpacity = 0.28 + normalizedHeat * 0.5;
+          }
+          break;
+        }
         default:
           break;
       }
@@ -758,6 +789,19 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       }
     }
 
+    const baseColor = typeof n.color === 'string' ? n.color : '#ff6b6b';
+    const pandemicMarkerColor = currentMode === 'pandemic' && !n.isPlayer && normalizedPandemicForMarker > 0
+      ? computePandemicColor(normalizedPandemicForMarker)
+      : null;
+    let markerColor = baseColor;
+    if (n.isPlayer) {
+      markerColor = '#7cff6b';
+    } else if (pandemicMarkerColor) {
+      markerColor = pandemicMarkerColor;
+    } else if (currentMode !== 'standard' && overlayEnabled && overlayColor) {
+      markerColor = overlayColor;
+    }
+
     const isSelectedTarget = selectedTargetRefId === n.id;
     if (isSelectedTarget) {
       const pulse = (Math.sin(Date.now() / 200) + 1) / 2;
@@ -765,7 +809,7 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       const radius = baseRadius + pulse * 10;
 
       ctx.save();
-      const targetColor = isWireframeStyle ? '#4ef6ff' : (n.color || '#ff6666');
+      const targetColor = isWireframeStyle ? '#4ef6ff' : markerColor;
       ctx.strokeStyle = targetColor;
       ctx.globalAlpha = isWireframeStyle ? 0.9 : 0.85;
       ctx.lineWidth = isWireframeStyle ? 1.5 : 2;
@@ -783,7 +827,7 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
 
     // Nation marker (triangle)
     ctx.save();
-    ctx.strokeStyle = n.color;
+    ctx.strokeStyle = markerColor;
     ctx.lineWidth = isWireframeStyle ? 1.5 : 2;
     if (isWireframeStyle) {
       ctx.setLineDash([6, 4]);
@@ -794,8 +838,8 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       ctx.closePath();
       ctx.stroke();
     } else {
-      ctx.fillStyle = n.color;
-      ctx.shadowColor = n.color;
+      ctx.fillStyle = markerColor;
+      ctx.shadowColor = markerColor;
       ctx.shadowBlur = 20;
       ctx.beginPath();
       ctx.moveTo(x, y - 20);
@@ -820,11 +864,11 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
         const cy = y + Math.sin(angle) * radius;
 
         if (isWireframeStyle) {
-          ctx.strokeStyle = n.color;
+          ctx.strokeStyle = markerColor;
           ctx.globalAlpha = 0.6;
           ctx.strokeRect(cx - 5, cy - 5, 10, 10);
         } else {
-          ctx.fillStyle = n.color;
+          ctx.fillStyle = markerColor;
           ctx.globalAlpha = 0.3;
           ctx.fillRect(cx - 6, cy - 6, 12, 12);
         }
@@ -876,15 +920,15 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
 
       ctx.save();
       ctx.globalAlpha = labelVisibility * (isWireframeStyle ? 0.65 : 0.4);
-      ctx.strokeStyle = isWireframeStyle ? '#4ef6ff' : n.color;
+      ctx.strokeStyle = isWireframeStyle ? '#4ef6ff' : markerColor;
       ctx.strokeRect(lx - bw / 2, lyTop, bw, bh);
       ctx.restore();
 
       ctx.save();
       ctx.globalAlpha = labelVisibility;
       ctx.font = `bold ${Math.round(12 * z)}px monospace`;
-      ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : n.color;
-      ctx.shadowColor = n.color;
+      ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : markerColor;
+      ctx.shadowColor = markerColor;
       ctx.shadowBlur = 6;
       ctx.fillText(displayName, lx, lyTop + pad + 12 * z);
       ctx.shadowBlur = 0;
@@ -915,6 +959,9 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
           case 'wireframe':
             return '#4ef6ff';
           case 'flat-realistic':
+            if (currentMode === 'pandemic' && !n.isPlayer && normalizedPandemicForMarker > 0) {
+              return 'rgba(248, 113, 113, 0.9)';
+            }
             return isPoliticalStyle ? '#ffd166' : '#00ff00';
           case 'realistic':
           default:
