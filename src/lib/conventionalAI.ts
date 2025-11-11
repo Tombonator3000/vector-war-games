@@ -41,9 +41,39 @@ function evaluateAttack(
   fromTerritory: TerritoryState,
   toTerritory: TerritoryState,
   aiId: string,
+  personality?: string,
 ): { score: number; reason: string } {
   let score = 0;
   let reasons: string[] = [];
+
+  // Personality affects base aggression
+  let aggressionMultiplier = 1.0;
+  let riskTolerance = 2.0; // Base risk tolerance (2:1 ratio)
+
+  // Personality affects aggression and risk tolerance
+  if (personality === 'aggressive') {
+    aggressionMultiplier = 1.5;
+    riskTolerance = 1.3; // Willing to attack at 1.3:1 ratio
+    score += 30; // Base aggression bonus
+  } else if (personality === 'defensive') {
+    aggressionMultiplier = 0.7;
+    riskTolerance = 2.5; // Only attacks at 2.5:1 ratio
+    score -= 20; // Penalty to aggression
+  } else if (personality === 'chaotic') {
+    aggressionMultiplier = 1.3;
+    riskTolerance = 1.0; // Will even take even fights
+    score += 15;
+  } else if (personality === 'isolationist') {
+    aggressionMultiplier = 0.5;
+    riskTolerance = 3.0; // Very cautious
+    score -= 30;
+  } else if (personality === 'trickster') {
+    aggressionMultiplier = 1.1;
+    riskTolerance = 1.8;
+  } else { // balanced
+    aggressionMultiplier = 1.0;
+    riskTolerance = 2.0;
+  }
 
   // Must have enough armies to attack (leave at least 1 behind)
   const availableArmies = fromTerritory.armies - 1;
@@ -54,24 +84,30 @@ function evaluateAttack(
   // Calculate power ratio
   const powerRatio = availableArmies / Math.max(1, toTerritory.armies);
 
+  // Check if attack meets personality's risk tolerance
+  if (powerRatio < riskTolerance && personality) {
+    score -= 40; // Penalty for too risky
+    reasons.push('below risk tolerance');
+  }
+
   // Strong advantage (3:1 or better) - very attractive
   if (powerRatio >= 3) {
-    score += 100;
+    score += 100 * aggressionMultiplier;
     reasons.push('overwhelming force');
   }
   // Good advantage (2:1 to 3:1) - attractive
   else if (powerRatio >= 2) {
-    score += 50;
+    score += 50 * aggressionMultiplier;
     reasons.push('strong advantage');
   }
   // Slight advantage (1.5:1 to 2:1) - risky but possible
   else if (powerRatio >= 1.5) {
-    score += 20;
+    score += 20 * aggressionMultiplier;
     reasons.push('slight advantage');
   }
-  // Even or disadvantage - avoid
+  // Even or disadvantage - avoid (unless aggressive/chaotic)
   else {
-    score -= 50;
+    score -= 50 / aggressionMultiplier;
     reasons.push('too risky');
   }
 
@@ -143,6 +179,7 @@ function wouldCompleteRegion(
 export function findBestAttack(
   aiId: string,
   territories: Record<string, TerritoryState>,
+  personality?: string,
 ): AIDecision | null {
   let bestAttack: AIDecision | null = null;
   let bestScore = -Infinity;
@@ -165,7 +202,7 @@ export function findBestAttack(
       if (toTerritory.controllingNationId === aiId) continue;
 
       // Evaluate this attack
-      const evaluation = evaluateAttack(fromTerritory, toTerritory, aiId);
+      const evaluation = evaluateAttack(fromTerritory, toTerritory, aiId, personality);
 
       if (evaluation.score > bestScore && evaluation.score > 0) {
         bestScore = evaluation.score;

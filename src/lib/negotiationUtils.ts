@@ -272,7 +272,7 @@ function calculateAllianceValue(
   }
 
   // Defensive nations value alliances more
-  if (context.evaluatorNation.ai === 'defensive') {
+  if (context.evaluatorNation.aiPersonality === 'defensive') {
     value *= 1.3;
   }
 
@@ -505,12 +505,12 @@ function applyContextModifiers(
   }
 
   // Personality modifiers
-  if (context.evaluatorNation.ai === 'aggressive' &&
+  if (context.evaluatorNation.aiPersonality === 'aggressive' &&
       (item.type === 'alliance' || item.type === 'treaty')) {
     modified *= 0.8; // Aggressive AI values diplomacy less
   }
 
-  if (context.evaluatorNation.ai === 'defensive' &&
+  if (context.evaluatorNation.aiPersonality === 'defensive' &&
       (item.type === 'alliance' || item.type === 'treaty')) {
     modified *= 1.3; // Defensive AI values diplomacy more
   }

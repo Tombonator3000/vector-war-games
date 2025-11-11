@@ -243,6 +243,7 @@ export function applyElectionConsequences(
         const newLeader = leaders[Math.floor(Math.random() * leaders.length)];
         const oldLeader = nation.leader;
         nation.leader = newLeader.name;
+        nation.aiPersonality = newLeader.ai;
         nation.ai = newLeader.ai;
         nation.morale = Math.max(20, nation.morale - 15);
         nation.instability = Math.min(100, (nation.instability || 0) + 20);

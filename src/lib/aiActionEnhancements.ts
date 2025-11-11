@@ -41,7 +41,7 @@ export function aiImmigrationAction(
   const target = validTargets.sort((a, b) => b.population - a.population)[0];
 
   // Determine immigration type based on AI personality and resources
-  const personality = aiNation.ai || 'balanced';
+  const personality = aiNation.aiPersonality || 'balanced';
   let actionType: string | null = null;
 
   // Aggressive AI prefers mass immigration

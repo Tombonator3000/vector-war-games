@@ -383,14 +383,14 @@ export function calculateAIVoteProbability(
   switch (agreement.type) {
     case 'multi-lateral-alliance':
       // Defensive nations more likely
-      if (aiNation.aiPersonality === 'defensive' || aiNation.aiPersonality === 'cautious') {
+      if (aiNation.aiPersonality === 'defensive' || aiNation.aiPersonality === 'balanced') {
         probability += 0.2;
       }
       break;
 
     case 'joint-war-declaration':
       // Aggressive nations more likely
-      if (aiNation.aiPersonality === 'aggressive' || aiNation.aiPersonality === 'warmonger') {
+      if (aiNation.aiPersonality === 'aggressive' || aiNation.aiPersonality === 'chaotic') {
         probability += 0.3;
       }
       // Check if AI has grievances with target
@@ -406,14 +406,14 @@ export function calculateAIVoteProbability(
 
     case 'non-aggression-bloc':
       // Almost always good for peace-loving nations
-      if (aiNation.aiPersonality === 'peaceful' || aiNation.aiPersonality === 'diplomat') {
+      if (aiNation.aiPersonality === 'defensive' || aiNation.aiPersonality === 'balanced' || aiNation.aiPersonality === 'isolationist') {
         probability += 0.3;
       }
       break;
 
     case 'trade-agreement':
       // Economic nations love this
-      if (aiNation.aiPersonality === 'economic') {
+      if (aiNation.aiPersonality === 'balanced' || aiNation.aiPersonality === 'isolationist') {
         probability += 0.3;
       }
       // Low on resources = more likely
