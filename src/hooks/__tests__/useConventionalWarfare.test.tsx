@@ -11,7 +11,6 @@ import {
   type ConventionalState,
 } from '../useConventionalWarfare';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
-import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 import { RNGProvider } from '@/contexts/RNGContext';
 import { SeededRandom } from '@/lib/seededRandom';
 import type { MilitaryTemplate } from '@/types/militaryTemplates';
@@ -388,40 +387,4 @@ describe('Conventional warfare panels', () => {
     expect(trainButtons.length).toBeGreaterThan(0);
   });
 
-  it('invokes engagement callbacks from the territory panel', () => {
-    const handleProxy = vi.fn();
-    const handleAttack = vi.fn();
-    const handleMove = vi.fn();
-    
-    render(
-      <TerritoryMapPanel
-        territories={[
-          {
-            id: 'eastern_bloc',
-            name: 'Eurasian Frontier',
-            region: 'Europe',
-            type: 'land',
-            anchorLat: 50.5,
-            anchorLon: 30.5,
-            controllingNationId: 'ai_0',
-            contestedBy: [],
-            strategicValue: 5,
-            productionBonus: 3,
-            instabilityModifier: -4,
-            conflictRisk: 20,
-            neighbors: [],
-            armies: 0,
-            unitComposition: { army: 0, navy: 0, air: 0 },
-          },
-        ]}
-        playerId="player"
-        onProxyEngagement={handleProxy}
-        onAttack={handleAttack}
-        onMove={handleMove}
-      />,
-    );
-
-    const buttons = screen.queryAllByRole('button');
-    expect(buttons.length).toBeGreaterThan(0);
-  });
 });

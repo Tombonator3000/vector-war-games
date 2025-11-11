@@ -287,8 +287,8 @@ vi.mock('@/components/ConventionalForcesPanel', () => ({
   ConventionalForcesPanel: () => <div data-testid="conventional-panel" />,
 }));
 
-vi.mock('@/components/TerritoryMapPanel', () => ({
-  TerritoryMapPanel: () => <div data-testid="territory-panel" />,
+vi.mock('@/components/warfare/MapBasedWarfare', () => ({
+  default: () => <div data-testid="territory-panel" />,
 }));
 
 vi.mock('@/components/MapModeBar', () => ({
