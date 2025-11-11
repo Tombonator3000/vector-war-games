@@ -27,7 +27,9 @@ export function initializeNationPopSystem(nation: Nation): void {
 
   // Initialize cultural power based on nation size and intel
   if (nation.culturalPower === undefined) {
-    nation.culturalPower = 50 + Math.floor(nation.intel / 10) + Math.floor(nation.population / 10);
+    const intel = nation.intel ?? 0;
+    const population = nation.population ?? 0;
+    nation.culturalPower = 50 + Math.floor(intel / 10) + Math.floor(population / 10);
     nation.culturalPower = Math.min(100, nation.culturalPower);
   }
 
