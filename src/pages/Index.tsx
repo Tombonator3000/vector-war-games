@@ -9901,10 +9901,27 @@ export default function NoradVector() {
       nations = updatedNations;
       GameStateManager.setNations(updatedNations);
       PlayerManager.setNations(updatedNations);
-      toast({
-        title: 'Aid Sent',
-        description: `Sent ${terms.resourceAmount} production to ${target.name}. Relationship improved by +10.`,
-      });
+
+      // Significant aid demonstrates goodwill and reduces tensions
+      if (terms.resourceAmount >= 50) {
+        handleDefconChange(1, `Generous aid to ${target.name} demonstrates goodwill and eases tensions`, 'player', {
+          onAudioTransition: AudioSys.handleDefconTransition,
+          onLog: log,
+          onNewsItem: addNewsItem,
+          onUpdateDisplay: updateDisplay,
+          onShowModal: setDefconChangeEvent,
+        });
+
+        toast({
+          title: 'Aid Sent',
+          description: `Sent ${terms.resourceAmount} production to ${target.name}. Relationship improved by +10. Global tensions reduced.`,
+        });
+      } else {
+        toast({
+          title: 'Aid Sent',
+          description: `Sent ${terms.resourceAmount} production to ${target.name}. Relationship improved by +10.`,
+        });
+      }
     } else if (type === 'alliance') {
       // Check if relationship is high enough
       const relationship = getRelationship(player, targetId, nations);
@@ -9932,12 +9949,81 @@ export default function NoradVector() {
       GameStateManager.setNations(updatedNations);
       PlayerManager.setNations(updatedNations);
       log(`Alliance formed between ${player.name} and ${target.name}!`, 'diplomatic');
+
+      // Alliance formation reduces global tensions
+      handleDefconChange(1, `Alliance between ${player.name} and ${target.name} reduces global tensions`, 'player', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onNewsItem: addNewsItem,
+        onUpdateDisplay: updateDisplay,
+        onShowModal: setDefconChangeEvent,
+      });
+
       toast({
         title: 'Alliance Formed',
-        description: `You are now allied with ${target.name}.`,
+        description: `You are now allied with ${target.name}. Global tensions reduced.`,
+      });
+    } else if (type === 'truce') {
+      // Establish temporary peace treaty
+      const truceDuration = terms?.duration || 10; // Default 10 turns
+      const truceExpiryTurn = S.turn + truceDuration;
+
+      // Add truce to both nations
+      const updatedNations = nations.map(n => {
+        if (n.id === player.id) {
+          const activeTreaties = n.activeTreaties || [];
+          return {
+            ...n,
+            activeTreaties: [
+              ...activeTreaties,
+              { withNationId: targetId, expiryTurn: truceExpiryTurn, type: 'truce' as const }
+            ],
+          };
+        }
+        if (n.id === targetId) {
+          const activeTreaties = n.activeTreaties || [];
+          return {
+            ...n,
+            activeTreaties: [
+              ...activeTreaties,
+              { withNationId: player.id, expiryTurn: truceExpiryTurn, type: 'truce' as const }
+            ],
+            relationships: {
+              ...n.relationships,
+              [player.id]: Math.min(100, (n.relationships?.[player.id] || 0) + 15),
+            },
+          };
+        }
+        return n;
+      });
+
+      nations = updatedNations;
+      GameStateManager.setNations(updatedNations);
+      PlayerManager.setNations(updatedNations);
+      log(`Truce established between ${player.name} and ${target.name} for ${truceDuration} turns`, 'diplomatic');
+
+      // Truce has stronger de-escalation effect at critical DEFCON levels
+      const currentDefcon = GameStateManager.getDefcon();
+      const defconBonus = currentDefcon <= 2 ? 2 : 1; // Larger impact at crisis levels
+      handleDefconChange(
+        defconBonus,
+        `Truce agreement between ${player.name} and ${target.name} de-escalates conflict`,
+        'player',
+        {
+          onAudioTransition: AudioSys.handleDefconTransition,
+          onLog: log,
+          onNewsItem: addNewsItem,
+          onUpdateDisplay: updateDisplay,
+          onShowModal: setDefconChangeEvent,
+        }
+      );
+
+      toast({
+        title: 'Truce Established',
+        description: `${truceDuration}-turn peace treaty with ${target.name}. Global tensions significantly reduced.`,
       });
     }
-  }, [nations, log, toast]);
+  }, [nations, log, toast, S.turn, addNewsItem, updateDisplay]);
 
   // Simplified Bio-Warfare Handlers
   const handleBioWeaponResearch = useCallback(() => {
