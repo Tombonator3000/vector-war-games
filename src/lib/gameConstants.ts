@@ -140,6 +140,19 @@ export const RESEARCH_TREE: ResearchProject[] = [
     }
   },
   {
+    id: 'submarine_tech',
+    name: 'Ballistic Submarine Program',
+    description: 'Deploy hidden missile submarines for second-strike capability and global reach.',
+    category: 'delivery',
+    turns: 6,
+    cost: { production: 85, intel: 55, uranium: 20 },
+    prerequisites: ['delivery_mirv'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.submarines = true;
+    }
+  },
+  {
     id: 'defense_grid',
     name: 'Orbital Defense Grid',
     description: 'Integrate lasers and interceptors for +2 permanent defense.',
