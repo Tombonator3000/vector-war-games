@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Swords, Shield, ScrollText } from 'lucide-react';
 import WarCouncilPanel from '@/components/WarCouncilPanel';
@@ -6,7 +6,6 @@ import type { Nation } from '@/types/game';
 import type { LocalNation } from '@/state';
 import { PlayerManager } from '@/state';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
-import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 import { BattleResultDisplay } from '@/components/DiceRoller';
 import { RESEARCH_LOOKUP } from '@/lib/gameConstants';
 import type {
@@ -20,6 +19,7 @@ import { createDefaultNationConventionalProfile } from '@/hooks/useConventionalW
 import type { ArmyGroupSummary } from '@/types/militaryTemplates';
 import { OrderOfBattlePanel } from './OrderOfBattlePanel';
 import { StrategicOutliner, type StrategicOutlinerGroup } from './StrategicOutliner';
+import MapBasedWarfare, { type ProjectedPoint } from '@/components/warfare/MapBasedWarfare';
 
 export interface ConsolidatedWarModalProps {
   // War Council props
@@ -101,6 +101,48 @@ export function ConsolidatedWarModal({
   const territoryList = Object.values(conventionalTerritories);
   const templates = Object.values(conventionalTemplatesMap);
   const recentLogs = [...conventionalLogs].slice(-6).reverse();
+
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const [mapDimensions, setMapDimensions] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
+
+  useEffect(() => {
+    const node = mapContainerRef.current;
+    if (!node) {
+      return;
+    }
+
+    const updateSize = () => {
+      const next = { width: node.clientWidth, height: node.clientHeight };
+      setMapDimensions(prev =>
+        prev.width === next.width && prev.height === next.height ? prev : next,
+      );
+    };
+
+    updateSize();
+
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => updateSize());
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const modalProjector = useCallback(
+    (lon: number, lat: number): ProjectedPoint => {
+      if (mapDimensions.width <= 0 || mapDimensions.height <= 0) {
+        return { x: 0, y: 0, visible: false };
+      }
+      const x = ((lon + 180) / 360) * mapDimensions.width;
+      const y = ((90 - lat) / 180) * mapDimensions.height;
+      return { x, y, visible: true };
+    },
+    [mapDimensions.height, mapDimensions.width],
+  );
 
   const playerTerritories = territoryList.filter(t => t.controllingNationId === localPlayer.id);
   const totalArmies = playerTerritories.reduce((sum, t) => sum + t.armies, 0);
@@ -260,15 +302,21 @@ export function ConsolidatedWarModal({
             playerId={localPlayer.id}
           />
 
-          <TerritoryMapPanel
-            territories={territoryList}
-            onAttack={handleAttack}
-            onMove={handleMove}
-            onProxyEngagement={handleProxyEngagement}
-            availableReinforcements={availableReinforcements}
-            onPlaceReinforcements={handlePlaceReinforcements}
-            playerId={localPlayer.id}
-          />
+          <div
+            ref={mapContainerRef}
+            className="relative h-[420px] overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/40"
+          >
+            <MapBasedWarfare
+              territories={territoryList}
+              playerId={localPlayer.id}
+              projector={modalProjector}
+              onAttack={handleAttack}
+              onMove={handleMove}
+              onProxyEngagement={handleProxyEngagement}
+              availableReinforcements={availableReinforcements}
+              onPlaceReinforcements={handlePlaceReinforcements}
+            />
+          </div>
 
           {recentLogs.length > 0 && (
             <div className="rounded-lg border border-cyan-500/30 bg-slate-900/60 p-4">

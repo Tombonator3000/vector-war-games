@@ -1,8 +1,7 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { LocalNation } from '@/state';
 import { PlayerManager } from '@/state';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
-import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
 import { BattleResultDisplay } from '@/components/DiceRoller';
 import { RESEARCH_LOOKUP } from '@/lib/gameConstants';
 import type {
@@ -13,6 +12,7 @@ import type {
   DiceRollResult,
 } from '@/hooks/useConventionalWarfare';
 import { createDefaultNationConventionalProfile } from '@/hooks/useConventionalWarfare';
+import MapBasedWarfare, { type ProjectedPoint } from '@/components/warfare/MapBasedWarfare';
 
 export interface MilitaryModalProps {
   conventionalTerritories: Record<string, TerritoryState>;
@@ -69,6 +69,48 @@ export function MilitaryModal({
   const territoryList = Object.values(conventionalTerritories);
   const templates = Object.values(conventionalTemplatesMap);
   const recentLogs = [...conventionalLogs].slice(-6).reverse();
+
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const [mapDimensions, setMapDimensions] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
+
+  useEffect(() => {
+    const node = mapContainerRef.current;
+    if (!node) {
+      return;
+    }
+
+    const updateSize = () => {
+      const next = { width: node.clientWidth, height: node.clientHeight };
+      setMapDimensions(prev =>
+        prev.width === next.width && prev.height === next.height ? prev : next,
+      );
+    };
+
+    updateSize();
+
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => updateSize());
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const modalProjector = useCallback(
+    (lon: number, lat: number): ProjectedPoint => {
+      if (mapDimensions.width <= 0 || mapDimensions.height <= 0) {
+        return { x: 0, y: 0, visible: false };
+      }
+      const x = ((lon + 180) / 360) * mapDimensions.width;
+      const y = ((90 - lat) / 180) * mapDimensions.height;
+      return { x, y, visible: true };
+    },
+    [mapDimensions.height, mapDimensions.width],
+  );
 
   const playerTerritories = territoryList.filter(t => t.controllingNationId === player.id);
   const totalArmies = playerTerritories.reduce((sum, t) => sum + t.armies, 0);
@@ -246,15 +288,21 @@ export function MilitaryModal({
             <span className="text-cyan-400">{totalArmies} total armies</span>
           </div>
         </header>
-        <TerritoryMapPanel
-          territories={territoryList}
-          playerId={player.id}
-          onAttack={handleAttack}
-          onMove={handleMove}
-          onProxyEngagement={handleProxyEngagement}
-          availableReinforcements={availableReinforcements}
-          onPlaceReinforcements={handlePlaceReinforcements}
-        />
+        <div
+          ref={mapContainerRef}
+          className="relative h-[420px] overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/40"
+        >
+          <MapBasedWarfare
+            territories={territoryList}
+            playerId={player.id}
+            projector={modalProjector}
+            onAttack={handleAttack}
+            onMove={handleMove}
+            onProxyEngagement={handleProxyEngagement}
+            availableReinforcements={availableReinforcements}
+            onPlaceReinforcements={handlePlaceReinforcements}
+          />
+        </div>
       </section>
 
       <section className="rounded-lg border border-cyan-500/30 bg-slate-800/50 p-6">
