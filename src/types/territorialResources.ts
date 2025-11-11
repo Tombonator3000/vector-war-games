@@ -234,18 +234,19 @@ export const RESOURCE_DEPOSIT_TEMPLATES: Record<string, ResourceDeposit[]> = {
 
   // Food producers
   usa_food: [
-    { type: 'food', amount: 25, richness: 1.8 },
+    { type: 'food', amount: 35, richness: 1.8 },
     { type: 'oil', amount: 10, richness: 1.3 },
   ],
   brazil_food: [
-    { type: 'food', amount: 20, richness: 1.6 },
+    { type: 'food', amount: 30, richness: 1.6 },
     { type: 'rare_earths', amount: 5, richness: 1.0 },
   ],
 
   // Balanced territories
   balanced: [
     { type: 'oil', amount: 5, richness: 1.0 },
-    { type: 'food', amount: 8, richness: 1.0 },
+    { type: 'food', amount: 18, richness: 1.0 },
+    { type: 'rare_earths', amount: 3, richness: 1.0 },
   ],
 
   // Poor territories
