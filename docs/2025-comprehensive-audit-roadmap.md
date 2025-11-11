@@ -729,6 +729,11 @@ Example: Player focuses on culture warfare
    - All nations have treaties
    - One betrayal triggers chain reaction
    - Diplomatic chaos
+
+6. "Pandemic 2020"
+   - Year: 2020 (3-month turns)
+   - COVID-19 escalation with BioForge online from turn one
+   - DEFCON 3 and annual elections under public health pressure
 ```
 
 **Implementation**:
