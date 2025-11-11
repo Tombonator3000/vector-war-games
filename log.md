@@ -3053,3 +3053,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Refactored `useConventionalWarfare` to calculate combat outcomes from army counts, unit composition, and supply multipliers, returning structured strength reports instead of dice rounds.
 - Updated battle UI (Military Modal, Consolidated War Modal, BattleResultDisplay) plus database copy to surface strength ratios, outcomes, and supply posture messaging.
 - Adjusted conventional warfare tests for deterministic results, added stalemate coverage, and ran `npm run test -- useConventionalWarfare` to verify scenarios.
+### 2025-11-11T08:03:24Z - Refresh UI after nuclear strikes
+- Added an `updateDisplay()` call at the end of the nuclear detonation handler so population and scoreboard values refresh immediately after resolving a strike.
