@@ -19,7 +19,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '🚀',
     baseTurnsToComplete: 3,
     resourceCosts: {
-      production: 80,
+      production: 52,
       uranium: 15,
     },
     unlocks: 'nuclear_missile',
@@ -33,7 +33,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '🎯',
     baseTurnsToComplete: 4,
     resourceCosts: {
-      production: 100,
+      production: 65,
       uranium: 18,
     },
     requiresResearch: ['submarine_tech'],
@@ -48,7 +48,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '🚢',
     baseTurnsToComplete: 12,
     resourceCosts: {
-      production: 350,
+      production: 228,
       uranium: 40,
     },
     requiresResearch: ['submarine_tech'],
@@ -65,7 +65,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '⚔️',
     baseTurnsToComplete: 5,
     resourceCosts: {
-      production: 120,
+      production: 78,
     },
     minTurn: 11,
     unlocks: 'army_unit',
@@ -79,7 +79,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '✈️',
     baseTurnsToComplete: 4,
     resourceCosts: {
-      production: 100,
+      production: 65,
     },
     minTurn: 11,
     unlocks: 'air_unit',
@@ -93,7 +93,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '⚓',
     baseTurnsToComplete: 8,
     resourceCosts: {
-      production: 200,
+      production: 130,
     },
     requiresBuilding: ['naval_base'],
     minTurn: 11,
@@ -112,7 +112,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '🛡️',
     baseTurnsToComplete: 6,
     resourceCosts: {
-      production: 140,
+      production: 91,
     },
     unlocks: 'abm_defense',
   },
@@ -125,7 +125,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '📡',
     baseTurnsToComplete: 4,
     resourceCosts: {
-      production: 70,
+      production: 46,
     },
     unlocks: 'radar_building',
   },
@@ -138,7 +138,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '🏰',
     baseTurnsToComplete: 5,
     resourceCosts: {
-      production: 80,
+      production: 52,
     },
     unlocks: 'bunker_building',
   },
@@ -155,7 +155,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '🏭',
     baseTurnsToComplete: 5,
     resourceCosts: {
-      production: 100,
+      production: 65,
     },
     unlocks: 'factory_building',
   },
@@ -168,7 +168,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '🔬',
     baseTurnsToComplete: 6,
     resourceCosts: {
-      production: 120,
+      production: 78,
     },
     requiresFocus: ['research_investment'],
     unlocks: 'research_lab_building',
@@ -182,7 +182,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '🕵️',
     baseTurnsToComplete: 7,
     resourceCosts: {
-      production: 140,
+      production: 91,
     },
     requiresFocus: ['intelligence_agency'],
     unlocks: 'intel_facility_building',
@@ -200,7 +200,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '🛰️',
     baseTurnsToComplete: 10,
     resourceCosts: {
-      production: 250,
+      production: 163,
       uranium: 10,
     },
     requiresFocus: ['satellite_network'],
@@ -216,7 +216,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '☣️',
     baseTurnsToComplete: 8,
     resourceCosts: {
-      production: 180,
+      production: 117,
       intel: 30,
     },
     requiresResearch: ['bio_weapons'],
@@ -232,7 +232,7 @@ export const PRODUCTION_TEMPLATES: Record<ProductionItemType, ProductionTemplate
     icon: '💻',
     baseTurnsToComplete: 7,
     resourceCosts: {
-      production: 150,
+      production: 98,
       intel: 20,
     },
     requiresFocus: ['cyber_warfare_division'],
@@ -309,8 +309,6 @@ export function canAffordProduction(
   availableResources: {
     production: number;
     uranium: number;
-    electronics: number;
-    steel: number;
     intel: number;
   }
 ): { canAfford: boolean; missing: string[] } {
@@ -322,17 +320,6 @@ export function canAffordProduction(
 
   if (template.resourceCosts.uranium && availableResources.uranium < template.resourceCosts.uranium) {
     missing.push('uranium');
-  }
-
-  if (
-    template.resourceCosts.electronics &&
-    availableResources.electronics < template.resourceCosts.electronics
-  ) {
-    missing.push('electronics');
-  }
-
-  if (template.resourceCosts.steel && availableResources.steel < template.resourceCosts.steel) {
-    missing.push('steel');
   }
 
   if (template.resourceCosts.intel && availableResources.intel < template.resourceCosts.intel) {

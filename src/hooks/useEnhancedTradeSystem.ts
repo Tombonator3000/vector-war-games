@@ -13,9 +13,8 @@ import type {
 const DEFAULT_GOODS: TradeGood[] = [
   { id: "oil", name: "Crude Oil", category: "raw" },
   { id: "fuel", name: "Refined Fuel", category: "refined" },
-  { id: "steel", name: "Steel", category: "manufactured" },
-  { id: "electronics", name: "Electronics", category: "manufactured" },
-  { id: "food", name: "Processed Food", category: "refined" },
+  { id: "rare_earths", name: "Rare Earth Minerals", category: "raw" },
+  { id: "processed_food", name: "Processed Food", category: "refined" },
 ];
 
 export function useEnhancedTradeSystem(

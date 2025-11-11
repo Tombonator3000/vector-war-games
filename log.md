@@ -3048,3 +3048,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-10T15:11:44Z - Hide launch control while consequence preview is active
 - Updated the Launch Control dialog in `src/pages/Index.tsx` to only open when a launch is pending and no consequence preview is visible, preventing overlapping modals.
 - Guarded dialog content and controls against active consequence previews so players only see and interact with the preview until it is dismissed.
+
+### 2025-11-10T15:35:00Z - Audit resource generation calculations follow-up fixes
+- Implemented the missing balance changes for production, food output, and morale penalties in `src/lib/gamePhaseHandlers.ts` and `src/lib/territorialResourcesSystem.ts`, ensuring uranium is no longer double-generated and fallout penalties match the design brief.
+- Reduced production templates costs by roughly 35% and removed electronics/steel dependencies across production, trade, and refinement systems (`src/data/productionItems.ts`, `src/hooks/useEnhancedTradeSystem.ts`, `src/hooks/useResourceRefinement.ts`, `src/types/economicDepth.ts`, `src/types/production.ts`).
+- Added rare earth coverage to all territory templates and updated refinery bonus handling to rely solely on supported strategic resources (`src/types/territorialResources.ts`).

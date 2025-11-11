@@ -255,6 +255,7 @@ export const RESOURCE_DEPOSIT_TEMPLATES: Record<string, ResourceDeposit[]> = {
   // Poor territories
   barren: [
     { type: 'food', amount: 8, richness: 0.8 },
+    { type: 'rare_earths', amount: 2, richness: 0.9 },
   ],
 };
 

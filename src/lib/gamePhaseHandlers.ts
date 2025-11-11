@@ -334,7 +334,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
   nations.forEach(n => {
     if (n.population <= 0) return;
 
-    // Base production - balanced for all nations
+    // Base production - balanced for all nations (0.20 multiplier = +67% vs. prior 0.12)
     const baseProduction = Math.floor(n.population * 0.20);
     const baseProd = baseProduction + (n.cities || 1) * 20;
     // NOTE: Uranium now comes ONLY from territorial resources (no double generation)
@@ -342,7 +342,6 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
     // Apply green shift debuff if active
     let prodMult = 1;
-    let uranMult = 1;
     // Reduced fallout hunger penalty from 95% max to 50% max
     const hungerPenalty = Math.min(0.50, (n.falloutHunger ?? 0) / 200);
     if (hungerPenalty > 0) {
@@ -357,7 +356,6 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     if (sicknessPenalty > 0) {
       const penaltyFactor = 1 - sicknessPenalty;
       prodMult *= penaltyFactor;
-      uranMult *= Math.max(0.5, penaltyFactor);
     }
 
     if (n.refugeeFlow && n.refugeeFlow > 0) {
@@ -366,7 +364,6 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     }
     if (n.greenShiftTurns && n.greenShiftTurns > 0) {
       prodMult = 0.7;
-      uranMult = 0.5;
       n.greenShiftTurns--;
       if (n === PlayerManager.get()) {
         log('Eco movement reduces nuclear production', 'warning');
@@ -375,7 +372,6 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
     if (n.environmentPenaltyTurns && n.environmentPenaltyTurns > 0) {
       prodMult *= 0.7;
-      uranMult *= 0.7;
       n.environmentPenaltyTurns--;
       if (n.environmentPenaltyTurns === 0 && n.isPlayer) {
         log('Environmental treaty penalties have expired.', 'success');
@@ -697,15 +693,15 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       nations.forEach(n => {
         const refineryStats = economicDepthApi.nationRefineryStats.get(n.id);
         if (refineryStats && refineryStats.totalOutput) {
-          // Apply refined resource bonuses to production
-          const steelBonus = (refineryStats.totalOutput.steel || 0) * 0.1; // 10% production bonus per steel
-          const electronicsBonus = (refineryStats.totalOutput.electronics || 0) * 0.05; // 5% intel bonus per electronics
+          // Apply refined resource bonuses to production/intel using existing strategic resources
+          const fuelBonus = (refineryStats.totalOutput.fuel || 0) * 0.05; // Military logistics boost production slightly
+          const processedFoodBonus = (refineryStats.totalOutput.processedFood || 0) * 0.03; // Extra food steadies morale/intel
 
-          if (steelBonus > 0) {
-            n.production = Math.floor((n.production || 0) + steelBonus);
+          if (fuelBonus > 0) {
+            n.production = Math.floor((n.production || 0) + fuelBonus);
           }
-          if (electronicsBonus > 0) {
-            n.intel = Math.floor((n.intel || 0) + electronicsBonus);
+          if (processedFoodBonus > 0) {
+            n.intel = Math.floor((n.intel || 0) + processedFoodBonus);
           }
         }
       });
