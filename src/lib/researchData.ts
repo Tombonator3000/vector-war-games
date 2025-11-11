@@ -111,6 +111,19 @@ export const NUCLEAR_RESEARCH: ResearchNode[] = [
       nation.researched.stealth = true;
     }
   },
+  {
+    id: 'submarine_tech',
+    name: 'Ballistic Submarine Program',
+    description: 'Deploy hidden missile submarines for second-strike capability and global reach.',
+    category: 'delivery',
+    turns: 6,
+    cost: { production: 85, intel: 55, uranium: 20 },
+    prerequisites: ['delivery_mirv'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.submarines = true;
+    }
+  },
 ];
 
 // ==================== CYBER WARFARE TREE ====================
