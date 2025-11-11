@@ -12,17 +12,18 @@ import type { PandemicTurnContext, PandemicTurnEffect } from './usePandemic';
 import type { NewsItem } from '@/components/NewsTicker';
 import type { PlagueState, SymptomId, EvolveNodePayload } from '@/types/biowarfare';
 import { getPlagueTypeById, getNodeById } from '@/lib/evolutionData';
+import type { ScenarioConfig } from '@/types/scenario';
 
 type AddNewsItem = (category: NewsItem['category'], text: string, priority: NewsItem['priority']) => void;
 
 /**
  * Main hook that combines pandemic spread with evolution tree and lab construction
  */
-export function useBioWarfare(addNewsItem: AddNewsItem) {
+export function useBioWarfare(addNewsItem: AddNewsItem, scenario?: ScenarioConfig) {
   const { rng } = useRNG();
   const pandemic = usePandemic(addNewsItem);
-  const evolution = useEvolutionTree(addNewsItem);
-  const bioLab = useBioLab(addNewsItem);
+  const evolution = useEvolutionTree(addNewsItem, scenario);
+  const bioLab = useBioLab(addNewsItem, scenario);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {

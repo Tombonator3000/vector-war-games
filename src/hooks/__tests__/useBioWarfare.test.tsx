@@ -5,6 +5,8 @@ import { RNGProvider } from '@/contexts/RNGContext';
 import { useBioWarfare } from '../useBioWarfare';
 import type { Nation } from '@/types/game';
 import type { PandemicTurnEffect } from '../usePandemic';
+import { SCENARIOS } from '@/types/scenario';
+import { ALL_EVOLUTION_NODES, PLAGUE_TYPES } from '@/lib/evolutionData';
 
 describe('useBioWarfare defensive research', () => {
   beforeEach(() => {
@@ -20,7 +22,7 @@ describe('useBioWarfare defensive research', () => {
 
   it('applies vaccine countermeasure when vaccine research unlocks', () => {
     const addNews = vi.fn();
-    const { result } = renderHook(() => useBioWarfare(addNews), { wrapper });
+    const { result } = renderHook(() => useBioWarfare(addNews, SCENARIOS.coldWar), { wrapper });
 
     act(() => {
       result.current.selectPlagueType('bacteria');
@@ -41,7 +43,7 @@ describe('useBioWarfare defensive research', () => {
 
   it('updates fallout mitigation when shielding research unlocks', () => {
     const addNews = vi.fn();
-    const { result } = renderHook(() => useBioWarfare(addNews), { wrapper });
+    const { result } = renderHook(() => useBioWarfare(addNews, SCENARIOS.coldWar), { wrapper });
 
     act(() => {
       result.current.selectPlagueType('bacteria');
@@ -62,8 +64,7 @@ describe('useBioWarfare defensive research', () => {
 
   it('applies per-nation casualties to infected AI populations', () => {
     const addNews = vi.fn();
-    const { result } = renderHook(() => useBioWarfare(addNews), { wrapper });
-
+    const { result } = renderHook(() => useBioWarfare(addNews, SCENARIOS.coldWar), { wrapper });
     const createNation = (id: string, isPlayer: boolean, population: number): Nation => ({
       id,
       isPlayer,
@@ -131,5 +132,20 @@ describe('useBioWarfare defensive research', () => {
     nations[1].population = Math.max(0, nations[1].population - casualties / 1_000_000);
 
     expect(nations[1].population).toBeLessThan(beforePopulation);
+  });
+
+  it('seeds pandemic scenario with fully unlocked lab and evolution tree', () => {
+    const addNews = vi.fn();
+    const { result } = renderHook(
+      () => useBioWarfare(addNews, SCENARIOS.pandemic2020),
+      { wrapper },
+    );
+
+    expect(result.current.labFacility.tier).toBe(4);
+    expect(result.current.labFacility.active).toBe(true);
+    expect(result.current.labFacility.underConstruction).toBe(false);
+    expect(result.current.plagueState.unlockedNodes.size).toBe(ALL_EVOLUTION_NODES.length);
+    expect(result.current.plagueState.unlockedPlagueTypes.size).toBe(PLAGUE_TYPES.length);
+    expect(result.current.plagueState.dnaPoints).toBe(0);
   });
 });
