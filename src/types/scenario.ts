@@ -193,7 +193,7 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
     id: 'pandemic2020',
     name: 'Pandemic 2020',
     description:
-      'January 2020: COVID-19 erupts into a global crisis. Juggle lockdown debates, supply chain collapse, disinformation wars, and mounting casualties as BioForge systems race to contain the escalation.',
+      'January 2020: A rogue superpower unleashes an experimental bioweapon in a real-world trial. Panic over lockdowns, supply chain shockwaves, and disinformation campaigns ensue as the pathogen races across the globe—and world powers scramble for containment before the masterminds consolidate control.',
     timeConfig: {
       unit: 'month',
       unitsPerTurn: 3,

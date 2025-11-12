@@ -3086,3 +3086,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated the selector to accept the unlocked set, gate selection on lab tier plus runtime unlocks, and preserve static requirement messaging.
 - Passed the unlocked set from `BioWarfareLab` and extended `useBioWarfare` tests to cover Pandemic 2020 advanced pathogen access and locked campaigns.
 - Attempted broad `npm run test -- --run` but aborted due to verbose unrelated suite output; verified targeted coverage via `npm run test -- --run src/hooks/__tests__/useBioWarfare.test.tsx`.
+
+### 2025-11-12T08:12:39Z - Reframed Pandemic 2020 scenario fiction
+- Updated the Pandemic 2020 scenario description in `src/types/scenario.ts` to describe a rogue superpower testing an experimental bioweapon instead of referencing COVID-19 directly.
