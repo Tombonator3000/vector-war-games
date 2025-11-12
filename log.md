@@ -3152,3 +3152,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated `executeCyberAttack` to emit the new reaction fields so `handleCyberAttackOperation` can drive diplomacy and readiness responses.
 - Enhanced `handleCyberAttackOperation` in `src/pages/Index.tsx` to modify both nations' relationships, trigger DEFCON updates, schedule counter-intel retaliation, and persist state through `PlayerManager`/`GameStateManager` while surfacing news alerts.
 - Added a `pendingCyberRetaliation` hook on `Nation` plus regression tests in `src/types/__tests__/unifiedIntelOperations.test.ts` that verify detected and attributed cyber attacks now reduce relationships and DEFCON while stealthy strikes leave them unchanged.
+### 2025-11-12T11:30:53Z - Preserved counter-intel mutations during cyber retaliation persistence
+- Updated `handleCyberAttackOperation` in `src/pages/Index.tsx` to merge relationship and retaliation patches onto the latest nation snapshot before calling `GameStateManager.updateNation`, preventing counter-intel mutations from being overwritten.
+- Verified `npm run test -- unifiedIntelOperations` continues to pass to cover cyber operation fallout regressions.

@@ -9572,6 +9572,18 @@ export default function NoradVector() {
     }
 
     PlayerManager.set(updatedPlayer);
+
+    const refreshedTarget = GameStateManager.getNation(updatedTarget.id);
+    if (refreshedTarget) {
+      updatedTarget = {
+        ...refreshedTarget,
+        relationships: updatedTarget.relationships ?? refreshedTarget.relationships,
+        relationshipHistory: updatedTarget.relationshipHistory ?? refreshedTarget.relationshipHistory,
+        pendingCyberRetaliation:
+          updatedTarget.pendingCyberRetaliation ?? refreshedTarget.pendingCyberRetaliation,
+      } as Nation;
+    }
+
     GameStateManager.updateNation(updatedTarget.id, updatedTarget);
     nations = GameStateManager.getNations();
     PlayerManager.setNations(nations);
