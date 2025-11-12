@@ -27,9 +27,9 @@ describe('evaluateCasualtyMilestones', () => {
 
     const result = evaluateCasualtyMilestones({
       tracker,
-      pandemicCasualtyTally: 600_000,
+      pandemicCasualtyTally: 6_200_000,
       plagueKillTotal: 0,
-      casualtyTotalsThisTurn: { alpha: 600_000 },
+      casualtyTotalsThisTurn: { alpha: 6_200_000 },
       nations: [{ id: 'alpha', name: 'Alpha' }],
       turn: 5,
       handlers: defaultHandlers,
@@ -40,9 +40,16 @@ describe('evaluateCasualtyMilestones', () => {
     expect(buildSummaryMock).toHaveBeenCalledTimes(1);
     const summaryPayload = buildSummaryMock.mock.calls[0][0];
     expect(openModalMock).toHaveBeenCalledWith('GLOBAL CASUALTY ALERT', summaryPayload);
+    expect(summaryPayload).toEqual(
+      expect.objectContaining({
+        milestoneId: 'wwi',
+        milestoneLabel: 'World War I',
+        milestoneHeadline: expect.stringContaining('World War I'),
+      }),
+    );
     expect(addNewsItemMock).toHaveBeenCalledWith(
       'crisis',
-      expect.stringContaining('500,000'),
+      expect.stringContaining('Emergency Broadcast'),
       'critical',
     );
   });
@@ -52,9 +59,9 @@ describe('evaluateCasualtyMilestones', () => {
 
     evaluateCasualtyMilestones({
       tracker,
-      pandemicCasualtyTally: 600_000,
+      pandemicCasualtyTally: 6_200_000,
       plagueKillTotal: 0,
-      casualtyTotalsThisTurn: { alpha: 600_000 },
+      casualtyTotalsThisTurn: { alpha: 6_200_000 },
       nations: [{ id: 'alpha', name: 'Alpha' }],
       turn: 5,
       handlers: defaultHandlers,
@@ -66,9 +73,9 @@ describe('evaluateCasualtyMilestones', () => {
 
     const result = evaluateCasualtyMilestones({
       tracker,
-      pandemicCasualtyTally: 650_000,
+      pandemicCasualtyTally: 6_500_000,
       plagueKillTotal: 0,
-      casualtyTotalsThisTurn: { alpha: 50_000 },
+      casualtyTotalsThisTurn: { alpha: 300_000 },
       nations: [{ id: 'alpha', name: 'Alpha' }],
       turn: 6,
       handlers: defaultHandlers,
@@ -105,6 +112,37 @@ describe('evaluateCasualtyMilestones', () => {
       'crisis',
       expect.stringContaining('300,000'),
       'urgent',
+    );
+  });
+
+  it('attaches historical milestone context for Spanish Flu-scale devastation', () => {
+    const tracker = createCasualtyAlertTracker();
+
+    const result = evaluateCasualtyMilestones({
+      tracker,
+      pandemicCasualtyTally: 52_000_000,
+      plagueKillTotal: 1_000_000,
+      casualtyTotalsThisTurn: { alpha: 10_000_000 },
+      nations: [{ id: 'alpha', name: 'Alpha' }],
+      turn: 9,
+      handlers: defaultHandlers,
+    });
+
+    expect(result).toBe(true);
+    const summaryPayload = buildSummaryMock.mock.calls[0][0];
+    expect(summaryPayload).toEqual(
+      expect.objectContaining({
+        type: 'global',
+        milestoneId: 'spanish-flu',
+        milestoneLabel: 'Spanish Flu Pandemic',
+        milestoneHeadline: expect.stringContaining('Spanish Flu'),
+        milestoneNarrative: expect.stringContaining('1918'),
+      }),
+    );
+    expect(addNewsItemMock).toHaveBeenCalledWith(
+      'crisis',
+      expect.stringContaining('Spanish Flu pandemic'),
+      'critical',
     );
   });
 });

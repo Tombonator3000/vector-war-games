@@ -3121,3 +3121,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T10:05:00Z - Added DEFCON 1 escalation warning overlay
 - Wrapped global `handleDefconChange` in `src/pages/Index.tsx` to notify listeners when DEFCON shifts to level 1 and subscribed the page component to trigger a temporary warning state.
 - Introduced `src/components/DefconWarningOverlay.tsx` to render a non-blocking, full-screen alert layer and wired it into the main page alongside lifecycle management for the auto-dismiss timeout.
+### 2025-11-12T10:04:26Z - Layered historical pandemic casualty milestones into alerts
+- Replaced numeric global casualty thresholds with structured milestones (World War I, Spanish Flu, World War II, Black Death) in `src/lib/pandemic/casualtyAlertEvaluator.ts`, piping milestone metadata through the alert payload and emergency broadcast copy.
+- Enhanced `CasualtyImpactSummary` to surface milestone headlines and narratives above the existing metrics so the modal reads like a crisis briefing.
+- Expanded `casualtyAlertEvaluator` tests to cover milestone metadata (including >50M Spanish Flu thresholds) and ran `npm run test -- --run` (suite still reports known `mapColorUtils` hex expectations).
