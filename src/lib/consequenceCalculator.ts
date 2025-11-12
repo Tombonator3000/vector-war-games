@@ -6,6 +6,7 @@ import type {
 import type { Nation } from '@/types/game';
 import { safePercentage } from '@/lib/safeMath';
 import { getRelationship } from '@/lib/relationshipUtils';
+import { calculateMissileInterceptChance } from '@/lib/missileDefense';
 
 /**
  * Calculate consequences for launching a nuclear missile
@@ -23,7 +24,14 @@ export function calculateMissileLaunchConsequences(
 
   // Calculate interception probability
   const defenseStrength = targetNation.defense || 0;
-  const interceptionChance = Math.min(75, defenseStrength * 2); // Max 75% intercept
+  const alliedInterceptors = allNations
+    .filter(
+      (nation) =>
+        nation.id !== targetNation.id && nation.treaties?.[targetNation.id]?.alliance && nation.defense > 0
+    )
+    .map((nation) => nation.defense || 0);
+  const interceptBreakdown = calculateMissileInterceptChance(defenseStrength, alliedInterceptors);
+  const interceptionChance = Math.round(interceptBreakdown.totalChance * 100);
   const successProbability = 100 - interceptionChance;
 
   const retaliationCapacity =
