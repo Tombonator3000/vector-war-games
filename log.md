@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-12T10:22:27Z - Diplomacy-based DEFCON escalation control
+- Added a council antagonism option in the enhanced diplomacy modal so players can intentionally lower DEFCON through targeted hostilities.
+- Extended the Index diplomacy handler to spend DIP, update trust/relationships, record aggressive intent, and pipe the new action through the unified DEFCON change callbacks.
+- Noted the manual DEFCON lowering route in the in-game helper tips for better player discovery.
+
 ### 2025-11-11T22:19:27Z - Pandemic scenario bio-warfare overrides
 - Threaded scenario parameters through `useBioWarfare`, `useBioLab`, and `useEvolutionTree` so the Pandemic 2020 campaign starts with a tier-4 lab and all evolution nodes unlocked.
 - Updated `Index` wiring and hook tests to pass explicit scenarios and validate the Pandemic baseline behavior.

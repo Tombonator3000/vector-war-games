@@ -72,7 +72,8 @@ const helpTopics: HelpTopic[] = [
       'DEFCON 4: Increased readiness - monitor enemies',
       'DEFCON 3: High alert - prepare defense',
       'DEFCON 2: War imminent - ready to attack',
-      'DEFCON 1: Nuclear war - all weapons active'
+      'DEFCON 1: Nuclear war - all weapons active',
+      'Council antagonism can deliberately lower DEFCON when you need wartime readiness'
     ]
   },
   {

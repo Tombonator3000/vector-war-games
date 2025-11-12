@@ -11289,6 +11289,18 @@ export default function NoradVector() {
       }
     }
 
+    if (action.id === 'defcon-escalate') {
+      const currentDefcon = GameStateManager.getDefcon();
+      if (!canPerformAction('escalate', currentDefcon)) {
+        toast({
+          title: 'DEFCON already critical',
+          description: 'Global readiness is already at DEFCON 1. No further escalation is possible.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     if (action.id === 'call-in-favor' && targetNation) {
       const availableFavors = getFavors(player, targetNation.id);
       if (availableFavors <= 0) {
@@ -11398,7 +11410,8 @@ export default function NoradVector() {
       action.dipCost &&
       action.id !== 'propose-resolution' &&
       action.id !== 'call-session' &&
-      action.id !== 'defcon-deescalate'
+      action.id !== 'defcon-deescalate' &&
+      action.id !== 'defcon-escalate'
     ) {
       const success = trySpendDip(action.dipCost, action.id, targetNation?.id);
       if (!success) {
@@ -11751,6 +11764,61 @@ export default function NoradVector() {
           priority: 'important',
         };
         log(`${player.name} leveraged diplomatic channels to shift DEFCON from ${defconBefore} to ${newDefcon}.`);
+        break;
+      }
+      case 'defcon-escalate': {
+        if (!updatedTarget) break;
+        if (action.dipCost && !trySpendDip(action.dipCost, 'defcon-escalate', updatedTarget.id)) {
+          return;
+        }
+
+        const defconBefore = GameStateManager.getDefcon();
+        if (!canPerformAction('escalate', defconBefore)) {
+          toastPayload = {
+            title: 'DEFCON unchanged',
+            description: 'Global readiness cannot climb any higher.',
+            variant: 'destructive',
+          };
+          break;
+        }
+
+        const reason = `${player.name} antagonizes ${updatedTarget.name}, forcing heightened readiness`;
+        const defconChanged = handleDefconChange(-1, reason, 'player', {
+          onAudioTransition: AudioSys.handleDefconTransition,
+          onLog: log,
+          onNewsItem: addNewsItem,
+          onUpdateDisplay: updateDisplay,
+          onShowModal: setDefconChangeEvent,
+        });
+
+        if (!defconChanged) {
+          toastPayload = {
+            title: 'DEFCON unchanged',
+            description: 'The world resists your attempts to inflame tensions.',
+            variant: 'destructive',
+          };
+          break;
+        }
+
+        updatedPlayer = modifyTrust(updatedPlayer, updatedTarget.id, -4, reason, currentTurn);
+        updatedTarget = modifyTrust(updatedTarget, updatedPlayer.id, -6, reason, currentTurn);
+        updatedPlayer = modifyRelationship(updatedPlayer, updatedTarget.id, -6, reason, currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, updatedPlayer.id, -8, reason, currentTurn);
+        adjustThreat(updatedPlayer, updatedTarget.id, 12);
+        adjustThreat(updatedTarget, updatedPlayer.id, 25);
+        updatedPlayer = { ...updatedPlayer, lastAggressiveAction: currentTurn };
+
+        const newDefcon = GameStateManager.getDefcon();
+        toastPayload = {
+          title: 'DEFCON Escalated',
+          description: `Global alert level spiked from DEFCON ${defconBefore} to DEFCON ${newDefcon}.`,
+          variant: 'destructive',
+        };
+        newsItem = {
+          text: `${player.name} deliberately provokes ${updatedTarget.name}, plunging the world toward DEFCON ${newDefcon}.`,
+          priority: 'critical',
+        };
+        log(`${player.name} escalated tensions with ${updatedTarget.name}, moving DEFCON from ${defconBefore} to ${newDefcon}.`);
         break;
       }
       case 'back-channel': {
