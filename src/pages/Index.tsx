@@ -10594,14 +10594,28 @@ export default function NoradVector() {
     }
 
     // Update nations
+    const launcherWithCampaign: Nation = Array.isArray(result.launcher.propagandaCampaigns)
+      ? result.launcher.propagandaCampaigns.some(campaign => campaign.id === result.campaign.id)
+        ? result.launcher
+        : {
+            ...result.launcher,
+            propagandaCampaigns: [...result.launcher.propagandaCampaigns, result.campaign],
+          } as Nation
+      : {
+          ...result.launcher,
+          propagandaCampaigns: [result.campaign],
+        } as Nation;
+
     const updatedNations = nations.map(n => {
-      if (n.id === player.id) return result.launcher;
+      if (n.id === player.id) return launcherWithCampaign;
       if (n.id === target.id) return result.target;
       return n;
     });
     nations = updatedNations;
     GameStateManager.setNations(updatedNations);
     PlayerManager.setNations(updatedNations);
+
+    PlayerManager.set(launcherWithCampaign);
 
     log(result.message, 'diplomatic');
     toast({

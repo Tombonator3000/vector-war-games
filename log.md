@@ -3138,3 +3138,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T11:15:00Z - Gated BioForge command access by lab tier unlock
 - Updated `src/pages/Index.tsx` to only render BioForge command buttons once the laboratory reaches Tier 3 while keeping co-op approval and feature flags respected for enabling/disabling.
 - Added a `bioForgeUnlocked` helper to drive both the primary command bar and minimal HUD sheet visibility so the BioForge UI remains hidden prior to Tier 3 unlocks.
+
+### 2025-11-12T10:53:23Z - Persist streamlined propaganda campaign state
+- Updated `launchPropagandaCampaign` in `src/lib/streamlinedCultureLogic.ts` to deduct intel, propagate relationship penalties, and persist new campaign records on the launcher before returning.
+- Ensured `handleLaunchPropaganda` in `src/pages/Index.tsx` merges the new campaign onto the player nation and syncs the cached PlayerManager entry so UI panels immediately reflect active operations.

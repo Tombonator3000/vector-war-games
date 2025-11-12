@@ -50,9 +50,12 @@ export function launchPropagandaCampaign(
   }
 
   // Deduct cost
-  const updatedLauncher = {
+  let updatedLauncher: Nation = {
     ...launcher,
     intel: launcher.intel - campaignDef.intelCost,
+    propagandaCampaigns: Array.isArray(launcher.propagandaCampaigns)
+      ? [...launcher.propagandaCampaigns]
+      : [],
   };
 
   // Execute campaign effects
@@ -83,14 +86,24 @@ export function launchPropagandaCampaign(
       currentTurn
     );
     updatedTarget = targetAfterRelationship;
+    updatedLauncher = launcherAfterRelationship;
   }
+
+  const launcherCampaigns = Array.isArray(updatedLauncher.propagandaCampaigns)
+    ? updatedLauncher.propagandaCampaigns
+    : [];
+
+  const launcherWithCampaigns: Nation = {
+    ...updatedLauncher,
+    propagandaCampaigns: [...launcherCampaigns, campaign],
+  };
 
   const message = result.discovered
     ? `${campaignDef.name} launched against ${target.name} but was DISCOVERED! Effects: ${result.effects.join(', ')}`
     : `${campaignDef.name} successfully launched against ${target.name}. Effects: ${result.effects.join(', ')}`;
 
   return {
-    launcher: updatedLauncher,
+    launcher: launcherWithCampaigns,
     target: updatedTarget,
     campaign,
     success: true,
