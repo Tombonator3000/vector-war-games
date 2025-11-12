@@ -46,26 +46,57 @@ const renderNationImpactRow = (nation: NationImpactSummary, index: number) => (
 );
 
 export function CasualtyImpactSummary({ summary }: CasualtyImpactSummaryProps) {
-  const { type, threshold, totalCasualties, pandemicCasualties, plagueCasualties, turn, focusNation, hardestHit } = summary;
+  const {
+    type,
+    threshold,
+    totalCasualties,
+    pandemicCasualties,
+    plagueCasualties,
+    turn,
+    focusNation,
+    hardestHit,
+    milestoneLabel,
+    milestoneHeadline,
+    milestoneNarrative,
+  } = summary;
+
   const title =
     type === 'global'
-      ? `Combined fatalities have exceeded ${formatFullNumber(threshold)}.`
+      ? milestoneHeadline ?? `Combined fatalities have exceeded ${formatFullNumber(threshold)}.`
       : `${focusNation?.nationName ?? 'Unknown nation'} suffered ${formatFullNumber(focusNation?.turnDeaths ?? 0)} deaths this turn.`;
 
   const subheading =
     type === 'global'
-      ? 'Escalating biohazard detected across multiple theatres.'
+      ? milestoneNarrative ?? 'Escalating biohazard detected across multiple theatres.'
       : 'Localized collapse event detected — humanitarian systems overwhelmed.';
+
+  const showMilestoneBanner = type === 'global' && Boolean(milestoneHeadline || milestoneNarrative);
 
   return (
     <div className="space-y-6 text-cyan-100">
-      <header className="space-y-2 rounded border border-cyan-500/40 bg-slate-900/60 p-5 shadow-lg shadow-cyan-500/10">
+      <header className="space-y-3 rounded border border-cyan-500/40 bg-slate-900/60 p-5 shadow-lg shadow-cyan-500/10">
         <div className="flex items-center gap-3 text-sm uppercase tracking-[0.35em] text-cyan-300/80">
           <Globe2 className="h-5 w-5 text-cyan-300" />
           <span>Turn {turn}</span>
         </div>
-        <h2 className="text-2xl font-bold text-cyan-200">{title}</h2>
-        <p className="text-sm text-cyan-200/80">{subheading}</p>
+        {showMilestoneBanner ? (
+          <div className="space-y-2 rounded border border-red-400/40 bg-red-950/30 p-4">
+            {milestoneLabel ? (
+              <span className="inline-flex items-center rounded bg-red-600/30 px-2 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-red-200">
+                {milestoneLabel}
+              </span>
+            ) : null}
+            <h2 className="text-2xl font-bold text-red-100">{title}</h2>
+            {milestoneNarrative ? (
+              <p className="text-sm leading-relaxed text-red-100/80">{milestoneNarrative}</p>
+            ) : null}
+          </div>
+        ) : (
+          <>
+            <h2 className="text-2xl font-bold text-cyan-200">{title}</h2>
+            <p className="text-sm text-cyan-200/80">{subheading}</p>
+          </>
+        )}
       </header>
 
       <section className="grid gap-4 sm:grid-cols-3">

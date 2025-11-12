@@ -1,6 +1,47 @@
 import type { ReactNode } from 'react';
 
-export const GLOBAL_CASUALTY_THRESHOLDS = [500_000, 1_000_000, 5_000_000];
+interface GlobalCasualtyMilestone {
+  threshold: number;
+  id: string;
+  label: string;
+  headline: string;
+  narrative: string;
+}
+
+export const GLOBAL_CASUALTY_MILESTONES: GlobalCasualtyMilestone[] = [
+  {
+    threshold: 5_000_000,
+    id: 'wwi',
+    label: 'World War I',
+    headline: 'Global losses rival the trenches of World War I.',
+    narrative:
+      'Reports describe cities dissolving into attritional warfare. Medical corps and relief agencies are drained to the breaking point as casualty figures echo the industrial slaughter of the Great War.',
+  },
+  {
+    threshold: 50_000_000,
+    id: 'spanish-flu',
+    label: 'Spanish Flu Pandemic',
+    headline: 'Fatalities eclipse the Spanish Flu pandemic.',
+    narrative:
+      'Emergency broadcasters compare morgues to 1918, where streets became triage wards and nations rationed grief. Analysts warn that civic order is eroding as the pathogen spreads faster than countermeasures.',
+  },
+  {
+    threshold: 75_000_000,
+    id: 'wwii',
+    label: 'World War II',
+    headline: 'Death toll now on par with World War II.',
+    narrative:
+      'Military historians confirm that the combined fatalities mirror the devastation of the Second World War. Governments activate continuity protocols, fearing a collapse of the global order.',
+  },
+  {
+    threshold: 200_000_000,
+    id: 'black-death',
+    label: 'Black Death',
+    headline: 'Humanity faces a Black Death-level catastrophe.',
+    narrative:
+      'Global monitoring stations transmit apocalyptic alerts: the death toll has reached medieval plague levels. Entire regions are silent as supply chains, governance, and healthcare crumble simultaneously.',
+  },
+];
 export const NATION_SPIKE_THRESHOLDS = [100_000, 250_000, 500_000, 1_000_000];
 
 export interface CasualtyAlertTracker {
@@ -31,6 +72,10 @@ export interface CasualtySummaryPayload {
   plagueCasualties: number;
   hardestHit: NationImpactSummary[];
   focusNation?: NationImpactSummary;
+  milestoneId?: string;
+  milestoneLabel?: string;
+  milestoneHeadline?: string;
+  milestoneNarrative?: string;
 }
 
 export interface CasualtyAlertHandlers {
@@ -101,30 +146,36 @@ export function evaluateCasualtyMilestones({
     .sort((a, b) => b.totalDeaths - a.totalDeaths)
     .slice(0, 5);
 
-  const triggeredGlobalThresholds = GLOBAL_CASUALTY_THRESHOLDS.filter((threshold) => {
-    if (tracker.triggeredThresholds.has(threshold)) {
+  const triggeredGlobalMilestones = GLOBAL_CASUALTY_MILESTONES.filter((milestone) => {
+    if (tracker.triggeredThresholds.has(milestone.threshold)) {
       return false;
     }
-    return previousTotal < threshold && combinedTotal >= threshold;
+    return previousTotal < milestone.threshold && combinedTotal >= milestone.threshold;
   });
 
-  triggeredGlobalThresholds.forEach((threshold) => tracker.triggeredThresholds.add(threshold));
+  triggeredGlobalMilestones.forEach((milestone) => tracker.triggeredThresholds.add(milestone.threshold));
 
-  if (triggeredGlobalThresholds.length > 0) {
-    const highestThreshold = Math.max(...triggeredGlobalThresholds);
+  if (triggeredGlobalMilestones.length > 0) {
+    const highestMilestone = triggeredGlobalMilestones.reduce((previous, current) =>
+      current.threshold > previous.threshold ? current : previous,
+    );
     const summaryPayload: CasualtySummaryPayload = {
       type: 'global',
-      threshold: highestThreshold,
+      threshold: highestMilestone.threshold,
       turn,
       totalCasualties: combinedTotal,
       pandemicCasualties: totalPandemicCasualties,
       plagueCasualties: totalPlagueCasualties,
       hardestHit,
+      milestoneId: highestMilestone.id,
+      milestoneLabel: highestMilestone.label,
+      milestoneHeadline: highestMilestone.headline,
+      milestoneNarrative: highestMilestone.narrative,
     };
 
     handlers.addNewsItem(
       'crisis',
-      `Global casualties surpass ${formatNumber(highestThreshold)} lives lost.`,
+      `[Emergency Broadcast] ${highestMilestone.headline} ${highestMilestone.narrative} Confirmed losses now exceed ${formatNumber(highestMilestone.threshold)} lives.`,
       'critical',
     );
 
