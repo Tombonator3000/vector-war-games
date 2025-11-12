@@ -92,19 +92,22 @@ export type SpySpecialization =
  * Spy mission types
  */
 export type SpyMissionType =
-  | 'steal-tech'           // Steal research/technology
-  | 'sabotage-production'  // Sabotage production facilities
-  | 'sabotage-military'    // Sabotage military assets
-  | 'rig-election'         // Influence elections
-  | 'sow-dissent'          // Reduce trust with other nations
-  | 'assassination'        // Assassinate leader
-  | 'gather-intel'         // Gather general intelligence
-  | 'counter-intel'        // Hunt enemy spies
-  | 'propaganda'           // Spread propaganda
-  | 'recruit-asset'        // Recruit local assets
-  | 'cyber-assist'         // Assist in cyber operations
-  | 'false-flag'           // Frame another nation
-  | 'exfiltrate';          // Extract someone/something
+  | 'steal-tech'                 // Steal research/technology
+  | 'sabotage-production'        // Sabotage production facilities
+  | 'sabotage-military'          // Sabotage military assets
+  | 'rig-election'               // Influence elections
+  | 'sow-dissent'                // Reduce trust with other nations
+  | 'assassination'              // Assassinate leader
+  | 'gather-intel'               // Gather general intelligence
+  | 'counter-intel'              // Hunt enemy spies
+  | 'propaganda'                 // Spread propaganda
+  | 'recruit-asset'              // Recruit local assets
+  | 'cyber-assist'               // Assist in cyber operations
+  | 'false-flag'                 // Frame another nation
+  | 'exfiltrate'                 // Extract someone/something
+  | 'social-media-disinfo'       // Social media disinformation campaign (Fase 2)
+  | 'fund-opposition'            // Fund opposition party (Fase 2)
+  | 'expose-corruption';         // Expose government corruption (Fase 2)
 
 /**
  * Active spy mission

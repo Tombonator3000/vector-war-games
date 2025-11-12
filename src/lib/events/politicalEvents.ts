@@ -41,6 +41,7 @@ export interface PoliticalEventDefinition {
     electionImminent?: boolean;
     minTurn?: number;
     requireAny?: PoliticalEventThresholdKey[];
+    customCondition?: (nation: any, currentTurn: number) => boolean; // Custom condition function
   };
   options: PoliticalEventOption[];
   fallbackDelta?: GovernanceDelta;
@@ -368,5 +369,114 @@ export const politicalEvents: PoliticalEventDefinition[] = [
     ],
     fallbackDelta: { morale: -15, publicOpinion: -12, cabinetApproval: -20, instability: 22 },
     fallbackSummary: 'Military unrest festers. Civil-military relations deteriorate.',
+  },
+  {
+    id: 'war_exhaustion',
+    title: 'War Exhaustion Crisis',
+    summary: 'Years of conflict have drained national morale. Citizens demand an end to the bloodshed.',
+    severity: 'serious',
+    cooldownTurns: 6,
+    conditions: {
+      moraleBelow: 60,
+      minTurn: 8, // Simulates prolonged conflict
+    },
+    options: [
+      {
+        id: 'rotate_units',
+        label: 'Rotate Frontline Units',
+        description: 'Pull exhausted troops from the front and deploy fresh reserves to restore fighting spirit.',
+        outcomes: [
+          {
+            id: 'rotation_success',
+            description: 'Fresh troops reinvigorate the war effort. Morale rebounds despite logistical strain.',
+            chance: 0.75,
+            effects: { morale: 12, cabinetApproval: 6, production: -8, instability: -4 },
+          },
+          {
+            id: 'rotation_logistics_fail',
+            description: 'Rotation causes operational chaos. Front lines weakened during transition.',
+            chance: 0.25,
+            effects: { morale: 4, cabinetApproval: -6, production: -12, instability: 8 },
+          },
+        ],
+      },
+      {
+        id: 'peace_campaign',
+        label: 'Launch Peace Talks Media Campaign',
+        description: 'Launch a public relations campaign framing negotiations as patriotic and strategic.',
+        outcomes: [
+          {
+            id: 'campaign_resonates',
+            description: 'Peace messaging resonates with war-weary public. Diplomatic efforts gain legitimacy.',
+            chance: 0.7,
+            effects: { morale: 8, publicOpinion: 10, cabinetApproval: 4, instability: -6 },
+          },
+          {
+            id: 'campaign_weakness',
+            description: 'Opposition brands you as weak. Hawks demand total victory!',
+            chance: 0.3,
+            effects: { morale: -6, publicOpinion: -4, cabinetApproval: -8, instability: 10 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -8, publicOpinion: -6, instability: 12 },
+    fallbackSummary: 'War exhaustion deepens. Desertion rates climb as public demands peace.',
+  },
+  {
+    id: 'nuclear_ptsd',
+    title: 'Nuclear Strike Trauma',
+    summary: 'The atomic strike has left deep psychological scars. Citizens demand action or comfort.',
+    severity: 'critical',
+    cooldownTurns: 6,
+    conditions: {
+      moraleBelow: 65,
+      customCondition: (nation: any, currentTurn: number) => {
+        // Check if nation was nuked in the last 3 turns
+        return nation.lastNukedTurn !== undefined && currentTurn - nation.lastNukedTurn <= 3;
+      },
+    },
+    options: [
+      {
+        id: 'aid_reconstruction',
+        label: 'Massive Aid & Reconstruction',
+        description: 'Deploy all available resources to rebuild affected areas and provide trauma support.',
+        outcomes: [
+          {
+            id: 'reconstruction_success',
+            description: 'Swift response demonstrates government commitment. Public morale rebounds despite costs.',
+            chance: 0.7,
+            effects: { morale: 15, publicOpinion: 10, cabinetApproval: 8, production: -25, instability: -10 },
+          },
+          {
+            id: 'reconstruction_inadequate',
+            description: 'Aid efforts overwhelmed by scale of devastation. Survivors feel abandoned.',
+            chance: 0.3,
+            effects: { morale: 5, publicOpinion: -8, cabinetApproval: -6, production: -30, instability: 15 },
+          },
+        ],
+      },
+      {
+        id: 'rally_retaliation',
+        label: 'Rally for Retaliation',
+        description: 'Channel public rage into calls for revenge. Promise swift nuclear response.',
+        outcomes: [
+          {
+            id: 'retaliation_accepted',
+            description: 'Public rallies behind promise of vengeance. War fever grips the nation.',
+            chance: 0.6,
+            effects: { morale: 10, publicOpinion: 6, cabinetApproval: 4, instability: 20 },
+          },
+          {
+            id: 'retaliation_horror',
+            description: 'Many reject calls for further nuclear war. Peace movements surge!',
+            chance: 0.4,
+            effects: { morale: -8, publicOpinion: -12, cabinetApproval: -10, instability: 25 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -15, publicOpinion: -12, instability: 30 },
+    fallbackSummary: 'Nuclear trauma festers. Mass exodus from contaminated zones as panic spreads.',
   },
 ];

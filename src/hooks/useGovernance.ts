@@ -30,6 +30,7 @@ const meetsPoliticalEventConditions = (
   definition: PoliticalEventDefinition,
   metrics: GovernanceMetrics,
   currentTurn: number,
+  nation?: GovernanceNationRef,
 ): boolean => {
   const { conditions } = definition;
   if (!conditions) {
@@ -38,6 +39,13 @@ const meetsPoliticalEventConditions = (
 
   if (typeof conditions.minTurn === 'number' && currentTurn < conditions.minTurn) {
     return false;
+  }
+
+  // Check custom condition if present
+  if (conditions.customCondition && nation) {
+    if (!conditions.customCondition(nation, currentTurn)) {
+      return false;
+    }
   }
 
   const requireAnySet = new Set<PoliticalEventThresholdKey>(conditions.requireAny ?? []);
@@ -92,6 +100,7 @@ export interface GovernanceNationRef {
   production: number;
   intel: number;
   uranium: number;
+  lastNukedTurn?: number;
 }
 
 export interface GovernanceEventState {
@@ -391,7 +400,7 @@ export function useGovernance({
           continue;
         }
 
-        if (!meetsPoliticalEventConditions(electionEvent, nationMetrics, currentTurn)) {
+        if (!meetsPoliticalEventConditions(electionEvent, nationMetrics, currentTurn, nation)) {
           syncNationMetrics(nation.id, (current) => ({
             ...current,
             electionTimer: getNextElectionTimer(current),
@@ -428,7 +437,7 @@ export function useGovernance({
     for (const nation of nations) {
       const snapshot = metrics[nation.id] ?? seedMetrics(nation);
       const applicableEvents = candidates.filter((event) =>
-        meetsPoliticalEventConditions(event, snapshot, currentTurn),
+        meetsPoliticalEventConditions(event, snapshot, currentTurn, nation),
       );
       if (applicableEvents.length === 0) {
         continue;
