@@ -12802,11 +12802,8 @@ export default function NoradVector() {
   const bioWarfareAllowed = coopEnabled ? canExecute('BIOWARFARE') : true;
   const cultureAllowed = coopEnabled ? canExecute('CULTURE') : true;
   const diplomacyAllowed = coopEnabled ? canExecute('DIPLOMACY') : true;
-  const hasBioForgeAccess =
-    labFacility.tier >= 3 &&
-    pandemicIntegrationEnabled &&
-    bioWarfareEnabled &&
-    bioWarfareAllowed;
+  const bioForgeUnlocked = labFacility.tier >= 3 && pandemicIntegrationEnabled && bioWarfareEnabled;
+  const hasBioForgeAccess = bioForgeUnlocked && bioWarfareAllowed;
 
   const strategicOutlinerGroups = useMemo<StrategicOutlinerGroup[]>(() => {
     const groups: StrategicOutlinerGroup[] = [];
@@ -13721,7 +13718,7 @@ export default function NoradVector() {
                       <span className="text-[8px] font-mono">INTEL</span>
                     </Button>
 
-                    {pandemicIntegrationEnabled && bioWarfareEnabled ? (
+                    {bioForgeUnlocked ? (
                       <Button
                         onClick={() => setIsBioWarfareOpen(true)}
                         variant="ghost"
@@ -13917,7 +13914,7 @@ export default function NoradVector() {
                       <Target className="h-5 w-5" />
                       INTEL
                     </Button>
-                    {pandemicIntegrationEnabled && bioWarfareEnabled ? (
+                    {bioForgeUnlocked ? (
                       <Button
                         onClick={() => {
                           setIsBioWarfareOpen(true);
