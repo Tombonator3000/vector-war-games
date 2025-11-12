@@ -3180,3 +3180,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated the missile interception block in `src/pages/Index.tsx` to use the shared helper so allies contribute proportionally while respecting the cap.
 - Synced the consequence preview by routing `calculateMissileLaunchConsequences` through the new helper and clamping displayed interception odds.
 - Created regression tests in `src/lib/__tests__/missileDefense.test.ts` and `src/lib/__tests__/consequenceCalculator.test.ts` to guarantee normalized probabilities never exceed the threshold.
+
+### 2025-11-12T14:49:06Z - Filtered catastrophic overlays from duplicate banners
+- Added catastrophic overlay detection in `src/pages/Index.tsx` so PhaseTransitionOverlay owns those alerts while the CatastropheBanner now only displays non-catastrophic notices.
+- Verified overlay gating to keep catastrophic payloads from reappearing after transitions.
