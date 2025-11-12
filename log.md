@@ -3080,3 +3080,9 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-11T22:33:32Z - Adjusted BioForge modal behavior for pandemic campaign
 - Defaulted the BioForge modal to open when loading the Pandemic 2020 scenario and ensured tier-three labs reopen it after scenario switches in `src/pages/Index.tsx`.
 - Tightened the tier upgrade notification guard so the BioForge toast only fires on upward transitions past tier three in `src/pages/Index.tsx`.
+
+### 2025-11-12T08:04:20Z - Align plague selector with dynamic unlock progression
+- Reviewed `PlagueTypeSelector` and `BioWarfareLab` to plan wiring for `plagueState.unlockedPlagueTypes`.
+- Updated the selector to accept the unlocked set, gate selection on lab tier plus runtime unlocks, and preserve static requirement messaging.
+- Passed the unlocked set from `BioWarfareLab` and extended `useBioWarfare` tests to cover Pandemic 2020 advanced pathogen access and locked campaigns.
+- Attempted broad `npm run test -- --run` but aborted due to verbose unrelated suite output; verified targeted coverage via `npm run test -- --run src/hooks/__tests__/useBioWarfare.test.tsx`.

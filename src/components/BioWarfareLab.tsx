@@ -131,6 +131,7 @@ export function BioWarfareLab({
         onOpenChange={setShowPlagueSelector}
         onSelect={handleSelectPlague}
         labTier={labTier}
+        unlockedPlagueTypes={plagueState.unlockedPlagueTypes}
       />
 
       {/* Deployment Target Selector */}
