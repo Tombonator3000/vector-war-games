@@ -3109,3 +3109,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added proportional casualty distribution to `PopSystemManager` so pop groups and aggregate populations shrink in tandem when deaths occur.
 - Wired the pandemic resolution loop in `src/pages/Index.tsx` to apply per-nation casualty deltas through the pop system while avoiding duplicate deductions from legacy totals.
 - Created `src/lib/__tests__/popSystemManager.test.ts` to cover the new casualty application helper and validate population capping logic.
+-
+### 2025-11-12T09:32:28Z - Harmonized spy trust records with TrustRecord schema
+- Refactored `applySpyTrustPenalty`, `applySowDissentDiplomacy`, and related helpers in `src/lib/spyDiplomaticIntegration.ts` to rely on `TrustRecord.value`, clamp adjustments, and preserve historical entries while removing obsolete `trustScore` keys.
+- Updated `applySowDissent` in `src/lib/spyMissionExecutor.ts` to read/write the unified trust structure and retain prior history snapshots.
+- Ran `CI=1 npm run test` to verify diplomacy systems; suite currently fails on `src/lib/__tests__/mapColorUtils.test.ts` expecting hex strings from color helpers (pre-existing mismatch).
