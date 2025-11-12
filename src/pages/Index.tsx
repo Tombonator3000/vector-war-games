@@ -5384,6 +5384,16 @@ function aiTurn(n: Nation) {
     // Escalate if poor relations
     else if (playerRelationship < -30 && S.defcon > 1 && Math.random() < 0.25) {
       handleDefconChange(-1, `${n.name} responds to perceived threats with increased military readiness`, 'ai', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onNewsItem: addNewsItem,
+        onUpdateDisplay: updateDisplay,
+        onShowModal: setDefconChangeEvent,
+      });
+      return;
+    }
+  }
+
   // 9. DIPLOMACY - Occasionally de-escalate if defensive
   if (n.aiPersonality === 'defensive' || n.aiPersonality === 'balanced') {
     if (S.defcon < 5 && Math.random() < 0.1) {
