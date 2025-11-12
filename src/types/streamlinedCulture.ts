@@ -31,7 +31,7 @@ export type PropagandaType =
 
 export interface SimplifiedPropagandaCampaign {
   id: string;
-  launcherIds: string;
+  launcherId: string;
   targetId: string;
   type: PropagandaType;
   startTurn: number;

@@ -108,7 +108,7 @@ export function StreamlinedCulturePanel({
                     return null;
                   }
 
-                  const target = enemies.find(e => e.id === campaign.targetNation);
+                  const target = enemies.find(e => e.id === campaign.targetId);
                   const propagandaDef = PROPAGANDA_DEFINITIONS[campaign.type as PropagandaType];
 
                   // Skip if propaganda definition not found

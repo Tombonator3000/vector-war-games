@@ -7,6 +7,10 @@
 
 ---
 
+### 2025-11-12T10:54:31Z - Streamlined culture campaign field cleanup
+- Renamed streamlined culture propaganda campaign fields to use `launcherId`/`targetId` across types, logic, and UI so badges render correctly.
+- Updated `StreamlinedCulturePanel` enemy matching to respect the canonical target identifier.
+
 ### 2025-11-12T10:22:27Z - Diplomacy-based DEFCON escalation control
 - Added a council antagonism option in the enhanced diplomacy modal so players can intentionally lower DEFCON through targeted hostilities.
 - Extended the Index diplomacy handler to spend DIP, update trust/relationships, record aggressive intent, and pipe the new action through the unified DEFCON change callbacks.
