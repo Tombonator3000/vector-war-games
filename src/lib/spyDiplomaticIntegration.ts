@@ -12,6 +12,7 @@ import type { Nation, GameState } from '@/types/game';
 import type { SpyAgent, SpyMission, SpyIncident, SpyIncidentResolution } from '@/types/spySystem';
 import type { Grievance } from '@/types/grievancesAndClaims';
 import { GrievanceDefinitions } from '@/types/grievancesAndClaims';
+import { DEFAULT_TRUST, clampTrust } from '@/types/trustAndFavors';
 import { v4 as uuidv4 } from 'uuid';
 
 // ============================================================================
@@ -164,21 +165,24 @@ export function applySpyTrustPenalty(
     updated.trustRecords = {};
   }
 
-  const currentTrust = updated.trustRecords[spyNation.id]?.trustScore || 50;
-  const newTrust = Math.max(0, currentTrust + resolution.trustPenalty);
+  const existingRecord = updated.trustRecords[spyNation.id];
+  const currentTrust = existingRecord?.value ?? DEFAULT_TRUST;
+  const newTrust = clampTrust(currentTrust + resolution.trustPenalty);
+
+  const history = [
+    ...(existingRecord?.history || []),
+    {
+      turn,
+      delta: resolution.trustPenalty,
+      reason: 'Spy caught - trust shattered',
+      newValue: newTrust,
+    },
+  ].slice(-20);
 
   updated.trustRecords[spyNation.id] = {
-    trustScore: newTrust,
+    value: newTrust,
     lastUpdated: turn,
-    history: [
-      ...(updated.trustRecords[spyNation.id]?.history || []),
-      {
-        turn,
-        delta: resolution.trustPenalty,
-        reason: 'Spy caught - trust shattered',
-        newValue: newTrust,
-      },
-    ].slice(-20), // Keep last 20 events
+    history,
   };
 
   return updated;
@@ -232,12 +236,13 @@ export function applyDiplomaticReputationPenalty(
 
     // Small trust penalty too
     if (nationCopy.trustRecords && nationCopy.trustRecords[spyNation.id]) {
-      const currentTrust = nationCopy.trustRecords[spyNation.id].trustScore;
+      const existingRecord = nationCopy.trustRecords[spyNation.id];
+      const currentTrust = existingRecord.value;
       const trustPenaltyAmount = Math.floor(reputationPenalty * 0.3);
       nationCopy.trustRecords[spyNation.id] = {
-        ...nationCopy.trustRecords[spyNation.id],
-        trustScore: Math.max(0, currentTrust + trustPenaltyAmount),
+        value: clampTrust(currentTrust + trustPenaltyAmount),
         lastUpdated: gameState.turn,
+        history: [...(existingRecord.history || [])],
       };
     }
 
@@ -295,7 +300,7 @@ export function applyAllSpyConsequences(
     turn
   );
 
-  const newTrust = updatedTargetNation.trustRecords?.[spyNation.id]?.trustScore || 0;
+  const newTrust = updatedTargetNation.trustRecords?.[spyNation.id]?.value ?? DEFAULT_TRUST;
   messages.push(`Trust with ${targetNation.name}: ${resolution.trustPenalty} (now ${newTrust})`);
 
   // Apply diplomatic reputation penalty (affects all nations)
@@ -400,13 +405,14 @@ export function applyFalseFlagDiplomacy(
 
   // Apply trust penalty
   if (updatedTargetNation.trustRecords && updatedTargetNation.trustRecords[framedNation.id]) {
-    const currentTrust = updatedTargetNation.trustRecords[framedNation.id].trustScore;
+    const existingRecord = updatedTargetNation.trustRecords[framedNation.id];
+    const currentTrust = existingRecord.value;
     const trustPenalty = -15;
 
     updatedTargetNation.trustRecords[framedNation.id] = {
-      ...updatedTargetNation.trustRecords[framedNation.id],
-      trustScore: Math.max(0, currentTrust + trustPenalty),
+      value: clampTrust(currentTrust + trustPenalty),
       lastUpdated: turn,
+      history: [...(existingRecord.history || [])],
     };
 
     messages.push(`Trust between ${targetNation.name} and ${framedNation.name} decreased`);
@@ -457,15 +463,16 @@ export function applySowDissentDiplomacy(
     const nation = gameState.nations.find((n) => n.id === nationId);
     if (!nation) continue;
 
-    const currentTrust = updatedTargetNation.trustRecords[nationId]?.trustScore || 50;
+    const existingRecord = updatedTargetNation.trustRecords[nationId];
+    const currentTrust = existingRecord?.value ?? DEFAULT_TRUST;
     const penalty = -10;
-    const newTrust = Math.max(0, currentTrust + penalty);
+    const newTrust = clampTrust(currentTrust + penalty);
 
     updatedTargetNation.trustRecords[nationId] = {
-      trustScore: newTrust,
+      value: newTrust,
       lastUpdated: turn,
       history: [
-        ...(updatedTargetNation.trustRecords[nationId]?.history || []),
+        ...(existingRecord?.history || []),
         {
           turn,
           delta: penalty,
@@ -510,7 +517,7 @@ export function calculateTotalDiplomaticDamage(nation: Nation): {
       : 0;
 
   const trustRecords = nation.trustRecords || {};
-  const trustValues = Object.values(trustRecords).map((record) => record.trustScore);
+  const trustValues = Object.values(trustRecords).map((record) => record.value);
   const averageTrust =
     trustValues.length > 0
       ? trustValues.reduce((sum, val) => sum + val, 0) / trustValues.length
