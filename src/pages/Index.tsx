@@ -76,6 +76,7 @@ import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
 import { useGameEra } from '@/hooks/useGameEra';
 import { useVictoryTracking } from '@/hooks/useVictoryTracking';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
+import { DefconWarningOverlay } from '@/components/DefconWarningOverlay';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
 import { LockedFeatureWrapper } from '@/components/LockedFeatureBadge';
 import { FEATURE_UNLOCK_INFO, type EraDefinition, type GameEra } from '@/types/era';
@@ -199,7 +200,7 @@ import { enhancedAIActions } from '@/lib/aiActionEnhancements';
 import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 import { IntroScreen } from '@/components/setup/IntroScreen';
 import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen';
-import { canAfford, pay, getCityCost, getCityBuildTime, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget, handleDefconChange } from '@/lib/gameUtils';
+import { canAfford, pay, getCityCost, getCityBuildTime, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget, handleDefconChange as baseHandleDefconChange, type DefconChangeCallbacks } from '@/lib/gameUtils';
 import {
   createCasualtyAlertTracker,
   evaluateCasualtyMilestones,
@@ -705,6 +706,47 @@ type OverlayNotification = { text: string; expiresAt: number; tone?: OverlayTone
 type OverlayListener = (message: OverlayNotification | null) => void;
 let overlayListener: OverlayListener | null = null;
 let overlayTimeout: ReturnType<typeof setTimeout> | null = null;
+
+type DefconAlertListener = (previousDefcon: number, newDefcon: number) => void;
+const defconAlertListeners = new Set<DefconAlertListener>();
+
+function subscribeToDefconOne(listener: DefconAlertListener): () => void {
+  defconAlertListeners.add(listener);
+  return () => {
+    defconAlertListeners.delete(listener);
+  };
+}
+
+function notifyDefconAlertListeners(previousDefcon: number, newDefcon: number) {
+  defconAlertListeners.forEach((listener) => {
+    try {
+      listener(previousDefcon, newDefcon);
+    } catch (error) {
+      // Listener failures should not interrupt DEFCON handling
+      console.error('Defcon alert listener failed', error);
+    }
+  });
+}
+
+function handleDefconChange(
+  delta: number,
+  reason: string,
+  triggeredBy: 'player' | 'ai' | 'event' | 'system',
+  callbacks?: DefconChangeCallbacks
+): boolean {
+  const previousDefcon = GameStateManager.getDefcon();
+  const didChange = baseHandleDefconChange(delta, reason, triggeredBy, callbacks);
+
+  if (didChange) {
+    const newDefcon = GameStateManager.getDefcon();
+
+    if (newDefcon === 1 && previousDefcon !== 1) {
+      notifyDefconAlertListeners(previousDefcon, newDefcon);
+    }
+  }
+
+  return didChange;
+}
 
 function registerOverlayListener(listener: OverlayListener | null) {
   overlayListener = listener;
@@ -6295,6 +6337,39 @@ export default function NoradVector() {
   const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
   const [showEnhancedDiplomacy, setShowEnhancedDiplomacy] = useState(false);
 
+  const triggerDefconWarning = useCallback(() => {
+    setIsDefconWarningVisible(true);
+
+    if (defconWarningTimeoutRef.current) {
+      clearTimeout(defconWarningTimeoutRef.current);
+    }
+
+    defconWarningTimeoutRef.current = setTimeout(() => {
+      setIsDefconWarningVisible(false);
+      defconWarningTimeoutRef.current = null;
+    }, 5000);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToDefconOne((previousDefcon, newDefcon) => {
+      if (newDefcon === 1 && previousDefcon !== 1) {
+        triggerDefconWarning();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [triggerDefconWarning]);
+
+  useEffect(() => {
+    return () => {
+      if (defconWarningTimeoutRef.current) {
+        clearTimeout(defconWarningTimeoutRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (layoutDensity !== 'minimal') {
       setShowMinimalApprovalQueue(false);
@@ -6399,6 +6474,8 @@ export default function NoradVector() {
   const [regionalSanityOverlayVisible, setRegionalSanityOverlayVisible] = useState(false);
   const [phase2PanelOpen, setPhase2PanelOpen] = useState(false);
   const [defconChangeEvent, setDefconChangeEvent] = useState<import('@/types/game').DefconChangeEvent | null>(null);
+  const [isDefconWarningVisible, setIsDefconWarningVisible] = useState(false);
+  const defconWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
   const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
   const [phase3State, setPhase3State] = useState<Phase3State | null>(null);
@@ -14751,6 +14828,8 @@ export default function NoradVector() {
         isTransitioning={isPhaseTransitioning}
         overlayMessage={activeOverlayMessage}
       />
+
+      <DefconWarningOverlay isVisible={isDefconWarningVisible} />
 
       {/* Era Transition Overlay */}
       {showEraTransition && eraTransitionData && (
