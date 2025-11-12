@@ -171,5 +171,16 @@ describe('calculateMissileLaunchConsequences', () => {
       modestEnvironmental?.probability ?? 0
     );
   });
+
+  it('never reports interception odds above the capped threshold', () => {
+    const context = createContext({ defense: 200 });
+    const consequences = calculateMissileLaunchConsequences(context, 12, 'missile');
+
+    const interception = consequences.immediate.find((entry) =>
+      entry.description.includes('interception')
+    );
+
+    expect(interception?.probability ?? 0).toBeLessThanOrEqual(75);
+  });
 });
 
