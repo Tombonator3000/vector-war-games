@@ -4,14 +4,10 @@ import { Loader2 } from 'lucide-react';
 interface PhaseTransitionOverlayProps {
   phase: 'PLAYER' | 'AI' | 'RESOLUTION' | 'PRODUCTION';
   isTransitioning: boolean;
-  overlayMessage?: string | null;
 }
 
-export function PhaseTransitionOverlay({ phase, isTransitioning, overlayMessage }: PhaseTransitionOverlayProps) {
-  const hasOverlayMessage = Boolean(overlayMessage);
-
-  const shouldShow =
-    (isTransitioning && (phase === 'AI' || phase === 'RESOLUTION' || phase === 'PRODUCTION')) || hasOverlayMessage;
+export function PhaseTransitionOverlay({ phase, isTransitioning }: PhaseTransitionOverlayProps) {
+  const shouldShow = isTransitioning && (phase === 'AI' || phase === 'RESOLUTION' || phase === 'PRODUCTION');
 
   const getMessage = () => {
     switch (phase) {
@@ -94,11 +90,6 @@ export function PhaseTransitionOverlay({ phase, isTransitioning, overlayMessage 
                   <p className="text-sm text-cyan-300/70 font-mono">
                     {message.subtitle}
                   </p>
-                  {hasOverlayMessage && (
-                    <p className="mt-3 text-base font-semibold uppercase tracking-[0.4em] text-cyan-100">
-                      {overlayMessage}
-                    </p>
-                  )}
                 </div>
 
                 {/* Pulsing dots */}

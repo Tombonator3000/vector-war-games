@@ -74,6 +74,7 @@ import { useMultiplayer } from '@/contexts/MultiplayerProvider';
 import { useRNG } from '@/contexts/RNGContext';
 import { useTutorialContext } from '@/contexts/TutorialContext';
 import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
+import { CatastropheBanner } from '@/components/CatastropheBanner';
 import { useGameEra } from '@/hooks/useGameEra';
 import { useVictoryTracking } from '@/hooks/useVictoryTracking';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
@@ -6925,7 +6926,7 @@ export default function NoradVector() {
   const tutorialContext = useTutorialContext();
   const [isPhaseTransitioning, setIsPhaseTransitioning] = useState(false);
   const [overlayBanner, setOverlayBanner] = useState<OverlayNotification | null>(null);
-  const activeOverlayMessage = overlayBanner && overlayBanner.expiresAt > Date.now() ? overlayBanner.text : null;
+  const activeOverlay = overlayBanner && overlayBanner.expiresAt > Date.now() ? overlayBanner : null;
 
   // Era system state
   const [showEraTransition, setShowEraTransition] = useState(false);
@@ -15174,11 +15175,15 @@ export default function NoradVector() {
       />
 
       {/* New Phase 1 Tutorial & Feedback Overlays */}
-      <PhaseTransitionOverlay
-        phase={S.phase}
-        isTransitioning={isPhaseTransitioning}
-        overlayMessage={activeOverlayMessage}
-      />
+      <PhaseTransitionOverlay phase={S.phase} isTransitioning={isPhaseTransitioning} />
+
+      {activeOverlay && (
+        <CatastropheBanner
+          message={activeOverlay.text}
+          tone={activeOverlay.tone}
+          expiresAt={activeOverlay.expiresAt}
+        />
+      )}
 
       <DefconWarningOverlay isVisible={isDefconWarningVisible} />
 

@@ -3162,3 +3162,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T12:27:44Z - Deferred endgame overlay until combat animations resolve
 - Added delayed endgame reveal metadata to `GameStateManager` so the UI can wait before showing the summary screen.
 - Updated `endGame` flow and render loop in `src/pages/Index.tsx` to monitor active missiles, bombers, and submarines, only presenting victory/defeat once animations finish or a safety timeout triggers.
+
+### 2025-11-12T12:48:30Z - Split catastrophe messaging into dedicated banner layer
+- Restricted `PhaseTransitionOverlay` to display solely during AI/resolution/production transitions, removing catastrophic messaging from the animated card (`src/components/PhaseTransitionOverlay.tsx`).
+- Introduced `CatastropheBanner` to render catastrophe and warning overlays as a compact top-anchored banner with countdown feedback (`src/components/CatastropheBanner.tsx`).
+- Mounted the new banner from the main index page while preserving existing dismissal timers and slimmed the DEFCON warning overlay to coexist with gameplay elements (`src/pages/Index.tsx`, `src/components/DefconWarningOverlay.tsx`).
