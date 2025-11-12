@@ -26,6 +26,62 @@ export class PopSystemManager {
   }
 
   /**
+   * Evenly distribute casualties across population groups while preserving totals
+   *
+   * @param popGroups Population groups (sizes measured in millions of people)
+   * @param casualties Casualties to apply (in millions of people)
+   * @returns The actual casualties applied after clamping to available population
+   */
+  static applyCasualties(popGroups: PopGroup[], casualties: number): number {
+    if (!Array.isArray(popGroups) || popGroups.length === 0) {
+      return 0;
+    }
+
+    if (casualties <= 0) {
+      return 0;
+    }
+
+    const initialSizes = popGroups.map(pop => pop.size);
+    const totalPopulation = initialSizes.reduce((sum, size) => sum + size, 0);
+
+    if (totalPopulation <= 0) {
+      return 0;
+    }
+
+    const casualtyBudget = Math.min(casualties, totalPopulation);
+    let remaining = casualtyBudget;
+
+    for (let index = 0; index < popGroups.length; index += 1) {
+      if (remaining <= 0) break;
+
+      const pop = popGroups[index];
+      const startingSize = initialSizes[index];
+
+      if (startingSize <= 0 || pop.size <= 0) {
+        continue;
+      }
+
+      const proportionalLoss = (startingSize / totalPopulation) * casualtyBudget;
+      const cappedLoss = index === popGroups.length - 1
+        ? remaining
+        : Math.min(remaining, proportionalLoss);
+
+      const appliedLoss = Math.min(pop.size, cappedLoss);
+      pop.size = Math.max(0, pop.size - appliedLoss);
+      remaining -= appliedLoss;
+    }
+
+    // Clean up negligible rounding residue so totals remain stable
+    for (const pop of popGroups) {
+      if (pop.size < 1e-6) {
+        pop.size = 0;
+      }
+    }
+
+    return casualtyBudget - Math.max(0, remaining);
+  }
+
+  /**
    * Calculate average loyalty across all pops (weighted by size)
    */
   static getAverageLoyalty(popGroups: PopGroup[]): number {

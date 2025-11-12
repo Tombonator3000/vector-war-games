@@ -35,6 +35,7 @@ import { useEconomicDepth } from '@/hooks/useEconomicDepth';
 import { useMilitaryTemplates } from '@/hooks/useMilitaryTemplates';
 import { useSupplySystem } from '@/hooks/useSupplySystem';
 import { initializeAllAINations, processAllAINationsBioWarfare } from '@/lib/aiBioWarfareIntegration';
+import { PopSystemManager } from '@/lib/popSystemManager';
 import { DEPLOYMENT_METHODS } from '@/types/bioDeployment';
 import type { BioLabTier } from '@/types/bioLab';
 import type { EvolutionNodeId } from '@/types/biowarfare';
@@ -5837,12 +5838,10 @@ function endTurn() {
         plagueOwnerId: plagueOwner?.id
       });
 
+      const casualtyEntries = Object.entries(pandemicResult?.casualtyTotals ?? {});
+      const hasPerNationCasualties = casualtyEntries.some(([, value]) => (value ?? 0) > 0);
+
       if (pandemicResult && player) {
-        // @ts-expect-error - Legacy pandemic result structure
-        if (pandemicResult.populationLoss) {
-          // @ts-expect-error - Legacy pandemic result structure
-          player.population = Math.max(0, player.population - pandemicResult.populationLoss);
-        }
         // @ts-expect-error - Legacy pandemic result structure
         if (pandemicResult.productionPenalty) {
           // @ts-expect-error - Legacy pandemic result structure
@@ -5866,16 +5865,47 @@ function endTurn() {
       }
 
       let populationAdjusted = false;
-      if (pandemicResult?.casualtyTotals) {
-        for (const [nationId, deaths] of Object.entries(pandemicResult.casualtyTotals)) {
-          if (deaths <= 0) continue;
+      if (casualtyEntries.length > 0) {
+        for (const [nationId, deaths] of casualtyEntries) {
+          const rawDeaths = deaths ?? 0;
+          if (rawDeaths <= 0) continue;
+
           const nation = nations.find(n => n.id === nationId);
           if (!nation) continue;
-          const populationLoss = deaths / 1_000_000;
-          if (populationLoss <= 0) continue;
-          nation.population = Math.max(0, nation.population - populationLoss);
+
+          const populationLossMillions = rawDeaths / 1_000_000;
+          if (populationLossMillions <= 0) continue;
+
+          if (nation.popGroups && nation.popGroups.length > 0) {
+            PopSystemManager.applyCasualties(nation.popGroups, populationLossMillions);
+            nation.population = Math.max(0, PopSystemManager.getTotalPopulation(nation.popGroups));
+          } else {
+            nation.population = Math.max(0, nation.population - populationLossMillions);
+          }
+
           if (nation.isPlayer && player) {
-            player.population = Math.max(0, player.population - populationLoss);
+            if (player === nation) {
+              player.population = nation.population;
+            } else if (player.popGroups && player.popGroups.length > 0) {
+              PopSystemManager.applyCasualties(player.popGroups, populationLossMillions);
+              player.population = Math.max(0, PopSystemManager.getTotalPopulation(player.popGroups));
+            } else {
+              player.population = Math.max(0, player.population - populationLossMillions);
+            }
+          }
+
+          populationAdjusted = true;
+        }
+      }
+
+      if (!hasPerNationCasualties && pandemicResult?.populationLoss && player) {
+        const populationLossMillions = pandemicResult.populationLoss / 1_000_000;
+        if (populationLossMillions > 0) {
+          if (player.popGroups && player.popGroups.length > 0) {
+            PopSystemManager.applyCasualties(player.popGroups, populationLossMillions);
+            player.population = Math.max(0, PopSystemManager.getTotalPopulation(player.popGroups));
+          } else {
+            player.population = Math.max(0, player.population - populationLossMillions);
           }
           populationAdjusted = true;
         }
@@ -5888,7 +5918,7 @@ function endTurn() {
       if (pandemicIntegrationEnabled || bioWarfareEnabled) {
         const globalPandemicCasualties = pandemicState?.casualtyTally ?? 0;
         const plagueKillTotal = plagueState?.plagueCompletionStats?.totalKills ?? 0;
-        const hasTurnCasualties = Object.values(pandemicResult?.casualtyTotals ?? {}).some((value) => (value ?? 0) > 0);
+        const hasTurnCasualties = casualtyEntries.some(([, value]) => (value ?? 0) > 0);
 
         if (hasTurnCasualties || globalPandemicCasualties > 0 || plagueKillTotal > 0) {
           evaluateCasualtyMilestones({
