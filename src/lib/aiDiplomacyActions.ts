@@ -741,10 +741,13 @@ export function processAIProactiveDiplomacy(
           // Stop if we've reached limits
           if (aiToAiNegotiationCount >= 15 || aiNegotiationsThisTurn >= 2) break;
 
+          // CRITICAL FIX: Re-fetch currentAiNation from updatedNations after each negotiation
+          // to ensure affordability checks reflect the latest resource state after previous deals
+          const refreshedAiNation = updatedNations.find(n => n.id === aiNation.id) || currentAiNation;
           const currentTargetAI = updatedNations.find(n => n.id === targetAI.id) || targetAI;
 
           const negotiationWithAI = aiCheckProactiveNegotiation(
-            currentAiNation,
+            refreshedAiNation,
             currentTargetAI,
             updatedNations,
             currentTurn,
@@ -754,14 +757,14 @@ export function processAIProactiveDiplomacy(
           if (negotiationWithAI) {
             // AI-to-AI negotiation: Process immediately (no UI needed)
             if (logFn) {
-              logFn(`${currentAiNation.name} initiates ${negotiationWithAI.purpose} with ${currentTargetAI.name}`, 'diplomacy');
+              logFn(`${refreshedAiNation.name} initiates ${negotiationWithAI.purpose} with ${currentTargetAI.name}`, 'diplomacy');
             }
 
             // Target AI automatically evaluates and responds
             // This returns updated nations array
             updatedNations = handleAItoAINegotiation(
               negotiationWithAI,
-              currentAiNation,
+              refreshedAiNation,
               currentTargetAI,
               updatedNations,
               currentTurn,

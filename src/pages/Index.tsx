@@ -9755,6 +9755,13 @@ export default function NoradVector() {
         const retaliation = spyNetworkApi?.launchCounterIntel(target.id, player.id);
         retaliationQueued = Boolean(retaliation?.success);
 
+        // CRITICAL FIX: launchCounterIntel mutates target nation via GameStateManager.updateNation
+        // We must fetch the updated state to avoid overwriting those changes (intel cost, spy network)
+        const freshTarget = getNationById(GameStateManager.getNations(), target.id) as Nation;
+        if (freshTarget) {
+          updatedTarget = freshTarget;
+        }
+
         if (!retaliationQueued) {
           updatedTarget = {
             ...updatedTarget,
