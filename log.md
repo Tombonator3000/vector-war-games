@@ -3099,3 +3099,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T08:31:10Z - Restored Aegis Protocol branding on the intro sequence
 - Replaced the intro SVG wordmark text in `src/components/intro/IntroLogo.tsx` with the Aegis Protocol identity while preserving the neon styling.
 - Updated the start screen tagline in `src/components/setup/IntroScreen.tsx` to emphasize activating the Aegis Protocol defensive command.
+### 2025-11-12T09:02:37Z - Casualty HUD badge integration
+- Memoized a combined casualty tally from pandemic and plague systems in `src/pages/Index.tsx` and exposed a reusable neon badge renderer for the HUD layouts.
+- Threaded the casualty badge through the primary command bar and minimal command sheet with accessibility labels and responsive stacking adjustments.
+- Updated the Index page test doubles to track casualty tallies and added a regression test ensuring the badge appears when casualties exceed zero.
+- Executed `npx vitest run src/pages/__tests__/Index.test.tsx` (terminated lingering Vitest processes after completion due to open handles in the suite).

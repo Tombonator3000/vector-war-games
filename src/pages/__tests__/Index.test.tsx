@@ -148,6 +148,11 @@ vi.mock('@/hooks/useBioWarfare', async () => {
     selectedPlagueType: null,
     deploymentHistory: [],
     countryInfections: new Map(),
+    plagueCompletionStats: {
+      totalKills: 0,
+      peakInfection: 0,
+      nationsInfected: 0,
+    },
   };
 
   let labFacilityState = createLabFacility(2);
@@ -319,9 +324,16 @@ vi.mock('@/hooks/useFogOfWar', () => ({
   }),
 }));
 
-vi.mock('@/hooks/usePandemic', () => ({
-  usePandemic: () => ({
-    pandemicState: { outbreaks: [], traits: {}, stage: 'STABLE' },
+vi.mock('@/hooks/usePandemic', () => {
+  let pandemicState = {
+    outbreaks: [],
+    traits: {},
+    stage: 'STABLE',
+    casualtyTally: 0,
+  };
+
+  const usePandemic = () => ({
+    pandemicState,
     triggerPandemic: vi.fn(),
     applyCountermeasure: vi.fn(),
     advancePandemicTurn: vi.fn(),
@@ -329,8 +341,22 @@ vi.mock('@/hooks/usePandemic', () => ({
     downgradeTrait: vi.fn(),
     resetTraits: vi.fn(),
     deployTraits: vi.fn(),
-  }),
-}));
+  });
+
+  const setPandemicCasualties = (value: number) => {
+    pandemicState = { ...pandemicState, casualtyTally: value };
+  };
+
+  const resetPandemicMock = () => {
+    pandemicState = { ...pandemicState, casualtyTally: 0 };
+  };
+
+  return {
+    usePandemic,
+    __setPandemicCasualties: setPandemicCasualties,
+    __resetPandemicMock: resetPandemicMock,
+  };
+});
 
 vi.mock('@/hooks/useConventionalWarfare', () => ({
   useConventionalWarfare: () => ({
@@ -445,6 +471,9 @@ describe('Index co-op toggle', () => {
 
     const bioWarfareModule = await import('@/hooks/useBioWarfare');
     (bioWarfareModule as any).__resetLabMock?.();
+
+    const pandemicModule = await import('@/hooks/usePandemic');
+    (pandemicModule as any).__resetPandemicMock?.();
   });
 
   it('bypasses approval requests when co-op is disabled', async () => {
@@ -517,5 +546,23 @@ describe('Index co-op toggle', () => {
     expect(screen.queryByTestId('simplified-bio-panel')).not.toBeInTheDocument();
     expect(toastMock).toHaveBeenCalled();
     expect(PlayerManager.get()?.bioLab?.tier).toBe(3);
+  });
+
+  it('renders the global casualty badge when casualties accrue', async () => {
+    window.localStorage.setItem('norad_option_coop_enabled', 'false');
+
+    const pandemicModule = await import('@/hooks/usePandemic');
+    (pandemicModule as any).__setPandemicCasualties?.(1_500_000);
+
+    render(<Index />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /start game/i }));
+    fireEvent.click(await screen.findByText('Ronnie Raygun'));
+
+    const casualtyBadge = await screen.findByRole('status', {
+      name: /global casualties 1,500,000/i,
+    });
+
+    expect(casualtyBadge).toHaveTextContent(/casualties/i);
   });
 });

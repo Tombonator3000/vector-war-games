@@ -7335,6 +7335,51 @@ export default function NoradVector() {
 
   const previousLabTierRef = useRef<BioLabTier>(labFacility.tier);
 
+  const pandemicCasualtyTally = pandemicState?.casualtyTally ?? 0;
+  const plagueTotalKills = plagueState?.plagueCompletionStats?.totalKills ?? 0;
+
+  const globalCasualtyDisplay = useMemo(() => {
+    const totalCasualties = Math.max(0, pandemicCasualtyTally) + Math.max(0, plagueTotalKills);
+
+    if (totalCasualties <= 0) {
+      return null;
+    }
+
+    const compactFormatter = new Intl.NumberFormat(undefined, {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    });
+
+    return {
+      total: totalCasualties,
+      displayValue: compactFormatter.format(totalCasualties),
+      fullValue: Math.round(totalCasualties).toLocaleString(),
+    };
+  }, [pandemicCasualtyTally, plagueTotalKills]);
+
+  const renderCasualtyBadge = useCallback(
+    (extraClasses?: string) => {
+      if (!globalCasualtyDisplay) {
+        return null;
+      }
+
+      const className = `flex items-center justify-center gap-2 rounded-full border border-rose-500/40 bg-black/70 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.35em] text-rose-200 shadow-[0_0_12px_rgba(244,63,94,0.35)] ${extraClasses ?? ''}`.trim();
+
+      return (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label={`Global casualties ${globalCasualtyDisplay.fullValue}`}
+          className={className}
+        >
+          <span className="text-rose-300/80">CASUALTIES</span>
+          <span className="text-rose-300 text-xs tracking-[0.25em]">{globalCasualtyDisplay.displayValue}</span>
+        </div>
+      );
+    },
+    [globalCasualtyDisplay],
+  );
+
   useEffect(() => {
     const previousTier = previousLabTierRef.current;
     const currentTier = labFacility.tier;
@@ -13375,7 +13420,7 @@ export default function NoradVector() {
             >
               <div className="flex flex-col gap-1">
                 <div className="h-16 sm:h-20 pointer-events-auto touch-auto">
-                  <div className="h-full flex items-center justify-center gap-1 px-4">
+                  <div className="h-full flex flex-wrap items-center justify-center gap-1 px-4 sm:flex-nowrap">
                     <Button
                       onClick={handleBuild}
                       variant="ghost"
@@ -13517,6 +13562,8 @@ export default function NoradVector() {
 
                     <div className="w-px h-8 bg-cyan-500/30 mx-2" />
 
+                    {renderCasualtyBadge('mx-2 basis-full sm:basis-auto text-center sm:text-left')}
+
                     <Button
                       onClick={handleAttack}
                       variant="ghost"
@@ -13566,6 +13613,8 @@ export default function NoradVector() {
                     </SheetDescription>
                   </SheetHeader>
                   <div className="mt-4 grid grid-cols-3 gap-3">
+                    {renderCasualtyBadge('col-span-3 w-full justify-center text-center py-2 text-[11px]')}
+
                     <Button
                       onClick={() => {
                         handleBuild();
