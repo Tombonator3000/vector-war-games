@@ -179,6 +179,7 @@ import { GovernanceDetailPanel } from '@/components/governance/GovernanceDetailP
 import { PolicySelectionPanel } from '@/components/governance/PolicySelectionPanel';
 import { PoliticalStabilityOverlay } from '@/components/governance/PoliticalStabilityOverlay';
 import { PandemicSpreadOverlay } from '@/components/pandemic/PandemicSpreadOverlay';
+import { CasualtyImpactSummary } from '@/components/pandemic/CasualtyImpactSummary';
 import { MapModeBar } from '@/components/MapModeBar';
 import { usePolicySystem } from '@/hooks/usePolicySystem';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
@@ -198,6 +199,11 @@ import { ScenarioSelectionPanel } from '@/components/ScenarioSelectionPanel';
 import { IntroScreen } from '@/components/setup/IntroScreen';
 import { LeaderSelectionScreen } from '@/components/setup/LeaderSelectionScreen';
 import { canAfford, pay, getCityCost, getCityBuildTime, canPerformAction, hasActivePeaceTreaty, isEligibleEnemyTarget, handleDefconChange } from '@/lib/gameUtils';
+import {
+  createCasualtyAlertTracker,
+  evaluateCasualtyMilestones,
+  type CasualtySummaryPayload,
+} from '@/lib/pandemic/casualtyAlertEvaluator';
 import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
 import { modifyRelationship, canFormAlliance, RELATIONSHIP_ALLIED } from '@/lib/relationshipUtils';
 import {
@@ -5879,6 +5885,30 @@ function endTurn() {
         updateDisplay();
       }
 
+      if (pandemicIntegrationEnabled || bioWarfareEnabled) {
+        const globalPandemicCasualties = pandemicState?.casualtyTally ?? 0;
+        const plagueKillTotal = plagueState?.plagueCompletionStats?.totalKills ?? 0;
+        const hasTurnCasualties = Object.values(pandemicResult?.casualtyTotals ?? {}).some((value) => (value ?? 0) > 0);
+
+        if (hasTurnCasualties || globalPandemicCasualties > 0 || plagueKillTotal > 0) {
+          evaluateCasualtyMilestones({
+            tracker: casualtyAlertTrackerRef.current,
+            pandemicCasualtyTally: globalPandemicCasualties,
+            plagueKillTotal,
+            casualtyTotalsThisTurn: pandemicResult?.casualtyTotals,
+            nations: nations.map((nation) => ({ id: nation.id, name: nation.name })),
+            turn: S.turn,
+            handlers: {
+              openModal,
+              addNewsItem: (category, text, priority) => addNewsItem(category as any, text, priority as any),
+              buildSummary: (payload: CasualtySummaryPayload) => (
+                <CasualtyImpactSummary summary={payload} />
+              ),
+            },
+          });
+        }
+      }
+
       // Trigger flashpoint check at start of new turn
       if (window.__gameTriggerFlashpoint) {
         const flashpoint = window.__gameTriggerFlashpoint(S.turn, S.defcon);
@@ -7334,6 +7364,7 @@ export default function NoradVector() {
   } = useBioWarfare(addNewsItem, selectedScenario);
 
   const previousLabTierRef = useRef<BioLabTier>(labFacility.tier);
+  const casualtyAlertTrackerRef = useRef(createCasualtyAlertTracker());
 
   useEffect(() => {
     const previousTier = previousLabTierRef.current;
