@@ -64,7 +64,7 @@ export function launchPropagandaCampaign(
   // Create campaign record
   const campaign: SimplifiedPropagandaCampaign = {
     id: `propaganda-${currentTurn}-${launcher.id}-${target.id}-${type}`,
-    launcherIds: launcher.id,
+    launcherId: launcher.id,
     targetId: target.id,
     type,
     startTurn: currentTurn,
@@ -222,7 +222,7 @@ export function processPropagandaCampaigns(
 
     // Apply ongoing effects
     const target = updatedNations.find(n => n.id === campaign.targetId);
-    const launcher = updatedNations.find(n => n.id === campaign.launcherIds);
+    const launcher = updatedNations.find(n => n.id === campaign.launcherId);
 
     if (target && launcher) {
       const campaignDef = PROPAGANDA_DEFINITIONS[campaign.type];
