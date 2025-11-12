@@ -92,12 +92,14 @@ const helpTopics: HelpTopic[] = [
 
 interface GameHelperProps {
   triggerButton?: boolean;
+  triggerButtonClassName?: string;
   onRestartModalTutorial?: () => void;
   onRestartInteractiveTutorial?: () => void;
 }
 
 export function GameHelper({
   triggerButton = true,
+  triggerButtonClassName = 'fixed bottom-4 left-4 z-50 h-12 w-12 rounded-full shadow-lg',
   onRestartModalTutorial,
   onRestartInteractiveTutorial
 }: GameHelperProps) {
@@ -124,7 +126,7 @@ export function GameHelper({
           variant="outline"
           size="icon"
           onClick={() => setOpen(true)}
-          className="fixed bottom-4 left-4 z-50 h-12 w-12 rounded-full shadow-lg"
+          className={triggerButtonClassName}
           title="Help"
         >
           <HelpCircle className="h-6 w-6" />

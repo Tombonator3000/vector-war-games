@@ -13623,8 +13623,6 @@ export default function NoradVector() {
 
                     <div className="w-px h-8 bg-cyan-500/30 mx-2" />
 
-                    {renderCasualtyBadge('mx-2 basis-full sm:basis-auto text-center sm:text-left')}
-
                     <Button
                       onClick={handleAttack}
                       variant="ghost"
@@ -13674,8 +13672,6 @@ export default function NoradVector() {
                     </SheetDescription>
                   </SheetHeader>
                   <div className="mt-4 grid grid-cols-3 gap-3">
-                    {renderCasualtyBadge('col-span-3 w-full justify-center text-center py-2 text-[11px]')}
-
                     <Button
                       onClick={() => {
                         handleBuild();
@@ -14809,12 +14805,13 @@ export default function NoradVector() {
         onOpenFullDiplomacy={() => setShowEnhancedDiplomacy(true)}
       />
 
-      {/* GameHelper moved to bottom right corner */}
-      <div className="fixed bottom-[72px] sm:bottom-24 right-4 z-40">
+      <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 sm:gap-3">
         <GameHelper
+          triggerButtonClassName="z-50 h-12 w-12 rounded-full border border-cyan-500/40 bg-slate-950/80 text-cyan-200 shadow-lg transition hover:text-neon-green hover:bg-cyan-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
           onRestartModalTutorial={handleRestartModalTutorial}
           onRestartInteractiveTutorial={handleRestartInteractiveTutorial}
         />
+        {renderCasualtyBadge('w-full justify-end text-right')}
       </div>
 
       {/* Diplomacy Proposal Overlay */}
