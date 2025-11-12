@@ -679,6 +679,9 @@ let isGameplayLoopEnabled = false;
 let isAttractModeActive = false;
 let globalRNG: SeededRandom | null = null; // Global RNG reference for use outside React component
 
+const ENDGAME_REVEAL_MIN_DELAY_MS = 2500;
+const ENDGAME_REVEAL_MAX_WAIT_MS = 12000;
+
 // Global game state - now managed by GameStateManager (Phase 6 refactoring)
 // Initialize GameStateManager (it has default state already)
 // S now references the state from GameStateManager for backward compatibility
@@ -5064,9 +5067,14 @@ function endGame(victory: boolean, message: string) {
   highscores.sort((a: any, b: any) => b.score - a.score);
   Storage.setItem('highscores', JSON.stringify(highscores.slice(0, 10)));
 
-  // Store statistics for end game screen
+  // Store statistics for end game screen and delay overlay until animations resolve
   S.endGameStatistics = statistics;
-  S.showEndGameScreen = true;
+  const now = Date.now();
+  S.pendingEndGameReveal = {
+    initiatedAt: now,
+    minRevealAt: now + ENDGAME_REVEAL_MIN_DELAY_MS,
+  };
+  S.showEndGameScreen = false;
 
   if (victory) {
     log('🏆 VICTORY ACHIEVED!', 'success');
@@ -6329,7 +6337,7 @@ function updateDisplay() {
 function updateScoreboard() {
   const scoreList = document.getElementById('scoreList');
   if (!scoreList) return;
-  
+
   scoreList.innerHTML = '';
   const sorted = [...nations].sort((a, b) => b.population - a.population);
   sorted.forEach(n => {
@@ -6338,6 +6346,31 @@ function updateScoreboard() {
     entry.innerHTML = `<span style="color:${n.color}">${n.name}</span><span>${Math.floor(n.population)}M</span>`;
     scoreList.appendChild(entry);
   });
+}
+
+function hasActiveEndGameAnimations(): boolean {
+  const missilesActive = Array.isArray(S.missiles) && S.missiles.length > 0;
+  const bombersActive = Array.isArray(S.bombers) && S.bombers.length > 0;
+  const submarinesActive = Array.isArray(S.submarines) && S.submarines.length > 0;
+
+  return missilesActive || bombersActive || submarinesActive;
+}
+
+function maybeRevealEndGameScreen() {
+  const pendingReveal = S.pendingEndGameReveal;
+  if (!pendingReveal) {
+    return;
+  }
+
+  const now = Date.now();
+  const animationsActive = hasActiveEndGameAnimations();
+  const exceededMaxWait = now - pendingReveal.initiatedAt >= ENDGAME_REVEAL_MAX_WAIT_MS;
+
+  if ((now >= pendingReveal.minRevealAt && !animationsActive) || exceededMaxWait) {
+    S.showEndGameScreen = true;
+    S.pendingEndGameReveal = undefined;
+    triggerNationsUpdate?.();
+  }
 }
 
 // Game loop
@@ -6378,6 +6411,8 @@ function gameLoop() {
   drawConventionalForces();
   drawParticles();
   drawFX();
+
+  maybeRevealEndGameScreen();
 }
 
 // Consume action

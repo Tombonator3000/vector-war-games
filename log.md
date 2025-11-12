@@ -3158,3 +3158,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T12:19:12Z - Repositioned launch controls outside consequence scroll region
 - Updated `src/components/ActionConsequencePreview.tsx` to restructure the modal card as a flex column so the consequence list scrolls independently of a new persistent footer.
 - Moved the Cancel and Launch buttons into a bordered footer with gradient-consistent styling to keep critical actions visible while maintaining overflow handling.
+
+### 2025-11-12T12:27:44Z - Deferred endgame overlay until combat animations resolve
+- Added delayed endgame reveal metadata to `GameStateManager` so the UI can wait before showing the summary screen.
+- Updated `endGame` flow and render loop in `src/pages/Index.tsx` to monitor active missiles, bombers, and submarines, only presenting victory/defeat once animations finish or a safety timeout triggers.
