@@ -158,6 +158,7 @@ import { migrateGameDiplomacy, getRelationship } from '@/lib/unifiedDiplomacyMig
 import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from '@/lib/simplifiedBioWarfareLogic';
 import { launchPropagandaCampaign, buildWonder, applyImmigrationPolicy } from '@/lib/streamlinedCultureLogic';
 import { clampDefenseValue, MAX_DEFENSE_LEVEL, calculateDirectNuclearDamage } from '@/lib/nuclearDamage';
+import { calculateMissileInterceptChance } from '@/lib/missileDefense';
 import { processImmigrationAndCultureTurn, initializeNationPopSystem } from '@/lib/immigrationCultureTurnProcessor';
 import { initializeSpyNetwork } from '@/lib/spyNetworkUtils';
 import { getPolicyById } from '@/lib/policyData';
@@ -3688,16 +3689,20 @@ function drawMissiles() {
       if (m.t >= 0.95 && !m.interceptChecked) {
         m.interceptChecked = true;
         const allies = nations.filter(n => n.treaties?.[m.target.id]?.alliance && n.defense > 0);
-        let totalIntercept = (m.target.defense || 0) / 16;
-        allies.forEach(ally => {
-          const allyIntercept = (ally.defense || 0) / 32;
-          totalIntercept += allyIntercept;
-          if (Math.random() < allyIntercept) {
+        const alliedDefenses = allies.map((ally) => ally.defense || 0);
+        const { totalChance, allyChances } = calculateMissileInterceptChance(
+          m.target.defense || 0,
+          alliedDefenses
+        );
+
+        allies.forEach((ally, index) => {
+          const allyChance = allyChances[index] ?? 0;
+          if (allyChance > 0 && Math.random() < allyChance) {
             log(`${ally.name} helps defend ${m.target.name}!`, 'success');
           }
         });
 
-        if (Math.random() < totalIntercept) {
+        if (Math.random() < totalChance) {
           S.missiles.splice(i, 1);
           log(`Missile intercepted! Defense successful`, 'success');
           S.rings.push({ x: tx, y: ty, r: 1, max: 40, speed: 3, alpha: 1, type: 'intercept' });

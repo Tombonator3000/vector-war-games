@@ -3175,3 +3175,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T13:59:30Z - Synced phase overlay styling with DEFCON state and banner messaging
 - Extended the phase transition overlay to accept DEFCON and optional overlay payload data, applying DEFCON-driven gradients and banner tone styling to the modal (`src/components/PhaseTransitionOverlay.tsx`).
 - Routed active catastrophe overlays into the phase modal during transitions and prevented duplicate banners during player turns (`src/pages/Index.tsx`).
+### 2025-11-12T13:20:05Z - Normalized missile interception odds and coverage
+- Added `calculateMissileInterceptChance` in `src/lib/missileDefense.ts` to cap interception probability at 75%, scale allied contributions, and expose reusable breakdown data.
+- Updated the missile interception block in `src/pages/Index.tsx` to use the shared helper so allies contribute proportionally while respecting the cap.
+- Synced the consequence preview by routing `calculateMissileLaunchConsequences` through the new helper and clamping displayed interception odds.
+- Created regression tests in `src/lib/__tests__/missileDefense.test.ts` and `src/lib/__tests__/consequenceCalculator.test.ts` to guarantee normalized probabilities never exceed the threshold.
