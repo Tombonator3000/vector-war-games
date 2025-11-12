@@ -1659,17 +1659,33 @@ type WindowWithScenario = Window & {
 };
 
 /**
- * Calculate the current game year based on scenario and turn
+ * Gets the current in-game year based on the turn number and scenario time configuration.
+ * Returns undefined if time configuration is not available, which causes flashpoint system
+ * to use all available templates without year filtering (graceful degradation).
+ *
+ * @param turn - Current turn number
+ * @returns Current year or undefined if time config unavailable
  */
 const getCurrentYear = (turn: number): number | undefined => {
-  if (typeof window === 'undefined') return undefined;
+  if (typeof window === 'undefined') {
+    console.log('[Flashpoint Debug] getCurrentYear: Server-side render, no year available');
+    return undefined;
+  }
 
   const globalWindow = window as WindowWithScenario;
   const timeConfig = globalWindow.S?.scenario?.timeConfig;
 
-  if (!timeConfig) return undefined;
+  if (!timeConfig) {
+    console.log('[Flashpoint Debug] getCurrentYear: timeConfig not available, using all flashpoint templates');
+    return undefined;
+  }
 
   const { startYear, unit, unitsPerTurn } = timeConfig;
+
+  if (!startYear || !unit || !unitsPerTurn) {
+    console.log('[Flashpoint Debug] getCurrentYear: Incomplete timeConfig, using all flashpoint templates', { startYear, unit, unitsPerTurn });
+    return undefined;
+  }
 
   // Calculate years passed based on time unit
   let yearsPassed = 0;
@@ -1686,9 +1702,14 @@ const getCurrentYear = (turn: number): number | undefined => {
     case 'day':
       yearsPassed = Math.floor(((turn - 1) * unitsPerTurn) / 365);
       break;
+    default:
+      console.log('[Flashpoint Debug] getCurrentYear: Unknown time unit', unit);
+      return undefined;
   }
 
-  return startYear + yearsPassed;
+  const currentYear = startYear + yearsPassed;
+  console.log(`[Flashpoint Debug] getCurrentYear: Turn ${turn} = Year ${currentYear}`);
+  return currentYear;
 };
 
 const getActiveScenarioId = (): string | undefined => {
@@ -2217,8 +2238,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'coup',
     severity: 'critical',
     timeLimit: 90,
-    minYear: 1948,
-    maxYear: 1949,
+    minYear: 1947,
+    maxYear: 1950,
     options: [
       {
         id: 'airlift',
@@ -2271,8 +2292,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'rogue',
     severity: 'catastrophic',
     timeLimit: 75,
-    minYear: 1950,
-    maxYear: 1951,
+    minYear: 1949,
+    maxYear: 1953,
     options: [
       {
         id: 'deny_nukes',
@@ -2325,8 +2346,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'coup',
     severity: 'critical',
     timeLimit: 60,
-    minYear: 1956,
-    maxYear: 1957,
+    minYear: 1954,
+    maxYear: 1958,
     options: [
       {
         id: 'support_allies',
@@ -2379,8 +2400,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'blackswan',
     severity: 'critical',
     timeLimit: 90,
-    minYear: 1957,
-    maxYear: 1958,
+    minYear: 1956,
+    maxYear: 1960,
     options: [
       {
         id: 'crash_program',
@@ -2433,8 +2454,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'accident',
     severity: 'major',
     timeLimit: 75,
-    minYear: 1960,
-    maxYear: 1961,
+    minYear: 1959,
+    maxYear: 1962,
     options: [
       {
         id: 'apologize',
@@ -2487,8 +2508,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'coup',
     severity: 'critical',
     timeLimit: 60,
-    minYear: 1961,
-    maxYear: 1962,
+    minYear: 1960,
+    maxYear: 1964,
     options: [
       {
         id: 'tear_down',
@@ -2541,8 +2562,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'coup',
     severity: 'critical',
     timeLimit: 90,
-    minYear: 1968,
-    maxYear: 1969,
+    minYear: 1965,
+    maxYear: 1972,
     options: [
       {
         id: 'escalate',
@@ -2595,8 +2616,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'terrorist',
     severity: 'catastrophic',
     timeLimit: 60,
-    minYear: 1973,
-    maxYear: 1974,
+    minYear: 1971,
+    maxYear: 1976,
     options: [
       {
         id: 'airlift',
@@ -2649,8 +2670,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'coup',
     severity: 'critical',
     timeLimit: 75,
-    minYear: 1979,
-    maxYear: 1980,
+    minYear: 1977,
+    maxYear: 1983,
     options: [
       {
         id: 'arm_mujahideen',
@@ -2703,8 +2724,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'accident',
     severity: 'catastrophic',
     timeLimit: 45,
-    minYear: 1983,
-    maxYear: 1984,
+    minYear: 1981,
+    maxYear: 1986,
     options: [
       {
         id: 'stand_down',
@@ -2757,8 +2778,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'accident',
     severity: 'critical',
     timeLimit: 90,
-    minYear: 1986,
-    maxYear: 1987,
+    minYear: 1985,
+    maxYear: 1989,
     options: [
       {
         id: 'offer_help',
@@ -2811,8 +2832,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'coup',
     severity: 'major',
     timeLimit: 75,
-    minYear: 1989,
-    maxYear: 1990,
+    minYear: 1988,
+    maxYear: 1992,
     options: [
       {
         id: 'sanctions',
@@ -2865,8 +2886,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'terrorist',
     severity: 'catastrophic',
     timeLimit: 120,
-    minYear: 2001,
-    maxYear: 2002,
+    minYear: 2000,
+    maxYear: 2005,
     options: [
       {
         id: 'afghanistan_only',
@@ -2919,8 +2940,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'accident',
     severity: 'critical',
     timeLimit: 90,
-    minYear: 2011,
-    maxYear: 2012,
+    minYear: 2009,
+    maxYear: 2014,
     options: [
       {
         id: 'emergency_aid',
@@ -2973,8 +2994,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'coup',
     severity: 'critical',
     timeLimit: 60,
-    minYear: 2014,
-    maxYear: 2015,
+    minYear: 2013,
+    maxYear: 2018,
     options: [
       {
         id: 'military_aid',
@@ -3027,8 +3048,8 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     category: 'blackswan',
     severity: 'catastrophic',
     timeLimit: 120,
-    minYear: 2020,
-    maxYear: 2021,
+    minYear: 2019,
+    maxYear: 2024,
     options: [
       {
         id: 'lockdown',
@@ -3729,8 +3750,8 @@ export function useFlashpoints() {
       const currentYear = getCurrentYear(turn);
       const templatePool = scenarioTemplates && scenarioTemplates.length > 0 ? scenarioTemplates : FLASHPOINT_TEMPLATES;
 
-      // Filter templates by year restrictions
-      const validTemplates = currentYear
+      // Filter templates by year restrictions (3-tier fallback system)
+      let validTemplates = currentYear
         ? templatePool.filter(t => {
             const minYearOk = !t.minYear || currentYear >= t.minYear;
             const maxYearOk = !t.maxYear || currentYear <= t.maxYear;
@@ -3738,9 +3759,23 @@ export function useFlashpoints() {
           })
         : templatePool; // If no year info, allow all templates
 
-      // If no valid templates after filtering, return null
+      // Tier 1: Use year-appropriate historical flashpoints
+      if (validTemplates.length === 0 && currentYear) {
+        console.log(`[Flashpoint Debug] No year-appropriate flashpoints for ${currentYear}, falling back to timeless templates`);
+
+        // Tier 2: Fall back to timeless templates (no year restrictions)
+        validTemplates = templatePool.filter(t => !t.minYear && !t.maxYear);
+
+        // Tier 3: If still none, use all templates as last resort
+        if (validTemplates.length === 0) {
+          console.log(`[Flashpoint Debug] No timeless templates found, using all templates`);
+          validTemplates = templatePool;
+        }
+      }
+
+      // If still no templates (empty template pool), return null
       if (validTemplates.length === 0) {
-        console.log(`[Flashpoint Debug] No valid flashpoints for year ${currentYear}`);
+        console.log(`[Flashpoint Debug] Template pool is empty - cannot generate flashpoint`);
         return null;
       }
 
