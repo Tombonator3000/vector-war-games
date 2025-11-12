@@ -3702,7 +3702,7 @@ function drawMissiles() {
       }
 
       m.hasExploded = true;
-      explode(tx, ty, m.target, m.yield);
+      explode(tx, ty, m.target, m.yield, m.from || null, m.isSubmarine ? 'submarine' : 'missile');
       S.missiles.splice(i, 1);
     }
   }
@@ -3748,7 +3748,7 @@ function drawBombers() {
     drawIcon(bomberIcon, x, y, angle, BOMBER_ICON_BASE_SCALE);
 
     if (bomber.t >= 1.0) {
-      explode(bomber.tx, bomber.ty, bomber.to, bomber.payload.yield);
+      explode(bomber.tx, bomber.ty, bomber.to, bomber.payload.yield, bomber.from || null, 'bomber');
       S.bombers.splice(i, 1);
     }
   });
@@ -4351,10 +4351,105 @@ function drawFX() {
   }
 }
 
+function hasMadDoctrine(nation: Nation | null | undefined): boolean {
+  if (!nation?.doctrine) {
+    return false;
+  }
+  return nation.doctrine.toLowerCase() === 'mad';
+}
+
+function selectLargestWarheadYield(nation: Nation): number | null {
+  const warheadEntries = Object.entries(nation.warheads || {}).filter(([, count]) => (count ?? 0) > 0);
+  if (warheadEntries.length === 0) {
+    return null;
+  }
+
+  const yields = warheadEntries
+    .map(([yieldStr]) => Number(yieldStr))
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  if (yields.length === 0) {
+    return null;
+  }
+
+  return Math.max(...yields);
+}
+
+function triggerMadCounterstrike(
+  defender: Nation,
+  attacker: Nation,
+  deliveryMethod: DeliveryMethod,
+  incomingYield: number
+): void {
+  if (!hasMadDoctrine(defender)) {
+    return;
+  }
+
+  if (defender.missiles <= 0) {
+    return;
+  }
+
+  const retaliationYield = selectLargestWarheadYield(defender);
+  if (!retaliationYield) {
+    return;
+  }
+
+  const defconBefore = S.defcon;
+  if (defconBefore > 1) {
+    handleDefconChange(
+      1 - defconBefore,
+      `${defender.name} triggers MAD counterstrike protocols`,
+      defender.isPlayer ? 'player' : 'system',
+      {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: (message, type) => log(message, type),
+        onUpdateDisplay: updateDisplay,
+      }
+    );
+  }
+
+  const retaliationLaunched = launch(defender, attacker, retaliationYield);
+  if (!retaliationLaunched) {
+    return;
+  }
+
+  const retaliationDescriptor = `${retaliationYield}MT missile`;
+  log(`☢️ MAD COUNTERSTRIKE: ${defender.name} launches ${retaliationDescriptor} at ${attacker.name}!`, 'alert');
+
+  if (typeof window !== 'undefined' && (window as any).__gameAddNewsItem) {
+    (window as any).__gameAddNewsItem(
+      'military',
+      `${defender.name} retaliates against ${attacker.name} under MAD protocols after a ${deliveryMethod} strike (${incomingYield}MT).`,
+      'critical'
+    );
+  }
+
+  if (defender.isPlayer) {
+    toast({
+      title: 'MAD Counterstrike Initiated',
+      description: `Automatic retaliation targeting ${attacker.name} (${retaliationDescriptor}).`,
+      variant: 'destructive',
+    });
+  } else if (attacker.isPlayer) {
+    toast({
+      title: 'Incoming MAD Retaliation',
+      description: `${defender.name} launches an automatic ${retaliationDescriptor}!`,
+      variant: 'destructive',
+    });
+  }
+}
+
 // Explosion function
-function explode(x: number, y: number, target: Nation, yieldMT: number) {
+function explode(
+  x: number,
+  y: number,
+  target: Nation,
+  yieldMT: number,
+  attacker: Nation | null = null,
+  deliveryMethod: DeliveryMethod = 'missile'
+) {
   AudioSys.playSFX('explosion');
-  
+
   const scale = Math.sqrt(yieldMT / 20);
   const particleCount = Math.floor(100 * scale);
   
@@ -4499,6 +4594,10 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
   S.screenShake = Math.max(S.screenShake || 0, Math.min(25, yieldMT / 5 + impact.severity * 3));
 
   if (target) {
+    if (attacker) {
+      triggerMadCounterstrike(target, attacker, deliveryMethod, yieldMT);
+    }
+
     const previousPopulation = target.population;
     applyNuclearImpactToNation(target, impact);
 

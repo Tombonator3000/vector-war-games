@@ -68,7 +68,14 @@ export interface ResolutionPhaseDependencies {
   nations: Nation[];
   log: (msg: string, type?: string) => void;
   projectLocal: (lon: number, lat: number) => ProjectedPoint;
-  explode: (x: number, y: number, target: Nation, yieldMT: number) => void;
+  explode: (
+    x: number,
+    y: number,
+    target: Nation,
+    yieldMT: number,
+    attacker?: Nation | null,
+    deliveryMethod?: 'missile' | 'bomber' | 'submarine'
+  ) => void;
   advanceResearch: (nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') => void;
   advanceCityConstruction: (nation: Nation, phase: 'PRODUCTION' | 'RESOLUTION') => void;
 }
@@ -235,7 +242,7 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
         return;
       }
       missile.hasExploded = true;
-      explode(x, y, missile.target, missile.yield);
+      explode(x, y, missile.target, missile.yield, missile.from || null, 'missile');
     }
   });
 

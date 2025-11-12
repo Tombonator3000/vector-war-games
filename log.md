@@ -3152,3 +3152,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated `executeCyberAttack` to emit the new reaction fields so `handleCyberAttackOperation` can drive diplomacy and readiness responses.
 - Enhanced `handleCyberAttackOperation` in `src/pages/Index.tsx` to modify both nations' relationships, trigger DEFCON updates, schedule counter-intel retaliation, and persist state through `PlayerManager`/`GameStateManager` while surfacing news alerts.
 - Added a `pendingCyberRetaliation` hook on `Nation` plus regression tests in `src/types/__tests__/unifiedIntelOperations.test.ts` that verify detected and attributed cyber attacks now reduce relationships and DEFCON while stealthy strikes leave them unchanged.
+### 2025-11-12T11:59:15Z - Enabled automatic MAD counterstrikes
+- Expanded `explode` in `src/pages/Index.tsx` to accept attacker context, select the largest remaining warhead, escalate DEFCON to 1, and immediately launch a retaliatory missile when MAD nations are struck.
+- Updated missile resolution in `src/lib/gamePhaseHandlers.ts` and local missile/bomber impact handlers to pass the attacker reference so MAD retaliation propagates through every strike type.
