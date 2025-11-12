@@ -3104,3 +3104,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Threaded the casualty badge through the primary command bar and minimal command sheet with accessibility labels and responsive stacking adjustments.
 - Updated the Index page test doubles to track casualty tallies and added a regression test ensuring the badge appears when casualties exceed zero.
 - Executed `npx vitest run src/pages/__tests__/Index.test.tsx` (terminated lingering Vitest processes after completion due to open handles in the suite).
+-
+### 2025-11-12T09:32:28Z - Harmonized spy trust records with TrustRecord schema
+- Refactored `applySpyTrustPenalty`, `applySowDissentDiplomacy`, and related helpers in `src/lib/spyDiplomaticIntegration.ts` to rely on `TrustRecord.value`, clamp adjustments, and preserve historical entries while removing obsolete `trustScore` keys.
+- Updated `applySowDissent` in `src/lib/spyMissionExecutor.ts` to read/write the unified trust structure and retain prior history snapshots.
+- Ran `CI=1 npm run test` to verify diplomacy systems; suite currently fails on `src/lib/__tests__/mapColorUtils.test.ts` expecting hex strings from color helpers (pre-existing mismatch).

@@ -6,6 +6,7 @@
 
 import type { Nation, GameState } from '@/types/game';
 import type { SpyMission, MissionResult, MissionReward } from '@/types/spySystem';
+import { DEFAULT_TRUST, clampTrust } from '@/types/trustAndFavors';
 
 // ============================================================================
 // MISSION EFFECT APPLICATION
@@ -295,15 +296,15 @@ function applySowDissent(
     }
 
     for (const [nationId, trustChange] of Object.entries(rewards.trustImpact)) {
-      const currentTrust = updated.trustRecords[nationId]?.trustScore || 50;
-      const newTrust = Math.max(0, Math.min(100, currentTrust + trustChange));
+      const existingRecord = updated.trustRecords[nationId];
+      const currentTrust = existingRecord?.value ?? DEFAULT_TRUST;
+      const newTrust = clampTrust(currentTrust + trustChange);
 
       updated.trustRecords[nationId] = {
-        ...updated.trustRecords[nationId],
-        trustScore: newTrust,
+        value: newTrust,
         lastUpdated: gameState.turn,
         history: [
-          ...(updated.trustRecords[nationId]?.history || []),
+          ...(existingRecord?.history || []),
           {
             turn: gameState.turn,
             delta: trustChange,
