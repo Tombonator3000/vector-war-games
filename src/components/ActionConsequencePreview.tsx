@@ -62,9 +62,9 @@ export function ActionConsequencePreview({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         className="relative z-10 max-w-2xl w-full"
       >
-        <Card className="bg-gradient-to-br from-cyan-950/95 to-black/95 backdrop-blur-xl border-2 border-cyan-500/60 shadow-2xl">
-          <ScrollArea className="max-h-[80vh]">
-            <div className="p-6">
+        <Card className="bg-gradient-to-br from-cyan-950/95 to-black/95 backdrop-blur-xl border-2 border-cyan-500/60 shadow-2xl flex max-h-[85vh] flex-col overflow-hidden">
+          <ScrollArea className="flex-1">
+            <div className="p-6 pb-4">
               {/* Header */}
               <div className="mb-6">
                 <Badge variant="outline" className="mb-3 border-cyan-500/50 text-cyan-300 text-xs">
@@ -295,39 +295,40 @@ export function ActionConsequencePreview({
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 mt-8">
-                <Button
-                  onClick={onCancel}
-                  variant="outline"
-                  className="flex-1 border-cyan-500/50 text-cyan-300 hover:bg-cyan-900/20"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={onConfirm}
-                  disabled={consequences.blockedReasons && consequences.blockedReasons.length > 0}
-                  className={`flex-1 font-bold disabled:opacity-50 disabled:cursor-not-allowed ${
-                    consequences.blockedReasons && consequences.blockedReasons.length > 0
-                      ? 'bg-gray-500 text-gray-300'
-                      : consequences.actionTitle.toLowerCase().includes('launch') ||
-                        consequences.actionTitle.toLowerCase().includes('nuclear') ||
-                        consequences.actionTitle.toLowerCase().includes('missile')
-                      ? 'bg-red-600 text-white hover:bg-red-500 border-2 border-red-400 shadow-lg shadow-red-500/50 uppercase text-lg'
-                      : 'bg-cyan-500 text-black hover:bg-cyan-400'
-                  }`}
-                >
-                  {consequences.blockedReasons && consequences.blockedReasons.length > 0
-                    ? 'Action Blocked'
-                    : consequences.actionTitle.toLowerCase().includes('launch') ||
-                      consequences.actionTitle.toLowerCase().includes('nuclear') ||
-                      consequences.actionTitle.toLowerCase().includes('missile')
-                    ? '🚀 LAUNCH'
-                    : 'Confirm Action'}
-                </Button>
-              </div>
             </div>
           </ScrollArea>
+          <div className="bg-black/40 px-6 py-4 border-t border-cyan-500/30">
+            <div className="flex gap-3">
+              <Button
+                onClick={onCancel}
+                variant="outline"
+                className="flex-1 border-cyan-500/50 text-cyan-300 hover:bg-cyan-900/20"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={onConfirm}
+                disabled={consequences.blockedReasons && consequences.blockedReasons.length > 0}
+                className={`flex-1 font-bold disabled:opacity-50 disabled:cursor-not-allowed ${
+                  consequences.blockedReasons && consequences.blockedReasons.length > 0
+                    ? 'bg-gray-500 text-gray-300'
+                    : consequences.actionTitle.toLowerCase().includes('launch') ||
+                        consequences.actionTitle.toLowerCase().includes('nuclear') ||
+                        consequences.actionTitle.toLowerCase().includes('missile')
+                    ? 'bg-red-600 text-white hover:bg-red-500 border-2 border-red-400 shadow-lg shadow-red-500/50 uppercase text-lg'
+                    : 'bg-cyan-500 text-black hover:bg-cyan-400'
+                }`}
+              >
+                {consequences.blockedReasons && consequences.blockedReasons.length > 0
+                  ? 'Action Blocked'
+                  : consequences.actionTitle.toLowerCase().includes('launch') ||
+                      consequences.actionTitle.toLowerCase().includes('nuclear') ||
+                      consequences.actionTitle.toLowerCase().includes('missile')
+                  ? '🚀 LAUNCH'
+                  : 'Confirm Action'}
+              </Button>
+            </div>
+          </div>
         </Card>
       </motion.div>
     </div>
