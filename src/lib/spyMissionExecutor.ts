@@ -108,6 +108,24 @@ export function applyMissionRewards(
     case 'counter-intel':
       effectMessages.push('Counter-intelligence sweep completed');
       break;
+
+    case 'social-media-disinfo':
+      const socialMediaResult = applySocialMediaDisinfo(rewards, updatedTargetNation);
+      updatedTargetNation = socialMediaResult.targetNation;
+      effectMessages.push(...socialMediaResult.messages);
+      break;
+
+    case 'fund-opposition':
+      const fundOppResult = applyFundOpposition(rewards, updatedTargetNation, updatedGameState);
+      updatedTargetNation = fundOppResult.targetNation;
+      effectMessages.push(...fundOppResult.messages);
+      break;
+
+    case 'expose-corruption':
+      const exposeResult = applyExposeCorruption(rewards, updatedTargetNation);
+      updatedTargetNation = exposeResult.targetNation;
+      effectMessages.push(...exposeResult.messages);
+      break;
   }
 
   return {
@@ -504,6 +522,118 @@ function applyExfiltrate(
   return { spyNation: updated, messages };
 }
 
+/**
+ * Apply social media disinformation mission effects (Fase 2)
+ */
+function applySocialMediaDisinfo(
+  rewards: MissionReward,
+  targetNation: Nation
+): {
+  targetNation: Nation;
+  messages: string[];
+} {
+  const messages: string[] = [];
+  const updated = { ...targetNation };
+
+  // Reduce public opinion over time
+  updated.publicOpinion = Math.max(0, updated.publicOpinion - 12);
+  messages.push(`Social media disinformation campaign reduces public opinion in ${targetNation.name} by 12`);
+
+  // Slight morale damage
+  if (rewards.moraleImpact) {
+    updated.morale = Math.max(0, updated.morale + rewards.moraleImpact);
+    messages.push(`Morale weakened by ${Math.abs(rewards.moraleImpact)}`);
+  }
+
+  // Small instability increase
+  if (updated.instability !== undefined) {
+    updated.instability = Math.min(100, updated.instability + 6);
+    messages.push(`Social unrest increased`);
+  }
+
+  return { targetNation: updated, messages };
+}
+
+/**
+ * Apply fund opposition mission effects (Fase 2)
+ */
+function applyFundOpposition(
+  rewards: MissionReward,
+  targetNation: Nation,
+  gameState: GameState
+): {
+  targetNation: Nation;
+  messages: string[];
+} {
+  const messages: string[] = [];
+  const updated = { ...targetNation };
+
+  // Strengthen opposition
+  if (updated.oppositionState) {
+    updated.oppositionState = { ...updated.oppositionState };
+    updated.oppositionState.strength = Math.min(100, updated.oppositionState.strength + 15);
+    messages.push(`Opposition strength increased by 15 in ${targetNation.name}`);
+  } else {
+    // Initialize opposition if not present
+    updated.oppositionState = {
+      strength: 45, // Start at 45 with funding
+      platform: 'populist',
+      recentActions: [],
+      lastActiveTurn: gameState.turn,
+      mobilizing: false,
+    };
+    messages.push(`Opposition movement funded in ${targetNation.name}`);
+  }
+
+  // Reduce public opinion of government
+  updated.publicOpinion = Math.max(0, updated.publicOpinion - 10);
+  messages.push(`Public opinion of government decreased`);
+
+  // Increase instability
+  if (updated.instability !== undefined) {
+    updated.instability = Math.min(100, updated.instability + 8);
+    messages.push(`Political instability increased`);
+  }
+
+  return { targetNation: updated, messages };
+}
+
+/**
+ * Apply expose corruption mission effects (Fase 2)
+ */
+function applyExposeCorruption(
+  rewards: MissionReward,
+  targetNation: Nation
+): {
+  targetNation: Nation;
+  messages: string[];
+} {
+  const messages: string[] = [];
+  const updated = { ...targetNation };
+
+  // Major cabinet approval hit
+  updated.cabinetApproval = Math.max(0, updated.cabinetApproval - 15);
+  messages.push(`Cabinet approval plummeted by 15 in ${targetNation.name}`);
+
+  // Public opinion damage
+  updated.publicOpinion = Math.max(0, updated.publicOpinion - 10);
+  messages.push(`Public outrage over corruption scandal`);
+
+  // Morale hit
+  if (rewards.moraleImpact) {
+    updated.morale = Math.max(0, updated.morale + rewards.moraleImpact);
+    messages.push(`National morale damaged by scandal`);
+  }
+
+  // Instability increase
+  if (updated.instability !== undefined) {
+    updated.instability = Math.min(100, updated.instability + 10);
+    messages.push(`Political crisis deepens`);
+  }
+
+  return { targetNation: updated, messages };
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -526,6 +656,9 @@ export function getMissionEffectDescription(missionType: string): string {
     'cyber-assist': 'Weaken cyber defenses for easier future operations',
     'false-flag': 'Frame another nation for an attack',
     'exfiltrate': 'Extract a high-value asset or defector',
+    'social-media-disinfo': 'Run social media disinformation campaign to erode public opinion',
+    'fund-opposition': 'Fund opposition party to strengthen political rivals',
+    'expose-corruption': 'Expose government corruption to damage cabinet approval',
   };
 
   return descriptions[missionType] || 'Unknown mission type';

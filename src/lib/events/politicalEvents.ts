@@ -41,6 +41,7 @@ export interface PoliticalEventDefinition {
     electionImminent?: boolean;
     minTurn?: number;
     requireAny?: PoliticalEventThresholdKey[];
+    customCondition?: (nation: any, currentTurn: number) => boolean; // Custom condition function
   };
   options: PoliticalEventOption[];
   fallbackDelta?: GovernanceDelta;
@@ -421,5 +422,61 @@ export const politicalEvents: PoliticalEventDefinition[] = [
     ],
     fallbackDelta: { morale: -8, publicOpinion: -6, instability: 12 },
     fallbackSummary: 'War exhaustion deepens. Desertion rates climb as public demands peace.',
+  },
+  {
+    id: 'nuclear_ptsd',
+    title: 'Nuclear Strike Trauma',
+    summary: 'The atomic strike has left deep psychological scars. Citizens demand action or comfort.',
+    severity: 'critical',
+    cooldownTurns: 6,
+    conditions: {
+      moraleBelow: 65,
+      customCondition: (nation: any, currentTurn: number) => {
+        // Check if nation was nuked in the last 3 turns
+        return nation.lastNukedTurn !== undefined && currentTurn - nation.lastNukedTurn <= 3;
+      },
+    },
+    options: [
+      {
+        id: 'aid_reconstruction',
+        label: 'Massive Aid & Reconstruction',
+        description: 'Deploy all available resources to rebuild affected areas and provide trauma support.',
+        outcomes: [
+          {
+            id: 'reconstruction_success',
+            description: 'Swift response demonstrates government commitment. Public morale rebounds despite costs.',
+            chance: 0.7,
+            effects: { morale: 15, publicOpinion: 10, cabinetApproval: 8, production: -25, instability: -10 },
+          },
+          {
+            id: 'reconstruction_inadequate',
+            description: 'Aid efforts overwhelmed by scale of devastation. Survivors feel abandoned.',
+            chance: 0.3,
+            effects: { morale: 5, publicOpinion: -8, cabinetApproval: -6, production: -30, instability: 15 },
+          },
+        ],
+      },
+      {
+        id: 'rally_retaliation',
+        label: 'Rally for Retaliation',
+        description: 'Channel public rage into calls for revenge. Promise swift nuclear response.',
+        outcomes: [
+          {
+            id: 'retaliation_accepted',
+            description: 'Public rallies behind promise of vengeance. War fever grips the nation.',
+            chance: 0.6,
+            effects: { morale: 10, publicOpinion: 6, cabinetApproval: 4, instability: 20 },
+          },
+          {
+            id: 'retaliation_horror',
+            description: 'Many reject calls for further nuclear war. Peace movements surge!',
+            chance: 0.4,
+            effects: { morale: -8, publicOpinion: -12, cabinetApproval: -10, instability: 25 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -15, publicOpinion: -12, instability: 30 },
+    fallbackSummary: 'Nuclear trauma festers. Mass exodus from contaminated zones as panic spreads.',
   },
 ];

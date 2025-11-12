@@ -4502,6 +4502,9 @@ function explode(x: number, y: number, target: Nation, yieldMT: number) {
     const previousPopulation = target.population;
     applyNuclearImpactToNation(target, impact);
 
+    // Track when nation was last nuked (for political events)
+    target.lastNukedTurn = S.turn;
+
     log(`💥 ${yieldMT}MT detonation at ${target.name}! ${impact.humanitarianSummary}`, 'alert');
     impact.stageReports.forEach(stage => {
       if (stage.summary) {
