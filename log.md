@@ -3126,3 +3126,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Injected a new "De-escalate DEFCON" council action within `src/components/EnhancedDiplomacyModal.tsx`, including availability checks when DEFCON is already stable.
 - Wired the new action through `handleEnhancedDiplomacyAction` in `src/pages/Index.tsx` so spending DIP influence can raise the global DEFCON level with full audio, news, and modal feedback.
 - Documented the resulting DEFCON shift with toasts/logging while preserving existing diplomacy action flows.
+### 2025-11-12T10:04:26Z - Layered historical pandemic casualty milestones into alerts
+- Replaced numeric global casualty thresholds with structured milestones (World War I, Spanish Flu, World War II, Black Death) in `src/lib/pandemic/casualtyAlertEvaluator.ts`, piping milestone metadata through the alert payload and emergency broadcast copy.
+- Enhanced `CasualtyImpactSummary` to surface milestone headlines and narratives above the existing metrics so the modal reads like a crisis briefing.
+- Expanded `casualtyAlertEvaluator` tests to cover milestone metadata (including >50M Spanish Flu thresholds) and ran `npm run test -- --run` (suite still reports known `mapColorUtils` hex expectations).
