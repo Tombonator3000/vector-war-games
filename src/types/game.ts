@@ -264,6 +264,12 @@ export interface Nation {
 
   // Spy Network System
   spyNetwork?: import('./spySystem').SpyNetworkState;
+  pendingCyberRetaliation?: {
+    // Queued retaliation plan when the nation traces a hostile cyber attack
+    targetId: string;
+    triggerTurn: number;
+    reason: string;
+  };
 
   // Temporary ability effects
   firstStrikeBonus?: number;

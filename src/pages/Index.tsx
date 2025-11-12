@@ -9507,18 +9507,78 @@ export default function NoradVector() {
 
     log(result.message);
 
+    const currentTurn = GameStateManager.getTurn();
+    let updatedPlayer = player;
+    let updatedTarget = target;
+
+    if (result.relationshipPenalty !== 0) {
+      const reason = result.attributed
+        ? `${target.name} traced your cyber attack`
+        : `${target.name} detected suspicious cyber activity`;
+      updatedPlayer = modifyRelationship(updatedPlayer, target.id, result.relationshipPenalty, reason, currentTurn) as Nation;
+      updatedTarget = modifyRelationship(updatedTarget, player.id, result.relationshipPenalty, reason, currentTurn) as Nation;
+    }
+
+    if (result.defconDelta !== 0) {
+      const defconReason = result.attributed
+        ? `${target.name} escalates readiness after tracing a cyber attack`
+        : `${target.name} heightens readiness after cyber intrusion`;
+      handleDefconChange(result.defconDelta, defconReason, 'ai', {
+        onAudioTransition: AudioSys.handleDefconTransition,
+        onLog: log,
+        onNewsItem: addNewsItem,
+        onUpdateDisplay: updateDisplay,
+        onShowModal: setDefconChangeEvent,
+      });
+    }
+
+    let retaliationQueued = false;
+
     if (result.discovered) {
+      const toastTitle = result.attributed ? 'Cyber Attack Attributed!' : 'Cyber Attack Detected';
+      const toastDescription = result.attributed ? `Attack traced back to you!` : `Target detected the attack`;
       toast({
-        title: result.attributed ? 'Cyber Attack Attributed!' : 'Cyber Attack Detected',
-        description: result.attributed ? `Attack traced back to you!` : `Target detected the attack`,
+        title: toastTitle,
+        description: toastDescription,
         variant: result.attributed ? 'destructive' : 'default'
       });
+
+      if (result.attributed) {
+        const retaliation = spyNetworkApi?.launchCounterIntel(target.id, player.id);
+        retaliationQueued = Boolean(retaliation?.success);
+
+        if (!retaliationQueued) {
+          updatedTarget = {
+            ...updatedTarget,
+            pendingCyberRetaliation: {
+              targetId: player.id,
+              triggerTurn: currentTurn + 1,
+              reason: 'Cyber attack attribution',
+            },
+          };
+          retaliationQueued = true;
+        }
+
+        if (retaliationQueued) {
+          result.retaliationExpected = true;
+          log(`${target.name} vows retaliation after tracing the cyber attack.`);
+          addNewsItem('intel', `${target.name} prepares counter-operations after tracing a cyber attack to ${player.name}.`, 'urgent');
+        }
+      } else {
+        addNewsItem('intel', `${target.name} increases cyber defenses after detecting hostile network probes.`, 'important');
+      }
     } else {
       toast({ title: 'Cyber Attack Successful', description: result.message });
     }
 
+    PlayerManager.set(updatedPlayer);
+    GameStateManager.updateNation(updatedTarget.id, updatedTarget);
+    nations = GameStateManager.getNations();
+    PlayerManager.setNations(nations);
+
+    updateDisplay();
     setIsIntelOperationsOpen(false);
-  }, [nations, log]);
+  }, [nations, log, addNewsItem, updateDisplay]);
 
   // ResearchModal - Extracted to src/components/game/ResearchModal.tsx (Phase 7 refactoring)
   const renderResearchModal = useCallback((): ReactNode => {
