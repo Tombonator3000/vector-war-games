@@ -4605,6 +4605,13 @@ function explode(
     const previousPopulation = target.population;
     applyNuclearImpactToNation(target, impact);
 
+    const convertedCasualties = Number.isFinite(impact.totalCasualties)
+      ? Math.max(0, Math.round(impact.totalCasualties * 1_000_000))
+      : 0;
+    if (convertedCasualties > 0) {
+      GameStateManager.addNonPandemicCasualties(convertedCasualties);
+    }
+
     // Track when nation was last nuked (for political events)
     target.lastNukedTurn = S.turn;
 
@@ -4633,14 +4640,28 @@ function explode(
     }
 
     if (target.isPlayer) {
-      if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
+      if (!S.statistics) {
+        S.statistics = {
+          nukesLaunched: 0,
+          nukesReceived: 0,
+          enemiesDestroyed: 0,
+          nonPandemicCasualties: 0,
+        };
+      }
       S.statistics.nukesReceived++;
     }
 
     if (previousPopulation > 0 && target.population <= 0 && !target.isPlayer) {
       const player = PlayerManager.get();
       if (player) {
-        if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
+        if (!S.statistics) {
+          S.statistics = {
+            nukesLaunched: 0,
+            nukesReceived: 0,
+            enemiesDestroyed: 0,
+            nonPandemicCasualties: 0,
+          };
+        }
         S.statistics.enemiesDestroyed++;
       }
     }
@@ -4699,7 +4720,14 @@ function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
 
   // Track statistics for submarine launches
   if (from.isPlayer) {
-    if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
+    if (!S.statistics) {
+      S.statistics = {
+        nukesLaunched: 0,
+        nukesReceived: 0,
+        enemiesDestroyed: 0,
+        nonPandemicCasualties: 0,
+      };
+    }
     S.statistics.nukesLaunched++;
 
     toast({
@@ -4726,7 +4754,14 @@ function launchBomber(from: Nation, to: Nation, payload: any) {
 
   // Track statistics for bombers as nuclear launches
   if (from.isPlayer) {
-    if (!S.statistics) S.statistics = { nukesLaunched: 0, nukesReceived: 0, enemiesDestroyed: 0 };
+    if (!S.statistics) {
+      S.statistics = {
+        nukesLaunched: 0,
+        nukesReceived: 0,
+        enemiesDestroyed: 0,
+        nonPandemicCasualties: 0,
+      };
+    }
     S.statistics.nukesLaunched++;
 
     toast({
@@ -7614,9 +7649,13 @@ export default function NoradVector() {
 
   const pandemicCasualtyTally = pandemicState?.casualtyTally ?? 0;
   const plagueTotalKills = plagueState?.plagueCompletionStats?.totalKills ?? 0;
+  const nonPandemicCasualtyTally = GameStateManager.getStatistics().nonPandemicCasualties ?? 0;
 
   const globalCasualtyDisplay = useMemo(() => {
-    const totalCasualties = Math.max(0, pandemicCasualtyTally) + Math.max(0, plagueTotalKills);
+    const totalCasualties =
+      Math.max(0, pandemicCasualtyTally) +
+      Math.max(0, plagueTotalKills) +
+      Math.max(0, nonPandemicCasualtyTally);
 
     if (totalCasualties <= 0) {
       return null;
@@ -7632,7 +7671,7 @@ export default function NoradVector() {
       displayValue: compactFormatter.format(totalCasualties),
       fullValue: Math.round(totalCasualties).toLocaleString(),
     };
-  }, [pandemicCasualtyTally, plagueTotalKills]);
+  }, [pandemicCasualtyTally, plagueTotalKills, nonPandemicCasualtyTally]);
 
   const renderCasualtyBadge = useCallback(
     (extraClasses?: string) => {
