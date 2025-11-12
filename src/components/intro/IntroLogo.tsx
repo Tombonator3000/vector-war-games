@@ -12,9 +12,9 @@ export const IntroLogo = () => (
     role="img"
     aria-labelledby="intro-logo-title intro-logo-desc"
   >
-    <title id="intro-logo-title">Vector War Games</title>
+    <title id="intro-logo-title">Aegis Protocol</title>
     <desc id="intro-logo-desc">
-      Neon synthwave wordmark for the Vector War Games simulation.
+      Neon synthwave wordmark for the Aegis Protocol crisis command simulation.
     </desc>
     <defs>
       <linearGradient id="logo-fill" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -53,7 +53,7 @@ export const IntroLogo = () => (
         strokeWidth={6}
         paintOrder="stroke fill"
       >
-        VECTOR
+        AEGIS
       </text>
       <text
         x="50%"
@@ -66,20 +66,20 @@ export const IntroLogo = () => (
         strokeWidth={7}
         paintOrder="stroke fill"
       >
-        WAR
+        PROTOCOL
       </text>
       <text
         x="50%"
         y="88%"
         textAnchor="middle"
-        fontSize={128}
-        letterSpacing="0.55em"
+        fontSize={96}
+        letterSpacing="0.6em"
         fill="url(#logo-fill)"
         stroke="url(#logo-stroke)"
-        strokeWidth={6}
+        strokeWidth={5}
         paintOrder="stroke fill"
       >
-        GAMES
+        DIRECTIVE
       </text>
     </g>
   </svg>
