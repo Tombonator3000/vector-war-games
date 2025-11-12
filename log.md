@@ -3104,6 +3104,11 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Threaded the casualty badge through the primary command bar and minimal command sheet with accessibility labels and responsive stacking adjustments.
 - Updated the Index page test doubles to track casualty tallies and added a regression test ensuring the badge appears when casualties exceed zero.
 - Executed `npx vitest run src/pages/__tests__/Index.test.tsx` (terminated lingering Vitest processes after completion due to open handles in the suite).
+
+### 2025-11-12T09:34:28Z - Ensured pandemic casualties deplete national populations
+- Added proportional casualty distribution to `PopSystemManager` so pop groups and aggregate populations shrink in tandem when deaths occur.
+- Wired the pandemic resolution loop in `src/pages/Index.tsx` to apply per-nation casualty deltas through the pop system while avoiding duplicate deductions from legacy totals.
+- Created `src/lib/__tests__/popSystemManager.test.ts` to cover the new casualty application helper and validate population capping logic.
 -
 ### 2025-11-12T09:32:28Z - Harmonized spy trust records with TrustRecord schema
 - Refactored `applySpyTrustPenalty`, `applySowDissentDiplomacy`, and related helpers in `src/lib/spyDiplomaticIntegration.ts` to rely on `TrustRecord.value`, clamp adjustments, and preserve historical entries while removing obsolete `trustScore` keys.
