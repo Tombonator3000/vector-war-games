@@ -15229,9 +15229,14 @@ export default function NoradVector() {
       />
 
       {/* New Phase 1 Tutorial & Feedback Overlays */}
-      <PhaseTransitionOverlay phase={S.phase} isTransitioning={isPhaseTransitioning} />
+      <PhaseTransitionOverlay
+        phase={S.phase}
+        isTransitioning={isPhaseTransitioning}
+        defcon={S.defcon}
+        overlay={isPhaseTransitioning ? activeOverlay : null}
+      />
 
-      {activeOverlay && (
+      {!isPhaseTransitioning && activeOverlay && (
         <CatastropheBanner
           message={activeOverlay.text}
           tone={activeOverlay.tone}

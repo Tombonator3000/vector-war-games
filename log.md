@@ -3171,6 +3171,10 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Restricted `PhaseTransitionOverlay` to display solely during AI/resolution/production transitions, removing catastrophic messaging from the animated card (`src/components/PhaseTransitionOverlay.tsx`).
 - Introduced `CatastropheBanner` to render catastrophe and warning overlays as a compact top-anchored banner with countdown feedback (`src/components/CatastropheBanner.tsx`).
 - Mounted the new banner from the main index page while preserving existing dismissal timers and slimmed the DEFCON warning overlay to coexist with gameplay elements (`src/pages/Index.tsx`, `src/components/DefconWarningOverlay.tsx`).
+
+### 2025-11-12T13:59:30Z - Synced phase overlay styling with DEFCON state and banner messaging
+- Extended the phase transition overlay to accept DEFCON and optional overlay payload data, applying DEFCON-driven gradients and banner tone styling to the modal (`src/components/PhaseTransitionOverlay.tsx`).
+- Routed active catastrophe overlays into the phase modal during transitions and prevented duplicate banners during player turns (`src/pages/Index.tsx`).
 ### 2025-11-12T13:20:05Z - Normalized missile interception odds and coverage
 - Added `calculateMissileInterceptChance` in `src/lib/missileDefense.ts` to cap interception probability at 75%, scale allied contributions, and expose reusable breakdown data.
 - Updated the missile interception block in `src/pages/Index.tsx` to use the shared helper so allies contribute proportionally while respecting the cap.
