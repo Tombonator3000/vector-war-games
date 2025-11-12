@@ -161,6 +161,8 @@ export const RESEARCH_TREE: ResearchProject[] = [
     cost: { production: 45, intel: 20 },
     prerequisites: ['space_weapon_platform'],
     onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.defense_grid = true;
       nation.defense += 2;
     }
   },

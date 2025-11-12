@@ -90,6 +90,10 @@ export function BuildModal({
   const cityBuildTime = getCityBuildTime(player);
   const cityMaintenanceCosts = getCityMaintenanceCosts(player);
 
+  const defenseResearchId = 'defense_grid';
+  const defenseResearchName = RESEARCH_LOOKUP[defenseResearchId]?.name ?? 'Orbital Defense Grid';
+  const hasDefenseGridResearch = !!player.researched?.[defenseResearchId];
+
   type BuildOption = {
     key: string;
     label: string;
@@ -124,6 +128,9 @@ export function BuildModal({
       cost: COSTS.defense,
       onClick: buildDefense,
       statusLine: `Current defense: ${player.defense || 0}`,
+      requirementMessage: hasDefenseGridResearch
+        ? null
+        : `Complete ${defenseResearchName} research to unlock.`,
     },
   ];
 

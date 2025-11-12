@@ -5476,7 +5476,7 @@ function aiTurn(n: Nation) {
   // 6. BUILD DEFENSE
   if (r < 0.65 + defenseMod) {
     const currentDefense = n.defense ?? 0;
-    if (canAfford(n, COSTS.defense) && currentDefense < MAX_DEFENSE_LEVEL) {
+    if (n.researched?.defense_grid && canAfford(n, COSTS.defense) && currentDefense < MAX_DEFENSE_LEVEL) {
       pay(n, COSTS.defense);
       n.defense = clampDefenseValue(currentDefense + 2);
       log(`${n.name} upgrades defense`);
@@ -9872,6 +9872,16 @@ export default function NoradVector() {
     if (!player) return;
 
     const currentDefense = player.defense ?? 0;
+
+    if (!player.researched?.defense_grid) {
+      const projectName = RESEARCH_LOOKUP.defense_grid?.name ?? 'Orbital Defense Grid';
+      toast({
+        title: 'Defense network offline',
+        description: `Complete the ${projectName} research to authorize orbital defense upgrades.`,
+      });
+      return;
+    }
+
     if (currentDefense >= MAX_DEFENSE_LEVEL) {
       toast({
         title: 'Defense grid at capacity',
