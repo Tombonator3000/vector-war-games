@@ -12502,6 +12502,11 @@ export default function NoradVector() {
   const bioWarfareAllowed = coopEnabled ? canExecute('BIOWARFARE') : true;
   const cultureAllowed = coopEnabled ? canExecute('CULTURE') : true;
   const diplomacyAllowed = coopEnabled ? canExecute('DIPLOMACY') : true;
+  const hasBioForgeAccess =
+    labFacility.tier >= 3 &&
+    pandemicIntegrationEnabled &&
+    bioWarfareEnabled &&
+    bioWarfareAllowed;
 
   const strategicOutlinerGroups = useMemo<StrategicOutlinerGroup[]>(() => {
     const groups: StrategicOutlinerGroup[] = [];
@@ -13416,6 +13421,29 @@ export default function NoradVector() {
                       <span className="text-[8px] font-mono">INTEL</span>
                     </Button>
 
+                    {pandemicIntegrationEnabled && bioWarfareEnabled ? (
+                      <Button
+                        onClick={() => setIsBioWarfareOpen(true)}
+                        variant="ghost"
+                        size="icon"
+                        data-role-locked={!bioWarfareAllowed}
+                        disabled={!hasBioForgeAccess}
+                        className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                          hasBioForgeAccess
+                            ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10'
+                            : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                        }`}
+                        title={
+                          hasBioForgeAccess
+                            ? 'BIOFORGE - Advanced bio-warfare operations'
+                            : 'Requires Tier 3 BioForge access and co-commander approval'
+                        }
+                      >
+                        <FlaskConical className="h-5 w-5" />
+                        <span className="text-[8px] font-mono">BIO</span>
+                      </Button>
+                    ) : null}
+
                     <Button
                       onClick={() => setIsCulturePanelOpen(!isCulturePanelOpen)}
                       variant="ghost"
@@ -13589,6 +13617,31 @@ export default function NoradVector() {
                       <Target className="h-5 w-5" />
                       INTEL
                     </Button>
+                    {pandemicIntegrationEnabled && bioWarfareEnabled ? (
+                      <Button
+                        onClick={() => {
+                          setIsBioWarfareOpen(true);
+                          setShowMinimalCommandSheet(false);
+                        }}
+                        variant="ghost"
+                        size="icon"
+                        data-role-locked={!bioWarfareAllowed}
+                        disabled={!hasBioForgeAccess}
+                        className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
+                          hasBioForgeAccess
+                            ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10'
+                            : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
+                        }`}
+                        title={
+                          hasBioForgeAccess
+                            ? 'BIOFORGE - Advanced bio-warfare operations'
+                            : 'Requires Tier 3 BioForge access and co-commander approval'
+                        }
+                      >
+                        <FlaskConical className="h-5 w-5" />
+                        BIOFORGE
+                      </Button>
+                    ) : null}
                     <Button
                       onClick={() => {
                         setIsCulturePanelOpen(!isCulturePanelOpen);
