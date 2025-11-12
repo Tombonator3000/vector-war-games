@@ -7,6 +7,10 @@
 
 ---
 
+### 2025-11-12T13:30:18Z - Nuclear casualty tracking integration
+- Extended `GameStateManager` statistics to include cumulative non-pandemic casualties and exposed a helper for updating the tally.
+- Wired nuclear strike resolution and global casualty UI to record absolute casualty counts and surface them alongside pandemic/bio totals.
+
 ### 2025-11-12T10:54:31Z - Streamlined culture campaign field cleanup
 - Renamed streamlined culture propaganda campaign fields to use `launcherId`/`targetId` across types, logic, and UI so badges render correctly.
 - Updated `StreamlinedCulturePanel` enemy matching to respect the canonical target identifier.

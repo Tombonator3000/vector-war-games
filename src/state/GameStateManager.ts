@@ -48,6 +48,7 @@ type LocalGameStateExtras = {
     nukesLaunched: number;
     nukesReceived: number;
     enemiesDestroyed: number;
+    nonPandemicCasualties: number;
   };
   showEndGameScreen?: boolean;
   endGameStatistics?: unknown;
@@ -132,6 +133,7 @@ function createInitialState(): LocalGameState {
       nukesLaunched: 0,
       nukesReceived: 0,
       enemiesDestroyed: 0,
+      nonPandemicCasualties: 0,
     },
     showEndGameScreen: false,
     endGameStatistics: undefined,
@@ -579,6 +581,7 @@ class GameStateManager {
         nukesLaunched: 0,
         nukesReceived: 0,
         enemiesDestroyed: 0,
+        nonPandemicCasualties: 0,
       };
     }
     return this._state.statistics;
@@ -606,6 +609,18 @@ class GameStateManager {
   static incrementEnemiesDestroyed(count = 1): void {
     const stats = this.getStatistics();
     stats.enemiesDestroyed += count;
+  }
+
+  /**
+   * Adds to the cumulative non-pandemic casualty tally
+   */
+  static addNonPandemicCasualties(count: number): void {
+    if (count <= 0) {
+      return;
+    }
+
+    const stats = this.getStatistics();
+    stats.nonPandemicCasualties += count;
   }
 
   // ============================================
