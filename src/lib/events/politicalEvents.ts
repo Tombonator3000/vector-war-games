@@ -369,4 +369,57 @@ export const politicalEvents: PoliticalEventDefinition[] = [
     fallbackDelta: { morale: -15, publicOpinion: -12, cabinetApproval: -20, instability: 22 },
     fallbackSummary: 'Military unrest festers. Civil-military relations deteriorate.',
   },
+  {
+    id: 'war_exhaustion',
+    title: 'War Exhaustion Crisis',
+    summary: 'Years of conflict have drained national morale. Citizens demand an end to the bloodshed.',
+    severity: 'serious',
+    cooldownTurns: 6,
+    conditions: {
+      moraleBelow: 60,
+      minTurn: 8, // Simulates prolonged conflict
+    },
+    options: [
+      {
+        id: 'rotate_units',
+        label: 'Rotate Frontline Units',
+        description: 'Pull exhausted troops from the front and deploy fresh reserves to restore fighting spirit.',
+        outcomes: [
+          {
+            id: 'rotation_success',
+            description: 'Fresh troops reinvigorate the war effort. Morale rebounds despite logistical strain.',
+            chance: 0.75,
+            effects: { morale: 12, cabinetApproval: 6, production: -8, instability: -4 },
+          },
+          {
+            id: 'rotation_logistics_fail',
+            description: 'Rotation causes operational chaos. Front lines weakened during transition.',
+            chance: 0.25,
+            effects: { morale: 4, cabinetApproval: -6, production: -12, instability: 8 },
+          },
+        ],
+      },
+      {
+        id: 'peace_campaign',
+        label: 'Launch Peace Talks Media Campaign',
+        description: 'Launch a public relations campaign framing negotiations as patriotic and strategic.',
+        outcomes: [
+          {
+            id: 'campaign_resonates',
+            description: 'Peace messaging resonates with war-weary public. Diplomatic efforts gain legitimacy.',
+            chance: 0.7,
+            effects: { morale: 8, publicOpinion: 10, cabinetApproval: 4, instability: -6 },
+          },
+          {
+            id: 'campaign_weakness',
+            description: 'Opposition brands you as weak. Hawks demand total victory!',
+            chance: 0.3,
+            effects: { morale: -6, publicOpinion: -4, cabinetApproval: -8, instability: 10 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -8, publicOpinion: -6, instability: 12 },
+    fallbackSummary: 'War exhaustion deepens. Desertion rates climb as public demands peace.',
+  },
 ];

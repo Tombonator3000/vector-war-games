@@ -65,6 +65,7 @@ import {
   calculateMoraleProductionMultiplier,
   calculateMoraleRecruitmentModifier,
 } from '@/hooks/useGovernance';
+import { useOpposition } from '@/hooks/useOpposition';
 import { TutorialGuide } from '@/components/TutorialGuide';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
@@ -7891,6 +7892,22 @@ export default function NoradVector() {
     [],
   );
 
+  const handleOppositionUpdate = useCallback(
+    (nationId: string, oppositionState: import('@/types/opposition').OppositionState) => {
+      const nation = getNationById(governanceNationsRef.current, nationId);
+      if (!nation) return;
+      nation.oppositionState = oppositionState;
+
+      // Apply opposition action effects
+      const latestAction = oppositionState.recentActions[0];
+      if (latestAction && latestAction.turn === S.turn) {
+        // Apply effects through governance delta
+        handleGovernanceDelta(nationId, latestAction.effects);
+      }
+    },
+    [handleGovernanceDelta],
+  );
+
   const governance = useGovernance({
     currentTurn: S.turn,
     getNations: getGovernanceNations,
@@ -7898,6 +7915,15 @@ export default function NoradVector() {
     onApplyDelta: handleGovernanceDelta,
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
     nationsVersion: governanceNationsVersion,
+  });
+
+  // Opposition tracking system
+  useOpposition({
+    currentTurn: S.turn,
+    getNations: getGovernanceNations,
+    metrics: governance.metrics,
+    onUpdateOpposition: handleOppositionUpdate,
+    onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
   });
 
   const playerGovernanceMetrics = playerNation ? governance.metrics[playerNation.id] : undefined;

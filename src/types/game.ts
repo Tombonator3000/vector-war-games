@@ -149,6 +149,7 @@ export interface Nation {
   treaties?: Record<string, Treaty>;
   satellites?: Record<string, number>; // targetId -> expiresAtTurn
   intelOperationCooldowns?: Record<string, number>; // Unified intel operations cooldown tracking
+  governanceActionCooldowns?: Record<string, number>; // Governance action cooldown tracking (actionId -> turn last used)
   bordersClosedTurns?: number;
   greenShiftTurns?: number;
   threats?: Record<string, number>;
@@ -167,6 +168,7 @@ export interface Nation {
   publicOpinion: number;
   electionTimer: number;
   cabinetApproval: number;
+  oppositionState?: import('./opposition').OppositionState;
   productionMultiplier?: number;
   uraniumPerTurn?: number;
   hasASATCapability?: boolean;
