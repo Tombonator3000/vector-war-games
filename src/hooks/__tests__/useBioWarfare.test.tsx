@@ -148,4 +148,33 @@ describe('useBioWarfare defensive research', () => {
     expect(result.current.plagueState.unlockedPlagueTypes.size).toBe(PLAGUE_TYPES.length);
     expect(result.current.plagueState.dnaPoints).toBe(0);
   });
+
+  it('allows Pandemic 2020 scenario to select advanced plague types', () => {
+    const addNews = vi.fn();
+    const { result } = renderHook(
+      () => useBioWarfare(addNews, SCENARIOS.pandemic2020),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.selectPlagueType('bio-weapon');
+    });
+
+    expect(result.current.plagueState.selectedPlagueType).toBe('bio-weapon');
+  });
+
+  it('blocks advanced plague types until unlocked in progression campaigns', () => {
+    const addNews = vi.fn();
+    const { result } = renderHook(
+      () => useBioWarfare(addNews, SCENARIOS.coldWar),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.selectPlagueType('bio-weapon');
+    });
+
+    expect(result.current.plagueState.selectedPlagueType).not.toBe('bio-weapon');
+    expect(result.current.plagueState.unlockedPlagueTypes.has('bio-weapon')).toBe(false);
+  });
 });

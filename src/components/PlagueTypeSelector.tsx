@@ -1,7 +1,7 @@
 import { Lock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { PlagueType } from '@/types/biowarfare';
+import type { PlagueType, PlagueTypeId } from '@/types/biowarfare';
 import type { BioLabTier } from '@/types/bioLab';
 import { PLAGUE_TYPES } from '@/lib/evolutionData';
 
@@ -10,6 +10,7 @@ interface PlagueTypeSelectorProps {
   onOpenChange: (open: boolean) => void;
   onSelect: (plagueTypeId: string) => void;
   labTier: BioLabTier;
+  unlockedPlagueTypes: ReadonlySet<PlagueTypeId>;
 }
 
 const DIFFICULTY_COLORS = {
@@ -26,7 +27,13 @@ const DIFFICULTY_LABELS = {
   expert: 'EXPERT',
 };
 
-export function PlagueTypeSelector({ open, onOpenChange, onSelect, labTier }: PlagueTypeSelectorProps) {
+export function PlagueTypeSelector({
+  open,
+  onOpenChange,
+  onSelect,
+  labTier,
+  unlockedPlagueTypes,
+}: PlagueTypeSelectorProps) {
   // Check if plague type is unlocked by lab tier
   const isPlagueTypeAvailable = (plagueTypeId: string): { available: boolean; reason?: string } => {
     if (labTier < 3) {
@@ -50,7 +57,7 @@ export function PlagueTypeSelector({ open, onOpenChange, onSelect, labTier }: Pl
   };
 
   const handleSelect = (plagueType: PlagueType) => {
-    if (!plagueType.unlocked) return;
+    if (!unlockedPlagueTypes.has(plagueType.id)) return;
 
     const availability = isPlagueTypeAvailable(plagueType.id);
     if (!availability.available) return;
@@ -74,7 +81,8 @@ export function PlagueTypeSelector({ open, onOpenChange, onSelect, labTier }: Pl
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
           {PLAGUE_TYPES.map((plagueType) => {
             const availability = isPlagueTypeAvailable(plagueType.id);
-            const isSelectable = plagueType.unlocked && availability.available;
+            const isUnlocked = unlockedPlagueTypes.has(plagueType.id);
+            const isSelectable = isUnlocked && availability.available;
 
             return (
               <div
@@ -89,7 +97,7 @@ export function PlagueTypeSelector({ open, onOpenChange, onSelect, labTier }: Pl
                 onClick={() => handleSelect(plagueType)}
               >
                 {/* Lock icon for locked plagues */}
-                {(!plagueType.unlocked || !availability.available) && (
+                {(!isUnlocked || !availability.available) && (
                   <div className="absolute top-2 right-2">
                     <Lock className="h-4 w-4 text-gray-500" />
                   </div>
@@ -141,7 +149,7 @@ export function PlagueTypeSelector({ open, onOpenChange, onSelect, labTier }: Pl
               </div>
 
               {/* Unlock requirement */}
-              {!plagueType.unlocked && plagueType.unlockRequirement && (
+              {!isUnlocked && plagueType.unlockRequirement && (
                 <div className="mt-3 pt-3 border-t border-gray-600/30">
                   <p className="text-[9px] text-gray-400 uppercase tracking-wide">
                     🔒 {plagueType.unlockRequirement}
