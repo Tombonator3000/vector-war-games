@@ -3118,3 +3118,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T09:43:11Z - Repositioned helper HUD controls and casualty badge
 - Added a configurable `triggerButtonClassName` prop to `src/components/GameHelper.tsx` to allow parent layouts to manage helper button placement without breaking defaults.
 - Updated `src/pages/Index.tsx` to relocate the Game Helper and global casualty badge into a bottom-right stack while removing badge duplicates from the main command bar and minimal HUD sheet.
+### 2025-11-12T10:05:00Z - Added DEFCON 1 escalation warning overlay
+- Wrapped global `handleDefconChange` in `src/pages/Index.tsx` to notify listeners when DEFCON shifts to level 1 and subscribed the page component to trigger a temporary warning state.
+- Introduced `src/components/DefconWarningOverlay.tsx` to render a non-blocking, full-screen alert layer and wired it into the main page alongside lifecycle management for the auto-dismiss timeout.
