@@ -479,4 +479,236 @@ export const politicalEvents: PoliticalEventDefinition[] = [
     fallbackDelta: { morale: -15, publicOpinion: -12, instability: 30 },
     fallbackSummary: 'Nuclear trauma festers. Mass exodus from contaminated zones as panic spreads.',
   },
+  {
+    id: 'refugee_crisis',
+    title: 'Refugee Crisis',
+    summary: 'Mass displacement from conflict zones overwhelms border infrastructure. Humanitarian crisis unfolds.',
+    severity: 'critical',
+    cooldownTurns: 8,
+    conditions: {
+      customCondition: (nation: any, currentTurn: number) => {
+        // Trigger if: instability > 60 (proxy for war/bombing) OR recently nuked
+        const highInstability = (nation.instability ?? 0) > 60;
+        const recentlyNuked = nation.lastNukedTurn !== undefined && currentTurn - nation.lastNukedTurn <= 5;
+        return highInstability || recentlyNuked;
+      },
+    },
+    options: [
+      {
+        id: 'accept_refugees',
+        label: 'Accept Refugees',
+        description: 'Open borders and provide humanitarian aid to displaced populations.',
+        outcomes: [
+          {
+            id: 'refugee_integration_success',
+            description: 'International community praises humanitarian response. Refugees begin integration.',
+            chance: 0.65,
+            effects: { morale: -5, publicOpinion: 10, cabinetApproval: 5, production: -10, instability: -8 },
+          },
+          {
+            id: 'refugee_strain',
+            description: 'Infrastructure strained by refugee influx. Local protests erupt over resources.',
+            chance: 0.35,
+            effects: { morale: -10, publicOpinion: 5, cabinetApproval: -5, production: -15, instability: 12 },
+          },
+        ],
+      },
+      {
+        id: 'close_borders',
+        label: 'Close Borders',
+        description: 'Seal borders and deploy military to prevent refugee entry. Protect national resources.',
+        outcomes: [
+          {
+            id: 'borders_secured',
+            description: 'Borders secured. Nationalist base rallies behind strong stance.',
+            chance: 0.6,
+            effects: { morale: 8, publicOpinion: -15, cabinetApproval: -8, instability: 10 },
+          },
+          {
+            id: 'international_condemnation',
+            description: 'Humanitarian catastrophe at borders sparks international outrage!',
+            chance: 0.4,
+            effects: { morale: 5, publicOpinion: -20, cabinetApproval: -12, instability: 15 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -8, publicOpinion: -10, instability: 15 },
+    fallbackSummary: 'Refugee crisis escalates. Border camps overwhelmed as humanitarian disaster unfolds.',
+  },
+  {
+    id: 'veterans_revolt',
+    title: "Veterans' Revolt",
+    summary: 'Wounded soldiers and discharged veterans protest government neglect. Military loyalty questioned.',
+    severity: 'critical',
+    cooldownTurns: 10,
+    conditions: {
+      moraleBelow: 45,
+      minTurn: 8,
+      customCondition: (nation: any, currentTurn: number) => {
+        // Trigger if at war or recently in conflict (high instability as proxy)
+        const inConflict = (nation.instability ?? 0) > 40;
+        const hasAlliances = nation.alliances && nation.alliances.length > 0;
+        return inConflict || hasAlliances;
+      },
+    },
+    options: [
+      {
+        id: 'veterans_benefits',
+        label: "Establish Veterans' Benefits Program",
+        description: 'Fund comprehensive healthcare, pensions, and job placement for veterans.',
+        outcomes: [
+          {
+            id: 'benefits_restore_trust',
+            description: 'Veterans stand down. Military morale stabilizes as government honors its commitments.',
+            chance: 0.7,
+            effects: { morale: 10, publicOpinion: 8, cabinetApproval: 8, production: -15, instability: -12 },
+          },
+          {
+            id: 'benefits_insufficient',
+            description: 'Program deemed inadequate. Protests continue despite massive expenditure.',
+            chance: 0.3,
+            effects: { morale: 4, publicOpinion: -2, cabinetApproval: -4, production: -20, instability: 8 },
+          },
+        ],
+      },
+      {
+        id: 'crackdown_veterans',
+        label: 'Crack Down on Protests',
+        description: 'Deploy security forces to disperse veteran protests and restore order.',
+        outcomes: [
+          {
+            id: 'crackdown_backfire',
+            description: 'Military refuses to attack their own! Officers threaten coup if repression continues!',
+            chance: 0.4,
+            effects: { morale: -15, publicOpinion: -20, cabinetApproval: -18, instability: 30 },
+          },
+          {
+            id: 'crackdown_temporary_order',
+            description: 'Protests suppressed but resentment festers. Military loyalty severely damaged.',
+            chance: 0.6,
+            effects: { morale: -10, publicOpinion: -10, cabinetApproval: -8, instability: 20 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -12, publicOpinion: -15, cabinetApproval: -10, instability: 25 },
+    fallbackSummary: "Veterans' revolt intensifies. Reports of armed confrontations with security forces.",
+  },
+  {
+    id: 'economic_depression',
+    title: 'Economic Depression Crisis',
+    summary: 'Economic collapse triggers nationwide despair. Unemployment and poverty soar.',
+    severity: 'serious',
+    cooldownTurns: 8,
+    conditions: {
+      moraleBelow: 55,
+      customCondition: (nation: any, currentTurn: number) => {
+        // Trigger if production is critically low (< 40 as proxy for economic collapse)
+        return nation.production < 40;
+      },
+    },
+    options: [
+      {
+        id: 'public_works_program',
+        label: 'Launch Public Works Program',
+        description: 'Massive infrastructure investment to create jobs and stimulate the economy.',
+        outcomes: [
+          {
+            id: 'works_program_success',
+            description: 'Infrastructure projects provide employment. Economic recovery begins slowly.',
+            chance: 0.65,
+            effects: { morale: 6, publicOpinion: 8, cabinetApproval: 5, production: 8, uranium: -5, instability: -6 },
+          },
+          {
+            id: 'works_program_debt',
+            description: 'Spending triggers debt crisis. Credit markets freeze as deficit explodes!',
+            chance: 0.35,
+            effects: { morale: 2, publicOpinion: -4, cabinetApproval: -8, production: 4, uranium: -8, instability: 10 },
+          },
+        ],
+      },
+      {
+        id: 'emergency_austerity',
+        label: 'Implement Emergency Austerity',
+        description: 'Slash government spending and cut social programs to balance the budget.',
+        outcomes: [
+          {
+            id: 'austerity_recovery',
+            description: 'Fiscal discipline restores investor confidence. Long-term recovery begins.',
+            chance: 0.45,
+            effects: { morale: -8, publicOpinion: -12, cabinetApproval: -6, production: 15, instability: 8 },
+          },
+          {
+            id: 'austerity_unrest',
+            description: 'Austerity sparks mass protests! Public services collapse amid cuts!',
+            chance: 0.55,
+            effects: { morale: -12, publicOpinion: -18, cabinetApproval: -12, production: 8, instability: 20 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -10, publicOpinion: -12, production: -5, instability: 15 },
+    fallbackSummary: 'Economic depression deepens. Breadlines form as middle class collapses.',
+  },
+  {
+    id: 'youth_antiwar_movement',
+    title: 'Youth Anti-War Movement',
+    summary: 'Young generation rises up against endless war. Campus protests spread to major cities.',
+    severity: 'serious',
+    cooldownTurns: 6,
+    conditions: {
+      moraleBelow: 50,
+      publicOpinionBelow: 60,
+      minTurn: 10,
+      customCondition: (nation: any, currentTurn: number) => {
+        // Trigger if nation has been in prolonged conflict (has alliances or high instability)
+        const prolongedConflict = (nation.instability ?? 0) > 35;
+        const hasAlliances = nation.alliances && nation.alliances.length > 0;
+        return prolongedConflict || hasAlliances;
+      },
+    },
+    options: [
+      {
+        id: 'dialogue_protesters',
+        label: 'Open Dialogue with Protesters',
+        description: 'Meet with youth leaders and address their concerns about endless conflict.',
+        outcomes: [
+          {
+            id: 'dialogue_success',
+            description: 'Youth leaders welcome dialogue. Anti-war sentiment channeled into constructive reform.',
+            chance: 0.6,
+            effects: { morale: 8, publicOpinion: 12, cabinetApproval: 6, instability: -10 },
+          },
+          {
+            id: 'dialogue_weakness',
+            description: 'Hawks brand you as weak! Opposition exploits concessions to anti-war movement!',
+            chance: 0.4,
+            effects: { morale: -4, publicOpinion: -6, cabinetApproval: -10, instability: 15 },
+          },
+        ],
+      },
+      {
+        id: 'reinstate_draft',
+        label: 'Reinstate Military Draft',
+        description: 'Expand conscription to bolster military strength and demonstrate resolve.',
+        outcomes: [
+          {
+            id: 'draft_riots',
+            description: 'Draft dodging becomes epidemic! Street riots erupt in every major city!',
+            chance: 0.65,
+            effects: { morale: -15, publicOpinion: -20, cabinetApproval: -12, instability: 25 },
+          },
+          {
+            id: 'draft_reluctant_acceptance',
+            description: 'Draft implemented but deeply unpopular. Military recruitment increases marginally.',
+            chance: 0.35,
+            effects: { morale: -8, publicOpinion: -15, cabinetApproval: -6, production: 5, instability: 18 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -10, publicOpinion: -12, instability: 18 },
+    fallbackSummary: 'Youth movement grows. Universities shut down as student strikes spread nationwide.',
+  },
 ];
