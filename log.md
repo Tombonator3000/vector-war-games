@@ -3121,3 +3121,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T10:05:00Z - Added DEFCON 1 escalation warning overlay
 - Wrapped global `handleDefconChange` in `src/pages/Index.tsx` to notify listeners when DEFCON shifts to level 1 and subscribed the page component to trigger a temporary warning state.
 - Introduced `src/components/DefconWarningOverlay.tsx` to render a non-blocking, full-screen alert layer and wired it into the main page alongside lifecycle management for the auto-dismiss timeout.
+-
+### 2025-11-12T10:32:00Z - Added diplomatic DEFCON de-escalation option
+- Injected a new "De-escalate DEFCON" council action within `src/components/EnhancedDiplomacyModal.tsx`, including availability checks when DEFCON is already stable.
+- Wired the new action through `handleEnhancedDiplomacyAction` in `src/pages/Index.tsx` so spending DIP influence can raise the global DEFCON level with full audio, news, and modal feedback.
+- Documented the resulting DEFCON shift with toasts/logging while preserving existing diplomacy action flows.

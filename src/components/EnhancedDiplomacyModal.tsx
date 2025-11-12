@@ -17,6 +17,7 @@ import { TrustAndFavorsDisplay } from '@/components/TrustAndFavorsDisplay';
 import { getFavors } from '@/types/trustAndFavors';
 import { getActivePromises } from '@/lib/trustAndFavorsUtils';
 import { getActiveGrievances } from '@/lib/grievancesAndClaimsUtils';
+import GameStateManager from '@/state/GameStateManager';
 
 interface EnhancedDiplomacyModalProps {
   player: Nation;
@@ -137,6 +138,15 @@ export function EnhancedDiplomacyModal({
       requiresTarget: false,
     },
     {
+      id: 'defcon-deescalate',
+      title: 'DE-ESCALATE DEFCON',
+      subtitle:
+        'Costs 35 DIP. Coordinate global assurances to raise the DEFCON level by +1, easing worldwide alertness when tensions run high.',
+      category: 'council',
+      dipCost: 35,
+      requiresTarget: false,
+    },
+    {
       id: 'back-channel',
       title: 'BACK-CHANNEL COMMUNICATION',
       subtitle: 'Costs 20 DIP. Send a private diplomatic letter to secretly communicate with another nation away from public scrutiny.',
@@ -154,6 +164,7 @@ export function EnhancedDiplomacyModal({
     ? getActiveGrievances(selectedTarget, player.id)
     : [];
   const playerDIP = player.diplomaticInfluence?.points || 0;
+  const currentDefconLevel = player.defcon ?? GameStateManager.getDefcon();
 
   const availableActions = useMemo(() => {
     return diplomaticActions
@@ -203,6 +214,11 @@ export function EnhancedDiplomacyModal({
           }
         }
 
+        if (!disabled && action.id === 'defcon-deescalate' && currentDefconLevel >= 5) {
+          disabled = true;
+          disabledReason = 'DEFCON is already at its most stable level.';
+        }
+
         return { ...action, disabled, disabledReason };
       });
   }, [
@@ -210,6 +226,7 @@ export function EnhancedDiplomacyModal({
     diplomaticActions,
     favorsWithTarget,
     grievancesFromTarget.length,
+    currentDefconLevel,
     playerDIP,
     selectedCategory,
     selectedTarget,

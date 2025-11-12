@@ -11277,6 +11277,18 @@ export default function NoradVector() {
       return;
     }
 
+    if (action.id === 'defcon-deescalate') {
+      const currentDefcon = GameStateManager.getDefcon();
+      if (currentDefcon >= 5) {
+        toast({
+          title: 'DEFCON already stable',
+          description: 'Global readiness is already at DEFCON 5. No further de-escalation is possible.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     if (action.id === 'call-in-favor' && targetNation) {
       const availableFavors = getFavors(player, targetNation.id);
       if (availableFavors <= 0) {
@@ -11385,7 +11397,8 @@ export default function NoradVector() {
     if (
       action.dipCost &&
       action.id !== 'propose-resolution' &&
-      action.id !== 'call-session'
+      action.id !== 'call-session' &&
+      action.id !== 'defcon-deescalate'
     ) {
       const success = trySpendDip(action.dipCost, action.id, targetNation?.id);
       if (!success) {
@@ -11702,6 +11715,42 @@ export default function NoradVector() {
           priority: 'critical',
         };
         log(`${player.name} called an emergency session of the International Council.`);
+        break;
+      }
+      case 'defcon-deescalate': {
+        if (action.dipCost && !trySpendDip(action.dipCost, 'defcon-deescalate')) {
+          return;
+        }
+
+        const defconBefore = GameStateManager.getDefcon();
+        const reason = `${player.name} coordinates a global de-escalation campaign`;
+        const defconChanged = handleDefconChange(1, reason, 'player', {
+          onAudioTransition: AudioSys.handleDefconTransition,
+          onLog: log,
+          onNewsItem: addNewsItem,
+          onUpdateDisplay: updateDisplay,
+          onShowModal: setDefconChangeEvent,
+        });
+
+        if (!defconChanged) {
+          toastPayload = {
+            title: 'DEFCON unchanged',
+            description: 'Diplomatic pressure failed to move the global alert level.',
+            variant: 'destructive',
+          };
+          break;
+        }
+
+        const newDefcon = GameStateManager.getDefcon();
+        toastPayload = {
+          title: 'DEFCON De-escalated',
+          description: `Global alert level relaxed from DEFCON ${defconBefore} to DEFCON ${newDefcon}.`,
+        };
+        newsItem = {
+          text: `${player.name} orchestrates wide-reaching assurances, easing the world to DEFCON ${newDefcon}.`,
+          priority: 'important',
+        };
+        log(`${player.name} leveraged diplomatic channels to shift DEFCON from ${defconBefore} to ${newDefcon}.`);
         break;
       }
       case 'back-channel': {
