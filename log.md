@@ -3089,3 +3089,13 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 
 ### 2025-11-12T08:12:39Z - Reframed Pandemic 2020 scenario fiction
 - Updated the Pandemic 2020 scenario description in `src/types/scenario.ts` to describe a rogue superpower testing an experimental bioweapon instead of referencing COVID-19 directly.
+### 2025-11-12T08:19:02Z - Title exploration support
+- Reviewed gameplay guides and core page imports to capture the project's shift toward globe-spanning diplomacy, culture, and warfare systems.
+- Researched thematic direction to prepare a slate of rebranding suggestions reflecting the modernized strategic scope.
+
+### 2025-11-12T08:26:38Z - Retitled the intro sequence to Ironlight Accord
+- Updated the neon SVG wordmark in `src/components/intro/IntroLogo.tsx` to display the new Ironlight Accord identity with a refreshed subtitle line.
+- Replaced the start screen tagline in `src/components/setup/IntroScreen.tsx` so the menu copy reinforces the Ironlight Accord branding.
+### 2025-11-12T08:31:10Z - Restored Aegis Protocol branding on the intro sequence
+- Replaced the intro SVG wordmark text in `src/components/intro/IntroLogo.tsx` with the Aegis Protocol identity while preserving the neon styling.
+- Updated the start screen tagline in `src/components/setup/IntroScreen.tsx` to emphasize activating the Aegis Protocol defensive command.

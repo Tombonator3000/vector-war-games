@@ -180,7 +180,7 @@ export function IntroScreen({
         <div className="intro-screen__right">
           <IntroLogo />
 
-          <p className="intro-screen__tagline">Want to play a game?</p>
+          <p className="intro-screen__tagline">Activate the Protocol. Safeguard humanity.</p>
 
           <div className="intro-screen__menu">
             <button onClick={onStart} className="intro-screen__menu-btn intro-screen__menu-btn--primary">
