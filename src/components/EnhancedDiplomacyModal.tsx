@@ -147,6 +147,15 @@ export function EnhancedDiplomacyModal({
       requiresTarget: false,
     },
     {
+      id: 'defcon-escalate',
+      title: 'ESCALATE DEFCON',
+      subtitle:
+        'Costs 30 DIP. Orchestrate hostile posturing against a rival to lower global DEFCON by -1 when you are ready to risk war.',
+      category: 'council',
+      dipCost: 30,
+      requiresTarget: true,
+    },
+    {
       id: 'back-channel',
       title: 'BACK-CHANNEL COMMUNICATION',
       subtitle: 'Costs 20 DIP. Send a private diplomatic letter to secretly communicate with another nation away from public scrutiny.',
@@ -217,6 +226,11 @@ export function EnhancedDiplomacyModal({
         if (!disabled && action.id === 'defcon-deescalate' && currentDefconLevel >= 5) {
           disabled = true;
           disabledReason = 'DEFCON is already at its most stable level.';
+        }
+
+        if (!disabled && action.id === 'defcon-escalate' && currentDefconLevel <= 1) {
+          disabled = true;
+          disabledReason = 'DEFCON is already at maximum alert.';
         }
 
         return { ...action, disabled, disabledReason };
