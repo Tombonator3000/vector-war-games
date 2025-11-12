@@ -94,6 +94,9 @@ export interface CyberAttackResult {
   discovered: boolean;
   attributed: boolean;
   attributedTo: string | null;
+  relationshipPenalty: number;
+  defconDelta: number;
+  retaliationExpected?: boolean;
   missilesDisabled?: number;
   disabledDuration?: number; // turns
   intelStolen?: number;
@@ -206,12 +209,17 @@ export function executeCyberAttack(
   const success = Math.random() < successChance;
 
   if (!success) {
+    const relationshipPenalty = discovered ? (launcher.id === target.id ? 0 : -10) : 0;
+    const defconDelta = discovered ? -1 : 0;
+
     return {
       success: false,
       targetId: target.id,
       discovered,
       attributed: false,
       attributedTo: null,
+      relationshipPenalty,
+      defconDelta,
       message: `Cyber attack on ${target.name} failed!`,
     };
   }
@@ -235,6 +243,16 @@ export function executeCyberAttack(
 
   const attributed = discovered && Math.random() < 0.5;
 
+  let relationshipPenalty = 0;
+  let defconDelta = 0;
+  let retaliationExpected: boolean | undefined;
+
+  if (discovered) {
+    relationshipPenalty = attributed ? -22 : -12;
+    defconDelta = attributed ? -2 : -1;
+    retaliationExpected = attributed ? true : undefined;
+  }
+
   const message = `Cyber attack on ${target.name}: Disabled ${missilesDisabled} missiles for ${disabledDuration} turns, stole ${intelStolen} intel, drained ${readinessDrained} cyber readiness!`;
 
   return {
@@ -243,6 +261,9 @@ export function executeCyberAttack(
     discovered,
     attributed,
     attributedTo: attributed ? launcher.id : null,
+    relationshipPenalty,
+    defconDelta,
+    retaliationExpected,
     missilesDisabled,
     disabledDuration,
     intelStolen,

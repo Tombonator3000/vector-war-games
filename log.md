@@ -3146,3 +3146,9 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T10:53:23Z - Persist streamlined propaganda campaign state
 - Updated `launchPropagandaCampaign` in `src/lib/streamlinedCultureLogic.ts` to deduct intel, propagate relationship penalties, and persist new campaign records on the launcher before returning.
 - Ensured `handleLaunchPropaganda` in `src/pages/Index.tsx` merges the new campaign onto the player nation and syncs the cached PlayerManager entry so UI panels immediately reflect active operations.
+
+### 2025-11-12T11:30:00Z - Added cyber retaliation consequences and coverage
+- Extended `CyberAttackResult` in `src/types/unifiedIntelOperations.ts` with reaction metadata (relationship penalties, DEFCON delta, retaliation flag) and populated those values when attacks are detected or attributed.
+- Updated `executeCyberAttack` to emit the new reaction fields so `handleCyberAttackOperation` can drive diplomacy and readiness responses.
+- Enhanced `handleCyberAttackOperation` in `src/pages/Index.tsx` to modify both nations' relationships, trigger DEFCON updates, schedule counter-intel retaliation, and persist state through `PlayerManager`/`GameStateManager` while surfacing news alerts.
+- Added a `pendingCyberRetaliation` hook on `Nation` plus regression tests in `src/types/__tests__/unifiedIntelOperations.test.ts` that verify detected and attributed cyber attacks now reduce relationships and DEFCON while stealthy strikes leave them unchanged.
