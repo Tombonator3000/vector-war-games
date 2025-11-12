@@ -3155,3 +3155,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T11:59:15Z - Enabled automatic MAD counterstrikes
 - Expanded `explode` in `src/pages/Index.tsx` to accept attacker context, select the largest remaining warhead, escalate DEFCON to 1, and immediately launch a retaliatory missile when MAD nations are struck.
 - Updated missile resolution in `src/lib/gamePhaseHandlers.ts` and local missile/bomber impact handlers to pass the attacker reference so MAD retaliation propagates through every strike type.
+### 2025-11-12T12:19:12Z - Repositioned launch controls outside consequence scroll region
+- Updated `src/components/ActionConsequencePreview.tsx` to restructure the modal card as a flex column so the consequence list scrolls independently of a new persistent footer.
+- Moved the Cancel and Launch buttons into a bordered footer with gradient-consistent styling to keep critical actions visible while maintaining overflow handling.
