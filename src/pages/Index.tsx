@@ -8820,6 +8820,8 @@ export default function NoradVector() {
     if (S.gameOver) return;
 
     victoryAnalysis.paths.forEach(path => {
+      if (!path || typeof path.progress !== 'number') return;
+      
       const pathKey = path.type;
       const currentProgress = Math.floor(path.progress);
       const lastNotifiedProgress = victoryMilestones[pathKey] || 0;
