@@ -3299,3 +3299,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Replaced the module-level national focus API pointer in `src/pages/Index.tsx` with a component-scoped `useRef` and wired it to the latest `useNationalFocus` instance on every render so turn handlers have a stable reference.
 - Updated the production phase turn handling to call `focusApiRef.current?.processTurnFocusProgress()` exactly once per turn before incrementing `S.turn`, reusing the cached API for applying player focus income.
 - Manually verified focus progress and remaining turns decrement by temporarily rendering the hook in Vitest (`npx vitest run src/hooks/__tests__/focusManualCheck.test.tsx`) and confirming the values advanced across five turns.
+### 2025-11-13T18:10:00Z - Restored module-visible national focus ref
+- Added a module-scoped `nationalFocusSystemRef` in `src/pages/Index.tsx` and rewired `endTurn` to read from it so the file compiles outside the `NoradVector` component scope.
+- Synced the component's `focusApiRef` lifecycle with the module-level holder to clear both references on unmount or provider swap.
+- Prepared to rerun `npx vitest run src/hooks/__tests__/focusManualCheck.test.tsx` after code review to confirm turn processing continues to advance national focuses.

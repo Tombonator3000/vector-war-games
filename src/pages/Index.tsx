@@ -385,6 +385,8 @@ let draggingArmyRef: { current: { sourceId: string; armies: number } | null } = 
 
 type NationalFocusSystemApi = ReturnType<typeof useNationalFocus>;
 
+const nationalFocusSystemRef: { current: NationalFocusSystemApi | null } = { current: null };
+
 const PROPOSAL_MAX_AGE = 10;
 
 const isProposalExpired = (proposal: DiplomaticProposal, currentTurn: number): boolean => {
@@ -5923,7 +5925,7 @@ function endTurn() {
         }
       }
 
-      const focusApi = focusApiRef.current;
+      const focusApi = nationalFocusSystemRef.current;
       const focusTurnCompletions = focusApi?.processTurnFocusProgress?.() ?? [];
 
       if (focusTurnCompletions.length > 0) {
@@ -8522,6 +8524,7 @@ export default function NoradVector() {
   });
 
   focusApiRef.current = nationalFocusSystem;
+  nationalFocusSystemRef.current = nationalFocusSystem;
 
   const focusStates = nationalFocusSystem.focusStates;
   const focusCompletionLog = nationalFocusSystem.completionLog;
@@ -8530,6 +8533,9 @@ export default function NoradVector() {
     return () => {
       if (focusApiRef.current === nationalFocusSystem) {
         focusApiRef.current = null;
+      }
+      if (nationalFocusSystemRef.current === nationalFocusSystem) {
+        nationalFocusSystemRef.current = null;
       }
     };
   }, [nationalFocusSystem]);
