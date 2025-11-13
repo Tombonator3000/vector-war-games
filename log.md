@@ -3231,3 +3231,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated `src/pages/Index.tsx` and `src/lib/aiDiplomacyActions.ts` to pass the current game state into `applyNegotiationDeal` and persist returned nation/state updates through the game managers.
 ### 2025-11-13T11:49:35Z - Added negotiation integration tests
 - Created `src/lib/__tests__/negotiationDealEffects.test.ts` to cover each negotiation item type, asserting that both nations and shared systems (treaties, resource trades, grievances) mutate as expected when deals are applied.
+### 2025-11-13T12:35:25Z - Removed national focus command buttons
+- Deleted the floating quick-access focus button and the main command interface focus button from `src/pages/Index.tsx` to comply with the UI request.
