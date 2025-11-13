@@ -177,4 +177,86 @@ describe('useBioWarfare defensive research', () => {
     expect(result.current.plagueState.selectedPlagueType).not.toBe('bio-weapon');
     expect(result.current.plagueState.unlockedPlagueTypes.has('bio-weapon')).toBe(false);
   });
+
+  it('awards DNA milestones based on the updated pandemic state after a turn', () => {
+    const addNews = vi.fn();
+    const mathSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    const { result } = renderHook(
+      () => useBioWarfare(addNews, SCENARIOS.coldWar),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.selectPlagueType('virus');
+    });
+    act(() => {
+      result.current.triggerBioWarfare({
+        severity: 'contained',
+        origin: 'bio-terror',
+        initialInfection: 6,
+        initialContainment: 0,
+      });
+    });
+
+    const dnaBefore = result.current.plagueState.dnaPoints;
+    const infectionBefore = result.current.pandemicState.globalInfection;
+
+    expect(infectionBefore).toBeGreaterThan(0);
+
+    act(() => {
+      result.current.advanceBioWarfareTurn(
+        { turn: 1, defcon: 3, playerPopulation: 600, plagueOwnerId: 'player' },
+        [],
+      );
+    });
+
+    const dnaAfter = result.current.plagueState.dnaPoints;
+    const outbreaksAfter = result.current.pandemicState.outbreaks.length;
+    const infectionAfter = result.current.pandemicState.globalInfection;
+    const dnaGain = dnaAfter - dnaBefore;
+    const milestoneDelta = Math.floor(infectionAfter / 10) - Math.floor(infectionBefore / 10);
+    const expectedGain = outbreaksAfter + (milestoneDelta > 0 ? 2 : 0);
+
+    expect(result.current.pandemicState.globalInfection).toBeGreaterThan(infectionBefore);
+    expect(dnaGain).toBeGreaterThanOrEqual(expectedGain);
+
+    mathSpy.mockRestore();
+  });
+
+  it('gates parasite cure progression until the updated infection threshold is met', () => {
+    const addNews = vi.fn();
+    const mathSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    const { result } = renderHook(
+      () => useBioWarfare(addNews, SCENARIOS.pandemic2020),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.selectPlagueType('parasite');
+    });
+    act(() => {
+      result.current.triggerBioWarfare({
+        severity: 'contained',
+        origin: 'bio-terror',
+        initialInfection: 28,
+        initialContainment: 0,
+      });
+    });
+
+    expect(result.current.plagueState.selectedPlagueType).toBe('parasite');
+
+    expect(result.current.plagueState.cureProgress).toBe(0);
+
+    act(() => {
+      result.current.advanceBioWarfareTurn(
+        { turn: 1, defcon: 3, playerPopulation: 600, plagueOwnerId: 'player' },
+        [],
+      );
+    });
+
+    expect(result.current.pandemicState.globalInfection).toBeGreaterThan(28);
+    expect(result.current.plagueState.cureProgress).toBeGreaterThan(0);
+
+    mathSpy.mockRestore();
+  });
 });
