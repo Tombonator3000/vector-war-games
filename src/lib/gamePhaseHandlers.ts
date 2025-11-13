@@ -325,6 +325,8 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
 export function productionPhase(deps: ProductionPhaseDependencies): void {
   const { S, nations, log, advanceResearch, advanceCityConstruction, leaders, PlayerManager, conventionalState } = deps;
 
+  const player = PlayerManager?.get?.() ?? null;
+
   log('=== PRODUCTION PHASE ===', 'success');
 
   // Initialize territorial resources system if needed
@@ -361,7 +363,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     const hungerPenalty = Math.min(0.50, (n.falloutHunger ?? 0) / 100);
     if (hungerPenalty > 0) {
       prodMult *= 1 - hungerPenalty;
-      if (n === PlayerManager.get() && hungerPenalty > 0.5) {
+      if (player && n === player && hungerPenalty > 0.5) {
         log(`${n.name} agricultural collapse: fallout starvation cripples output`, 'warning');
       }
     }
@@ -381,7 +383,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       prodMult = 0.7;
       uranMult = 0.5;
       n.greenShiftTurns--;
-      if (n === PlayerManager.get()) {
+      if (player && n === player) {
         log('Eco movement reduces nuclear production', 'warning');
       }
     }
@@ -450,7 +452,6 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       S.resourceMarket = updateResourceMarket(S.resourceMarket, S, nations, S.turn, deps.rng);
 
       // Log market events for player
-      const player = PlayerManager.get();
       if (player && S.resourceMarket.activeEvent && S.resourceMarket.eventDuration === S.resourceMarket.activeEvent.duration) {
         // Event just started
         log(`📊 Market Event: ${S.resourceMarket.activeEvent.name} - ${S.resourceMarket.activeEvent.description}`, 'alert');
@@ -468,7 +469,6 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     S.depletionWarnings = depletionResult.warnings;
 
     // Warn player about critical depletion
-    const player = PlayerManager.get();
     if (player) {
       const playerWarnings = depletionResult.warnings.filter(w => {
         const territory = conventionalState.territories[w.territoryId];
@@ -508,7 +508,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       );
 
       // Log resource changes for player
-      if (n === PlayerManager.get() && result.generation) {
+      if (player && n === player && result.generation) {
         const gen = result.generation;
         if (gen.oil > 0 || gen.uranium > 0 || gen.rare_earths > 0 || gen.food > 0) {
           log(
@@ -557,7 +557,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
         const moraleImpact = Math.floor(totalShortage * 10);
         n.morale = Math.max(0, (n.morale || 100) - moraleImpact);
 
-        if (n === PlayerManager.get()) {
+        if (player && n === player) {
           log(`⚠️ City maintenance shortages! Morale -${moraleImpact}`, 'warning');
         }
       }

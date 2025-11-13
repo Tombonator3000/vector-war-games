@@ -3243,3 +3243,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Ran `npx vitest run src/lib/__tests__/territorialResourcesSystem.test.ts` to confirm the updated logic and new regression test pass.
 ### 2025-11-13T12:52:19Z - Re-verified territorial resource test after import tidy-up
 - Re-ran `npx vitest run src/lib/__tests__/territorialResourcesSystem.test.ts` to confirm the test suite still passes after consolidating type imports.
+### 2025-11-13T13:39:30Z - Cached player reference in production phase
+- Retrieved the active player once at the start of `productionPhase` in `src/lib/gamePhaseHandlers.ts` and replaced inline `PlayerManager.get()` comparisons with guarded checks against the cached reference.
+### 2025-11-13T13:39:34Z - Re-ran territorial resources regression test
+- Executed `npx vitest run src/lib/__tests__/territorialResourcesSystem.test.ts` to ensure the production phase refactor maintained resource logging and depletion behavior.
