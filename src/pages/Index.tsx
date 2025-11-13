@@ -5688,6 +5688,9 @@ function aiTurn(n: Nation) {
       deployUnit: window.__conventionalWarfare?.deployUnit,
       resolveBorderConflict: window.__conventionalWarfare?.resolveBorderConflict,
       getUnitsForNation: window.__conventionalWarfare?.getUnitsForNation,
+      getTerritoriesForNation: window.__conventionalWarfare?.getTerritoriesForNation,
+      getDeployableTerritories: window.__conventionalWarfare?.getDeployableTerritories,
+      territories: window.__conventionalWarfare?.territories,
     },
     {
       launchCyberAttack: window.__cyberWarfare?.launchCyberAttack,

@@ -53,6 +53,9 @@ declare global {
       deployUnit?: (unitId: string, territoryId: string) => void;
       resolveBorderConflict?: (attackerId: string, defenderId: string, territoryId: string) => void;
       getUnitsForNation?: (nationId: string) => unknown[];
+      getTerritoriesForNation?: (nationId: string) => unknown[];
+      getDeployableTerritories?: (nationId: string) => unknown[];
+      territories?: Record<string, unknown>;
     };
 
     /**
