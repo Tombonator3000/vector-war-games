@@ -164,6 +164,16 @@ export function useInternationalPressure(options: UseInternationalPressureOption
         if (resolution && !resolution.passed) {
           // Simple majority for most resolutions
           const totalVotes = resolution.votesFor.length + resolution.votesAgainst.length;
+
+          if (totalVotes === 0) {
+            updated.set(resolutionId, {
+              ...resolution,
+              passed: false,
+            });
+
+            return updated;
+          }
+
           const forPercentage = (resolution.votesFor.length / totalVotes) * 100;
 
           passed = forPercentage > 50;
