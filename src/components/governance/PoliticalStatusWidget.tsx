@@ -13,6 +13,7 @@ interface PoliticalStatusWidgetProps {
   instability: number;
   onOpenDetails?: () => void;
   onOpenPolicyPanel?: () => void;
+  onOpenNationalFocus?: () => void;
   leaderName?: string;
   onOpenLeaderOverview?: () => void;
   showLeaderButton?: boolean;
@@ -24,6 +25,7 @@ export function PoliticalStatusWidget({
   instability,
   onOpenDetails,
   onOpenPolicyPanel,
+  onOpenNationalFocus,
   leaderName,
   onOpenLeaderOverview,
   showLeaderButton = true,
@@ -98,15 +100,29 @@ export function PoliticalStatusWidget({
         </div>
       </div>
 
-      {onOpenDetails && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full mt-2 text-cyan-300 hover:bg-cyan-500/10"
-          onClick={onOpenDetails}
-        >
-          View Details
-        </Button>
+      {(onOpenDetails || onOpenNationalFocus) && (
+        <div className="mt-2 grid gap-2">
+          {onOpenDetails && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-cyan-300 hover:bg-cyan-500/10"
+              onClick={onOpenDetails}
+            >
+              View Details
+            </Button>
+          )}
+          {onOpenNationalFocus && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full border-cyan-500/60 text-cyan-200 hover:bg-cyan-500/20"
+              onClick={onOpenNationalFocus}
+            >
+              Open National Focus
+            </Button>
+          )}
+        </div>
       )}
 
       {stabilityLevel === 'CRISIS' && (
@@ -131,15 +147,29 @@ export function PoliticalStatusWidget({
                   <li key={i}>{action}</li>
                 ))}
               </ul>
-              {onOpenPolicyPanel && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-red-300 border-red-500/50 hover:bg-red-500/20 text-xs"
-                  onClick={onOpenPolicyPanel}
-                >
-                  Open Policy Panel to Enact Reforms
-                </Button>
+              {(onOpenPolicyPanel || onOpenNationalFocus) && (
+                <div className="grid gap-2">
+                  {onOpenPolicyPanel && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-red-300 border-red-500/50 hover:bg-red-500/20 text-xs"
+                      onClick={onOpenPolicyPanel}
+                    >
+                      Open Policy Panel to Enact Reforms
+                    </Button>
+                  )}
+                  {onOpenNationalFocus && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-cyan-500/60 text-cyan-200 hover:bg-cyan-500/20"
+                      onClick={onOpenNationalFocus}
+                    >
+                      Review National Focus Options
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </div>
