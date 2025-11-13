@@ -193,6 +193,12 @@ import { usePolicySystem } from '@/hooks/usePolicySystem';
 import { useNationalFocus } from '@/hooks/useNationalFocus';
 import type { AvailableFocus } from '@/types/nationalFocus';
 import { useInternationalPressure } from '@/hooks/useInternationalPressure';
+import { useWarSupport } from '@/hooks/useWarSupport';
+import { usePoliticalFactions } from '@/hooks/usePoliticalFactions';
+import { useRegionalMorale } from '@/hooks/useRegionalMorale';
+import { useMediaWarfare } from '@/hooks/useMediaWarfare';
+import { useProductionQueue } from '@/hooks/useProductionQueue';
+import { useResourceRefinement } from '@/hooks/useResourceRefinement';
 import type { SanctionPackage, AidPackage, AidType } from '@/types/regionalMorale';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 import type { Unit } from '@/lib/unitModels';
@@ -8049,12 +8055,12 @@ export default function NoradVector() {
   );
 
   // Hearts of Iron Phase 2: Memoize nations data to prevent infinite loops
-  const memoizedNationsForTemplates = useMemo(() => 
+  const memoizedNationsForTemplates = useMemo(() =>
     nations.map(n => ({ id: n.id, name: n.name })),
     [nations.map(n => `${n.id}-${n.name}`).join(',')]
   );
 
-  const memoizedNationsForSupply = useMemo(() => 
+  const memoizedNationsForSupply = useMemo(() =>
     nations.map(n => ({
       id: n.id,
       name: n.name,
@@ -8065,6 +8071,16 @@ export default function NoradVector() {
         : []
     })),
     [nations.map(n => n.id).join(','), conventionalState?.territories]
+  );
+
+  const memoizedDomesticNationSummaries = useMemo(
+    () => nations.map(n => ({ id: n.id, name: n.name, ideology: n.ideology })),
+    [nations.map(n => `${n.id}-${n.name}-${n.ideology ?? ''}`).join(',')]
+  );
+
+  const memoizedNationIdNameList = useMemo(
+    () => nations.map(n => ({ id: n.id, name: n.name })),
+    [nations.map(n => `${n.id}-${n.name}`).join(',')]
   );
 
   // Hearts of Iron Phase 2: Military Templates System - MUST be declared before useConventionalWarfare
@@ -8209,6 +8225,168 @@ export default function NoradVector() {
     },
   });
 
+  const warSupport = useWarSupport({
+    currentTurn: S.turn,
+    nations: memoizedDomesticNationSummaries,
+  });
+
+  const politicalFactions = usePoliticalFactions({
+    currentTurn: S.turn,
+    onFactionDemand: (nationId, demand) => {
+      const nation = getNationById(nationId);
+      const severityLabel = demand.severity === 'ultimatum'
+        ? 'ULTIMATUM'
+        : demand.severity === 'demand'
+          ? 'Demand'
+          : 'Request';
+      const message = `${severityLabel}: ${nation?.name ?? 'Unknown nation'} faction issues ${demand.description}`;
+      log(message, demand.severity === 'ultimatum' ? 'warning' : 'info');
+
+      if (nation?.isPlayer) {
+        addNewsItem('governance', message, demand.severity === 'ultimatum' ? 'critical' : 'important');
+        toast({
+          title: 'Faction Pressure',
+          description: demand.description,
+          variant: demand.severity === 'ultimatum' ? 'destructive' : 'default',
+        });
+      }
+    },
+    onCoupAttempt: (nationId, coup) => {
+      const nation = getNationById(nationId);
+      const message = `⚠️ Coup plotting detected in ${nation?.name ?? 'unknown nation'} (success chance ${Math.round(coup.successChance)}%)`;
+      log(message, 'warning');
+      if (nation?.isPlayer) {
+        addNewsItem('governance', message, 'critical');
+        toast({
+          title: 'Coup Attempt Detected',
+          description: 'Domestic factions are mobilizing against your government.',
+          variant: 'destructive',
+        });
+      }
+    },
+    onCoalitionShift: (nationId, factionId, joined) => {
+      const nation = getNationById(nationId);
+      const direction = joined ? 'joined' : 'left';
+      log(`Faction ${factionId} has ${direction} the ruling coalition in ${nation?.name ?? 'unknown nation'}.`, 'info');
+    },
+  });
+
+  const { initializeFactions, getFactionsForNation } = politicalFactions;
+
+  const regionalMorale = useRegionalMorale({
+    territories: territoryList,
+    currentTurn: S.turn,
+    onMoraleChange: (territoryId, oldMorale, newMorale) => {
+      const territory = territoryMap.get(territoryId);
+      const controllingNation = territory?.controllingNationId ? getNationById(territory.controllingNationId) : null;
+      if (!controllingNation?.isPlayer) {
+        return;
+      }
+
+      const delta = newMorale - oldMorale;
+      if (Math.abs(delta) < 10) {
+        return;
+      }
+
+      const tone = delta < 0 ? 'warning' : 'success';
+      const priority = delta < 0 ? 'important' : 'info';
+      const message = `${territory?.name ?? 'Unknown territory'} morale ${delta < 0 ? 'drops' : 'improves'} to ${Math.round(newMorale)}.`;
+      log(message, tone);
+      addNewsItem('domestic', message, priority);
+    },
+    onProtestStart: (territoryId, protest) => {
+      const territory = territoryMap.get(territoryId);
+      const controllingNation = territory?.controllingNationId ? getNationById(territory.controllingNationId) : null;
+      const cause = protest.causes[0]?.replace(/_/g, ' ') ?? 'unrest';
+      const message = `Protest erupts in ${territory?.name ?? 'unknown territory'} over ${cause}.`;
+      log(message, 'warning');
+      if (controllingNation?.isPlayer) {
+        addNewsItem('domestic', message, 'important');
+        toast({
+          title: 'Domestic Unrest',
+          description: `Civilians rally over ${cause}.`,
+          variant: 'destructive',
+        });
+      }
+    },
+    onStrikeStart: (territoryId, strike) => {
+      const territory = territoryMap.get(territoryId);
+      const controllingNation = territory?.controllingNationId ? getNationById(territory.controllingNationId) : null;
+      const demandType = strike.strikerDemands[0]?.type.replace(/_/g, ' ') ?? 'grievances';
+      const message = `Workers strike in ${territory?.name ?? 'unknown territory'} over ${demandType}.`;
+      log(message, 'warning');
+      if (controllingNation?.isPlayer) {
+        addNewsItem('domestic', message, 'important');
+      }
+    },
+    onCivilWarRisk: (nationId, risk) => {
+      const nation = getNationById(nationId);
+      if (!nation?.isPlayer) {
+        return;
+      }
+      const message = `Civil war risk at ${Math.round(risk.riskLevel)}% after ${risk.turnsAtRisk} turns of unrest.`;
+      log(message, 'warning');
+      addNewsItem('domestic', message, risk.riskLevel >= 80 ? 'critical' : 'important');
+      if (risk.riskLevel >= 80) {
+        toast({
+          title: 'Civil War Imminent',
+          description: 'Stabilize your nation immediately to prevent collapse.',
+          variant: 'destructive',
+        });
+      }
+    },
+  });
+
+  const mediaWarfare = useMediaWarfare({
+    currentTurn: S.turn,
+    onCampaignStarted: (campaign) => {
+      const source = getNationById(campaign.sourceNationId);
+      const target = getNationById(campaign.targetNationId);
+      const description = `${campaign.type.replace(/_/g, ' ')} campaign launched by ${source?.name ?? 'Unknown'} targeting ${target?.name ?? 'Unknown'}.`;
+      log(description, 'info');
+      if (source?.isPlayer || target?.isPlayer) {
+        addNewsItem('media', description, 'info');
+      }
+    },
+    onCampaignExposed: (campaign) => {
+      const source = getNationById(campaign.sourceNationId);
+      const target = getNationById(campaign.targetNationId);
+      const message = `Propaganda campaign from ${source?.name ?? 'Unknown'} exposed by ${target?.name ?? 'Unknown'}!`;
+      log(message, 'warning');
+      addNewsItem('media', message, 'important');
+      if (source?.isPlayer || target?.isPlayer) {
+        toast({
+          title: 'Propaganda Exposed',
+          description: message,
+          variant: 'destructive',
+        });
+      }
+    },
+    onMediaEvent: (event) => {
+      const nation = getNationById(event.nationId);
+      if (!nation) {
+        return;
+      }
+      const baseMessage = `${nation.name}: ${event.type.replace(/_/g, ' ')} media event.`;
+      const priority = event.severity === 'major' ? 'important' : event.severity === 'critical' ? 'critical' : 'info';
+      addNewsItem('media', baseMessage, priority);
+      if (nation.isPlayer) {
+        log(baseMessage, event.severity === 'critical' ? 'warning' : 'info');
+      }
+    },
+  });
+
+  const { initializeMediaPower, getMediaPower } = mediaWarfare;
+
+  const productionQueue = useProductionQueue({
+    nations: memoizedNationIdNameList,
+    currentTurn: S.turn,
+  });
+
+  const resourceRefinement = useResourceRefinement({
+    nations: memoizedNationIdNameList,
+  });
+
   // Hearts of Iron Phase 3: Economic Depth System
   const economicDepth = useEconomicDepth(
     nations,
@@ -8269,6 +8447,88 @@ export default function NoradVector() {
       }
     };
   }, [supplySystem]);
+
+  useEffect(() => {
+    memoizedNationIdNameList.forEach(({ id, name }) => {
+      if (getFactionsForNation(id).length === 0) {
+        initializeFactions(id, name, 'cold_war');
+      }
+    });
+  }, [memoizedNationIdNameList, getFactionsForNation, initializeFactions]);
+
+  useEffect(() => {
+    memoizedNationIdNameList.forEach(({ id }) => {
+      if (!getMediaPower(id)) {
+        initializeMediaPower(id);
+      }
+    });
+  }, [memoizedNationIdNameList, getMediaPower, initializeMediaPower]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).warSupportApi = warSupport;
+    }
+    return () => {
+      if (typeof window !== 'undefined' && (window as any).warSupportApi === warSupport) {
+        delete (window as any).warSupportApi;
+      }
+    };
+  }, [warSupport]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).politicalFactionsApi = politicalFactions;
+    }
+    return () => {
+      if (typeof window !== 'undefined' && (window as any).politicalFactionsApi === politicalFactions) {
+        delete (window as any).politicalFactionsApi;
+      }
+    };
+  }, [politicalFactions]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).regionalMoraleApi = regionalMorale;
+    }
+    return () => {
+      if (typeof window !== 'undefined' && (window as any).regionalMoraleApi === regionalMorale) {
+        delete (window as any).regionalMoraleApi;
+      }
+    };
+  }, [regionalMorale]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).mediaWarfareApi = mediaWarfare;
+    }
+    return () => {
+      if (typeof window !== 'undefined' && (window as any).mediaWarfareApi === mediaWarfare) {
+        delete (window as any).mediaWarfareApi;
+      }
+    };
+  }, [mediaWarfare]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).productionQueueApi = productionQueue;
+    }
+    return () => {
+      if (typeof window !== 'undefined' && (window as any).productionQueueApi === productionQueue) {
+        delete (window as any).productionQueueApi;
+      }
+    };
+  }, [productionQueue]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).resourceRefinementApi = resourceRefinement;
+    }
+    return () => {
+      if (typeof window !== 'undefined' && (window as any).resourceRefinementApi === resourceRefinement) {
+        delete (window as any).resourceRefinementApi;
+      }
+    };
+  }, [resourceRefinement]);
 
   const {
     getActionAvailability: getCyberActionAvailability,
