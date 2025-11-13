@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { applyRemoteGameStateSync } from '../coopSync';
-import { GameStateManager } from '@/state';
+import GameStateManager from '@/state/GameStateManager';
 import { SCENARIOS } from '@/types/scenario';
 import { useFlashpoints } from '@/hooks/useFlashpoints';
 
