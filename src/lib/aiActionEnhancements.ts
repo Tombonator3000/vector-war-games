@@ -107,10 +107,18 @@ function chooseBorderConflict(
   for (const from of nationTerritories) {
     const neighbors = (from.neighbors ?? [])
       .map((id) => territoryMap[id])
-      .filter(
-        (neighbor): neighbor is ConventionalTerritory =>
-          Boolean(neighbor?.controllingNationId && neighbor.controllingNationId !== nationId)
-      );
+      .filter((neighbor): neighbor is ConventionalTerritory => {
+        const controller = neighbor?.controllingNationId;
+        if (!controller || controller === nationId) {
+          return false;
+        }
+
+        if (!preferredEnemies.has(controller)) {
+          return false;
+        }
+
+        return true;
+      });
 
     for (const target of neighbors) {
       const availableArmies = Math.max(1, (from.armies ?? 0) - 1);
