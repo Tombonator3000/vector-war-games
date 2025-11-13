@@ -3187,3 +3187,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 
 ### 2025-11-13T08:20:51Z - Corrected AI diplomacy trust lookup
 - Updated the AI diplomacy modal in `src/pages/Index.tsx` to source trust through the shared `getTrust` helper rather than the deprecated `trustLevel` field, preventing undefined values during proposal rendering.
+
+### 2025-11-13T08:37:37Z - Wired national focus progression and interface
+- Synced the national focus hook with turn resolution by persisting a module-level reference, initializing focus trees when nations load, and advancing focus progress each end turn while broadcasting completion news (`src/pages/Index.tsx`).
+- Added toast notifications for player completions, exposed a dedicated focus management sheet with branch summaries, and introduced UI controls to start or cancel focuses from both standard and minimal layouts (`src/pages/Index.tsx`).
+- Logged player-triggered focus actions and payouts through the existing news system so resource effects apply immediately on completion (`src/pages/Index.tsx`).
