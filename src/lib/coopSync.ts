@@ -1,4 +1,4 @@
-import { GameStateManager, type LocalGameState } from '@/state';
+import GameStateManager, { type LocalGameState } from '@/state/GameStateManager';
 
 /**
  * Applies a remote co-op game state update to the local runtime.
