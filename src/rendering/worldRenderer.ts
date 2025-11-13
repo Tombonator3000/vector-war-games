@@ -542,9 +542,10 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
       ctx.stroke();
     });
 
-    const MIN_LABEL_ZOOM = 1.1;
-    const MIN_FEATURE_SIZE_PX = 28;
-    const SMALL_FEATURE_ZOOM = 2.05;
+    // Lower thresholds to match 3D globe label visibility (see MAP_FIX_NOTES.md)
+    const MIN_LABEL_ZOOM = 0.4;  // Labels start appearing at lower zoom
+    const MIN_FEATURE_SIZE_PX = 20;  // Allow smaller features to show labels
+    const SMALL_FEATURE_ZOOM = 0.8;  // Show small features at lower zoom
 
     if (!isWireframe && cam.zoom >= MIN_LABEL_ZOOM && features.length > 0) {
       ctx.save();
