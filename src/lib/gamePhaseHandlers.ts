@@ -655,20 +655,21 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     if (n.population <= 0) return;
 
     // Phase 1: Apply trust decay and update favors
-    applyTrustDecay(n, S.turn);
+    let updatedNation = applyTrustDecay(n, S.turn);
+    nations[index] = updatedNation;
 
     // Phase 2: Update grievances, claims, and specialized alliances
-    updateGrievancesAndClaimsPerTurn(n, S.turn);
-    updatePhase2PerTurn(n, S.turn);
+    updateGrievancesAndClaimsPerTurn(updatedNation, S.turn);
+    updatePhase2PerTurn(updatedNation, S.turn);
 
     // Update specialized alliances for all nations
-    updateAlliancesPerTurn(n, S.turn, nations);
+    updateAlliancesPerTurn(updatedNation, S.turn, nations);
 
     // Phase 3: Update DIP income
-    if (n.diplomaticInfluence) {
-      const withUpdatedIncome = updateDIPIncome(n, nations, S.turn, peaceTurns);
-      const withIncomeApplied = applyDIPIncome(withUpdatedIncome, S.turn);
-      nations[index] = withIncomeApplied;
+    if (updatedNation.diplomaticInfluence) {
+      const withUpdatedIncome = updateDIPIncome(updatedNation, nations, S.turn, peaceTurns);
+      updatedNation = applyDIPIncome(withUpdatedIncome, S.turn);
+      nations[index] = updatedNation;
     }
   });
 
