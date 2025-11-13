@@ -3295,3 +3295,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Pulled attacker/defender treaty metadata inside `src/hooks/useConventionalWarfare.ts` so active truces or alliances abort `resolveBorderConflict` before DEFCON or relationship penalties apply, returning player-friendly reasons.
 - Expanded `src/hooks/__tests__/useConventionalWarfare.test.tsx` with alliance/truce attack attempts to confirm the hook rejects those actions without invoking DEFCON or relationship callbacks.
 - Executed `npm run test -- --run src/hooks/__tests__/useConventionalWarfare.test.tsx` to validate the updated safeguards.
+### 2025-11-13T17:53:02Z - National focus ref integration update
+- Replaced the module-level national focus API pointer in `src/pages/Index.tsx` with a component-scoped `useRef` and wired it to the latest `useNationalFocus` instance on every render so turn handlers have a stable reference.
+- Updated the production phase turn handling to call `focusApiRef.current?.processTurnFocusProgress()` exactly once per turn before incrementing `S.turn`, reusing the cached API for applying player focus income.
+- Manually verified focus progress and remaining turns decrement by temporarily rendering the hook in Vitest (`npx vitest run src/hooks/__tests__/focusManualCheck.test.tsx`) and confirming the values advanced across five turns.
