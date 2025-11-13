@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { SeededRandom } from '@/lib/seededRandom';
 import type { NewsItem } from '@/components/NewsTicker';
 
 export type PandemicStage = 'outbreak' | 'epidemic' | 'pandemic' | 'collapse';
@@ -184,23 +185,23 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function pickRandom<T>(values: T[]): T {
-  return values[Math.floor(Math.random() * values.length)];
+function pickRandom<T>(rng: SeededRandom, values: T[]): T {
+  return rng.choice(values);
 }
 
-function generateStrainName() {
-  const prefix = pickRandom(STRAIN_PREFIXES);
-  const suffix = pickRandom(STRAIN_SUFFIXES);
-  const numeric = Math.floor(Math.random() * 900 + 100);
+function generateStrainName(rng: SeededRandom) {
+  const prefix = pickRandom(rng, STRAIN_PREFIXES);
+  const suffix = pickRandom(rng, STRAIN_SUFFIXES);
+  const numeric = rng.nextInt(100, 999);
   return `${prefix}-${numeric}${suffix}`;
 }
 
-function buildOutbreaks(regions?: string[]): PandemicOutbreak[] {
-  const sourceRegions = regions && regions.length > 0 ? regions : [pickRandom(REGIONAL_THEATRES)];
+function buildOutbreaks(rng: SeededRandom, regions?: string[]): PandemicOutbreak[] {
+  const sourceRegions = regions && regions.length > 0 ? regions : [pickRandom(rng, REGIONAL_THEATRES)];
   return sourceRegions.map(region => ({
     region,
-    infection: Math.floor(Math.random() * 15) + 10,
-    heat: Math.floor(Math.random() * 40) + 30
+    infection: rng.nextInt(10, 24),
+    heat: rng.nextInt(30, 69)
   }));
 }
 
@@ -226,14 +227,19 @@ function deriveTraitEffects(traits: PandemicTraitLevels) {
   };
 }
 
-export function usePandemic(addNewsItem: AddNewsItem) {
+export function usePandemic(addNewsItem: AddNewsItem, rng: SeededRandom) {
   const [pandemicState, setPandemicState] = useState<PandemicState>(INITIAL_STATE);
   const stageRef = useRef<PandemicStage>('outbreak');
   const stateRef = useRef<PandemicState>(INITIAL_STATE);
+  const rngRef = useRef<SeededRandom>(rng);
 
   useEffect(() => {
     stateRef.current = pandemicState;
   }, [pandemicState]);
+
+  useEffect(() => {
+    rngRef.current = rng;
+  }, [rng]);
 
   const triggerPandemic = useCallback((payload: PandemicTriggerPayload) => {
     let newsText: string | null = null;
@@ -241,8 +247,9 @@ export function usePandemic(addNewsItem: AddNewsItem) {
 
     setPandemicState(prev => {
       const active = prev.active;
-      const strainName = active ? prev.strainName : generateStrainName();
-      const pathogenType = active ? prev.pathogenType : pickRandom(PATHOGEN_TYPES);
+      const currentRng = rngRef.current;
+      const strainName = active ? prev.strainName : generateStrainName(currentRng);
+      const pathogenType = active ? prev.pathogenType : pickRandom(currentRng, PATHOGEN_TYPES);
       const lethalityBase = payload.severity === 'severe' ? 0.35 : payload.severity === 'moderate' ? 0.25 : 0.15;
       const containmentBoost = payload.initialContainment ?? (payload.severity === 'severe' ? 10 : payload.severity === 'moderate' ? 25 : 40);
       const infectionBoost = payload.initialInfection ?? (payload.severity === 'severe' ? 40 : payload.severity === 'moderate' ? 25 : 12);
@@ -260,7 +267,7 @@ export function usePandemic(addNewsItem: AddNewsItem) {
             infection: clamp(outbreak.infection + infectionWithTraits * 0.3, 0, 100),
             heat: clamp(outbreak.heat + 10 - traitEffects.stealthHeatReduction, 0, 100)
           }))
-        : buildOutbreaks(payload.regions);
+        : buildOutbreaks(currentRng, payload.regions);
 
       const desiredStage = payload.severity === 'severe' ? 'pandemic' : payload.severity === 'moderate' ? 'epidemic' : 'outbreak';
       const stageIndex = STAGE_ORDER.indexOf(desiredStage);
@@ -269,7 +276,11 @@ export function usePandemic(addNewsItem: AddNewsItem) {
 
       newsText = payload.label
         ? payload.label
-        : `Bio-weapon ${strainName} detected – ${pickRandom(['crews reporting hemorrhagic symptoms', 'NORAD medics overwhelmed', 'strategic readiness collapsing'])}`;
+        : `Bio-weapon ${strainName} detected – ${pickRandom(currentRng, [
+            'crews reporting hemorrhagic symptoms',
+            'NORAD medics overwhelmed',
+            'strategic readiness collapsing'
+          ])}`;
 
       const nextState: PandemicState = {
         ...prev,
@@ -428,9 +439,10 @@ export function usePandemic(addNewsItem: AddNewsItem) {
 
     const mutationChance = 0.12 + prev.mutationLevel * 0.03 - prev.containmentEffort * 0.002;
     let mutationLevel = prev.mutationLevel;
-    if (Math.random() < clamp(mutationChance, 0.05, 0.45)) {
+    const currentRng = rngRef.current;
+    if (currentRng.next() < clamp(mutationChance, 0.05, 0.45)) {
       mutationLevel = clamp(mutationLevel + 1, 0, 12);
-      mutationDescriptor = pickRandom(MUTATION_TRAITS);
+      mutationDescriptor = pickRandom(currentRng, MUTATION_TRAITS);
       turnNews.push({
         category: 'science',
         text: `${prev.strainName} expresses ${mutationDescriptor}.`,

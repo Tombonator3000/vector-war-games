@@ -180,7 +180,6 @@ describe('useBioWarfare defensive research', () => {
 
   it('awards DNA milestones based on the updated pandemic state after a turn', () => {
     const addNews = vi.fn();
-    const mathSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
     const { result } = renderHook(
       () => useBioWarfare(addNews, SCENARIOS.coldWar),
       { wrapper },
@@ -220,12 +219,10 @@ describe('useBioWarfare defensive research', () => {
     expect(result.current.pandemicState.globalInfection).toBeGreaterThan(infectionBefore);
     expect(dnaGain).toBeGreaterThanOrEqual(expectedGain);
 
-    mathSpy.mockRestore();
   });
 
   it('gates parasite cure progression until the updated infection threshold is met', () => {
     const addNews = vi.fn();
-    const mathSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
     const { result } = renderHook(
       () => useBioWarfare(addNews, SCENARIOS.pandemic2020),
       { wrapper },
@@ -257,6 +254,5 @@ describe('useBioWarfare defensive research', () => {
     expect(result.current.pandemicState.globalInfection).toBeGreaterThan(28);
     expect(result.current.plagueState.cureProgress).toBeGreaterThan(0);
 
-    mathSpy.mockRestore();
   });
 });

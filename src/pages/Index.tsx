@@ -7885,7 +7885,7 @@ export default function NoradVector() {
     downgradeTrait: downgradePandemicTrait,
     resetTraits: resetPandemicTraits,
     deployTraits: deployPandemicTraits
-  } = usePandemic(addNewsItem);
+  } = usePandemic(addNewsItem, rng);
 
   const showPandemicPanel = useMemo(() => {
     if (!pandemicIntegrationEnabled) {
