@@ -3233,3 +3233,13 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Created `src/lib/__tests__/negotiationDealEffects.test.ts` to cover each negotiation item type, asserting that both nations and shared systems (treaties, resource trades, grievances) mutate as expected when deals are applied.
 ### 2025-11-13T12:35:25Z - Removed national focus command buttons
 - Deleted the floating quick-access focus button and the main command interface focus button from `src/pages/Index.tsx` to comply with the UI request.
+### 2025-11-13T12:51:46Z - Optimized production phase territory handling
+- Built a shared nation-to-territory map inside `productionPhase` so each nation's resource processing can reuse the grouped territory list rather than recalculating filters per iteration.
+### 2025-11-13T12:51:55Z - Refactored territorial resource processors
+- Updated `processNationResources` and its generation/consumption helpers to accept the pre-grouped territories array, preserving math while eliminating redundant lookups.
+### 2025-11-13T12:52:07Z - Added territorial resource regression test
+- Extended `src/lib/__tests__/territorialResourcesSystem.test.ts` with a scenario covering generation, trade income, and consumption to ensure the refactor matches prior behavior.
+### 2025-11-13T12:52:18Z - Verified territorial resource logic
+- Ran `npx vitest run src/lib/__tests__/territorialResourcesSystem.test.ts` to confirm the updated logic and new regression test pass.
+### 2025-11-13T12:52:19Z - Re-verified territorial resource test after import tidy-up
+- Re-ran `npx vitest run src/lib/__tests__/territorialResourcesSystem.test.ts` to confirm the test suite still passes after consolidating type imports.

@@ -162,8 +162,8 @@ export function assignTerritoryResources(
  */
 export function calculateNationResourceGeneration(
   nation: Nation,
-  territories: Record<string, TerritoryState>,
-  territoryResources: Record<string, TerritoryResources>
+  territoryResources: Record<string, TerritoryResources>,
+  controlledTerritories: TerritoryState[]
 ): ResourceGeneration {
   const generation: ResourceGeneration = {
     oil: 0,
@@ -171,11 +171,6 @@ export function calculateNationResourceGeneration(
     rare_earths: 0,
     food: 0,
   };
-
-  // Find all territories controlled by this nation
-  const controlledTerritories = Object.values(territories).filter(
-    t => t.controllingNationId === nation.id
-  );
 
   // Sum up resource generation from each territory
   controlledTerritories.forEach(territory => {
@@ -205,7 +200,7 @@ export function calculateNationResourceGeneration(
  */
 export function calculateNationResourceConsumption(
   nation: Nation,
-  territories: Record<string, TerritoryState>
+  controlledTerritories: TerritoryState[]
 ): ResourceConsumption {
   const consumption: ResourceConsumption = {
     military: { oil: 0 },
@@ -215,10 +210,6 @@ export function calculateNationResourceConsumption(
   };
 
   // Military consumption: armies need oil
-  const controlledTerritories = Object.values(territories).filter(
-    t => t.controllingNationId === nation.id
-  );
-
   let totalArmies = 0;
   controlledTerritories.forEach(t => {
     totalArmies += t.armies;
@@ -250,7 +241,7 @@ export function calculateNationResourceConsumption(
  */
 export function processNationResources(
   nation: Nation,
-  territories: Record<string, TerritoryState>,
+  controlledTerritories: TerritoryState[],
   territoryResources: Record<string, TerritoryResources>,
   activeTrades: ResourceTrade[],
   turn: number
@@ -264,10 +255,14 @@ export function processNationResources(
   initializeResourceStockpile(nation);
 
   // Calculate generation
-  const generation = calculateNationResourceGeneration(nation, territories, territoryResources);
+  const generation = calculateNationResourceGeneration(
+    nation,
+    territoryResources,
+    controlledTerritories
+  );
 
   // Calculate consumption
-  const consumption = calculateNationResourceConsumption(nation, territories);
+  const consumption = calculateNationResourceConsumption(nation, controlledTerritories);
 
   // Process trade income
   const tradeIncome: ResourceGeneration = { oil: 0, uranium: 0, rare_earths: 0, food: 0 };
