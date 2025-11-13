@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, ReactNode } from 're
 import { useNavigate } from 'react-router-dom';
 import { feature } from 'topojson-client';
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,7 +20,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle, Target, UserSearch, Swords } from 'lucide-react';
+import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle, Target, UserSearch, Swords, Flag } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
@@ -189,6 +190,7 @@ import { CasualtyImpactSummary } from '@/components/pandemic/CasualtyImpactSumma
 import { MapModeBar } from '@/components/MapModeBar';
 import { usePolicySystem } from '@/hooks/usePolicySystem';
 import { useNationalFocus } from '@/hooks/useNationalFocus';
+import type { AvailableFocus } from '@/types/nationalFocus';
 import { useInternationalPressure } from '@/hooks/useInternationalPressure';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 import type { Unit } from '@/lib/unitModels';
@@ -375,6 +377,9 @@ let hoveredTerritoryIdRef: { current: string | null } = { current: null };
 let dragTargetTerritoryIdRef: { current: string | null } = { current: null };
 let draggingArmyRef: { current: { sourceId: string; armies: number } | null } = { current: null };
 
+type NationalFocusSystemApi = ReturnType<typeof useNationalFocus>;
+let nationalFocusSystemRef: NationalFocusSystemApi | null = null;
+
 const PROPOSAL_MAX_AGE = 10;
 
 const isProposalExpired = (proposal: DiplomaticProposal, currentTurn: number): boolean => {
@@ -455,6 +460,32 @@ const isVisualStyleValue = (value: unknown): value is MapVisualStyle =>
 
 const isMapModeValue = (value: unknown): value is MapMode =>
   typeof value === 'string' && MAP_MODES.includes(value as MapMode);
+
+const FOCUS_BRANCH_METADATA: Record<
+  'diplomatic' | 'economic' | 'intelligence' | 'military' | 'special',
+  { title: string; description: string }
+> = {
+  diplomatic: {
+    title: 'Diplomacy & Influence',
+    description: 'Forge alliances, expand treaties, and sway global opinion.',
+  },
+  economic: {
+    title: 'Economic Power',
+    description: 'Invest in industry, trade, and infrastructure.',
+  },
+  intelligence: {
+    title: 'Intelligence & Covert Ops',
+    description: 'Enhance espionage, surveillance, and covert capabilities.',
+  },
+  military: {
+    title: 'Military Doctrine',
+    description: 'Strengthen armed forces and strategic readiness.',
+  },
+  special: {
+    title: 'Special Projects',
+    description: 'Pursue unique national ambitions and experimental paths.',
+  },
+};
 
 type ScreenResolution = 'auto' | '1280x720' | '1600x900' | '1920x1080' | '2560x1440' | '3840x2160';
 
@@ -5845,9 +5876,24 @@ function endTurn() {
         }
       }
 
+      const focusTurnCompletions = nationalFocusSystemRef?.processTurnFocusProgress?.() ?? [];
+
+      if (focusTurnCompletions.length > 0) {
+        focusTurnCompletions.forEach((completion) => {
+          const nation = nations.find((entry) => entry.id === completion.nationId);
+          const nationName = nation?.name ?? completion.nationId;
+          const priority: NewsItem['priority'] = nation?.isPlayer ? 'important' : 'routine';
+          window.__gameAddNewsItem?.(
+            'governance',
+            `${nationName} completes national focus: ${completion.focusName}`,
+            priority
+          );
+        });
+      }
+
       // Apply national focus effects for player nation
-      if (player) {
-        const completedFocuses = nationalFocusSystem.getCompletedFocuses(player.id);
+      if (player && nationalFocusSystemRef) {
+        const completedFocuses = nationalFocusSystemRef.getCompletedFocuses(player.id);
         let focusGoldPerTurn = 0;
         let focusIntelPerTurn = 0;
 
@@ -6660,6 +6706,8 @@ export default function NoradVector() {
   );
 
   const playerNation = useMemo(() => nations.find(n => n.isPlayer), [nations]);
+  const playerNationId = playerNation?.id ?? null;
+  const playerNationName = playerNation?.name ?? 'Player';
   const advancedGameState = GameStateManager.getState();
   const enemyNations = useMemo(() => nations.filter(n => !n.isPlayer && !n.eliminated), [nations]);
   const currentPlayerLeaderName = playerNation?.leaderName || playerNation?.leader;
@@ -6713,6 +6761,7 @@ export default function NoradVector() {
   const [defconChangeEvent, setDefconChangeEvent] = useState<import('@/types/game').DefconChangeEvent | null>(null);
   const [isDefconWarningVisible, setIsDefconWarningVisible] = useState(false);
   const defconWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const focusCompletionCountRef = useRef(0);
   const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
   const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
   const [phase3State, setPhase3State] = useState<Phase3State | null>(null);
@@ -6726,8 +6775,15 @@ export default function NoradVector() {
   const [showGovernanceDetails, setShowGovernanceDetails] = useState(false);
   const [showPolicyPanel, setShowPolicyPanel] = useState(false);
   const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
+  const [isNationalFocusOpen, setIsNationalFocusOpen] = useState(false);
   const [isIntelOperationsOpen, setIsIntelOperationsOpen] = useState(false);
   const [isSpyPanelOpen, setIsSpyPanelOpen] = useState(false);
+
+  useEffect(() => {
+    if (!playerNationId) {
+      setIsNationalFocusOpen(false);
+    }
+  }, [playerNationId]);
   const [isWarCouncilOpen, setIsWarCouncilOpen] = useState(false);
   const [populationImpacts, setPopulationImpacts] = useState<Array<{ id: string; casualties: number; targetName: string; timestamp: number }>>([]);
 
@@ -8326,6 +8382,124 @@ export default function NoradVector() {
     currentTurn: S.turn,
     nations: nations.map(n => ({ id: n.id, name: n.name })),
   });
+
+  const focusStates = nationalFocusSystem.focusStates;
+  const focusCompletionLog = nationalFocusSystem.completionLog;
+
+  useEffect(() => {
+    nationalFocusSystemRef = nationalFocusSystem;
+    return () => {
+      if (nationalFocusSystemRef === nationalFocusSystem) {
+        nationalFocusSystemRef = null;
+      }
+    };
+  }, [nationalFocusSystem]);
+
+  useEffect(() => {
+    if (nations.length === 0) {
+      return;
+    }
+
+    const hasAllStates = nations.every((nation) => focusStates.has(nation.id));
+    if (!hasAllStates || focusStates.size === 0) {
+      nationalFocusSystem.initializeFocusTrees();
+    }
+  }, [nations, focusStates, nationalFocusSystem.initializeFocusTrees]);
+
+  useEffect(() => {
+    const completions = focusCompletionLog;
+
+    if (completions.length < focusCompletionCountRef.current) {
+      focusCompletionCountRef.current = completions.length;
+    }
+
+    if (!playerNationId) {
+      focusCompletionCountRef.current = completions.length;
+      return;
+    }
+
+    if (completions.length > focusCompletionCountRef.current) {
+      const newEntries = completions.slice(focusCompletionCountRef.current);
+      newEntries
+        .filter((entry) => entry.nationId === playerNationId)
+        .forEach((entry) => {
+          const effectSummary = entry.effects
+            .map((effect) => effect.message)
+            .filter((message): message is string => Boolean(message))
+            .join(' ');
+
+          toast({
+            title: 'National Focus Complete',
+            description: effectSummary
+              ? `${entry.focusName}: ${effectSummary}`
+              : `${entry.focusName} is now complete.`,
+          });
+        });
+
+      focusCompletionCountRef.current = completions.length;
+    }
+  }, [focusCompletionLog, playerNationId]);
+
+  const playerActiveFocus = playerNationId
+    ? nationalFocusSystem.getActiveFocus(playerNationId)
+    : null;
+  const availableFocuses = playerNationId
+    ? nationalFocusSystem.getAvailableFocuses(playerNationId)
+    : [];
+  const availableFocusLookup = useMemo(
+    () => new Map(availableFocuses.map((focus) => [focus.id, focus] as const)),
+    [availableFocuses]
+  );
+  const focusPaths = playerNationId
+    ? nationalFocusSystem.getFocusesByPath(playerNationId)
+    : null;
+
+  const handleStartFocus = useCallback(
+    (focus: AvailableFocus) => {
+      if (!playerNationId) {
+        return;
+      }
+
+      const result = nationalFocusSystem.startFocus(playerNationId, focus.id);
+
+      toast({
+        title: result.success ? 'Focus Started' : 'Unable to start focus',
+        description: result.message,
+        variant: result.success ? 'default' : 'destructive',
+      });
+
+      if (result.success) {
+        addNewsItem(
+          'governance',
+          `${playerNationName} begins national focus: ${focus.name}`,
+          'important'
+        );
+      }
+    },
+    [playerNationId, nationalFocusSystem, addNewsItem, playerNationName]
+  );
+
+  const handleCancelFocus = useCallback(() => {
+    if (!playerNationId) {
+      return;
+    }
+
+    const result = nationalFocusSystem.cancelFocus(playerNationId);
+
+    toast({
+      title: result.success ? 'Focus Cancelled' : 'No active focus',
+      description: result.message,
+      variant: result.success ? 'default' : 'destructive',
+    });
+
+    if (result.success) {
+      addNewsItem(
+        'governance',
+        `${playerNationName} cancels its current national focus`,
+        'routine'
+      );
+    }
+  }, [playerNationId, nationalFocusSystem, addNewsItem, playerNationName]);
 
   // International pressure system for sanctions and aid
   const internationalPressureSystem = useInternationalPressure({
@@ -14025,6 +14199,17 @@ export default function NoradVector() {
               <Button
                 size="icon"
                 variant="ghost"
+                className={`fixed bottom-36 right-4 z-40 h-10 w-10 rounded-full border border-cyan-500/40 bg-black/70 text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20 ${
+                  isNationalFocusOpen ? 'ring-2 ring-cyan-400/70' : ''
+                }`}
+                onClick={() => setIsNationalFocusOpen(true)}
+                aria-label="Open national focus"
+              >
+                <Flag className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
                 className={`fixed bottom-24 right-4 z-40 h-10 w-10 rounded-full border border-cyan-500/40 bg-black/70 text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20 ${
                   isStrikePlannerOpen ? 'ring-2 ring-cyan-400/70' : ''
                 }`}
@@ -14096,6 +14281,17 @@ export default function NoradVector() {
                     >
                       <Target className="h-5 w-5" />
                       <span className="text-[8px] font-mono">INTEL</span>
+                    </Button>
+
+                    <Button
+                      onClick={() => setIsNationalFocusOpen(true)}
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                      title="FOCUS - Direct national priorities"
+                    >
+                      <Flag className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">FOCUS</span>
                     </Button>
 
                     {bioForgeUnlocked ? (
@@ -14558,6 +14754,170 @@ export default function NoradVector() {
           }}
         />
       ) : null}
+
+      <Sheet open={isNationalFocusOpen} onOpenChange={setIsNationalFocusOpen}>
+        <SheetContent
+          side="right"
+          className="w-[min(26rem,90vw)] border-cyan-500/40 bg-gradient-to-br from-slate-950/95 to-slate-900/95 text-cyan-100"
+        >
+          <SheetHeader>
+            <SheetTitle className="text-xl font-semibold text-cyan-200">
+              National Focus
+            </SheetTitle>
+            <SheetDescription className="text-sm text-cyan-300/70">
+              Direct long-term strategic initiatives. Focuses progress automatically at the
+              end of each turn.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-4 flex h-full flex-col gap-4 overflow-y-auto pr-1">
+            {!playerNationId ? (
+              <div className="rounded-lg border border-cyan-500/30 bg-slate-950/70 p-4 text-sm text-cyan-200/80">
+                National focus controls will unlock once a player nation is selected.
+              </div>
+            ) : !focusPaths ? (
+              <div className="rounded-lg border border-cyan-500/30 bg-slate-950/70 p-4 text-sm text-cyan-200/80">
+                Initializing focus trees...
+              </div>
+            ) : (
+              <>
+                <div className="rounded-lg border border-cyan-500/30 bg-slate-950/70 p-4">
+                  {playerActiveFocus ? (
+                    <div className="space-y-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-base font-semibold text-cyan-100">
+                            {playerActiveFocus.focus.name}
+                          </p>
+                          <p className="mt-1 text-sm text-cyan-300/80">
+                            {playerActiveFocus.focus.description}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCancelFocus}
+                          className="text-red-300 hover:text-red-200 hover:bg-red-500/10"
+                        >
+                          Cancel Focus
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Progress value={playerActiveFocus.progress} className="h-2 bg-cyan-500/20" />
+                        <div className="flex items-center justify-between text-xs text-cyan-300/80">
+                          <span>{Math.round(playerActiveFocus.progress)}% complete</span>
+                          <span>{playerActiveFocus.turnsRemaining} turns remaining</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 text-sm text-cyan-200/85">
+                      <p className="font-semibold text-cyan-100">No active focus.</p>
+                      <p>Select a focus below to guide your nation&apos;s strategic efforts.</p>
+                    </div>
+                  )}
+                </div>
+
+                {Object.entries(focusPaths).map(([branch, focuses]) => {
+                  const metadata = FOCUS_BRANCH_METADATA[branch as keyof typeof FOCUS_BRANCH_METADATA];
+                  const branchHasFocuses = focuses.length > 0;
+
+                  return (
+                    <div key={branch} className="rounded-lg border border-cyan-500/20 bg-slate-950/60 p-4">
+                      <div className="flex flex-col gap-1">
+                        <h3 className="text-sm font-semibold uppercase tracking-wide text-cyan-200">
+                          {metadata?.title ?? branch}
+                        </h3>
+                        {metadata?.description ? (
+                          <p className="text-xs text-cyan-300/70">{metadata.description}</p>
+                        ) : null}
+                      </div>
+
+                      <div className="mt-3 space-y-3">
+                        {branchHasFocuses
+                          ? focuses.map((focus) => {
+                              const focusInfo = availableFocusLookup.get(focus.id);
+                              if (!focusInfo) {
+                                return null;
+                              }
+
+                              let statusLabel: string | null = null;
+                              let statusClass = 'text-xs font-semibold uppercase tracking-wide';
+
+                              if (focusInfo.isCompleted) {
+                                statusLabel = 'Completed';
+                                statusClass += ' text-neon-green';
+                              } else if (focusInfo.isActive) {
+                                statusLabel = 'In Progress';
+                                statusClass += ' text-cyan-200';
+                              } else if (focusInfo.isLocked) {
+                                statusLabel = 'Locked';
+                                statusClass += ' text-red-300';
+                              }
+
+                              const canStart =
+                                focusInfo.canStart && !focusInfo.isActive && !focusInfo.isCompleted;
+
+                              return (
+                                <div
+                                  key={focus.id}
+                                  className="rounded-lg border border-cyan-500/30 bg-slate-950/80 p-3"
+                                >
+                                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                      <p className="text-sm font-semibold text-cyan-100">{focus.name}</p>
+                                      <p className="mt-1 text-xs text-cyan-300/80">{focus.description}</p>
+                                    </div>
+                                    {statusLabel ? <span className={statusClass}>{statusLabel}</span> : null}
+                                  </div>
+
+                                  <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-cyan-300/80">
+                                    <span>Duration: {focus.completionTime} turns</span>
+                                    {focus.prerequisites.length > 0 ? (
+                                      <span>Prerequisites: {focus.prerequisites.length}</span>
+                                    ) : null}
+                                  </div>
+
+                                  {focusInfo.missingPrerequisites.length > 0 && !focusInfo.canStart ? (
+                                    <p className="mt-2 text-xs text-yellow-300">
+                                      Requires: {focusInfo.missingPrerequisites.join(', ')}
+                                    </p>
+                                  ) : null}
+
+                                  {focusInfo.isLocked ? (
+                                    <p className="mt-2 text-xs text-red-300">
+                                      Locked by a mutually exclusive focus path.
+                                    </p>
+                                  ) : null}
+
+                                  {canStart ? (
+                                    <div className="mt-3 flex justify-end">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleStartFocus(focusInfo)}
+                                        className="bg-cyan-500 text-black hover:bg-cyan-400"
+                                      >
+                                        Start Focus
+                                      </Button>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })
+                          : (
+                              <p className="text-xs text-cyan-300/70">
+                                No focuses available in this branch yet.
+                              </p>
+                            )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={Boolean(pendingLaunch) && !consequencePreview} onOpenChange={(open) => { if (!open) resetLaunchControl(); }}>
         <DialogContent className="max-w-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm">
