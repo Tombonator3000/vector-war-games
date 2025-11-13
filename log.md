@@ -3264,3 +3264,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Built a nation map before invoking `processResourceDepletion` in `src/lib/gamePhaseHandlers.ts` and updated the depletion helper to accept the precomputed map for constant-time lookups.
 - Added `src/lib/__tests__/resourceDepletionSystem.test.ts` to verify depletion warnings and deposit exhaustion remain consistent after the optimization.
 - Ran `npx vitest run src/lib/__tests__/resourceDepletionSystem.test.ts` to confirm the new tests and lookup changes pass.
+### 2025-11-13T16:28:43Z - Updated streamlined culture immigration state wiring
+- Swapped the legacy `immigrationPolicy` assignment in `src/lib/streamlinedCultureLogic.ts` for the canonical `currentImmigrationPolicy` field.
+- Passed `PlayerManager.get()?.currentImmigrationPolicy` through `StreamlinedCulturePanel` props in `src/pages/Index.tsx` to surface the latest policy selection.
