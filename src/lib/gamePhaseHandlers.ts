@@ -34,6 +34,7 @@ import {
   assignTerritoryResources,
   addStrategicResource,
 } from '@/lib/territorialResourcesSystem';
+import type { TerritoryState } from '@/hooks/useConventionalWarfare';
 import {
   initializeResourceMarket,
   updateResourceMarket
@@ -434,6 +435,16 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
   // Process territorial resources generation and consumption
   if (S.territoryResources && conventionalState?.territories) {
+    const territoriesByNation: Record<string, TerritoryState[]> = {};
+    Object.values(conventionalState.territories).forEach(territory => {
+      const controllerId = territory.controllingNationId;
+      if (!controllerId) return;
+      if (!territoriesByNation[controllerId]) {
+        territoriesByNation[controllerId] = [];
+      }
+      territoriesByNation[controllerId].push(territory);
+    });
+
     // Update resource market with dynamic pricing
     if (S.resourceMarket) {
       S.resourceMarket = updateResourceMarket(S.resourceMarket, S, nations, S.turn, deps.rng);
@@ -487,9 +498,10 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     nations.forEach(n => {
       if (n.population <= 0) return;
 
+      const controlledTerritories = territoriesByNation[n.id] ?? [];
       const result = processNationResources(
         n,
-        conventionalState.territories,
+        controlledTerritories,
         S.territoryResources!,
         S.resourceTrades || [],
         S.turn
