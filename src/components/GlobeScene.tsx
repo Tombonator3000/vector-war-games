@@ -1570,6 +1570,11 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   }, []);
 
   const updateProjector = useCallback(() => {
+    const cameraWorldPosition = new THREE.Vector3();
+    const surfaceNormal = new THREE.Vector3();
+    const cameraToSurface = new THREE.Vector3();
+    const projectedVector = new THREE.Vector3();
+
     const projector: ProjectorFn = (lon, lat) => {
       const size = sizeRef.current;
       const overlay = overlayRef.current;
@@ -1603,12 +1608,21 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         };
       }
 
-      const vector = latLonToVector3(lon, lat, EARTH_RADIUS + MARKER_OFFSET * 0.5);
-      vector.project(camera);
+      const worldVector = latLonToVector3(lon, lat, EARTH_RADIUS + MARKER_OFFSET * 0.5);
+
+      camera.getWorldPosition(cameraWorldPosition);
+      surfaceNormal.copy(worldVector).normalize();
+      cameraToSurface.subVectors(cameraWorldPosition, worldVector);
+
+      const facingCamera = cameraToSurface.dot(surfaceNormal) > 0;
+
+      projectedVector.copy(worldVector).project(camera);
+      const isVisible = facingCamera && projectedVector.z < 1;
+
       return {
-        x: (vector.x * 0.5 + 0.5) * width,
-        y: (-vector.y * 0.5 + 0.5) * height,
-        visible: vector.z < 1,
+        x: (projectedVector.x * 0.5 + 0.5) * width,
+        y: (-projectedVector.y * 0.5 + 0.5) * height,
+        visible: isVisible,
       };
     };
     projectorRef.current = projector;
