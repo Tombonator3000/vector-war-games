@@ -3237,6 +3237,9 @@ function productionPhase(rng: SeededRandom) {
     leaders,
     PlayerManager,
     rng,
+    onGameOver: ({ victory, message }) => {
+      endGame(victory, message);
+    },
   };
   runProductionPhase(deps);
 
