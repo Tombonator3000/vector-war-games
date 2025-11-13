@@ -3197,3 +3197,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Initialized international pressure tracking for every nation, advanced pressure timers during turn resolution, and captured gold swing messaging via toasts/news (`src/pages/Index.tsx`).
 - Wired player diplomacy aid proposals and AI diplomacy sanctions/aid events into the pressure system so economic penalties and relief packages populate `pressureState` (`src/pages/Index.tsx`, `src/lib/aiDiplomacyActions.ts`).
 - Registered callbacks to surface sanction and aid notifications, synchronize hook callbacks, and updated lint run status (`npm run lint`).
+### 2025-11-13T09:16:05Z - Rebalanced BioLab tier production requirements
+- Reduced BioLab tier 2 production cost to 100 while keeping construction timing and unlocks intact (`src/lib/researchData.ts`).
+- Lowered BioLab tier 3 and tier 4 production costs to 150 and 250 respectively, preserving their uranium requirements for late-game balance (`src/lib/researchData.ts`).
