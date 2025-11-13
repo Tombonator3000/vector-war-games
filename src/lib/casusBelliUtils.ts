@@ -62,11 +62,19 @@ export function calculateJustificationFactors(
   // Ideological conflict: opposing ideologies provide justification
   let ideologicalConflict = 0;
   if (attacker.ideologyState && defender.ideologyState) {
-    // Use ideology support as proxy for alignment difference
+    // Use ideology support as proxy for alignment difference and scale non-linearly so
+    // extreme divergence contributes meaningfully without overwhelming other factors.
     const attackerDem = attacker.ideologyState.ideologicalSupport?.democracy || 0;
     const defenderDem = defender.ideologyState.ideologicalSupport?.democracy || 0;
     const ideologyDiff = Math.abs(attackerDem - defenderDem);
-    ideologicalConflict = Math.min(20, ideologyDiff / 5);
+    const normalizedDiff = Math.min(ideologyDiff, 100) / 100;
+    if (normalizedDiff > 0) {
+      // Baseline 5 points once an ideological divide exists and up to ~30 when
+      // democracy support is polar opposite (diff ≈ 100).
+      const baseline = 5;
+      const curveContribution = Math.pow(normalizedDiff, 0.8) * 25; // 0-25 range
+      ideologicalConflict = Math.min(30, baseline + curveContribution);
+    }
   }
 
   // Council authorization: strong justification if sanctioned
@@ -309,7 +317,15 @@ export function createHolyWarCB(
     ideologyDiff = Math.abs(attackerDem - defenderDem);
   }
 
-  const justification = Math.min(30, ideologyDiff / 3);
+  const normalizedDiff = Math.min(ideologyDiff, 100) / 100;
+  const hasIdeologicalData = Boolean(normalizedDiff);
+  const baselineJustification = hasIdeologicalData ? 10 : 0;
+  // Non-linear growth that reaches roughly 60-80 justification for ideological gaps
+  // near 100 while still capping below hard-coded maximums.
+  const curveJustification = hasIdeologicalData
+    ? Math.pow(normalizedDiff, 0.85) * 70
+    : 0;
+  const justification = Math.min(90, baselineJustification + curveJustification);
   const publicSupport = attacker.ideologyState?.ideologyStability
     ? 50 + attacker.ideologyState.ideologyStability / 2
     : 50;
