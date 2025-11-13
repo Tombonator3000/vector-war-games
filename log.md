@@ -3299,3 +3299,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Replaced the module-level national focus API pointer in `src/pages/Index.tsx` with a component-scoped `useRef` and wired it to the latest `useNationalFocus` instance on every render so turn handlers have a stable reference.
 - Updated the production phase turn handling to call `focusApiRef.current?.processTurnFocusProgress()` exactly once per turn before incrementing `S.turn`, reusing the cached API for applying player focus income.
 - Manually verified focus progress and remaining turns decrement by temporarily rendering the hook in Vitest (`npx vitest run src/hooks/__tests__/focusManualCheck.test.tsx`) and confirming the values advanced across five turns.
+
+### 2025-11-13T18:05:00Z - Added gold badge to strategic header
+- Extended the top-bar resource stack in `src/pages/Index.tsx` with a gold badge and assigned a stable `goldDisplay` identifier for runtime updates.
+- Updated `updateDisplay()` in `src/pages/Index.tsx` to populate the new badge with the player's floored gold value while retaining existing production/intel behavior.
+- Reviewed existing gold consumers (e.g., `PolicySelectionPanel` props) to ensure no additional adjustments were required after the display changes.
