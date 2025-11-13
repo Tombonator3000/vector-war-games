@@ -56,6 +56,7 @@ type LocalGameStateExtras = {
     initiatedAt: number;
     minRevealAt: number;
   };
+  endGameRevealRequiresConfirmation?: boolean;
   victoryProgressNotifications?: {
     economic: boolean;
     demographic: boolean;
@@ -138,6 +139,7 @@ function createInitialState(): LocalGameState {
     showEndGameScreen: false,
     endGameStatistics: undefined,
     pendingEndGameReveal: undefined,
+    endGameRevealRequiresConfirmation: false,
     territoryResources: undefined,
     resourceTrades: [],
     resourceMarket: undefined,
