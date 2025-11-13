@@ -1,21 +1,31 @@
+import type { ReactNode } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  TrendingUp, 
-  Shield, 
-  Users, 
-  Globe, 
+import { Progress } from '@/components/ui/progress';
+import {
+  TrendingUp,
+  Shield,
+  Users,
+  Globe,
   Lock,
   CheckCircle2,
   AlertTriangle,
-  Zap
+  Zap,
+  Target
 } from 'lucide-react';
 import { policies, getPolicyById, checkPolicyConflict, calculatePolicySynergies } from '@/lib/policyData';
 import type { Policy, PolicyCategory, ActivePolicy } from '@/types/policy';
+import type { AvailableFocus, NationalFocus } from '@/types/nationalFocus';
+
+type ActiveFocusInfo = {
+  focus: NationalFocus;
+  progress: number;
+  turnsRemaining: number;
+};
 
 interface PolicySelectionPanelProps {
   open: boolean;
@@ -27,6 +37,11 @@ interface PolicySelectionPanelProps {
   currentTurn: number;
   onEnactPolicy: (policyId: string) => void;
   onRepealPolicy: (policyId: string) => void;
+  playerActiveFocus?: ActiveFocusInfo | null;
+  focusPaths?: Record<string, NationalFocus[]> | null;
+  availableFocusLookup?: Map<string, AvailableFocus> | null;
+  onStartFocus?: (focus: AvailableFocus) => void;
+  onCancelFocus?: () => void;
 }
 
 export function PolicySelectionPanel({
@@ -38,7 +53,12 @@ export function PolicySelectionPanel({
   availableIntel,
   currentTurn,
   onEnactPolicy,
-  onRepealPolicy
+  onRepealPolicy,
+  playerActiveFocus,
+  focusPaths,
+  availableFocusLookup,
+  onStartFocus,
+  onCancelFocus
 }: PolicySelectionPanelProps) {
   const activePolicyIds = activePolicies.map(p => p.policyId);
   const synergies = calculatePolicySynergies(activePolicyIds);
@@ -53,7 +73,7 @@ export function PolicySelectionPanel({
         </DialogHeader>
 
         <Tabs defaultValue="economic" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-slate-900/50">
+          <TabsList className="grid w-full grid-cols-6 bg-slate-900/50">
             <TabsTrigger value="economic">
               <TrendingUp className="h-4 w-4 mr-2" />
               Economic
@@ -73,6 +93,10 @@ export function PolicySelectionPanel({
             <TabsTrigger value="active">
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Active ({activePolicies.length})
+            </TabsTrigger>
+            <TabsTrigger value="focus">
+              <Target className="h-4 w-4 mr-2" />
+              Focus
             </TabsTrigger>
           </TabsList>
 
@@ -137,6 +161,16 @@ export function PolicySelectionPanel({
                 availableGold={availableGold}
                 availableProduction={availableProduction}
                 availableIntel={availableIntel}
+              />
+            </TabsContent>
+
+            <TabsContent value="focus" className="space-y-4">
+              <FocusManagementTab
+                activeFocus={playerActiveFocus ?? null}
+                focusPaths={focusPaths ?? null}
+                availableFocusLookup={availableFocusLookup ?? null}
+                onStartFocus={onStartFocus}
+                onCancelFocus={onCancelFocus}
               />
             </TabsContent>
           </ScrollArea>
@@ -429,6 +463,212 @@ function ActivePoliciesList({
       })}
     </div>
   );
+}
+
+interface FocusManagementTabProps {
+  activeFocus: ActiveFocusInfo | null;
+  focusPaths: Record<string, NationalFocus[]> | null;
+  availableFocusLookup: Map<string, AvailableFocus> | null;
+  onStartFocus?: (focus: AvailableFocus) => void;
+  onCancelFocus?: () => void;
+}
+
+function FocusManagementTab({
+  activeFocus,
+  focusPaths,
+  availableFocusLookup,
+  onStartFocus,
+  onCancelFocus
+}: FocusManagementTabProps) {
+  if (!focusPaths || !availableFocusLookup || availableFocusLookup.size === 0) {
+    return (
+      <div className="rounded-lg border border-cyan-500/30 bg-slate-950/60 p-6 text-center text-sm text-cyan-300/80">
+        National focus information will appear here once a nation with an initialized focus tree is selected.
+      </div>
+    );
+  }
+
+  const pathEntries = Object.entries(focusPaths).filter(([, focuses]) => focuses.length > 0);
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-cyan-500/40 bg-slate-950/60 p-4">
+        {activeFocus ? (
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-cyan-200">{activeFocus.focus.name}</h3>
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">Active</Badge>
+                </div>
+                <p className="mt-1 text-sm text-cyan-300/80">{activeFocus.focus.description}</p>
+              </div>
+              {onCancelFocus ? (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={onCancelFocus}
+                  className="self-start"
+                >
+                  Cancel Focus
+                </Button>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-cyan-300/70">
+                <span>Progress</span>
+                <span>{Math.round(activeFocus.progress)}%</span>
+              </div>
+              <Progress value={activeFocus.progress} className="h-2 bg-slate-900" />
+              <p className="text-xs text-cyan-400/80">
+                {activeFocus.turnsRemaining} turn{activeFocus.turnsRemaining === 1 ? '' : 's'} remaining
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-cyan-300/80">
+            No active focus. Start one from the list below to guide your nation's long-term strategy.
+          </div>
+        )}
+      </Card>
+
+      {pathEntries.length === 0 ? (
+        <div className="rounded-lg border border-cyan-500/30 bg-slate-950/60 p-6 text-center text-sm text-cyan-300/80">
+          No focus branches are currently available for this nation.
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {pathEntries.map(([path, focuses]) => (
+            <div key={path} className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h4 className="text-base font-semibold capitalize text-cyan-200">{formatFocusPathLabel(path)}</h4>
+                <Badge variant="outline" className="text-xs text-cyan-300 border-cyan-500/40">
+                  {focuses.length} focuses
+                </Badge>
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-2">
+                {focuses.map(focus => {
+                  const focusDetails = availableFocusLookup.get(focus.id);
+                  if (!focusDetails) return null;
+
+                  const canStart = focusDetails.canStart && !focusDetails.isActive;
+                  const missingPrereqs = focusDetails.missingPrerequisites;
+                  const statusBadges: ReactNode[] = [];
+
+                  if (focusDetails.isActive) {
+                    statusBadges.push(
+                      <Badge
+                        key="active"
+                        className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                      >
+                        Active
+                      </Badge>
+                    );
+                  }
+
+                  if (focusDetails.isCompleted) {
+                    statusBadges.push(
+                      <Badge
+                        key="completed"
+                        className="bg-cyan-500/20 text-cyan-200 border-cyan-500/40"
+                      >
+                        Completed
+                      </Badge>
+                    );
+                  }
+
+                  if (focusDetails.isLocked && !focusDetails.isActive && !focusDetails.isCompleted) {
+                    statusBadges.push(
+                      <Badge
+                        key="locked"
+                        variant="outline"
+                        className="border-yellow-500/40 text-yellow-300"
+                      >
+                        Locked
+                      </Badge>
+                    );
+                  }
+
+                  const disabledReason = (() => {
+                    if (focusDetails.isCompleted) return 'Completed';
+                    if (focusDetails.isActive) return 'In Progress';
+                    if (focusDetails.isLocked) return 'Locked';
+                    if (missingPrereqs.length > 0) return `Requires: ${missingPrereqs.join(', ')}`;
+                    if (!focusDetails.canStart) return 'Unavailable';
+                    return null;
+                  })();
+
+                  return (
+                    <Card
+                      key={focus.id}
+                      className="flex flex-col gap-3 border-cyan-500/20 bg-slate-900/60 p-4"
+                    >
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h5 className="text-base font-semibold text-cyan-200">{focus.name}</h5>
+                          {statusBadges}
+                        </div>
+                        <p className="text-sm text-cyan-300/80">{focus.description}</p>
+                      </div>
+
+                      <div className="grid gap-2 text-xs text-cyan-300/70 sm:grid-cols-2">
+                        <div>
+                          <p className="font-semibold text-cyan-200/80">Completion Time</p>
+                          <p>{focus.completionTime} turns</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-cyan-200/80">Political Power Cost</p>
+                          <p>{focus.ppCost}</p>
+                        </div>
+                      </div>
+
+                      {missingPrereqs.length > 0 && (
+                        <div className="rounded border border-yellow-500/30 bg-yellow-500/5 p-3 text-xs text-yellow-200">
+                          <p className="font-semibold">Missing Prerequisites</p>
+                          <p>{missingPrereqs.join(', ')}</p>
+                        </div>
+                      )}
+
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant={canStart ? 'default' : 'ghost'}
+                          disabled={!canStart || !onStartFocus}
+                          onClick={() => focusDetails && onStartFocus?.(focusDetails)}
+                          className={canStart ? 'bg-cyan-600 hover:bg-cyan-700' : ''}
+                        >
+                          {canStart ? 'Start Focus' : disabledReason || 'Unavailable'}
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatFocusPathLabel(path: string): string {
+  switch (path) {
+    case 'diplomatic':
+      return 'Diplomatic Path';
+    case 'economic':
+      return 'Economic Path';
+    case 'intelligence':
+      return 'Intelligence Path';
+    case 'military':
+      return 'Military Path';
+    case 'special':
+      return 'Special Projects';
+    default:
+      return path.charAt(0).toUpperCase() + path.slice(1);
+  }
 }
 
 function canAffordPolicy(

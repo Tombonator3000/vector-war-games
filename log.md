@@ -29,6 +29,11 @@
 - Added the `Ballistic Submarine Program` delivery project to `src/lib/gameConstants.ts` so players can unlock SLBMs and nuclear submarines after researching MIRVs.
 - Mirrored the submarine research node in `src/lib/researchData.ts` for the React Flow tech tree so UI previews and dependency edges show the new requirement.
 
+### 2025-11-13T11:53:17Z - Governance policy panel focus integration
+- Reviewed `PolicySelectionPanel` to plan a new focus management tab and identify required national focus data.
+- Added a focus tab that lists branch progress, supports starting or cancelling focuses via the existing handlers, and surfaces active focus progress within the policy dialog.
+- Passed focus state from `Index` into the governance panel and attempted `npm run lint` (fails due to longstanding repository lint violations).
+
 ## 2025-11-07 - Cesium Deprecation Phase 2: Port Critical Features to Three.js
 
 **Branch:** `claude/port-cesium-phase-2-011CUt9LBDmdTG66hwrkjEmg`
