@@ -8868,8 +8868,14 @@ export default function NoradVector() {
 
       const aiVictoryCheck = checkVictory(aiNation, nations, gameState as any);
 
+      // Guard against undefined progress
+      if (!aiVictoryCheck || !aiVictoryCheck.progress) return;
+
       // Find the AI's highest progress
-      const maxProgress = Math.max(...Object.values(aiVictoryCheck.progress));
+      const progressValues = Object.values(aiVictoryCheck.progress).filter(v => typeof v === 'number');
+      if (progressValues.length === 0) return;
+      
+      const maxProgress = Math.max(...progressValues);
       const warningKey = `${aiNation.id}-70`;
       const alreadyWarned = aiVictoryWarnings[warningKey];
 
