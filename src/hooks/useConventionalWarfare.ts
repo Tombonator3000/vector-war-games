@@ -6,6 +6,7 @@ import type { MilitaryTemplate } from '@/types/militaryTemplates';
 import type { UseMilitaryTemplatesApi } from './useMilitaryTemplates';
 import type { UseSupplySystemApi } from './useSupplySystem';
 import type { Territory as SupplyTerritory } from '@/types/supplySystem';
+import type { Treaty } from '@/types/game';
 import {
   initializeResourceStockpile,
   spendStrategicResource,
@@ -129,6 +130,7 @@ export interface ConventionalNationRef {
   combinedArmsBonus?: number;
   relationships?: Record<string, number>;
   alliances?: string[];
+  treaties?: Record<string, Treaty>;
   resourceStockpile?: {  // New: Resource stockpile for checking oil/rare earth availability
     oil: number;
     uranium: number;
@@ -1198,6 +1200,48 @@ export function useConventionalWarfare({
 
       const attackerNation = getNation(attackerId);
       const defenderNation = getNation(defenderId);
+
+      const attackerTreaty = attackerNation?.treaties?.[defenderId];
+      const defenderTreaty = defenderNation?.treaties?.[attackerId];
+      const attackerAlliances = attackerNation?.alliances ?? [];
+      const defenderAlliances = defenderNation?.alliances ?? [];
+
+      const isTruceActive = (treaty?: Treaty | null): boolean => {
+        if (!treaty) {
+          return false;
+        }
+        const { truceTurns } = treaty as { truceTurns?: unknown };
+        if (typeof truceTurns === 'number' && truceTurns > 0) {
+          return true;
+        }
+        const { truceExpiryTurn } = treaty as { truceExpiryTurn?: unknown };
+        if (typeof truceExpiryTurn === 'number' && truceExpiryTurn > currentTurn) {
+          return true;
+        }
+        return false;
+      };
+
+      const truceActive = isTruceActive(attackerTreaty) || isTruceActive(defenderTreaty);
+      if (truceActive) {
+        return {
+          success: false,
+          reason: 'An active truce prevents launching a conventional assault on this nation.',
+        } as const;
+      }
+
+      const alliedPartners = Boolean(
+        attackerTreaty?.alliance ||
+          defenderTreaty?.alliance ||
+          attackerAlliances.includes(defenderId) ||
+          defenderAlliances.includes(attackerId),
+      );
+
+      if (alliedPartners) {
+        return {
+          success: false,
+          reason: 'Allied nations cannot be targeted with conventional assaults.',
+        } as const;
+      }
 
       // DEFCON Impact: Major military action lowers DEFCON (increases threat)
       // Territory strategic value determines how much it affects global tension

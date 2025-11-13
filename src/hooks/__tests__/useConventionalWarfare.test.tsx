@@ -27,6 +27,8 @@ interface MockNation {
   intel?: number;
   uranium?: number;
   researched?: Record<string, boolean>;
+  alliances?: string[];
+  treaties?: Record<string, { truceTurns?: number; alliance?: boolean; truceExpiryTurn?: number }>;
 }
 
 describe('useConventionalWarfare', () => {
@@ -47,6 +49,8 @@ describe('useConventionalWarfare', () => {
       intel: 20,
       uranium: 10,
       researched: {},
+      alliances: [],
+      treaties: {},
     };
     rival = {
       id: 'ai_0',
@@ -58,6 +62,8 @@ describe('useConventionalWarfare', () => {
       intel: 15,
       uranium: 8,
       researched: {},
+      alliances: [],
+      treaties: {},
     };
     latestState = createDefaultConventionalState([
       { id: player.id, isPlayer: true },
@@ -118,6 +124,102 @@ describe('useConventionalWarfare', () => {
     expect(result.current.state.territories[rivalTerritory].controllingNationId).toBe(player.id);
     expect(consumeSpy).toHaveBeenCalled();
     expect(updateSpy).toHaveBeenCalled();
+  });
+
+  it('rejects border assaults when a truce is active between nations', () => {
+    player.treaties = { [rival.id]: { truceTurns: 3 } };
+    rival.treaties = { [player.id]: { truceTurns: 3 } };
+
+    const defconSpy = vi.fn();
+    const relationshipSpy = vi.fn();
+
+    const { result } = renderHook(() =>
+      useConventionalWarfare({
+        initialState: latestState,
+        currentTurn: 7,
+        getNation,
+        onStateChange: state => {
+          latestState = state;
+        },
+        onConsumeAction: consumeSpy,
+        onUpdateDisplay: updateSpy,
+        onDefconChange: defconSpy,
+        onRelationshipChange: relationshipSpy,
+      }),
+      { wrapper },
+    );
+
+    const playerTerritory = Object.keys(result.current.state.territories)[0];
+    const rivalTerritory = Object.keys(result.current.state.territories)[1];
+
+    act(() => {
+      result.current.state.territories[playerTerritory].controllingNationId = player.id;
+      result.current.state.territories[rivalTerritory].controllingNationId = rival.id;
+      result.current.state.territories[playerTerritory].armies = 6;
+    });
+
+    consumeSpy.mockClear();
+    updateSpy.mockClear();
+
+    const resolution = result.current.resolveBorderConflict(playerTerritory, rivalTerritory, 4);
+
+    expect(resolution).toEqual({
+      success: false,
+      reason: 'An active truce prevents launching a conventional assault on this nation.',
+    });
+    expect(defconSpy).not.toHaveBeenCalled();
+    expect(relationshipSpy).not.toHaveBeenCalled();
+    expect(consumeSpy).not.toHaveBeenCalled();
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it('blocks allied nations from launching conventional assaults against each other', () => {
+    player.treaties = { [rival.id]: { alliance: true } };
+    rival.treaties = { [player.id]: { alliance: true } };
+    player.alliances = [rival.id];
+    rival.alliances = [player.id];
+
+    const defconSpy = vi.fn();
+    const relationshipSpy = vi.fn();
+
+    const { result } = renderHook(() =>
+      useConventionalWarfare({
+        initialState: latestState,
+        currentTurn: 9,
+        getNation,
+        onStateChange: state => {
+          latestState = state;
+        },
+        onConsumeAction: consumeSpy,
+        onUpdateDisplay: updateSpy,
+        onDefconChange: defconSpy,
+        onRelationshipChange: relationshipSpy,
+      }),
+      { wrapper },
+    );
+
+    const playerTerritory = Object.keys(result.current.state.territories)[0];
+    const rivalTerritory = Object.keys(result.current.state.territories)[1];
+
+    act(() => {
+      result.current.state.territories[playerTerritory].controllingNationId = player.id;
+      result.current.state.territories[rivalTerritory].controllingNationId = rival.id;
+      result.current.state.territories[playerTerritory].armies = 5;
+    });
+
+    consumeSpy.mockClear();
+    updateSpy.mockClear();
+
+    const resolution = result.current.resolveBorderConflict(playerTerritory, rivalTerritory, 3);
+
+    expect(resolution).toEqual({
+      success: false,
+      reason: 'Allied nations cannot be targeted with conventional assaults.',
+    });
+    expect(defconSpy).not.toHaveBeenCalled();
+    expect(relationshipSpy).not.toHaveBeenCalled();
+    expect(consumeSpy).not.toHaveBeenCalled();
+    expect(updateSpy).not.toHaveBeenCalled();
   });
 
   it('modifies instability and production during proxy engagements', () => {
