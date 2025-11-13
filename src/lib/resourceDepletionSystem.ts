@@ -51,7 +51,8 @@ export function processResourceDepletion(
   territoryResources: Record<string, TerritoryResources>,
   territories: Record<string, any>,
   nations: Nation[],
-  config: DepletionConfig = DEFAULT_DEPLETION_CONFIG
+  config: DepletionConfig = DEFAULT_DEPLETION_CONFIG,
+  nationMap?: Map<string, Nation>
 ): {
   territoryResources: Record<string, TerritoryResources>;
   warnings: DepletionWarning[];
@@ -62,12 +63,15 @@ export function processResourceDepletion(
 
   const warnings: DepletionWarning[] = [];
   const updatedResources = { ...territoryResources };
+  const lookup = nationMap ?? new Map<string, Nation>(nations.map(nation => [nation.id, nation]));
 
   Object.entries(updatedResources).forEach(([territoryId, territoryResource]) => {
     const territory = territories[territoryId];
     if (!territory) return;
 
-    const controllingNation = nations.find(n => n.id === territory.controllingNationId);
+    const controllingNation = territory.controllingNationId
+      ? lookup.get(territory.controllingNationId)
+      : undefined;
     if (!controllingNation) return; // Uncontrolled territories don't deplete
 
     // Update each deposit
