@@ -21,6 +21,8 @@ import {
   calculateAIVoteProbability,
   initializeMultiPartyDiplomacyState,
 } from '@/types/multiPartyDiplomacy';
+import { applyCubaPeaceConferenceOutcome, isCubaConferenceMetadata } from './cubaCrisisPeaceConference';
+import { updateRelationship } from './unifiedDiplomacyMigration';
 
 /**
  * Initialize multi-party diplomacy state in game state
@@ -270,6 +272,14 @@ function applyAgreementEffects(agreement: MultiPartyAgreement, gameState: GameSt
       }
       break;
 
+    case 'peace-treaty':
+      if (isCubaConferenceMetadata(agreement.metadata)) {
+        applyCubaPeaceConferenceOutcome(agreement, gameState);
+      } else {
+        applyGenericPeaceTreaty(agreement, gameState);
+      }
+      break;
+
     case 'trade-agreement':
       // Grant production/resource bonuses
       for (const participantId of agreement.participantIds) {
@@ -294,6 +304,56 @@ function applyAgreementEffects(agreement: MultiPartyAgreement, gameState: GameSt
         }
       }
       break;
+  }
+}
+
+function applyGenericPeaceTreaty(agreement: MultiPartyAgreement, gameState: GameState): void {
+  const participants = agreement.participantIds
+    .map(id => gameState.nations.find(nation => nation.id === id))
+    .filter((nation): nation is Nation => Boolean(nation));
+
+  for (let i = 0; i < participants.length; i++) {
+    for (let j = i + 1; j < participants.length; j++) {
+      const nationA = participants[i];
+      const nationB = participants[j];
+
+      const { nationA: updatedA, nationB: updatedB } = updateRelationship(
+        nationA,
+        nationB,
+        10,
+        `Peace treaty ratified: ${agreement.title}`,
+        gameState.turn
+      );
+
+      const withNonAggressionA = ensureNonAggressionTreaty(updatedA, nationB.id);
+      const withNonAggressionB = ensureNonAggressionTreaty(updatedB, nationA.id);
+
+      replaceNation(gameState, withNonAggressionA);
+      replaceNation(gameState, withNonAggressionB);
+    }
+  }
+
+  gameState.defcon = Math.min(5, gameState.defcon + 1);
+}
+
+function ensureNonAggressionTreaty(nation: Nation, partnerId: string): Nation {
+  const treaties = { ...(nation.treaties || {}) };
+  const partnerTreaty = { ...(treaties[partnerId] || {}) } as Record<string, unknown>;
+  partnerTreaty.nonAggression = true;
+
+  return {
+    ...nation,
+    treaties: {
+      ...treaties,
+      [partnerId]: partnerTreaty,
+    },
+  };
+}
+
+function replaceNation(gameState: GameState, nation: Nation): void {
+  const index = gameState.nations.findIndex(n => n.id === nation.id);
+  if (index >= 0) {
+    gameState.nations[index] = nation;
   }
 }
 
