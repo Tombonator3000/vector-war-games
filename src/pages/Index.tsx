@@ -6544,6 +6544,9 @@ function updateDisplay() {
   const intelEl = document.getElementById('intelDisplay');
   if (intelEl) intelEl.textContent = (player.intel || 0).toString();
 
+  const goldEl = document.getElementById('goldDisplay');
+  if (goldEl) goldEl.textContent = Math.floor(player.gold ?? 0).toString();
+
   const citiesEl = document.getElementById('citiesDisplay');
   if (citiesEl) citiesEl.textContent = (player.cities || 1).toString();
   
@@ -14351,6 +14354,15 @@ export default function NoradVector() {
                             id="intelDisplay"
                           >
                             {Math.floor(playerNation.intel ?? 0)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-cyan-300 tracking-wide">GOLD</span>
+                          <span
+                            className="font-mono font-semibold text-neon-green"
+                            id="goldDisplay"
+                          >
+                            {Math.floor(playerNation.gold ?? 0)}
                           </span>
                         </div>
                       </div>
