@@ -14576,7 +14576,7 @@ export default function NoradVector() {
 
               <div className="flex items-center gap-1.5">
                 <span className="text-cyan-300 text-[11px] tracking-wide">TURN</span>
-                <span className="text-neon-green font-semibold text-sm" id="turn">1</span>
+                <span className="text-neon-green font-semibold text-sm" id="turn">{S.turn}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-cyan-300 text-[11px] tracking-wide">ACTIONS</span>
