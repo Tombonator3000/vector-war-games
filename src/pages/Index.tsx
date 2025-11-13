@@ -14497,17 +14497,6 @@ export default function NoradVector() {
               <Button
                 size="icon"
                 variant="ghost"
-                className={`fixed bottom-36 right-4 z-40 h-10 w-10 rounded-full border border-cyan-500/40 bg-black/70 text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20 ${
-                  isNationalFocusOpen ? 'ring-2 ring-cyan-400/70' : ''
-                }`}
-                onClick={() => setIsNationalFocusOpen(true)}
-                aria-label="Open national focus"
-              >
-                <Flag className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
                 className={`fixed bottom-24 right-4 z-40 h-10 w-10 rounded-full border border-cyan-500/40 bg-black/70 text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20 ${
                   isStrikePlannerOpen ? 'ring-2 ring-cyan-400/70' : ''
                 }`}
@@ -14579,17 +14568,6 @@ export default function NoradVector() {
                     >
                       <Target className="h-5 w-5" />
                       <span className="text-[8px] font-mono">INTEL</span>
-                    </Button>
-
-                    <Button
-                      onClick={() => setIsNationalFocusOpen(true)}
-                      variant="ghost"
-                      size="icon"
-                      className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
-                      title="FOCUS - Direct national priorities"
-                    >
-                      <Flag className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">FOCUS</span>
                     </Button>
 
                     {bioForgeUnlocked ? (
