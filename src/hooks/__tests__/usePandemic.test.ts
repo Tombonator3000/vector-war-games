@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { SeededRandom } from '@/lib/seededRandom';
 import { usePandemic } from '../usePandemic';
 
 describe('usePandemic bio-warfare traits', () => {
@@ -9,7 +10,8 @@ describe('usePandemic bio-warfare traits', () => {
 
   it('upgrades, downgrades, and resets trait loadouts with resource tracking', () => {
     const addNews = vi.fn();
-    const { result } = renderHook(() => usePandemic(addNews));
+    const rng = new SeededRandom(1);
+    const { result } = renderHook(() => usePandemic(addNews, rng));
 
     expect(result.current.pandemicState.labResources).toBe(8);
 
@@ -57,16 +59,16 @@ describe('usePandemic bio-warfare traits', () => {
 
   it('applies deployed traits to pandemic trigger dynamics', () => {
     const addNews = vi.fn();
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.2);
-
-    const baseHook = renderHook(() => usePandemic(addNews));
+    const baseRng = new SeededRandom(1234);
+    const baseHook = renderHook(() => usePandemic(addNews, baseRng));
     act(() => {
       baseHook.result.current.triggerPandemic({ severity: 'moderate', origin: 'bio-terror' });
     });
     const baselineInfection = baseHook.result.current.pandemicState.globalInfection;
     const baselineLethality = baseHook.result.current.pandemicState.lethality;
 
-    const traitHook = renderHook(() => usePandemic(addNews));
+    const traitRng = new SeededRandom(1234);
+    const traitHook = renderHook(() => usePandemic(addNews, traitRng));
     act(() => {
       traitHook.result.current.upgradeTrait('transmission');
       traitHook.result.current.upgradeTrait('lethality');
@@ -80,14 +82,12 @@ describe('usePandemic bio-warfare traits', () => {
 
     expect(traitHook.result.current.pandemicState.globalInfection).toBeGreaterThan(baselineInfection);
     expect(traitHook.result.current.pandemicState.lethality).toBeGreaterThanOrEqual(baselineLethality);
-
-    randomSpy.mockRestore();
   });
 
   it('tracks casualties over turns and resolves when countermeasures succeed', () => {
     const addNews = vi.fn();
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.15);
-    const { result } = renderHook(() => usePandemic(addNews));
+    const rng = new SeededRandom(2024);
+    const { result } = renderHook(() => usePandemic(addNews, rng));
 
     act(() => {
       result.current.upgradeTrait('lethality');
@@ -131,7 +131,32 @@ describe('usePandemic bio-warfare traits', () => {
 
     expect(result.current.pandemicState.active).toBe(false);
     expect(result.current.pandemicState.casualtyTally).toBeGreaterThan(0);
+  });
 
-    randomSpy.mockRestore();
+  it('produces identical progression for identical seeds', () => {
+    const addNewsA = vi.fn();
+    const addNewsB = vi.fn();
+    const seed = 314159;
+    const rngA = new SeededRandom(seed);
+    const rngB = new SeededRandom(seed);
+
+    const firstHook = renderHook(() => usePandemic(addNewsA, rngA));
+    const secondHook = renderHook(() => usePandemic(addNewsB, rngB));
+
+    act(() => {
+      firstHook.result.current.triggerPandemic({ severity: 'moderate', origin: 'bio-terror' });
+      secondHook.result.current.triggerPandemic({ severity: 'moderate', origin: 'bio-terror' });
+    });
+
+    for (let turn = 1; turn <= 4; turn += 1) {
+      act(() => {
+        firstHook.result.current.advancePandemicTurn({ turn, defcon: 3, playerPopulation: 600 });
+        secondHook.result.current.advancePandemicTurn({ turn, defcon: 3, playerPopulation: 600 });
+      });
+
+      expect(firstHook.result.current.pandemicState).toEqual(secondHook.result.current.pandemicState);
+    }
+
+    expect(addNewsA.mock.calls).toEqual(addNewsB.mock.calls);
   });
 });

@@ -21,7 +21,7 @@ type AddNewsItem = (category: NewsItem['category'], text: string, priority: News
  */
 export function useBioWarfare(addNewsItem: AddNewsItem, scenario?: ScenarioConfig) {
   const { rng } = useRNG();
-  const pandemic = usePandemic(addNewsItem);
+  const pandemic = usePandemic(addNewsItem, rng);
   const evolution = useEvolutionTree(addNewsItem, scenario);
   const bioLab = useBioLab(addNewsItem, scenario);
 

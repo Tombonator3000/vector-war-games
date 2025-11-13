@@ -332,7 +332,7 @@ vi.mock('@/hooks/usePandemic', () => {
     casualtyTally: 0,
   };
 
-  const usePandemic = () => ({
+  const usePandemic = (_addNewsItem: unknown, _rng: unknown) => ({
     pandemicState,
     triggerPandemic: vi.fn(),
     applyCountermeasure: vi.fn(),

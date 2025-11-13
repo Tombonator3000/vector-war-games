@@ -3335,3 +3335,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated `advanceBioWarfareTurn` in `src/hooks/useBioWarfare.ts` to consume the returned pandemic state for DNA milestones, outbreak counts, and cure gating logic.
 - Added targeted regression tests in `src/hooks/__tests__/useBioWarfare.test.tsx` verifying DNA milestone gains and parasite cure gating using the refreshed state.
 - Executed `npx vitest run src/hooks/__tests__/useBioWarfare.test.tsx` to confirm the new coverage passes.
+
+### 2025-11-13T22:40:00Z - Routed pandemic randomness through seeded generator
+- Updated `usePandemic` to require a `SeededRandom` instance, replacing all `Math.random` usages with deterministic draws for strain names, outbreak rolls, and mutation checks.
+- Passed the shared RNG from `useRNG` into `usePandemic` via `useBioWarfare` and the main NORAD vector page, and refreshed mocks/tests to accommodate the signature change.
+- Expanded pandemic hook tests to assert identical seeds yield identical outbreak progress, and ran `npx vitest run src/hooks/__tests__/usePandemic.test.ts src/hooks/__tests__/useBioWarfare.test.tsx` to verify deterministic behavior.
