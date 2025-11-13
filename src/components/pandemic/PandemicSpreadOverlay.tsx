@@ -42,6 +42,8 @@ interface PandemicPoint {
   casualties: number;
   color: string;
   isDetected: boolean;
+  baseRadius: number;
+  glowRadius: number;
   dots: InfectionDot[];
 }
 
@@ -85,11 +87,11 @@ export function PandemicSpreadOverlay({
         const spreadRadius = 30 + normalized * 50; // Area size based on infection
 
         const dots: InfectionDot[] = [];
-        
+
         // Use deterministic random seed based on nation ID for consistency
         const seed = nation.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
         let random = seed;
-        
+
         // Simple seeded random number generator
         const seededRandom = () => {
           random = (random * 9301 + 49297) % 233280;
@@ -102,18 +104,18 @@ export function PandemicSpreadOverlay({
           const distance = Math.sqrt(seededRandom()) * spreadRadius;
           const dotX = centerX + Math.cos(angle) * distance;
           const dotY = centerY + Math.sin(angle) * distance;
-          
+
           // Dot size varies slightly
           const dotRadius = 2 + seededRandom() * 2;
-          
+
           // Color variation - from orange to deep red based on severity
           const hue = 0; // Red hue
           const saturation = 80 + normalized * 20;
           const lightness = 60 - normalized * 30; // Darker as more severe
           const dotColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-          
+
           // Stagger animation delay
-          const delay = (i / numDots) * 2;
+          const delay = numDots ? (i / numDots) * 2 : 0;
 
           dots.push({
             id: `${nation.id}-dot-${i}`,
@@ -125,6 +127,9 @@ export function PandemicSpreadOverlay({
           });
         }
 
+        const baseRadius = 10 + normalized * 18;
+        const glowRadius = baseRadius * 1.6;
+
         return {
           id: nation.id,
           name: nation.name,
@@ -135,6 +140,8 @@ export function PandemicSpreadOverlay({
           casualties,
           color,
           isDetected,
+          baseRadius,
+          glowRadius,
           dots,
         };
       })
@@ -156,53 +163,42 @@ export function PandemicSpreadOverlay({
       style={{ zIndex: 6 }}
     >
       {overlayPoints.map(point => {
-        const animationDuration = `${Math.max(1.2, 3.2 - point.normalized * 1.5)}s`;
-        const progressOffset = point.circumference * (1 - Math.min(point.normalized, 1));
         const casualtyLabel = point.casualties > 0 ? casualtyFormatter.format(point.casualties) : null;
 
         return (
           <g key={point.id}>
             <circle
-              cx={point.x}
-              cy={point.y}
-              r={point.outerRadius}
+              cx={point.centerX}
+              cy={point.centerY}
+              r={point.glowRadius}
               fill={point.color}
-              opacity={0.18 + point.heatNormalized * 0.3}
+              opacity={0.18 + point.normalized * 0.25}
               className="animate-ping"
-              style={{ animationDuration }}
+              style={{ animationDuration: `${Math.max(1.2, 3.2 - point.normalized * 1.5)}s` }}
             />
             <circle
-              cx={point.x}
-              cy={point.y}
-              r={point.middleRadius}
+              cx={point.centerX}
+              cy={point.centerY}
+              r={point.baseRadius}
               fill={point.color}
-              opacity={0.25 + point.heatNormalized * 0.35}
+              opacity={0.65}
             />
-            <circle
-              cx={point.x}
-              cy={point.y}
-              r={point.innerRadius}
-              fill={point.color}
-              opacity={0.6}
-            />
-            <circle
-              cx={point.x}
-              cy={point.y}
-              r={point.progressRadius}
-              fill="none"
-              stroke={point.color}
-              strokeWidth={4}
-              strokeOpacity={0.9}
-              strokeDasharray={point.circumference}
-              strokeDashoffset={progressOffset}
-              strokeLinecap="round"
-              transform={`rotate(-90, ${point.x}, ${point.y})`}
-            />
+            {point.dots.map(dot => (
+              <circle
+                key={dot.id}
+                cx={dot.x}
+                cy={dot.y}
+                r={dot.radius}
+                fill={dot.color}
+                className="animate-pulse"
+                style={{ animationDelay: `${dot.delay}s` }}
+              />
+            ))}
             {point.isDetected && (
               <circle
-                cx={point.x}
-                cy={point.y}
-                r={point.innerRadius + 12}
+                cx={point.centerX}
+                cy={point.centerY}
+                r={point.baseRadius + 12}
                 fill="none"
                 stroke="rgba(248, 113, 113, 0.85)"
                 strokeWidth={2}
@@ -210,8 +206,8 @@ export function PandemicSpreadOverlay({
               />
             )}
             <text
-              x={point.x}
-              y={point.y - (point.innerRadius + 20)}
+              x={point.centerX}
+              y={point.centerY - (point.baseRadius + 20)}
               textAnchor="middle"
               className="text-[11px] font-semibold fill-rose-100"
               style={{ fontSize: '11px' }}
@@ -219,8 +215,8 @@ export function PandemicSpreadOverlay({
               {point.name}
             </text>
             <text
-              x={point.x}
-              y={point.y + point.innerRadius + 18}
+              x={point.centerX}
+              y={point.centerY + point.baseRadius + 18}
               textAnchor="middle"
               className="text-[10px] font-mono fill-rose-200"
               style={{ fontSize: '10px' }}
@@ -229,8 +225,8 @@ export function PandemicSpreadOverlay({
             </text>
             {casualtyLabel ? (
               <text
-                x={point.x}
-                y={point.y + point.innerRadius + 32}
+                x={point.centerX}
+                y={point.centerY + point.baseRadius + 32}
                 textAnchor="middle"
                 className="text-[10px] font-mono fill-rose-300"
                 style={{ fontSize: '10px' }}
@@ -240,8 +236,8 @@ export function PandemicSpreadOverlay({
             ) : null}
             {point.isDetected ? (
               <text
-                x={point.x}
-                y={point.y}
+                x={point.centerX}
+                y={point.centerY}
                 textAnchor="middle"
                 className="text-[12px] font-bold fill-yellow-200"
                 style={{ fontSize: '12px' }}
