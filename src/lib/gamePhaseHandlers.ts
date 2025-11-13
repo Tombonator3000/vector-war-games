@@ -17,6 +17,7 @@ import {
   runElection,
   applyElectionConsequences,
   modifyOpinionFromAction,
+  buildPublicOpinionAggregates,
   type ElectionResult,
 } from '@/lib/electionSystem';
 import { applyTrustDecay } from '@/lib/trustAndFavorsUtils';
@@ -627,9 +628,12 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
   // Handle Elections
   if (S.scenario?.electionConfig.enabled) {
+    const electionConfig = S.scenario.electionConfig;
+    const publicOpinionAggregates = buildPublicOpinionAggregates(nations, electionConfig);
+
     nations.forEach(n => {
       // Update public opinion based on current state
-      n.publicOpinion = calculatePublicOpinion(n, nations, S.scenario!.electionConfig);
+      n.publicOpinion = calculatePublicOpinion(n, electionConfig, publicOpinionAggregates[n.id]);
 
       // Decrease election timer
       if (n.electionTimer > 0) {
@@ -637,8 +641,8 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       }
 
       // Check if it's election time
-      if (n.electionTimer === 0 && S.scenario?.electionConfig.interval > 0) {
-        const result = runElection(n, nations, S.scenario.electionConfig);
+      if (n.electionTimer === 0 && electionConfig.interval > 0) {
+        const result = runElection(n, electionConfig, publicOpinionAggregates);
 
         const electionLog = applyElectionConsequences(
           n,

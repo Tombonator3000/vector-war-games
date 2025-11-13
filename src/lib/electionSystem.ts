@@ -24,15 +24,62 @@ export interface PublicOpinionFactors {
   foreignInfluence: number;
 }
 
+export interface ForeignInfluenceAggregate {
+  hostileNationIds: string[];
+  totalHostileIntel: number;
+}
+
+export type PublicOpinionAggregates = Record<string, ForeignInfluenceAggregate>;
+
+export function buildPublicOpinionAggregates(
+  allNations: Nation[],
+  config: ElectionConfig
+): PublicOpinionAggregates {
+  const aggregates: PublicOpinionAggregates = {};
+
+  if (!config.foreignInfluenceEnabled) {
+    allNations.forEach(targetNation => {
+      aggregates[targetNation.id] = { hostileNationIds: [], totalHostileIntel: 0 };
+    });
+    return aggregates;
+  }
+
+  allNations.forEach(targetNation => {
+    if (targetNation.eliminated) {
+      aggregates[targetNation.id] = { hostileNationIds: [], totalHostileIntel: 0 };
+      return;
+    }
+
+    const hostileNationIds: string[] = [];
+    let totalHostileIntel = 0;
+
+    allNations.forEach(candidate => {
+      if (
+        candidate.id !== targetNation.id &&
+        !candidate.isPlayer &&
+        !candidate.eliminated &&
+        (candidate.threats?.[targetNation.id] || 0) > 20
+      ) {
+        hostileNationIds.push(candidate.id);
+        totalHostileIntel += candidate.intel || 0;
+      }
+    });
+
+    aggregates[targetNation.id] = { hostileNationIds, totalHostileIntel };
+  });
+
+  return aggregates;
+}
+
 /**
  * Calculate public opinion based on various factors
  */
 export function calculatePublicOpinion(
   nation: Nation,
-  allNations: Nation[],
-  config: ElectionConfig
+  config: ElectionConfig,
+  aggregate?: ForeignInfluenceAggregate
 ): number {
-  const factors = getPublicOpinionFactors(nation, allNations, config);
+  const factors = getPublicOpinionFactors(nation, config, aggregate);
 
   const weights = {
     economicPerformance: 0.3,
@@ -91,8 +138,8 @@ export function calculatePublicOpinion(
  */
 export function getPublicOpinionFactors(
   nation: Nation,
-  allNations: Nation[],
-  config: ElectionConfig
+  config: ElectionConfig,
+  aggregate?: ForeignInfluenceAggregate
 ): PublicOpinionFactors {
   const factors: PublicOpinionFactors = {
     economicPerformance: 0,
@@ -133,14 +180,7 @@ export function getPublicOpinionFactors(
 
   // Foreign Influence (if enabled in config)
   if (config.foreignInfluenceEnabled) {
-    const enemyNations = allNations.filter(n =>
-      !n.isPlayer &&
-      !n.eliminated &&
-      (n.threats?.[nation.id] || 0) > 20
-    );
-
-    // Enemy nations with high intel can influence elections
-    const totalEnemyIntel = enemyNations.reduce((sum, n) => sum + (n.intel || 0), 0);
+    const totalEnemyIntel = aggregate?.totalHostileIntel ?? 0;
     const influencePenalty = Math.min(15, totalEnemyIntel * 0.05);
     factors.foreignInfluence = -influencePenalty;
   }
@@ -153,11 +193,12 @@ export function getPublicOpinionFactors(
  */
 export function runElection(
   nation: Nation,
-  allNations: Nation[],
-  config: ElectionConfig
+  config: ElectionConfig,
+  aggregates: PublicOpinionAggregates
 ): ElectionResult {
   // Calculate base vote share from public opinion
-  const publicOpinion = calculatePublicOpinion(nation, allNations, config);
+  const aggregate = aggregates[nation.id];
+  const publicOpinion = calculatePublicOpinion(nation, config, aggregate);
 
   // Convert opinion to vote share (50% base + opinion modifier)
   let playerVoteShare = 50 + (publicOpinion * 0.4);
@@ -186,7 +227,7 @@ export function runElection(
   const margin = Math.abs(playerVoteShare - oppositionVoteShare);
 
   // Identify swing factors
-  const factors = getPublicOpinionFactors(nation, allNations, config);
+  const factors = getPublicOpinionFactors(nation, config, aggregate);
   const swingFactors: string[] = [];
 
   if (factors.economicPerformance < 20) swingFactors.push('Poor economic performance');

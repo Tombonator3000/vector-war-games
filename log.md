@@ -3247,3 +3247,11 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Retrieved the active player once at the start of `productionPhase` in `src/lib/gamePhaseHandlers.ts` and replaced inline `PlayerManager.get()` comparisons with guarded checks against the cached reference.
 ### 2025-11-13T13:39:34Z - Re-ran territorial resources regression test
 - Executed `npx vitest run src/lib/__tests__/territorialResourcesSystem.test.ts` to ensure the production phase refactor maintained resource logging and depletion behavior.
+### 2025-11-13T13:48:08Z - Precomputed election influence aggregates
+- Added a reusable hostile influence aggregation in `src/lib/electionSystem.ts` and updated `productionPhase` to reuse the shared data when updating public opinion and running elections.
+- Refreshed election helpers to consume the precomputed aggregates instead of re-filtering the full nation list per call.
+### 2025-11-13T13:48:23Z - Added election regression test coverage
+- Extended `src/lib/__tests__/electionSystem.test.ts` with a legacy parity scenario covering hostile foreign influence and updated existing opinion tests for the new helper signatures.
+- Ran `npx vitest run src/lib/__tests__/electionSystem.test.ts` to confirm the refactor preserved election outcomes.
+### 2025-11-13T13:48:52Z - Re-ran election regression tests
+- Re-executed `npx vitest run src/lib/__tests__/electionSystem.test.ts` after refining the aggregate builder to ensure the suite remained green.
