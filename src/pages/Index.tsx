@@ -384,7 +384,6 @@ let dragTargetTerritoryIdRef: { current: string | null } = { current: null };
 let draggingArmyRef: { current: { sourceId: string; armies: number } | null } = { current: null };
 
 type NationalFocusSystemApi = ReturnType<typeof useNationalFocus>;
-let nationalFocusSystemRef: NationalFocusSystemApi | null = null;
 
 const PROPOSAL_MAX_AGE = 10;
 
@@ -5924,7 +5923,8 @@ function endTurn() {
         }
       }
 
-      const focusTurnCompletions = nationalFocusSystemRef?.processTurnFocusProgress?.() ?? [];
+      const focusApi = focusApiRef.current;
+      const focusTurnCompletions = focusApi?.processTurnFocusProgress?.() ?? [];
 
       if (focusTurnCompletions.length > 0) {
         focusTurnCompletions.forEach((completion) => {
@@ -5940,8 +5940,8 @@ function endTurn() {
       }
 
       // Apply national focus effects for player nation
-      if (player && nationalFocusSystemRef) {
-        const completedFocuses = nationalFocusSystemRef.getCompletedFocuses(player.id);
+      if (player && focusApi) {
+        const completedFocuses = focusApi.getCompletedFocuses(player.id);
         let focusGoldPerTurn = 0;
         let focusIntelPerTurn = 0;
 
@@ -6708,6 +6708,7 @@ export default function NoradVector() {
   const [pressureSyncKey, setPressureSyncKey] = useState(0);
   const pressureInitializedNationsRef = useRef<Set<string>>(new Set());
   const pressureDeltaRef = useRef<{ goldPenalty: number; aidGold: number }>({ goldPenalty: 0, aidGold: 0 });
+  const focusApiRef = useRef<NationalFocusSystemApi | null>(null);
 
   // Modal management - Extracted to useModalManager hook (Phase 7 refactoring)
   const { showModal, modalContent, openModal, closeModal } = useModalManager();
@@ -8520,14 +8521,15 @@ export default function NoradVector() {
     nations: nations.map(n => ({ id: n.id, name: n.name })),
   });
 
+  focusApiRef.current = nationalFocusSystem;
+
   const focusStates = nationalFocusSystem.focusStates;
   const focusCompletionLog = nationalFocusSystem.completionLog;
 
   useEffect(() => {
-    nationalFocusSystemRef = nationalFocusSystem;
     return () => {
-      if (nationalFocusSystemRef === nationalFocusSystem) {
-        nationalFocusSystemRef = null;
+      if (focusApiRef.current === nationalFocusSystem) {
+        focusApiRef.current = null;
       }
     };
   }, [nationalFocusSystem]);
