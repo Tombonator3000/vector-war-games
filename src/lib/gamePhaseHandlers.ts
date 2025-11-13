@@ -471,7 +471,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
   if (S.territoryResources && conventionalState?.territories) {
     // OPTIMIZED: Use for..of instead of forEach for better performance
     const territoriesByNation: Record<string, TerritoryState[]> = {};
-    const territoryEntries = Object.values(conventionalState.territories);
+    const territoryEntries = Object.values(conventionalState?.territories || {});
     for (let i = 0; i < territoryEntries.length; i++) {
       const territory = territoryEntries[i] as TerritoryState;
       const controllerId = territory.controllingNationId;
@@ -498,7 +498,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
     const depletionResult = processResourceDepletion(
       S.territoryResources,
-      conventionalState.territories,
+      conventionalState?.territories || {},
       nations,
       DEFAULT_DEPLETION_CONFIG,
       nationsById
@@ -507,7 +507,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     S.depletionWarnings = depletionResult.warnings;
 
     // Warn player about critical depletion
-    if (player) {
+    if (player && conventionalState?.territories) {
       const playerWarnings = depletionResult.warnings.filter(w => {
         const territory = conventionalState.territories[w.territoryId];
         return territory?.controllingNationId === player.id;
@@ -762,21 +762,23 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       economicDepthApi.processEconomicTurn(nationStockpiles);
 
       // Apply refined resource bonuses to nations
-      nations.forEach(n => {
-        const refineryStats = economicDepthApi.nationRefineryStats.get(n.id);
-        if (refineryStats && refineryStats.totalOutput) {
-          // Apply refined resource bonuses to production
-          const steelBonus = (refineryStats.totalOutput.steel || 0) * 0.1; // 10% production bonus per steel
-          const electronicsBonus = (refineryStats.totalOutput.electronics || 0) * 0.05; // 5% intel bonus per electronics
+      if (economicDepthApi.nationRefineryStats) {
+        nations.forEach(n => {
+          const refineryStats = economicDepthApi.nationRefineryStats.get(n.id);
+          if (refineryStats && refineryStats.totalOutput) {
+            // Apply refined resource bonuses to production
+            const steelBonus = (refineryStats.totalOutput.steel || 0) * 0.1; // 10% production bonus per steel
+            const electronicsBonus = (refineryStats.totalOutput.electronics || 0) * 0.05; // 5% intel bonus per electronics
 
-          if (steelBonus > 0) {
-            n.production = Math.floor((n.production || 0) + steelBonus);
+            if (steelBonus > 0) {
+              n.production = Math.floor((n.production || 0) + steelBonus);
+            }
+            if (electronicsBonus > 0) {
+              n.intel = Math.floor((n.intel || 0) + electronicsBonus);
+            }
           }
-          if (electronicsBonus > 0) {
-            n.intel = Math.floor((n.intel || 0) + electronicsBonus);
-          }
-        }
-      });
+        });
+      }
 
       log('✅ Economic depth systems processed', 'success');
     } catch (error) {
