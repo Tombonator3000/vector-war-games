@@ -19,7 +19,7 @@ import { checkAllTriggers } from '@/lib/aiNegotiationTriggers';
 import { generateAINegotiationDeal } from '@/lib/aiNegotiationContentGenerator';
 import { evaluateNegotiation } from '@/lib/aiNegotiationEvaluator';
 import { applyNegotiationDeal } from '@/lib/negotiationUtils';
-import { GameStateManager, type LocalGameState, type LocalNation } from '@/state/GameStateManager';
+import GameStateManager, { type LocalGameState, type LocalNation } from '@/state/GameStateManager';
 
 export interface InternationalPressureSanctionEvent {
   imposingNationId: string;
