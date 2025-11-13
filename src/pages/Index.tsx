@@ -8016,18 +8016,14 @@ export default function NoradVector() {
     [addNewsItem]
   );
 
-  // Hearts of Iron Phase 2: Military Templates System - MUST be declared before useConventionalWarfare
-  const militaryTemplates = useMilitaryTemplates({
-    currentTurn: S.turn,
-    nations: nations.map(n => ({ id: n.id, name: n.name })),
-  });
+  // Hearts of Iron Phase 2: Memoize nations data to prevent infinite loops
+  const memoizedNationsForTemplates = useMemo(() => 
+    nations.map(n => ({ id: n.id, name: n.name })),
+    [nations.map(n => `${n.id}-${n.name}`).join(',')]
+  );
 
-  const { templateStates: militaryTemplateStates, deployedUnits: militaryDeployedUnits } = militaryTemplates;
-
-  // Hearts of Iron Phase 2: Supply System - MUST be declared before useConventionalWarfare
-  const supplySystem = useSupplySystem({
-    currentTurn: S.turn,
-    nations: nations.map(n => ({
+  const memoizedNationsForSupply = useMemo(() => 
+    nations.map(n => ({
       id: n.id,
       name: n.name,
       territories: conventionalState?.territories
@@ -8036,6 +8032,21 @@ export default function NoradVector() {
           )
         : []
     })),
+    [nations.map(n => n.id).join(','), conventionalState?.territories]
+  );
+
+  // Hearts of Iron Phase 2: Military Templates System - MUST be declared before useConventionalWarfare
+  const militaryTemplates = useMilitaryTemplates({
+    currentTurn: S.turn,
+    nations: memoizedNationsForTemplates,
+  });
+
+  const { templateStates: militaryTemplateStates, deployedUnits: militaryDeployedUnits } = militaryTemplates;
+
+  // Hearts of Iron Phase 2: Supply System - MUST be declared before useConventionalWarfare
+  const supplySystem = useSupplySystem({
+    currentTurn: S.turn,
+    nations: memoizedNationsForSupply,
   });
 
   const conventional = useConventionalWarfare({
