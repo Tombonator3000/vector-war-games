@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-13T19:26:29Z - Turn system domestic hooks integration
+- Instantiated the dormant war support, political factions, regional morale, media warfare, production queue, and resource refinement hooks inside `Index.tsx`, adding player-facing logging/toasts and exposing their APIs for phase processing.
+- Registered initialization and window bindings for the new systems so every nation seeds factions/media power and external modules can access the hook state safely.
+- Updated `gamePhaseHandlers.ts` to invoke each system's `processTurn*` routine during the production phase, ensuring domestic modifiers, campaigns, and build queues now tick every turn.
+
 ### 2025-11-13T16:53:14Z - End game confirmation gate
 - Added an `endGameRevealRequiresConfirmation` flag to the game state manager so final turn clicks can acknowledge the outcome before showing the end screen.
 - Updated `Index.tsx` to defer end game reveal scheduling until the player confirms, adjust the reveal helper, and relax the `endTurn` guard to route the final acknowledgement.

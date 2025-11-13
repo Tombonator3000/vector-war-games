@@ -824,4 +824,70 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       console.error('[Production Phase] Error processing supply system:', error);
     }
   }
+
+  if (typeof window !== 'undefined') {
+    const warSupportApi = (window as any).warSupportApi;
+    if (warSupportApi?.processTurnWarSupport) {
+      try {
+        warSupportApi.processTurnWarSupport();
+        log('✅ War support and stability processed', 'success');
+      } catch (error) {
+        console.error('[Production Phase] Error processing war support:', error);
+      }
+    }
+
+    const politicalFactionsApi = (window as any).politicalFactionsApi;
+    if (politicalFactionsApi?.processTurnUpdates) {
+      try {
+        politicalFactionsApi.processTurnUpdates();
+        log('✅ Political factions updated', 'success');
+      } catch (error) {
+        console.error('[Production Phase] Error processing political factions:', error);
+      }
+    }
+
+    const regionalMoraleApi = (window as any).regionalMoraleApi;
+    if (regionalMoraleApi?.processTurnUpdates) {
+      try {
+        regionalMoraleApi.processTurnUpdates();
+        log('✅ Regional morale advanced', 'success');
+      } catch (error) {
+        console.error('[Production Phase] Error processing regional morale:', error);
+      }
+    }
+
+    const mediaWarfareApi = (window as any).mediaWarfareApi;
+    if (mediaWarfareApi?.processTurnUpdates) {
+      try {
+        mediaWarfareApi.processTurnUpdates();
+        log('✅ Media warfare campaigns resolved', 'success');
+      } catch (error) {
+        console.error('[Production Phase] Error processing media warfare:', error);
+      }
+    }
+
+    const productionQueueApi = (window as any).productionQueueApi;
+    if (productionQueueApi?.processTurnProduction) {
+      try {
+        const completions = productionQueueApi.processTurnProduction();
+        if (Array.isArray(completions) && completions.length > 0) {
+          log(`✅ ${completions.length} production projects advanced`, 'success');
+        } else {
+          log('✅ Production queues updated', 'success');
+        }
+      } catch (error) {
+        console.error('[Production Phase] Error processing production queues:', error);
+      }
+    }
+
+    const resourceRefinementApi = (window as any).resourceRefinementApi;
+    if (resourceRefinementApi?.processTurn) {
+      try {
+        resourceRefinementApi.processTurn();
+        log('✅ Resource refinement progressed', 'success');
+      } catch (error) {
+        console.error('[Production Phase] Error processing resource refinement:', error);
+      }
+    }
+  }
 }
