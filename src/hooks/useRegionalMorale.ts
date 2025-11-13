@@ -40,6 +40,7 @@ export function useRegionalMorale(options: UseRegionalMoraleOptions) {
 
   // Regional morale state for all territories
   const [regionalMorale, setRegionalMorale] = useState<Map<string, RegionalMorale>>(new Map());
+  const [territoryUnrestDuration, setTerritoryUnrestDuration] = useState<Map<string, number>>(new Map());
 
   // Initialize morale for new territories
   useEffect(() => {
@@ -57,6 +58,16 @@ export function useRegionalMorale(options: UseRegionalMoraleOptions) {
             strikes: null,
             refugeeInflux: 0,
           });
+        }
+      });
+      return updated;
+    });
+
+    setTerritoryUnrestDuration((prev) => {
+      const updated = new Map(prev);
+      territories.forEach((territory) => {
+        if (!updated.has(territory.id)) {
+          updated.set(territory.id, 0);
         }
       });
       return updated;
@@ -399,6 +410,8 @@ export function useRegionalMorale(options: UseRegionalMoraleOptions) {
    * Process turn updates for protests and strikes
    */
   const processTurnUpdates = useCallback(() => {
+    const updatedUnrest = new Map(territoryUnrestDuration);
+
     setRegionalMorale((prev) => {
       const updated = new Map(prev);
 
@@ -443,17 +456,24 @@ export function useRegionalMorale(options: UseRegionalMoraleOptions) {
           needsUpdate = true;
         }
 
+        const finalState = needsUpdate ? changes : morale;
+        const hasUnrest = Boolean(finalState.protests || finalState.strikes);
+        const previousDuration = updatedUnrest.get(territoryId) ?? 0;
+        updatedUnrest.set(territoryId, hasUnrest ? previousDuration + 1 : 0);
+
         if (needsUpdate) {
-          updated.set(territoryId, changes);
+          updated.set(territoryId, finalState);
         }
       });
 
       return updated;
     });
 
+    setTerritoryUnrestDuration(updatedUnrest);
+
     // Process morale spread
     processMoraleSpread();
-  }, [processMoraleSpread]);
+  }, [processMoraleSpread, territoryUnrestDuration]);
 
   /**
    * Calculate civil war risk for a nation
@@ -472,8 +492,9 @@ export function useRegionalMorale(options: UseRegionalMoraleOptions) {
         if (morale?.strikes) strikeCount++;
       });
 
-      // TODO: Track turns at risk - needs persistent state
-      const turnsAtRisk = 0; // Placeholder
+      const turnsAtRisk = nationTerritories.reduce((total, territory) => {
+        return total + (territoryUnrestDuration.get(territory.id) ?? 0);
+      }, 0);
 
       return calculateCivilWarRisk(
         nationMorale.weightedAverage,
@@ -484,7 +505,7 @@ export function useRegionalMorale(options: UseRegionalMoraleOptions) {
         turnsAtRisk
       );
     },
-    [territories, regionalMorale, calculateNationalMoraleForNation]
+    [territories, regionalMorale, territoryUnrestDuration, calculateNationalMoraleForNation]
   );
 
   /**
@@ -563,6 +584,7 @@ export function useRegionalMorale(options: UseRegionalMoraleOptions) {
     // State
     regionalMorale: Array.from(regionalMorale.values()),
     regionalMoraleMap: regionalMorale,
+    territoryUnrestDuration,
 
     // Territory morale
     getTerritoryMorale,
