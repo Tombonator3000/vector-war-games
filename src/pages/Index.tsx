@@ -78,6 +78,8 @@ import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
 import { CatastropheBanner } from '@/components/CatastropheBanner';
 import { useGameEra } from '@/hooks/useGameEra';
 import { useVictoryTracking } from '@/hooks/useVictoryTracking';
+import { VictoryProgressPanel } from '@/components/VictoryProgressPanel';
+import { checkVictory } from '@/types/streamlinedVictoryConditions';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
 import { DefconWarningOverlay } from '@/components/DefconWarningOverlay';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
@@ -5073,12 +5075,41 @@ function checkVictory() {
     return;
   }
 
-  // Cultural Victory - automatic check
+  // Cultural Victory - enhanced check integrating Cultural Warfare system
   const totalIntel = alive.reduce((sum, n) => sum + (n.intel || 0), 0);
-  if (totalIntel > 0) {
+  const totalCulturalPower = alive.reduce((sum, n) => sum + (n.culturalPower || 0), 0);
+
+  if (totalIntel > 0 || totalCulturalPower > 0) {
     const influenceShare = (player.intel || 0) / totalIntel;
-    if ((player.intel || 0) >= 50 && influenceShare > 0.5) {
-      endGame(true, 'CULTURAL VICTORY - Your propaganda dominates the world\'s minds!');
+    const culturalShare = totalCulturalPower > 0 ? (player.culturalPower || 0) / totalCulturalPower : 0;
+
+    // Active propaganda campaigns count toward victory
+    const activeCampaigns = (player.propagandaCampaigns || []).length;
+
+    // Cultural influences on other nations
+    const dominatedNations = alive.filter(n => {
+      if (n.isPlayer) return false;
+      const influence = (player.culturalInfluences || []).find(ci => ci.targetNation === n.id);
+      return influence && influence.strength >= 70; // 70+ strength = dominated
+    }).length;
+
+    // Multiple paths to Cultural Victory:
+    // Path 1: Traditional intel dominance (50+ intel, 50%+ share)
+    // Path 2: Cultural power dominance (80+ cultural power, 60%+ share)
+    // Path 3: Cultural domination (dominate 60%+ of nations through influence)
+
+    const path1Met = (player.intel || 0) >= 50 && influenceShare > 0.5;
+    const path2Met = (player.culturalPower || 0) >= 80 && culturalShare > 0.6;
+    const path3Met = alive.length > 0 && dominatedNations / alive.length >= 0.6;
+
+    if (path1Met) {
+      endGame(true, '📻 CULTURAL VICTORY - Your propaganda dominates the world\'s minds!');
+      return;
+    } else if (path2Met) {
+      endGame(true, '🎭 CULTURAL VICTORY - Your culture has become the world\'s standard!');
+      return;
+    } else if (path3Met) {
+      endGame(true, '🌍 CULTURAL VICTORY - Your influence has won hearts and minds globally!');
       return;
     }
   }
@@ -8769,6 +8800,93 @@ export default function NoradVector() {
     defcon: S.defcon,
     diplomacyState: S.diplomacy,
   });
+
+  // Victory progress milestone notifications
+  const [victoryMilestones, setVictoryMilestones] = useState<Record<string, number>>({});
+  const [aiVictoryWarnings, setAiVictoryWarnings] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (S.gameOver) return;
+
+    victoryAnalysis.paths.forEach(path => {
+      const pathKey = path.type;
+      const currentProgress = Math.floor(path.progress);
+      const lastNotifiedProgress = victoryMilestones[pathKey] || 0;
+
+      // Check for milestone thresholds: 50%, 70%, 90%
+      const milestones = [50, 70, 90];
+      for (const milestone of milestones) {
+        if (currentProgress >= milestone && lastNotifiedProgress < milestone) {
+          // Show toast notification
+          const emoji = milestone >= 90 ? '🏆' : milestone >= 70 ? '⚠️' : '📊';
+          const urgency = milestone >= 90 ? 'CRITICAL' : milestone >= 70 ? 'WARNING' : 'NOTICE';
+
+          toast({
+            title: `${emoji} ${urgency}: ${path.name} Victory`,
+            description: `You are ${currentProgress}% toward ${path.name} victory! ${milestone >= 70 ? 'Press your advantage!' : 'Keep pushing forward.'}`,
+            duration: milestone >= 70 ? 8000 : 5000,
+          });
+
+          // Update the milestone tracker
+          setVictoryMilestones(prev => ({
+            ...prev,
+            [pathKey]: milestone,
+          }));
+
+          // Only show one toast per update
+          break;
+        }
+      }
+    });
+  }, [victoryAnalysis, S.gameOver, victoryMilestones]);
+
+  // AI Victory tracking - warn player if AI nations are close to victory
+  useEffect(() => {
+    if (S.gameOver) return;
+
+    const aiNations = nations.filter(n => !n.isPlayer && !n.eliminated);
+
+    aiNations.forEach(aiNation => {
+      const gameState = {
+        turn: S.turn,
+        defcon: S.defcon,
+        diplomacy: S.diplomacy,
+      };
+
+      const aiVictoryCheck = checkVictory(aiNation, nations, gameState as any);
+
+      // Find the AI's highest progress
+      const maxProgress = Math.max(...Object.values(aiVictoryCheck.progress));
+      const warningKey = `${aiNation.id}-70`;
+      const alreadyWarned = aiVictoryWarnings[warningKey];
+
+      // Warn if AI is 70%+ on any path and we haven't warned about this yet
+      if (maxProgress >= 70 && !alreadyWarned) {
+        const leadingPath = Object.entries(aiVictoryCheck.progress).find(
+          ([_, progress]) => progress === maxProgress
+        );
+
+        if (leadingPath) {
+          const pathName = leadingPath[0];
+          const pathProgress = Math.floor(leadingPath[1]);
+
+          toast({
+            title: `🚨 THREAT: ${aiNation.name} Approaching Victory!`,
+            description: `${aiNation.name} is ${pathProgress}% toward ${pathName} victory! Take action to prevent their victory!`,
+            duration: 10000,
+            variant: 'destructive',
+          });
+
+          addLog(`⚠️ INTEL: ${aiNation.name} is approaching ${pathName} victory (${pathProgress}%)`);
+
+          setAiVictoryWarnings(prev => ({
+            ...prev,
+            [warningKey]: true,
+          }));
+        }
+      }
+    });
+  }, [nations, S.turn, S.gameOver, S.defcon, S.diplomacy, aiVictoryWarnings]);
 
   useEffect(() => {
     governanceApiRef = governance;
@@ -15933,6 +16051,15 @@ export default function NoradVector() {
         resourceMarket={S.resourceMarket}
         depletionWarnings={playerDepletionWarnings}
         onOpenFullDiplomacy={() => setShowEnhancedDiplomacy(true)}
+      />
+
+      {/* Victory Progress Panel - Always visible on HUD */}
+      <VictoryProgressPanel
+        diplomaticProgress={victoryAnalysis.paths.find(p => p.type === 'diplomatic')?.progress || 0}
+        dominationProgress={victoryAnalysis.paths.find(p => p.type === 'domination')?.progress || 0}
+        economicProgress={victoryAnalysis.paths.find(p => p.type === 'economic')?.progress || 0}
+        survivalProgress={victoryAnalysis.paths.find(p => p.type === 'survival')?.progress || 0}
+        isVisible={!S.gameOver && !blockingModalActive}
       />
 
       <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 sm:gap-3">
