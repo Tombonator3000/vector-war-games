@@ -78,7 +78,6 @@ import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
 import { CatastropheBanner } from '@/components/CatastropheBanner';
 import { useGameEra } from '@/hooks/useGameEra';
 import { useVictoryTracking } from '@/hooks/useVictoryTracking';
-import { VictoryProgressPanel } from '@/components/VictoryProgressPanel';
 import { checkVictory } from '@/types/streamlinedVictoryConditions';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
 import { DefconWarningOverlay } from '@/components/DefconWarningOverlay';
@@ -16054,15 +16053,6 @@ export default function NoradVector() {
         resourceMarket={S.resourceMarket}
         depletionWarnings={playerDepletionWarnings}
         onOpenFullDiplomacy={() => setShowEnhancedDiplomacy(true)}
-      />
-
-      {/* Victory Progress Panel - Always visible on HUD */}
-      <VictoryProgressPanel
-        diplomaticProgress={victoryAnalysis.paths.find(p => p.type === 'diplomatic')?.progress || 0}
-        dominationProgress={victoryAnalysis.paths.find(p => p.type === 'domination')?.progress || 0}
-        economicProgress={victoryAnalysis.paths.find(p => p.type === 'economic')?.progress || 0}
-        survivalProgress={victoryAnalysis.paths.find(p => p.type === 'survival')?.progress || 0}
-        isVisible={!S.gameOver && !blockingModalActive}
       />
 
       <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 sm:gap-3">

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { VictoryProgressSummary, victoryColorClasses } from './VictoryProgressSummary';
 import {
   Trophy,
   ChevronDown,
@@ -22,48 +23,6 @@ import type {
 interface VictoryPathsSectionProps extends VictoryAnalysis {
   currentTurn: number;
 }
-
-const colorClasses: Record<
-  string,
-  { bg: string; text: string; border: string; progress: string }
-> = {
-  blue: {
-    bg: 'bg-blue-900/20',
-    text: 'text-blue-400',
-    border: 'border-blue-500/30',
-    progress: 'bg-blue-500',
-  },
-  red: {
-    bg: 'bg-red-900/20',
-    text: 'text-red-400',
-    border: 'border-red-500/30',
-    progress: 'bg-red-500',
-  },
-  green: {
-    bg: 'bg-green-900/20',
-    text: 'text-green-400',
-    border: 'border-green-500/30',
-    progress: 'bg-green-500',
-  },
-  purple: {
-    bg: 'bg-purple-900/20',
-    text: 'text-purple-400',
-    border: 'border-purple-500/30',
-    progress: 'bg-purple-500',
-  },
-  yellow: {
-    bg: 'bg-yellow-900/20',
-    text: 'text-yellow-400',
-    border: 'border-yellow-500/30',
-    progress: 'bg-yellow-500',
-  },
-  gray: {
-    bg: 'bg-gray-900/20',
-    text: 'text-gray-400',
-    border: 'border-gray-500/30',
-    progress: 'bg-gray-500',
-  },
-};
 
 export function VictoryPathsSection({
   paths,
@@ -116,7 +75,11 @@ export function VictoryPathsSection({
               <>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-cyan-200">{topPath.icon} {topPath.name}</span>
-                  <span className={`font-mono font-bold ${colorClasses[topPath.color]?.text || 'text-cyan-200'}`}>
+                  <span
+                    className={`font-mono font-bold ${
+                      victoryColorClasses[topPath.color]?.text || 'text-cyan-200'
+                    }`}
+                  >
                     {Math.round(topPath.progress)}%
                   </span>
                 </div>
@@ -150,6 +113,8 @@ export function VictoryPathsSection({
             className="border-t border-cyan-500/20"
           >
             <div className="p-4 space-y-4">
+              <VictoryProgressSummary paths={paths} />
+
               {warnings.length > 0 && (
                 <div className="space-y-1">
                   {warnings.map((warning, idx) => (
@@ -197,7 +162,9 @@ export function VictoryPathsSection({
                           current === path.type ? null : path.type
                         )
                       }
-                      colorClasses={colorClasses[path.color] || colorClasses.gray}
+                      colorClasses={
+                        victoryColorClasses[path.color] || victoryColorClasses.gray
+                      }
                     />
                   ))
                 ) : (

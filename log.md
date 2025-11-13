@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-13T15:35:15Z - Victory progress summary refactor
+- Removed the floating HUD overlay from `Index.tsx` and repurposed the victory tracking component into an inline Civilization Status Report summary.
+- Introduced `VictoryProgressSummary` for reusable path displays and wired it into `VictoryPathsSection` with shared color palettes.
+- Verified no lingering imports reference the old panel and noted follow-up styling parity within the info panel collapse.
+
 ### 2025-11-12T13:30:18Z - Nuclear casualty tracking integration
 - Extended `GameStateManager` statistics to include cumulative non-pandemic casualties and exposed a helper for updating the tally.
 - Wired nuclear strike resolution and global casualty UI to record absolute casualty counts and surface them alongside pandemic/bio totals.
