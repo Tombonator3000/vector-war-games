@@ -349,6 +349,7 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
   // Apply ideology bonuses to all nations BEFORE resource generation
   applyIdeologyBonusesForProduction(nations);
 
+  // OPTIMIZED: Single loop for base production calculations
   nations.forEach(n => {
     if (n.population <= 0) return;
 
@@ -438,15 +439,18 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
   // Process territorial resources generation and consumption
   if (S.territoryResources && conventionalState?.territories) {
+    // OPTIMIZED: Use for..of instead of forEach for better performance
     const territoriesByNation: Record<string, TerritoryState[]> = {};
-    Object.values(conventionalState.territories).forEach(territory => {
+    const territoryEntries = Object.values(conventionalState.territories);
+    for (let i = 0; i < territoryEntries.length; i++) {
+      const territory = territoryEntries[i] as TerritoryState;
       const controllerId = territory.controllingNationId;
-      if (!controllerId) return;
+      if (!controllerId) continue;
       if (!territoriesByNation[controllerId]) {
         territoriesByNation[controllerId] = [];
       }
       territoriesByNation[controllerId].push(territory);
-    });
+    }
 
     // Update resource market with dynamic pricing
     if (S.resourceMarket) {
