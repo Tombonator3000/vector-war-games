@@ -15470,6 +15470,7 @@ export default function NoradVector() {
                 instability={metrics.instability || 0}
                 onOpenGovernanceDetails={() => setShowGovernanceDetails(true)}
                 onOpenPolicyPanel={() => setShowPolicyPanel(true)}
+                onOpenNationalFocus={() => setIsNationalFocusOpen(true)}
                 strategicOutlinerGroups={strategicOutlinerGroups}
                 isOutlinerCollapsed={isOutlinerCollapsed}
                 onOutlinerToggle={handleOutlinerToggle}

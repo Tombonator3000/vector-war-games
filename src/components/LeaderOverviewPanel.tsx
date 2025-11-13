@@ -23,6 +23,7 @@ interface LeaderOverviewPanelProps {
   instability: number;
   onOpenGovernanceDetails?: () => void;
   onOpenPolicyPanel?: () => void;
+  onOpenNationalFocus?: () => void;
   strategicOutlinerGroups: StrategicOutlinerGroup[];
   isOutlinerCollapsed?: boolean;
   onOutlinerToggle: () => void;
@@ -45,6 +46,7 @@ export function LeaderOverviewPanel({
   instability,
   onOpenGovernanceDetails,
   onOpenPolicyPanel,
+  onOpenNationalFocus,
   strategicOutlinerGroups,
   isOutlinerCollapsed = false,
   onOutlinerToggle,
@@ -150,6 +152,7 @@ export function LeaderOverviewPanel({
             instability={instability}
             onOpenDetails={onOpenGovernanceDetails}
             onOpenPolicyPanel={onOpenPolicyPanel}
+            onOpenNationalFocus={onOpenNationalFocus}
             leaderName={leaderName}
             showLeaderButton={false}
           />
