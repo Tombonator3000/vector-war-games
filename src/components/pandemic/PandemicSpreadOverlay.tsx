@@ -23,23 +23,26 @@ interface PandemicSpreadOverlayProps {
   pandemic: PandemicOverlay;
 }
 
+interface InfectionDot {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+  color: string;
+  delay: number;
+}
+
 interface PandemicPoint {
   id: string;
   name: string;
-  x: number;
-  y: number;
+  centerX: number;
+  centerY: number;
   infection: number;
   normalized: number;
-  heat: number;
-  heatNormalized: number;
   casualties: number;
   color: string;
-  outerRadius: number;
-  middleRadius: number;
-  innerRadius: number;
-  progressRadius: number;
-  circumference: number;
   isDetected: boolean;
+  dots: InfectionDot[];
 }
 
 export function PandemicSpreadOverlay({
@@ -69,36 +72,70 @@ export function PandemicSpreadOverlay({
         }
 
         const normalized = Math.max(0, infection) / maxInfection;
-        const heat = pandemic.heat?.[nation.id] ?? infection;
-        const heatNormalized = Math.min(1, Math.max(0, heat / 100));
         const casualties = pandemic.casualties?.[nation.id] ?? 0;
         const color = computePandemicColor(normalized);
-        const outerRadius = 40 + normalized * 80;
-        const middleRadius = outerRadius * (0.6 + normalized * 0.1);
-        const innerRadius = 14 + normalized * 24;
-        const progressRadius = innerRadius + 8;
-        const circumference = 2 * Math.PI * progressRadius;
-        const x = ((nation.lon + 180) / 360) * canvasWidth;
-        const y = ((90 - nation.lat) / 180) * canvasHeight;
+        const centerX = ((nation.lon + 180) / 360) * canvasWidth;
+        const centerY = ((90 - nation.lat) / 180) * canvasHeight;
         const isDetected = Boolean(pandemic.detections?.[nation.id]);
+
+        // Generate infection dots based on infection level
+        // More infected = more dots
+        const maxDots = 200; // Maximum dots per country
+        const numDots = Math.floor(normalized * maxDots);
+        const spreadRadius = 30 + normalized * 50; // Area size based on infection
+
+        const dots: InfectionDot[] = [];
+        
+        // Use deterministic random seed based on nation ID for consistency
+        const seed = nation.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        let random = seed;
+        
+        // Simple seeded random number generator
+        const seededRandom = () => {
+          random = (random * 9301 + 49297) % 233280;
+          return random / 233280;
+        };
+
+        for (let i = 0; i < numDots; i++) {
+          // Random position within spread radius using polar coordinates
+          const angle = seededRandom() * Math.PI * 2;
+          const distance = Math.sqrt(seededRandom()) * spreadRadius;
+          const dotX = centerX + Math.cos(angle) * distance;
+          const dotY = centerY + Math.sin(angle) * distance;
+          
+          // Dot size varies slightly
+          const dotRadius = 2 + seededRandom() * 2;
+          
+          // Color variation - from orange to deep red based on severity
+          const hue = 0; // Red hue
+          const saturation = 80 + normalized * 20;
+          const lightness = 60 - normalized * 30; // Darker as more severe
+          const dotColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+          
+          // Stagger animation delay
+          const delay = (i / numDots) * 2;
+
+          dots.push({
+            id: `${nation.id}-dot-${i}`,
+            x: dotX,
+            y: dotY,
+            radius: dotRadius,
+            color: dotColor,
+            delay,
+          });
+        }
 
         return {
           id: nation.id,
           name: nation.name,
-          x,
-          y,
+          centerX,
+          centerY,
           infection,
           normalized,
-          heat,
-          heatNormalized,
           casualties,
           color,
-          outerRadius,
-          middleRadius,
-          innerRadius,
-          progressRadius,
-          circumference,
           isDetected,
+          dots,
         };
       })
       .filter((point): point is PandemicPoint => Boolean(point));
