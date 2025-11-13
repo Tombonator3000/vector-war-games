@@ -3323,3 +3323,9 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added an early `PlayerManager.get()` lookup within `endTurn` so the production phase policy and focus handlers consistently target the current player snapshot.
 - Renamed the agenda revelation refresh variable to avoid clashing with the preserved player reference and keep late-turn updates aligned with the latest manager state.
 - Reviewed the manual end-turn flow to confirm the production phase completes, the counter advances, and the phase resets without runtime errors.
+### 2025-11-13T20:26:33Z - Investigated Lovable turn resolution fixes
+- Reviewed repository instructions and prepared to audit Lovable's reported changes to the end-turn flow and error handling.
+### 2025-11-13T20:29:25Z - Scaled end-turn safety timeout with AI load
+- Reworked `endTurn` in `src/pages/Index.tsx` to derive the safety timeout from the computed AI resolution delay plus production buffering, preventing premature lock release on long AI sequences.
+- Cleared the timer defensively once the turn resolves or when recovery handling fires to avoid stray pending timeouts.
+- Logged the dynamic timeout scheduling details for easier debugging of lengthy production cycles.
