@@ -3288,6 +3288,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added an alliance gating check in `src/lib/gamePhaseHandlers.ts` that inspects reciprocal treaties and alliance lists before permitting launches, emitting a toast for the player when blocked.
 - Extended `src/lib/__tests__/gamePhaseHandlers.test.ts` with launch-focused coverage ensuring allied nations cannot strike each other.
 - Ran `npx vitest run src/lib/__tests__/gamePhaseHandlers.test.ts` to verify the new safeguards.
+### 2025-11-13T17:24:46Z - Added projector visibility occlusion check
+- Updated `updateProjector` in `src/components/GlobeScene.tsx` to cull overlay projections when the surface normal faces away from the camera, preserving flat map behavior.
 
 ### 2025-11-13T17:27:45Z - Prevented conventional assaults on treaty partners
 - Pulled attacker/defender treaty metadata inside `src/hooks/useConventionalWarfare.ts` so active truces or alliances abort `resolveBorderConflict` before DEFCON or relationship penalties apply, returning player-friendly reasons.
