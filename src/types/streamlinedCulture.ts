@@ -319,7 +319,7 @@ export const IMMIGRATION_POLICIES: Record<ImmigrationPolicy, ImmigrationPolicyDe
     name: 'Selective Immigration',
     description: 'High-skill immigrants only. Expensive but strong economic benefits.',
     populationGrowthModifier: 0.8,
-    instabilityModifier: 2, // Slight stability boost
+    instabilityModifier: -2, // Slight stability boost
     economicGrowthBonus: 8, // +8 production per turn
     diplomaticImpact: 0,
     intelCostPerTurn: 6, // Expensive screening
@@ -397,8 +397,8 @@ export function applyImmigrationPolicyEffects(
   // Calculate population gain
   const populationGain = calculateImmigrationBonus(nation, policy);
 
-  // Apply instability change (negative modifier = more stable)
-  const instabilityChange = -policyDef.instabilityModifier;
+  // Apply instability change directly (positive raises instability, negative increases stability)
+  const instabilityChange = policyDef.instabilityModifier;
 
   // Apply economic growth bonus
   const productionBonus = policyDef.economicGrowthBonus;
