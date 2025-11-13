@@ -11961,23 +11961,23 @@ export default function NoradVector() {
 
     if (accepted) {
       // Apply the deal
-      const { respondent: updatedTarget, allNations: updatedNations } =
-        applyNegotiationDeal(negotiation, player, targetNation, nations, S.turn);
+      const result = applyNegotiationDeal(negotiation, player, targetNation, nations, S.turn, S);
 
-      const updatedState = { ...S } as LocalGameState;
+      const updatedState = (result.gameState ? { ...result.gameState } : { ...S }) as LocalGameState;
+      const updatedLocalNations = result.allNations as LocalNation[];
+      updatedState.nations = updatedLocalNations;
+
       GameStateManager.setState(updatedState);
+      GameStateManager.setNations(updatedLocalNations);
+      PlayerManager.setNations(updatedLocalNations);
+
       S = updatedState;
-      const updatedLocalNations = updatedNations as LocalNation[];
       nations = updatedLocalNations;
 
       toast({
         title: 'Deal Accepted!',
-        description: `${updatedTarget.name} has accepted your proposal.`,
+        description: `${result.respondent.name} has accepted your proposal.`,
       });
-
-      // Update game state with changes
-      GameStateManager.setNations(updatedLocalNations);
-      PlayerManager.setNations(updatedLocalNations);
     } else {
       toast({
         title: 'Deal Rejected',
@@ -16095,46 +16095,46 @@ export default function NoradVector() {
                 playerNation,
                 aiNation,
                 nations,
-                turn
+                turn,
+                S
               );
 
-              if (result.success) {
-                // Update nations with the result
-                setNations(result.nations);
+              const updatedState = (result.gameState ? { ...result.gameState } : { ...S }) as LocalGameState;
+              const updatedLocalNations = result.allNations as LocalNation[];
 
-                // Log success
-                addLog(`✅ Accepted ${aiNation.name}'s proposal: ${activeAIProposal.message}`);
+              // Improve relationship before committing state
+              const improvedNations = updatedLocalNations.map(n => {
+                if (n.id === aiNation.id) {
+                  const newRelationship = Math.min(100, (n.relationships?.[humanPlayerId] || 0) + 10);
+                  return {
+                    ...n,
+                    relationships: {
+                      ...n.relationships,
+                      [humanPlayerId]: newRelationship,
+                    },
+                  };
+                }
+                return n;
+              });
 
-                // Show success toast
-                toast({
-                  title: "Deal Accepted",
-                  description: `You have accepted ${aiNation.name}'s proposal.`,
-                  variant: "default",
-                });
+              updatedState.nations = improvedNations;
 
-                // Improve relationship
-                const updatedNations = result.nations.map(n => {
-                  if (n.id === aiNation.id) {
-                    const newRelationship = Math.min(100, (n.relationships?.[humanPlayerId] || 0) + 10);
-                    return {
-                      ...n,
-                      relationships: {
-                        ...n.relationships,
-                        [humanPlayerId]: newRelationship
-                      }
-                    };
-                  }
-                  return n;
-                });
-                setNations(updatedNations);
-              } else {
-                addLog(`❌ Failed to accept ${aiNation.name}'s proposal: ${result.error}`);
-                toast({
-                  title: "Deal Failed",
-                  description: result.error || "Failed to apply deal.",
-                  variant: "destructive",
-                });
-              }
+              GameStateManager.setState(updatedState);
+              GameStateManager.setNations(improvedNations);
+              PlayerManager.setNations(improvedNations);
+
+              S = updatedState;
+              setNations(improvedNations);
+
+              // Log success
+              addLog(`✅ Accepted ${aiNation.name}'s proposal: ${activeAIProposal.message}`);
+
+              // Show success toast
+              toast({
+                title: "Deal Accepted",
+                description: `You have accepted ${aiNation.name}'s proposal.`,
+                variant: "default",
+              });
 
               setActiveAIProposal(null);
             }}

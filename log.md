@@ -3219,3 +3219,10 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Replaced the intermediate array with a direct duration map update inside `processTurnUpdates` to ensure each territory increments or resets consistently.
 ### 2025-11-13T09:41:38Z - Verified regional morale regression test
 - Ran `npm run test -- useRegionalMorale` to confirm the new duration tracking and risk escalation behavior passes.
+### 2025-11-13T11:48:51Z - Audited negotiation item schema
+- Reviewed `src/types/negotiation.ts` to catalog the existing `NegotiableItemType` union members ahead of implementing missing effects.
+### 2025-11-13T11:49:12Z - Implemented comprehensive negotiation item effects
+- Expanded `applyNegotiationDeal` and the new `applyNegotiationItemEffects` helper in `src/lib/negotiationUtils.ts` to handle resource sharing, technology transfers, ceasefires, promises, favors, and territory transfers while wiring updates into treaties, resource stockpiles, and research state.
+- Updated `src/pages/Index.tsx` and `src/lib/aiDiplomacyActions.ts` to pass the current game state into `applyNegotiationDeal` and persist returned nation/state updates through the game managers.
+### 2025-11-13T11:49:35Z - Added negotiation integration tests
+- Created `src/lib/__tests__/negotiationDealEffects.test.ts` to cover each negotiation item type, asserting that both nations and shared systems (treaties, resource trades, grievances) mutate as expected when deals are applied.
