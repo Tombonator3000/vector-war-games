@@ -3284,3 +3284,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added `src/lib/diplomaticProposalUtils.ts` with `applyAllianceProposal` and `applyTruceProposal` helpers that synchronize treaty metadata (`alliance`, `truceTurns`, expiry/established turns) and keep `activeTreaties` arrays deduplicated.
 - Created `src/lib/__tests__/diplomaticProposalUtils.test.ts` to confirm proposals populate treaty maps and that `hasActivePeaceTreaty`/`isEligibleEnemyTarget` gate launch and border actions once alliances or truces are active.
 - Executed `npx vitest run src/lib/__tests__/diplomaticProposalUtils.test.ts` to verify the new treaty persistence coverage.
+### 2025-11-13T17:20:57Z - Blocked allied nuclear launches
+- Added an alliance gating check in `src/lib/gamePhaseHandlers.ts` that inspects reciprocal treaties and alliance lists before permitting launches, emitting a toast for the player when blocked.
+- Extended `src/lib/__tests__/gamePhaseHandlers.test.ts` with launch-focused coverage ensuring allied nations cannot strike each other.
+- Ran `npx vitest run src/lib/__tests__/gamePhaseHandlers.test.ts` to verify the new safeguards.
