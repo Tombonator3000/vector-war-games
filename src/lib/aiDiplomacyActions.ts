@@ -19,6 +19,7 @@ import { checkAllTriggers } from '@/lib/aiNegotiationTriggers';
 import { generateAINegotiationDeal } from '@/lib/aiNegotiationContentGenerator';
 import { evaluateNegotiation } from '@/lib/aiNegotiationEvaluator';
 import { applyNegotiationDeal } from '@/lib/negotiationUtils';
+import { GameStateManager, type LocalGameState, type LocalNation } from '@/state/GameStateManager';
 
 export interface InternationalPressureSanctionEvent {
   imposingNationId: string;
@@ -638,13 +639,27 @@ function handleAItoAINegotiation(
   if (willAccept) {
     // Execute the deal immediately
     try {
+      const globalState = GameStateManager.getState();
       const result = applyNegotiationDeal(
         negotiation.proposedDeal,
         initiatorNation,
         targetNation,
         allNations,
-        currentTurn
+        currentTurn,
+        globalState
       );
+
+      if (result.gameState) {
+        const updatedState = { ...result.gameState } as LocalGameState;
+        updatedState.nations = result.allNations as LocalNation[];
+        GameStateManager.setState(updatedState);
+        GameStateManager.setNations(updatedState.nations);
+      } else {
+        const fallbackState = { ...globalState } as LocalGameState;
+        fallbackState.nations = result.allNations as LocalNation[];
+        GameStateManager.setState(fallbackState);
+        GameStateManager.setNations(fallbackState.nations);
+      }
 
       // Return the updated nations array from the result
       if (logFn) {
