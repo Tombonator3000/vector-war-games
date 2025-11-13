@@ -6968,7 +6968,8 @@ export default function NoradVector() {
   const [overlayBanner, setOverlayBanner] = useState<OverlayNotification | null>(null);
   const activeOverlay = overlayBanner && overlayBanner.expiresAt > Date.now() ? overlayBanner : null;
   const isCatastrophicOverlay = activeOverlay?.tone === 'catastrophe';
-  const bannerOverlay = !isCatastrophicOverlay ? activeOverlay : null;
+  const showOverlayInPhaseTransition = isPhaseTransitioning && isCatastrophicOverlay;
+  const bannerOverlay = showOverlayInPhaseTransition ? null : activeOverlay;
 
   // Era system state
   const [showEraTransition, setShowEraTransition] = useState(false);

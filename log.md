@@ -3184,3 +3184,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T14:49:06Z - Filtered catastrophic overlays from duplicate banners
 - Added catastrophic overlay detection in `src/pages/Index.tsx` so PhaseTransitionOverlay owns those alerts while the CatastropheBanner now only displays non-catastrophic notices.
 - Verified overlay gating to keep catastrophic payloads from reappearing after transitions.
+
+### 2025-11-13T07:31:06Z - Restored catastrophe banner outside transitions
+- Scoped the catastrophic overlay filter to only hide alerts while a phase transition is active so standalone catastrophe events still reach the CatastropheBanner (`src/pages/Index.tsx`).
