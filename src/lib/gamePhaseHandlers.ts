@@ -145,14 +145,18 @@ export function launch(
   }
   from.missiles--;
 
+  // Add random offset to spread impacts across the country (±3 degrees)
+  const lonOffset = (Math.random() - 0.5) * 6;
+  const latOffset = (Math.random() - 0.5) * 6;
+
   S.missiles.push({
     from,
     to,
     t: 0,
     fromLon: from.lon,
     fromLat: from.lat,
-    toLon: to.lon,
-    toLat: to.lat,
+    toLon: to.lon + lonOffset,
+    toLat: to.lat + latOffset,
     yield: yieldMT,
     target: to,
     color: from.color

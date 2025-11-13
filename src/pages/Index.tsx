@@ -3666,8 +3666,9 @@ function drawMissiles() {
         const splitYield = Math.floor(m.yield / 3);
         for (let j = 0; j < 2; j++) {
           setTimeout(() => {
-            const offsetLon = m.toLon + (Math.random() - 0.5) * 5;
-            const offsetLat = m.toLat + (Math.random() - 0.5) * 5;
+            // Larger spread for MIRV warheads (±8 degrees)
+            const offsetLon = m.toLon + (Math.random() - 0.5) * 16;
+            const offsetLat = m.toLat + (Math.random() - 0.5) * 16;
             S.missiles.push({
               from: m.from,
               to: m.target,
@@ -3787,15 +3788,18 @@ function drawSubmarines() {
       drawIcon(submarineIcon, sub.x, sub.y + (1 - p) * 10, angle, SUBMARINE_ICON_BASE_SCALE, { alpha: p });
       if (p >= 1) {
         sub.phase = 1;
-        // Launch missile
+        // Launch missile with random offset to spread impacts
+        const lonOffset = (Math.random() - 0.5) * 6;
+        const latOffset = (Math.random() - 0.5) * 6;
+        
         const missile = {
           from: sub.from || null,
           to: sub.target,
           t: 0.5,
           fromLon: 0,
           fromLat: 0,
-          toLon: sub.target.lon,
-          toLat: sub.target.lat,
+          toLon: sub.target.lon + lonOffset,
+          toLat: sub.target.lat + latOffset,
           yield: sub.yield,
           target: sub.target,
           color: '#00ffff',
@@ -4747,8 +4751,12 @@ function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
 
 // Launch bomber
 function launchBomber(from: Nation, to: Nation, payload: any) {
+  // Add random offset to spread impacts across the country
+  const lonOffset = (Math.random() - 0.5) * 6;
+  const latOffset = (Math.random() - 0.5) * 6;
+  
   const { x: sx, y: sy } = projectLocal(from.lon, from.lat);
-  const { x: tx, y: ty } = projectLocal(to.lon, to.lat);
+  const { x: tx, y: ty } = projectLocal(to.lon + lonOffset, to.lat + latOffset);
 
   S.bombers.push({
     from, to,
