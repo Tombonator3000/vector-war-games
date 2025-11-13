@@ -5,6 +5,140 @@
 
 import type { Nation } from '../types/game';
 
+interface ConventionalTerritory {
+  id: string;
+  name?: string;
+  controllingNationId?: string | null;
+  neighbors?: string[];
+  armies?: number;
+  strategicValue?: number;
+  productionBonus?: number;
+  instabilityModifier?: number;
+  contestedBy?: string[];
+}
+
+function getTerritoryMap(hook: any): Record<string, ConventionalTerritory> {
+  const raw = hook?.territories;
+  if (raw && typeof raw === 'object') {
+    return raw as Record<string, ConventionalTerritory>;
+  }
+  return {};
+}
+
+function getNationTerritories(
+  hook: any,
+  nationId: string,
+  territoryMap: Record<string, ConventionalTerritory>
+): ConventionalTerritory[] {
+  if (typeof hook?.getTerritoriesForNation === 'function') {
+    const territories = hook.getTerritoriesForNation(nationId) as ConventionalTerritory[];
+    if (Array.isArray(territories)) {
+      return territories;
+    }
+  }
+
+  return Object.values(territoryMap).filter(
+    (territory) => territory?.controllingNationId === nationId
+  );
+}
+
+function getDeployableTerritories(
+  hook: any,
+  nationId: string,
+  territoryMap: Record<string, ConventionalTerritory>
+): ConventionalTerritory[] {
+  if (typeof hook?.getDeployableTerritories === 'function') {
+    const territories = hook.getDeployableTerritories(nationId) as ConventionalTerritory[];
+    if (Array.isArray(territories) && territories.length > 0) {
+      return territories;
+    }
+  }
+
+  return getNationTerritories(hook, nationId, territoryMap);
+}
+
+function scoreDeploymentTarget(
+  territory: ConventionalTerritory,
+  nationId: string,
+  territoryMap: Record<string, ConventionalTerritory>
+): number {
+  const armies = territory.armies ?? 0;
+  const production = territory.productionBonus ?? 0;
+  const strategic = territory.strategicValue ?? 0;
+  const contested = territory.contestedBy ?? [];
+
+  const hasEnemyNeighbor = (territory.neighbors ?? []).some((neighborId) => {
+    const neighbor = territoryMap[neighborId];
+    return neighbor?.controllingNationId && neighbor.controllingNationId !== nationId;
+  });
+
+  let score = 0;
+  if (hasEnemyNeighbor) {
+    score += 40;
+  }
+  score += strategic * 10 + production * 5;
+  score += contested.includes(nationId) ? 15 : 0;
+  // Prefer reinforcing weaker territories (fewer armies -> higher priority)
+  score += Math.max(0, 10 - armies);
+
+  return score;
+}
+
+function chooseBorderConflict(
+  nationId: string,
+  territoryMap: Record<string, ConventionalTerritory>,
+  preferredEnemies: Set<string>
+): {
+  from: ConventionalTerritory;
+  to: ConventionalTerritory;
+  armies: number;
+} | null {
+  const nationTerritories = Object.values(territoryMap).filter(
+    (territory) => territory?.controllingNationId === nationId && (territory.armies ?? 0) > 1
+  );
+
+  let bestOpportunity: {
+    from: ConventionalTerritory;
+    to: ConventionalTerritory;
+    armies: number;
+    score: number;
+  } | null = null;
+
+  for (const from of nationTerritories) {
+    const neighbors = (from.neighbors ?? [])
+      .map((id) => territoryMap[id])
+      .filter(
+        (neighbor): neighbor is ConventionalTerritory =>
+          Boolean(neighbor?.controllingNationId && neighbor.controllingNationId !== nationId)
+      );
+
+    for (const target of neighbors) {
+      const availableArmies = Math.max(1, (from.armies ?? 0) - 1);
+      if (availableArmies <= 0) continue;
+
+      const enemyArmies = Math.max(1, target.armies ?? 0);
+      const powerRatio = availableArmies / enemyArmies;
+      const strategicValue = (target.strategicValue ?? 0) * 10 + (target.productionBonus ?? 0) * 6;
+      const preferredBonus = preferredEnemies.has(target.controllingNationId ?? '') ? 25 : 0;
+      const score = powerRatio * 30 + strategicValue + preferredBonus;
+
+      const armiesToCommit = Math.max(1, Math.min(availableArmies, Math.round(availableArmies * 0.6)));
+
+      if (!bestOpportunity || score > bestOpportunity.score) {
+        bestOpportunity = { from, to: target, armies: armiesToCommit, score };
+      }
+    }
+  }
+
+  if (!bestOpportunity) return null;
+
+  return {
+    from: bestOpportunity.from,
+    to: bestOpportunity.to,
+    armies: bestOpportunity.armies,
+  };
+}
+
 /**
  * Check if a nation has open borders for immigration
  */
@@ -171,6 +305,8 @@ export function aiConventionalWarfareAction(
   const { templates, trainUnit, deployUnit, resolveBorderConflict, getUnitsForNation } =
     conventionalWarfareHook;
 
+  const territoryMap = getTerritoryMap(conventionalWarfareHook);
+
   // Decision: Should we train a unit?
   const personality = aiNation.ai || 'balanced';
   const shouldTrainUnit = Math.random() < (personality === 'aggressive' ? 0.4 : 0.25);
@@ -205,8 +341,32 @@ export function aiConventionalWarfareAction(
 
   if (reserveUnits.length > 0 && Math.random() < 0.3) {
     const unit = reserveUnits[0];
-    // AI unit deployment logic - skip for now
-    // TODO: Implement proper territory system integration
+    const deployableTerritories = getDeployableTerritories(
+      conventionalWarfareHook,
+      aiNation.id,
+      territoryMap
+    );
+
+    if (deployableTerritories.length > 0 && typeof deployUnit === 'function') {
+      const scored = deployableTerritories
+        .map((territory) => ({
+          territory,
+          score: scoreDeploymentTarget(territory, aiNation.id, territoryMap),
+        }))
+        .sort((a, b) => b.score - a.score);
+
+      const chosen = scored[0]?.territory;
+
+      if (chosen) {
+        const result = deployUnit(unit.id, chosen.id);
+        if (!result || result.success !== false) {
+          const template = templates?.[unit.templateId];
+          const unitName = unit.label || template?.name || 'military unit';
+          log(`${aiNation.name} deploys ${unitName} to ${chosen.name || chosen.id}`);
+          return true;
+        }
+      }
+    }
   }
 
   // Decision: Should we initiate a border conflict?
@@ -223,10 +383,28 @@ export function aiConventionalWarfareAction(
         (aiNation.threats?.[n.id] || 0) > 30
     );
 
-    if (enemies.length > 0) {
-      const enemy = enemies[Math.floor(Math.random() * enemies.length)];
-      // AI territory attack logic - skip for now
-      // TODO: Implement proper territory system integration
+    if (enemies.length > 0 && typeof resolveBorderConflict === 'function') {
+      const preferredEnemies = new Set(enemies.map((enemy) => enemy.id));
+      const opportunity = chooseBorderConflict(aiNation.id, territoryMap, preferredEnemies);
+
+      if (opportunity) {
+        const result = resolveBorderConflict(
+          opportunity.from.id,
+          opportunity.to.id,
+          opportunity.armies,
+        );
+
+        if (result && result.success === false) {
+          return false;
+        }
+
+        log(
+          `${aiNation.name} launches border offensive from ${
+            opportunity.from.name || opportunity.from.id
+          } into ${opportunity.to.name || opportunity.to.id}`,
+        );
+        return true;
+      }
     }
   }
 
