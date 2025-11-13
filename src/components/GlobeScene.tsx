@@ -785,9 +785,9 @@ function EarthWireframe({
       <mesh ref={meshRef} position={[0, 0, FLAT_PLANE_Z]} frustumCulled={false}>
         <planeGeometry args={[1, 1]} />
         <meshBasicMaterial
-          color="#061021"
+          color="#000000"
           transparent
-          opacity={0.96}
+          opacity={0.08}
           toneMapped={false}
           side={THREE.DoubleSide}
           depthWrite={false}
