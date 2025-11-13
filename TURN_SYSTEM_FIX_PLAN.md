@@ -6,6 +6,23 @@
 
 ---
 
+## ⚠️ CORRECTION NOTICE
+
+**Original dokumentet hadde GROVE FEIL i implementeringskoden (rettet av Codex audit):**
+
+1. ❌ **usePoliticalFactions** - Tok IKKE `nations` prop, kun callbacks
+2. ❌ **useRegionalMorale** - Tok `territories: Territory[]` (array), IKKE object
+3. ❌ **useProductionQueue** - Hadde IKKE `onProductionComplete` callback
+4. ❌ **useResourceRefinement** - Tok IKKE `currentTurn`, tok helt andre props
+5. ❌ **Timing-konflikt** - Motstridende instruksjoner om når å kalle processTurn
+
+**ALLE hook signatures er nå verifisert mot faktisk kode.**
+**Timing er clarified: Pattern A (kall i productionPhase FØR S.turn++).**
+
+---
+
+---
+
 ## STRATEGI
 
 Vi har 2 hovedalternativer:
@@ -58,35 +75,68 @@ import { useResourceRefinement } from '@/hooks/useResourceRefinement';
 
 #### 1.2 Instansier hooks (rundt linje ~8000, etter andre hooks)
 
+**VIKTIG: Disse signaturene er verifisert mot faktisk kode!**
+
 ```typescript
 // War Support System
 const warSupport = useWarSupport({
   currentTurn: S.turn,
-  nations,
+  nations, // ✅ Correct - takes nations array
 });
 
 // Political Factions System
 const politicalFactions = usePoliticalFactions({
   currentTurn: S.turn,
-  nations,
+  // ❌ Does NOT take nations! Only takes callbacks:
+  onFactionDemand: (nationId: string, demand: any) => {
+    log(`💥 Faction demand from ${nationId}`, 'warning');
+  },
+  onCoupAttempt: (nationId: string, coup: any) => {
+    log(`⚠️ Coup attempt in ${nationId}!`, 'warning');
+  },
+  onCoalitionShift: (nationId: string, factionId: string, joined: boolean) => {
+    log(`Political faction ${joined ? 'joins' : 'leaves'} coalition`, 'info');
+  },
 });
 
 // Regional Morale System
 const regionalMorale = useRegionalMorale({
-  territories: conventionalState?.territories || {},
+  // ❌ territories must be Territory[] array, not object!
+  territories: Object.values(conventionalState?.territories || {}).map(t => ({
+    id: t.id,
+    name: t.name,
+    controllingNationId: t.controllingNationId,
+    neighbors: t.neighbors || [],
+    strategicValue: t.strategicValue || 1,
+  })),
   currentTurn: S.turn,
-  nations,
+  onMoraleChange: (territoryId, oldMorale, newMorale) => {
+    if (newMorale < 30) {
+      log(`⚠️ Low morale in territory ${territoryId}`, 'warning');
+    }
+  },
+  onProtestStart: (territoryId, protest) => {
+    log(`✊ Protests beginning in territory ${territoryId}`, 'warning');
+  },
+  onStrikeStart: (territoryId, strike) => {
+    log(`🚩 Strike action in territory ${territoryId}`, 'warning');
+  },
+  onCivilWarRisk: (nationId, risk) => {
+    log(`⚠️ Civil war risk in ${nationId}: ${risk.level}`, 'warning');
+  },
 });
 
 // Media Warfare System
 const mediaWarfare = useMediaWarfare({
   currentTurn: S.turn,
-  nations,
-  onCampaignExposed: (campaignId: string) => {
+  // ✅ Correct callbacks
+  onCampaignStarted: (campaign) => {
+    log(`📰 Media campaign started: ${campaign.type}`, 'info');
+  },
+  onCampaignExposed: (campaign) => {
     log('⚠️ Propaganda campaign exposed!', 'warning');
   },
-  onMediaEvent: (event: any) => {
-    // Handle media events
+  onMediaEvent: (event) => {
     if (event.type === 'propaganda_success') {
       log('📰 Propaganda campaign successful', 'info');
     }
@@ -95,20 +145,19 @@ const mediaWarfare = useMediaWarfare({
 
 // Production Queue System
 const productionQueue = useProductionQueue({
-  nations,
   currentTurn: S.turn,
-  onProductionComplete: (completion: any) => {
-    const nation = nations.find(n => n.id === completion.nationId);
-    if (nation?.isPlayer) {
-      log(`✅ Production complete: ${completion.itemName}`, 'success');
-    }
-  },
+  nations, // ✅ Correct - takes nations array
+  // ❌ Does NOT have onProductionComplete callback!
+  // Completion handling is done via returned completionLog
 });
 
 // Resource Refinement System
 const resourceRefinement = useResourceRefinement({
-  nations,
-  currentTurn: S.turn,
+  // ❌ Does NOT take currentTurn or nations!
+  // Takes UseResourceRefinementParams:
+  initialRefineries: [],
+  initialOrders: [],
+  conversionRates: {}, // Optional custom rates
 });
 ```
 
@@ -459,19 +508,40 @@ export async function productionPhase(nations, S, log) {
 
 ## KRITISKE NOTATER
 
-### Timing Issues
+### Timing Issues - CORRECTED
 
-Vær oppmerksom på **når** hooks mottar oppdaterte props:
+**VIKTIG CLARIFICATION om turn timing:**
 
-```typescript
-// Current turn increments at Index.tsx:6042
-S.turn++;
+Turn-flyten er:
+1. **PRODUCTION Phase** (gamePhaseHandlers.ts) - S.turn er fortsatt OLD turn
+2. **S.turn++** (Index.tsx:6042) - Turn incrementer
+3. **Post-turn processing** (Index.tsx:6046+) - S.turn er nå NEW turn
 
-// But hooks may not re-render immediately with new turn value
-// Ensure processTurn() is called AFTER S.turn++ with updated state
-```
+**Hvor skal vi kalle processTurn?**
 
-**Løsning:** Kall processTurn-metoder etter `S.turn++` i post-turn processing.
+Det finnes 2 mønstre i eksisterende kode:
+
+**Pattern A: Kall i PRODUCTION phase (FØR S.turn++)**
+- economicDepthApi.processEconomicTurn() - gamePhaseHandlers.ts:762
+- militaryTemplatesApi.processTurnMaintenance() - gamePhaseHandlers.ts:791
+- supplySystemApi.processTurnSupply() - gamePhaseHandlers.ts:814
+- Dette prosesserer turn N → N (oppdaterer for current turn)
+
+**Pattern B: Kall ETTER S.turn++ (i post-turn processing)**
+- focusApi.processTurnFocusProgress() - Index.tsx:5927 (actually before setTimeout chain!)
+- spyNetworkApi.processTurnStart() - Index.tsx:6051 (after S.turn++)
+- Dette prosesserer turn N+1 → N+1 (oppdaterer for new turn)
+
+**Anbefaling for våre 6 nye systemer:**
+Bruk **Pattern A** - kall i productionPhase() FØR S.turn++. Dette er mest konsistent med eksisterende systems og gir korrekt timing for:
+- War support decay (skal skje ved turn-slutt)
+- Faction satisfaction (skal skje ved turn-slutt)
+- Morale/protest duration (skal skje ved turn-slutt)
+- Campaign expiration (skal skje ved turn-slutt)
+- Production progress (skal skje i production phase)
+- Refinement progress (skal skje i production phase)
+
+**FEIL i original dokumentasjon:** Jeg sa "kall i production phase" OG "kall etter S.turn++" - dette er motstridende. Korrekt er: **Kall i production phase (Pattern A)**.
 
 ### Dependency Issues
 

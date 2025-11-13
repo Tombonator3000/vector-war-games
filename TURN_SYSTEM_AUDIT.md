@@ -6,6 +6,18 @@
 
 ---
 
+## ⚠️ CORRECTION NOTICE
+
+**Original dokumentet hadde følgende feil (rettet av Codex audit):**
+1. ❌ Statement "INGEN hooks har useEffect på currentTurn" var for bred - useGovernance HAR dette
+2. Korrigert til: "De 6 manglende systemene har IKKE useEffect på currentTurn"
+
+**Alle andre funn er verifisert korrekte.**
+
+---
+
+---
+
 ## HOVEDFUNN
 
 ### ❌ 6 Systemer med processTurn-metoder som ALDRI kalles
@@ -84,17 +96,19 @@ Turn-prosessering er spredt over 3 forskjellige steder:
 - Production Queue
 - Resource Refinement
 
-### Problem B: Ingen useEffect Dependencies på Turn Changes
+### Problem B: Manglende useEffect Dependencies på Turn Changes for Nye Systemer
 
-**INGEN HOOKS** har `useEffect` som lytter på turn-endringer:
+**De 6 manglende systemene** har IKKE `useEffect` som lytter på turn-endringer:
 
 ```bash
-$ grep -r "useEffect.*turn" src/hooks/
+$ grep -r "useEffect.*currentTurn" src/hooks/useWarSupport.ts src/hooks/usePoliticalFactions.ts src/hooks/useRegionalMorale.ts src/hooks/useMediaWarfare.ts src/hooks/useProductionQueue.ts src/hooks/useResourceRefinement.ts
 # Ingen resultater!
 ```
 
+**MERK:** Andre hooks som useGovernance.ts HAR useEffect på currentTurn (linje 225, 281), så dette er ikke et universelt problem - men de 6 manglende systemene mangler denne funksjonaliteten.
+
 Dette betyr:
-- Hooks mottar `currentTurn` som prop
+- De 6 hooks mottar `currentTurn` som prop
 - Men de har **INGEN reaktiv logikk** som trigger når turn endres
 - Systemene er helt avhengige av at `processTurn()` kalles manuelt
 
