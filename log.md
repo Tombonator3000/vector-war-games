@@ -3309,3 +3309,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Reworked `createHolyWarCB` in `src/lib/casusBelliUtils.ts` with a non-linear ideology gap curve that introduces a baseline when data exists and allows extreme divergence to exceed the valid justification threshold.
 - Updated the ideology portion of `calculateJustificationFactors` to mirror the new scaling and documented the intended contribution range.
 - Added `src/lib/__tests__/validateWarDeclaration.test.ts` to cover a high-divergence scenario and confirmed the holy war Casus Belli now returns a valid justification via `npx vitest run src/lib/__tests__/validateWarDeclaration.test.ts`.
+
+### 2025-11-13T18:45:00Z - Dokumenterte manglende turn-lyttere i revisjonshooks
+- Oppdaterte "Problem B"-delen i `TURN_SYSTEM_AUDIT.md` for å anerkjenne eksisterende hooks som allerede lytter til `currentTurn` og presisere at de seks auditerte systemene fortsatt mangler automatiske turn-oppdateringer.
+- Erstattet det generelle `grep`-eksempelet med en `rg`-kommando som viser fraværet av `useEffect`-turn-lyttere spesifikt i de seks berørte hook-filene.
