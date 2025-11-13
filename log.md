@@ -3290,3 +3290,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Ran `npx vitest run src/lib/__tests__/gamePhaseHandlers.test.ts` to verify the new safeguards.
 ### 2025-11-13T17:24:46Z - Added projector visibility occlusion check
 - Updated `updateProjector` in `src/components/GlobeScene.tsx` to cull overlay projections when the surface normal faces away from the camera, preserving flat map behavior.
+
+### 2025-11-13T17:27:45Z - Prevented conventional assaults on treaty partners
+- Pulled attacker/defender treaty metadata inside `src/hooks/useConventionalWarfare.ts` so active truces or alliances abort `resolveBorderConflict` before DEFCON or relationship penalties apply, returning player-friendly reasons.
+- Expanded `src/hooks/__tests__/useConventionalWarfare.test.tsx` with alliance/truce attack attempts to confirm the hook rejects those actions without invoking DEFCON or relationship callbacks.
+- Executed `npm run test -- --run src/hooks/__tests__/useConventionalWarfare.test.tsx` to validate the updated safeguards.
