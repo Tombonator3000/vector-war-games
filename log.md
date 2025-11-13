@@ -3318,3 +3318,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-13T18:45:00Z - Dokumenterte manglende turn-lyttere i revisjonshooks
 - Oppdaterte "Problem B"-delen i `TURN_SYSTEM_AUDIT.md` for å anerkjenne eksisterende hooks som allerede lytter til `currentTurn` og presisere at de seks auditerte systemene fortsatt mangler automatiske turn-oppdateringer.
 - Erstattet det generelle `grep`-eksempelet med en `rg`-kommando som viser fraværet av `useEffect`-turn-lyttere spesifikt i de seks berørte hook-filene.
+
+### 2025-11-13T20:00:38Z - Stabilized production phase player lookup
+- Added an early `PlayerManager.get()` lookup within `endTurn` so the production phase policy and focus handlers consistently target the current player snapshot.
+- Renamed the agenda revelation refresh variable to avoid clashing with the preserved player reference and keep late-turn updates aligned with the latest manager state.
+- Reviewed the manual end-turn flow to confirm the production phase completes, the counter advances, and the phase resets without runtime errors.

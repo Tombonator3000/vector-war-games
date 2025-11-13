@@ -5822,6 +5822,8 @@ function endTurn() {
     return;
   }
 
+  const player = PlayerManager.get();
+
   // Set flag to prevent re-entry
   turnInProgress = true;
   notifyPhaseTransition(true);
@@ -6091,11 +6093,11 @@ function endTurn() {
       });
 
       // Process Agenda Revelations (Phase 4): Check if hidden agendas should be revealed
-      const player = PlayerManager.get();
-      if (player) {
+      const refreshedPlayer = PlayerManager.get();
+      if (refreshedPlayer) {
         const { nations: nationsAfterRevelations, revelations } = processAgendaRevelations(
           nations,
-          player,
+          refreshedPlayer,
           S.turn
         );
 
