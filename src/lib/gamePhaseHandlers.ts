@@ -111,6 +111,25 @@ export function launch(
     return false;
   }
 
+  const allianceActive = Boolean(
+    from.treaties?.[to.id]?.alliance ||
+    to.treaties?.[from.id]?.alliance ||
+    from.alliances?.includes(to.id) ||
+    to.alliances?.includes(from.id)
+  );
+
+  if (allianceActive) {
+    const allianceMessage = `Cannot attack ${to.name} - alliance active!`;
+    log(allianceMessage, 'warning');
+    if (from.isPlayer) {
+      toast({
+        title: 'Alliance prevents strike',
+        description: allianceMessage,
+      });
+    }
+    return false;
+  }
+
   if (yieldMT > 50 && S.defcon > 1) {
     log(`Strategic weapons require DEFCON 1`, 'warning');
     return false;
