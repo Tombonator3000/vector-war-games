@@ -192,6 +192,7 @@ import { usePolicySystem } from '@/hooks/usePolicySystem';
 import { useNationalFocus } from '@/hooks/useNationalFocus';
 import type { AvailableFocus } from '@/types/nationalFocus';
 import { useInternationalPressure } from '@/hooks/useInternationalPressure';
+import type { SanctionPackage, AidPackage, AidType } from '@/types/regionalMorale';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 import type { Unit } from '@/lib/unitModels';
 import { getDefaultScenario, type ScenarioConfig, SCENARIOS } from '@/types/scenario';
@@ -246,6 +247,9 @@ import {
   aiHandleDiplomaticUrgencies,
   aiAttemptDiplomacy,
   processAIProactiveDiplomacy,
+  registerInternationalPressureCallbacks,
+  type InternationalPressureSanctionEvent,
+  type InternationalPressureAidEvent,
 } from '@/lib/aiDiplomacyActions';
 import { updateCasusBelliForAllNations, processWarDeclaration } from '@/lib/casusBelliIntegration';
 import { createPeaceOffer, createWhitePeaceTerms } from '@/lib/peaceTermsUtils';
@@ -5920,17 +5924,74 @@ function endTurn() {
 
       // Apply international pressure effects (aid and sanctions) for player nation
       if (player) {
-        const economicImpact = internationalPressureSystem.getTotalEconomicImpact(player.id);
-        const aidBenefits = internationalPressureSystem.getAidBenefits(player.id);
+        processInternationalPressureTurn();
+        const economicImpact = getTotalEconomicImpact(player.id);
+        const aidBenefits = getAidBenefits(player.id);
+        const previousPressure = pressureDeltaRef.current;
+        const currentGoldPenalty = economicImpact.goldPenalty;
+        const currentAidGold = aidBenefits.goldPerTurn ?? 0;
 
-        // Apply sanctions (gold penalty)
-        if (economicImpact.goldPenalty > 0) {
-          player.gold = Math.max(0, (player.gold || 0) - economicImpact.goldPenalty);
+        if (currentGoldPenalty !== previousPressure.goldPenalty) {
+          if (currentGoldPenalty > 0) {
+            addNewsItem(
+              'diplomatic',
+              `${playerNationName} loses ${currentGoldPenalty} gold per turn to foreign sanctions.`,
+              'important',
+            );
+            toast({
+              title: 'Sanctions drain treasury',
+              description: `${playerNationName} forfeits ${currentGoldPenalty} gold this turn due to international pressure.`,
+              variant: 'destructive',
+            });
+          } else if (previousPressure.goldPenalty > 0) {
+            addNewsItem(
+              'diplomatic',
+              `Sanctions ease and ${playerNationName} regains trade revenues.`,
+              'important',
+            );
+            toast({
+              title: 'Sanctions relief',
+              description: `${playerNationName} no longer loses gold to sanctions this turn.`,
+            });
+          }
         }
 
-        // Apply aid benefits (gold per turn)
-        if (aidBenefits.goldPerTurn && aidBenefits.goldPerTurn > 0) {
-          player.gold = Math.max(0, (player.gold || 0) + aidBenefits.goldPerTurn);
+        if (currentAidGold !== previousPressure.aidGold) {
+          if (currentAidGold > 0) {
+            addNewsItem(
+              'diplomatic',
+              `${playerNationName} receives ${currentAidGold} gold per turn from aid coalitions.`,
+              'info',
+            );
+            toast({
+              title: 'Aid package disbursed',
+              description: `${playerNationName} gains ${currentAidGold} gold this turn from international assistance.`,
+              variant: 'success',
+            });
+          } else if (previousPressure.aidGold > 0) {
+            addNewsItem(
+              'diplomatic',
+              `Aid shipments wind down for ${playerNationName}.`,
+              'info',
+            );
+            toast({
+              title: 'Aid concluded',
+              description: `${playerNationName} no longer receives gold from international aid this turn.`,
+            });
+          }
+        }
+
+        pressureDeltaRef.current = {
+          goldPenalty: currentGoldPenalty,
+          aidGold: currentAidGold,
+        };
+
+        if (currentGoldPenalty > 0) {
+          player.gold = Math.max(0, (player.gold || 0) - currentGoldPenalty);
+        }
+
+        if (currentAidGold > 0) {
+          player.gold = Math.max(0, (player.gold || 0) + currentAidGold);
         }
       }
 
@@ -6582,6 +6643,9 @@ export default function NoradVector() {
   const hasAutoplayedTurnOneMusicRef = useRef(false);
   const hasBootstrappedGameRef = useRef(false);
   const [, setRenderTick] = useState(0);
+  const [pressureSyncKey, setPressureSyncKey] = useState(0);
+  const pressureInitializedNationsRef = useRef<Set<string>>(new Set());
+  const pressureDeltaRef = useRef<{ goldPenalty: number; aidGold: number }>({ goldPenalty: 0, aidGold: 0 });
 
   // Modal management - Extracted to useModalManager hook (Phase 7 refactoring)
   const { showModal, modalContent, openModal, closeModal } = useModalManager();
@@ -6874,11 +6938,14 @@ export default function NoradVector() {
   }, [S.turn, activeDiplomacyProposal, nations, setPendingAIProposals, getNationById]);
 
   useEffect(() => {
-    triggerNationsUpdate = () => setRenderTick((tick) => tick + 1);
+    triggerNationsUpdate = () => {
+      setRenderTick((tick) => tick + 1);
+      setPressureSyncKey((key) => key + 1);
+    };
     return () => {
       triggerNationsUpdate = null;
     };
-  }, []);
+  }, [setPressureSyncKey]);
   const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
     const storedVisual = Storage.getItem('map_style_visual') ?? Storage.getItem('map_style');
     const storedMode = Storage.getItem('map_mode');
@@ -8498,19 +8565,126 @@ export default function NoradVector() {
     }
   }, [playerNationId, nationalFocusSystem, addNewsItem, playerNationName]);
 
+  const handleSanctionsImposedNotification = useCallback(
+    (sanctions: SanctionPackage) => {
+      const targetNation = getNationById(GameStateManager.getNations(), sanctions.targetNationId);
+      const targetName = targetNation?.name ?? sanctions.targetNationId;
+
+      addNewsItem('diplomatic', `Sanctions imposed on ${targetName}`, 'high');
+
+      if (playerNationId && sanctions.targetNationId === playerNationId) {
+        const penalty = Math.max(0, sanctions.effects.goldPenalty);
+        toast({
+          title: penalty > 0 ? 'Sanctions tighten' : 'Sanctions enacted',
+          description:
+            penalty > 0
+              ? `${playerNationName} will lose ${penalty} gold each turn under the new sanctions.`
+              : `${playerNationName} faces new international sanctions.`,
+          variant: penalty > 0 ? 'destructive' : 'default',
+        });
+      }
+    },
+    [addNewsItem, playerNationId, playerNationName, toast],
+  );
+
+  const handleAidGrantedNotification = useCallback(
+    (aid: AidPackage) => {
+      const recipientNation = getNationById(GameStateManager.getNations(), aid.recipientNationId);
+      const recipientName = recipientNation?.name ?? aid.recipientNationId;
+
+      addNewsItem('diplomatic', `International aid granted to ${recipientName}`, 'medium');
+
+      if (playerNationId && aid.recipientNationId === playerNationId) {
+        const aidGold = Math.max(0, aid.benefits.goldPerTurn ?? 0);
+        toast({
+          title: 'International aid arrives',
+          description:
+            aidGold > 0
+              ? `${playerNationName} gains ${aidGold} gold per turn from relief packages.`
+              : `${playerNationName} receives humanitarian support from the global community.`,
+          variant: 'success',
+        });
+      }
+    },
+    [addNewsItem, playerNationId, playerNationName, toast],
+  );
+
   // International pressure system for sanctions and aid
-  const internationalPressureSystem = useInternationalPressure({
+  const {
+    initializePressure: initializeInternationalPressure,
+    imposeSanctions: imposeInternationalSanctions,
+    grantAid: grantInternationalAid,
+    processTurnUpdates: processInternationalPressureTurn,
+    getTotalEconomicImpact,
+    getAidBenefits,
+  } = useInternationalPressure({
     currentTurn: S.turn,
     onResolutionPassed: (resolution) => {
       addNewsItem('diplomatic', `UN Resolution passed: ${resolution.name}`, 'high');
     },
-    onSanctionsImposed: (sanctions) => {
-      addNewsItem('diplomatic', `Sanctions imposed on ${sanctions.targetNationId}`, 'high');
-    },
-    onAidGranted: (aid) => {
-      addNewsItem('diplomatic', `International aid granted to ${aid.recipientNationId}`, 'medium');
-    },
+    onSanctionsImposed: handleSanctionsImposedNotification,
+    onAidGranted: handleAidGrantedNotification,
   });
+
+  const ensurePressureTracking = useCallback(
+    (nationId: string | null | undefined) => {
+      if (!nationId) {
+        return;
+      }
+
+      if (!pressureInitializedNationsRef.current.has(nationId)) {
+        initializeInternationalPressure(nationId);
+        pressureInitializedNationsRef.current.add(nationId);
+      }
+    },
+    [initializeInternationalPressure],
+  );
+
+  useEffect(() => {
+    const currentNations = GameStateManager.getNations();
+    currentNations.forEach((nation) => ensurePressureTracking(nation.id));
+  }, [ensurePressureTracking, pressureSyncKey]);
+
+  const handleAISanctionImposed = useCallback(
+    (event: InternationalPressureSanctionEvent) => {
+      ensurePressureTracking(event.targetNationId);
+      ensurePressureTracking(event.imposingNationId);
+      imposeInternationalSanctions(
+        event.targetNationId,
+        [event.imposingNationId],
+        event.types,
+        event.severity,
+        event.duration,
+      );
+    },
+    [ensurePressureTracking, imposeInternationalSanctions],
+  );
+
+  const handleAIAidGranted = useCallback(
+    (event: InternationalPressureAidEvent) => {
+      ensurePressureTracking(event.recipientNationId);
+      ensurePressureTracking(event.donorNationId);
+      grantInternationalAid(
+        event.recipientNationId,
+        [event.donorNationId],
+        event.types,
+        event.duration,
+        [],
+      );
+    },
+    [ensurePressureTracking, grantInternationalAid],
+  );
+
+  useEffect(() => {
+    registerInternationalPressureCallbacks({
+      onSanctionsImposed: handleAISanctionImposed,
+      onAidSent: handleAIAidGranted,
+    });
+
+    return () => {
+      registerInternationalPressureCallbacks(null);
+    };
+  }, [handleAISanctionImposed, handleAIAidGranted]);
 
   // Era system for progressive complexity
   const handleEraChange = useCallback(
@@ -10826,6 +11000,12 @@ export default function NoradVector() {
       nations = updatedNations;
       GameStateManager.setNations(updatedNations);
       PlayerManager.setNations(updatedNations);
+
+      ensurePressureTracking(target.id);
+      ensurePressureTracking(player.id);
+      const aidTypes: AidType[] = terms.resourceAmount >= 60 ? ['economic', 'humanitarian'] : ['economic'];
+      const aidDuration = Math.min(8, Math.max(3, Math.ceil(terms.resourceAmount / 20)));
+      grantInternationalAid(target.id, [player.id], aidTypes, aidDuration, []);
 
       // Significant aid demonstrates goodwill and reduces tensions
       if (terms.resourceAmount >= 50) {

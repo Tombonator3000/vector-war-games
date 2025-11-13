@@ -3192,3 +3192,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Synced the national focus hook with turn resolution by persisting a module-level reference, initializing focus trees when nations load, and advancing focus progress each end turn while broadcasting completion news (`src/pages/Index.tsx`).
 - Added toast notifications for player completions, exposed a dedicated focus management sheet with branch summaries, and introduced UI controls to start or cancel focuses from both standard and minimal layouts (`src/pages/Index.tsx`).
 - Logged player-triggered focus actions and payouts through the existing news system so resource effects apply immediately on completion (`src/pages/Index.tsx`).
+
+### 2025-11-13T09:03:30Z - Integrated international pressure sanctions and aid loops
+- Initialized international pressure tracking for every nation, advanced pressure timers during turn resolution, and captured gold swing messaging via toasts/news (`src/pages/Index.tsx`).
+- Wired player diplomacy aid proposals and AI diplomacy sanctions/aid events into the pressure system so economic penalties and relief packages populate `pressureState` (`src/pages/Index.tsx`, `src/lib/aiDiplomacyActions.ts`).
+- Registered callbacks to surface sanction and aid notifications, synchronize hook callbacks, and updated lint run status (`npm run lint`).

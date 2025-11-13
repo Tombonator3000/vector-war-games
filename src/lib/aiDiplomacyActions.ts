@@ -11,6 +11,7 @@
 import type { Nation } from '@/types/game';
 import type { AllianceType } from '@/types/specializedAlliances';
 import type { AIInitiatedNegotiation } from '@/types/negotiation';
+import type { AidType, SanctionType } from '@/types/regionalMorale';
 import { canAfford, pay } from '@/lib/gameUtils';
 import { getNationById, ensureTreatyRecord, adjustThreat } from '@/lib/nationUtils';
 import { onTreatyBroken, onSanctionHarm, formSpecializedAlliance, breakSpecializedAlliance } from '@/lib/diplomacyPhase2Integration';
@@ -18,6 +19,35 @@ import { checkAllTriggers } from '@/lib/aiNegotiationTriggers';
 import { generateAINegotiationDeal } from '@/lib/aiNegotiationContentGenerator';
 import { evaluateNegotiation } from '@/lib/aiNegotiationEvaluator';
 import { applyNegotiationDeal } from '@/lib/negotiationUtils';
+
+export interface InternationalPressureSanctionEvent {
+  imposingNationId: string;
+  targetNationId: string;
+  duration: number;
+  severity: number;
+  types: SanctionType[];
+}
+
+export interface InternationalPressureAidEvent {
+  donorNationId: string;
+  recipientNationId: string;
+  duration: number;
+  types: AidType[];
+  productionCommitment: number;
+}
+
+export interface InternationalPressureCallbacks {
+  onSanctionsImposed?: (event: InternationalPressureSanctionEvent) => void;
+  onAidSent?: (event: InternationalPressureAidEvent) => void;
+}
+
+let internationalPressureCallbacks: InternationalPressureCallbacks | null = null;
+
+export function registerInternationalPressureCallbacks(
+  callbacks: InternationalPressureCallbacks | null,
+): void {
+  internationalPressureCallbacks = callbacks;
+}
 
 /**
  * Log diplomacy message
@@ -114,6 +144,13 @@ export function aiSendAid(
   target.instability = Math.max(0, (target.instability || 0) - 10);
   aiLogDiplomacy(actor, `sends economic aid to ${target.name}, reducing their instability.`, logFn);
   adjustThreat(target, actor.id, -2);
+  internationalPressureCallbacks?.onAidSent?.({
+    donorNationId: actor.id,
+    recipientNationId: target.id,
+    duration: 4,
+    types: ['economic'] as AidType[],
+    productionCommitment: cost.production,
+  });
   return true;
 }
 
@@ -144,6 +181,14 @@ export function aiImposeSanctions(
 
   aiLogDiplomacy(actor, `imposes sanctions on ${target.name}.`, logFn);
   adjustThreat(target, actor.id, 3);
+  const severityLevel = Math.max(1, Math.min(5, Math.round((target.sanctionedBy[actor.id] || 5) / 5)));
+  internationalPressureCallbacks?.onSanctionsImposed?.({
+    imposingNationId: actor.id,
+    targetNationId: target.id,
+    duration: 5,
+    severity: severityLevel,
+    types: ['trade', 'financial'] as SanctionType[],
+  });
   return true;
 }
 
