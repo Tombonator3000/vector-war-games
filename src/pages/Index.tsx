@@ -15534,7 +15534,7 @@ export default function NoradVector() {
                   onLaunchPropaganda={handleLaunchPropaganda}
                   onBuildWonder={handleBuildWonder}
                   onSetImmigrationPolicy={handleSetImmigrationPolicy}
-                  currentImmigrationPolicy={(PlayerManager.get()?.immigrationPolicy as ImmigrationPolicy) || 'restricted'}
+                  currentImmigrationPolicy={(PlayerManager.get()?.currentImmigrationPolicy as ImmigrationPolicy) || 'restricted'}
                   onClose={() => setIsCulturePanelOpen(false)}
                 />
               </TabsContent>
@@ -15546,7 +15546,7 @@ export default function NoradVector() {
               onLaunchPropaganda={handleLaunchPropaganda}
               onBuildWonder={handleBuildWonder}
               onSetImmigrationPolicy={handleSetImmigrationPolicy}
-              currentImmigrationPolicy={(PlayerManager.get()?.immigrationPolicy as ImmigrationPolicy) || 'restricted'}
+              currentImmigrationPolicy={(PlayerManager.get()?.currentImmigrationPolicy as ImmigrationPolicy) || 'restricted'}
               onClose={() => setIsCulturePanelOpen(false)}
             />
           )}

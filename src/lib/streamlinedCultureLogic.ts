@@ -188,7 +188,7 @@ export function applyImmigrationPolicy(
     ...nation,
     population: nation.population + immigrationBonus,
     instability: Math.max(0, Math.min(100, (nation.instability || 0) + policyDef.instabilityModifier)),
-    immigrationPolicy: policy,
+    currentImmigrationPolicy: policy,
   };
 }
 
