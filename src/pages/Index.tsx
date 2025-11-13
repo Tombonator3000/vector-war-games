@@ -98,6 +98,7 @@ import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/Enha
 import { LeaderContactModal } from '@/components/LeaderContactModal';
 import { LeadersScreen } from '@/components/LeadersScreen';
 import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
+import { PopulationImpactFeedback } from '@/components/PopulationImpactFeedback';
 import { LeaderOverviewPanel } from '@/components/LeaderOverviewPanel';
 import { StrategicOutliner } from '@/components/StrategicOutliner';
 import type { StrategicOutlinerGroup } from '@/components/StrategicOutliner';
@@ -4621,6 +4622,14 @@ function explode(
       : 0;
     if (convertedCasualties > 0) {
       GameStateManager.addNonPandemicCasualties(convertedCasualties);
+      
+      // Add visual population impact feedback
+      setPopulationImpacts(prev => [...prev, {
+        id: `impact-${Date.now()}-${Math.random()}`,
+        casualties: convertedCasualties,
+        targetName: target.name,
+        timestamp: Date.now()
+      }]);
     }
 
     // Track when nation was last nuked (for political events)
@@ -6720,6 +6729,7 @@ export default function NoradVector() {
   const [isIntelOperationsOpen, setIsIntelOperationsOpen] = useState(false);
   const [isSpyPanelOpen, setIsSpyPanelOpen] = useState(false);
   const [isWarCouncilOpen, setIsWarCouncilOpen] = useState(false);
+  const [populationImpacts, setPopulationImpacts] = useState<Array<{ id: string; casualties: number; targetName: string; timestamp: number }>>([]);
 
   const activeDoctrineIncident = S.doctrineIncidentState?.activeIncident ?? null;
   const doctrineIncidentActive = Boolean(activeDoctrineIncident);
@@ -15323,6 +15333,14 @@ export default function NoradVector() {
       )}
 
       <DefconWarningOverlay isVisible={isDefconWarningVisible} />
+
+      {/* Population Impact Feedback */}
+      <PopulationImpactFeedback 
+        impacts={populationImpacts}
+        onImpactComplete={(id) => {
+          setPopulationImpacts(prev => prev.filter(impact => impact.id !== id));
+        }}
+      />
 
       {/* Era Transition Overlay */}
       {showEraTransition && eraTransitionData && (
