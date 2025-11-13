@@ -92,6 +92,7 @@ export interface ProductionPhaseDependencies {
   PlayerManager: any;
   conventionalState?: any;  // Optional: conventional warfare state with territories
   rng: SeededRandom;
+  onGameOver?: (payload: { victory: boolean; message: string; cause?: string }) => void;
 }
 
 /**
@@ -324,7 +325,17 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
  * Process production phase - generate resources, handle timers, elections
  */
 export function productionPhase(deps: ProductionPhaseDependencies): void {
-  const { S, nations, log, advanceResearch, advanceCityConstruction, leaders, PlayerManager, conventionalState } = deps;
+  const {
+    S,
+    nations,
+    log,
+    advanceResearch,
+    advanceCityConstruction,
+    leaders,
+    PlayerManager,
+    conventionalState,
+    onGameOver,
+  } = deps;
 
   const player = PlayerManager?.get?.() ?? null;
 
@@ -661,7 +672,11 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
         log(`${n.name}: ${electionLog.message}`, result.winner === 'incumbent' ? 'success' : 'alert');
 
         if (electionLog.gameOver && n.isPlayer) {
-          S.gameOver = true;
+          if (onGameOver) {
+            onGameOver({ victory: false, message: electionLog.message, cause: 'election' });
+          } else {
+            S.gameOver = true;
+          }
           S.overlay = { text: 'VOTED OUT - GAME OVER', ttl: 5000 };
         }
 

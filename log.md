@@ -3274,3 +3274,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-13T16:41:55Z - Corrected immigration instability modifiers
 - Applied immigration policy instability modifiers directly in `src/types/streamlinedCulture.ts` and updated the selective policy balance to keep its stability bonus.
 - Added `src/types/__tests__/streamlinedCulture.test.ts` to cover positive and negative instability modifiers and ran `npm run test -- streamlinedCulture` to confirm behavior.
+### 2025-11-13T17:07:36Z - Routed election defeats through shared end-game flow
+- Injected an `onGameOver` callback into `productionPhase` so `applyElectionConsequences` can trigger the unified `endGame` routine from `src/pages/Index.tsx`, ensuring defeat narratives populate the final statistics screen.
+- Added `src/lib/__tests__/gamePhaseHandlers.test.ts` to simulate a player election loss, verified the callback receives the election message, and executed `npx vitest run src/lib/__tests__/gamePhaseHandlers.test.ts` to validate the behavior.
