@@ -15518,7 +15518,7 @@ export default function NoradVector() {
         if (!aiNation || !playerNation) return null;
 
         const relationship = aiNation.relationships?.[humanPlayerId] || 0;
-        const trust = aiNation.trustRecords?.[humanPlayerId]?.trustLevel || 50;
+        const trust = getTrust(aiNation, humanPlayerId);
 
         return (
           <AIDiplomacyProposalModal

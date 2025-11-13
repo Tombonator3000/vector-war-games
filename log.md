@@ -3184,3 +3184,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-12T14:49:06Z - Filtered catastrophic overlays from duplicate banners
 - Added catastrophic overlay detection in `src/pages/Index.tsx` so PhaseTransitionOverlay owns those alerts while the CatastropheBanner now only displays non-catastrophic notices.
 - Verified overlay gating to keep catastrophic payloads from reappearing after transitions.
+
+### 2025-11-13T08:20:51Z - Corrected AI diplomacy trust lookup
+- Updated the AI diplomacy modal in `src/pages/Index.tsx` to source trust through the shared `getTrust` helper rather than the deprecated `trustLevel` field, preventing undefined values during proposal rendering.
