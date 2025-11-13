@@ -7,6 +7,10 @@
 
 ---
 
+### 2025-11-13T16:53:14Z - End game confirmation gate
+- Added an `endGameRevealRequiresConfirmation` flag to the game state manager so final turn clicks can acknowledge the outcome before showing the end screen.
+- Updated `Index.tsx` to defer end game reveal scheduling until the player confirms, adjust the reveal helper, and relax the `endTurn` guard to route the final acknowledgement.
+
 ### 2025-11-13T15:35:15Z - Victory progress summary refactor
 - Removed the floating HUD overlay from `Index.tsx` and repurposed the victory tracking component into an inline Civilization Status Report summary.
 - Introduced `VictoryProgressSummary` for reusable path displays and wired it into `VictoryPathsSection` with shared color palettes.

@@ -5123,6 +5123,7 @@ function checkVictory() {
 // End game
 function endGame(victory: boolean, message: string) {
   S.gameOver = true;
+  S.endGameRevealRequiresConfirmation = true;
 
   const player = PlayerManager.get();
   if (!player) return;
@@ -5193,11 +5194,7 @@ function endGame(victory: boolean, message: string) {
 
   // Store statistics for end game screen and delay overlay until animations resolve
   S.endGameStatistics = statistics;
-  const now = Date.now();
-  S.pendingEndGameReveal = {
-    initiatedAt: now,
-    minRevealAt: now + ENDGAME_REVEAL_MIN_DELAY_MS,
-  };
+  S.pendingEndGameReveal = undefined;
   S.showEndGameScreen = false;
 
   if (victory) {
@@ -5801,8 +5798,18 @@ function endTurn() {
     return;
   }
 
-  if (S.gameOver || S.phase !== 'PLAYER') {
-    console.log('[Turn Debug] Blocked: gameOver or not in PLAYER phase');
+  if (S.gameOver) {
+    if (S.endGameRevealRequiresConfirmation) {
+      console.log('[Turn Debug] Confirming end game reveal');
+      confirmEndGameReveal();
+    } else {
+      console.log('[Turn Debug] Blocked: gameOver state with no pending confirmation');
+    }
+    return;
+  }
+
+  if (S.phase !== 'PLAYER') {
+    console.log('[Turn Debug] Blocked: not in PLAYER phase');
     return;
   }
 
@@ -6595,7 +6602,25 @@ function hasActiveEndGameAnimations(): boolean {
   return missilesActive || bombersActive || submarinesActive;
 }
 
+function confirmEndGameReveal() {
+  if (!S.pendingEndGameReveal) {
+    const now = Date.now();
+    S.pendingEndGameReveal = {
+      initiatedAt: now,
+      minRevealAt: now + ENDGAME_REVEAL_MIN_DELAY_MS,
+    };
+  }
+
+  S.endGameRevealRequiresConfirmation = false;
+  S.showEndGameScreen = false;
+  triggerNationsUpdate?.();
+}
+
 function maybeRevealEndGameScreen() {
+  if (S.endGameRevealRequiresConfirmation) {
+    return;
+  }
+
   const pendingReveal = S.pendingEndGameReveal;
   if (!pendingReveal) {
     return;
