@@ -3255,3 +3255,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Ran `npx vitest run src/lib/__tests__/electionSystem.test.ts` to confirm the refactor preserved election outcomes.
 ### 2025-11-13T13:48:52Z - Re-ran election regression tests
 - Re-executed `npx vitest run src/lib/__tests__/electionSystem.test.ts` after refining the aggregate builder to ensure the suite remained green.
+### 2025-11-13T15:30:23Z - Optimized resource depletion lookups
+- Built a nation map before invoking `processResourceDepletion` in `src/lib/gamePhaseHandlers.ts` and updated the depletion helper to accept the precomputed map for constant-time lookups.
+- Added `src/lib/__tests__/resourceDepletionSystem.test.ts` to verify depletion warnings and deposit exhaustion remain consistent after the optimization.
+- Ran `npx vitest run src/lib/__tests__/resourceDepletionSystem.test.ts` to confirm the new tests and lookup changes pass.

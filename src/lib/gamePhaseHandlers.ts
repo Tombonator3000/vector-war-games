@@ -460,11 +460,14 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     }
 
     // Process resource depletion
+    const nationsById = new Map<string, Nation>(nations.map(n => [n.id, n]));
+
     const depletionResult = processResourceDepletion(
       S.territoryResources,
       conventionalState.territories,
       nations,
-      DEFAULT_DEPLETION_CONFIG
+      DEFAULT_DEPLETION_CONFIG,
+      nationsById
     );
     S.territoryResources = depletionResult.territoryResources;
     S.depletionWarnings = depletionResult.warnings;
