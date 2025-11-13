@@ -519,7 +519,8 @@ export function useSupplySystem({ currentTurn, nations }: UseSupplySystemOptions
     if (sources.size === 0) {
       initializeSupplySystem();
     }
-  }, [initializeSupplySystem, sources.size]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sources.size]);
 
   return {
     // State
