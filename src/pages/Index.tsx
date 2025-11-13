@@ -7915,9 +7915,6 @@ export default function NoradVector() {
     [addNewsItem]
   );
 
-  const playerNationId =
-    PlayerManager.get()?.id ?? nations.find(nation => nation.isPlayer)?.id ?? 'player';
-
   // Hearts of Iron Phase 2: Military Templates System - MUST be declared before useConventionalWarfare
   const militaryTemplates = useMilitaryTemplates({
     currentTurn: S.turn,
