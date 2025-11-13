@@ -187,6 +187,8 @@ import { PandemicSpreadOverlay } from '@/components/pandemic/PandemicSpreadOverl
 import { CasualtyImpactSummary } from '@/components/pandemic/CasualtyImpactSummary';
 import { MapModeBar } from '@/components/MapModeBar';
 import { usePolicySystem } from '@/hooks/usePolicySystem';
+import { useNationalFocus } from '@/hooks/useNationalFocus';
+import { useInternationalPressure } from '@/hooks/useInternationalPressure';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 import type { Unit } from '@/lib/unitModels';
 import { getDefaultScenario, type ScenarioConfig, SCENARIOS } from '@/types/scenario';
@@ -5794,8 +5796,6 @@ function endTurn() {
         log('⚠️ Error in production phase - continuing turn', 'warning');
       }
 
-      // NOTE: Policy system temporarily disabled during refactoring
-      /*
       // Apply policy effects for player nation
       if (player && policySystem.totalEffects) {
         const effects = policySystem.totalEffects;
@@ -5835,7 +5835,49 @@ function endTurn() {
           governance.applyDelta(player.id, delta);
         }
       }
-      */
+
+      // Apply national focus effects for player nation
+      if (player) {
+        const completedFocuses = nationalFocusSystem.getCompletedFocuses(player.id);
+        let focusGoldPerTurn = 0;
+        let focusIntelPerTurn = 0;
+
+        completedFocuses.forEach((focus) => {
+          focus.effects.forEach((effect) => {
+            if (effect.statChanges) {
+              if (effect.statChanges.goldPerTurn) {
+                focusGoldPerTurn += effect.statChanges.goldPerTurn;
+              }
+              if (effect.statChanges.intelPerTurn) {
+                focusIntelPerTurn += effect.statChanges.intelPerTurn;
+              }
+            }
+          });
+        });
+
+        if (focusGoldPerTurn !== 0) {
+          player.gold = Math.max(0, (player.gold || 0) + focusGoldPerTurn);
+        }
+        if (focusIntelPerTurn !== 0) {
+          player.intel = Math.max(0, (player.intel || 0) + focusIntelPerTurn);
+        }
+      }
+
+      // Apply international pressure effects (aid and sanctions) for player nation
+      if (player) {
+        const economicImpact = internationalPressureSystem.getTotalEconomicImpact(player.id);
+        const aidBenefits = internationalPressureSystem.getAidBenefits(player.id);
+
+        // Apply sanctions (gold penalty)
+        if (economicImpact.goldPenalty > 0) {
+          player.gold = Math.max(0, (player.gold || 0) - economicImpact.goldPenalty);
+        }
+
+        // Apply aid benefits (gold per turn)
+        if (aidBenefits.goldPerTurn && aidBenefits.goldPerTurn > 0) {
+          player.gold = Math.max(0, (player.gold || 0) + aidBenefits.goldPerTurn);
+        }
+      }
 
       S.turn++;
       S.phase = 'PLAYER';
@@ -8267,6 +8309,26 @@ export default function NoradVector() {
       }
     },
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
+  });
+
+  // National focus system for strategic national objectives
+  const nationalFocusSystem = useNationalFocus({
+    currentTurn: S.turn,
+    nations: nations.map(n => ({ id: n.id, name: n.name })),
+  });
+
+  // International pressure system for sanctions and aid
+  const internationalPressureSystem = useInternationalPressure({
+    currentTurn: S.turn,
+    onResolutionPassed: (resolution) => {
+      addNewsItem('diplomatic', `UN Resolution passed: ${resolution.name}`, 'high');
+    },
+    onSanctionsImposed: (sanctions) => {
+      addNewsItem('diplomatic', `Sanctions imposed on ${sanctions.targetNationId}`, 'high');
+    },
+    onAidGranted: (aid) => {
+      addNewsItem('diplomatic', `International aid granted to ${aid.recipientNationId}`, 'medium');
+    },
   });
 
   // Era system for progressive complexity
