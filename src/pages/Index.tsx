@@ -14900,6 +14900,11 @@ export default function NoradVector() {
           availableProduction={player.production}
           availableIntel={player.intel || 0}
           currentTurn={S.turn}
+          playerActiveFocus={playerActiveFocus}
+          focusPaths={focusPaths}
+          availableFocusLookup={availableFocusLookup}
+          onStartFocus={handleStartFocus}
+          onCancelFocus={handleCancelFocus}
           onEnactPolicy={(policyId) => {
             const result = policySystem.enactPolicy(policyId);
             if (result.success) {
