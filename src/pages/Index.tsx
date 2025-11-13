@@ -5828,19 +5828,8 @@ function endTurn() {
   turnInProgress = true;
   notifyPhaseTransition(true);
 
-  // Safety timeout: auto-release lock after 30 seconds to prevent permanent lock
-  const safetyTimeout = setTimeout(() => {
-    if (turnInProgress) {
-      console.error('[Turn Debug] SAFETY: Force-releasing turn lock after timeout');
-      turnInProgress = false;
-      if (S.phase !== 'PLAYER') {
-        S.phase = 'PLAYER';
-        S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
-        updateDisplay();
-      }
-      notifyPhaseTransition(false);
-    }
-  }, 30000);
+  // Track the safety timer so it can be cleared after successful completion
+  let safetyTimeout: ReturnType<typeof setTimeout> | null = null;
 
   S.actionsRemaining = 0;
   S.phase = 'AI';
@@ -5865,8 +5854,37 @@ function endTurn() {
     }
   });
   
+  // Compute dynamic safety timeout to cover the full AI + production sequence
   const resolutionDelay = aiActionCount * 500 + 500;
-  console.log('[Turn Debug] Resolution phase scheduled in', resolutionDelay, 'ms');
+  const productionPhaseDelay = 1500;
+  const safetyBuffer = 3000;
+  const minimumSafetyTimeout = 30000;
+  const computedSafetyTimeout = Math.max(
+    minimumSafetyTimeout,
+    resolutionDelay + productionPhaseDelay + safetyBuffer
+  );
+
+  safetyTimeout = setTimeout(() => {
+    if (turnInProgress) {
+      console.error('[Turn Debug] SAFETY: Force-releasing turn lock after timeout');
+      turnInProgress = false;
+      if (S.phase !== 'PLAYER') {
+        S.phase = 'PLAYER';
+        S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+        updateDisplay();
+      }
+      notifyPhaseTransition(false);
+    }
+    safetyTimeout = null;
+  }, computedSafetyTimeout);
+
+  console.log(
+    '[Turn Debug] Resolution phase scheduled in',
+    resolutionDelay,
+    'ms (safety timeout:',
+    computedSafetyTimeout,
+    'ms)'
+  );
   
   setTimeout(() => {
     try {
@@ -5893,7 +5911,7 @@ function endTurn() {
 
       try {
         // Apply policy effects for player nation
-      if (player && policySystem.totalEffects) {
+        if (player && policySystem.totalEffects) {
         const effects = policySystem.totalEffects;
 
         // Apply per-turn resource gains/costs
@@ -6062,7 +6080,10 @@ function endTurn() {
 
         // Release the turn lock and clear safety timeout
         turnInProgress = false;
-        clearTimeout(safetyTimeout);
+        if (safetyTimeout) {
+          clearTimeout(safetyTimeout);
+          safetyTimeout = null;
+        }
         notifyPhaseTransition(false);
         console.log('[Turn Debug] Turn complete! New turn:', S.turn, 'Phase:', S.phase, 'Actions:', S.actionsRemaining, 'turn lock released');
       } catch (error) {
@@ -6076,7 +6097,10 @@ function endTurn() {
         
         // Release turn lock
         turnInProgress = false;
-        clearTimeout(safetyTimeout);
+        if (safetyTimeout) {
+          clearTimeout(safetyTimeout);
+          safetyTimeout = null;
+        }
         notifyPhaseTransition(false);
         console.log('[Turn Debug] Turn salvaged after error! New turn:', S.turn);
       }
@@ -6529,8 +6553,8 @@ function endTurn() {
       updateDisplay();
       checkVictory();
       checkVictoryProgress();
-    }, 1500);
-  }, aiActionCount * 500 + 500);
+    }, productionPhaseDelay);
+  }, resolutionDelay);
 }
 
 // Update display
