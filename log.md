@@ -3304,3 +3304,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Extended the top-bar resource stack in `src/pages/Index.tsx` with a gold badge and assigned a stable `goldDisplay` identifier for runtime updates.
 - Updated `updateDisplay()` in `src/pages/Index.tsx` to populate the new badge with the player's floored gold value while retaining existing production/intel behavior.
 - Reviewed existing gold consumers (e.g., `PolicySelectionPanel` props) to ensure no additional adjustments were required after the display changes.
+
+### 2025-11-13T18:24:25Z - Rebalanced holy war justification scaling
+- Reworked `createHolyWarCB` in `src/lib/casusBelliUtils.ts` with a non-linear ideology gap curve that introduces a baseline when data exists and allows extreme divergence to exceed the valid justification threshold.
+- Updated the ideology portion of `calculateJustificationFactors` to mirror the new scaling and documented the intended contribution range.
+- Added `src/lib/__tests__/validateWarDeclaration.test.ts` to cover a high-divergence scenario and confirmed the holy war Casus Belli now returns a valid justification via `npx vitest run src/lib/__tests__/validateWarDeclaration.test.ts`.
