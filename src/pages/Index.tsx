@@ -5891,7 +5891,8 @@ function endTurn() {
         log('⚠️ Error in production phase - continuing turn', 'warning');
       }
 
-      // Apply policy effects for player nation
+      try {
+        // Apply policy effects for player nation
       if (player && policySystem.totalEffects) {
         const effects = policySystem.totalEffects;
 
@@ -6059,11 +6060,26 @@ function endTurn() {
       spyNetworkApi?.processTurnStart();
       triggerNationsUpdate?.();
 
-      // Release the turn lock and clear safety timeout
-      turnInProgress = false;
-      clearTimeout(safetyTimeout);
-      notifyPhaseTransition(false);
-      console.log('[Turn Debug] Turn complete! New turn:', S.turn, 'Phase:', S.phase, 'Actions:', S.actionsRemaining, 'turn lock released');
+        // Release the turn lock and clear safety timeout
+        turnInProgress = false;
+        clearTimeout(safetyTimeout);
+        notifyPhaseTransition(false);
+        console.log('[Turn Debug] Turn complete! New turn:', S.turn, 'Phase:', S.phase, 'Actions:', S.actionsRemaining, 'turn lock released');
+      } catch (error) {
+        console.error('[Turn Debug] ERROR in post-production processing:', error);
+        log('⚠️ Error completing turn - resetting to player phase', 'alert');
+        
+        // Ensure turn advances even on error
+        S.turn++;
+        S.phase = 'PLAYER';
+        S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+        
+        // Release turn lock
+        turnInProgress = false;
+        clearTimeout(safetyTimeout);
+        notifyPhaseTransition(false);
+        console.log('[Turn Debug] Turn salvaged after error! New turn:', S.turn);
+      }
 
       // Decrement intel operation cooldowns
       nations.forEach(nation => {
