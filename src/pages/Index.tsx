@@ -4637,9 +4637,8 @@ function explode(
       variant: 'destructive',
       duration: 8000,
     });
-    const damage = calculateDirectNuclearDamage(yieldMT, target.defense);
-    const oldPopulation = target.population;
-    target.population = Math.max(0, target.population - damage);
+
+    // Update instability from the strike
     target.instability = Math.min(100, (target.instability || 0) + yieldMT);
 
     emitOverlayMessage(impact.overlayMessage, 8000, { tone: 'catastrophe', sound: 'explosion-blast' });
