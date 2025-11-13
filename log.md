@@ -3267,3 +3267,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-13T16:28:43Z - Updated streamlined culture immigration state wiring
 - Swapped the legacy `immigrationPolicy` assignment in `src/lib/streamlinedCultureLogic.ts` for the canonical `currentImmigrationPolicy` field.
 - Passed `PlayerManager.get()?.currentImmigrationPolicy` through `StreamlinedCulturePanel` props in `src/pages/Index.tsx` to surface the latest policy selection.
+### 2025-11-13T16:41:55Z - Corrected immigration instability modifiers
+- Applied immigration policy instability modifiers directly in `src/types/streamlinedCulture.ts` and updated the selective policy balance to keep its stability bonus.
+- Added `src/types/__tests__/streamlinedCulture.test.ts` to cover positive and negative instability modifiers and ran `npm run test -- streamlinedCulture` to confirm behavior.
