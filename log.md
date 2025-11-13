@@ -3200,3 +3200,22 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-13T09:16:05Z - Rebalanced BioLab tier production requirements
 - Reduced BioLab tier 2 production cost to 100 while keeping construction timing and unlocks intact (`src/lib/researchData.ts`).
 - Lowered BioLab tier 3 and tier 4 production costs to 150 and 250 respectively, preserving their uranium requirements for late-game balance (`src/lib/researchData.ts`).
+### 2025-11-13T09:38:30Z - Scoped regional morale unrest tracking update
+- Reviewed `useRegionalMorale` implementation and civil war risk helpers to plan protest/strike duration tracking and test coverage.
+### 2025-11-13T09:38:52Z - Implemented unrest duration tracking and risk integration
+- Added per-territory unrest duration state in `useRegionalMorale` and wired the morale update loop to increment or reset counts.
+- Threaded accumulated unrest durations into `calculateNationCivilWarRisk` so extended protests amplify civil war risk.
+- Exposed the new duration map from the hook for downstream consumers.
+### 2025-11-13T09:38:56Z - Added civil war risk regression test coverage
+- Created `useRegionalMorale` Vitest to compare single-turn and sustained unrest scenarios and verify risk escalation behavior.
+- Mocked RNG to stabilize protest persistence and exercised the new unrest duration accumulation logic.
+### 2025-11-13T09:39:35Z - Stabilized unrest regression test timing
+- Wrapped turn processing steps in async `act` helpers to ensure state updates flush before civil war risk assertions run.
+### 2025-11-13T09:40:05Z - Extended test assertions for unrest duration output
+- Captured the exposed `territoryUnrestDuration` map in the regression test to directly validate per-territory counters feed into national risk.
+### 2025-11-13T09:40:24Z - Added protest activation assertion for debugging
+- Asserted the protest state after processing to confirm unrest remains active while iterating on duration tracking.
+### 2025-11-13T09:41:25Z - Refactored unrest duration accumulation
+- Replaced the intermediate array with a direct duration map update inside `processTurnUpdates` to ensure each territory increments or resets consistently.
+### 2025-11-13T09:41:38Z - Verified regional morale regression test
+- Ran `npm run test -- useRegionalMorale` to confirm the new duration tracking and risk escalation behavior passes.
