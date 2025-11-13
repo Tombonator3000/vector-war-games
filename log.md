@@ -3329,3 +3329,9 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Reworked `endTurn` in `src/pages/Index.tsx` to derive the safety timeout from the computed AI resolution delay plus production buffering, preventing premature lock release on long AI sequences.
 - Cleared the timer defensively once the turn resolves or when recovery handling fires to avoid stray pending timeouts.
 - Logged the dynamic timeout scheduling details for easier debugging of lengthy production cycles.
+
+### 2025-11-13T21:15:00Z - Synchronized bio-warfare turn rewards with pandemic state
+- Refactored `advancePandemicTurn` in `src/hooks/usePandemic.ts` to return computed state snapshots and update internal refs synchronously for consumers.
+- Updated `advanceBioWarfareTurn` in `src/hooks/useBioWarfare.ts` to consume the returned pandemic state for DNA milestones, outbreak counts, and cure gating logic.
+- Added targeted regression tests in `src/hooks/__tests__/useBioWarfare.test.tsx` verifying DNA milestone gains and parasite cure gating using the refreshed state.
+- Executed `npx vitest run src/hooks/__tests__/useBioWarfare.test.tsx` to confirm the new coverage passes.

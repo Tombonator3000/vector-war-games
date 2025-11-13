@@ -102,12 +102,12 @@ describe('usePandemic bio-warfare traits', () => {
 
     const casualtiesBefore = result.current.pandemicState.casualtyTally;
 
-    let firstEffect;
+    let firstResolution;
     act(() => {
-      firstEffect = result.current.advancePandemicTurn({ turn: 1, defcon: 3, playerPopulation: 600 });
+      firstResolution = result.current.advancePandemicTurn({ turn: 1, defcon: 3, playerPopulation: 600 });
     });
 
-    expect(firstEffect).not.toBeNull();
+    expect(firstResolution?.effect).toBeTruthy();
     expect(result.current.pandemicState.casualtyTally).toBeGreaterThan(casualtiesBefore);
 
     act(() => {

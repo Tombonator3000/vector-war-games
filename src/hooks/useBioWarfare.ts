@@ -8,7 +8,7 @@ import { usePandemic } from './usePandemic';
 import { useEvolutionTree } from './useEvolutionTree';
 import { useBioLab } from './useBioLab';
 import { useRNG } from '@/contexts/RNGContext';
-import type { PandemicTurnContext, PandemicTurnEffect } from './usePandemic';
+import type { PandemicTurnContext, PandemicTurnEffect, PandemicTurnResolution } from './usePandemic';
 import type { NewsItem } from '@/components/NewsTicker';
 import type { PlagueState, SymptomId, EvolveNodePayload } from '@/types/biowarfare';
 import { getPlagueTypeById, getNodeById } from '@/lib/evolutionData';
@@ -184,6 +184,8 @@ export function useBioWarfare(addNewsItem: AddNewsItem, scenario?: ScenarioConfi
         return null;
       }
 
+      const previousPandemicState = pandemic.pandemicState;
+
       // Calculate modifiers from evolution
       const modifiers = calculateSpreadModifiers(evolution.plagueState);
 
@@ -237,9 +239,11 @@ export function useBioWarfare(addNewsItem: AddNewsItem, scenario?: ScenarioConfi
     }
 
     // Advance pandemic with modifiers
-    const baseEffect = pandemic.advancePandemicTurn(context);
+    const turnResolution: PandemicTurnResolution | null = pandemic.advancePandemicTurn(context);
 
-    if (!baseEffect) return null;
+    if (!turnResolution) return null;
+
+    const { effect: baseEffect, state: updatedPandemicState } = turnResolution;
 
     // Apply evolution modifiers to effects
     const enhancedEffect: PandemicTurnEffect = {
@@ -264,16 +268,16 @@ export function useBioWarfare(addNewsItem: AddNewsItem, scenario?: ScenarioConfi
     }
 
     // DNA from infection spread (every 10% global infection = 1 DNA)
-    const infectionMilestone = Math.floor(pandemic.pandemicState.globalInfection / 10);
-    const previousMilestone = Math.floor((pandemic.pandemicState.globalInfection - 5) / 10);
+    const infectionMilestone = Math.floor(updatedPandemicState.globalInfection / 10);
+    const previousMilestone = Math.floor(previousPandemicState.globalInfection / 10);
     if (infectionMilestone > previousMilestone) {
       dnaGained += 2;
       addNewsItem('science', `Infection milestone reached: +2 DNA`, 'important');
     }
 
     // DNA from active outbreaks (1 DNA per active outbreak region)
-    if (pandemic.pandemicState.outbreaks.length > 0) {
-      dnaGained += pandemic.pandemicState.outbreaks.length;
+    if (updatedPandemicState.outbreaks.length > 0) {
+      dnaGained += updatedPandemicState.outbreaks.length;
     }
 
     // Passive DNA generation based on lab tier (only if plague is active)
@@ -297,7 +301,7 @@ export function useBioWarfare(addNewsItem: AddNewsItem, scenario?: ScenarioConfi
     const deathsThisTurn = enhancedEffect?.populationLoss || 0;
     const nationsInfected = evolution.plagueState.countryInfections.size;
     evolution.updatePlagueStats(
-      pandemic.pandemicState.globalInfection,
+      updatedPandemicState.globalInfection,
       deathsThisTurn,
       nationsInfected
     );
@@ -314,10 +318,10 @@ export function useBioWarfare(addNewsItem: AddNewsItem, scenario?: ScenarioConfi
     }
 
     // Parasite/Prion: Cure starts later (detection delay)
-    if (plagueType?.id === 'parasite' && pandemic.pandemicState.globalInfection < 30) {
+    if (plagueType?.id === 'parasite' && updatedPandemicState.globalInfection < 30) {
       cureIncrease = 0; // No cure until 30% infected
     }
-    if (plagueType?.id === 'prion' && pandemic.pandemicState.globalInfection < 40) {
+    if (plagueType?.id === 'prion' && updatedPandemicState.globalInfection < 40) {
       cureIncrease = 0; // No cure until 40% infected
     }
 
@@ -349,7 +353,7 @@ export function useBioWarfare(addNewsItem: AddNewsItem, scenario?: ScenarioConfi
       const lethalityReduction = (cureEffectiveness * 0.005) * 1.0; // 0.05-0.5 per turn
 
       // Reduce global infection
-      if (pandemic.pandemicState.globalInfection > 0) {
+      if (updatedPandemicState.globalInfection > 0) {
         pandemic.applyCountermeasure({
           type: 'vaccine',
           value: infectionReduction,
@@ -364,12 +368,12 @@ export function useBioWarfare(addNewsItem: AddNewsItem, scenario?: ScenarioConfi
       }
 
       // Add news update every 5 turns
-      if (context.turn % 5 === 0 && pandemic.pandemicState.globalInfection > 5) {
+      if (context.turn % 5 === 0 && updatedPandemicState.globalInfection > 5) {
         addNewsItem('science', `Cure deployment ${cureEffectiveness.toFixed(0)}% effective - infection declining`, 'important');
       }
 
       // Check if pandemic is effectively neutralized
-      if (pandemic.pandemicState.globalInfection < 2 && pandemic.pandemicState.lethality < 0.05) {
+      if (updatedPandemicState.globalInfection < 2 && updatedPandemicState.lethality < 0.05) {
         addNewsItem('science', 'Pandemic effectively neutralized by cure deployment', 'critical');
       }
     }

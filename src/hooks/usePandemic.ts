@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NewsItem } from '@/components/NewsTicker';
 
 export type PandemicStage = 'outbreak' | 'epidemic' | 'pandemic' | 'collapse';
@@ -77,6 +77,11 @@ export interface PandemicTurnEffect {
   resolved?: boolean;
   summary?: string;
   casualtyTotals?: Record<string, number>;
+}
+
+export interface PandemicTurnResolution {
+  effect: PandemicTurnEffect;
+  state: PandemicState;
 }
 
 type AddNewsItem = (category: NewsItem['category'], text: string, priority: NewsItem['priority']) => void;
@@ -224,6 +229,11 @@ function deriveTraitEffects(traits: PandemicTraitLevels) {
 export function usePandemic(addNewsItem: AddNewsItem) {
   const [pandemicState, setPandemicState] = useState<PandemicState>(INITIAL_STATE);
   const stageRef = useRef<PandemicStage>('outbreak');
+  const stateRef = useRef<PandemicState>(INITIAL_STATE);
+
+  useEffect(() => {
+    stateRef.current = pandemicState;
+  }, [pandemicState]);
 
   const triggerPandemic = useCallback((payload: PandemicTriggerPayload) => {
     let newsText: string | null = null;
@@ -390,8 +400,9 @@ export function usePandemic(addNewsItem: AddNewsItem) {
     }
   }, [addNewsItem, pandemicState.active]);
 
-  const advancePandemicTurn = useCallback((context: PandemicTurnContext): PandemicTurnEffect | null => {
-    if (!pandemicState.active) {
+  const advancePandemicTurn = useCallback((context: PandemicTurnContext): PandemicTurnResolution | null => {
+    const prev = stateRef.current;
+    if (!prev.active) {
       return null;
     }
 
@@ -400,135 +411,131 @@ export function usePandemic(addNewsItem: AddNewsItem) {
     let mutationDescriptor: string | null = null;
     let resolved = false;
     let summary: string | undefined;
-    let populationLoss = 0;
-    let productionPenalty = 0;
-    let instabilityIncrease = 0;
-    let actionsPenalty = 0;
 
-    setPandemicState(prev => {
-      if (!prev.active) return prev;
+    const traitEffects = deriveTraitEffects(prev.activeTraits);
+    const containmentBleed = prev.containmentEffort > 0 ? 1.5 : 0;
+    const vaccineMomentum = prev.vaccineProgress / 20;
+    const baseSpread = 6 + prev.outbreaks.length * 1.5 + prev.mutationLevel * 1.3 + traitEffects.spreadBonus;
+    const containmentEffect = Math.max(0, prev.containmentEffort * 0.12 + vaccineMomentum - traitEffects.containmentResistance);
+    const newGlobalInfection = clamp(prev.globalInfection + baseSpread - containmentEffect, 0, 100);
+    const infectionDelta = newGlobalInfection - prev.globalInfection;
 
-      const traitEffects = deriveTraitEffects(prev.activeTraits);
-      const containmentBleed = prev.containmentEffort > 0 ? 1.5 : 0;
-      const vaccineMomentum = prev.vaccineProgress / 20;
-      const baseSpread = 6 + prev.outbreaks.length * 1.5 + prev.mutationLevel * 1.3 + traitEffects.spreadBonus;
-      const containmentEffect = Math.max(0, prev.containmentEffort * 0.12 + vaccineMomentum - traitEffects.containmentResistance);
-      const newGlobalInfection = clamp(prev.globalInfection + baseSpread - containmentEffect, 0, 100);
-      const infectionDelta = newGlobalInfection - prev.globalInfection;
+    const outbreaks = prev.outbreaks.map(outbreak => ({
+      ...outbreak,
+      infection: clamp(outbreak.infection + infectionDelta * 0.5 - containmentEffect * 0.3, 0, 100),
+      heat: clamp(outbreak.heat + Math.max(0, infectionDelta) * 0.6 - containmentEffect * 0.2 - traitEffects.stealthHeatReduction, 0, 100)
+    }));
 
-      const outbreaks = prev.outbreaks.map(outbreak => ({
-        ...outbreak,
-        infection: clamp(outbreak.infection + infectionDelta * 0.5 - containmentEffect * 0.3, 0, 100),
-        heat: clamp(outbreak.heat + Math.max(0, infectionDelta) * 0.6 - containmentEffect * 0.2 - traitEffects.stealthHeatReduction, 0, 100)
-      }));
+    const mutationChance = 0.12 + prev.mutationLevel * 0.03 - prev.containmentEffort * 0.002;
+    let mutationLevel = prev.mutationLevel;
+    if (Math.random() < clamp(mutationChance, 0.05, 0.45)) {
+      mutationLevel = clamp(mutationLevel + 1, 0, 12);
+      mutationDescriptor = pickRandom(MUTATION_TRAITS);
+      turnNews.push({
+        category: 'science',
+        text: `${prev.strainName} expresses ${mutationDescriptor}.`,
+        priority: 'urgent'
+      });
+    }
 
-      const mutationChance = 0.12 + prev.mutationLevel * 0.03 - prev.containmentEffort * 0.002;
-      let mutationLevel = prev.mutationLevel;
-      if (Math.random() < clamp(mutationChance, 0.05, 0.45)) {
-        mutationLevel = clamp(mutationLevel + 1, 0, 12);
-        mutationDescriptor = pickRandom(MUTATION_TRAITS);
-        turnNews.push({
-          category: 'science',
-          text: `${prev.strainName} expresses ${mutationDescriptor}.`,
-          priority: 'urgent'
-        });
-      }
+    const newContainment = clamp(prev.containmentEffort - containmentBleed, 0, 100);
+    const newVaccine = clamp(prev.vaccineProgress + Math.max(0, prev.containmentEffort - 40) * 0.05, 0, 120);
 
-      const newContainment = clamp(prev.containmentEffort - containmentBleed, 0, 100);
-      const newVaccine = clamp(prev.vaccineProgress + Math.max(0, prev.containmentEffort - 40) * 0.05, 0, 120);
+    const lethality = prev.lethality + mutationLevel * 0.01 + traitEffects.lethalityBase;
+    const casualtyBase = Math.max(0, infectionDelta) * (lethality + 0.1) * 50000 * traitEffects.lethalityScalar;
+    const populationLoss = Math.round(casualtyBase * (context.playerPopulation > 0 ? clamp(context.playerPopulation / 300, 0.2, 2) : 1));
+    const productionPenalty = Math.round(newGlobalInfection * 0.2);
+    const instabilityIncrease = Math.round(Math.max(0, infectionDelta) * 0.5);
+    const actionsPenalty = newGlobalInfection >= 70 ? 1 : newGlobalInfection >= 45 ? 1 : 0;
 
-      const lethality = prev.lethality + mutationLevel * 0.01 + traitEffects.lethalityBase;
-      const casualtyBase = Math.max(0, infectionDelta) * (lethality + 0.1) * 50000 * traitEffects.lethalityScalar;
-      populationLoss = Math.round(casualtyBase * (context.playerPopulation > 0 ? clamp(context.playerPopulation / 300, 0.2, 2) : 1));
-      productionPenalty = Math.round(newGlobalInfection * 0.2);
-      instabilityIncrease = Math.round(Math.max(0, infectionDelta) * 0.5);
-      actionsPenalty = newGlobalInfection >= 70 ? 1 : newGlobalInfection >= 45 ? 1 : 0;
+    const newCasualtyTally = prev.casualtyTally + populationLoss;
 
-      const newCasualtyTally = prev.casualtyTally + populationLoss;
+    const researchYield = Math.max(0, Math.round(Math.max(infectionDelta, 0) / 6));
+    const traitYield = prev.activeTraits.transmission > 0 || prev.activeTraits.stealth > 0 || prev.activeTraits.lethality > 0 ? 1 : 0;
+    const newLabResources = prev.labResources + researchYield + traitYield;
 
-      const researchYield = Math.max(0, Math.round(Math.max(infectionDelta, 0) / 6));
-      const traitYield = prev.activeTraits.transmission > 0 || prev.activeTraits.stealth > 0 || prev.activeTraits.lethality > 0 ? 1 : 0;
-      const newLabResources = prev.labResources + researchYield + traitYield;
+    let stage: PandemicStage = prev.stage;
+    if (newGlobalInfection >= STAGE_THRESHOLDS.collapse) {
+      stage = 'collapse';
+    } else if (newGlobalInfection >= STAGE_THRESHOLDS.pandemic) {
+      stage = 'pandemic';
+    } else if (newGlobalInfection >= STAGE_THRESHOLDS.epidemic) {
+      stage = 'epidemic';
+    } else {
+      stage = 'outbreak';
+    }
 
-      let stage: PandemicStage = prev.stage;
-      if (newGlobalInfection >= STAGE_THRESHOLDS.collapse) {
-        stage = 'collapse';
-      } else if (newGlobalInfection >= STAGE_THRESHOLDS.pandemic) {
-        stage = 'pandemic';
-      } else if (newGlobalInfection >= STAGE_THRESHOLDS.epidemic) {
-        stage = 'epidemic';
-      } else {
-        stage = 'outbreak';
-      }
+    if (stage !== stageRef.current) {
+      const stageMessages: Record<PandemicStage, string> = {
+        outbreak: `${prev.strainName} activity stabilizing but still present`,
+        epidemic: `${prev.strainName} declared EPIDEMIC across strategic forces`,
+        pandemic: `${prev.strainName} now PANDEMIC – readiness severely degraded`,
+        collapse: `${prev.strainName} collapsing logistics and command nodes`
+      };
+      turnNews.push({
+        category: 'crisis',
+        text: stageMessages[stage],
+        priority: stage === 'collapse' ? 'critical' : 'urgent'
+      });
+      stageRef.current = stage;
+    }
 
-      if (stage !== stageRef.current) {
-        const stageMessages: Record<PandemicStage, string> = {
-          outbreak: `${prev.strainName} activity stabilizing but still present`,
-          epidemic: `${prev.strainName} declared EPIDEMIC across strategic forces`,
-          pandemic: `${prev.strainName} now PANDEMIC – readiness severely degraded`,
-          collapse: `${prev.strainName} collapsing logistics and command nodes`
+    if (newGlobalInfection <= 5 && (newContainment > 70 || newVaccine >= 90)) {
+      resolved = true;
+      summary = `${prev.strainName} neutralized after claiming ${newCasualtyTally.toLocaleString()} lives.`;
+      turnNews.push({
+        category: 'science',
+        text: summary,
+        priority: 'important'
+      });
+    }
+
+    const nextState: PandemicState = resolved
+      ? {
+          ...INITIAL_STATE,
+          active: false,
+          casualtyTally: newCasualtyTally,
+          lastMutation: mutationDescriptor,
+          labResources: newLabResources,
+          traitLoadout: { ...prev.traitLoadout },
+          activeTraits: { ...ZERO_TRAITS }
+        }
+      : {
+          ...prev,
+          globalInfection: newGlobalInfection,
+          mutationLevel,
+          containmentEffort: newContainment,
+          vaccineProgress: newVaccine,
+          outbreaks,
+          casualtyTally: newCasualtyTally,
+          stage,
+          lastMutation: mutationDescriptor ?? prev.lastMutation,
+          labResources: newLabResources
         };
-        turnNews.push({
-          category: 'crisis',
-          text: stageMessages[stage],
-          priority: stage === 'collapse' ? 'critical' : 'urgent'
-        });
-        stageRef.current = stage;
-      }
 
-      if (newGlobalInfection <= 5 && (newContainment > 70 || newVaccine >= 90)) {
-        resolved = true;
-        summary = `${prev.strainName} neutralized after claiming ${newCasualtyTally.toLocaleString()} lives.`;
-        turnNews.push({
-          category: 'science',
-          text: summary,
-          priority: 'important'
-        });
-      }
+    if (resolved) {
+      stageRef.current = 'outbreak';
+    }
 
-      const nextState: PandemicState = resolved
-        ? {
-            ...INITIAL_STATE,
-            active: false,
-            casualtyTally: newCasualtyTally,
-            lastMutation: mutationDescriptor,
-            labResources: newLabResources,
-            traitLoadout: { ...prev.traitLoadout },
-            activeTraits: { ...ZERO_TRAITS }
-          }
-        : {
-            ...prev,
-            globalInfection: newGlobalInfection,
-            mutationLevel,
-            containmentEffort: newContainment,
-            vaccineProgress: newVaccine,
-            outbreaks,
-            casualtyTally: newCasualtyTally,
-            stage,
-            lastMutation: mutationDescriptor ?? prev.lastMutation,
-            labResources: newLabResources
-          };
-
-      if (resolved) {
-        stageRef.current = 'outbreak';
-      }
-
-      return nextState;
-    });
+    setPandemicState(nextState);
+    stateRef.current = nextState;
 
     if (turnNews.length > 0) {
       turnNews.forEach(item => addNewsItem(item.category, item.text, item.priority));
     }
 
     return {
-      populationLoss,
-      productionPenalty,
-      instabilityIncrease,
-      actionsPenalty,
-      resolved,
-      summary
+      effect: {
+        populationLoss,
+        productionPenalty,
+        instabilityIncrease,
+        actionsPenalty,
+        resolved,
+        summary
+      },
+      state: nextState
     };
-  }, [addNewsItem, pandemicState.active]);
+  }, [addNewsItem]);
 
   const upgradeTrait = useCallback((trait: PandemicTraitKey) => {
     let upgraded = false;
