@@ -216,7 +216,8 @@ import {
   evaluateCasualtyMilestones,
   type CasualtySummaryPayload,
 } from '@/lib/pandemic/casualtyAlertEvaluator';
-import { getNationById, ensureTreatyRecord, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
+import { getNationById, adjustThreat, hasOpenBorders } from '@/lib/nationUtils';
+import { applyAllianceProposal, applyTruceProposal } from '@/lib/diplomaticProposalUtils';
 import { modifyRelationship, canFormAlliance, RELATIONSHIP_ALLIED } from '@/lib/relationshipUtils';
 import {
   project,
@@ -11206,13 +11207,14 @@ export default function NoradVector() {
         return;
       }
 
-      // Form alliance
+      // Form alliance and persist treaty metadata
+      const { updatedPlayer, updatedTarget } = applyAllianceProposal(player, target);
       const updatedNations = nations.map(n => {
-        if (n.id === player.id) {
-          return { ...n, alliances: [...(n.alliances || []), targetId] };
+        if (n.id === updatedPlayer.id) {
+          return updatedPlayer;
         }
-        if (n.id === targetId) {
-          return { ...n, alliances: [...(n.alliances || []), player.id] };
+        if (n.id === updatedTarget.id) {
+          return updatedTarget;
         }
         return n;
       });
@@ -11238,33 +11240,18 @@ export default function NoradVector() {
     } else if (type === 'truce') {
       // Establish temporary peace treaty
       const truceDuration = terms?.duration || 10; // Default 10 turns
-      const truceExpiryTurn = S.turn + truceDuration;
-
-      // Add truce to both nations
+      const { updatedPlayer, updatedTarget, expiryTurn: truceExpiryTurn } = applyTruceProposal(
+        player,
+        target,
+        truceDuration,
+        S.turn
+      );
       const updatedNations = nations.map(n => {
-        if (n.id === player.id) {
-          const activeTreaties = n.activeTreaties || [];
-          return {
-            ...n,
-            activeTreaties: [
-              ...activeTreaties,
-              { withNationId: targetId, expiryTurn: truceExpiryTurn, type: 'truce' as const }
-            ],
-          };
+        if (n.id === updatedPlayer.id) {
+          return updatedPlayer;
         }
-        if (n.id === targetId) {
-          const activeTreaties = n.activeTreaties || [];
-          return {
-            ...n,
-            activeTreaties: [
-              ...activeTreaties,
-              { withNationId: player.id, expiryTurn: truceExpiryTurn, type: 'truce' as const }
-            ],
-            relationships: {
-              ...n.relationships,
-              [player.id]: Math.min(100, (n.relationships?.[player.id] || 0) + 15),
-            },
-          };
+        if (n.id === updatedTarget.id) {
+          return updatedTarget;
         }
         return n;
       });

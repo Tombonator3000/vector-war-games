@@ -3277,3 +3277,10 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-13T17:07:36Z - Routed election defeats through shared end-game flow
 - Injected an `onGameOver` callback into `productionPhase` so `applyElectionConsequences` can trigger the unified `endGame` routine from `src/pages/Index.tsx`, ensuring defeat narratives populate the final statistics screen.
 - Added `src/lib/__tests__/gamePhaseHandlers.test.ts` to simulate a player election loss, verified the callback receives the election message, and executed `npx vitest run src/lib/__tests__/gamePhaseHandlers.test.ts` to validate the behavior.
+- Ran targeted diplomacy treaty persistence updates to ensure proposals synchronize nation treaties.
+
+### 2025-11-13T17:20:00Z - Diplomacy treaty persistence update
+- Refactored `handleDiplomaticProposal` in `src/pages/Index.tsx` to delegate alliance/truce persistence to new helpers that initialize treaty records via `ensureTreatyRecord` before mutating alliances or truces.
+- Added `src/lib/diplomaticProposalUtils.ts` with `applyAllianceProposal` and `applyTruceProposal` helpers that synchronize treaty metadata (`alliance`, `truceTurns`, expiry/established turns) and keep `activeTreaties` arrays deduplicated.
+- Created `src/lib/__tests__/diplomaticProposalUtils.test.ts` to confirm proposals populate treaty maps and that `hasActivePeaceTreaty`/`isEligibleEnemyTarget` gate launch and border actions once alliances or truces are active.
+- Executed `npx vitest run src/lib/__tests__/diplomaticProposalUtils.test.ts` to verify the new treaty persistence coverage.
