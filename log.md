@@ -3365,3 +3365,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Extended `GlobeScene` to emit `onProjectorUpdate` revision ticks whenever the orbit camera quaternion, zoom, or position shifts so overlay consumers can recompute projections.
 - Stored the latest projector revision in `src/pages/Index.tsx` and forwarded it to pandemic overlays, invalidating their `useMemo` caches when the globe moves.
 - Updated `PandemicSpreadOverlay` memo dependencies to include the revision counter, ensuring markers remain aligned after each camera interaction.
+
+### 2025-11-14T11:22:47Z - Added pandemic superstate geometry aggregation
+- Defined bloc membership metadata so EURASIA, EASTASIA, SOUTHAM, and AFRICA resolve to collections of ISO country features and fallback territory polygons.
+- Built synthetic superstate features when preparing the pandemic geometry lookup, registering aliases for AI ids and bloc labels.
+- Updated the pandemic overlay feature search to recognize superstate-prefixed keys, enabling area fills for the blocs instead of circle fallbacks.
