@@ -16,6 +16,8 @@ import { useState } from 'react';
 import { getLeaderBiography } from '@/data/leaderBiographies';
 import { getLeaderDefaultDoctrine, getDoctrineName, getDoctrineDescription } from '@/data/leaderDoctrines';
 import { getLeaderImage } from '@/lib/leaderImages';
+import { getLeaderAbility } from '@/data/leaderAbilities';
+import { Zap } from 'lucide-react';
 
 export interface Leader {
   name: string;
@@ -47,6 +49,7 @@ export function LeaderSelectionScreen({
   const defaultDoctrine = currentLeader ? getLeaderDefaultDoctrine(currentLeader.name) : null;
   const doctrineName = defaultDoctrine ? getDoctrineName(defaultDoctrine) : '';
   const doctrineDescription = defaultDoctrine ? getDoctrineDescription(defaultDoctrine) : '';
+  const leaderAbility = currentLeader ? getLeaderAbility(currentLeader.name) : null;
 
   return (
     <div ref={interfaceRef} className="command-interface">
@@ -55,7 +58,7 @@ export function LeaderSelectionScreen({
 
       <div className="fixed inset-0 bg-gradient-to-br from-background via-deep-space to-background flex flex-col p-4 md:p-8">
         <h2 className="text-3xl font-mono text-cyan text-center mb-4 md:mb-6 tracking-widest uppercase glow-text">
-          Select Commander
+          Select Leader
         </h2>
 
         <div className="flex-1 flex gap-4 md:gap-6 overflow-hidden">
@@ -158,6 +161,30 @@ export function LeaderSelectionScreen({
                           Starting Doctrine: {doctrineName}
                         </h4>
                         <p className="text-xs text-cyan/80">{doctrineDescription}</p>
+                      </div>
+                    )}
+
+                    {/* Leader Ability */}
+                    {leaderAbility && (
+                      <div className="space-y-3 bg-amber/10 border border-amber/30 rounded-lg p-4">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-5 h-5 text-amber" />
+                          <h4 className="font-mono font-bold text-sm text-amber">
+                            {leaderAbility.icon} {leaderAbility.name}
+                          </h4>
+                          <Badge className="ml-auto bg-amber/20 text-amber text-xs border-amber">
+                            {leaderAbility.maxUses} {leaderAbility.maxUses === 1 ? 'use' : 'uses'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-cyan/80">{leaderAbility.description}</p>
+                        <div className="flex gap-2 text-xs text-muted-foreground">
+                          <Badge variant="outline" className="text-xs">
+                            {leaderAbility.category}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {leaderAbility.targetType}
+                          </Badge>
+                        </div>
                       </div>
                     )}
 
