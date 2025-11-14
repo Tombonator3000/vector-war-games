@@ -3345,3 +3345,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated `usePandemic` to require a `SeededRandom` instance, replacing all `Math.random` usages with deterministic draws for strain names, outbreak rolls, and mutation checks.
 - Passed the shared RNG from `useRNG` into `usePandemic` via `useBioWarfare` and the main NORAD vector page, and refreshed mocks/tests to accommodate the signature change.
 - Expanded pandemic hook tests to assert identical seeds yield identical outbreak progress, and ran `npx vitest run src/hooks/__tests__/usePandemic.test.ts src/hooks/__tests__/useBioWarfare.test.tsx` to verify deterministic behavior.
+### 2025-11-14T08:07:35Z - Cleaned pandemic overlay geometry handling
+- Consolidated the optional `projector` prop and removed dead InfectionDot fallback code in `PandemicSpreadOverlay` so the overlay relies on actual territory polygons.
+- Added deterministic territory/fallback aggregation that returns `{ territories, fallbackPoints }` directly when computing infection visuals.
+- Ran `npm run lint` (fails due to existing repository ESLint violations unrelated to the overlay refactor).
+- Ran `npm run test -- --run --reporter=basic` (fails because `src/hooks/__tests__/useGovernance.test.ts` still reports the pre-existing cooldown assertion error).
