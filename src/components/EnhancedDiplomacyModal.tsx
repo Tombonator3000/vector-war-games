@@ -173,7 +173,7 @@ export function EnhancedDiplomacyModal({
     ? getActiveGrievances(selectedTarget, player.id)
     : [];
   const playerDIP = player.diplomaticInfluence?.points || 0;
-  const currentDefconLevel = player.defcon ?? GameStateManager.getDefcon();
+  const currentDefconLevel = GameStateManager.getDefcon();
 
   const availableActions = useMemo(() => {
     return diplomaticActions

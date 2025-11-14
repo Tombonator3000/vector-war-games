@@ -6,6 +6,9 @@ import type {
   DevolveNodePayload,
   DNAGainEvent,
   PlagueTypeId,
+  TransmissionId,
+  SymptomId,
+  AbilityId,
 } from '@/types/biowarfare';
 import type { DeploymentMethodId } from '@/types/bioDeployment';
 import {
