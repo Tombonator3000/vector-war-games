@@ -1,9 +1,10 @@
 /**
  * AI Action Enhancements
- * Adds cyber warfare, conventional warfare, and immigration to AI decision making
+ * Adds cyber warfare, conventional warfare, immigration, and NGO operations to AI decision making
  */
 
 import type { Nation } from '../types/game';
+import { aiNGOAction, aiNGOInfrastructureUpgrade } from './aiNGOStrategies';
 
 interface ConventionalTerritory {
   id: string;
@@ -492,27 +493,47 @@ export function enhancedAIActions(
   // Random decision tree for action selection
   const r = Math.random();
 
-  // 1. Cyber warfare (10-25% chance based on personality)
+  // 1. NGO Operations (12-30% chance based on personality) - STRATEGIC WEAPON
+  const ngoChance = personality === 'aggressive' ? 0.30 : personality === 'trickster' ? 0.25 : 0.12;
+  if (r < ngoChance) {
+    if (aiNGOAction(aiNation, nations, turn, log)) {
+      return true;
+    }
+  }
+
+  // 2. Cyber warfare (10-25% chance based on personality)
   const cyberChance = personality === 'trickster' ? 0.25 : 0.10;
-  if (r < cyberChance) {
+  if (r < cyberChance + ngoChance) {
     if (aiCyberWarfareAction(aiNation, nations, cyberWarfareHook, log)) {
       return true;
     }
   }
 
-  // 2. Immigration (8-15% chance)
-  const immigrationChance = personality === 'trickster' ? 0.15 : 0.08;
-  if (r < 0.10 + immigrationChance) {
-    if (aiImmigrationAction(aiNation, nations, costs, log)) {
-      return true;
+  // 3. Legacy Immigration (DEPRECATED - NGO system is preferred, but keep as fallback)
+  // Only use if NGO infrastructure is zero and turn < 20
+  const useSimpleImmigration = (!aiNation.ngoState || aiNation.ngoState.infrastructure === 0) && turn < 20;
+  if (useSimpleImmigration) {
+    const immigrationChance = personality === 'trickster' ? 0.15 : 0.08;
+    if (r < 0.10 + immigrationChance) {
+      if (aiImmigrationAction(aiNation, nations, costs, log)) {
+        return true;
+      }
     }
   }
 
-  // 3. Conventional warfare (15-35% chance based on personality and era)
+  // 4. Conventional warfare (15-35% chance based on personality and era)
   const conventionalChance =
     turn > 15 ? (personality === 'aggressive' ? 0.35 : personality === 'balanced' ? 0.20 : 0.10) : 0.05;
   if (r < 0.20 + conventionalChance) {
     if (aiConventionalWarfareAction(aiNation, nations, conventionalWarfareHook, turn, log)) {
+      return true;
+    }
+  }
+
+  // 5. NGO Infrastructure Upgrade (opportunistic - if no other action taken)
+  // Try to upgrade infrastructure even if main action wasn't NGO
+  if (Math.random() < 0.15) {
+    if (aiNGOInfrastructureUpgrade(aiNation, log)) {
       return true;
     }
   }
