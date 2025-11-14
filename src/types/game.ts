@@ -265,6 +265,9 @@ export interface Nation {
   ideologyState?: IdeologyState;                    // Nation's ideology and support levels
   revolutionState?: RevolutionState;                // Revolution risk tracking
 
+  // NGO System (Immigration & Destabilization Operations)
+  ngoState?: import('./ngoSystem').NGOState;        // NGO operations and infrastructure
+
   // Casus Belli System (War Justification & Peace Terms)
   casusBelli?: import('./casusBelli').CasusBelli[];        // Available reasons for war
   activeWars?: import('./casusBelli').WarState[];          // Active wars this nation is involved in
