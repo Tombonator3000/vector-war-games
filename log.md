@@ -3369,3 +3369,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added module-level holders for the international pressure callbacks and shared delta state in `src/pages/Index.tsx`, wiring the component hook outputs into those references so non-React code can invoke them safely.
 - Updated `endTurn()` to use the stored callbacks, rely on the shared delta state for gold/aid tracking, and reuse the cached player nation name during production resolution.
 - Ran `CI=1 npm run test -- --run --reporter=basic` (fails due to pre-existing governance cooldown, map color hex format, and casualty alert evaluator assertions).
+
+### 2025-11-14T11:22:47Z - Added pandemic superstate geometry aggregation
+- Defined bloc membership metadata so EURASIA, EASTASIA, SOUTHAM, and AFRICA resolve to collections of ISO country features and fallback territory polygons.
+- Built synthetic superstate features when preparing the pandemic geometry lookup, registering aliases for AI ids and bloc labels.
+- Updated the pandemic overlay feature search to recognize superstate-prefixed keys, enabling area fills for the blocs instead of circle fallbacks.

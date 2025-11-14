@@ -880,6 +880,144 @@ let worldData: any = null;
 let worldCountries: any = null;
 let worldLoadPromise: Promise<void> | null = null;
 
+type SuperstateGeometryConfig = {
+  isoA3?: string[];
+  territoryIds?: string[];
+  aliases?: string[];
+};
+
+const SUPERSTATE_GEOMETRY_CONFIG: Record<string, SuperstateGeometryConfig> = {
+  EURASIA: {
+    isoA3: [
+      'RUS',
+      'UKR',
+      'BLR',
+      'KAZ',
+      'ARM',
+      'AZE',
+      'GEO',
+      'MDA',
+      'POL',
+      'DEU',
+      'FRA',
+      'ESP',
+      'ITA',
+      'ROU',
+      'BGR',
+      'SVK',
+      'CZE',
+      'HUN',
+      'SWE',
+      'NOR',
+      'FIN',
+      'EST',
+      'LVA',
+      'LTU',
+    ],
+    territoryIds: ['eastern_bloc'],
+    aliases: ['ai_0'],
+  },
+  EASTASIA: {
+    isoA3: [
+      'CHN',
+      'MNG',
+      'JPN',
+      'KOR',
+      'PRK',
+      'VNM',
+      'THA',
+      'KHM',
+      'LAO',
+      'MMR',
+      'TWN',
+      'PHL',
+      'MYS',
+      'IDN',
+    ],
+    territoryIds: ['indo_pacific'],
+    aliases: ['ai_1'],
+  },
+  SOUTHAM: {
+    isoA3: [
+      'BRA',
+      'ARG',
+      'CHL',
+      'PER',
+      'COL',
+      'VEN',
+      'ECU',
+      'BOL',
+      'PRY',
+      'URY',
+      'GUY',
+      'SUR',
+      'GUF',
+    ],
+    territoryIds: ['southern_front'],
+    aliases: ['ai_2'],
+  },
+  AFRICA: {
+    isoA3: [
+      'DZA',
+      'MAR',
+      'TUN',
+      'LBY',
+      'EGY',
+      'SDN',
+      'SSD',
+      'ETH',
+      'SOM',
+      'DJI',
+      'ERI',
+      'KEN',
+      'UGA',
+      'TZA',
+      'RWA',
+      'BDI',
+      'COD',
+      'COG',
+      'GAB',
+      'GNQ',
+      'CAF',
+      'CMR',
+      'NGA',
+      'NER',
+      'MLI',
+      'BFA',
+      'SEN',
+      'GMB',
+      'GIN',
+      'SLE',
+      'LBR',
+      'CIV',
+      'GHA',
+      'TGO',
+      'BEN',
+      'GNB',
+      'CPV',
+      'STP',
+      'AGO',
+      'ZMB',
+      'ZWE',
+      'NAM',
+      'BWA',
+      'ZAF',
+      'LSO',
+      'SWZ',
+      'MWI',
+      'MOZ',
+      'MDG',
+      'COM',
+      'SYC',
+      'MUS',
+      'TCD',
+      'MRT',
+    ],
+    territoryIds: ['equatorial_belt'],
+    aliases: ['ai_3'],
+  },
+};
+
 // resolvePublicAssetPath moved to @/lib/renderingUtils
 
 const FLAT_REALISTIC_DAY_TEXTURE_URL = resolvePublicAssetPath('textures/earth_day_flat.jpg');
@@ -8829,7 +8967,9 @@ export default function NoradVector() {
 
   const pandemicCountryGeometry = useMemo(() => {
     const collection = worldCountries as FeatureCollection<Polygon | MultiPolygon> | null;
-    if (!collection || !Array.isArray(collection.features)) {
+    const features = (collection?.features as Feature<Polygon | MultiPolygon>[] | undefined) ?? [];
+
+    if (features.length === 0 && territoryPolygons.length === 0) {
       return null;
     }
 
@@ -8860,6 +9000,20 @@ export default function NoradVector() {
     };
 
     const lookup = new Map<string, Feature<Polygon | MultiPolygon>>();
+    const isoFeatureIndex = new Map<string, Feature<Polygon | MultiPolygon>>();
+    const territoryIndex = new Map<string, TerritoryPolygon>();
+
+    territoryPolygons.forEach(polygon => {
+      const idKey = normalizeKey(polygon.id);
+      if (idKey && !territoryIndex.has(idKey)) {
+        territoryIndex.set(idKey, polygon);
+      }
+      const nameKey = normalizeKey(polygon.name);
+      if (nameKey && !territoryIndex.has(nameKey)) {
+        territoryIndex.set(nameKey, polygon);
+      }
+    });
+
     const candidateKeys = [
       'name',
       'NAME',
@@ -8889,7 +9043,18 @@ export default function NoradVector() {
       'BRK_A3',
     ] as const;
 
-    for (const featureEntry of collection.features as Feature<Polygon | MultiPolygon>[]) {
+    const isoKeys = [
+      'iso_a3',
+      'ISO_A3',
+      'adm0_a3',
+      'ADM0_A3',
+      'wb_a3',
+      'WB_A3',
+      'brk_a3',
+      'BRK_A3',
+    ] as const;
+
+    for (const featureEntry of features) {
       if (!featureEntry) {
         continue;
       }
@@ -8906,10 +9071,101 @@ export default function NoradVector() {
           register(lookup, properties[key], featureEntry);
         }
       }
+
+      for (const isoKey of isoKeys) {
+        if (Object.prototype.hasOwnProperty.call(properties, isoKey)) {
+          const normalizedIso = normalizeKey(properties[isoKey]);
+          if (normalizedIso && !isoFeatureIndex.has(normalizedIso)) {
+            isoFeatureIndex.set(normalizedIso, featureEntry);
+          }
+        }
+      }
+    }
+
+    const addFeatureGeometry = (
+      target: MultiPolygon['coordinates'],
+      source: Feature<Polygon | MultiPolygon>,
+    ) => {
+      const geometry = source.geometry;
+      if (!geometry) {
+        return;
+      }
+      if (geometry.type === 'Polygon') {
+        target.push(geometry.coordinates);
+      } else if (geometry.type === 'MultiPolygon') {
+        target.push(...geometry.coordinates);
+      }
+    };
+
+    const addTerritoryGeometry = (
+      target: MultiPolygon['coordinates'],
+      polygon: TerritoryPolygon,
+    ) => {
+      const geometry = polygon.geometry;
+      if (geometry.type === 'Polygon') {
+        target.push(geometry.coordinates);
+      } else if (geometry.type === 'MultiPolygon') {
+        target.push(...geometry.coordinates);
+      }
+    };
+
+    for (const [superstateId, config] of Object.entries(SUPERSTATE_GEOMETRY_CONFIG)) {
+      const aggregatedPolygons: MultiPolygon['coordinates'] = [];
+      const seen = new Set<Feature<Polygon | MultiPolygon>>();
+
+      for (const isoCode of config.isoA3 ?? []) {
+        const normalizedIso = normalizeKey(isoCode);
+        if (!normalizedIso) {
+          continue;
+        }
+        const sourceFeature = isoFeatureIndex.get(normalizedIso);
+        if (sourceFeature && !seen.has(sourceFeature)) {
+          seen.add(sourceFeature);
+          addFeatureGeometry(aggregatedPolygons, sourceFeature);
+        }
+      }
+
+      for (const territoryId of config.territoryIds ?? []) {
+        const normalizedId = normalizeKey(territoryId);
+        if (!normalizedId) {
+          continue;
+        }
+        const polygon = territoryIndex.get(normalizedId);
+        if (polygon) {
+          addTerritoryGeometry(aggregatedPolygons, polygon);
+        }
+      }
+
+      if (aggregatedPolygons.length === 0) {
+        continue;
+      }
+
+      const syntheticFeature: Feature<MultiPolygon> = {
+        type: 'Feature',
+        id: superstateId,
+        properties: {
+          name: superstateId,
+          superstateId,
+          memberIsoA3: config.isoA3 ?? [],
+          synthetic: true,
+        },
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates: aggregatedPolygons,
+        },
+      };
+
+      const registrationKeys = new Set<string>([superstateId, `superstate:${superstateId}`]);
+      for (const alias of config.aliases ?? []) {
+        registrationKeys.add(alias);
+        registrationKeys.add(`superstate:${alias}`);
+      }
+
+      registrationKeys.forEach(key => register(lookup, key, syntheticFeature));
     }
 
     return lookup.size > 0 ? lookup : null;
-  }, [worldCountries, uiTick]);
+  }, [territoryPolygons, worldCountries, uiTick]);
 
   // Policy system for strategic national policies
   const player = nations.find(n => n.isPlayer);
