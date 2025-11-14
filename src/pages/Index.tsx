@@ -361,6 +361,11 @@ let getTotalEconomicImpactFn:
 let getAidBenefitsFn: ((nationId: string) => AidPackage['benefits']) | null = null;
 let pressureDeltaState: PressureDeltaState = { goldPenalty: 0, aidGold: 0 };
 
+const resetPressureDeltaState = () => {
+  pressureDeltaState.goldPenalty = 0;
+  pressureDeltaState.aidGold = 0;
+};
+
 // Storage wrapper for localStorage
 const Storage = {
   getItem: (key: string) => {
@@ -7043,6 +7048,12 @@ export default function NoradVector() {
   const [pressureSyncKey, setPressureSyncKey] = useState(0);
   const pressureInitializedNationsRef = useRef<Set<string>>(new Set());
   const pressureDeltaRef = useRef<PressureDeltaState>(pressureDeltaState);
+  const syncPressureDeltaState = () => {
+    const delta = pressureDeltaRef.current;
+    pressureDeltaState.goldPenalty = delta.goldPenalty;
+    pressureDeltaState.aidGold = delta.aidGold;
+    pressureDeltaRef.current = pressureDeltaState;
+  };
   const focusApiRef = useRef<NationalFocusSystemApi | null>(null);
 
   // Modal management - Extracted to useModalManager hook (Phase 7 refactoring)
@@ -9685,15 +9696,15 @@ export default function NoradVector() {
   processInternationalPressureTurnFn = processInternationalPressureTurn;
   getTotalEconomicImpactFn = getTotalEconomicImpact;
   getAidBenefitsFn = getAidBenefits;
-  pressureDeltaState.goldPenalty = pressureDeltaRef.current.goldPenalty;
-  pressureDeltaState.aidGold = pressureDeltaRef.current.aidGold;
-  pressureDeltaRef.current = pressureDeltaState;
+  syncPressureDeltaState();
 
   useEffect(() => {
     return () => {
       processInternationalPressureTurnFn = null;
       getTotalEconomicImpactFn = null;
       getAidBenefitsFn = null;
+      resetPressureDeltaState();
+      pressureDeltaRef.current = pressureDeltaState;
     };
   }, []);
 
