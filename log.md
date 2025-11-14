@@ -3380,3 +3380,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Computed migration metrics per nation in `pages/Index.tsx`, blending refugee flow, immigration policy rates, and cultural bonuses into a shared overlay payload.
 - Implemented `MigrationFlowOverlay` to render net migration fills using the pandemic geometry lookup and display attraction/pressure tooltips.
 - Updated `Index` to mount the migration overlay with the shared projector and geometry references so bloc aliases resolve correctly.
+
+### 2025-11-14T15:23:16Z - Synced international pressure state holders and reran vitest suite
+- Added a shared reset helper and synchronization wrapper around the international pressure delta reference in `src/pages/Index.tsx` so non-React turn logic reads the latest gold penalties and aid inflows.
+- Reset the module-level delta cache during component teardown to avoid stale data between mount cycles.
+- Executed `CI=1 npm run test -- --run --reporter=basic` to verify turn resolution, observing pre-existing failures in governance, map color, and casualty alert tests.
