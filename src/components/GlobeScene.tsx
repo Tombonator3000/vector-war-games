@@ -136,6 +136,7 @@ export interface GlobeSceneProps {
   onTerritoryClick?: (territoryId: string) => void;
   onUnitClick?: (unitId: string) => void;
   onProjectorReady?: (projector: ProjectorFn) => void;
+  onProjectorUpdate?: (projector: ProjectorFn, revision: number) => void;
   onPickerReady?: (picker: PickerFn) => void;
   mapStyle?: MapStyle;
   modeData?: MapModeOverlayData;
@@ -1054,6 +1055,7 @@ function SceneContent({
   explosionsRef,
   flatMapVariant,
   worldCountries,
+  onCameraPoseUpdate,
 }: {
   cam: GlobeSceneProps['cam'];
   nations: GlobeSceneProps['nations'];
@@ -1071,12 +1073,18 @@ function SceneContent({
   explosionsRef: MutableRefObject<Map<string, { group: THREE.Group; startTime: number }>>;
   flatMapVariant?: GlobeSceneProps['flatMapVariant'];
   worldCountries?: GlobeSceneProps['worldCountries'];
+  onCameraPoseUpdate?: (camera: THREE.PerspectiveCamera) => void;
 }) {
   const { camera, size, clock, gl } = useThree();
   const earthRef = useRef<THREE.Mesh | null>(null);
   const visualStyle = mapStyle?.visual ?? 'realistic';
   const currentMode = mapStyle?.mode ?? 'standard';
   const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
+  const cameraPoseUpdateRef = useRef<typeof onCameraPoseUpdate>();
+
+  useEffect(() => {
+    cameraPoseUpdateRef.current = onCameraPoseUpdate;
+  }, [onCameraPoseUpdate]);
 
   const cssDimensions = useMemo(
     () =>
@@ -1292,6 +1300,10 @@ function SceneContent({
     if (missilesRemoved || explosionsRemoved) {
       // Request render if needed
     }
+
+    if (camera instanceof THREE.PerspectiveCamera) {
+      cameraPoseUpdateRef.current?.(camera);
+    }
   });
 
   const renderEarth = () => {
@@ -1503,6 +1515,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     onTerritoryClick,
     onUnitClick,
     onProjectorReady,
+    onProjectorUpdate,
     onPickerReady,
     mapStyle = DEFAULT_MAP_STYLE,
     modeData,
@@ -1518,10 +1531,15 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerVec = useRef(new THREE.Vector2());
   const projectorRef = useRef<ProjectorFn>(NOOP_PROJECTOR);
+  const projectorRevisionRef = useRef(0);
   const pickerRef = useRef<PickerFn>(NOOP_PICKER);
   const positionProjectorRef = useRef<(lon: number, lat: number, radius: number) => THREE.Vector3>(
     (lon, lat, radius) => latLonToVector3(lon, lat, radius),
   );
+  const lastCameraQuaternionRef = useRef(new THREE.Quaternion());
+  const lastCameraPositionRef = useRef(new THREE.Vector3());
+  const lastCameraZoomRef = useRef(0);
+  const hasCameraPoseRef = useRef(false);
   const visualStyle = mapStyle?.visual ?? DEFAULT_MAP_STYLE.visual;
   const [, triggerRender] = useReducer((value: number) => value + 1, 0);
   const isMountedRef = useRef(true);
@@ -1532,6 +1550,28 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   const missileIdCounterRef = useRef(0);
   const explosionIdCounterRef = useRef(0);
   const clockRef = useRef<THREE.Clock | null>(null);
+
+  const emitInitialProjector = useCallback(
+    (projector: ProjectorFn) => {
+      if (onProjectorReady) {
+        onProjectorReady(projector);
+      }
+      if (onProjectorUpdate) {
+        onProjectorUpdate(projector, projectorRevisionRef.current);
+      }
+    },
+    [onProjectorReady, onProjectorUpdate],
+  );
+
+  const incrementProjectorRevision = useCallback(() => {
+    projectorRevisionRef.current += 1;
+    const projector = projectorRef.current;
+    if (onProjectorUpdate) {
+      onProjectorUpdate(projector, projectorRevisionRef.current);
+    } else if (onProjectorReady) {
+      onProjectorReady(projector);
+    }
+  }, [onProjectorReady, onProjectorUpdate]);
 
   useEffect(() => {
     return () => {
@@ -1626,10 +1666,9 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       };
     };
     projectorRef.current = projector;
-    if (onProjectorReady) {
-      onProjectorReady(projector);
-    }
-  }, [cam.x, cam.y, cam.zoom, visualStyle, onProjectorReady]);
+    projectorRevisionRef.current = 0;
+    emitInitialProjector(projector);
+  }, [cam.x, cam.y, cam.zoom, visualStyle, emitInitialProjector]);
 
   const updatePicker = useCallback(() => {
     const picker: PickerFn = (pointerX, pointerY) => {
@@ -1693,10 +1732,46 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       positionProjectorRef.current = projectPosition
         ? projectPosition
         : (lon, lat, radius) => latLonToVector3(lon, lat, radius);
+      if (camera) {
+        lastCameraQuaternionRef.current.copy(camera.quaternion);
+        lastCameraPositionRef.current.copy(camera.position);
+        lastCameraZoomRef.current = camera.zoom;
+        hasCameraPoseRef.current = true;
+      }
       updateProjector();
       updatePicker();
     },
     [updatePicker, updateProjector],
+  );
+
+  const handleCameraPoseUpdate = useCallback(
+    (camera: THREE.PerspectiveCamera) => {
+      if (!camera) {
+        return;
+      }
+
+      if (!hasCameraPoseRef.current) {
+        lastCameraQuaternionRef.current.copy(camera.quaternion);
+        lastCameraPositionRef.current.copy(camera.position);
+        lastCameraZoomRef.current = camera.zoom;
+        hasCameraPoseRef.current = true;
+        return;
+      }
+
+      const previousQuaternion = lastCameraQuaternionRef.current;
+      const previousPosition = lastCameraPositionRef.current;
+      const quaternionDelta = 1 - Math.abs(camera.quaternion.dot(previousQuaternion));
+      const positionDelta = previousPosition.distanceToSquared(camera.position);
+      const zoomDelta = Math.abs(camera.zoom - lastCameraZoomRef.current);
+
+      if (quaternionDelta > 1e-5 || positionDelta > 1e-6 || zoomDelta > 1e-6) {
+        previousQuaternion.copy(camera.quaternion);
+        previousPosition.copy(camera.position);
+        lastCameraZoomRef.current = camera.zoom;
+        incrementProjectorRevision();
+      }
+    },
+    [incrementProjectorRevision],
   );
 
   useEffect(() => {
@@ -1816,6 +1891,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
             explosionsRef={explosionsRef}
             flatMapVariant={flatMapVariant}
             worldCountries={worldCountries}
+            onCameraPoseUpdate={handleCameraPoseUpdate}
           />
         </Canvas>
       )}

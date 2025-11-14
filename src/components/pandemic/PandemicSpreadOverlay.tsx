@@ -25,6 +25,7 @@ interface PandemicSpreadOverlayProps {
   visible: boolean;
   pandemic: PandemicOverlay;
   projector?: ProjectorFn | null;
+  projectorRevision?: number;
   countryFeatureLookup?: FeatureLookup | null;
   worldCountryFeatures?: FeatureCollection<Polygon | MultiPolygon> | null;
 }
@@ -295,6 +296,7 @@ export function PandemicSpreadOverlay({
   canvasWidth,
   canvasHeight,
   projector,
+  projectorRevision,
   visible,
   pandemic,
   countryFeatureLookup,
@@ -394,7 +396,16 @@ export function PandemicSpreadOverlay({
       }
     });
     return { territories, fallbackPoints };
-  }, [canvasWidth, canvasHeight, geometryLookup, nations, pandemic, projector, visible]);
+  }, [
+    canvasWidth,
+    canvasHeight,
+    geometryLookup,
+    nations,
+    pandemic,
+    projector,
+    projectorRevision,
+    visible,
+  ]);
 
   if (!visible) return null;
 

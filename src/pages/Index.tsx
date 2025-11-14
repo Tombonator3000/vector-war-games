@@ -7709,6 +7709,7 @@ export default function NoradVector() {
   }, []);
   const [uiTick, setUiTick] = useState(0);
   const [overlayProjectorFn, setOverlayProjectorFn] = useState<ProjectorFn | null>(null);
+  const [overlayProjectorVersion, setOverlayProjectorVersion] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
   const [showTutorial, setShowTutorial] = useState(() => {
@@ -7758,8 +7759,17 @@ export default function NoradVector() {
     (projector: ProjectorFn) => {
       globeProjector = projector;
       setOverlayProjectorFn(() => projector);
+      setOverlayProjectorVersion(0);
     },
-    [setOverlayProjectorFn],
+    [setOverlayProjectorFn, setOverlayProjectorVersion],
+  );
+  const handleProjectorUpdate = useCallback(
+    (projector: ProjectorFn, revision: number) => {
+      globeProjector = projector;
+      setOverlayProjectorFn(() => projector);
+      setOverlayProjectorVersion(revision);
+    },
+    [setOverlayProjectorFn, setOverlayProjectorVersion],
   );
   const handlePickerReady = useCallback((picker: PickerFn) => {
     globePicker = picker;
@@ -14567,6 +14577,7 @@ export default function NoradVector() {
     overlayCanvas,
     overlayCanvasHeight,
     overlayCanvasWidth,
+    overlayProjectorVersion,
     cam.x,
     cam.y,
     cam.zoom,
@@ -14676,6 +14687,7 @@ export default function NoradVector() {
           territories={territoryPolygons}
           units={globeUnits}
           onProjectorReady={handleProjectorReady}
+          onProjectorUpdate={handleProjectorUpdate}
           onPickerReady={handlePickerReady}
           mapStyle={mapStyle}
           modeData={mapModeData}
@@ -14730,6 +14742,7 @@ export default function NoradVector() {
             canvasWidth={overlayCanvas.width}
             canvasHeight={overlayCanvas.height}
             projector={effectiveOverlayProjector}
+            projectorRevision={overlayProjectorVersion}
             visible={mapStyle.mode === 'pandemic'}
             pandemic={mapModeData.pandemic}
             countryFeatureLookup={pandemicCountryGeometry}
