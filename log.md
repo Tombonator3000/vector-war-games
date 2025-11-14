@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-14T07:18:18Z - Pandemic polygon overlay fill
+- Passed the world country geometry lookup and active projector from `Index.tsx` into the pandemic overlay so map fills align with both globe and flat projections.
+- Rebuilt `PandemicSpreadOverlay` to project GeoJSON polygons, animate clip-based infection fills by percentage, and gracefully fall back to centroid circles when geometry is missing.
+- Ran `npm run lint` to check the workspace; the command surfaced longstanding lint errors unrelated to this change.
+
 ### 2025-11-13T19:26:29Z - Turn system domestic hooks integration
 - Instantiated the dormant war support, political factions, regional morale, media warfare, production queue, and resource refinement hooks inside `Index.tsx`, adding player-facing logging/toasts and exposing their APIs for phase processing.
 - Registered initialization and window bindings for the new systems so every nation seeds factions/media power and external modules can access the hook state safely.
