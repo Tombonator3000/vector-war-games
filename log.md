@@ -3360,3 +3360,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated `createPandemicPlagueState` in `src/hooks/useEvolutionTree.ts` to grant all plague types, retain locked trait nodes, and start the player with 69 DNA for early research decisions.
 - Adjusted `useBioWarfare` pandemic scenario test expectations to reflect the locked nodes and new DNA reserve.
 - Ran `npx vitest run src/hooks/__tests__/useBioWarfare.test.tsx` to verify the evolution tree initialization changes pass existing coverage.
+
+### 2025-11-14T11:10:09Z - Synced overlay projectors with camera pose updates
+- Extended `GlobeScene` to emit `onProjectorUpdate` revision ticks whenever the orbit camera quaternion, zoom, or position shifts so overlay consumers can recompute projections.
+- Stored the latest projector revision in `src/pages/Index.tsx` and forwarded it to pandemic overlays, invalidating their `useMemo` caches when the globe moves.
+- Updated `PandemicSpreadOverlay` memo dependencies to include the revision counter, ensuring markers remain aligned after each camera interaction.
