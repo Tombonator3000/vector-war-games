@@ -3345,3 +3345,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated `usePandemic` to require a `SeededRandom` instance, replacing all `Math.random` usages with deterministic draws for strain names, outbreak rolls, and mutation checks.
 - Passed the shared RNG from `useRNG` into `usePandemic` via `useBioWarfare` and the main NORAD vector page, and refreshed mocks/tests to accommodate the signature change.
 - Expanded pandemic hook tests to assert identical seeds yield identical outbreak progress, and ran `npx vitest run src/hooks/__tests__/usePandemic.test.ts src/hooks/__tests__/useBioWarfare.test.tsx` to verify deterministic behavior.
+### 2025-11-14T09:31:23Z - Reprojected pandemic overlay with camera tracking
+- Reviewed Codex feedback about frozen infection polygons after camera movement and inspected `PandemicSpreadOverlay` memo dependencies.
+- Extended `GlobeScene` to emit projector version bumps whenever the globe camera transforms and threaded the version through `Index` state to the overlay.
+- Cleaned up the overlay geometry projection logic, added the projector version dependency, and verified the targeted `Index` Vitest suite before noting the runner hang.

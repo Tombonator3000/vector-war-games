@@ -7708,7 +7708,10 @@ export default function NoradVector() {
     };
   }, []);
   const [uiTick, setUiTick] = useState(0);
-  const [overlayProjectorFn, setOverlayProjectorFn] = useState<ProjectorFn | null>(null);
+  const [overlayProjector, setOverlayProjector] = useState<{ fn: ProjectorFn | null; version: number }>({
+    fn: null,
+    version: 0,
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
   const [showTutorial, setShowTutorial] = useState(() => {
@@ -7755,11 +7758,11 @@ export default function NoradVector() {
   }, [pandemicIntegrationEnabled, bioWarfareEnabled]);
   const handleAttackRef = useRef<() => void>(() => {});
   const handleProjectorReady = useCallback(
-    (projector: ProjectorFn) => {
+    (projector: ProjectorFn, version: number) => {
       globeProjector = projector;
-      setOverlayProjectorFn(() => projector);
+      setOverlayProjector({ fn: projector, version });
     },
-    [setOverlayProjectorFn],
+    [setOverlayProjector],
   );
   const handlePickerReady = useCallback((picker: PickerFn) => {
     globePicker = picker;
@@ -10149,9 +10152,9 @@ export default function NoradVector() {
     () => () => {
       globeProjector = null;
       globePicker = null;
-      setOverlayProjectorFn(null);
+      setOverlayProjector({ fn: null, version: 0 });
     },
-    [setOverlayProjectorFn],
+    [setOverlayProjector],
   );
 
   useEffect(() => {
@@ -14534,6 +14537,8 @@ export default function NoradVector() {
   const overlayCanvas = globeSceneRef.current?.overlayCanvas ?? null;
   const overlayCanvasWidth = overlayCanvas?.width ?? 0;
   const overlayCanvasHeight = overlayCanvas?.height ?? 0;
+  const overlayProjectorFn = overlayProjector.fn;
+  const overlayProjectorVersion = overlayProjector.version;
 
   const effectiveOverlayProjector = useMemo<ProjectorFn | null>(() => {
     if (overlayProjectorFn) {
@@ -14730,9 +14735,9 @@ export default function NoradVector() {
             canvasWidth={overlayCanvas.width}
             canvasHeight={overlayCanvas.height}
             projector={effectiveOverlayProjector}
+            projectorVersion={overlayProjectorVersion}
             visible={mapStyle.mode === 'pandemic'}
             pandemic={mapModeData.pandemic}
-            projector={overlayProjector}
             countryFeatureLookup={pandemicCountryGeometry}
             worldCountryFeatures={worldCountries as FeatureCollection<Polygon | MultiPolygon> | null}
           />
