@@ -3365,3 +3365,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Extended `GlobeScene` to emit `onProjectorUpdate` revision ticks whenever the orbit camera quaternion, zoom, or position shifts so overlay consumers can recompute projections.
 - Stored the latest projector revision in `src/pages/Index.tsx` and forwarded it to pandemic overlays, invalidating their `useMemo` caches when the globe moves.
 - Updated `PandemicSpreadOverlay` memo dependencies to include the revision counter, ensuring markers remain aligned after each camera interaction.
+### 2025-11-14T11:25:59Z - Stabilized international pressure turn handlers
+- Added module-level holders for the international pressure callbacks and shared delta state in `src/pages/Index.tsx`, wiring the component hook outputs into those references so non-React code can invoke them safely.
+- Updated `endTurn()` to use the stored callbacks, rely on the shared delta state for gold/aid tracking, and reuse the cached player nation name during production resolution.
+- Ran `CI=1 npm run test -- --run --reporter=basic` (fails due to pre-existing governance cooldown, map color hex format, and casualty alert evaluator assertions).

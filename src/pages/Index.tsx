@@ -5833,6 +5833,7 @@ function endTurn() {
   }
 
   const player = PlayerManager.get();
+  const playerNationName = player?.name ?? 'Player';
 
   // Set flag to prevent re-entry
   turnInProgress = true;
@@ -6005,7 +6006,6 @@ function endTurn() {
 
       // Apply international pressure effects (aid and sanctions) for player nation
       if (player) {
-        const playerNationName = player.name ?? 'Player';
         processInternationalPressureTurnFn?.();
         const economicImpact =
           getTotalEconomicImpactFn?.(player.id) ?? { productionPenalty: 0, goldPenalty: 0 };
