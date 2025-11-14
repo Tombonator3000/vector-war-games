@@ -7708,7 +7708,7 @@ export default function NoradVector() {
     };
   }, []);
   const [uiTick, setUiTick] = useState(0);
-  const [overlayProjector, setOverlayProjector] = useState<ProjectorFn | null>(null);
+  const [overlayProjectorFn, setOverlayProjectorFn] = useState<ProjectorFn | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
   const [showTutorial, setShowTutorial] = useState(() => {
@@ -7754,10 +7754,13 @@ export default function NoradVector() {
     }
   }, [pandemicIntegrationEnabled, bioWarfareEnabled]);
   const handleAttackRef = useRef<() => void>(() => {});
-  const handleProjectorReady = useCallback((projector: ProjectorFn) => {
-    globeProjector = projector;
-    setOverlayProjector(() => projector);
-  }, []);
+  const handleProjectorReady = useCallback(
+    (projector: ProjectorFn) => {
+      globeProjector = projector;
+      setOverlayProjectorFn(() => projector);
+    },
+    [setOverlayProjectorFn],
+  );
   const handlePickerReady = useCallback((picker: PickerFn) => {
     globePicker = picker;
   }, []);
@@ -10142,11 +10145,14 @@ export default function NoradVector() {
     selectedTargetRefId = selectedTargetId;
   }, [selectedTargetId]);
 
-  useEffect(() => () => {
-    globeProjector = null;
-    globePicker = null;
-    setOverlayProjector(null);
-  }, []);
+  useEffect(
+    () => () => {
+      globeProjector = null;
+      globePicker = null;
+      setOverlayProjectorFn(null);
+    },
+    [setOverlayProjectorFn],
+  );
 
   useEffect(() => {
     setIsPaused(S.paused);
@@ -14525,6 +14531,49 @@ export default function NoradVector() {
     );
   };
 
+  const overlayCanvas = globeSceneRef.current?.overlayCanvas ?? null;
+  const overlayCanvasWidth = overlayCanvas?.width ?? 0;
+  const overlayCanvasHeight = overlayCanvas?.height ?? 0;
+
+  const effectiveOverlayProjector = useMemo<ProjectorFn | null>(() => {
+    if (overlayProjectorFn) {
+      return overlayProjectorFn;
+    }
+    if (!overlayCanvas) {
+      return null;
+    }
+
+    const width = overlayCanvasWidth;
+    const height = overlayCanvasHeight;
+
+    return (lon: number, lat: number) => {
+      const projected = project(lon, lat, {
+        W: width,
+        H: height,
+        cam,
+        globeProjector: null,
+        globePicker,
+      });
+
+      if (Array.isArray(projected)) {
+        const [x, y] = projected;
+        return { x, y, visible: true };
+      }
+
+      return projected;
+    };
+  }, [
+    overlayProjectorFn,
+    overlayCanvas,
+    overlayCanvasHeight,
+    overlayCanvasWidth,
+    cam.x,
+    cam.y,
+    cam.zoom,
+    cam.targetZoom,
+    globePicker,
+  ]);
+
   // Early returns for different phases
   if (gamePhase === 'intro') {
     return renderIntroScreen();
@@ -14613,8 +14662,6 @@ export default function NoradVector() {
     </div>
   );
 
-  const overlayCanvas = globeSceneRef.current?.overlayCanvas ?? null;
-
   return (
     <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity}`}>
       <div className="command-interface__glow" aria-hidden="true" />
@@ -14682,6 +14729,7 @@ export default function NoradVector() {
             }))}
             canvasWidth={overlayCanvas.width}
             canvasHeight={overlayCanvas.height}
+            projector={effectiveOverlayProjector}
             visible={mapStyle.mode === 'pandemic'}
             pandemic={mapModeData.pandemic}
             projector={overlayProjector}
