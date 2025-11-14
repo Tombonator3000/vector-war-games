@@ -158,6 +158,7 @@ import { AdvancedPropagandaPanel } from '@/components/AdvancedPropagandaPanel';
 import { StreamlinedCulturePanel } from '@/components/StreamlinedCulturePanel';
 import type { ProposalType, DiplomaticProposal } from '@/types/unifiedDiplomacy';
 import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/types/streamlinedCulture';
+import type { ImmigrationPolicyType } from '@/types/popSystem';
 import { migrateGameDiplomacy, getRelationship } from '@/lib/unifiedDiplomacyMigration';
 import { deployBioWeapon, processAllBioAttacks, initializeBioWarfareState } from '@/lib/simplifiedBioWarfareLogic';
 import { launchPropagandaCampaign, buildWonder, applyImmigrationPolicy } from '@/lib/streamlinedCultureLogic';
@@ -190,6 +191,7 @@ import { PoliticalStabilityOverlay } from '@/components/governance/PoliticalStab
 import { PandemicSpreadOverlay } from '@/components/pandemic/PandemicSpreadOverlay';
 import { CasualtyImpactSummary } from '@/components/pandemic/CasualtyImpactSummary';
 import { MapModeBar } from '@/components/MapModeBar';
+import { MigrationFlowOverlay } from '@/components/migration/MigrationFlowOverlay';
 import { usePolicySystem } from '@/hooks/usePolicySystem';
 import { useNationalFocus } from '@/hooks/useNationalFocus';
 import type { AvailableFocus } from '@/types/nationalFocus';
@@ -198,6 +200,7 @@ import { useWarSupport } from '@/hooks/useWarSupport';
 import { usePoliticalFactions } from '@/hooks/usePoliticalFactions';
 import { useRegionalMorale } from '@/hooks/useRegionalMorale';
 import { useMediaWarfare } from '@/hooks/useMediaWarfare';
+import { IMMIGRATION_POLICIES } from '@/lib/immigrationPoliciesData';
 import { useProductionQueue } from '@/hooks/useProductionQueue';
 import { useResourceRefinement } from '@/hooks/useResourceRefinement';
 import type { SanctionPackage, AidPackage, AidType } from '@/types/regionalMorale';
@@ -8851,6 +8854,18 @@ export default function NoradVector() {
       globalCasualties: pandemicState.casualtyTally,
       vaccineProgress: pandemicState.vaccineProgress,
     };
+    const migrationOverlay = {
+      inflow: {} as Record<string, number>,
+      outflow: {} as Record<string, number>,
+      net: {} as Record<string, number>,
+      policyRate: {} as Record<string, number>,
+      bonusMultiplier: {} as Record<string, number>,
+      attraction: {} as Record<string, number>,
+      pressure: {} as Record<string, number>,
+    };
+
+    const roundToHundred = (value: number) =>
+      Number.isFinite(value) ? Math.round(value * 100) / 100 : 0;
 
     const nationById = new Map<string, Nation>();
     const nationByName = new Map<string, Nation>();
@@ -8889,6 +8904,53 @@ export default function NoradVector() {
             publicOpinion: nation.publicOpinion ?? 50,
             instability: nation.instability ?? 0,
           };
+
+      const refugeeOutflow = Math.max(0, Number(nation.refugeeFlow ?? 0));
+      const migrantsRecent = Math.max(
+        0,
+        Number(nation.migrantsThisTurn ?? 0),
+        Number(nation.migrantsLastTurn ?? 0),
+        Number(nation.immigrants ?? 0),
+      );
+
+      const policyKey = nation.currentImmigrationPolicy as ImmigrationPolicyType | undefined;
+      const policyDef = policyKey ? IMMIGRATION_POLICIES[policyKey] : undefined;
+      const policyRate = Number.isFinite(policyDef?.immigrationRate) ? policyDef!.immigrationRate : 0;
+
+      const bonusRaw = Number(nation.immigrationBonus ?? 0);
+      let bonusMultiplier = 1;
+      if (Number.isFinite(bonusRaw) && bonusRaw !== 0) {
+        if (bonusRaw > 0 && bonusRaw < 1) {
+          bonusMultiplier = 1 + bonusRaw;
+        } else if (bonusRaw >= 1) {
+          bonusMultiplier = bonusRaw;
+        } else {
+          bonusMultiplier = Math.max(0.25, 1 + bonusRaw);
+        }
+      }
+
+      const projectedInbound = policyRate * bonusMultiplier;
+      const inbound = Math.max(projectedInbound, migrantsRecent);
+      const netFlow = inbound - refugeeOutflow;
+
+      const normalizedInbound = Math.min(1, inbound / 12);
+      const normalizedPolicy = Math.min(1, policyRate / 10);
+      const normalizedBonus = Math.min(1, Math.max(0, bonusMultiplier - 1) / 1.5);
+      const attractionScore = Math.round(
+        Math.min(1, normalizedInbound * 0.5 + normalizedPolicy * 0.25 + normalizedBonus * 0.25) * 100,
+      );
+
+      const normalizedOutflow = Math.min(1, refugeeOutflow / 8);
+      const flowBalance = inbound > 0 ? Math.min(1, refugeeOutflow / Math.max(inbound, 0.5)) : normalizedOutflow;
+      const pressureScore = Math.round(Math.min(1, normalizedOutflow * 0.6 + flowBalance * 0.4) * 100);
+
+      migrationOverlay.inflow[nation.id] = roundToHundred(inbound);
+      migrationOverlay.outflow[nation.id] = roundToHundred(refugeeOutflow);
+      migrationOverlay.net[nation.id] = roundToHundred(netFlow);
+      migrationOverlay.policyRate[nation.id] = roundToHundred(policyRate);
+      migrationOverlay.bonusMultiplier[nation.id] = roundToHundred(bonusMultiplier);
+      migrationOverlay.attraction[nation.id] = Math.max(0, Math.min(100, attractionScore));
+      migrationOverlay.pressure[nation.id] = Math.max(0, Math.min(100, pressureScore));
     });
 
     if (pandemicIntegrationEnabled) {
@@ -8948,6 +9010,7 @@ export default function NoradVector() {
       resourceTotals,
       unrest,
       pandemic: pandemicIntegrationEnabled ? pandemicOverlay : undefined,
+      migration: migrationOverlay,
     };
   }, [
     bioWarfareEnabled,
@@ -15026,6 +15089,25 @@ export default function NoradVector() {
             projectorRevision={overlayProjectorVersion}
             visible={mapStyle.mode === 'pandemic'}
             pandemic={mapModeData.pandemic}
+            countryFeatureLookup={pandemicCountryGeometry}
+            worldCountryFeatures={worldCountries as FeatureCollection<Polygon | MultiPolygon> | null}
+          />
+        )}
+
+        {overlayCanvas && mapStyle.mode === 'migration' && mapModeData.migration && (
+          <MigrationFlowOverlay
+            nations={nations.map(n => ({
+              id: n.id,
+              name: n.name,
+              lon: n.lon || 0,
+              lat: n.lat || 0,
+            }))}
+            canvasWidth={overlayCanvas.width}
+            canvasHeight={overlayCanvas.height}
+            projector={effectiveOverlayProjector}
+            projectorRevision={overlayProjectorVersion}
+            visible={mapStyle.mode === 'migration'}
+            migration={mapModeData.migration}
             countryFeatureLookup={pandemicCountryGeometry}
             worldCountryFeatures={worldCountries as FeatureCollection<Polygon | MultiPolygon> | null}
           />

@@ -3,10 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
-import { Globe2, Handshake, Radar, Factory, AlertTriangle, Biohazard } from 'lucide-react';
+import { Globe2, Handshake, Radar, Factory, AlertTriangle, Biohazard, PlaneTakeoff } from 'lucide-react';
 import type { MapMode } from '@/components/GlobeScene';
 
-const MAP_MODE_ORDER: MapMode[] = ['standard', 'diplomatic', 'intel', 'resources', 'unrest', 'pandemic'];
+const MAP_MODE_ORDER: MapMode[] = ['standard', 'diplomatic', 'intel', 'resources', 'unrest', 'pandemic', 'migration'];
 
 const MAP_MODE_ICONS: Record<MapMode, LucideIcon> = {
   standard: Globe2,
@@ -15,6 +15,7 @@ const MAP_MODE_ICONS: Record<MapMode, LucideIcon> = {
   resources: Factory,
   unrest: AlertTriangle,
   pandemic: Biohazard,
+  migration: PlaneTakeoff,
 };
 
 const DEFAULT_DESCRIPTIONS: Record<MapMode, { label: string; description: string }> = {
@@ -42,6 +43,10 @@ const DEFAULT_DESCRIPTIONS: Record<MapMode, { label: string; description: string
     label: 'Pandemi',
     description: 'Visualiserer infeksjonstrykk, varme og bio-weapon deteksjoner.',
   },
+  migration: {
+    label: 'Migrasjon',
+    description: 'Kartlegger flyktningstrømmer, innvandringstiltak og demografisk press.',
+  },
 };
 
 const DEFAULT_HOTKEYS: Partial<Record<MapMode, string>> = {
@@ -51,6 +56,7 @@ const DEFAULT_HOTKEYS: Partial<Record<MapMode, string>> = {
   resources: 'Alt+4',
   unrest: 'Alt+5',
   pandemic: 'Alt+6',
+  migration: 'Alt+7',
 };
 
 export interface MapModeBarProps {
