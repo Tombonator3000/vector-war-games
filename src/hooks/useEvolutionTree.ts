@@ -2,9 +2,6 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type {
   PlagueState,
   EvolutionNodeId,
-  TransmissionId,
-  SymptomId,
-  AbilityId,
   EvolveNodePayload,
   DevolveNodePayload,
   DNAGainEvent,
@@ -147,35 +144,12 @@ const computeStatsForNodes = (
 };
 
 const createPandemicPlagueState = (): PlagueState => {
-  const unlockedNodes = new Set<EvolutionNodeId>(
-    ALL_EVOLUTION_NODES.map((node) => node.id as EvolutionNodeId)
-  );
-
-  const activeTransmissions = ALL_EVOLUTION_NODES
-    .filter((node) => node.category === 'transmission')
-    .map((node) => node.id as TransmissionId);
-
-  const activeSymptoms = ALL_EVOLUTION_NODES
-    .filter((node) => node.category === 'symptom')
-    .map((node) => node.id as SymptomId);
-
-  const activeAbilities = ALL_EVOLUTION_NODES
-    .filter((node) => node.category === 'ability')
-    .map((node) => node.id as AbilityId);
-
-  const unlockedPlagueTypes = new Set<PlagueTypeId>(PLAGUE_TYPES.map((type) => type.id));
-
   const baseState = createBasePlagueState();
 
   return {
     ...baseState,
-    dnaPoints: 0,
-    unlockedNodes,
-    activeTransmissions,
-    activeSymptoms,
-    activeAbilities,
-    unlockedPlagueTypes,
-    calculatedStats: computeStatsForNodes(unlockedNodes, null),
+    dnaPoints: 69,
+    unlockedPlagueTypes: new Set<PlagueTypeId>(PLAGUE_TYPES.map((type) => type.id)),
   };
 };
 

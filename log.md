@@ -3355,3 +3355,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Removed the duplicate `projector` prop wiring in `src/pages/Index.tsx` so the overlay receives a single optional projector reference.
 - Refined the pandemic overlay geometry fallback logic to avoid early returns, rely on the shared projection helper, and include the GeoJSON lookup in memo dependencies.
 - Executed `npx tsc --noEmit` to confirm the TypeScript overlay compilation passes.
+
+### 2025-11-14T09:18:42Z - Balanced Pandemic 2020 starting evolution tree
+- Updated `createPandemicPlagueState` in `src/hooks/useEvolutionTree.ts` to grant all plague types, retain locked trait nodes, and start the player with 69 DNA for early research decisions.
+- Adjusted `useBioWarfare` pandemic scenario test expectations to reflect the locked nodes and new DNA reserve.
+- Ran `npx vitest run src/hooks/__tests__/useBioWarfare.test.tsx` to verify the evolution tree initialization changes pass existing coverage.

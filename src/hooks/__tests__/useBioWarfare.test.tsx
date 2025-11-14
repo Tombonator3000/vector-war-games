@@ -6,7 +6,7 @@ import { useBioWarfare } from '../useBioWarfare';
 import type { Nation } from '@/types/game';
 import type { PandemicTurnEffect } from '../usePandemic';
 import { SCENARIOS } from '@/types/scenario';
-import { ALL_EVOLUTION_NODES, PLAGUE_TYPES } from '@/lib/evolutionData';
+import { PLAGUE_TYPES } from '@/lib/evolutionData';
 
 describe('useBioWarfare defensive research', () => {
   beforeEach(() => {
@@ -134,7 +134,7 @@ describe('useBioWarfare defensive research', () => {
     expect(nations[1].population).toBeLessThan(beforePopulation);
   });
 
-  it('seeds pandemic scenario with fully unlocked lab and evolution tree', () => {
+  it('seeds pandemic scenario with advanced lab and available plague types while keeping research locked', () => {
     const addNews = vi.fn();
     const { result } = renderHook(
       () => useBioWarfare(addNews, SCENARIOS.pandemic2020),
@@ -144,9 +144,12 @@ describe('useBioWarfare defensive research', () => {
     expect(result.current.labFacility.tier).toBe(4);
     expect(result.current.labFacility.active).toBe(true);
     expect(result.current.labFacility.underConstruction).toBe(false);
-    expect(result.current.plagueState.unlockedNodes.size).toBe(ALL_EVOLUTION_NODES.length);
+    expect(result.current.plagueState.unlockedNodes.size).toBe(0);
+    expect(result.current.plagueState.activeTransmissions.length).toBe(0);
+    expect(result.current.plagueState.activeSymptoms.length).toBe(0);
+    expect(result.current.plagueState.activeAbilities.length).toBe(0);
     expect(result.current.plagueState.unlockedPlagueTypes.size).toBe(PLAGUE_TYPES.length);
-    expect(result.current.plagueState.dnaPoints).toBe(0);
+    expect(result.current.plagueState.dnaPoints).toBe(69);
   });
 
   it('allows Pandemic 2020 scenario to select advanced plague types', () => {
