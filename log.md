@@ -3380,3 +3380,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Computed migration metrics per nation in `pages/Index.tsx`, blending refugee flow, immigration policy rates, and cultural bonuses into a shared overlay payload.
 - Implemented `MigrationFlowOverlay` to render net migration fills using the pandemic geometry lookup and display attraction/pressure tooltips.
 - Updated `Index` to mount the migration overlay with the shared projector and geometry references so bloc aliases resolve correctly.
+### 2025-11-14T14:45:00Z - Deployed radiation fallout visualization pipeline
+- Added a `radiation` map mode to `GlobeScene`/`MapModeBar`, including hotkey bindings and descriptive copy for the control bar.
+- Refactored `upsertFalloutMark`, explosion handling, and the canvas renderer in `pages/Index.tsx` to preserve lon/lat and nation IDs for fallout marks and radiation zones, then aggregated per-nation exposure, sickness, and refugee pressure in `mapModeData`.
+- Implemented `RadiationFalloutOverlay` with shared geometry lookup, zone glows, and fallout markers, and wired it into the index page alongside the existing pandemic/migration overlays.

@@ -22,6 +22,7 @@ import {
   computeResourceColor,
   computeUnrestColor,
 } from '@/lib/mapColorUtils';
+import type { FalloutMark, RadiationZone } from '@/types/game';
 import type { PandemicStage } from '@/hooks/usePandemic';
 import {
   loadTerritoryData,
@@ -76,6 +77,7 @@ export type MapMode =
   | 'resources'
   | 'unrest'
   | 'pandemic'
+  | 'radiation'
   | 'migration';
 
 export const MAP_MODES: MapMode[] = [
@@ -85,6 +87,7 @@ export const MAP_MODES: MapMode[] = [
   'resources',
   'unrest',
   'pandemic',
+  'radiation',
   'migration',
 ];
 
@@ -118,6 +121,18 @@ export interface MapModeOverlayData {
     attraction: Record<string, number>;
     pressure: Record<string, number>;
   };
+  radiation?: RadiationOverlayPayload;
+}
+
+export interface RadiationOverlayPayload {
+  exposures: Record<string, number>;
+  sickness: Record<string, number>;
+  refugeePressure: Record<string, number>;
+  falloutMarks: Array<
+    Pick<FalloutMark, 'id' | 'lon' | 'lat' | 'intensity' | 'alertLevel' | 'nationId'>
+  >;
+  radiationZones: Array<Pick<RadiationZone, 'id' | 'lon' | 'lat' | 'intensity' | 'radius' | 'nationId'>>;
+  globalRadiation: number;
 }
 
 export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'flat-realistic', mode: 'standard' };

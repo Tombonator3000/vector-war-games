@@ -109,7 +109,15 @@ import { OrderOfBattlePanel } from '@/components/OrderOfBattlePanel';
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { AIDiplomacyProposalModal } from '@/components/AIDiplomacyProposalModal';
 import { EndGameScreen } from '@/components/EndGameScreen';
-import type { GameState, Nation, ConventionalWarfareDelta, NationCyberProfile, SatelliteOrbit, FalloutMark } from '@/types/game';
+import type {
+  GameState,
+  Nation,
+  ConventionalWarfareDelta,
+  NationCyberProfile,
+  SatelliteOrbit,
+  FalloutMark,
+  RadiationZone,
+} from '@/types/game';
 import type { WarState, PeaceOffer } from '@/types/casusBelli';
 // Removed - using unified diplomacy DiplomaticProposal instead
 import type { NegotiationState } from '@/types/negotiation';
@@ -191,6 +199,7 @@ import { PoliticalStabilityOverlay } from '@/components/governance/PoliticalStab
 import { PandemicSpreadOverlay } from '@/components/pandemic/PandemicSpreadOverlay';
 import { CasualtyImpactSummary } from '@/components/pandemic/CasualtyImpactSummary';
 import { MapModeBar } from '@/components/MapModeBar';
+import { RadiationFalloutOverlay } from '@/components/radiation/RadiationFalloutOverlay';
 import { MigrationFlowOverlay } from '@/components/migration/MigrationFlowOverlay';
 import { usePolicySystem } from '@/hooks/usePolicySystem';
 import { useNationalFocus } from '@/hooks/useNationalFocus';
@@ -468,6 +477,14 @@ const MAP_MODE_DESCRIPTIONS: Record<MapMode, { label: string; description: strin
     label: 'Pandemi',
     description: 'Visualiserer global infeksjon, varme og laboratoriedeteksjon.',
   },
+  radiation: {
+    label: 'Stråling',
+    description: 'Overvåker radioaktivt nedfall, sykdom og evakueringspress.',
+  },
+  migration: {
+    label: 'Migrasjon',
+    description: 'Kartlegger flyktningstrømmer, innvandring og demografisk press.',
+  },
 };
 
 const MAP_MODE_HOTKEYS: Record<MapMode, string> = {
@@ -477,6 +494,8 @@ const MAP_MODE_HOTKEYS: Record<MapMode, string> = {
   resources: 'Alt+4',
   unrest: 'Alt+5',
   pandemic: 'Alt+6',
+  radiation: 'Alt+7',
+  migration: 'Alt+8',
 };
 
 const isVisualStyleValue = (value: unknown): value is MapVisualStyle =>
@@ -4335,7 +4354,14 @@ function drawFalloutMarks(deltaMs: number) {
   S.falloutMarks = updatedMarks;
 }
 
-function upsertFalloutMark(x: number, y: number, lon: number, lat: number, yieldMT: number) {
+function upsertFalloutMark(
+  x: number,
+  y: number,
+  lon: number,
+  lat: number,
+  yieldMT: number,
+  targetNationId?: string | null,
+) {
   if (!Array.isArray(S.falloutMarks)) {
     S.falloutMarks = [];
   }
@@ -4371,6 +4397,9 @@ function upsertFalloutMark(x: number, y: number, lon: number, lat: number, yield
     targetMark.growthRate = Math.max(targetMark.growthRate, growthRate);
     targetMark.decayDelayMs = Math.max(targetMark.decayDelayMs, decayDelay);
     targetMark.decayRate = Math.max(targetMark.decayRate, decayRate);
+    if (!targetMark.nationId && targetNationId) {
+      targetMark.nationId = targetNationId;
+    }
   } else {
     const newMark: FalloutMark = {
       id: `fallout_${now}_${Math.random().toString(36).slice(2, 8)}`,
@@ -4389,6 +4418,7 @@ function upsertFalloutMark(x: number, y: number, lon: number, lat: number, yield
       decayDelayMs: decayDelay,
       decayRate,
       alertLevel: 'none',
+      nationId: targetNationId ?? null,
     };
     S.falloutMarks.push(newMark);
   }
@@ -4457,26 +4487,80 @@ function drawFX() {
   });
   
   // Radiation zones
-  S.radiationZones.forEach((zone: any, i: number) => {
-    if (zone.intensity < 0.01) {
-      S.radiationZones.splice(i, 1);
+  if (!Array.isArray(S.radiationZones)) {
+    S.radiationZones = [];
+  }
+
+  const nextRadiationZones: RadiationZone[] = [];
+  const radiationNow = Date.now();
+
+  S.radiationZones.forEach((entry: RadiationZone | (RadiationZone & { x?: number; y?: number })) => {
+    const zone = { ...entry } as RadiationZone & { x?: number; y?: number };
+    const normalizedIntensity = Number.isFinite(zone.intensity) ? Math.max(0, zone.intensity) : 0;
+
+    if (normalizedIntensity < 0.01) {
       return;
     }
-    
-    ctx.save();
-    const pulse = Math.sin(Date.now() / 500) * 0.2 + 0.8;
-    ctx.globalCompositeOperation = 'screen';
-    
-    const grad = ctx.createRadialGradient(zone.x, zone.y, 0, zone.x, zone.y, zone.radius);
-    grad.addColorStop(0, `rgba(150,255,0,${zone.intensity * 0.3 * pulse})`);
-    grad.addColorStop(1, `rgba(255,100,0,0)`);
-    
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+
+    let lon = Number.isFinite(zone.lon) ? zone.lon : undefined;
+    let lat = Number.isFinite(zone.lat) ? zone.lat : undefined;
+
+    if ((!Number.isFinite(lon) || !Number.isFinite(lat)) && Number.isFinite(zone.x) && Number.isFinite(zone.y)) {
+      const [computedLon, computedLat] = toLonLatLocal(zone.x!, zone.y!);
+      if (Number.isFinite(computedLon) && Number.isFinite(computedLat)) {
+        lon = computedLon;
+        lat = computedLat;
+      }
+    }
+
+    const projection = Number.isFinite(lon) && Number.isFinite(lat)
+      ? projectLocal(lon!, lat!)
+      : {
+          x: Number.isFinite(zone.canvasX)
+            ? zone.canvasX!
+            : Number.isFinite(zone.x)
+              ? zone.x!
+              : 0,
+          y: Number.isFinite(zone.canvasY)
+            ? zone.canvasY!
+            : Number.isFinite(zone.y)
+              ? zone.y!
+              : 0,
+          visible: true,
+        };
+
+    const radius = Math.max(12, zone.radius ?? 0);
+
+    if (projection.visible) {
+      const pulse = Math.sin(radiationNow / 500) * 0.2 + 0.8;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+
+      const grad = ctx.createRadialGradient(projection.x, projection.y, 0, projection.x, projection.y, radius);
+      grad.addColorStop(0, `rgba(168,255,80,${Math.min(1, normalizedIntensity + 0.1) * 0.35 * pulse})`);
+      grad.addColorStop(0.6, `rgba(80,255,160,${normalizedIntensity * 0.18 * pulse})`);
+      grad.addColorStop(1, 'rgba(30,110,60,0)');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(projection.x, projection.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    nextRadiationZones.push({
+      ...zone,
+      lon: Number.isFinite(lon) ? lon! : zone.lon,
+      lat: Number.isFinite(lat) ? lat! : zone.lat,
+      intensity: normalizedIntensity,
+      radius,
+      updatedAt: radiationNow,
+      canvasX: projection.x,
+      canvasY: projection.y,
+    });
   });
+
+  S.radiationZones = nextRadiationZones;
   
   // EMP effects
   S.empEffects.forEach((emp: any, i: number) => {
@@ -4677,7 +4761,7 @@ function explode(
 
   const [elon, elat] = toLonLatLocal(x, y);
   if (Number.isFinite(elon) && Number.isFinite(elat)) {
-    upsertFalloutMark(x, y, elon, elat, yieldMT);
+    upsertFalloutMark(x, y, elon, elat, yieldMT, target?.id ?? null);
   }
 
   // Create mushroom cloud particles
@@ -4760,12 +4844,60 @@ function explode(
     nationName: target?.name,
   });
 
-  S.radiationZones.push({
-    x,
-    y,
-    radius: Math.sqrt(yieldMT) * 8 * (1 + impact.severity * 0.3),
-    intensity: yieldMT / 100 + impact.radiationDelta / 15
-  });
+  if (!Array.isArray(S.radiationZones)) {
+    S.radiationZones = [];
+  }
+
+  const zoneRadius = Math.sqrt(yieldMT) * 8 * (1 + impact.severity * 0.3);
+  const zoneIntensity = Math.max(0, yieldMT / 100 + impact.radiationDelta / 15);
+  const radiationTimestamp = Date.now();
+  const existingZones: RadiationZone[] = [...S.radiationZones];
+  let mergedZone = false;
+
+  for (const zone of existingZones) {
+    const legacyZone = zone as unknown as { x?: number; y?: number };
+    const baseX = Number.isFinite(zone.canvasX) ? zone.canvasX! : legacyZone.x ?? x;
+    const baseY = Number.isFinite(zone.canvasY) ? zone.canvasY! : legacyZone.y ?? y;
+    const distance = Math.hypot(baseX - x, baseY - y);
+    const overlapThreshold = Math.max(zone.radius ?? zoneRadius, zoneRadius) * 0.75;
+    const sameNation = target?.id && zone.nationId === target.id;
+
+    if (sameNation || distance <= overlapThreshold) {
+      const currentIntensity = Number.isFinite(zone.intensity) ? zone.intensity : 0;
+      zone.intensity = Math.min(1.5, currentIntensity + zoneIntensity * 0.6);
+      zone.radius = Math.max(zone.radius ?? zoneRadius, (zone.radius ?? zoneRadius) * 0.85 + zoneRadius * 0.35);
+      zone.lon = Number.isFinite(elon) ? (Number.isFinite(zone.lon) ? (zone.lon + elon) / 2 : elon) : zone.lon;
+      zone.lat = Number.isFinite(elat) ? (Number.isFinite(zone.lat) ? (zone.lat + elat) / 2 : elat) : zone.lat;
+      zone.canvasX = x;
+      zone.canvasY = y;
+      zone.updatedAt = radiationTimestamp;
+      zone.lastStrikeAt = radiationTimestamp;
+      if (!zone.nationId && target?.id) {
+        zone.nationId = target.id;
+      }
+      mergedZone = true;
+      break;
+    }
+  }
+
+  if (!mergedZone) {
+    const newZone: RadiationZone = {
+      id: `radiation_${radiationTimestamp}_${Math.random().toString(36).slice(2, 8)}`,
+      lon: Number.isFinite(elon) ? elon : 0,
+      lat: Number.isFinite(elat) ? elat : 0,
+      radius: Math.max(18, zoneRadius),
+      intensity: Math.min(1.25, zoneIntensity),
+      createdAt: radiationTimestamp,
+      updatedAt: radiationTimestamp,
+      lastStrikeAt: radiationTimestamp,
+      nationId: target?.id ?? null,
+      canvasX: x,
+      canvasY: y,
+    };
+    existingZones.push(newZone);
+  }
+
+  S.radiationZones = existingZones;
 
   const smokeBursts = Math.max(0, Math.round((impact.severity + impact.totalCityLosses * 0.6) * 12));
   for (let s = 0; s < smokeBursts; s++) {
@@ -8863,12 +8995,67 @@ export default function NoradVector() {
       attraction: {} as Record<string, number>,
       pressure: {} as Record<string, number>,
     };
+    const radiationOverlay: NonNullable<MapModeOverlayData['radiation']> = {
+      exposures: {},
+      sickness: {},
+      refugeePressure: {},
+      falloutMarks: [],
+      radiationZones: [],
+      globalRadiation: Number.isFinite(S.globalRadiation)
+        ? Math.round(Number(S.globalRadiation) * 100) / 100
+        : 0,
+    };
 
     const roundToHundred = (value: number) =>
       Number.isFinite(value) ? Math.round(value * 100) / 100 : 0;
 
     const nationById = new Map<string, Nation>();
     const nationByName = new Map<string, Nation>();
+    const coordinateNations = nations.filter(
+      nation => Number.isFinite(nation.lon) && Number.isFinite(nation.lat),
+    );
+
+    const resolveNationIdForLocation = (
+      candidateId: string | null | undefined,
+      lon: number,
+      lat: number,
+    ): string | null => {
+      if (candidateId && nationById.has(candidateId)) {
+        return candidateId;
+      }
+      if (!Number.isFinite(lon) || !Number.isFinite(lat) || coordinateNations.length === 0) {
+        return null;
+      }
+      let closest: { id: string; distance: number } | null = null;
+      const latRad = (lat * Math.PI) / 180;
+
+      coordinateNations.forEach(nation => {
+        const lon2 = Number(nation.lon);
+        const lat2 = Number(nation.lat);
+        if (!Number.isFinite(lon2) || !Number.isFinite(lat2)) {
+          return;
+        }
+        const lonDelta = (lon2 - lon) * Math.cos((latRad + (lat2 * Math.PI) / 180) / 2);
+        const latDelta = lat2 - lat;
+        const distance = Math.hypot(lonDelta, latDelta);
+        if (!closest || distance < closest.distance) {
+          closest = { id: nation.id, distance };
+        }
+      });
+
+      return closest?.id ?? null;
+    };
+
+    const registerExposure = (nationId: string | null | undefined, value: number) => {
+      if (!nationId) {
+        return;
+      }
+      const clamped = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+      const previous = radiationOverlay.exposures[nationId] ?? 0;
+      if (clamped > previous) {
+        radiationOverlay.exposures[nationId] = clamped;
+      }
+    };
 
     nations.forEach(nation => {
       nationById.set(nation.id, nation);
@@ -8951,6 +9138,20 @@ export default function NoradVector() {
       migrationOverlay.bonusMultiplier[nation.id] = roundToHundred(bonusMultiplier);
       migrationOverlay.attraction[nation.id] = Math.max(0, Math.min(100, attractionScore));
       migrationOverlay.pressure[nation.id] = Math.max(0, Math.min(100, pressureScore));
+
+      const sicknessScore = Number.isFinite(nation.radiationSickness)
+        ? Math.max(0, Math.min(100, Math.round(nation.radiationSickness ?? 0)))
+        : 0;
+      radiationOverlay.sickness[nation.id] = sicknessScore;
+      if (sicknessScore > 0) {
+        registerExposure(nation.id, sicknessScore);
+      }
+
+      const refugeePressureScore = Math.max(0, Math.min(100, Math.round(refugeeOutflow * 12)));
+      radiationOverlay.refugeePressure[nation.id] = refugeePressureScore;
+      if (refugeePressureScore > 0) {
+        registerExposure(nation.id, refugeePressureScore * 0.6);
+      }
     });
 
     if (pandemicIntegrationEnabled) {
@@ -9003,6 +9204,46 @@ export default function NoradVector() {
       });
     }
 
+    const falloutMarks = Array.isArray(S.falloutMarks) ? S.falloutMarks : [];
+    falloutMarks.forEach(mark => {
+      const normalizedIntensity = Number.isFinite(mark.intensity)
+        ? Math.max(0, Math.min(1, mark.intensity))
+        : 0;
+      const associatedNation = resolveNationIdForLocation(mark.nationId, mark.lon, mark.lat);
+      if (associatedNation) {
+        registerExposure(associatedNation, normalizedIntensity * 100);
+      }
+
+      radiationOverlay.falloutMarks.push({
+        id: mark.id,
+        lon: mark.lon,
+        lat: mark.lat,
+        intensity: normalizedIntensity,
+        alertLevel: mark.alertLevel ?? 'none',
+        nationId: associatedNation ?? mark.nationId ?? null,
+      });
+    });
+
+    const radiationZones = Array.isArray(S.radiationZones) ? S.radiationZones : [];
+    radiationZones.forEach(zone => {
+      const normalizedIntensity = Number.isFinite(zone.intensity)
+        ? Math.max(0, Math.min(1, zone.intensity))
+        : 0;
+      const zoneNation = resolveNationIdForLocation(zone.nationId, zone.lon, zone.lat);
+      if (zoneNation) {
+        registerExposure(zoneNation, normalizedIntensity * 100);
+      }
+
+      radiationOverlay.radiationZones.push({
+        id: zone.id,
+        lon: Number.isFinite(zone.lon) ? zone.lon : 0,
+        lat: Number.isFinite(zone.lat) ? zone.lat : 0,
+        intensity: normalizedIntensity,
+        radius: Number.isFinite(zone.radius) ? zone.radius : 0,
+        nationId: zoneNation ?? zone.nationId ?? null,
+      });
+    });
+
     return {
       playerId,
       relationships,
@@ -9011,6 +9252,7 @@ export default function NoradVector() {
       unrest,
       pandemic: pandemicIntegrationEnabled ? pandemicOverlay : undefined,
       migration: migrationOverlay,
+      radiation: radiationOverlay,
     };
   }, [
     bioWarfareEnabled,
@@ -9019,6 +9261,11 @@ export default function NoradVector() {
     pandemicIntegrationEnabled,
     pandemicState,
     plagueState.countryInfections,
+    S.falloutMarks,
+    Array.isArray(S.falloutMarks) ? S.falloutMarks.length : 0,
+    S.radiationZones,
+    Array.isArray(S.radiationZones) ? S.radiationZones.length : 0,
+    S.globalRadiation,
   ]);
 
   useEffect(() => {
@@ -15089,6 +15336,25 @@ export default function NoradVector() {
             projectorRevision={overlayProjectorVersion}
             visible={mapStyle.mode === 'pandemic'}
             pandemic={mapModeData.pandemic}
+            countryFeatureLookup={pandemicCountryGeometry}
+            worldCountryFeatures={worldCountries as FeatureCollection<Polygon | MultiPolygon> | null}
+          />
+        )}
+
+        {overlayCanvas && mapStyle.mode === 'radiation' && mapModeData.radiation && (
+          <RadiationFalloutOverlay
+            nations={nations.map(n => ({
+              id: n.id,
+              name: n.name,
+              lon: n.lon || 0,
+              lat: n.lat || 0,
+            }))}
+            canvasWidth={overlayCanvas.width}
+            canvasHeight={overlayCanvas.height}
+            projector={effectiveOverlayProjector}
+            projectorRevision={overlayProjectorVersion}
+            visible={mapStyle.mode === 'radiation'}
+            radiation={mapModeData.radiation}
             countryFeatureLookup={pandemicCountryGeometry}
             worldCountryFeatures={worldCountries as FeatureCollection<Polygon | MultiPolygon> | null}
           />
