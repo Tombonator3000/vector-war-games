@@ -164,6 +164,7 @@ import { UnifiedDiplomacyPanel } from '@/components/UnifiedDiplomacyPanel';
 import { SimplifiedBioWarfarePanel } from '@/components/SimplifiedBioWarfarePanel';
 import { AdvancedPropagandaPanel } from '@/components/AdvancedPropagandaPanel';
 import { StreamlinedCulturePanel } from '@/components/StreamlinedCulturePanel';
+import { NGOOperationsPanel } from '@/components/NGOOperationsPanel';
 import type { ProposalType, DiplomaticProposal } from '@/types/unifiedDiplomacy';
 import type { PropagandaType, CulturalWonderType, ImmigrationPolicy } from '@/types/streamlinedCulture';
 import type { ImmigrationPolicyType } from '@/types/popSystem';
@@ -7249,6 +7250,7 @@ export default function NoradVector() {
   // Modal and panel states - MUST be declared before blockingModalActive useMemo
   const [isBioWarfareOpen, setIsBioWarfareOpen] = useState(() => selectedScenarioId === 'pandemic2020');
   const [isCulturePanelOpen, setIsCulturePanelOpen] = useState(false);
+  const [isNGOPanelOpen, setIsNGOPanelOpen] = useState(false);
   const [showGovernanceDetails, setShowGovernanceDetails] = useState(false);
   const [showPolicyPanel, setShowPolicyPanel] = useState(false);
   const [isStrikePlannerOpen, setIsStrikePlannerOpen] = useState(false);
@@ -7280,6 +7282,7 @@ export default function NoradVector() {
           leadersScreenOpen ||
           isIntelOperationsOpen ||
           isCulturePanelOpen ||
+          isNGOPanelOpen ||
           isBioWarfareOpen ||
           isWarCouncilOpen ||
           isSpyPanelOpen ||
@@ -7299,6 +7302,7 @@ export default function NoradVector() {
       leadersScreenOpen,
       isIntelOperationsOpen,
       isCulturePanelOpen,
+      isNGOPanelOpen,
       isBioWarfareOpen,
       isWarCouncilOpen,
       isSpyPanelOpen,
@@ -15766,6 +15770,17 @@ export default function NoradVector() {
                     </Button>
 
                     <Button
+                      onClick={() => setIsNGOPanelOpen(!isNGOPanelOpen)}
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-purple-400 hover:text-neon-green hover:bg-purple-500/10"
+                      title="NGO - Sponsor immigration for destabilization"
+                    >
+                      <Users className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">NGO</span>
+                    </Button>
+
+                    <Button
                       onClick={() => setShowPolicyPanel(true)}
                       variant="ghost"
                       size="icon"
@@ -16690,6 +16705,31 @@ export default function NoradVector() {
               onClose={() => setIsCulturePanelOpen(false)}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* NGO Operations Panel */}
+      <Dialog open={isNGOPanelOpen} onOpenChange={setIsNGOPanelOpen}>
+        <DialogContent className="max-w-4xl border border-purple-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b border-purple-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
+            <DialogTitle className="text-2xl font-bold text-purple-300 font-mono uppercase tracking-wider">
+              NGO Operations
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-400 mt-1">
+              Sponsor immigration operations to destabilize enemy nations
+            </DialogDescription>
+          </DialogHeader>
+          <NGOOperationsPanel
+            player={PlayerManager.get() || {} as Nation}
+            allNations={nations}
+            currentTurn={S.turn}
+            onRefresh={() => {
+              const updatedNations = GameStateManager.getNations();
+              setNations(updatedNations);
+              PlayerManager.setNations(updatedNations);
+            }}
+            onClose={() => setIsNGOPanelOpen(false)}
+          />
         </DialogContent>
       </Dialog>
 

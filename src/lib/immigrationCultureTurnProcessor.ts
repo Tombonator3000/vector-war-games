@@ -12,6 +12,8 @@ import {
   processAdvancedPropaganda,
   initializeAdvancedPropagandaState,
 } from './advancedPropagandaManager';
+import { processNGOOperationsTurn } from './ngoTurnProcessor';
+import { initializeNGOState } from './ngoOperationsData';
 
 /**
  * Initialize nation with pop system (one-time migration from old system)
@@ -76,6 +78,11 @@ export function initializeNationPopSystem(nation: Nation): void {
   if (!nation.activeCulturalDefenses) {
     nation.activeCulturalDefenses = [];
   }
+
+  // Initialize NGO state
+  if (!nation.ngoState) {
+    nation.ngoState = initializeNGOState();
+  }
 }
 
 /**
@@ -107,6 +114,23 @@ export function processImmigrationAndCultureTurn(
   // Log narratives for player visibility
   for (const narrative of narratives) {
     console.log(`[Advanced Propaganda] ${narrative}`);
+  }
+
+  // Process NGO operations (immigration & destabilization)
+  const ngoResults = processNGOOperationsTurn(nations, gameState.turn);
+
+  // Log NGO activities
+  for (const log of ngoResults.logs) {
+    console.log(`[NGO Operations] ${log}`);
+  }
+
+  // Handle exposure events (could trigger UI notifications)
+  for (const exposure of ngoResults.exposureEvents) {
+    const sponsor = nations.find(n => n.ngoState?.activeOperations.some(op => op.id === exposure.operationId));
+    const target = nations.find(n => n.id === exposure.exposedToNationId);
+    if (sponsor && target) {
+      console.log(`[NGO Exposure] ${target.name} discovered ${sponsor.name}'s covert immigration operation!`);
+    }
   }
 
   // Process each nation
