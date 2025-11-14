@@ -154,13 +154,18 @@ function findFeatureForNation(
   if (!lookup?.size) {
     return null;
   }
-  const idKey = normalizeKey(nationId);
-  if (idKey && lookup.has(idKey)) {
-    return lookup.get(idKey)!;
-  }
-  const nameKey = normalizeKey(nationName);
-  if (nameKey && lookup.has(nameKey)) {
-    return lookup.get(nameKey)!;
+  const candidates: Array<string | null> = [
+    nationId,
+    nationName,
+    nationId ? `superstate:${nationId}` : null,
+    nationName ? `superstate:${nationName}` : null,
+  ];
+
+  for (const candidate of candidates) {
+    const key = normalizeKey(candidate);
+    if (key && lookup.has(key)) {
+      return lookup.get(key)!;
+    }
   }
   return null;
 }
