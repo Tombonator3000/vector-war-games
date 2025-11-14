@@ -69,9 +69,24 @@ export type MapVisualStyle = 'realistic' | 'wireframe' | 'flat-realistic';
 
 export const MAP_VISUAL_STYLES: MapVisualStyle[] = ['realistic', 'wireframe', 'flat-realistic'];
 
-export type MapMode = 'standard' | 'diplomatic' | 'intel' | 'resources' | 'unrest' | 'pandemic';
+export type MapMode =
+  | 'standard'
+  | 'diplomatic'
+  | 'intel'
+  | 'resources'
+  | 'unrest'
+  | 'pandemic'
+  | 'migration';
 
-export const MAP_MODES: MapMode[] = ['standard', 'diplomatic', 'intel', 'resources', 'unrest', 'pandemic'];
+export const MAP_MODES: MapMode[] = [
+  'standard',
+  'diplomatic',
+  'intel',
+  'resources',
+  'unrest',
+  'pandemic',
+  'migration',
+];
 
 export interface MapStyle {
   visual: MapVisualStyle;
@@ -93,6 +108,15 @@ export interface MapModeOverlayData {
     globalInfection: number;
     globalCasualties: number;
     vaccineProgress: number;
+  };
+  migration?: {
+    inflow: Record<string, number>;
+    outflow: Record<string, number>;
+    net: Record<string, number>;
+    policyRate: Record<string, number>;
+    bonusMultiplier: Record<string, number>;
+    attraction: Record<string, number>;
+    pressure: Record<string, number>;
   };
 }
 

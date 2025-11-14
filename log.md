@@ -3374,3 +3374,9 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Defined bloc membership metadata so EURASIA, EASTASIA, SOUTHAM, and AFRICA resolve to collections of ISO country features and fallback territory polygons.
 - Built synthetic superstate features when preparing the pandemic geometry lookup, registering aliases for AI ids and bloc labels.
 - Updated the pandemic overlay feature search to recognize superstate-prefixed keys, enabling area fills for the blocs instead of circle fallbacks.
+
+### 2025-11-14T13:02:51Z - Introduced migration map overlay mode
+- Added a `migration` map mode to `GlobeScene`, extended `MapModeBar` with iconography, descriptions, and hotkey, and wired the selection into the mode list.
+- Computed migration metrics per nation in `pages/Index.tsx`, blending refugee flow, immigration policy rates, and cultural bonuses into a shared overlay payload.
+- Implemented `MigrationFlowOverlay` to render net migration fills using the pandemic geometry lookup and display attraction/pressure tooltips.
+- Updated `Index` to mount the migration overlay with the shared projector and geometry references so bloc aliases resolve correctly.
