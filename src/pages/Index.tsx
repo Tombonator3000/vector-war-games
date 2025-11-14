@@ -416,7 +416,11 @@ let hoveredTerritoryIdRef: { current: string | null } = { current: null };
 let dragTargetTerritoryIdRef: { current: string | null } = { current: null };
 let draggingArmyRef: { current: { sourceId: string; armies: number } | null } = { current: null };
 
+let policySystemRef: ReturnType<typeof usePolicySystem> | null = null;
+
 type NationalFocusSystemApi = ReturnType<typeof useNationalFocus>;
+
+let focusApiRef: NationalFocusSystemApi | null = null;
 
 const PROPOSAL_MAX_AGE = 10;
 
@@ -6200,46 +6204,47 @@ function endTurn() {
 
       try {
         // Apply policy effects for player nation
-        if (player && policySystem.totalEffects) {
-        const effects = policySystem.totalEffects;
+        const policySystem = policySystemRef;
+        if (player && policySystem?.totalEffects) {
+          const effects = policySystem.totalEffects;
 
-        // Apply per-turn resource gains/costs
-        if (effects.goldPerTurn) {
-          player.gold = Math.max(0, (player.gold || 0) + effects.goldPerTurn);
-        }
-        if (effects.uraniumPerTurn) {
-          addStrategicResource(player, 'uranium', effects.uraniumPerTurn);
-        }
-        if (effects.intelPerTurn) {
-          player.intel = Math.max(0, (player.intel || 0) + effects.intelPerTurn);
-        }
-
-        // Apply maintenance costs for active policies
-        policySystem.activePolicies.forEach((activePolicy) => {
-          const policy = getPolicyById(activePolicy.policyId);
-          if (policy?.maintenanceCost) {
-            if (policy.maintenanceCost.gold) {
-              player.gold = Math.max(0, (player.gold || 0) - policy.maintenanceCost.gold);
-            }
-            if (policy.maintenanceCost.intel) {
-              player.intel = Math.max(0, (player.intel || 0) - policy.maintenanceCost.intel);
-            }
+          // Apply per-turn resource gains/costs
+          if (effects.goldPerTurn) {
+            player.gold = Math.max(0, (player.gold || 0) + effects.goldPerTurn);
           }
-        });
+          if (effects.uraniumPerTurn) {
+            addStrategicResource(player, 'uranium', effects.uraniumPerTurn);
+          }
+          if (effects.intelPerTurn) {
+            player.intel = Math.max(0, (player.intel || 0) + effects.intelPerTurn);
+          }
 
-        // Apply governance modifiers from policies
-        if (governance.metrics[player.id]) {
-          const delta: GovernanceDelta = {
-            morale: effects.moraleModifier || 0,
-            publicOpinion: effects.publicOpinionModifier || 0,
-            cabinetApproval: effects.cabinetApprovalModifier || 0,
-            instability: effects.instabilityModifier || 0
-          };
-          governance.applyDelta(player.id, delta);
+          // Apply maintenance costs for active policies
+          policySystem.activePolicies.forEach((activePolicy) => {
+            const policy = getPolicyById(activePolicy.policyId);
+            if (policy?.maintenanceCost) {
+              if (policy.maintenanceCost.gold) {
+                player.gold = Math.max(0, (player.gold || 0) - policy.maintenanceCost.gold);
+              }
+              if (policy.maintenanceCost.intel) {
+                player.intel = Math.max(0, (player.intel || 0) - policy.maintenanceCost.intel);
+              }
+            }
+          });
+
+          // Apply governance modifiers from policies
+          if (governance.metrics[player.id]) {
+            const delta: GovernanceDelta = {
+              morale: effects.moraleModifier || 0,
+              publicOpinion: effects.publicOpinionModifier || 0,
+              cabinetApproval: effects.cabinetApprovalModifier || 0,
+              instability: effects.instabilityModifier || 0,
+            };
+            governance.applyDelta(player.id, delta);
+          }
         }
-      }
 
-      const focusApi = focusApiRef.current;
+        const focusApi = focusApiRef;
       const focusTurnCompletions = focusApi?.processTurnFocusProgress?.() ?? [];
 
       if (focusTurnCompletions.length > 0) {
@@ -7054,7 +7059,6 @@ export default function NoradVector() {
     pressureDeltaState.aidGold = delta.aidGold;
     pressureDeltaRef.current = pressureDeltaState;
   };
-  const focusApiRef = useRef<NationalFocusSystemApi | null>(null);
 
   // Modal management - Extracted to useModalManager hook (Phase 7 refactoring)
   const { showModal, modalContent, openModal, closeModal } = useModalManager();
@@ -9507,21 +9511,35 @@ export default function NoradVector() {
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
   });
 
+  policySystemRef = policySystem;
+
+  useEffect(() => {
+    policySystemRef = policySystem;
+
+    return () => {
+      if (policySystemRef === policySystem) {
+        policySystemRef = null;
+      }
+    };
+  }, [policySystem]);
+
   // National focus system for strategic national objectives
   const nationalFocusSystem = useNationalFocus({
     currentTurn: S.turn,
     nations: nations.map(n => ({ id: n.id, name: n.name })),
   });
 
-  focusApiRef.current = nationalFocusSystem;
+  focusApiRef = nationalFocusSystem;
 
   const focusStates = nationalFocusSystem.focusStates;
   const focusCompletionLog = nationalFocusSystem.completionLog;
 
   useEffect(() => {
+    focusApiRef = nationalFocusSystem;
+
     return () => {
-      if (focusApiRef.current === nationalFocusSystem) {
-        focusApiRef.current = null;
+      if (focusApiRef === nationalFocusSystem) {
+        focusApiRef = null;
       }
     };
   }, [nationalFocusSystem]);

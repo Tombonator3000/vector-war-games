@@ -3385,6 +3385,10 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added a shared reset helper and synchronization wrapper around the international pressure delta reference in `src/pages/Index.tsx` so non-React turn logic reads the latest gold penalties and aid inflows.
 - Reset the module-level delta cache during component teardown to avoid stale data between mount cycles.
 - Executed `CI=1 npm run test -- --run --reporter=basic` to verify turn resolution, observing pre-existing failures in governance, map color, and casualty alert tests.
+### 2025-11-14T17:48:00Z - Promoted policy and focus system references for turn resolution
+- Introduced module-level holders for the policy and national focus systems in `src/pages/Index.tsx` and synchronized them with the active hook instances so `endTurn()` can safely access the latest APIs.
+- Updated the `endTurn()` production-phase sequence to read from the module refs with null-guards before applying policy upkeep, governance deltas, and focus completions.
+- Ran `CI=1 npm run test -- --run --reporter=basic`, which still reports pre-existing failures in governance cooldown, map color utilities, and casualty alert milestone suites.
 ### 2025-11-14T14:45:00Z - Deployed radiation fallout visualization pipeline
 - Added a `radiation` map mode to `GlobeScene`/`MapModeBar`, including hotkey bindings and descriptive copy for the control bar.
 - Refactored `upsertFalloutMark`, explosion handling, and the canvas renderer in `pages/Index.tsx` to preserve lon/lat and nation IDs for fallout marks and radiation zones, then aggregated per-nation exposure, sickness, and refugee pressure in `mapModeData`.
