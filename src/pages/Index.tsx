@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { feature } from 'topojson-client';
+import type { Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7707,6 +7708,7 @@ export default function NoradVector() {
     };
   }, []);
   const [uiTick, setUiTick] = useState(0);
+  const [overlayProjector, setOverlayProjector] = useState<ProjectorFn | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
   const [showTutorial, setShowTutorial] = useState(() => {
@@ -7754,6 +7756,7 @@ export default function NoradVector() {
   const handleAttackRef = useRef<() => void>(() => {});
   const handleProjectorReady = useCallback((projector: ProjectorFn) => {
     globeProjector = projector;
+    setOverlayProjector(() => projector);
   }, []);
   const handlePickerReady = useCallback((picker: PickerFn) => {
     globePicker = picker;
@@ -8800,6 +8803,90 @@ export default function NoradVector() {
 
   const showTerritories = territoryPolygons.length > 0;
   const showUnits = globeUnits.length > 0;
+
+  const pandemicCountryGeometry = useMemo(() => {
+    const collection = worldCountries as FeatureCollection<Polygon | MultiPolygon> | null;
+    if (!collection || !Array.isArray(collection.features)) {
+      return null;
+    }
+
+    const normalizeKey = (value: unknown): string | null => {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      const raw = String(value).trim();
+      if (!raw) {
+        return null;
+      }
+      const normalized = raw.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      return normalized || null;
+    };
+
+    const register = (
+      map: Map<string, Feature<Polygon | MultiPolygon>>,
+      value: unknown,
+      featureRef: Feature<Polygon | MultiPolygon>,
+    ) => {
+      const key = normalizeKey(value);
+      if (!key) {
+        return;
+      }
+      if (!map.has(key)) {
+        map.set(key, featureRef);
+      }
+    };
+
+    const lookup = new Map<string, Feature<Polygon | MultiPolygon>>();
+    const candidateKeys = [
+      'name',
+      'NAME',
+      'name_long',
+      'NAME_LONG',
+      'formal_en',
+      'FORMAL_EN',
+      'admin',
+      'ADMIN',
+      'sovereignt',
+      'SOVEREIGNT',
+      'abbrev',
+      'ABBREV',
+      'postal',
+      'POSTAL',
+      'iso_a3',
+      'ISO_A3',
+      'iso_a2',
+      'ISO_A2',
+      'adm0_a3',
+      'ADM0_A3',
+      'gu_a3',
+      'GU_A3',
+      'wb_a3',
+      'WB_A3',
+      'brk_a3',
+      'BRK_A3',
+    ] as const;
+
+    for (const featureEntry of collection.features as Feature<Polygon | MultiPolygon>[]) {
+      if (!featureEntry) {
+        continue;
+      }
+
+      register(lookup, featureEntry.id, featureEntry);
+
+      const properties = featureEntry.properties as Record<string, unknown> | undefined;
+      if (!properties) {
+        continue;
+      }
+
+      for (const key of candidateKeys) {
+        if (Object.prototype.hasOwnProperty.call(properties, key)) {
+          register(lookup, properties[key], featureEntry);
+        }
+      }
+    }
+
+    return lookup.size > 0 ? lookup : null;
+  }, [worldCountries, uiTick]);
 
   // Policy system for strategic national policies
   const player = nations.find(n => n.isPlayer);
@@ -10058,6 +10145,7 @@ export default function NoradVector() {
   useEffect(() => () => {
     globeProjector = null;
     globePicker = null;
+    setOverlayProjector(null);
   }, []);
 
   useEffect(() => {
@@ -14596,6 +14684,9 @@ export default function NoradVector() {
             canvasHeight={overlayCanvas.height}
             visible={mapStyle.mode === 'pandemic'}
             pandemic={mapModeData.pandemic}
+            projector={overlayProjector}
+            countryFeatureLookup={pandemicCountryGeometry}
+            worldCountryFeatures={worldCountries as FeatureCollection<Polygon | MultiPolygon> | null}
           />
         )}
 
