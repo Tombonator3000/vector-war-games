@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
-import { Globe2, Handshake, Radar, Factory, AlertTriangle, Biohazard, Radioactive, PlaneTakeoff } from 'lucide-react';
+import { Globe2, Handshake, Radar, Factory, AlertTriangle, Biohazard, Radiation, PlaneTakeoff } from 'lucide-react';
 import type { MapMode } from '@/components/GlobeScene';
 
 const MAP_MODE_ORDER: MapMode[] = ['standard', 'diplomatic', 'intel', 'resources', 'unrest', 'pandemic', 'radiation', 'migration'];
@@ -15,7 +15,7 @@ const MAP_MODE_ICONS: Record<MapMode, LucideIcon> = {
   resources: Factory,
   unrest: AlertTriangle,
   pandemic: Biohazard,
-  radiation: Radioactive,
+  radiation: Radiation,
   migration: PlaneTakeoff,
 };
 

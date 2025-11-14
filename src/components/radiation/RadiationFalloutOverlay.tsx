@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Radioactive } from 'lucide-react';
+import { Radiation } from 'lucide-react';
 import type { Feature, FeatureCollection, MultiPolygon, Polygon, Position } from 'geojson';
 import type { MapModeOverlayData, ProjectorFn } from '@/components/GlobeScene';
 
@@ -561,7 +561,7 @@ export function RadiationFalloutOverlay({
             transform={`translate(${marker.x - 8}, ${marker.y - 8})`}
             opacity={Math.max(0.4, marker.intensity + 0.2)}
           >
-            <Radioactive
+            <Radiation
               width={16}
               height={16}
               strokeWidth={1.4}
