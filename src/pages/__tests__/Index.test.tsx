@@ -227,7 +227,7 @@ vi.mock('@/components/GlobeScene', async () => {
         props.onPickerReady(() => null);
       }
       if (typeof props.onProjectorReady === 'function') {
-        props.onProjectorReady(() => ({ x: 0, y: 0, visible: true }));
+        props.onProjectorReady(() => ({ x: 0, y: 0, visible: true }), 1);
       }
     }, [props.onPickerReady, props.onProjectorReady]);
 

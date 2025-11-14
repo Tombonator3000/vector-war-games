@@ -135,7 +135,7 @@ export interface GlobeSceneProps {
   onNationClick?: (nationId: string) => void;
   onTerritoryClick?: (territoryId: string) => void;
   onUnitClick?: (unitId: string) => void;
-  onProjectorReady?: (projector: ProjectorFn) => void;
+  onProjectorReady?: (projector: ProjectorFn, version: number) => void;
   onPickerReady?: (picker: PickerFn) => void;
   mapStyle?: MapStyle;
   modeData?: MapModeOverlayData;
@@ -1048,6 +1048,7 @@ function SceneContent({
   onTerritoryClick,
   onUnitClick,
   register,
+  onCameraTransformChange,
   mapStyle = DEFAULT_MAP_STYLE,
   modeData,
   missilesRef,
@@ -1065,6 +1066,7 @@ function SceneContent({
   onTerritoryClick?: GlobeSceneProps['onTerritoryClick'];
   onUnitClick?: GlobeSceneProps['onUnitClick'];
   register: (registration: SceneRegistration) => void;
+  onCameraTransformChange: () => void;
   mapStyle?: MapStyle;
   modeData?: MapModeOverlayData;
   missilesRef: MutableRefObject<Map<string, MissileTrajectoryInstance>>;
@@ -1073,10 +1075,57 @@ function SceneContent({
   worldCountries?: GlobeSceneProps['worldCountries'];
 }) {
   const { camera, size, clock, gl } = useThree();
+  const lastCameraState = useRef<{
+    position: THREE.Vector3;
+    quaternion: THREE.Quaternion;
+    zoom: number;
+  } | null>(null);
   const earthRef = useRef<THREE.Mesh | null>(null);
   const visualStyle = mapStyle?.visual ?? 'realistic';
   const currentMode = mapStyle?.mode ?? 'standard';
   const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
+
+  useEffect(() => {
+    const perspective = camera as THREE.PerspectiveCamera;
+    if (!perspective || !perspective.isPerspectiveCamera) {
+      lastCameraState.current = null;
+      return;
+    }
+    lastCameraState.current = {
+      position: perspective.position.clone(),
+      quaternion: perspective.quaternion.clone(),
+      zoom: perspective.zoom,
+    };
+  }, [camera]);
+
+  useFrame(() => {
+    const perspective = camera as THREE.PerspectiveCamera;
+    if (!perspective || !perspective.isPerspectiveCamera) {
+      return;
+    }
+
+    const last = lastCameraState.current;
+    if (!last) {
+      lastCameraState.current = {
+        position: perspective.position.clone(),
+        quaternion: perspective.quaternion.clone(),
+        zoom: perspective.zoom,
+      };
+      onCameraTransformChange();
+      return;
+    }
+
+    if (
+      !last.position.equals(perspective.position) ||
+      !last.quaternion.equals(perspective.quaternion) ||
+      last.zoom !== perspective.zoom
+    ) {
+      last.position.copy(perspective.position);
+      last.quaternion.copy(perspective.quaternion);
+      last.zoom = perspective.zoom;
+      onCameraTransformChange();
+    }
+  });
 
   const cssDimensions = useMemo(
     () =>
@@ -1518,6 +1567,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   const raycasterRef = useRef(new THREE.Raycaster());
   const pointerVec = useRef(new THREE.Vector2());
   const projectorRef = useRef<ProjectorFn>(NOOP_PROJECTOR);
+  const projectorVersionRef = useRef(0);
   const pickerRef = useRef<PickerFn>(NOOP_PICKER);
   const positionProjectorRef = useRef<(lon: number, lat: number, radius: number) => THREE.Vector3>(
     (lon, lat, radius) => latLonToVector3(lon, lat, radius),
@@ -1568,6 +1618,18 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       explosions.clear();
     };
   }, []);
+
+  const notifyProjectorReady = useCallback(() => {
+    if (!onProjectorReady) {
+      return;
+    }
+    const projector = projectorRef.current;
+    if (!projector) {
+      return;
+    }
+    projectorVersionRef.current += 1;
+    onProjectorReady(projector, projectorVersionRef.current);
+  }, [onProjectorReady]);
 
   const updateProjector = useCallback(() => {
     const cameraWorldPosition = new THREE.Vector3();
@@ -1626,10 +1688,8 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       };
     };
     projectorRef.current = projector;
-    if (onProjectorReady) {
-      onProjectorReady(projector);
-    }
-  }, [cam.x, cam.y, cam.zoom, visualStyle, onProjectorReady]);
+    notifyProjectorReady();
+  }, [cam.x, cam.y, cam.zoom, notifyProjectorReady, visualStyle]);
 
   const updatePicker = useCallback(() => {
     const picker: PickerFn = (pointerX, pointerY) => {
@@ -1810,6 +1870,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
             onTerritoryClick={onTerritoryClick}
             onUnitClick={onUnitClick}
             register={handleRegister}
+            onCameraTransformChange={notifyProjectorReady}
             mapStyle={mapStyle}
             modeData={modeData}
             missilesRef={missilesRef}
