@@ -351,6 +351,8 @@ export function PandemicSpreadOverlay({
       const center = projectPoint(nation.lon, nation.lat);
 
       const feature = geometryLookup ? findFeatureForNation(nation.id, nation.name, geometryLookup) : null;
+      let renderedViaGeometry = false;
+
       if (feature) {
         const projected = projectFeatureGeometry(feature, projectPoint);
         if (projected) {
@@ -369,11 +371,11 @@ export function PandemicSpreadOverlay({
             paths: projected.paths,
             labelPosition: center,
           });
-          return;
+          renderedViaGeometry = true;
         }
       }
 
-      if (center) {
+      if (!renderedViaGeometry && center) {
         const baseRadius = 8 + fillRatio * 22;
         const glowRadius = baseRadius * 1.7;
         fallbackPoints.push({
@@ -392,7 +394,7 @@ export function PandemicSpreadOverlay({
       }
     });
     return { territories, fallbackPoints };
-  }, [canvasWidth, canvasHeight, nations, pandemic, projector, visible]);
+  }, [canvasWidth, canvasHeight, geometryLookup, nations, pandemic, projector, visible]);
 
   if (!visible) return null;
 

@@ -14732,7 +14732,6 @@ export default function NoradVector() {
             projector={effectiveOverlayProjector}
             visible={mapStyle.mode === 'pandemic'}
             pandemic={mapModeData.pandemic}
-            projector={overlayProjector}
             countryFeatureLookup={pandemicCountryGeometry}
             worldCountryFeatures={worldCountries as FeatureCollection<Polygon | MultiPolygon> | null}
           />

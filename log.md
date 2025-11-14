@@ -3350,3 +3350,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added deterministic territory/fallback aggregation that returns `{ territories, fallbackPoints }` directly when computing infection visuals.
 - Ran `npm run lint` (fails due to existing repository ESLint violations unrelated to the overlay refactor).
 - Ran `npm run test -- --run --reporter=basic` (fails because `src/hooks/__tests__/useGovernance.test.ts` still reports the pre-existing cooldown assertion error).
+
+### 2025-11-14T08:12:08Z - Finalized pandemic overlay prop usage
+- Removed the duplicate `projector` prop wiring in `src/pages/Index.tsx` so the overlay receives a single optional projector reference.
+- Refined the pandemic overlay geometry fallback logic to avoid early returns, rely on the shared projection helper, and include the GeoJSON lookup in memo dependencies.
+- Executed `npx tsc --noEmit` to confirm the TypeScript overlay compilation passes.
