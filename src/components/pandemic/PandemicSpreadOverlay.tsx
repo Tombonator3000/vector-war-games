@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Biohazard } from 'lucide-react';
-import type { MapModeOverlayData } from '@/components/GlobeScene';
+import type { MapModeOverlayData, ProjectorFn } from '@/components/GlobeScene';
 import { computePandemicColor } from '@/lib/mapColorUtils';
 
 const casualtyFormatter = new Intl.NumberFormat('en-US', {
@@ -19,6 +19,7 @@ interface PandemicSpreadOverlayProps {
   }>;
   canvasWidth: number;
   canvasHeight: number;
+  projector?: ProjectorFn | null;
   visible: boolean;
   pandemic: PandemicOverlay;
 }
@@ -51,6 +52,7 @@ export function PandemicSpreadOverlay({
   nations,
   canvasWidth,
   canvasHeight,
+  projector,
   visible,
   pandemic,
 }: PandemicSpreadOverlayProps) {
@@ -66,6 +68,20 @@ export function PandemicSpreadOverlay({
       return [];
     }
 
+    const projectNation = (lon: number, lat: number) => {
+      if (projector) {
+        const { x, y, visible: isVisible } = projector(lon, lat);
+        if (!isVisible) {
+          return null;
+        }
+        return { x, y };
+      }
+
+      const x = ((lon + 180) / 360) * canvasWidth;
+      const y = ((90 - lat) / 180) * canvasHeight;
+      return { x, y };
+    };
+
     return nations
       .map(nation => {
         const infection = pandemic.infections?.[nation.id] ?? 0;
@@ -76,8 +92,11 @@ export function PandemicSpreadOverlay({
         const normalized = Math.max(0, infection) / maxInfection;
         const casualties = pandemic.casualties?.[nation.id] ?? 0;
         const color = computePandemicColor(normalized);
-        const centerX = ((nation.lon + 180) / 360) * canvasWidth;
-        const centerY = ((90 - nation.lat) / 180) * canvasHeight;
+        const projection = projectNation(nation.lon, nation.lat);
+        if (!projection) {
+          return null;
+        }
+        const { x: centerX, y: centerY } = projection;
         const isDetected = Boolean(pandemic.detections?.[nation.id]);
 
         // Generate infection dots based on infection level
@@ -146,7 +165,7 @@ export function PandemicSpreadOverlay({
         };
       })
       .filter((point): point is PandemicPoint => Boolean(point));
-  }, [canvasWidth, canvasHeight, nations, pandemic, visible]);
+  }, [canvasWidth, canvasHeight, nations, pandemic, projector, visible]);
 
   if (!visible) return null;
 
