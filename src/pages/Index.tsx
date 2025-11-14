@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo, ReactNode } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, ReactNode, useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { feature } from 'topojson-client';
 import type { Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
@@ -863,8 +863,152 @@ let globeProjector: ProjectorFn | null = null;
 let globePicker: PickerFn | null = null;
 let lastFxTimestamp: number | null = null;
 
+type OverlayProjectorSnapshot = { fn: ProjectorFn | null; version: number };
+
+interface OverlayProjectorStore {
+  getSnapshot: () => OverlayProjectorSnapshot;
+  subscribe: (listener: () => void) => () => void;
+  setSnapshot: (snapshot: OverlayProjectorSnapshot) => void;
+}
+
+function createOverlayProjectorStore(): OverlayProjectorStore {
+  let snapshot: OverlayProjectorSnapshot = { fn: null, version: 0 };
+  const listeners = new Set<() => void>();
+
+  return {
+    getSnapshot: () => snapshot,
+    subscribe: listener => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    setSnapshot: next => {
+      if (snapshot.fn === next.fn && snapshot.version === next.version) {
+        return;
+      }
+      snapshot = next;
+      listeners.forEach(listener => listener());
+    },
+  };
+}
+
 // Camera system
 const cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
+
+type OverlayLayersProps = {
+  overlayCanvas: HTMLCanvasElement | null;
+  overlayProjectorStore: OverlayProjectorStore;
+  mapStyle: MapStyle;
+  mapModeData: MapModeOverlayData;
+  nations: Nation[];
+  pandemicCountryGeometry: Map<string, Feature<Polygon | MultiPolygon>> | null;
+  worldCountries: FeatureCollection<Polygon | MultiPolygon> | null;
+};
+
+function OverlayLayers({
+  overlayCanvas,
+  overlayProjectorStore,
+  mapStyle,
+  mapModeData,
+  nations,
+  pandemicCountryGeometry,
+  worldCountries,
+}: OverlayLayersProps) {
+  const overlayProjector = useSyncExternalStore(
+    overlayProjectorStore.subscribe,
+    overlayProjectorStore.getSnapshot,
+    overlayProjectorStore.getSnapshot,
+  );
+
+  const overlayCanvasWidth = overlayCanvas?.width ?? 0;
+  const overlayCanvasHeight = overlayCanvas?.height ?? 0;
+  const overlayProjectorFn = overlayProjector.fn;
+  const overlayProjectorVersion = overlayProjector.version;
+
+  const effectiveOverlayProjector = useMemo<ProjectorFn | null>(() => {
+    if (overlayProjectorFn) {
+      return overlayProjectorFn;
+    }
+    if (!overlayCanvas) {
+      return null;
+    }
+
+    const width = overlayCanvasWidth;
+    const height = overlayCanvasHeight;
+
+    return (lon: number, lat: number) => {
+      const projected = project(lon, lat, {
+        W: width,
+        H: height,
+        cam,
+        globeProjector: null,
+        globePicker,
+      });
+
+      if (Array.isArray(projected)) {
+        const [x, y] = projected;
+        return { x, y, visible: true };
+      }
+
+      return projected;
+    };
+  }, [
+    overlayProjectorFn,
+    overlayCanvas,
+    overlayCanvasHeight,
+    overlayCanvasWidth,
+    cam.x,
+    cam.y,
+    cam.zoom,
+    cam.targetZoom,
+    globePicker,
+  ]);
+
+  if (!overlayCanvas) {
+    return null;
+  }
+
+  return (
+    <>
+      {mapStyle.mode === 'unrest' && (
+        <PoliticalStabilityOverlay
+          nations={nations.map(n => ({
+            id: n.id,
+            name: n.name,
+            lon: n.lon || 0,
+            lat: n.lat || 0,
+            morale: mapModeData.unrest[n.id]?.morale ?? 50,
+            publicOpinion: mapModeData.unrest[n.id]?.publicOpinion ?? 50,
+            instability: mapModeData.unrest[n.id]?.instability ?? 0,
+          }))}
+          canvasWidth={overlayCanvasWidth}
+          canvasHeight={overlayCanvasHeight}
+          visible={mapStyle.mode === 'unrest'}
+        />
+      )}
+
+      {mapStyle.mode === 'pandemic' && mapModeData.pandemic && (
+        <PandemicSpreadOverlay
+          nations={nations.map(n => ({
+            id: n.id,
+            name: n.name,
+            lon: n.lon || 0,
+            lat: n.lat || 0,
+          }))}
+          canvasWidth={overlayCanvasWidth}
+          canvasHeight={overlayCanvasHeight}
+          projector={effectiveOverlayProjector}
+          projectorVersion={overlayProjectorVersion}
+          visible={mapStyle.mode === 'pandemic'}
+          pandemic={mapModeData.pandemic}
+          countryFeatureLookup={pandemicCountryGeometry}
+          worldCountryFeatures={worldCountries}
+        />
+      )}
+    </>
+  );
+}
 
 // World data
 let worldData: any = null;
@@ -7708,10 +7852,7 @@ export default function NoradVector() {
     };
   }, []);
   const [uiTick, setUiTick] = useState(0);
-  const [overlayProjector, setOverlayProjector] = useState<{ fn: ProjectorFn | null; version: number }>({
-    fn: null,
-    version: 0,
-  });
+  const overlayProjectorStore = useMemo(() => createOverlayProjectorStore(), []);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPaused, setIsPaused] = useState(S.paused);
   const [showTutorial, setShowTutorial] = useState(() => {
@@ -7760,9 +7901,9 @@ export default function NoradVector() {
   const handleProjectorReady = useCallback(
     (projector: ProjectorFn, version: number) => {
       globeProjector = projector;
-      setOverlayProjector({ fn: projector, version });
+      overlayProjectorStore.setSnapshot({ fn: projector, version });
     },
-    [setOverlayProjector],
+    [overlayProjectorStore],
   );
   const handlePickerReady = useCallback((picker: PickerFn) => {
     globePicker = picker;
@@ -14535,49 +14676,6 @@ export default function NoradVector() {
   };
 
   const overlayCanvas = globeSceneRef.current?.overlayCanvas ?? null;
-  const overlayCanvasWidth = overlayCanvas?.width ?? 0;
-  const overlayCanvasHeight = overlayCanvas?.height ?? 0;
-  const overlayProjectorFn = overlayProjector.fn;
-  const overlayProjectorVersion = overlayProjector.version;
-
-  const effectiveOverlayProjector = useMemo<ProjectorFn | null>(() => {
-    if (overlayProjectorFn) {
-      return overlayProjectorFn;
-    }
-    if (!overlayCanvas) {
-      return null;
-    }
-
-    const width = overlayCanvasWidth;
-    const height = overlayCanvasHeight;
-
-    return (lon: number, lat: number) => {
-      const projected = project(lon, lat, {
-        W: width,
-        H: height,
-        cam,
-        globeProjector: null,
-        globePicker,
-      });
-
-      if (Array.isArray(projected)) {
-        const [x, y] = projected;
-        return { x, y, visible: true };
-      }
-
-      return projected;
-    };
-  }, [
-    overlayProjectorFn,
-    overlayCanvas,
-    overlayCanvasHeight,
-    overlayCanvasWidth,
-    cam.x,
-    cam.y,
-    cam.zoom,
-    cam.targetZoom,
-    globePicker,
-  ]);
 
   // Early returns for different phases
   if (gamePhase === 'intro') {
@@ -14707,41 +14805,15 @@ export default function NoradVector() {
           </div>
         )}
 
-        {overlayCanvas && mapStyle.mode === 'unrest' && (
-          <PoliticalStabilityOverlay
-            nations={nations.map(n => ({
-              id: n.id,
-              name: n.name,
-              lon: n.lon || 0,
-              lat: n.lat || 0,
-              morale: mapModeData.unrest[n.id]?.morale ?? 50,
-              publicOpinion: mapModeData.unrest[n.id]?.publicOpinion ?? 50,
-              instability: mapModeData.unrest[n.id]?.instability ?? 0,
-            }))}
-            canvasWidth={overlayCanvas.width}
-            canvasHeight={overlayCanvas.height}
-            visible={mapStyle.mode === 'unrest'}
-          />
-        )}
-
-        {overlayCanvas && mapStyle.mode === 'pandemic' && mapModeData.pandemic && (
-          <PandemicSpreadOverlay
-            nations={nations.map(n => ({
-              id: n.id,
-              name: n.name,
-              lon: n.lon || 0,
-              lat: n.lat || 0,
-            }))}
-            canvasWidth={overlayCanvas.width}
-            canvasHeight={overlayCanvas.height}
-            projector={effectiveOverlayProjector}
-            projectorVersion={overlayProjectorVersion}
-            visible={mapStyle.mode === 'pandemic'}
-            pandemic={mapModeData.pandemic}
-            countryFeatureLookup={pandemicCountryGeometry}
-            worldCountryFeatures={worldCountries as FeatureCollection<Polygon | MultiPolygon> | null}
-          />
-        )}
+        <OverlayLayers
+          overlayCanvas={overlayCanvas}
+          overlayProjectorStore={overlayProjectorStore}
+          mapStyle={mapStyle}
+          mapModeData={mapModeData}
+          nations={nations}
+          pandemicCountryGeometry={pandemicCountryGeometry}
+          worldCountries={worldCountries as FeatureCollection<Polygon | MultiPolygon> | null}
+        />
 
         <div className="hud-layers pointer-events-none touch-none">
           <div className="game-top-stack pointer-events-none">

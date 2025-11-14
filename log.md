@@ -3349,3 +3349,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Reviewed Codex feedback about frozen infection polygons after camera movement and inspected `PandemicSpreadOverlay` memo dependencies.
 - Extended `GlobeScene` to emit projector version bumps whenever the globe camera transforms and threaded the version through `Index` state to the overlay.
 - Cleaned up the overlay geometry projection logic, added the projector version dependency, and verified the targeted `Index` Vitest suite before noting the runner hang.
+
+### 2025-11-14T10:45:00Z - Isolated overlay projector updates from main page renders
+- Replaced the `overlayProjector` React state in `src/pages/Index.tsx` with a memoized external store so camera movement no longer re-renders the full NORAD interface each frame.
+- Introduced an `OverlayLayers` bridge component that subscribes to projector updates via `useSyncExternalStore`, recomputing overlay projections without touching unrelated UI trees.
+- Updated the pandemic overlay wiring to consume the new projector store while preserving existing geometry fallback behavior.
