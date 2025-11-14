@@ -32,6 +32,8 @@ export interface FalloutMark {
   decayDelayMs: number;
   decayRate: number;
   alertLevel?: 'none' | 'elevated' | 'severe' | 'deadly';
+  nationId?: string | null;
+  regionKey?: string | null;
 }
 
 export interface RelationshipEvent {
@@ -104,7 +106,17 @@ export interface Particle {
 }
 
 export interface RadiationZone {
-  [key: string]: unknown;
+  id: string;
+  lon: number;
+  lat: number;
+  radius: number;
+  intensity: number;
+  createdAt: number;
+  updatedAt: number;
+  lastStrikeAt: number;
+  nationId?: string | null;
+  canvasX?: number;
+  canvasY?: number;
 }
 
 export interface EMPEffect {

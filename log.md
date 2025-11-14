@@ -3385,3 +3385,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added a shared reset helper and synchronization wrapper around the international pressure delta reference in `src/pages/Index.tsx` so non-React turn logic reads the latest gold penalties and aid inflows.
 - Reset the module-level delta cache during component teardown to avoid stale data between mount cycles.
 - Executed `CI=1 npm run test -- --run --reporter=basic` to verify turn resolution, observing pre-existing failures in governance, map color, and casualty alert tests.
+### 2025-11-14T14:45:00Z - Deployed radiation fallout visualization pipeline
+- Added a `radiation` map mode to `GlobeScene`/`MapModeBar`, including hotkey bindings and descriptive copy for the control bar.
+- Refactored `upsertFalloutMark`, explosion handling, and the canvas renderer in `pages/Index.tsx` to preserve lon/lat and nation IDs for fallout marks and radiation zones, then aggregated per-nation exposure, sickness, and refugee pressure in `mapModeData`.
+- Implemented `RadiationFalloutOverlay` with shared geometry lookup, zone glows, and fallout markers, and wired it into the index page alongside the existing pandemic/migration overlays.
