@@ -22,10 +22,9 @@ interface PandemicSpreadOverlayProps {
   }>;
   canvasWidth: number;
   canvasHeight: number;
-  projector?: ProjectorFn | null;
   visible: boolean;
   pandemic: PandemicOverlay;
-  projector: ProjectorFn | null;
+  projector?: ProjectorFn | null;
   countryFeatureLookup?: FeatureLookup | null;
   worldCountryFeatures?: FeatureCollection<Polygon | MultiPolygon> | null;
 }
@@ -298,7 +297,6 @@ export function PandemicSpreadOverlay({
   projector,
   visible,
   pandemic,
-  projector,
   countryFeatureLookup,
   worldCountryFeatures,
 }: PandemicSpreadOverlayProps) {
@@ -370,60 +368,6 @@ export function PandemicSpreadOverlay({
             bounds: projected.bounds,
             paths: projected.paths,
             labelPosition: center,
-        const normalized = Math.max(0, infection) / maxInfection;
-        const casualties = pandemic.casualties?.[nation.id] ?? 0;
-        const color = computePandemicColor(normalized);
-        const projection = projectNation(nation.lon, nation.lat);
-        if (!projection) {
-          return null;
-        }
-        const { x: centerX, y: centerY } = projection;
-        const isDetected = Boolean(pandemic.detections?.[nation.id]);
-
-        // Generate infection dots based on infection level
-        // More infected = more dots
-        const maxDots = 200; // Maximum dots per country
-        const numDots = Math.floor(normalized * maxDots);
-        const spreadRadius = 30 + normalized * 50; // Area size based on infection
-
-        const dots: InfectionDot[] = [];
-
-        // Use deterministic random seed based on nation ID for consistency
-        const seed = nation.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        let random = seed;
-
-        // Simple seeded random number generator
-        const seededRandom = () => {
-          random = (random * 9301 + 49297) % 233280;
-          return random / 233280;
-        };
-
-        for (let i = 0; i < numDots; i++) {
-          // Random position within spread radius using polar coordinates
-          const angle = seededRandom() * Math.PI * 2;
-          const distance = Math.sqrt(seededRandom()) * spreadRadius;
-          const dotX = centerX + Math.cos(angle) * distance;
-          const dotY = centerY + Math.sin(angle) * distance;
-
-          // Dot size varies slightly
-          const dotRadius = 2 + seededRandom() * 2;
-
-          // Color variation - from orange to deep red based on severity
-          const hue = 0; // Red hue
-          const saturation = 80 + normalized * 20;
-          const lightness = 60 - normalized * 30; // Darker as more severe
-          const dotColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-
-          // Stagger animation delay
-          const delay = numDots ? (i / numDots) * 2 : 0;
-
-          dots.push({
-            id: `${nation.id}-dot-${i}`,
-            x: dotX,
-            y: dotY,
-            radius: dotRadius,
-            color: dotColor,
-            delay,
           });
           return;
         }
@@ -444,10 +388,10 @@ export function PandemicSpreadOverlay({
           isDetected,
           baseRadius,
           glowRadius,
-          dots,
-        };
-      })
-      .filter((point): point is PandemicPoint => Boolean(point));
+        });
+      }
+    });
+    return { territories, fallbackPoints };
   }, [canvasWidth, canvasHeight, nations, pandemic, projector, visible]);
 
   if (!visible) return null;
