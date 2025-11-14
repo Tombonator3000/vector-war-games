@@ -340,6 +340,15 @@ import { useModalManager, type ModalContentValue } from '@/hooks/game/useModalMa
 import { useNewsManager } from '@/hooks/game/useNewsManager';
 import { getTrust, getFavors, FavorCosts } from '@/types/trustAndFavors';
 
+type PressureDeltaState = { goldPenalty: number; aidGold: number };
+
+let processInternationalPressureTurnFn: (() => void) | null = null;
+let getTotalEconomicImpactFn:
+  | ((nationId: string) => { productionPenalty: number; goldPenalty: number })
+  | null = null;
+let getAidBenefitsFn: ((nationId: string) => AidPackage['benefits']) | null = null;
+let pressureDeltaState: PressureDeltaState = { goldPenalty: 0, aidGold: 0 };
+
 // Storage wrapper for localStorage
 const Storage = {
   getItem: (key: string) => {
@@ -5996,14 +6005,17 @@ function endTurn() {
 
       // Apply international pressure effects (aid and sanctions) for player nation
       if (player) {
-        processInternationalPressureTurn();
-        const economicImpact = getTotalEconomicImpact(player.id);
-        const aidBenefits = getAidBenefits(player.id);
-        const previousPressure = pressureDeltaRef.current;
-        const currentGoldPenalty = economicImpact.goldPenalty;
+        const playerNationName = player.name ?? 'Player';
+        processInternationalPressureTurnFn?.();
+        const economicImpact =
+          getTotalEconomicImpactFn?.(player.id) ?? { productionPenalty: 0, goldPenalty: 0 };
+        const aidBenefits = getAidBenefitsFn?.(player.id) ?? ({} as AidPackage['benefits']);
+        const previousGoldPenalty = pressureDeltaState.goldPenalty;
+        const previousAidGold = pressureDeltaState.aidGold;
+        const currentGoldPenalty = economicImpact.goldPenalty ?? 0;
         const currentAidGold = aidBenefits.goldPerTurn ?? 0;
 
-        if (currentGoldPenalty !== previousPressure.goldPenalty) {
+        if (currentGoldPenalty !== previousGoldPenalty) {
           if (currentGoldPenalty > 0) {
             addNewsItem(
               'diplomatic',
@@ -6015,7 +6027,7 @@ function endTurn() {
               description: `${playerNationName} forfeits ${currentGoldPenalty} gold this turn due to international pressure.`,
               variant: 'destructive',
             });
-          } else if (previousPressure.goldPenalty > 0) {
+          } else if (previousGoldPenalty > 0) {
             addNewsItem(
               'diplomatic',
               `Sanctions ease and ${playerNationName} regains trade revenues.`,
@@ -6028,7 +6040,7 @@ function endTurn() {
           }
         }
 
-        if (currentAidGold !== previousPressure.aidGold) {
+        if (currentAidGold !== previousAidGold) {
           if (currentAidGold > 0) {
             addNewsItem(
               'diplomatic',
@@ -6040,7 +6052,7 @@ function endTurn() {
               description: `${playerNationName} gains ${currentAidGold} gold this turn from international assistance.`,
               variant: 'success',
             });
-          } else if (previousPressure.aidGold > 0) {
+          } else if (previousAidGold > 0) {
             addNewsItem(
               'diplomatic',
               `Aid shipments wind down for ${playerNationName}.`,
@@ -6053,10 +6065,8 @@ function endTurn() {
           }
         }
 
-        pressureDeltaRef.current = {
-          goldPenalty: currentGoldPenalty,
-          aidGold: currentAidGold,
-        };
+        pressureDeltaState.goldPenalty = currentGoldPenalty;
+        pressureDeltaState.aidGold = currentAidGold;
 
         if (currentGoldPenalty > 0) {
           player.gold = Math.max(0, (player.gold || 0) - currentGoldPenalty);
@@ -6759,7 +6769,7 @@ export default function NoradVector() {
   const [, setRenderTick] = useState(0);
   const [pressureSyncKey, setPressureSyncKey] = useState(0);
   const pressureInitializedNationsRef = useRef<Set<string>>(new Set());
-  const pressureDeltaRef = useRef<{ goldPenalty: number; aidGold: number }>({ goldPenalty: 0, aidGold: 0 });
+  const pressureDeltaRef = useRef<PressureDeltaState>(pressureDeltaState);
   const focusApiRef = useRef<NationalFocusSystemApi | null>(null);
 
   // Modal management - Extracted to useModalManager hook (Phase 7 refactoring)
@@ -9095,6 +9105,21 @@ export default function NoradVector() {
     onSanctionsImposed: handleSanctionsImposedNotification,
     onAidGranted: handleAidGrantedNotification,
   });
+
+  processInternationalPressureTurnFn = processInternationalPressureTurn;
+  getTotalEconomicImpactFn = getTotalEconomicImpact;
+  getAidBenefitsFn = getAidBenefits;
+  pressureDeltaState.goldPenalty = pressureDeltaRef.current.goldPenalty;
+  pressureDeltaState.aidGold = pressureDeltaRef.current.aidGold;
+  pressureDeltaRef.current = pressureDeltaState;
+
+  useEffect(() => {
+    return () => {
+      processInternationalPressureTurnFn = null;
+      getTotalEconomicImpactFn = null;
+      getAidBenefitsFn = null;
+    };
+  }, []);
 
   const ensurePressureTracking = useCallback(
     (nationId: string | null | undefined) => {
