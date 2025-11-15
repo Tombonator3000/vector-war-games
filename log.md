@@ -3409,3 +3409,4 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-15T11:17:15Z - Ran `npx tsc --noEmit` to verify TypeScript now accepts the DEFCON news callback without overrides.
 2025-11-15T11:29:40Z - Expanded news ticker category and priority support, aligned doctrine incident payloads, and removed legacy `@ts-expect-error`/`as any` bridges in src/components/NewsTicker.tsx, src/pages/Index.tsx, src/lib/pandemic/casualtyAlertEvaluator.ts, src/lib/doctrineIncidentSystem.ts, and src/types/doctrineIncidents.ts.
 2025-11-15T11:29:40Z - Ran `npm run lint`; command failed due to longstanding lint violations unrelated to the news ticker updates.
+2025-11-15T12:04:10Z - Tightened doctrine incident system helpers to reuse `NewsItem` unions for generated news payloads, ensuring `resolveIncident` propagates literal ticker categories and priorities.
