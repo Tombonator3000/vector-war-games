@@ -3,7 +3,16 @@ import { useEffect, useState, useRef } from 'react';
 export interface NewsItem {
   id: string;
   text: string;
-  priority: 'routine' | 'important' | 'urgent' | 'critical';
+  priority:
+    | 'info'
+    | 'routine'
+    | 'low'
+    | 'medium'
+    | 'important'
+    | 'alert'
+    | 'high'
+    | 'urgent'
+    | 'critical';
   timestamp: number;
   category:
     | 'military'
@@ -13,7 +22,11 @@ export interface NewsItem {
     | 'crisis'
     | 'environment'
     | 'science'
-    | 'governance';
+    | 'governance'
+    | 'domestic'
+    | 'media'
+    | 'occult'
+    | 'political';
 }
 
 interface NewsTickerProps {
@@ -22,14 +35,19 @@ interface NewsTickerProps {
   className?: string;
 }
 
-const PRIORITY_COLORS = {
+const PRIORITY_COLORS: Record<NewsItem['priority'], string> = {
+  info: 'text-slate-300',
   routine: 'text-cyan-300',
+  low: 'text-slate-200',
+  medium: 'text-teal-300',
   important: 'text-yellow-300',
-  urgent: 'text-orange-400',
+  alert: 'text-amber-300 font-semibold',
+  high: 'text-orange-400 font-semibold',
+  urgent: 'text-orange-500 font-semibold',
   critical: 'text-red-500 font-bold'
 };
 
-const CATEGORY_PREFIXES = {
+const CATEGORY_PREFIXES: Record<NewsItem['category'], string> = {
   military: '⚔️',
   diplomatic: '🤝',
   economic: '💰',
@@ -38,6 +56,10 @@ const CATEGORY_PREFIXES = {
   environment: '☢️',
   science: '🧪',
   governance: '🏛️',
+  domestic: '🏠',
+  media: '📰',
+  occult: '🔮',
+  political: '🗳️'
 };
 
 export function NewsTicker({ items, speed = 50, className }: NewsTickerProps) {
@@ -64,8 +86,19 @@ export function NewsTicker({ items, speed = 50, className }: NewsTickerProps) {
   if (items.length === 0) return null;
 
   // Sort by priority and timestamp
+  const priorityOrder: Record<NewsItem['priority'], number> = {
+    critical: 0,
+    urgent: 1,
+    high: 2,
+    alert: 3,
+    important: 4,
+    medium: 5,
+    routine: 6,
+    info: 7,
+    low: 8,
+  };
+
   const sortedItems = [...items].sort((a, b) => {
-    const priorityOrder = { critical: 0, urgent: 1, important: 2, routine: 3 };
     const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
     if (priorityDiff !== 0) return priorityDiff;
     return b.timestamp - a.timestamp;
