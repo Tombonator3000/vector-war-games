@@ -257,10 +257,19 @@ body.theme-wargames button:hover,
 body.theme-wargames [role="button"]:hover,
 body.theme-wargames .command-button:hover {
   background: #003300;
-  box-shadow: 
-    0 0 20px rgba(0, 255, 0, 0.5),
+  box-shadow:
+    0 0 25px rgba(0, 255, 0, 0.6),
+    0 4px 20px rgba(0, 255, 0, 0.4),
     inset 0 0 15px rgba(0, 255, 0, 0.2);
-  text-shadow: 0 0 8px rgba(0, 255, 0, 1);
+  text-shadow: 0 0 10px rgba(0, 255, 0, 1);
+  transform: translateY(-2px) scale(1.02);
+}
+
+body.theme-wargames button:active,
+body.theme-wargames [role="button"]:active,
+body.theme-wargames .command-button:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.08s ease;
 }
 
 body.theme-wargames .hud-module,
@@ -301,15 +310,45 @@ body.theme-wargames .layout-chip {
 
 body.theme-wargames .theme-chip:hover,
 body.theme-wargames .layout-chip:hover {
-  box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
+  box-shadow:
+    0 0 20px rgba(0, 255, 0, 0.5),
+    0 4px 15px rgba(0, 255, 0, 0.3);
   background: #001a00;
+  transform: translateY(-2px) scale(1.02);
+}
+
+body.theme-wargames .theme-chip:active,
+body.theme-wargames .layout-chip:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.08s ease;
 }
 
 body.theme-wargames .theme-chip.is-active,
 body.theme-wargames .layout-chip.is-active {
   background: #003300;
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
-  text-shadow: 0 0 8px rgba(0, 255, 0, 1);
+  box-shadow:
+    0 0 30px rgba(0, 255, 0, 0.7),
+    0 0 50px rgba(0, 255, 0, 0.5),
+    inset 0 0 20px rgba(0, 255, 0, 0.2);
+  text-shadow: 0 0 12px rgba(0, 255, 0, 1);
+  font-weight: bold;
+  border-width: 3px;
+  animation: pulse-wargames 2s ease-in-out infinite;
+}
+
+@keyframes pulse-wargames {
+  0%, 100% {
+    box-shadow:
+      0 0 30px rgba(0, 255, 0, 0.7),
+      0 0 50px rgba(0, 255, 0, 0.5),
+      inset 0 0 20px rgba(0, 255, 0, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 40px rgba(0, 255, 0, 0.8),
+      0 0 60px rgba(0, 255, 0, 0.6),
+      inset 0 0 25px rgba(0, 255, 0, 0.3);
+  }
 }
 
 body.theme-wargames [data-ui-button]:not(.command-button) {
@@ -1851,11 +1890,13 @@ body.theme-synthwave .doomsday__status {
   letter-spacing: 0.35em;
   text-transform: uppercase;
   background: linear-gradient(135deg, rgba(0, 255, 213, 0.22), rgba(0, 128, 255, 0.1));
-  border: 1px solid rgba(0, 255, 213, 0.35);
+  border: 2px solid rgba(0, 255, 213, 0.35);
   border-radius: 0.65rem;
   color: #adfaff;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 0 18px rgba(0, 255, 213, 0.2);
+  cursor: pointer;
+  position: relative;
 }
 
 body.theme-synthwave [data-ui-button]:not(.command-button) {
@@ -1881,8 +1922,15 @@ body.theme-synthwave [data-ui-button]:not(.command-button)::after {
 }
 
 body.theme-synthwave [data-ui-button]:not(.command-button):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 28px hsl(188 100% 72% / 0.52);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow:
+    0 0 35px hsl(188 100% 72% / 0.6),
+    0 6px 25px hsl(188 100% 72% / 0.35);
+}
+
+body.theme-synthwave [data-ui-button]:not(.command-button):active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.08s ease;
 }
 
 body.theme-synthwave [data-ui-button]:not(.command-button):focus-visible {
@@ -1891,8 +1939,28 @@ body.theme-synthwave [data-ui-button]:not(.command-button):focus-visible {
 }
 
 body.theme-synthwave [data-ui-button].is-active {
-  box-shadow: 0 0 32px hsl(188 100% 72% / 0.65);
+  box-shadow:
+    0 0 40px hsl(188 100% 72% / 0.75),
+    0 0 60px hsl(188 100% 72% / 0.45),
+    inset 0 0 20px hsl(188 100% 72% / 0.25);
   border-color: var(--synthwave-button-border-strong);
+  border-width: 2px;
+  animation: pulse-synthwave 2s ease-in-out infinite;
+}
+
+@keyframes pulse-synthwave {
+  0%, 100% {
+    box-shadow:
+      0 0 40px hsl(188 100% 72% / 0.75),
+      0 0 60px hsl(188 100% 72% / 0.45),
+      inset 0 0 20px hsl(188 100% 72% / 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 50px hsl(188 100% 72% / 0.85),
+      0 0 70px hsl(188 100% 72% / 0.55),
+      inset 0 0 25px hsl(188 100% 72% / 0.35);
+  }
 }
 
 body.theme-synthwave .theme-chip {
@@ -1908,6 +1976,15 @@ body.theme-synthwave .theme-chip.is-active {
     hsl(162 100% 72%) 100%
   );
   color: hsl(224 100% 6%);
+  border-width: 2px;
+  border-color: hsl(188 100% 76%);
+  box-shadow:
+    0 0 35px hsl(188 100% 72% / 0.7),
+    0 0 55px hsl(308 100% 72% / 0.5),
+    inset 0 0 25px hsl(188 100% 100% / 0.3);
+  font-weight: 800;
+  text-shadow: 0 0 10px hsl(224 100% 6% / 0.5);
+  animation: pulse-synthwave 2s ease-in-out infinite;
 }
 
 body.theme-synthwave .options-sheet {
@@ -2026,25 +2103,52 @@ body.theme-synthwave .options-sheet__description {
 .theme-chip {
   padding: 0.6rem 0.75rem;
   border-radius: 8px;
-  border: 1px solid rgba(6, 182, 212, 0.3);
+  border: 2px solid rgba(6, 182, 212, 0.35);
   background: rgba(0, 0, 0, 0.4);
   font-size: 0.65rem;
   letter-spacing: 0.25em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .theme-chip:hover {
-  border-color: rgba(6, 182, 212, 0.5);
-  background: rgba(6, 182, 212, 0.1);
-  transform: translateY(-1px);
+  border-color: rgba(6, 182, 212, 0.6);
+  background: rgba(6, 182, 212, 0.15);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.25);
+}
+
+.theme-chip:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.08s ease;
 }
 
 .theme-chip.is-active {
-  border-color: rgba(6, 182, 212, 0.7);
-  background: rgba(6, 182, 212, 0.2);
-  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+  border-width: 2px;
+  border-color: rgba(6, 182, 212, 0.9);
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(34, 211, 238, 0.25));
+  box-shadow:
+    0 0 25px rgba(6, 182, 212, 0.5),
+    0 0 40px rgba(6, 182, 212, 0.3),
+    inset 0 0 20px rgba(6, 182, 212, 0.15);
+  animation: pulse-active 2s ease-in-out infinite;
+}
+
+@keyframes pulse-active {
+  0%, 100% {
+    box-shadow:
+      0 0 25px rgba(6, 182, 212, 0.5),
+      0 0 40px rgba(6, 182, 212, 0.3),
+      inset 0 0 20px rgba(6, 182, 212, 0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(6, 182, 212, 0.6),
+      0 0 50px rgba(6, 182, 212, 0.4),
+      inset 0 0 25px rgba(6, 182, 212, 0.2);
+  }
 }
 
 .layout-chip {
@@ -2054,23 +2158,39 @@ body.theme-synthwave .options-sheet__description {
   gap: 0.25rem;
   padding: 0.6rem 0.75rem;
   border-radius: 10px;
-  border: 1px solid rgba(6, 182, 212, 0.3);
+  border: 2px solid rgba(6, 182, 212, 0.35);
   background: rgba(0, 0, 0, 0.4);
   text-align: left;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .layout-chip:hover {
-  border-color: rgba(6, 182, 212, 0.5);
-  background: rgba(6, 182, 212, 0.1);
-  transform: translateY(-1px);
+  border-color: rgba(6, 182, 212, 0.6);
+  background: rgba(6, 182, 212, 0.15);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.25);
+}
+
+.layout-chip:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.08s ease;
 }
 
 .layout-chip.is-active {
-  border-color: rgba(6, 182, 212, 0.7);
-  background: rgba(6, 182, 212, 0.2);
-  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+  border-width: 2px;
+  border-color: rgba(6, 182, 212, 0.9);
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(34, 211, 238, 0.25));
+  box-shadow:
+    0 0 25px rgba(6, 182, 212, 0.5),
+    0 0 40px rgba(6, 182, 212, 0.3),
+    inset 0 0 20px rgba(6, 182, 212, 0.15);
+  animation: pulse-active 2s ease-in-out infinite;
+}
+
+.layout-chip.is-active .layout-chip__label {
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.8);
 }
 
 .layout-chip__label {
@@ -2278,9 +2398,16 @@ body.theme-synthwave .command-button::after {
 }
 
 body.theme-synthwave .command-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 34px hsl(188 100% 72% / 0.6);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow:
+    0 0 40px hsl(188 100% 72% / 0.65),
+    0 6px 25px hsl(188 100% 72% / 0.4);
   border-color: var(--synthwave-button-border-strong);
+}
+
+body.theme-synthwave .command-button:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.08s ease;
 }
 
 body.theme-synthwave .command-button:focus-visible {
@@ -2289,10 +2416,18 @@ body.theme-synthwave .command-button:focus-visible {
 }
 
 .command-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 26px rgba(0, 255, 213, 0.35);
-  border-color: rgba(0, 255, 213, 0.55);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 0 30px rgba(0, 255, 213, 0.4),
+    0 4px 20px rgba(0, 255, 213, 0.25);
+  border-color: rgba(0, 255, 213, 0.65);
   background: linear-gradient(135deg, rgba(0, 255, 213, 0.32), rgba(0, 128, 255, 0.2));
+}
+
+.command-button:active {
+  transform: translateY(0) scale(0.98);
+  transition: all 0.08s ease;
+  box-shadow: 0 0 18px rgba(0, 255, 213, 0.3);
 }
 
 .command-button--danger {
@@ -2613,6 +2748,123 @@ body.theme-synthwave .command-button--neutral:hover {
 /* Panel styling */
 .react-flow__panel {
   font-family: 'Share Tech Mono', monospace;
+}
+
+/* ============================================================================
+   Enhanced Menu Item Highlighting
+   ============================================================================ */
+
+/* Dropdown Menu Items - Enhanced focus/hover states */
+[role="menuitem"],
+[role="option"],
+[data-radix-collection-item] {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+/* Enhanced hover/focus states for all menu items */
+[role="menuitem"]:hover,
+[role="menuitem"]:focus,
+[role="option"]:hover,
+[role="option"]:focus,
+[data-radix-collection-item]:hover,
+[data-radix-collection-item]:focus {
+  transform: translateX(2px);
+}
+
+/* Synthwave theme dropdown enhancements */
+body.theme-synthwave [role="menuitem"]:hover,
+body.theme-synthwave [role="menuitem"]:focus,
+body.theme-synthwave [role="option"]:hover,
+body.theme-synthwave [role="option"]:focus {
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.25), rgba(34, 211, 238, 0.15));
+  box-shadow:
+    inset 3px 0 0 0 hsl(188 100% 62%),
+    0 0 15px rgba(6, 182, 212, 0.3);
+  border-left: 3px solid hsl(188 100% 62%);
+}
+
+body.theme-synthwave [role="menuitem"][data-state="checked"],
+body.theme-synthwave [role="option"][data-state="checked"] {
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.3), rgba(34, 211, 238, 0.2));
+  box-shadow:
+    inset 3px 0 0 0 hsl(188 100% 72%),
+    0 0 20px rgba(6, 182, 212, 0.4);
+  font-weight: 700;
+}
+
+/* WARGAMES theme dropdown enhancements */
+body.theme-wargames [role="menuitem"]:hover,
+body.theme-wargames [role="menuitem"]:focus,
+body.theme-wargames [role="option"]:hover,
+body.theme-wargames [role="option"]:focus {
+  background: #001a00;
+  box-shadow:
+    inset 3px 0 0 0 #00ff00,
+    0 0 15px rgba(0, 255, 0, 0.4);
+  border-left: 3px solid #00ff00;
+  text-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+}
+
+body.theme-wargames [role="menuitem"][data-state="checked"],
+body.theme-wargames [role="option"][data-state="checked"] {
+  background: #003300;
+  box-shadow:
+    inset 3px 0 0 0 #00ff00,
+    0 0 20px rgba(0, 255, 0, 0.5);
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(0, 255, 0, 1);
+}
+
+/* Tab enhancements */
+[role="tab"][data-state="active"] {
+  position: relative;
+}
+
+body.theme-synthwave [role="tab"][data-state="active"]::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, hsl(188 100% 62%), hsl(308 100% 72%));
+  box-shadow: 0 0 10px hsl(188 100% 62% / 0.6);
+  animation: pulse-tab 2s ease-in-out infinite;
+}
+
+@keyframes pulse-tab {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px hsl(188 100% 62% / 0.6);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 15px hsl(188 100% 62% / 0.8);
+  }
+}
+
+body.theme-wargames [role="tab"][data-state="active"]::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #00ff00;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+  animation: pulse-tab-wargames 2s ease-in-out infinite;
+}
+
+@keyframes pulse-tab-wargames {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.9);
+  }
 }
 
   @media (max-width: 768px) {
