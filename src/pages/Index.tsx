@@ -7046,7 +7046,7 @@ export default function NoradVector() {
   const interfaceRef = useRef<HTMLDivElement>(null);
   const globeSceneRef = useRef<GlobeSceneHandle | null>(null);
   const [gamePhase, setGamePhase] = useState('intro');
-  const { rng } = useRNG();
+  const { rng, resetRNG } = useRNG();
   const [isGameStarted, setIsGameStarted] = useState(false);
   const hasAutoplayedTurnOneMusicRef = useRef(false);
   const hasBootstrappedGameRef = useRef(false);
@@ -11148,6 +11148,7 @@ export default function NoradVector() {
     // CRITICAL: Reset all game state before starting a new game
     // This ensures no state persists from previous sessions (immigration policy, etc.)
     resetGameState();
+    resetRNG();
     resetInternationalPressure();
     pressureInitializedNationsRef.current.clear();
     resetPressureDeltaState();
@@ -11179,7 +11180,7 @@ export default function NoradVector() {
     }
 
     setIsGameStarted(true);
-  }, [selectedLeader, selectedDoctrine]);
+  }, [resetRNG, selectedLeader, selectedDoctrine]);
 
   // Doctrine Incident Choice Handler
   const handleDoctrineIncidentChoice = useCallback((choiceId: string) => {
