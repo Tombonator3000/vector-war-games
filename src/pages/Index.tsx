@@ -12523,6 +12523,8 @@ export default function NoradVector() {
 
     PlayerManager.set(launcherWithCampaign);
 
+    triggerNationsUpdate?.();
+
     log(result.message, 'diplomatic');
     toast({
       title: result.discovered ? 'Campaign Discovered!' : 'Propaganda Launched',
@@ -12555,6 +12557,8 @@ export default function NoradVector() {
     GameStateManager.setNations(updatedNations);
     PlayerManager.setNations(updatedNations);
 
+    triggerNationsUpdate?.();
+
     log(result.message, 'diplomatic');
     toast({
       title: 'Wonder Complete',
@@ -12575,6 +12579,8 @@ export default function NoradVector() {
     nations = updatedNations;
     GameStateManager.setNations(updatedNations);
     PlayerManager.setNations(updatedNations);
+
+    triggerNationsUpdate?.();
 
     log(`Immigration policy changed to: ${policy}`, 'diplomatic');
     toast({

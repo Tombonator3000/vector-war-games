@@ -3393,3 +3393,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added a `radiation` map mode to `GlobeScene`/`MapModeBar`, including hotkey bindings and descriptive copy for the control bar.
 - Refactored `upsertFalloutMark`, explosion handling, and the canvas renderer in `pages/Index.tsx` to preserve lon/lat and nation IDs for fallout marks and radiation zones, then aggregated per-nation exposure, sickness, and refugee pressure in `mapModeData`.
 - Implemented `RadiationFalloutOverlay` with shared geometry lookup, zone glows, and fallout markers, and wired it into the index page alongside the existing pandemic/migration overlays.
+### 2025-11-14T22:26:26Z - Synced cultural action handlers with UI refresh trigger
+- Updated `handleLaunchPropaganda`, `handleBuildWonder`, and `handleSetImmigrationPolicy` in `src/pages/Index.tsx` to call `triggerNationsUpdate?.()` after refreshing the `nations` array and `PlayerManager` caches so dialogs immediately reflect new propaganda campaigns, wonder completions, and immigration policies.
