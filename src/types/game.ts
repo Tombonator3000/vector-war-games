@@ -2,6 +2,7 @@ import type { BioLabFacility } from './bioLab';
 import type { PlagueState } from './biowarfare';
 import type { ScenarioConfig } from './scenario';
 import type { GreatOldOnesState } from './greatOldOnes';
+import type { NuclearWarCampaignState } from './nuclearWarCampaign';
 import type { TrustRecord, FavorBalance, DiplomaticPromise } from './trustAndFavors';
 import type { Grievance, Claim } from './grievancesAndClaims';
 import type { SpecializedAlliance } from './specializedAlliances';
@@ -386,6 +387,9 @@ export interface GameState {
 
   /** Great Old Ones campaign mode state */
   greatOldOnes?: GreatOldOnesState;
+
+  /** Nuclear War campaign mode state */
+  nuclearWarCampaign?: NuclearWarCampaignState;
 
   /** Diplomacy Phase 3 state */
   diplomacyPhase3?: import('./diplomacyPhase3').DiplomacyPhase3State;
