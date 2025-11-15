@@ -3395,3 +3395,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Implemented `RadiationFalloutOverlay` with shared geometry lookup, zone glows, and fallout markers, and wired it into the index page alongside the existing pandemic/migration overlays.
 ### 2025-11-14T22:26:26Z - Synced cultural action handlers with UI refresh trigger
 - Updated `handleLaunchPropaganda`, `handleBuildWonder`, and `handleSetImmigrationPolicy` in `src/pages/Index.tsx` to call `triggerNationsUpdate?.()` after refreshing the `nations` array and `PlayerManager` caches so dialogs immediately reflect new propaganda campaigns, wonder completions, and immigration policies.
+### 2025-11-15T07:08:34Z - Reset international pressure systems between campaigns
+- Added a `reset` callback to `useInternationalPressure` that clears stored measures and ID counters.
+- Wired the international pressure reset, cache clearing, and pressure delta wipe into `startGame` in `src/pages/Index.tsx`.
+- Extended `useInternationalPressure` tests to cover sanctions/aid persistence and ensure restarting yields a clean state.

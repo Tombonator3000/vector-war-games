@@ -9706,6 +9706,7 @@ export default function NoradVector() {
     processTurnUpdates: processInternationalPressureTurn,
     getTotalEconomicImpact,
     getAidBenefits,
+    reset: resetInternationalPressure,
   } = useInternationalPressure({
     currentTurn: S.turn,
     onResolutionPassed: (resolution) => {
@@ -11147,6 +11148,10 @@ export default function NoradVector() {
     // CRITICAL: Reset all game state before starting a new game
     // This ensures no state persists from previous sessions (immigration policy, etc.)
     resetGameState();
+    resetInternationalPressure();
+    pressureInitializedNationsRef.current.clear();
+    resetPressureDeltaState();
+    pressureDeltaRef.current = pressureDeltaState;
 
     // Reset bootstrap flag to allow game initialization to run again
     hasBootstrappedGameRef.current = false;
