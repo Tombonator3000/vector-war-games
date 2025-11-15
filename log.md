@@ -3403,3 +3403,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated `src/pages/Index.tsx` to pull `resetRNG` from `useRNG()` and invoke it alongside `resetGameState()` so fresh campaigns rewind the deterministic sequence.
 - Expanded the Index page vitest suite to mock the RNG context and added a regression that starts two games consecutively to confirm the first random draw matches after the reset.
 - Ran `npx vitest run src/pages/__tests__/Index.test.tsx`, noting the suite passes but requires manual termination due to lingering Three.js warnings.
+### 2025-11-15T10:46:43Z - Hardened NGO tab badge
+- Defaulted NGO active operations list to an empty array in `src/components/StreamlinedCulturePanel.tsx` so the Culture panel loads when `ngoState` is undefined.
