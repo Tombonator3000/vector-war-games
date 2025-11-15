@@ -421,13 +421,18 @@ vi.mock('@/hooks/useTutorial', () => ({
   }),
 }));
 
+let lastLeaderSelectHandler: ((leader: string) => void) | null = null;
+
 vi.mock('@/components/setup/LeaderSelectionScreen', () => ({
-  LeaderSelectionScreen: ({ onSelectLeader }: { onSelectLeader: (name: string) => void }) => (
-    <div>
-      <button onClick={() => onSelectLeader('Ronnie Raygun')}>Ronnie Raygun</button>
-      <button onClick={() => onSelectLeader('Fidel Castro')}>Fidel Castro</button>
-    </div>
-  ),
+  LeaderSelectionScreen: ({ onSelectLeader }: { onSelectLeader: (name: string) => void }) => {
+    lastLeaderSelectHandler = onSelectLeader;
+    return (
+      <div>
+        <button onClick={() => onSelectLeader('Ronnie Raygun')}>Ronnie Raygun</button>
+        <button onClick={() => onSelectLeader('Fidel Castro')}>Fidel Castro</button>
+      </div>
+    );
+  },
 }));
 
 vi.mock('@/contexts/TutorialContext', () => ({
@@ -439,11 +444,70 @@ vi.mock('@/contexts/TutorialContext', () => ({
   }),
 }));
 
+const rngSequence = [0.17, 0.83, 0.42, 0.67];
+let rngIndex = 0;
+const baseSeed = 1337;
+
+const nextValue = () => {
+  const value = rngSequence[rngIndex % rngSequence.length];
+  rngIndex += 1;
+  return value;
+};
+
+const rngMock: any = {
+  next: vi.fn(() => nextValue()),
+};
+
+rngMock.nextInt = vi.fn((min: number, max: number) => {
+  const value = rngMock.next();
+  return Math.floor(value * (max - min + 1)) + min;
+});
+rngMock.nextBool = vi.fn((probability: number = 0.5) => rngMock.next() < probability);
+rngMock.choice = vi.fn(<T,>(array: T[]) => {
+  if (array.length === 0) {
+    throw new Error('Cannot choose from empty array');
+  }
+  const index = Math.floor(rngMock.next() * array.length) % array.length;
+  return array[index];
+});
+rngMock.shuffle = vi.fn(<T,>(array: T[]) => {
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(rngMock.next() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+});
+rngMock.nextGaussian = vi.fn((mean: number = 0, stdDev: number = 1) => mean + stdDev * (rngMock.next() - 0.5));
+rngMock.nextRange = vi.fn((min: number, max: number) => rngMock.next() * (max - min) + min);
+rngMock.getSeed = vi.fn(() => baseSeed);
+rngMock.getState = vi.fn(() => rngIndex);
+rngMock.setState = vi.fn((state: number) => {
+  rngIndex = state;
+});
+rngMock.reset = vi.fn(() => {
+  rngIndex = 0;
+});
+rngMock.clone = vi.fn(() => rngMock);
+
+const resetRNGMock = vi.fn(() => {
+  rngIndex = 0;
+});
+const reseedRNGMock = vi.fn((_seed: number) => {
+  rngIndex = 0;
+});
+const getRNGStateMock = vi.fn(() => ({ seed: baseSeed, state: rngIndex }));
+const setRNGStateMock = vi.fn((_seed: number, state: number) => {
+  rngIndex = state;
+});
+
 vi.mock('@/contexts/RNGContext', () => ({
   useRNG: () => ({
-    random: () => 0.5,
-    seed: 'test-seed',
-    reseed: vi.fn(),
+    rng: rngMock,
+    resetRNG: resetRNGMock,
+    reseedRNG: reseedRNGMock,
+    getRNGState: getRNGStateMock,
+    setRNGState: setRNGStateMock,
   }),
 }));
 
@@ -468,6 +532,25 @@ describe('Index co-op toggle', () => {
     PlayerManager.reset();
     PlayerManager.setNations([] as any);
     toastMock.mockClear();
+    lastLeaderSelectHandler = null;
+
+    rngIndex = 0;
+    rngMock.next.mockClear();
+    rngMock.nextInt.mockClear();
+    rngMock.nextBool.mockClear();
+    rngMock.choice.mockClear();
+    rngMock.shuffle.mockClear();
+    rngMock.nextGaussian.mockClear();
+    rngMock.nextRange.mockClear();
+    rngMock.getSeed.mockClear();
+    rngMock.getState.mockClear();
+    rngMock.setState.mockClear();
+    rngMock.reset.mockClear();
+    rngMock.clone.mockClear();
+    resetRNGMock.mockClear();
+    reseedRNGMock.mockClear();
+    getRNGStateMock.mockClear();
+    setRNGStateMock.mockClear();
 
     const bioWarfareModule = await import('@/hooks/useBioWarfare');
     (bioWarfareModule as any).__resetLabMock?.();
@@ -516,6 +599,35 @@ describe('Index co-op toggle', () => {
       const button = screen.getByRole('button', { name: /activate ability/i }) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
     });
+  });
+
+  it('resets RNG sequence when starting consecutive campaigns', async () => {
+    window.localStorage.setItem('norad_option_coop_enabled', 'false');
+
+    render(<Index />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /start game/i }));
+
+    expect(typeof lastLeaderSelectHandler).toBe('function');
+
+    act(() => {
+      lastLeaderSelectHandler?.('Ronnie Raygun');
+    });
+
+    const firstDraw = rngMock.next();
+
+    act(() => {
+      lastLeaderSelectHandler?.('Ronnie Raygun');
+    });
+
+    expect(resetRNGMock).toHaveBeenCalledTimes(2);
+
+    const secondDraw = rngMock.next();
+
+    expect(secondDraw).toBe(firstDraw);
+
+    const thirdDraw = rngMock.next();
+    expect(thirdDraw).not.toBe(firstDraw);
   });
 
   it('auto-opens advanced bio lab when facility reaches tier 3', async () => {
