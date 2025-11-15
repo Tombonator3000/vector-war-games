@@ -303,13 +303,15 @@ export function useSpyNetwork(options: UseSpyNetworkOptions) {
           );
 
           // Update nations with rewards
+          const existingNationRewardUpdate = updates.get(nation.id) ?? {};
           updates.set(nation.id, {
-            ...updates.get(nation.id),
+            ...existingNationRewardUpdate,
             ...rewardResult.updatedSpyNation,
           });
 
+          const existingTargetRewardUpdate = updates.get(target.id) ?? {};
           updates.set(target.id, {
-            ...updates.get(target.id),
+            ...existingTargetRewardUpdate,
             ...rewardResult.updatedTargetNation,
           });
 
@@ -378,20 +380,23 @@ export function useSpyNetwork(options: UseSpyNetworkOptions) {
           );
 
           // Update nations with consequences
+          const existingNationConsequenceUpdate = updates.get(nation.id) ?? {};
           updates.set(nation.id, {
-            ...updates.get(nation.id),
+            ...existingNationConsequenceUpdate,
             ...consequences.updatedSpyNation,
           });
 
+          const existingTargetConsequenceUpdate = updates.get(target.id) ?? {};
           updates.set(target.id, {
-            ...updates.get(target.id),
+            ...existingTargetConsequenceUpdate,
             ...consequences.updatedTargetNation,
           });
 
           // Update other nations affected by reputation damage
           for (const otherNation of consequences.updatedOtherNations) {
+            const previousOtherUpdate = updates.get(otherNation.id) ?? {};
             updates.set(otherNation.id, {
-              ...updates.get(otherNation.id),
+              ...previousOtherUpdate,
               ...otherNation,
             });
           }
@@ -444,9 +449,15 @@ export function useSpyNetwork(options: UseSpyNetworkOptions) {
       updatedNetwork = updateSpyNetworkReputation(updatedNetwork);
 
       // Add network update to batch
+      const previousNationUpdate = updates.get(nation.id) ?? {};
+      const previousSpyNetworkUpdate =
+        (previousNationUpdate.spyNetwork as SpyNetworkState | undefined) ?? {};
       updates.set(nation.id, {
-        ...updates.get(nation.id),
-        spyNetwork: updatedNetwork,
+        ...previousNationUpdate,
+        spyNetwork: {
+          ...previousSpyNetworkUpdate,
+          ...updatedNetwork,
+        },
       });
     }
 
@@ -541,10 +552,14 @@ export function useSpyNetwork(options: UseSpyNetworkOptions) {
                   s.id === spyId ? { ...s, status: 'captured' as SpyStatus } : s
                 );
 
+                const previousOtherUpdate = updates.get(otherNation.id) ?? {};
+                const previousOtherSpyNetwork =
+                  (previousOtherUpdate.spyNetwork as SpyNetworkState | undefined) ??
+                  otherNation.spyNetwork ?? {};
                 updates.set(otherNation.id, {
-                  ...updates.get(otherNation.id),
+                  ...previousOtherUpdate,
                   spyNetwork: {
-                    ...otherNation.spyNetwork,
+                    ...previousOtherSpyNetwork,
                     spies: updatedSpies,
                   },
                 });
@@ -564,9 +579,15 @@ export function useSpyNetwork(options: UseSpyNetworkOptions) {
         }
       }
 
+      const previousNationUpdate = updates.get(nation.id) ?? {};
+      const previousSpyNetworkUpdate =
+        (previousNationUpdate.spyNetwork as SpyNetworkState | undefined) ?? {};
       updates.set(nation.id, {
-        ...updates.get(nation.id),
-        spyNetwork: updatedNetwork,
+        ...previousNationUpdate,
+        spyNetwork: {
+          ...previousSpyNetworkUpdate,
+          ...updatedNetwork,
+        },
       });
     }
 
