@@ -677,6 +677,16 @@ export function useInternationalPressure(options: UseInternationalPressureOption
     });
   }, [getTotalEconomicImpact, getTotalDiplomaticPenalty, liftSanctions]);
 
+  const reset = useCallback(() => {
+    setResolutions(new Map());
+    setSanctions(new Map());
+    setAidPackages(new Map());
+    setPressureState(new Map());
+    setResolutionIdCounter(0);
+    setSanctionIdCounter(0);
+    setAidIdCounter(0);
+  }, []);
+
   return {
     // State
     resolutions: Array.from(resolutions.values()),
@@ -686,6 +696,9 @@ export function useInternationalPressure(options: UseInternationalPressureOption
 
     // Initialization
     initializePressure,
+
+    // Reset
+    reset,
 
     // Pressure queries
     getPressure,
