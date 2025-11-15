@@ -6,6 +6,7 @@
  */
 
 import type { Nation, GameState } from '@/types/game';
+import type { NewsItem } from '@/components/NewsTicker';
 import type {
   DoctrineIncident,
   DoctrineIncidentChoice,
@@ -208,13 +209,21 @@ export function applyIncidentConsequences(
 ): {
   updatedNation: Nation;
   updatedShiftState: DoctrineShiftState;
-  newsItems: Array<{ category: string; headline: string; priority: string }>;
+  newsItems: Array<{
+    category: NewsItem['category'];
+    headline: string;
+    priority: NewsItem['priority'];
+  }>;
   triggeredWar: boolean;
   brokeTreaties: boolean;
 } {
   const consequences = choice.consequences;
   const updatedNation = { ...playerNation };
-  const newsItems: Array<{ category: string; headline: string; priority: string }> = [];
+  const newsItems: Array<{
+    category: NewsItem['category'];
+    headline: string;
+    priority: NewsItem['priority'];
+  }> = [];
   let triggeredWar = false;
   let brokeTreaties = false;
 

@@ -3407,3 +3407,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-15T08:21:15Z - Ran `npm test -- --run --reporter basic`; existing suites reported failures in useGovernance and casualty alert evaluator tests unrelated to spy network changes.
 2025-11-15T11:17:15Z - Updated src/pages/Index.tsx to route DEFCON emergency news through the supported `critical` ticker priority.
 2025-11-15T11:17:15Z - Ran `npx tsc --noEmit` to verify TypeScript now accepts the DEFCON news callback without overrides.
+2025-11-15T11:29:40Z - Expanded news ticker category and priority support, aligned doctrine incident payloads, and removed legacy `@ts-expect-error`/`as any` bridges in src/components/NewsTicker.tsx, src/pages/Index.tsx, src/lib/pandemic/casualtyAlertEvaluator.ts, src/lib/doctrineIncidentSystem.ts, and src/types/doctrineIncidents.ts.
+2025-11-15T11:29:40Z - Ran `npm run lint`; command failed due to longstanding lint violations unrelated to the news ticker updates.

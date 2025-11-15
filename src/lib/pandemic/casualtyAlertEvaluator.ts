@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { NewsItem } from '@/components/NewsTicker';
 
 interface GlobalCasualtyMilestone {
   threshold: number;
@@ -80,7 +81,11 @@ export interface CasualtySummaryPayload {
 
 export interface CasualtyAlertHandlers {
   openModal: (title: string, content: ReactNode) => void;
-  addNewsItem: (category: string, text: string, priority: string) => void;
+  addNewsItem: (
+    category: NewsItem['category'],
+    text: string,
+    priority: NewsItem['priority']
+  ) => void;
   buildSummary: (payload: CasualtySummaryPayload) => ReactNode;
 }
 

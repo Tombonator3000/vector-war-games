@@ -6551,7 +6551,6 @@ function endTurn() {
         onLabConstructionStart: (nationId, tier) => {
           const nation = nations.find(n => n.id === nationId);
           if (nation && window.__gameAddNewsItem) {
-            // @ts-expect-error - News item priority type mismatch
             window.__gameAddNewsItem('military', `${nation.name} has begun constructing bio-laboratory (Tier ${tier})`, 'alert');
           }
         },
@@ -6676,7 +6675,7 @@ function endTurn() {
             turn: S.turn,
             handlers: {
               openModal,
-              addNewsItem: (category, text, priority) => addNewsItem(category as any, text, priority as any),
+              addNewsItem,
               buildSummary: (payload: CasualtySummaryPayload) => (
                 <CasualtyImpactSummary summary={payload} />
               ),
@@ -8500,7 +8499,7 @@ export default function NoradVector() {
           ? `${nation1.name} ↔ ${nation2.name} relations deteriorate (${delta})`
           : `${nation1.name} ↔ ${nation2.name} relations improve (+${delta})`;
         log(message, delta < 0 ? 'warning' : 'success');
-        addNewsItem('diplomacy', message, Math.abs(delta) >= 25 ? 'critical' : 'important');
+        addNewsItem('diplomatic', message, Math.abs(delta) >= 25 ? 'critical' : 'important');
       }
       updateDisplay();
     },
@@ -11209,7 +11208,7 @@ export default function NoradVector() {
 
       // Add news items
       result.newsItems.forEach(newsItem => {
-        addNewsItem(newsItem.category as any, newsItem.headline, newsItem.priority as any);
+        addNewsItem(newsItem.category, newsItem.headline, newsItem.priority);
       });
 
       // Handle special effects
@@ -12677,7 +12676,7 @@ export default function NoradVector() {
         const resolutionTitle = result.councilResolution.title ?? 'Council intervention triggered';
         const resolutionDescription =
           result.councilResolution.description ?? 'International Council responds to the conflict.';
-        addNewsItem('diplomacy', resolutionTitle, 'important');
+        addNewsItem('diplomatic', resolutionTitle, 'important');
         toast({ title: 'Council Intervention', description: resolutionDescription });
       }
 
@@ -12731,7 +12730,7 @@ export default function NoradVector() {
         description: `White peace proposal sent to ${opponent.name}.`,
       });
       log(`Peace offer sent to ${opponent.name}`, 'diplomatic');
-      addNewsItem('diplomacy', `${player.name || player.id} proposes peace to ${opponent.name}`, 'important');
+      addNewsItem('diplomatic', `${player.name || player.id} proposes peace to ${opponent.name}`, 'important');
       triggerNationsUpdate?.();
     },
     [applyNationUpdatesMap, toast, addNewsItem]
@@ -12796,7 +12795,7 @@ export default function NoradVector() {
 
       toast({ title: 'Peace Accepted', description: `Peace agreed with ${opponent.name}.` });
       log(`Peace concluded with ${opponent.name}`, 'success');
-      addNewsItem('diplomacy', `${player.name || player.id} accepts peace with ${opponent.name}`, 'important');
+      addNewsItem('diplomatic', `${player.name || player.id} accepts peace with ${opponent.name}`, 'important');
       triggerNationsUpdate?.();
     },
     [applyNationUpdatesMap, toast, addNewsItem]
@@ -12840,7 +12839,7 @@ export default function NoradVector() {
         variant: 'destructive',
       });
       log(`Peace offer rejected from ${opponent?.name ?? 'opponent'}`, 'warning');
-      addNewsItem('diplomacy', `${player.name || player.id} rejects peace from ${opponent?.name ?? 'opponent'}`, 'alert');
+      addNewsItem('diplomatic', `${player.name || player.id} rejects peace from ${opponent?.name ?? 'opponent'}`, 'alert');
       triggerNationsUpdate?.();
     },
     [applyNationUpdatesMap, toast, addNewsItem]

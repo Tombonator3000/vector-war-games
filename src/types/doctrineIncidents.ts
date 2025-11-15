@@ -5,6 +5,8 @@
  * and force meaningful decisions with consequences.
  */
 
+import type { NewsItem } from '@/components/NewsTicker';
+
 export type DoctrineKey = 'mad' | 'defense' | 'firstStrike' | 'detente';
 
 export type IncidentSeverity = 'minor' | 'major' | 'critical';
@@ -46,9 +48,9 @@ export interface DoctrineIncidentChoice {
 
     // Narrative
     newsEvent?: {
-      category: 'military' | 'diplomatic' | 'political' | 'economic';
+      category: NewsItem['category'];
       headline: string;
-      priority: 'low' | 'medium' | 'high' | 'critical';
+      priority: NewsItem['priority'];
     };
   };
   followUpIncident?: string; // id of incident that may trigger after
