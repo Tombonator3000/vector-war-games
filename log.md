@@ -3403,3 +3403,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Updated `src/pages/Index.tsx` to pull `resetRNG` from `useRNG()` and invoke it alongside `resetGameState()` so fresh campaigns rewind the deterministic sequence.
 - Expanded the Index page vitest suite to mock the RNG context and added a regression that starts two games consecutively to confirm the first random draw matches after the reset.
 - Ran `npx vitest run src/pages/__tests__/Index.test.tsx`, noting the suite passes but requires manual termination due to lingering Three.js warnings.
+2025-11-15T08:21:15Z - Updated src/hooks/useSpyNetwork.ts to merge batched nation updates with existing partials before spreading to prevent undefined spreads during spy mission resolution.
+2025-11-15T08:21:15Z - Ran `npm test -- --run --reporter basic`; existing suites reported failures in useGovernance and casualty alert evaluator tests unrelated to spy network changes.
