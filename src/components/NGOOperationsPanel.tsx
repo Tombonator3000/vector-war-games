@@ -231,12 +231,12 @@ export function NGOOperationsPanel({
                     </div>
                     <div className="flex items-center gap-2">
                       {op.isCovert ? (
-                        <EyeOff className="w-4 h-4 text-purple-400" title="Covert" />
+                        <EyeOff className="w-4 h-4 text-purple-400" />
                       ) : (
-                        <Eye className="w-4 h-4 text-blue-400" title="Public" />
+                        <Eye className="w-4 h-4 text-blue-400" />
                       )}
                       {isExposed && (
-                        <AlertTriangle className="w-4 h-4 text-red-400" title="Exposed!" />
+                        <AlertTriangle className="w-4 h-4 text-red-400" />
                       )}
                     </div>
                   </div>

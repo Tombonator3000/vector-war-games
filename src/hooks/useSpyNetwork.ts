@@ -559,6 +559,16 @@ export function useSpyNetwork(options: UseSpyNetworkOptions) {
                 updates.set(otherNation.id, {
                   ...previousOtherUpdate,
                   spyNetwork: {
+                    spies: [],
+                    activeMissions: [],
+                    completedMissions: [],
+                    incidents: [],
+                    counterIntelOps: [],
+                    recruitmentCooldown: 0,
+                    totalSpiesCaptured: 0,
+                    totalSpiesLost: 0,
+                    totalSuccessfulMissions: 0,
+                    reputation: 'unknown' as const,
                     ...previousOtherSpyNetwork,
                     spies: updatedSpies,
                   },
