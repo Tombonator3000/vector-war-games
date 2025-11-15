@@ -22,28 +22,35 @@ import {
   calculateCulturalPower,
   getCulturalWonderBonuses,
 } from '@/types/streamlinedCulture';
+import { NGOOperationsPanel } from '@/components/NGOOperationsPanel';
 
 interface StreamlinedCulturePanelProps {
   player: Nation;
   enemies: Nation[];
+  allNations?: Nation[];
+  currentTurn?: number;
   onLaunchPropaganda?: (type: PropagandaType, targetId: string) => void;
   onBuildWonder?: (wonderType: CulturalWonderType) => void;
   onSetImmigrationPolicy?: (policy: ImmigrationPolicy) => void;
   currentImmigrationPolicy?: ImmigrationPolicy;
+  onNGORefresh?: () => void;
   onClose?: () => void;
 }
 
 export function StreamlinedCulturePanel({
   player,
   enemies,
+  allNations,
+  currentTurn = 0,
   onLaunchPropaganda,
   onBuildWonder,
   onSetImmigrationPolicy,
   currentImmigrationPolicy = 'selective',
+  onNGORefresh,
   onClose,
 }: StreamlinedCulturePanelProps) {
   const [selectedPropagandaTarget, setSelectedPropagandaTarget] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'operations' | 'active'>('operations');
+  const [activeTab, setActiveTab] = useState<'operations' | 'active' | 'ngo'>('operations');
 
   const culturalPower = calculateCulturalPower(player);
   const wonderBonuses = getCulturalWonderBonuses(player);
@@ -63,6 +70,20 @@ export function StreamlinedCulturePanel({
           }`}
         >
           Operations
+        </button>
+        <button
+          onClick={() => setActiveTab('ngo')}
+          className={`px-4 py-2 text-sm font-semibold transition-colors ${
+            activeTab === 'ngo'
+              ? 'text-purple-400 border-b-2 border-purple-400'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          NGO Operations {player.ngoState?.activeOperations?.filter((op: any) => op.status === 'active').length > 0 && (
+            <Badge className="ml-1 bg-purple-500/20 text-purple-400 text-xs">
+              {player.ngoState.activeOperations.filter((op: any) => op.status === 'active').length}
+            </Badge>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('active')}
@@ -240,6 +261,17 @@ export function StreamlinedCulturePanel({
             )}
           </div>
         </div>
+      )}
+
+      {/* NGO Operations Tab Content */}
+      {activeTab === 'ngo' && allNations && (
+        <NGOOperationsPanel
+          player={player}
+          allNations={allNations}
+          currentTurn={currentTurn}
+          onRefresh={onNGORefresh}
+          onClose={onClose}
+        />
       )}
 
       {/* Operations Tab Content */}
