@@ -16,6 +16,12 @@ import type {
 } from '@/types/doctrineIncidents';
 import { DOCTRINE_INCIDENTS, getIncidentsForDoctrine } from './doctrineIncidentData';
 
+type DoctrineNewsItem = {
+  category: NewsItem['category'];
+  headline: string;
+  priority: NewsItem['priority'];
+};
+
 /**
  * Initialize doctrine incident state for a new game
  */
@@ -209,21 +215,13 @@ export function applyIncidentConsequences(
 ): {
   updatedNation: Nation;
   updatedShiftState: DoctrineShiftState;
-  newsItems: Array<{
-    category: NewsItem['category'];
-    headline: string;
-    priority: NewsItem['priority'];
-  }>;
+  newsItems: DoctrineNewsItem[];
   triggeredWar: boolean;
   brokeTreaties: boolean;
 } {
   const consequences = choice.consequences;
   const updatedNation = { ...playerNation };
-  const newsItems: Array<{
-    category: NewsItem['category'];
-    headline: string;
-    priority: NewsItem['priority'];
-  }> = [];
+  const newsItems: DoctrineNewsItem[] = [];
   let triggeredWar = false;
   let brokeTreaties = false;
 
@@ -351,7 +349,7 @@ export function resolveIncident(
   updatedNation: Nation;
   updatedIncidentState: DoctrineIncidentState;
   updatedShiftState: DoctrineShiftState;
-  newsItems: Array<{ category: string; headline: string; priority: string }>;
+  newsItems: DoctrineNewsItem[];
   followUpIncidentId?: string;
   triggeredWar: boolean;
   brokeTreaties: boolean;
