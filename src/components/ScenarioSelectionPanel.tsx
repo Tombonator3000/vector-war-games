@@ -21,6 +21,7 @@ export function ScenarioSelectionPanel({
   onSelect,
 }: ScenarioSelectionPanelProps) {
   const featuredScenarioId = 'cubanCrisis';
+  const nuclearWarScenarioId = 'nuclearWar';
 
   const orderedScenarios = useMemo(() => {
     const cubanCrisisIndex = scenarios.findIndex(scenario => scenario.id === featuredScenarioId);
@@ -49,6 +50,7 @@ export function ScenarioSelectionPanel({
             {orderedScenarios.map(scenario => {
               const isSelected = scenario.id === selectedScenarioId;
               const isFeatured = scenario.id === featuredScenarioId;
+              const isNuclearWar = scenario.id === nuclearWarScenarioId;
 
               return (
                 <button
@@ -60,6 +62,8 @@ export function ScenarioSelectionPanel({
                     'bg-slate-900/70 hover:bg-slate-900/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400',
                     isSelected
                       ? 'border-neon-green/70 shadow-[0_0_25px_rgba(74,222,128,0.4)]'
+                      : isNuclearWar
+                      ? 'border-orange-500/50 hover:border-orange-400/70'
                       : 'border-cyan-500/30 hover:border-cyan-300/70',
                   )}
                 >
@@ -75,6 +79,14 @@ export function ScenarioSelectionPanel({
                             className="border-red-500/60 bg-red-500/10 text-[0.65rem] uppercase tracking-[0.3em] text-red-300"
                           >
                             High Tension
+                          </Badge>
+                        )}
+                        {isNuclearWar && (
+                          <Badge
+                            variant="outline"
+                            className="border-orange-500/60 bg-orange-500/10 text-[0.65rem] uppercase tracking-[0.3em] text-orange-300"
+                          >
+                            ☢️ Last Man Standing
                           </Badge>
                         )}
                         {isSelected && (

@@ -349,6 +349,51 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
       },
     },
   },
+
+  nuclearWar: {
+    id: 'nuclearWar',
+    name: 'Nuclear War: Last Man Standing',
+    description:
+      'DEFCON 2 ALERT! It\'s mutually assured destruction time! Launch nukes, eliminate enemies, be the last nation standing. Dark humor included. Inspired by the Nuclear War card game.',
+    timeConfig: {
+      unit: 'day',
+      unitsPerTurn: 1,
+      startYear: 1962,
+      startMonth: 10,
+      displayFormat: 'DD MMM YYYY',
+    },
+    electionConfig: {
+      interval: 0, // No elections during nuclear apocalypse
+      enabled: false,
+      minMoraleThreshold: 0,
+      minPublicOpinionThreshold: 0,
+      actionInfluenceMultiplier: 0.0, // Public opinion doesn't matter when everyone's dead
+      foreignInfluenceEnabled: false,
+      loseElectionConsequence: 'none',
+    },
+    startingDefcon: 2, // High tension - fingers on the button
+    modifiers: {
+      timeSpeedMultiplier: 0.3, // Very fast paced - nuclear war is quick
+      startingResourcesMultiplier: 2.0, // More resources to build more nukes!
+    },
+    eraOverrides: {
+      early: {
+        endTurn: 50, // Game could last up to 50 turns
+        unlockedFeatures: [
+          'nuclear_missiles',
+          'nuclear_bombers',
+          'defense_systems',
+          'basic_diplomacy', // Can form temporary truces (to be broken later)
+          'basic_research',
+          'conventional_warfare',
+          'territory_control',
+          'submarines',
+          'satellites', // For targeting
+          'space_weapons', // Orbital strikes!
+        ],
+      },
+    },
+  },
 };
 
 /**
