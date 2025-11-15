@@ -56,6 +56,8 @@ export function StreamlinedCulturePanel({
   const wonderBonuses = getCulturalWonderBonuses(player);
   const builtWonders = Array.isArray(player.culturalWonders) ? player.culturalWonders : [];
   const activePropaganda = Array.isArray(player.propagandaCampaigns) ? player.propagandaCampaigns : [];
+  const activeNgoOperations =
+    player.ngoState?.activeOperations?.filter((op: any) => op?.status === 'active') ?? [];
 
   return (
     <div className="space-y-4">
@@ -79,9 +81,9 @@ export function StreamlinedCulturePanel({
               : 'text-gray-400 hover:text-gray-300'
           }`}
         >
-          NGO Operations {player.ngoState?.activeOperations?.filter((op: any) => op.status === 'active').length > 0 && (
+          NGO Operations {activeNgoOperations.length > 0 && (
             <Badge className="ml-1 bg-purple-500/20 text-purple-400 text-xs">
-              {player.ngoState.activeOperations.filter((op: any) => op.status === 'active').length}
+              {activeNgoOperations.length}
             </Badge>
           )}
         </button>
