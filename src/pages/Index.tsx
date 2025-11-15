@@ -5902,7 +5902,7 @@ function aiTurn(n: Nation) {
     handleDefconChange(1, `${n.name} makes desperate plea for de-escalation to avoid nuclear war`, 'ai', {
       onAudioTransition: AudioSys.handleDefconTransition,
       onLog: log,
-      onNewsItem: (cat, msg, pri) => addNewsItem(cat, msg, 'breaking'),
+      onNewsItem: (cat, msg) => addNewsItem(cat, msg, 'critical'),
       onUpdateDisplay: updateDisplay,
       onShowModal: setDefconChangeEvent,
     });

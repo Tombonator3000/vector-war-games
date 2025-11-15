@@ -3405,3 +3405,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Ran `npx vitest run src/pages/__tests__/Index.test.tsx`, noting the suite passes but requires manual termination due to lingering Three.js warnings.
 2025-11-15T08:21:15Z - Updated src/hooks/useSpyNetwork.ts to merge batched nation updates with existing partials before spreading to prevent undefined spreads during spy mission resolution.
 2025-11-15T08:21:15Z - Ran `npm test -- --run --reporter basic`; existing suites reported failures in useGovernance and casualty alert evaluator tests unrelated to spy network changes.
+2025-11-15T11:17:15Z - Updated src/pages/Index.tsx to route DEFCON emergency news through the supported `critical` ticker priority.
+2025-11-15T11:17:15Z - Ran `npx tsc --noEmit` to verify TypeScript now accepts the DEFCON news callback without overrides.
