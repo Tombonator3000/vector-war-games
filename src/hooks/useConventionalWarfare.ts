@@ -12,7 +12,7 @@ import {
   spendStrategicResource,
 } from '@/lib/territorialResourcesSystem';
 
-export type ForceType = 'army' | 'navy' | 'air';
+export type ForceType = 'army' | 'navy' | 'air' | 'drone';
 
 export interface ResourceCost {
   production?: number;
@@ -67,6 +67,7 @@ export interface TerritoryState {
     army: number;
     navy: number;
     air: number;
+    drone: number;
   };
 }
 
@@ -163,6 +164,7 @@ const UNIT_ARMIES: Record<ForceType, number> = {
   army: 5,  // Armored Corps = 5 armies
   navy: 4,  // Carrier Strike Group = 4 armies
   air: 3,   // Air Wing = 3 armies
+  drone: 2, // Drone units = 2-4 armies (varies by type)
 };
 
 // Combat bonuses for unit types
@@ -170,6 +172,7 @@ const UNIT_COMBAT_BONUS: Record<ForceType, { attack: number; defense: number }> 
   army: { attack: 0, defense: 0 },   // Standard
   navy: { attack: 0, defense: 1 },   // +1 to defense dice
   air: { attack: 1, defense: 0 },    // +1 to attack dice
+  drone: { attack: 1, defense: 0 },  // +1 to attack dice (precision strikes)
 };
 
 const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
@@ -208,6 +211,46 @@ const UNIT_TEMPLATES: ConventionalUnitTemplate[] = [
     cost: { production: 14, intel: 4, oil: 4, rare_earths: 2 },  // Requires oil and rare earths!
     readinessImpact: 7,
     requiresResearch: 'conventional_expeditionary_airframes',
+  },
+  // ==================== DRONE UNITS ====================
+  {
+    id: 'recon_drone',
+    type: 'drone',
+    name: 'Reconnaissance Drone Squadron',
+    description: 'Unmanned reconnaissance platforms. Deploys 2 armies with excellent support capabilities. Low cost alternative for intelligence gathering.',
+    attack: 2,
+    defense: 2,
+    support: 5,
+    cost: { production: 8, intel: 3, rare_earths: 2, oil: 1 },
+    readinessImpact: 3,
+    requiresResearch: 'conventional_uav_reconnaissance',
+    armiesValue: 2,
+  },
+  {
+    id: 'combat_drone',
+    type: 'drone',
+    name: 'Combat Drone Wing',
+    description: 'Armed autonomous drones for precision strikes. Deploys 3 armies with good attack and +1 attack dice bonus. Vulnerable but cost-effective.',
+    attack: 7,
+    defense: 3,
+    support: 2,
+    cost: { production: 13, intel: 6, rare_earths: 5, oil: 3 },
+    readinessImpact: 5,
+    requiresResearch: 'conventional_combat_drones',
+    armiesValue: 3,
+  },
+  {
+    id: 'drone_swarm',
+    type: 'drone',
+    name: 'Autonomous Drone Swarm',
+    description: 'AI-coordinated swarm platform. Deploys 4 armies with devastating attack power and swarm tactics. High rare earth requirement.',
+    attack: 10,
+    defense: 4,
+    support: 1,
+    cost: { production: 19, intel: 10, rare_earths: 10, oil: 5 },
+    readinessImpact: 6,
+    requiresResearch: 'conventional_drone_swarms',
+    armiesValue: 4,
   },
 ];
 
@@ -259,7 +302,7 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     conflictRisk: 10,
     neighbors: ['atlantic_corridor', 'arctic_circle'],
     armies: 5,
-    unitComposition: { army: 5, navy: 0, air: 0 },
+    unitComposition: { army: 5, navy: 0, air: 0, drone: 0 },
     defaultOwner: 'player',
   },
   {
@@ -276,7 +319,7 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     conflictRisk: 18,
     neighbors: ['north_america', 'eastern_bloc', 'arctic_circle'],
     armies: 0,
-    unitComposition: { army: 0, navy: 0, air: 0 },
+    unitComposition: { army: 0, navy: 0, air: 0, drone: 0 },
     defaultOwner: 'player',
   },
   {
@@ -293,7 +336,7 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     conflictRisk: 22,
     neighbors: ['atlantic_corridor', 'indo_pacific', 'arctic_circle'],
     armies: 5,
-    unitComposition: { army: 5, navy: 0, air: 0 },
+    unitComposition: { army: 5, navy: 0, air: 0, drone: 0 },
     defaultOwner: 'ai_0',
   },
   {
@@ -310,7 +353,7 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     conflictRisk: 20,
     neighbors: ['eastern_bloc', 'southern_front'],
     armies: 3,
-    unitComposition: { army: 0, navy: 0, air: 3 },
+    unitComposition: { army: 0, navy: 0, air: 3, drone: 0 },
     defaultOwner: 'ai_1',
   },
   {
@@ -327,7 +370,7 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     conflictRisk: 14,
     neighbors: ['indo_pacific', 'equatorial_belt'],
     armies: 4,
-    unitComposition: { army: 0, navy: 4, air: 0 },
+    unitComposition: { army: 0, navy: 4, air: 0, drone: 0 },
     defaultOwner: 'ai_2',
   },
   {
@@ -344,7 +387,7 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     conflictRisk: 24,
     neighbors: ['southern_front', 'atlantic_corridor'],
     armies: 5,
-    unitComposition: { army: 5, navy: 0, air: 0 },
+    unitComposition: { army: 5, navy: 0, air: 0, drone: 0 },
     defaultOwner: 'ai_3',
   },
   {
@@ -361,7 +404,7 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     conflictRisk: 28,
     neighbors: ['equatorial_belt', 'eastern_bloc'],
     armies: 0,
-    unitComposition: { army: 0, navy: 0, air: 0 },
+    unitComposition: { army: 0, navy: 0, air: 0, drone: 0 },
   },
   {
     id: 'arctic_circle',
@@ -377,7 +420,7 @@ const DEFAULT_TERRITORIES: Array<Omit<TerritoryState, 'contestedBy'> & { default
     conflictRisk: 12,
     neighbors: ['north_america', 'atlantic_corridor', 'eastern_bloc'],
     armies: 0,
-    unitComposition: { army: 0, navy: 0, air: 0 },
+    unitComposition: { army: 0, navy: 0, air: 0, drone: 0 },
   },
 ];
 
@@ -444,6 +487,11 @@ function getTerritoryBonuses(territory: TerritoryState): { attack: number; defen
   // Navy units give +1 defense per 2 navy units
   if (territory.unitComposition.navy >= 2) {
     defenseBonus += Math.floor(territory.unitComposition.navy / 2) * UNIT_COMBAT_BONUS.navy.defense;
+  }
+
+  // Drone units give +1 attack per 2 drone units (precision strikes)
+  if (territory.unitComposition.drone >= 2) {
+    attackBonus += Math.floor(territory.unitComposition.drone / 2) * UNIT_COMBAT_BONUS.drone.attack;
   }
 
   return { attack: attackBonus, defense: defenseBonus };
@@ -752,14 +800,17 @@ export function useConventionalWarfare({
         const armyShare = territory.unitComposition.army / totalArmies;
         const navyShare = territory.unitComposition.navy / totalArmies;
         const airShare = territory.unitComposition.air / totalArmies;
+        const droneShare = territory.unitComposition.drone / totalArmies;
         aggregateAttack =
           baseProfile.attack * armyShare +
           baseProfile.attack * 0.9 * navyShare +
-          baseProfile.attack * 1.1 * airShare;
+          baseProfile.attack * 1.1 * airShare +
+          baseProfile.attack * 1.15 * droneShare; // Drones have slightly higher attack
         aggregateDefense =
           baseProfile.defense * armyShare +
           baseProfile.defense * 1.1 * navyShare +
-          baseProfile.defense * 0.9 * airShare;
+          baseProfile.defense * 0.9 * airShare +
+          baseProfile.defense * 0.7 * droneShare; // Drones are more vulnerable
         aggregateSupport = baseProfile.support;
       }
 
@@ -1109,6 +1160,7 @@ export function useConventionalWarfare({
         army: fromComposition.army / totalArmies,
         navy: fromComposition.navy / totalArmies,
         air: fromComposition.air / totalArmies,
+        drone: fromComposition.drone / totalArmies,
       };
 
       syncState((prev) => {
@@ -1123,18 +1175,21 @@ export function useConventionalWarfare({
           army: Math.round(count * proportions.army),
           navy: Math.round(count * proportions.navy),
           air: Math.round(count * proportions.air),
+          drone: Math.round(count * proportions.drone),
         };
 
         updatedFrom.unitComposition = {
           army: Math.max(0, updatedFrom.unitComposition.army - movedComposition.army),
           navy: Math.max(0, updatedFrom.unitComposition.navy - movedComposition.navy),
           air: Math.max(0, updatedFrom.unitComposition.air - movedComposition.air),
+          drone: Math.max(0, updatedFrom.unitComposition.drone - movedComposition.drone),
         };
 
         updatedTo.unitComposition = {
           army: updatedTo.unitComposition.army + movedComposition.army,
           navy: updatedTo.unitComposition.navy + movedComposition.navy,
           air: updatedTo.unitComposition.air + movedComposition.air,
+          drone: updatedTo.unitComposition.drone + movedComposition.drone,
         };
 
         return createEngagementLog({

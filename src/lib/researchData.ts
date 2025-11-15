@@ -310,6 +310,63 @@ export const CONVENTIONAL_RESEARCH: ResearchNode[] = [
       nation.unitDefenseBonus = (nation.unitDefenseBonus || 0) + 1;
     }
   },
+  // ==================== DRONE WARFARE TREE ====================
+  {
+    id: 'conventional_uav_reconnaissance',
+    name: 'UAV Reconnaissance Doctrine',
+    description: 'Deploy unmanned aerial reconnaissance platforms for advanced battlefield intelligence. Unlocks reconnaissance drones.',
+    category: 'conventional',
+    turns: 3,
+    cost: { production: 22, intel: 10, rare_earths: 3 },
+    prerequisites: ['conventional_armored_doctrine'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_uav_reconnaissance = true;
+      nation.droneReconBonus = (nation.droneReconBonus || 0) + 0.15;
+    }
+  },
+  {
+    id: 'conventional_combat_drones',
+    name: 'Armed Combat Drones',
+    description: 'Weaponized autonomous platforms for precision strikes and close air support. Unlocks combat drones.',
+    category: 'conventional',
+    turns: 4,
+    cost: { production: 32, intel: 18, rare_earths: 6, oil: 2 },
+    prerequisites: ['conventional_uav_reconnaissance'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_combat_drones = true;
+      nation.droneAttackBonus = (nation.droneAttackBonus || 0) + 0.10;
+    }
+  },
+  {
+    id: 'conventional_drone_swarms',
+    name: 'Autonomous Swarm Coordination',
+    description: 'AI-driven swarm tactics enable coordinated multi-drone operations. Unlocks drone swarms. Requires Cyber capabilities.',
+    category: 'conventional',
+    turns: 5,
+    cost: { production: 45, intel: 28, rare_earths: 12, oil: 4 },
+    prerequisites: ['conventional_combat_drones', 'cyber_ids'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_drone_swarms = true;
+      nation.droneSwarmBonus = (nation.droneSwarmBonus || 0) + 0.20;
+    }
+  },
+  {
+    id: 'conventional_ai_targeting',
+    name: 'AI-Enhanced Precision Targeting',
+    description: 'Machine learning targeting algorithms maximize drone effectiveness and minimize collateral damage (+25% drone accuracy).',
+    category: 'conventional',
+    turns: 6,
+    cost: { production: 55, intel: 38, rare_earths: 18 },
+    prerequisites: ['conventional_drone_swarms', 'cyber_advanced_offense'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.conventional_ai_targeting = true;
+      nation.droneAccuracyBonus = (nation.droneAccuracyBonus || 0) + 0.25;
+    }
+  },
 ];
 
 // ==================== ECONOMY/PRODUCTION TREE ====================
