@@ -3411,3 +3411,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-15T11:29:40Z - Ran `npm run lint`; command failed due to longstanding lint violations unrelated to the news ticker updates.
 2025-11-15T17:20:00Z - Hardened casus belli integrations against malformed grievance/claim payloads by normalizing inputs in src/lib/casusBelliIntegration.ts and src/lib/aiCasusBelliDecisions.ts, then added a regression test ensuring end-turn CB generation tolerates non-array state.
 2025-11-15T17:20:45Z - Ran `npm run test -- casusBelliIntegration` to validate the new regression coverage and confirm turn resolution no longer throws during automatic casus belli generation.
+### 2025-11-16T08:28:23Z - Reviewed repository instructions for DEFCON change
+- Read root-level AGENTS.md to confirm coding standards, logging expectations, and gameplay context before starting the DEFCON request.
+### 2025-11-16T08:31:07Z - Ensured scenario resets keep Nuclear War at DEFCON 2
+- Updated `startGame` in `src/pages/Index.tsx` to reapply the selected scenario (and its starting DEFCON/actions) after `GameStateManager.reset()` so "Nuclear War: Last Man Standing" campaigns launch at DEFCON 2 instead of reverting to the default Cold War state.
