@@ -11157,6 +11157,12 @@ export default function NoradVector() {
     // Re-sync S reference after reset
     S = GameStateManager.getState();
 
+    // Reapply the selected scenario after reset so campaign settings persist
+    const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
+    S.scenario = scenario;
+    S.defcon = scenario.startingDefcon;
+    S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+
     S.selectedLeader = leaderToUse;
     S.selectedDoctrine = doctrineToUse;
     S.playerName = leaderToUse;
@@ -11176,7 +11182,7 @@ export default function NoradVector() {
     }
 
     setIsGameStarted(true);
-  }, [resetRNG, selectedLeader, selectedDoctrine]);
+  }, [resetRNG, selectedLeader, selectedDoctrine, selectedScenarioId]);
 
   // Doctrine Incident Choice Handler
   const handleDoctrineIncidentChoice = useCallback((choiceId: string) => {
