@@ -353,6 +353,10 @@ import { useModalManager, type ModalContentValue } from '@/hooks/game/useModalMa
 import { useNewsManager } from '@/hooks/game/useNewsManager';
 import { getTrust, getFavors, FavorCosts } from '@/types/trustAndFavors';
 
+const DEFAULT_DEFCON_LEVEL = 5;
+const getScenarioDefcon = (scenario: ScenarioConfig) =>
+  scenario.id === 'nuclearWar' ? scenario.startingDefcon : DEFAULT_DEFCON_LEVEL;
+
 type PressureDeltaState = { goldPenalty: number; aidGold: number };
 
 let processInternationalPressureTurnFn: (() => void) | null = null;
@@ -7495,8 +7499,9 @@ export default function NoradVector() {
     S.phase = 'PLAYER';
     S.gameOver = false;
     S.paused = false;
-    S.defcon = scenario.startingDefcon;
-    S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+    const defcon = getScenarioDefcon(scenario);
+    S.defcon = defcon;
+    S.actionsRemaining = defcon >= 4 ? 1 : defcon >= 2 ? 2 : 3;
 
     // Initialize Great Old Ones campaign if selected
     if (scenario.id === 'greatOldOnes') {
@@ -11157,6 +11162,13 @@ export default function NoradVector() {
     // Re-sync S reference after reset
     S = GameStateManager.getState();
 
+    // Reapply the selected scenario after reset so campaign settings persist
+    const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
+    S.scenario = scenario;
+    const defcon = getScenarioDefcon(scenario);
+    S.defcon = defcon;
+    S.actionsRemaining = defcon >= 4 ? 1 : defcon >= 2 ? 2 : 3;
+
     S.selectedLeader = leaderToUse;
     S.selectedDoctrine = doctrineToUse;
     S.playerName = leaderToUse;
@@ -11176,7 +11188,7 @@ export default function NoradVector() {
     }
 
     setIsGameStarted(true);
-  }, [resetRNG, selectedLeader, selectedDoctrine]);
+  }, [resetRNG, selectedLeader, selectedDoctrine, selectedScenarioId]);
 
   // Doctrine Incident Choice Handler
   const handleDoctrineIncidentChoice = useCallback((choiceId: string) => {
