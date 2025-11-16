@@ -7488,55 +7488,57 @@ export default function NoradVector() {
     }
   }, []);
 
+  const applyScenarioConfig = useCallback(
+    (scenario: ScenarioConfig) => {
+      S.scenario = scenario;
+      Storage.setItem('selected_scenario', scenario.id);
+      S.turn = 1;
+      S.phase = 'PLAYER';
+      S.gameOver = false;
+      S.paused = false;
+      S.defcon = scenario.startingDefcon;
+      S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
+
+      if (scenario.id === 'greatOldOnes') {
+        const gooState = initializeGreatOldOnesState();
+        S.greatOldOnes = gooState;
+        GameStateManager.setGreatOldOnes(gooState);
+        setGreatOldOnesState(gooState);
+        setWeek3State(initializeWeek3State());
+        setPhase2State(initializePhase2State());
+        setPhase3State(initializePhase3State());
+
+        AudioSys.setPreferredTrack('cthulhu-1');
+        Storage.setItem('audio_music_track', 'cthulhu-1');
+      } else {
+        S.greatOldOnes = undefined;
+        GameStateManager.setGreatOldOnes(undefined);
+        setGreatOldOnesState(null);
+        setWeek3State(null);
+        setPhase2State(null);
+        setPhase3State(null);
+
+        const storedTrack = Storage.getItem('audio_music_track');
+        if (storedTrack === 'cthulhu-1' || storedTrack === 'cthulhu-2') {
+          AudioSys.setPreferredTrack(null);
+          Storage.setItem('audio_music_track', 'random');
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        (window as any).S = S;
+        console.log('[Game State] Scenario configured. Scenario ID:', S.scenario?.id);
+      }
+    },
+    [setGreatOldOnesState, setWeek3State, setPhase2State, setPhase3State]
+  );
+
   const handleIntroStart = useCallback(() => {
     const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
-    S.scenario = scenario;
-    S.turn = 1;
-    S.phase = 'PLAYER';
-    S.gameOver = false;
-    S.paused = false;
-    S.defcon = scenario.startingDefcon;
-    S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
-
-    // Initialize Great Old Ones campaign if selected
-    if (scenario.id === 'greatOldOnes') {
-      const gooState = initializeGreatOldOnesState();
-      S.greatOldOnes = gooState;
-      GameStateManager.setGreatOldOnes(gooState);
-      setGreatOldOnesState(gooState);
-      setWeek3State(initializeWeek3State());
-      setPhase2State(initializePhase2State());
-      setPhase3State(initializePhase3State());
-
-      // Switch to Church of Cthulhu soundtrack
-      AudioSys.setPreferredTrack('cthulhu-1');
-      Storage.setItem('audio_music_track', 'cthulhu-1');
-    } else {
-      // Clear Great Old Ones state for other scenarios
-      S.greatOldOnes = undefined;
-      GameStateManager.setGreatOldOnes(undefined);
-      setGreatOldOnesState(null);
-      setWeek3State(null);
-      setPhase2State(null);
-      setPhase3State(null);
-
-      // Reset to random soundtrack for non-Cthulhu scenarios
-      const storedTrack = Storage.getItem('audio_music_track');
-      if (storedTrack === 'cthulhu-1' || storedTrack === 'cthulhu-2') {
-        AudioSys.setPreferredTrack(null);
-        Storage.setItem('audio_music_track', 'random');
-      }
-    }
-
-    // Expose updated S to window after scenario is set
-    if (typeof window !== 'undefined') {
-      (window as any).S = S;
-      console.log('[Game State] Exposed S to window after intro start. Scenario ID:', S.scenario?.id);
-    }
-
+    applyScenarioConfig(scenario);
     updateDisplay();
     setGamePhase('leader');
-  }, [selectedScenarioId, setGamePhase]);
+  }, [applyScenarioConfig, selectedScenarioId, setGamePhase]);
 
   // Screen resolution preference
   const [screenResolution, setScreenResolution] = useState<ScreenResolution>(() => {
@@ -11136,6 +11138,7 @@ export default function NoradVector() {
   const startGame = useCallback((leaderOverride?: string, doctrineOverride?: string) => {
     const leaderToUse = leaderOverride ?? selectedLeader;
     const doctrineToUse = doctrineOverride ?? selectedDoctrine;
+    const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
 
     if (!leaderToUse || !doctrineToUse) {
       return;
@@ -11157,6 +11160,8 @@ export default function NoradVector() {
     // Re-sync S reference after reset
     S = GameStateManager.getState();
 
+    applyScenarioConfig(scenario);
+
     S.selectedLeader = leaderToUse;
     S.selectedDoctrine = doctrineToUse;
     S.playerName = leaderToUse;
@@ -11176,7 +11181,13 @@ export default function NoradVector() {
     }
 
     setIsGameStarted(true);
-  }, [resetRNG, selectedLeader, selectedDoctrine]);
+  }, [
+    applyScenarioConfig,
+    resetRNG,
+    selectedDoctrine,
+    selectedLeader,
+    selectedScenarioId,
+  ]);
 
   // Doctrine Incident Choice Handler
   const handleDoctrineIncidentChoice = useCallback((choiceId: string) => {
