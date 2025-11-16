@@ -16,6 +16,7 @@ import {
   NUCLEAR_WAR_ACHIEVEMENTS,
   VICTORY_ANNOUNCEMENTS,
 } from '@/types/nuclearWarCampaign';
+import { initializeNuclearWarHands } from './nuclearWarCardSystem';
 
 /**
  * Check if the current scenario is Nuclear War campaign
@@ -57,6 +58,9 @@ export function initializeNuclearWarCampaign(
     };
   });
 
+  // Initialize card game system
+  const { hands, deck, discardPile } = initializeNuclearWarHands(gameState);
+
   return {
     isActive: true,
     round: 1,
@@ -72,6 +76,15 @@ export function initializeNuclearWarCampaign(
     })),
     doomsdayClock: 0,
     eventsTriggered: [],
+    hands,
+    deck,
+    discardPile,
+    populationDeck: [],
+    phases: {
+      currentPhase: 'STOCKPILE',
+      actionsRemaining: {},
+      simultaneousLaunches: [],
+    },
   };
 }
 
