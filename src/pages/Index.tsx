@@ -15143,9 +15143,10 @@ export default function NoradVector() {
   };
 
   const renderLeaderSelection = () => {
-    // Filter leaders based on scenario - only historical leaders for Cuban Crisis, only lovecraftian for Great Old Ones
+    // Filter leaders based on scenario - only historical leaders for Cuban Crisis, only lovecraftian for Great Old Ones, only parody for Nuclear War
     const isCubanCrisisScenario = S.scenario?.id === 'cubanCrisis';
     const isGreatOldOnesScenario = S.scenario?.id === 'greatOldOnes';
+    const isNuclearWarScenario = S.scenario?.id === 'nuclearWar';
     const availableLeaders = leaders.filter((leader) => {
       const tags = leader.scenarios
         ?? (leader.isLovecraftian
@@ -15160,6 +15161,10 @@ export default function NoradVector() {
 
       if (isGreatOldOnesScenario) {
         return tags.includes('greatOldOnes');
+      }
+
+      if (isNuclearWarScenario) {
+        return tags.includes('nuclearWar');
       }
 
       return tags.includes('default');
