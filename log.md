@@ -3415,3 +3415,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Read root-level AGENTS.md to confirm coding standards, logging expectations, and gameplay context before starting the DEFCON request.
 ### 2025-11-16T08:31:07Z - Ensured scenario resets keep Nuclear War at DEFCON 2
 - Updated `startGame` in `src/pages/Index.tsx` to reapply the selected scenario (and its starting DEFCON/actions) after `GameStateManager.reset()` so "Nuclear War: Last Man Standing" campaigns launch at DEFCON 2 instead of reverting to the default Cold War state.
+
+### 2025-11-16T09:15:00Z - Scoped DEFCON 2 to the Nuclear War scenario
+- Added a `getScenarioDefcon` helper in `src/pages/Index.tsx` that only returns DEFCON 2 for the "Nuclear War: Last Man Standing" campaign and defaults all other scenarios to DEFCON 5.
+- Updated both the intro setup and `startGame` initialization paths to use the helper so every non-nuclear scenario once again opens at DEFCON 5 with the correct action budget while Nuclear War remains at DEFCON 2.
