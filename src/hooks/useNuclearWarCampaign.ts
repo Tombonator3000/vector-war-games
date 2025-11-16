@@ -18,6 +18,7 @@ import {
   LAST_WORDS,
   VICTORY_ANNOUNCEMENTS,
 } from '@/types/nuclearWarCampaign';
+import { initializeNuclearWarHands } from '@/lib/nuclearWarCardSystem';
 
 interface UseNuclearWarCampaignProps {
   gameState: GameState;
@@ -70,6 +71,9 @@ export function useNuclearWarCampaign({
       };
     });
 
+    // Initialize card game system
+    const { hands, deck, discardPile } = initializeNuclearWarHands(gameState);
+
     const campaignState: NuclearWarCampaignState = {
       isActive: true,
       round: 1,
@@ -85,6 +89,15 @@ export function useNuclearWarCampaign({
       })),
       doomsdayClock: 0,
       eventsTriggered: [],
+      hands,
+      deck,
+      discardPile,
+      populationDeck: [],
+      phases: {
+        currentPhase: 'STOCKPILE',
+        actionsRemaining: {},
+        simultaneousLaunches: [],
+      },
     };
 
     setGameState((prev) => ({
