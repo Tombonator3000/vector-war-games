@@ -1238,17 +1238,17 @@ const leaders: LeaderDefinition[] = [
   { name: 'Shub-Niggurath', ai: 'aggressive', color: '#003300', isLovecraftian: true, scenarios: ['greatOldOnes'] }, // The Black Goat, aggressive expansion
   { name: 'Yog-Sothoth', ai: 'defensive', color: '#1a1a33', isLovecraftian: true, scenarios: ['greatOldOnes'] }, // The Gate and the Key, strategic defense
   
-  // Parody leaders (for other scenarios)
-  { name: 'Ronnie Raygun', ai: 'aggressive', color: '#ff5555', scenarios: ['default'] },
-  { name: 'Tricky Dick', ai: 'defensive', color: '#5599ff', scenarios: ['default'] },
-  { name: 'Jimi Farmer', ai: 'balanced', color: '#55ff99', scenarios: ['default'] },
-  { name: 'E. Musk Rat', ai: 'chaotic', color: '#ff55ff', scenarios: ['default'] },
-  { name: 'Donnie Trumpf', ai: 'aggressive', color: '#ffaa55', scenarios: ['default'] },
-  { name: 'Atom Hus-Bomb', ai: 'aggressive', color: '#ff3333', scenarios: ['default'] },
-  { name: 'Krazy Re-Entry', ai: 'chaotic', color: '#cc44ff', scenarios: ['default'] },
-  { name: 'Odd\'n Wild Card', ai: 'trickster', color: '#44ffcc', scenarios: ['default'] },
-  { name: 'Oil-Stain Lint-Off', ai: 'balanced', color: '#88ff88', scenarios: ['default'] },
-  { name: 'Ruin Annihilator', ai: 'aggressive', color: '#ff6600', scenarios: ['default']}
+  // Parody leaders (for Nuclear War: Last Man Standing campaign)
+  { name: 'Ronnie Raygun', ai: 'aggressive', color: '#ff5555', scenarios: ['nuclearWar'] },
+  { name: 'Tricky Dick', ai: 'defensive', color: '#5599ff', scenarios: ['nuclearWar'] },
+  { name: 'Jimi Farmer', ai: 'balanced', color: '#55ff99', scenarios: ['nuclearWar'] },
+  { name: 'E. Musk Rat', ai: 'chaotic', color: '#ff55ff', scenarios: ['nuclearWar'] },
+  { name: 'Donnie Trumpf', ai: 'aggressive', color: '#ffaa55', scenarios: ['nuclearWar'] },
+  { name: 'Atom Hus-Bomb', ai: 'aggressive', color: '#ff3333', scenarios: ['nuclearWar'] },
+  { name: 'Krazy Re-Entry', ai: 'chaotic', color: '#cc44ff', scenarios: ['nuclearWar'] },
+  { name: 'Odd\'n Wild Card', ai: 'trickster', color: '#44ffcc', scenarios: ['nuclearWar'] },
+  { name: 'Oil-Stain Lint-Off', ai: 'balanced', color: '#88ff88', scenarios: ['nuclearWar'] },
+  { name: 'Ruin Annihilator', ai: 'aggressive', color: '#ff6600', scenarios: ['nuclearWar']}
 ];
 
 // Leader-Specific Passive Bonuses (FASE 2.1)
