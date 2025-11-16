@@ -3409,3 +3409,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-15T11:17:15Z - Ran `npx tsc --noEmit` to verify TypeScript now accepts the DEFCON news callback without overrides.
 2025-11-15T11:29:40Z - Expanded news ticker category and priority support, aligned doctrine incident payloads, and removed legacy `@ts-expect-error`/`as any` bridges in src/components/NewsTicker.tsx, src/pages/Index.tsx, src/lib/pandemic/casualtyAlertEvaluator.ts, src/lib/doctrineIncidentSystem.ts, and src/types/doctrineIncidents.ts.
 2025-11-15T11:29:40Z - Ran `npm run lint`; command failed due to longstanding lint violations unrelated to the news ticker updates.
+2025-11-15T17:20:00Z - Hardened casus belli integrations against malformed grievance/claim payloads by normalizing inputs in src/lib/casusBelliIntegration.ts and src/lib/aiCasusBelliDecisions.ts, then added a regression test ensuring end-turn CB generation tolerates non-array state.
+2025-11-15T17:20:45Z - Ran `npm run test -- casusBelliIntegration` to validate the new regression coverage and confirm turn resolution no longer throws during automatic casus belli generation.
