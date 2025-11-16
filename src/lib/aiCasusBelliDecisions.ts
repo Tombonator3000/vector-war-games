@@ -7,6 +7,7 @@
 
 import type { Nation, GameState } from '../types/game';
 import type { CasusBelli, WarState, PeaceOffer } from '../types/casusBelli';
+import type { Grievance, Claim } from '../types/grievancesAndClaims';
 import {
   getBestCasusBelli,
   validateWarDeclaration,
@@ -18,6 +19,14 @@ import {
   evaluatePeaceOffer,
 } from './peaceTermsUtils';
 import { getWarDeclarationSummary } from './casusBelliIntegration';
+
+function toGrievanceArray(grievances: Nation['grievances']): Grievance[] {
+  return Array.isArray(grievances) ? grievances : [];
+}
+
+function toClaimArray(claims: Nation['claims']): Claim[] {
+  return Array.isArray(claims) ? claims : [];
+}
 
 /**
  * AI personality traits affecting war decisions
@@ -105,10 +114,16 @@ export function aiShouldDeclareWar(
   let confidence = 0;
 
   // Get best available Casus Belli
+  const grievances = toGrievanceArray(aiNation.grievances);
+  const claims = toClaimArray(aiNation.claims);
+  const casusBelli = Array.isArray(aiNation.casusBelli)
+    ? aiNation.casusBelli
+    : [];
+
   const bestCB = getBestCasusBelli(
     aiNation,
     targetNation,
-    aiNation.casusBelli || [],
+    casusBelli,
     currentTurn
   );
 
@@ -117,8 +132,8 @@ export function aiShouldDeclareWar(
     const potentialCBs = generateAutomaticCasusBelli(
       aiNation,
       targetNation,
-      aiNation.grievances || [],
-      aiNation.claims || [],
+      grievances,
+      claims,
       currentTurn
     );
 
@@ -147,9 +162,9 @@ export function aiShouldDeclareWar(
   const validation = validateWarDeclaration(
     aiNation,
     targetNation,
-    aiNation.grievances || [],
-    aiNation.claims || [],
-    aiNation.casusBelli || [],
+    grievances,
+    claims,
+    casusBelli,
     undefined,
     currentTurn
   );
