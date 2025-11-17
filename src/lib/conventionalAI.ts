@@ -41,6 +41,7 @@ function evaluateAttack(
   fromTerritory: TerritoryState,
   toTerritory: TerritoryState,
   aiId: string,
+  territories: Record<string, TerritoryState>,
   personality?: string,
 ): { score: number; reason: string } {
   let score = 0;
@@ -124,7 +125,7 @@ function evaluateAttack(
   }
 
   // Check if capturing would complete a region
-  const completesRegion = wouldCompleteRegion(toTerritory.id, aiId, fromTerritory, toTerritory);
+  const completesRegion = wouldCompleteRegion(toTerritory.id, aiId, territories);
   if (completesRegion) {
     score += 80;
     reasons.push(`completes ${completesRegion.name} (+${completesRegion.bonus} bonus)`);
@@ -151,8 +152,7 @@ function evaluateAttack(
 function wouldCompleteRegion(
   targetTerritoryId: string,
   aiId: string,
-  fromTerritory: TerritoryState,
-  toTerritory: TerritoryState,
+  territories: Record<string, TerritoryState>,
 ): RegionInfo | null {
   // Find regions that contain this territory
   for (const region of REGIONS) {
@@ -161,8 +161,8 @@ function wouldCompleteRegion(
     // Check if we would control all territories in this region after capturing
     const wouldControlAll = region.territoryIds.every(tid => {
       if (tid === targetTerritoryId) return true; // We're capturing this one
-      // Check current control (we need to pass territories to this function)
-      return fromTerritory.id === tid; // Simplified - needs full territory list
+      const territory = territories[tid];
+      return territory?.controllingNationId === aiId;
     });
 
     if (wouldControlAll) {
@@ -202,7 +202,7 @@ export function findBestAttack(
       if (toTerritory.controllingNationId === aiId) continue;
 
       // Evaluate this attack
-      const evaluation = evaluateAttack(fromTerritory, toTerritory, aiId, personality);
+      const evaluation = evaluateAttack(fromTerritory, toTerritory, aiId, territories, personality);
 
       if (evaluation.score > bestScore && evaluation.score > 0) {
         bestScore = evaluation.score;

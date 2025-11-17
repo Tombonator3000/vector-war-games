@@ -7,6 +7,14 @@
 
 ---
 
+### 2025-11-17T23:20:33Z - Conventional AI region completion ownership fix
+- Updated `wouldCompleteRegion` to validate ownership across all region territories using the full territory map so bonuses only trigger when the AI would control every member after the capture.
+- Passed the territory collection into attack evaluation so AI scoring correctly detects attacks that finish a regional bonus opportunity.
+- No automated tests run during this update.
+
+### 2025-11-17T23:20:08Z - Conventional AI region completion review
+- Reviewed repository contribution guidance and the conventional warfare AI helpers to plan the region completion ownership fix.
+
 ### 2025-11-14T07:18:18Z - Pandemic polygon overlay fill
 - Passed the world country geometry lookup and active projector from `Index.tsx` into the pandemic overlay so map fills align with both globe and flat projections.
 - Rebuilt `PandemicSpreadOverlay` to project GeoJSON polygons, animate clip-based infection fills by percentage, and gracefully fall back to centroid circles when geometry is missing.
