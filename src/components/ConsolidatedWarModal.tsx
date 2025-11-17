@@ -93,6 +93,7 @@ export function ConsolidatedWarModal({
     defenderName: string;
     territory: string;
   } | null>(null);
+  const [actionRefreshKey, setActionRefreshKey] = useState(0);
 
   if (!localPlayer) {
     return <div className="text-sm text-cyan-200">No player nation data available.</div>;
@@ -138,23 +139,72 @@ export function ConsolidatedWarModal({
 
   const handleAttack = (fromTerritoryId: string, toTerritoryId: string, armies: number) => {
     const result = resolveConventionalAttack(fromTerritoryId, toTerritoryId, armies);
-    if (result?.success && result?.diceRolls) {
-      const from = conventionalTerritories[fromTerritoryId];
-      const to = conventionalTerritories[toTerritoryId];
-      const attackerNation = nations.find(n => n.id === from?.controllingNationId);
-      const defenderNation = nations.find(n => n.id === to?.controllingNationId);
+    setActionRefreshKey(prev => prev + 1);
 
+    const from = conventionalTerritories[fromTerritoryId];
+    const to = conventionalTerritories[toTerritoryId];
+    const attackerNation = nations.find(n => n.id === from?.controllingNationId);
+    const defenderNation = nations.find(n => n.id === to?.controllingNationId);
+
+    if (!result?.success) {
+      toast({
+        title: 'Assault aborted',
+        description: result?.reason || 'Unable to resolve the attack order.',
+      });
+      return;
+    }
+
+    const territoryName = to?.name || 'Unknown Territory';
+    const attackerName = attackerNation?.name || 'Unknown';
+    const defenderName = defenderNation?.name || 'Unknown';
+
+    toast({
+      title: result.attackerVictory ? 'Assault successful' : 'Assault repelled',
+      description: `${attackerName} vs ${defenderName} at ${territoryName}`,
+    });
+
+    addNewsItem(
+      'military',
+      result.attackerVictory
+        ? `${attackerName} seized ground at ${territoryName}`
+        : `${defenderName} held the line at ${territoryName}`,
+      result.attackerVictory ? 'important' : 'notable',
+    );
+
+    if (result?.diceRolls?.length) {
       setLastBattleResult({
         diceRolls: result.diceRolls,
-        attackerName: attackerNation?.name || 'Unknown',
-        defenderName: defenderNation?.name || 'Unknown',
-        territory: to?.name || 'Unknown Territory',
+        attackerName,
+        defenderName,
+        territory: territoryName,
       });
     }
   };
 
   const handleMove = (fromTerritoryId: string, toTerritoryId: string, count: number) => {
-    moveConventionalArmies(fromTerritoryId, toTerritoryId, count);
+    const result = moveConventionalArmies(fromTerritoryId, toTerritoryId, count);
+    setActionRefreshKey(prev => prev + 1);
+
+    const from = conventionalTerritories[fromTerritoryId];
+    const to = conventionalTerritories[toTerritoryId];
+
+    if (!result?.success) {
+      toast({
+        title: 'Movement failed',
+        description: result?.reason || 'Unable to redeploy forces between territories.',
+      });
+      return;
+    }
+
+    const origin = from?.name || 'Unknown Territory';
+    const destination = to?.name || 'Unknown Territory';
+
+    toast({
+      title: 'Armies redeployed',
+      description: `Moved ${count} forces from ${origin} to ${destination}`,
+    });
+
+    addNewsItem('military', `${origin} forces repositioned to ${destination}`, 'notable');
   };
 
   const handleProxyEngagement = (territoryId: string, opposingId: string) => {
@@ -249,26 +299,27 @@ export function ConsolidatedWarModal({
             </div>
           )}
 
-          <ConventionalForcesPanel
-            templates={templates}
-            territories={territoryList}
-            profile={profile}
-            onTrain={handleTrain}
-            researchUnlocks={localPlayer.researched}
-            playerPopulation={localPlayer.population}
-            availableReinforcements={availableReinforcements}
-            playerId={localPlayer.id}
-          />
+        <ConventionalForcesPanel
+          templates={templates}
+          territories={territoryList}
+          profile={profile}
+          onTrain={handleTrain}
+          researchUnlocks={localPlayer.researched}
+          playerPopulation={localPlayer.population}
+          availableReinforcements={availableReinforcements}
+          playerId={localPlayer.id}
+        />
 
-          <TerritoryMapPanel
-            territories={territoryList}
-            onAttack={handleAttack}
-            onMove={handleMove}
-            onProxyEngagement={handleProxyEngagement}
-            availableReinforcements={availableReinforcements}
-            onPlaceReinforcements={handlePlaceReinforcements}
-            playerId={localPlayer.id}
-          />
+        <TerritoryMapPanel
+          key={actionRefreshKey}
+          territories={territoryList}
+          onAttack={handleAttack}
+          onMove={handleMove}
+          onProxyEngagement={handleProxyEngagement}
+          availableReinforcements={availableReinforcements}
+          onPlaceReinforcements={handlePlaceReinforcements}
+          playerId={localPlayer.id}
+        />
 
           {recentLogs.length > 0 && (
             <div className="rounded-lg border border-cyan-500/30 bg-slate-900/60 p-4">
