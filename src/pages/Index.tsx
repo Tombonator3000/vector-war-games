@@ -6214,160 +6214,171 @@ function endTurn() {
       try {
         // Apply policy effects for player nation
         const policySystem = policySystemRef;
-        if (player && policySystem?.totalEffects) {
-          const effects = policySystem.totalEffects;
 
-          // Apply per-turn resource gains/costs
-          if (effects.goldPerTurn) {
-            player.gold = Math.max(0, (player.gold || 0) + effects.goldPerTurn);
-          }
-          if (effects.uraniumPerTurn) {
-            addStrategicResource(player, 'uranium', effects.uraniumPerTurn);
-          }
-          if (effects.intelPerTurn) {
-            player.intel = Math.max(0, (player.intel || 0) + effects.intelPerTurn);
-          }
+        try {
+          if (player && policySystem?.totalEffects) {
+            const effects = policySystem.totalEffects;
 
-          // Apply maintenance costs for active policies
-          policySystem.activePolicies.forEach((activePolicy) => {
-            const policy = getPolicyById(activePolicy.policyId);
-            if (policy?.maintenanceCost) {
-              if (policy.maintenanceCost.gold) {
-                player.gold = Math.max(0, (player.gold || 0) - policy.maintenanceCost.gold);
+            // Apply per-turn resource gains/costs
+            if (effects.goldPerTurn) {
+              player.gold = Math.max(0, (player.gold || 0) + effects.goldPerTurn);
+            }
+            if (effects.uraniumPerTurn) {
+              addStrategicResource(player, 'uranium', effects.uraniumPerTurn);
+            }
+            if (effects.intelPerTurn) {
+              player.intel = Math.max(0, (player.intel || 0) + effects.intelPerTurn);
+            }
+
+            // Apply maintenance costs for active policies
+            policySystem.activePolicies.forEach((activePolicy) => {
+              const policy = getPolicyById(activePolicy.policyId);
+              if (policy?.maintenanceCost) {
+                if (policy.maintenanceCost.gold) {
+                  player.gold = Math.max(0, (player.gold || 0) - policy.maintenanceCost.gold);
+                }
+                if (policy.maintenanceCost.intel) {
+                  player.intel = Math.max(0, (player.intel || 0) - policy.maintenanceCost.intel);
+                }
               }
-              if (policy.maintenanceCost.intel) {
-                player.intel = Math.max(0, (player.intel || 0) - policy.maintenanceCost.intel);
+            });
+
+            // Apply governance modifiers from policies
+            if (governanceApiRef?.metrics[player.id]) {
+              const delta: GovernanceDelta = {
+                morale: effects.moraleModifier || 0,
+                publicOpinion: effects.publicOpinionModifier || 0,
+                cabinetApproval: effects.cabinetApprovalModifier || 0,
+                instability: effects.instabilityModifier || 0,
+              };
+              governanceApiRef.applyGovernanceDelta(player.id, delta);
+            }
+          }
+        } catch (error) {
+          console.error('[Turn Debug] ERROR applying policy effects:', error);
+          log('⚠️ Error applying policy effects - continuing turn', 'warning');
+        } finally {
+          try {
+            const focusApi = focusApiRef;
+            const focusTurnCompletions = focusApi?.processTurnFocusProgress?.() ?? [];
+
+            if (focusTurnCompletions.length > 0) {
+              focusTurnCompletions.forEach((completion) => {
+                const nation = nations.find((entry) => entry.id === completion.nationId);
+                const nationName = nation?.name ?? completion.nationId;
+                const priority: NewsItem['priority'] = nation?.isPlayer ? 'important' : 'routine';
+                window.__gameAddNewsItem?.(
+                  'governance',
+                  `${nationName} completes national focus: ${completion.focusName}`,
+                  priority
+                );
+              });
+            }
+
+            // Apply national focus effects for player nation
+            if (player && focusApi) {
+              const completedFocuses = focusApi.getCompletedFocuses(player.id);
+              let focusGoldPerTurn = 0;
+              let focusIntelPerTurn = 0;
+
+              completedFocuses.forEach((focus) => {
+                focus.effects.forEach((effect) => {
+                  if (effect.statChanges) {
+                    if (effect.statChanges.goldPerTurn) {
+                      focusGoldPerTurn += effect.statChanges.goldPerTurn;
+                    }
+                    if (effect.statChanges.intelPerTurn) {
+                      focusIntelPerTurn += effect.statChanges.intelPerTurn;
+                    }
+                  }
+                });
+              });
+
+              if (focusGoldPerTurn !== 0) {
+                player.gold = Math.max(0, (player.gold || 0) + focusGoldPerTurn);
+              }
+              if (focusIntelPerTurn !== 0) {
+                player.intel = Math.max(0, (player.intel || 0) + focusIntelPerTurn);
               }
             }
-          });
-
-          // Apply governance modifiers from policies
-          if (governanceApiRef?.metrics[player.id]) {
-            const delta: GovernanceDelta = {
-              morale: effects.moraleModifier || 0,
-              publicOpinion: effects.publicOpinionModifier || 0,
-              cabinetApproval: effects.cabinetApprovalModifier || 0,
-              instability: effects.instabilityModifier || 0,
-            };
-            governanceApiRef.applyGovernanceDelta(player.id, delta);
+          } catch (error) {
+            console.error('[Turn Debug] ERROR processing focus progression:', error);
+            log('⚠️ Error processing national focus progression - continuing turn', 'warning');
           }
         }
 
-        const focusApi = focusApiRef;
-      const focusTurnCompletions = focusApi?.processTurnFocusProgress?.() ?? [];
+        // Apply international pressure effects (aid and sanctions) for player nation
+        if (player) {
+          processInternationalPressureTurnFn?.();
+          const economicImpact =
+            getTotalEconomicImpactFn?.(player.id) ?? { productionPenalty: 0, goldPenalty: 0 };
+          const aidBenefits = getAidBenefitsFn?.(player.id) ?? ({} as AidPackage['benefits']);
+          const previousGoldPenalty = pressureDeltaState.goldPenalty;
+          const previousAidGold = pressureDeltaState.aidGold;
+          const currentGoldPenalty = economicImpact.goldPenalty ?? 0;
+          const currentAidGold = aidBenefits.goldPerTurn ?? 0;
 
-      if (focusTurnCompletions.length > 0) {
-        focusTurnCompletions.forEach((completion) => {
-          const nation = nations.find((entry) => entry.id === completion.nationId);
-          const nationName = nation?.name ?? completion.nationId;
-          const priority: NewsItem['priority'] = nation?.isPlayer ? 'important' : 'routine';
-          window.__gameAddNewsItem?.(
-            'governance',
-            `${nationName} completes national focus: ${completion.focusName}`,
-            priority
-          );
-        });
-      }
-
-      // Apply national focus effects for player nation
-      if (player && focusApi) {
-        const completedFocuses = focusApi.getCompletedFocuses(player.id);
-        let focusGoldPerTurn = 0;
-        let focusIntelPerTurn = 0;
-
-        completedFocuses.forEach((focus) => {
-          focus.effects.forEach((effect) => {
-            if (effect.statChanges) {
-              if (effect.statChanges.goldPerTurn) {
-                focusGoldPerTurn += effect.statChanges.goldPerTurn;
-              }
-              if (effect.statChanges.intelPerTurn) {
-                focusIntelPerTurn += effect.statChanges.intelPerTurn;
-              }
+          if (currentGoldPenalty !== previousGoldPenalty) {
+            if (currentGoldPenalty > 0) {
+              window.__gameAddNewsItem?.(
+                'diplomatic',
+                `${playerNationName} loses ${currentGoldPenalty} gold per turn to foreign sanctions.`,
+                'important',
+              );
+              toast({
+                title: 'Sanctions drain treasury',
+                description: `${playerNationName} forfeits ${currentGoldPenalty} gold this turn due to international pressure.`,
+                variant: 'destructive',
+              });
+            } else if (previousGoldPenalty > 0) {
+              window.__gameAddNewsItem?.(
+                'diplomatic',
+                `Sanctions ease and ${playerNationName} regains trade revenues.`,
+                'important',
+              );
+              toast({
+                title: 'Sanctions relief',
+                description: `${playerNationName} no longer loses gold to sanctions this turn.`,
+              });
             }
-          });
-        });
+          }
 
-        if (focusGoldPerTurn !== 0) {
-          player.gold = Math.max(0, (player.gold || 0) + focusGoldPerTurn);
-        }
-        if (focusIntelPerTurn !== 0) {
-          player.intel = Math.max(0, (player.intel || 0) + focusIntelPerTurn);
-        }
-      }
+          if (currentAidGold !== previousAidGold) {
+            if (currentAidGold > 0) {
+              window.__gameAddNewsItem?.(
+                'diplomatic',
+                `${playerNationName} receives ${currentAidGold} gold per turn from aid coalitions.`,
+                'info',
+              );
+              toast({
+                title: 'Aid package disbursed',
+                description: `${playerNationName} gains ${currentAidGold} gold this turn from international assistance.`,
+                variant: 'success',
+              });
+            } else if (previousAidGold > 0) {
+              window.__gameAddNewsItem?.(
+                'diplomatic',
+                `Aid shipments wind down for ${playerNationName}.`,
+                'info',
+              );
+              toast({
+                title: 'Aid concluded',
+                description: `${playerNationName} no longer receives gold from international aid this turn.`,
+              });
+            }
+          }
 
-      // Apply international pressure effects (aid and sanctions) for player nation
-      if (player) {
-        processInternationalPressureTurnFn?.();
-        const economicImpact =
-          getTotalEconomicImpactFn?.(player.id) ?? { productionPenalty: 0, goldPenalty: 0 };
-        const aidBenefits = getAidBenefitsFn?.(player.id) ?? ({} as AidPackage['benefits']);
-        const previousGoldPenalty = pressureDeltaState.goldPenalty;
-        const previousAidGold = pressureDeltaState.aidGold;
-        const currentGoldPenalty = economicImpact.goldPenalty ?? 0;
-        const currentAidGold = aidBenefits.goldPerTurn ?? 0;
+          pressureDeltaState.goldPenalty = currentGoldPenalty;
+          pressureDeltaState.aidGold = currentAidGold;
 
-        if (currentGoldPenalty !== previousGoldPenalty) {
           if (currentGoldPenalty > 0) {
-            window.__gameAddNewsItem?.(
-              'diplomatic',
-              `${playerNationName} loses ${currentGoldPenalty} gold per turn to foreign sanctions.`,
-              'important',
-            );
-            toast({
-              title: 'Sanctions drain treasury',
-              description: `${playerNationName} forfeits ${currentGoldPenalty} gold this turn due to international pressure.`,
-              variant: 'destructive',
-            });
-          } else if (previousGoldPenalty > 0) {
-            window.__gameAddNewsItem?.(
-              'diplomatic',
-              `Sanctions ease and ${playerNationName} regains trade revenues.`,
-              'important',
-            );
-            toast({
-              title: 'Sanctions relief',
-              description: `${playerNationName} no longer loses gold to sanctions this turn.`,
-            });
+            player.gold = Math.max(0, (player.gold || 0) - currentGoldPenalty);
           }
-        }
 
-        if (currentAidGold !== previousAidGold) {
           if (currentAidGold > 0) {
-            window.__gameAddNewsItem?.(
-              'diplomatic',
-              `${playerNationName} receives ${currentAidGold} gold per turn from aid coalitions.`,
-              'info',
-            );
-            toast({
-              title: 'Aid package disbursed',
-              description: `${playerNationName} gains ${currentAidGold} gold this turn from international assistance.`,
-              variant: 'success',
-            });
-          } else if (previousAidGold > 0) {
-            window.__gameAddNewsItem?.(
-              'diplomatic',
-              `Aid shipments wind down for ${playerNationName}.`,
-              'info',
-            );
-            toast({
-              title: 'Aid concluded',
-              description: `${playerNationName} no longer receives gold from international aid this turn.`,
-            });
+            player.gold = Math.max(0, (player.gold || 0) + currentAidGold);
           }
         }
-
-        pressureDeltaState.goldPenalty = currentGoldPenalty;
-        pressureDeltaState.aidGold = currentAidGold;
-
-        if (currentGoldPenalty > 0) {
-          player.gold = Math.max(0, (player.gold || 0) - currentGoldPenalty);
-        }
-
-        if (currentAidGold > 0) {
-          player.gold = Math.max(0, (player.gold || 0) + currentAidGold);
-        }
-      }
 
       S.turn++;
       S.phase = 'PLAYER';
