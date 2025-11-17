@@ -422,6 +422,8 @@ let dragTargetTerritoryIdRef: { current: string | null } = { current: null };
 let draggingArmyRef: { current: { sourceId: string; armies: number } | null } = { current: null };
 
 let policySystemRef: ReturnType<typeof usePolicySystem> | null = null;
+let pandemicIntegrationEnabledRef = true;
+let bioWarfareEnabledRef = true;
 
 type NationalFocusSystemApi = ReturnType<typeof useNationalFocus>;
 
@@ -6238,14 +6240,14 @@ function endTurn() {
           });
 
           // Apply governance modifiers from policies
-          if (governance.metrics[player.id]) {
+          if (governanceApiRef?.metrics[player.id]) {
             const delta: GovernanceDelta = {
               morale: effects.moraleModifier || 0,
               publicOpinion: effects.publicOpinionModifier || 0,
               cabinetApproval: effects.cabinetApprovalModifier || 0,
               instability: effects.instabilityModifier || 0,
             };
-            governance.applyDelta(player.id, delta);
+            governanceApiRef.applyDelta(player.id, delta);
           }
         }
 
@@ -6664,7 +6666,7 @@ function endTurn() {
         updateDisplay();
       }
 
-      if (pandemicIntegrationEnabled || bioWarfareEnabled) {
+      if (pandemicIntegrationEnabledRef || bioWarfareEnabledRef) {
         const globalPandemicCasualties = pandemicState?.casualtyTally ?? 0;
         const plagueKillTotal = plagueState?.plagueCompletionStats?.totalKills ?? 0;
         const hasTurnCasualties = casualtyEntries.some(([, value]) => (value ?? 0) > 0);
@@ -9976,6 +9978,14 @@ export default function NoradVector() {
       }
     };
   }, [governance]);
+
+  useEffect(() => {
+    pandemicIntegrationEnabledRef = pandemicIntegrationEnabled;
+  }, [pandemicIntegrationEnabled]);
+
+  useEffect(() => {
+    bioWarfareEnabledRef = bioWarfareEnabled;
+  }, [bioWarfareEnabled]);
 
   useEffect(() => {
     const nextState = conventional.state;
