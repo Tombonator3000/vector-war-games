@@ -303,6 +303,112 @@ export function createLiberationWarCB(
 }
 
 /**
+ * Create Casus Belli for regime change
+ */
+export function createRegimeChangeCB(
+  attacker: Nation,
+  defender: Nation,
+  currentTurn: number
+): CasusBelli {
+  const threatLevel = defender.threats?.[attacker.id] || 0;
+  const relationship = attacker.relationships?.[defender.id] || 0;
+  const instability = defender.ideologyState?.ideologyStability || 50;
+
+  const justification = Math.min(
+    85,
+    30 + threatLevel * 0.4 + Math.max(0, -relationship) * 0.3 + (80 - instability) * 0.3
+  );
+
+  const publicSupport = Math.max(
+    55,
+    Math.min(90, 50 + threatLevel / 2 + Math.max(0, -relationship) / 2)
+  );
+
+  return createCasusBelli(
+    'regime-change',
+    attacker.id,
+    defender.id,
+    justification,
+    `Overthrow hostile regime in ${defender.name}`,
+    currentTurn,
+    {
+      publicSupport,
+      expiresIn: 15,
+    }
+  );
+}
+
+/**
+ * Create Casus Belli for punitive expedition after treaty violations
+ */
+export function createPunitiveExpeditionCB(
+  attacker: Nation,
+  defender: Nation,
+  grievanceWeight: number,
+  grievanceIds: string[],
+  currentTurn: number
+): CasusBelli {
+  const justification = Math.min(70, 25 + grievanceWeight * 5);
+  const publicSupport = Math.min(85, 60 + grievanceWeight * 3);
+
+  return createCasusBelli(
+    'punitive-expedition',
+    attacker.id,
+    defender.id,
+    justification,
+    `Punitive expedition for treaty violations`,
+    currentTurn,
+    {
+      publicSupport,
+      grievanceIds,
+      expiresIn: 12,
+    }
+  );
+}
+
+/**
+ * Create Casus Belli granted by a leader's special ability
+ */
+export function createLeaderSpecialCB(
+  attacker: Nation,
+  defender: Nation,
+  currentTurn: number
+): CasusBelli | null {
+  const ability = attacker.leaderAbilityState?.ability;
+  const isAvailable = attacker.leaderAbilityState?.isAvailable !== false;
+
+  if (!ability || ability.usesRemaining <= 0 || !isAvailable) {
+    return null;
+  }
+
+  // If the ability targets a single nation, ensure this defender is the intended target when specified
+  if (
+    ability.targetType === 'single-nation' &&
+    ability.effect.targetId &&
+    ability.effect.targetId !== defender.id
+  ) {
+    return null;
+  }
+
+  const justification = Math.min(100, 40 + (ability.effect.value || 10));
+  const publicSupport = Math.min(95, 60 + ability.maxUses * 10);
+
+  return createCasusBelli(
+    'leader-special',
+    attacker.id,
+    defender.id,
+    justification,
+    ability.description || `Special war power authorized by ${attacker.leader}`,
+    currentTurn,
+    {
+      leaderAbilityId: ability.id,
+      publicSupport,
+      expiresIn: ability.cooldownTurns + 5,
+    }
+  );
+}
+
+/**
  * Create Casus Belli for holy/ideological war
  */
 export function createHolyWarCB(
@@ -556,12 +662,18 @@ export function getBestCasusBelli(
 /**
  * Generate automatic Casus Belli based on game state
  */
+export interface AutomaticCasusBelliContext {
+  allNations?: Nation[];
+  councilResolutions?: CouncilResolution[];
+}
+
 export function generateAutomaticCasusBelli(
   attacker: Nation,
   defender: Nation,
   grievances: Grievance[],
   claims: Claim[],
-  currentTurn: number
+  currentTurn: number,
+  context: AutomaticCasusBelliContext = {}
 ): CasusBelli[] {
   const newCBs: CasusBelli[] = [];
 
@@ -607,6 +719,92 @@ export function generateAutomaticCasusBelli(
     if (ideologyDiff >= 40 && attacker.ideologyState.ideologyStability > 60) {
       newCBs.push(createHolyWarCB(attacker, defender, currentTurn));
     }
+  }
+
+  // Defensive pact: if defender attacked an ally of the attacker
+  if (attacker.alliances && attacker.alliances.length > 0 && context.allNations) {
+    const alliesUnderAttack = context.allNations.filter((nation) =>
+      attacker.alliances?.includes(nation.id)
+    );
+
+    const targetedAlly = alliesUnderAttack.find((ally) =>
+      ally.activeWars?.some(
+        (war) =>
+          war.defenderNationId === ally.id &&
+          war.attackerNationId === defender.id &&
+          war.status === 'active'
+      )
+    );
+
+    if (targetedAlly) {
+      newCBs.push(
+        createDefensivePactCB(attacker, defender, targetedAlly.id, currentTurn)
+      );
+    }
+  }
+
+  // Liberation: if grievances indicate territorial seizure or liberation claims exist
+  const liberationClaims = relevantClaims.filter((c) => c.type === 'liberation');
+  const occupationGrievances = relevantGrievances.filter(
+    (g) => g.type === 'territorial-seizure'
+  );
+  if (liberationClaims.length > 0 || occupationGrievances.length > 0) {
+    newCBs.push(
+      createLiberationWarCB(attacker, defender, [], currentTurn)
+    );
+  }
+
+  // Regime change: hostile regime with high threat or instability
+  const relationshipScore = attacker.relationships?.[defender.id] || 0;
+  const instability = defender.ideologyState?.ideologyStability || 50;
+  if (threatLevel >= 50 && (relationshipScore < -30 || instability < 50)) {
+    newCBs.push(createRegimeChangeCB(attacker, defender, currentTurn));
+  }
+
+  // Punitive expedition: treaty violations and broken promises
+  const punitiveGrievances = relevantGrievances.filter((g) =>
+    g.type === 'broken-treaty' || g.type === 'betrayed-ally'
+  );
+  if (punitiveGrievances.length > 0) {
+    const grievanceWeight = punitiveGrievances.reduce((sum, g) => {
+      const severityMap = { minor: 1, moderate: 2, major: 3, severe: 4 } as const;
+      return sum + severityMap[g.severity];
+    }, 0);
+
+    newCBs.push(
+      createPunitiveExpeditionCB(
+        attacker,
+        defender,
+        grievanceWeight,
+        punitiveGrievances.map((g) => g.id),
+        currentTurn
+      )
+    );
+  }
+
+  // Council authorization: passed resolution targeting the defender
+  if (context.councilResolutions) {
+    const activeResolution = context.councilResolutions.find(
+      (resolution) =>
+        resolution.status === 'passed' && resolution.targetNationId === defender.id
+    );
+
+    if (activeResolution) {
+      newCBs.push(
+        createCouncilAuthorizedCB(
+          attacker,
+          defender,
+          activeResolution,
+          currentTurn
+        )
+      );
+    }
+  }
+
+  // Leader special: if leader ability can authorize action
+  const leaderCB = createLeaderSpecialCB(attacker, defender, currentTurn);
+  if (leaderCB) {
+    newCBs.push(leaderCB);
   }
 
   return newCBs;
