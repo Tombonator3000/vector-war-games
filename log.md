@@ -3444,3 +3444,4 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-17T22:39:18Z - Added conventional action feedback and refresh
 - Reviewed root-level AGENTS.md guidance and logging requirement before adjustments.
 - Added toast/news outcomes for conventional attacks and movements, gating battle summaries on dice rolls and refreshing the map panel after actions.
+2025-11-17T22:58:53Z - Implemented per-turn reinforcement pools and UI to consume them progressively in the conventional warfare flow (root-level AGENTS.md reviewed first).

@@ -396,17 +396,17 @@ export function ConsolidatedWarModal({
               Military Overview
             </div>
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Available Reinforcements:</span>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Reinforcements Remaining (Turn {currentTurn}):</span>
                 <span className="text-cyan-300 font-mono">{availableReinforcements}</span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <span className="text-slate-400">Casus Belli Available:</span>
                 <span className="text-cyan-300 font-mono">
                   {player.casusBelli?.filter(cb => !cb.used).length || 0}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <span className="text-slate-400">Peace Offers Pending:</span>
                 <span className="text-cyan-300 font-mono">
                   {player.peaceOffers?.length || 0}
