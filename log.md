@@ -3439,3 +3439,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-17T22:14:07Z - Added treaty visibility to Leaders Screen
 - Reviewed root-level AGENTS.md guidance and logging requirement before coding.
 - Derived alliance, truce (with remaining turns), war, and peace states from `playerNation.treaties` and surfaced them as badges on the Leaders Screen so diplomatic status is visible beside each leader.
+### 2025-11-17T22:20:02Z - Surfaced treaty chips in Enhanced Diplomacy
+- Added treaty status derivation (alliance, truce with remaining turns, war, or peace) to `EnhancedDiplomacyModal` target selection and trust/favors panels so players see current alliances or hostilities while choosing actions.

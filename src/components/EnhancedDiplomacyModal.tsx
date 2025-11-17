@@ -39,6 +39,57 @@ export interface DiplomaticAction {
   disabledReason?: string;
 }
 
+type TreatyStatus = {
+  state: 'alliance' | 'truce' | 'war' | 'peace';
+  truceTurns?: number;
+};
+
+function getTreatyStatus(playerNation: Nation, targetNation?: Nation | null): TreatyStatus | null {
+  if (!targetNation) return null;
+
+  const treaty = playerNation.treaties?.[targetNation.id];
+
+  if (treaty?.alliance) {
+    return { state: 'alliance' };
+  }
+
+  const truceTurns = typeof treaty?.truceTurns === 'number' ? treaty.truceTurns : undefined;
+  if (truceTurns && truceTurns > 0) {
+    return { state: 'truce', truceTurns };
+  }
+
+  if (treaty && !treaty.alliance) {
+    return { state: 'war' };
+  }
+
+  return { state: 'peace' };
+}
+
+function renderTreatyChip(status: TreatyStatus | null) {
+  if (!status) return null;
+
+  const styles: Record<TreatyStatus['state'], string> = {
+    alliance: 'bg-emerald-500/15 border border-emerald-400/40 text-emerald-200',
+    truce: 'bg-amber-500/15 border border-amber-400/40 text-amber-200',
+    peace: 'bg-cyan-500/10 border border-cyan-400/40 text-cyan-100',
+    war: 'bg-red-500/15 border border-red-400/40 text-red-200',
+  };
+
+  const labelByState: Record<TreatyStatus['state'], string> = {
+    alliance: 'Alliance',
+    truce: status.truceTurns ? `Truce (${status.truceTurns} turns)` : 'Truce',
+    peace: 'Peace',
+    war: 'At War',
+  };
+
+  return (
+    <span className={`text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-2 ${styles[status.state]}`}>
+      <span className="w-2 h-2 rounded-full bg-current opacity-80" aria-hidden="true" />
+      {labelByState[status.state]}
+    </span>
+  );
+}
+
 export function EnhancedDiplomacyModal({
   player,
   nations,
@@ -49,6 +100,10 @@ export function EnhancedDiplomacyModal({
 }: EnhancedDiplomacyModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('trust');
   const [selectedTarget, setSelectedTarget] = useState<Nation | null>(null);
+  const selectedTreatyStatus = useMemo(
+    () => getTreatyStatus(player, selectedTarget),
+    [player, selectedTarget]
+  );
 
   const categories = [
     { id: 'trust', name: 'Trust & Favors', icon: Handshake, color: 'text-green-400' },
@@ -341,23 +396,31 @@ export function EnhancedDiplomacyModal({
                 Target Nation
               </h3>
               <div className="space-y-2">
-                {otherNations.map((nation) => (
-                  <button
-                    key={nation.id}
-                    onClick={() => setSelectedTarget(nation)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded transition-colors ${
-                      selectedTarget?.id === nation.id
-                        ? 'bg-green-500/20 border border-green-500/50'
-                        : 'bg-slate-800/50 border border-gray-700 hover:bg-slate-700/50'
-                    }`}
-                  >
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: nation.color }}
-                    />
-                    <span className="text-sm text-gray-300 truncate">{nation.name}</span>
-                  </button>
-                ))}
+                {otherNations.map((nation) => {
+                  const treatyStatus = getTreatyStatus(player, nation);
+
+                  return (
+                    <button
+                      key={nation.id}
+                      onClick={() => setSelectedTarget(nation)}
+                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded transition-colors ${
+                        selectedTarget?.id === nation.id
+                          ? 'bg-green-500/20 border border-green-500/50'
+                          : 'bg-slate-800/50 border border-gray-700 hover:bg-slate-700/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className="w-3 h-3 rounded-full shrink-0"
+                          style={{ backgroundColor: nation.color }}
+                        />
+                        <span className="text-sm text-gray-300 truncate">{nation.name}</span>
+                      </div>
+
+                      <div className="shrink-0">{renderTreatyChip(treatyStatus)}</div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -367,6 +430,16 @@ export function EnhancedDiplomacyModal({
             <div className="space-y-4">
               {selectedTarget && (
                 <div className="rounded-lg border border-cyan-500/30 bg-slate-900/40 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: selectedTarget.color }}
+                      />
+                      <span className="text-sm font-semibold text-gray-200">{selectedTarget.name}</span>
+                    </div>
+                    {renderTreatyChip(selectedTreatyStatus)}
+                  </div>
                   <TrustAndFavorsDisplay nation={player} targetNation={selectedTarget} />
                 </div>
               )}
