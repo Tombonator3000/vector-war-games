@@ -8191,7 +8191,7 @@ export default function NoradVector() {
     });
     AudioSys.playSFX('click');
   }, [setOutlinerAttentionTick]);
-  const { distortNationIntel, generateFalseIntel } = useFogOfWar();
+  const { distortNationIntel, generateFalseIntel } = useFogOfWar(rng);
 
 
   const getAllNations = useCallback(() => nations, []);

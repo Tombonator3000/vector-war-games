@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { useOptionalRNG } from '@/contexts/RNGContext';
+import type { SeededRandom } from '@/lib/seededRandom';
 
 export interface IntelligenceReport {
   targetId: string;
@@ -21,8 +23,14 @@ interface FogOfWarConfig {
  * - Creates false positives/negatives
  * - Simulates intelligence failures
  */
-export function useFogOfWar() {
-  
+export function useFogOfWar(providedRng?: SeededRandom) {
+  const optionalRng = useOptionalRNG();
+  const rng = providedRng ?? optionalRng?.rng;
+
+  if (!rng) {
+    throw new Error('useFogOfWar requires an RNG source. Provide one via RNGProvider or parameter.');
+  }
+
   const applyIntelNoise = useMemo(() => {
     return (actualValue: number, config: FogOfWarConfig): { reported: number; confidence: number } => {
       let accuracy = config.baseAccuracy;
@@ -36,19 +44,19 @@ export function useFogOfWar() {
       
       accuracy = Math.max(0.2, Math.min(0.95, accuracy)); // Clamp between 20-95%
       
-      // Add Gaussian noise
-      const noise = (Math.random() + Math.random() + Math.random() - 1.5) * (1 - accuracy);
+      // Add Gaussian-like noise using shared RNG
+      const noise = (rng.next() + rng.next() + rng.next() - 1.5) * (1 - accuracy);
       const reported = Math.max(0, Math.round(actualValue * (1 + noise)));
-      
+
       return { reported, confidence: accuracy };
     };
-  }, []);
+  }, [rng]);
 
   const generateFalseIntel = useMemo(() => {
     return (config: FogOfWarConfig): { type: string; description: string } | null => {
       const falsePositiveChance = 0.15 * (1 - config.baseAccuracy);
-      
-      if (Math.random() < falsePositiveChance) {
+
+      if (rng.next() < falsePositiveChance) {
         const types = [
           { type: 'phantom_buildup', description: 'SIGINT indicates major military buildup, but satellite confirms nothing.' },
           { type: 'fake_launch_prep', description: 'Launch preparations detected, but later revealed as maintenance drill.' },
@@ -56,13 +64,13 @@ export function useFogOfWar() {
           { type: 'ghost_missiles', description: 'Radar shows 50+ missiles. Actually weather balloons.' },
           { type: 'planted_intel', description: 'Captured documents suggest new superweapon. Deliberate misinformation.' }
         ];
-        
-        return types[Math.floor(Math.random() * types.length)];
+
+        return types[Math.floor(rng.next() * types.length)];
       }
-      
+
       return null;
     };
-  }, []);
+  }, [rng]);
 
   const getIntelReliability = useMemo(() => {
     return (confidence: number): IntelligenceReport['reliability'] => {

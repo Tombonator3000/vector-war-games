@@ -3429,3 +3429,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Ran `npm test -- --run src/lib/__tests__/casusBelliTriggers.test.ts` to verify each trigger produces an available Casus Belli.
 2025-11-17T11:22:00Z - Reviewed root-level AGENTS.md and GlobeScene requirements for keeping the flat-realistic canvas mounted while scoping 3D-only effects.
 2025-11-17T11:22:29Z - Updated src/components/GlobeScene.tsx to always mount the Canvas (including in flat-realistic mode) so the FlatEarthBackdrop and projector stay active while retaining existing isFlat guards on 3D effects.
+### 2025-11-17T21:58:30Z - Routed fog of war randomness through shared RNG
+- Refactored `useFogOfWar` to require an injected `SeededRandom` source instead of `Math.random`, using the RNG context when available (`src/hooks/useFogOfWar.ts`).
+- Passed the shared RNG from `useRNG` into fog-of-war calls on the NORAD page and added deterministic RNG coverage for the hook (`src/pages/Index.tsx`, `src/hooks/__tests__/useFogOfWar.test.ts`).
