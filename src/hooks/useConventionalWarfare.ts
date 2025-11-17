@@ -108,11 +108,17 @@ export interface NationConventionalProfile {
   deployedUnits: string[];
 }
 
+export interface ReinforcementPool {
+  turn: number;
+  remaining: number;
+}
+
 export interface ConventionalState {
   templates: Record<string, ConventionalUnitTemplate>;
   units: Record<string, ConventionalUnitState>;
   territories: Record<string, TerritoryState>;
   logs: EngagementLogEntry[];
+  reinforcementPools?: Record<string, ReinforcementPool>;
 }
 
 export interface ConventionalNationRef {
@@ -577,7 +583,9 @@ const computeUnitDefense = (unit: ConventionalUnitState, nation?: ConventionalNa
 // Deprecated: Use safeClamp from safeMath instead
 const clamp = safeClamp;
 
-export function createDefaultConventionalState(nations: Array<{ id: string; isPlayer?: boolean }> = []): ConventionalState {
+export function createDefaultConventionalState(
+  nations: Array<{ id: string; isPlayer?: boolean }> = [],
+): ConventionalState {
   const territories = DEFAULT_TERRITORIES.reduce<Record<string, TerritoryState>>((acc, territory) => {
     acc[territory.id] = { ...territory, contestedBy: [] };
     return acc;
@@ -608,6 +616,7 @@ export function createDefaultConventionalState(nations: Array<{ id: string; isPl
     units,
     territories,
     logs: [],
+    reinforcementPools: {},
   };
 }
 
@@ -651,7 +660,13 @@ export function useConventionalWarfare({
   supplySystemApi,
 }: UseConventionalWarfareOptions) {
   const { rng } = useRNG();
-  const [state, setState] = useState<ConventionalState>(() => initialState ?? createDefaultConventionalState());
+  const [state, setState] = useState<ConventionalState>(() => {
+    const baseState = initialState ?? createDefaultConventionalState();
+    return {
+      ...baseState,
+      reinforcementPools: baseState.reinforcementPools ?? {},
+    };
+  });
   const initialisedRef = useRef(false);
 
   const syncState = useCallback(
@@ -667,7 +682,7 @@ export function useConventionalWarfare({
 
   useEffect(() => {
     if (!initialState) return;
-    setState(initialState);
+    setState({ ...initialState, reinforcementPools: initialState.reinforcementPools ?? {} });
     initialisedRef.current = true;
   }, [initialState]);
 
@@ -829,6 +844,35 @@ export function useConventionalWarfare({
   const toDiceBonus = useCallback((value: number) => Math.max(0, Math.min(3, Math.round(value / 4))), []);
 
   const territories = useMemo(() => state.territories, [state.territories]);
+
+  useEffect(() => {
+    syncState((prev) => {
+      const trackedNationIds = new Set<string>(Object.keys(prev.reinforcementPools ?? {}));
+
+      Object.values(prev.territories).forEach((territory) => {
+        if (territory.controllingNationId) {
+          trackedNationIds.add(territory.controllingNationId);
+        }
+      });
+
+      let changed = false;
+      const nextPools: Record<string, ReinforcementPool> = { ...(prev.reinforcementPools ?? {}) };
+
+      trackedNationIds.forEach((nationId) => {
+        const calculated = calculateReinforcements(nationId, prev.territories);
+        const pool = nextPools[nationId];
+        const needsReset = !pool || pool.turn !== currentTurn;
+        const remaining = needsReset ? calculated : Math.min(pool.remaining, calculated);
+
+        if (!pool || pool.turn !== currentTurn || remaining !== pool.remaining) {
+          nextPools[nationId] = { turn: currentTurn, remaining };
+          changed = true;
+        }
+      });
+
+      return changed ? { ...prev, reinforcementPools: nextPools } : prev;
+    });
+  }, [currentTurn, syncState, territories]);
 
   const adjustNationProduction = useCallback(
     (nationId: string, delta: number) => {
@@ -1606,6 +1650,20 @@ export function useConventionalWarfare({
     [territories],
   );
 
+  const getReinforcementPool = useCallback(
+    (nationId: string) => {
+      const calculated = calculateReinforcements(nationId, territories);
+      const pool = state.reinforcementPools?.[nationId];
+
+      if (pool?.turn === currentTurn) {
+        return Math.min(pool.remaining, calculated);
+      }
+
+      return calculated;
+    },
+    [currentTurn, state.reinforcementPools, territories],
+  );
+
   const placeReinforcements = useCallback(
     (nationId: string, territoryId: string, count: number) => {
       const territory = territories[territoryId];
@@ -1621,6 +1679,18 @@ export function useConventionalWarfare({
         return { success: false, reason: 'Must place at least 1 army' } as const;
       }
 
+      const available = getReinforcementPool(nationId);
+      if (available <= 0) {
+        return { success: false, reason: 'No reinforcements remaining this turn' } as const;
+      }
+
+      if (count > available) {
+        return {
+          success: false,
+          reason: `Only ${available} reinforcements remain this turn`,
+        } as const;
+      }
+
       syncState((prev) => ({
         ...prev,
         territories: {
@@ -1633,6 +1703,20 @@ export function useConventionalWarfare({
               ...prev.territories[territoryId].unitComposition,
               army: prev.territories[territoryId].unitComposition.army + count,
             },
+          },
+        },
+        reinforcementPools: {
+          ...(prev.reinforcementPools ?? {}),
+          [nationId]: {
+            turn: currentTurn,
+            remaining: (() => {
+              const calculated = calculateReinforcements(nationId, prev.territories);
+              const pool = prev.reinforcementPools?.[nationId];
+              const baseRemaining = !pool || pool.turn !== currentTurn
+                ? calculated
+                : Math.min(pool.remaining, calculated);
+              return Math.max(0, baseRemaining - count);
+            })(),
           },
         },
       }));
@@ -1656,13 +1740,10 @@ export function useConventionalWarfare({
       onUpdateDisplay?.();
       return { success: true } as const;
     },
-    [getNation, onUpdateDisplay, syncState, territories],
+    [currentTurn, getNation, getReinforcementPool, onUpdateDisplay, syncState, territories],
   );
 
-  const getReinforcements = useCallback(
-    (nationId: string) => calculateReinforcements(nationId, territories),
-    [territories],
-  );
+  const getReinforcements = useCallback((nationId: string) => getReinforcementPool(nationId), [getReinforcementPool]);
 
   return {
     state,

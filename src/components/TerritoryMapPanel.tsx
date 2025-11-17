@@ -142,16 +142,18 @@ export function TerritoryMapPanel({
                 <Swords className="mr-1 h-3 w-3" />
                 Select to Attack/Move
               </Button>
-              {availableReinforcements && availableReinforcements > 0 && onPlaceReinforcements && (
+              {typeof availableReinforcements === 'number' && availableReinforcements > 0 && onPlaceReinforcements && (
                 <Button
                   size="sm"
                   className="border-green-500/50 bg-green-500/20 text-green-200 hover:bg-green-500/30"
                   onClick={() => {
-                    const count = Math.min(availableReinforcements, 3);
-                    onPlaceReinforcements(territory.id, count);
+                    const count = Math.min(Math.max(availableReinforcements, 0), 3);
+                    if (count > 0) {
+                      onPlaceReinforcements(territory.id, count);
+                    }
                   }}
                 >
-                  +{Math.min(availableReinforcements, 3)} Reinforcements
+                  +{Math.min(Math.max(availableReinforcements, 0), 3)} Reinforcements
                 </Button>
               )}
             </>
@@ -266,14 +268,16 @@ export function TerritoryMapPanel({
 
   return (
     <div className="space-y-6">
-      {availableReinforcements !== undefined && availableReinforcements > 0 && (
+      {availableReinforcements !== undefined && (
         <div className="rounded-lg border-2 border-green-500/50 bg-green-500/10 p-4 text-center">
           <p className="text-sm font-mono uppercase tracking-widest text-green-300">
-            Reinforcements Available
+            Reinforcements Remaining (This Turn)
           </p>
           <p className="mt-1 text-3xl font-bold text-green-200">{availableReinforcements}</p>
           <p className="mt-1 text-xs text-green-300/80">
-            Click any of your territories to deploy reinforcements
+            {availableReinforcements > 0
+              ? 'Click any of your territories to deploy reinforcements'
+              : 'No remaining reinforcements this turn'}
           </p>
         </div>
       )}
