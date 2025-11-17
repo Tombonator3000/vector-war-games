@@ -3419,3 +3419,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-16T09:15:00Z - Scoped DEFCON 2 to the Nuclear War scenario
 - Added a `getScenarioDefcon` helper in `src/pages/Index.tsx` that only returns DEFCON 2 for the "Nuclear War: Last Man Standing" campaign and defaults all other scenarios to DEFCON 5.
 - Updated both the intro setup and `startGame` initialization paths to use the helper so every non-nuclear scenario once again opens at DEFCON 5 with the correct action budget while Nuclear War remains at DEFCON 2.
+
+### 2025-11-16T12:00:00Z - Audited Warfare Command casualty logging
+- Added attacker/defender identifiers, casualty totals, and round counts to conventional movement, border, and proxy engagement logs in `src/hooks/useConventionalWarfare.ts` so Warfare Command summaries render complete data.
+- Updated `src/components/ConsolidatedWarModal.tsx` to gracefully default casualty and round displays when optional log properties are absent, preventing NaN outputs in the Warfare Command UI.
