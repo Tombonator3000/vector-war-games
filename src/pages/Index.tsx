@@ -10452,7 +10452,7 @@ export default function NoradVector() {
 
     // Make available globally
     window.__gameAddNewsItem = addNewsItem;
-    window.__gameTriggerFlashpoint = triggerRandomFlashpoint;
+    window.__gameTriggerFlashpoint = (turn: number, defcon: number) => triggerRandomFlashpointRef.current(turn, defcon);
     window.__pandemicTrigger = (payload: unknown) => triggerPandemicRef.current(payload as any);
     window.__pandemicCountermeasure = (payload: unknown) => applyPandemicCountermeasureRef.current(payload as any);
     window.__pandemicAdvance = (context: unknown) => advancePandemicTurnRef.current(context as any);
