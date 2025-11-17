@@ -1163,6 +1163,9 @@ export function useConventionalWarfare({
         drone: fromComposition.drone / totalArmies,
       };
 
+      const attackerNationId = fromTerritory.controllingNationId ?? undefined;
+      const defenderNationId = toTerritory.controllingNationId ?? undefined;
+
       syncState((prev) => {
         const updatedFrom = { ...prev.territories[fromTerritoryId] };
         const updatedTo = { ...prev.territories[toTerritoryId] };
@@ -1205,7 +1208,17 @@ export function useConventionalWarfare({
           type: 'movement',
           outcome: 'stalemate',
           summary: `Moved ${count} armies from ${fromTerritory.name} to ${toTerritory.name}`,
-          casualties: {},
+          attackerNationId,
+          defenderNationId,
+          attackerCasualties: 0,
+          defenderCasualties: 0,
+          rounds: 0,
+          casualties: {
+            ...(attackerNationId ? { [attackerNationId]: 0 } : {}),
+            ...(defenderNationId && defenderNationId !== attackerNationId
+              ? { [defenderNationId]: 0 }
+              : {}),
+          },
           instabilityDelta: {},
           productionDelta: {},
         }, rng);
@@ -1426,6 +1439,11 @@ export function useConventionalWarfare({
           summary: attackerVictory
             ? `${attackerNation?.name || attackerId} conquers ${toTerritory.name}! (${diceRolls.length} rounds)`
             : `${defenderNation?.name || defenderId} holds ${toTerritory.name}! (${diceRolls.length} rounds)`,
+          attackerNationId: attackerId,
+          defenderNationId: defenderId,
+          attackerCasualties: attackerLosses,
+          defenderCasualties: defenderLosses,
+          rounds: diceRolls.length,
           casualties,
           instabilityDelta,
           productionDelta,
@@ -1532,6 +1550,11 @@ export function useConventionalWarfare({
           summary: sponsorSuccess
             ? `${sponsorId} proxy gains in ${territory.name}`
             : `${opposingId} repels proxy in ${territory.name}`,
+          attackerNationId: sponsorId,
+          defenderNationId: opposingId,
+          attackerCasualties: sponsorSuccess ? 5 : 12,
+          defenderCasualties: sponsorSuccess ? 12 : 6,
+          rounds: 1,
           casualties: {
             [sponsorId]: sponsorSuccess ? 5 : 12,
             [opposingId]: sponsorSuccess ? 12 : 6,

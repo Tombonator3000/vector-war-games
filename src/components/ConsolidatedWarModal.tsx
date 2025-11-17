@@ -280,12 +280,19 @@ export function ConsolidatedWarModal({
                   const attackerNation = nations.find(n => n.id === log.attackerNationId);
                   const defenderNation = nations.find(n => n.id === log.defenderNationId);
                   const territory = conventionalTerritories[log.territoryId];
+                  const attackerCasualties = log.attackerCasualties ?? (log.attackerNationId
+                    ? log.casualties?.[log.attackerNationId]
+                    : 0) ?? 0;
+                  const defenderCasualties = log.defenderCasualties ?? (log.defenderNationId
+                    ? log.casualties?.[log.defenderNationId]
+                    : 0) ?? 0;
+                  const rounds = log.rounds ?? log.diceRolls?.length;
 
                   return (
                     <div
                       key={idx}
                       className="text-xs border border-cyan-500/10 bg-slate-900/40 rounded p-2"
-                    >
+                      >
                       <div className="text-slate-300">
                         <span className="text-orange-300 font-semibold">
                           {attackerNation?.name || 'Unknown'}
@@ -298,8 +305,8 @@ export function ConsolidatedWarModal({
                         <span className="text-slate-400">{territory?.name || 'Unknown Territory'}</span>
                       </div>
                       <div className="text-slate-400 mt-1">
-                        Casualties: Attacker {log.attackerCasualties} | Defender {log.defenderCasualties}
-                        {log.rounds && ` • ${log.rounds} rounds`}
+                        Casualties: Attacker {attackerCasualties} | Defender {defenderCasualties}
+                        {rounds ? ` • ${rounds} rounds` : ''}
                       </div>
                     </div>
                   );
@@ -367,6 +374,14 @@ export function ConsolidatedWarModal({
                   const attackerNation = nations.find(n => n.id === log.attackerNationId);
                   const defenderNation = nations.find(n => n.id === log.defenderNationId);
                   const territory = conventionalTerritories[log.territoryId];
+                  const attackerCasualties = log.attackerCasualties ?? (log.attackerNationId
+                    ? log.casualties?.[log.attackerNationId]
+                    : 0) ?? 0;
+                  const defenderCasualties = log.defenderCasualties ?? (log.defenderNationId
+                    ? log.casualties?.[log.defenderNationId]
+                    : 0) ?? 0;
+                  const totalCasualties = attackerCasualties + defenderCasualties;
+                  const rounds = log.rounds ?? log.diceRolls?.length;
                   const isPlayerInvolved =
                     log.attackerNationId === localPlayer.id ||
                     log.defenderNationId === localPlayer.id;
@@ -392,7 +407,8 @@ export function ConsolidatedWarModal({
                         <span className="text-slate-400">{territory?.name || 'Unknown'}</span>
                       </div>
                       <div className="text-slate-400 mt-1">
-                        Casualties: {log.attackerCasualties + log.defenderCasualties} total
+                        Casualties: {totalCasualties} total
+                        {rounds ? ` • ${rounds} rounds` : ''}
                         {log.outcome && ` • ${log.outcome}`}
                       </div>
                     </div>
