@@ -3436,3 +3436,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-17T22:15:57Z - Verified base flashpoints remain available outside Cuban Crisis
 - Added a regression test to the flashpoint hook to confirm non-Cuban scenarios still draw from the standard flashpoint pool (`src/hooks/__tests__/useFlashpoints.test.ts`).
 - Ran `npx vitest run src/hooks/__tests__/useFlashpoints.test.ts` to validate flashpoint triggering across scenarios.
+### 2025-11-17T22:14:07Z - Added treaty visibility to Leaders Screen
+- Reviewed root-level AGENTS.md guidance and logging requirement before coding.
+- Derived alliance, truce (with remaining turns), war, and peace states from `playerNation.treaties` and surfaced them as badges on the Leaders Screen so diplomatic status is visible beside each leader.

@@ -82,8 +82,8 @@ function sortNationsByImportance(
     .filter(n => !n.isPlayer && n.population > 0)
     .sort((a, b) => {
       // First by alliance status
-      const aAllied = playerNation.alliances?.includes(a.id);
-      const bAllied = playerNation.alliances?.includes(b.id);
+      const aAllied = playerNation.treaties?.[a.id]?.alliance;
+      const bAllied = playerNation.treaties?.[b.id]?.alliance;
       if (aAllied !== bAllied) return aAllied ? -1 : 1;
 
       // Then by relationship
@@ -94,6 +94,30 @@ function sortNationsByImportance(
       // Finally by power
       return getMilitaryPower(b) - getMilitaryPower(a);
     });
+}
+
+type TreatyStatus = {
+  state: 'alliance' | 'truce' | 'war' | 'peace';
+  truceTurns?: number;
+};
+
+function getTreatyStatus(playerNation: Nation, targetNationId: string): TreatyStatus {
+  const treaty = playerNation.treaties?.[targetNationId];
+
+  if (treaty?.alliance) {
+    return { state: 'alliance' };
+  }
+
+  const truceTurns = typeof treaty?.truceTurns === 'number' ? treaty.truceTurns : undefined;
+  if (truceTurns && truceTurns > 0) {
+    return { state: 'truce', truceTurns };
+  }
+
+  if (treaty && !treaty.alliance) {
+    return { state: 'war' };
+  }
+
+  return { state: 'peace' };
 }
 
 export function LeadersScreen({
@@ -114,7 +138,9 @@ export function LeadersScreen({
     const counts = { allies: 0, friendly: 0, neutral: 0, hostile: 0 };
     sortedNations.forEach(nation => {
       const relationship = getRelationship(playerNation, nation.id);
-      if (playerNation.alliances?.includes(nation.id)) counts.allies++;
+      const treatyStatus = getTreatyStatus(playerNation, nation.id);
+      if (treatyStatus.state === 'alliance') counts.allies++;
+      else if (treatyStatus.state === 'war') counts.hostile++;
       else if (relationship >= 25) counts.friendly++;
       else if (relationship >= -25) counts.neutral++;
       else counts.hostile++;
@@ -192,8 +218,11 @@ export function LeadersScreen({
             const relationship = getRelationship(playerNation, nation.id);
             const trust = getTrust(playerNation, nation.id);
             const favors = getFavors(playerNation, nation.id);
-            const isAllied = playerNation.alliances?.includes(nation.id);
-            const isAtWar = false; // War state not tracked in current Nation type
+            const treatyStatus = getTreatyStatus(playerNation, nation.id);
+            const isAllied = treatyStatus.state === 'alliance';
+            const isTruce = treatyStatus.state === 'truce';
+            const isAtWar = treatyStatus.state === 'war';
+            const truceTurnsRemaining = treatyStatus.truceTurns || 0;
             const { label: relLabel, color: relColor } = getRelationshipStatus(relationship);
             const militaryPower = getMilitaryPower(nation);
 
@@ -203,6 +232,7 @@ export function LeadersScreen({
                 className={cn(
                   'transition-all hover:border-blue-500/50 cursor-pointer bg-slate-800/30 border-slate-700',
                   isAllied && 'border-green-500/50 bg-green-900/10',
+                  isTruce && 'border-amber-400/60 bg-amber-900/10',
                   isAtWar && 'border-red-500/50 bg-red-900/10'
                 )}
                 onClick={() => {
@@ -234,7 +264,7 @@ export function LeadersScreen({
                       <CardDescription className="truncate">
                         {nation.name}
                       </CardDescription>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <Badge variant="outline" className="text-xs">
                           {nation.aiPersonality || 'Balanced'}
                         </Badge>
@@ -244,10 +274,22 @@ export function LeadersScreen({
                             Allied
                           </Badge>
                         )}
+                        {isTruce && (
+                          <Badge className="text-xs bg-amber-600">
+                            <Flag className="h-3 w-3 mr-1" />
+                            Truce ({truceTurnsRemaining} turns)
+                          </Badge>
+                        )}
                         {isAtWar && (
                           <Badge className="text-xs bg-red-600">
                             <Swords className="h-3 w-3 mr-1" />
                             At War
+                          </Badge>
+                        )}
+                        {!isAllied && !isTruce && !isAtWar && (
+                          <Badge className="text-xs bg-slate-700 text-slate-100 border-slate-600">
+                            <Globe className="h-3 w-3 mr-1" />
+                            Peace
                           </Badge>
                         )}
                       </div>
