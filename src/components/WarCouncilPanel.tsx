@@ -10,6 +10,15 @@ import type { CasusBelli, WarState, PeaceOffer } from '@/types/casusBelli';
 import { getWarDeclarationSummary } from '@/lib/casusBelliIntegration';
 import { WAR_JUSTIFICATION_THRESHOLDS } from '@/types/casusBelli';
 
+const casusBelliTypeHints: Partial<Record<CasusBelli['type'], string>> = {
+  'defensive-pact': 'Ally attacked — honor the pact and join their defense.',
+  'liberation-war': 'Free occupied territories or populations under foreign control.',
+  'regime-change': 'Dismantle a hostile or unstable regime before it escalates.',
+  'punitive-expedition': 'Punish treaty breakers and deter further violations.',
+  'council-authorized': 'Backed by an international council resolution.',
+  'leader-special': 'Uniquely empowered by your leader’s special authority.',
+};
+
 interface WarCouncilPanelProps {
   player: Nation;
   nations: Nation[];
@@ -160,6 +169,11 @@ export function WarCouncilPanel({
                             {renderJustificationBadge(cb.justification)}
                           </div>
                           <div className="text-xs text-slate-400 mt-1">{cb.description}</div>
+                          {casusBelliTypeHints[cb.type] && (
+                            <div className="text-[11px] text-cyan-200/70 mt-1">
+                              {casusBelliTypeHints[cb.type]}
+                            </div>
+                          )}
                           <div className="text-xs text-slate-500 mt-1">
                             Public Support: {cb.publicSupport}%
                           </div>
