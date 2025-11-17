@@ -3423,3 +3423,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-16T12:00:00Z - Audited Warfare Command casualty logging
 - Added attacker/defender identifiers, casualty totals, and round counts to conventional movement, border, and proxy engagement logs in `src/hooks/useConventionalWarfare.ts` so Warfare Command summaries render complete data.
 - Updated `src/components/ConsolidatedWarModal.tsx` to gracefully default casualty and round displays when optional log properties are absent, preventing NaN outputs in the Warfare Command UI.
+### 2025-11-17T10:26:09Z - Expanded automatic Casus Belli coverage
+- Reviewed root-level AGENTS.md instructions before implementing diplomacy changes.
+- Added defensive pact, liberation, regime change, punitive expedition, council authorization, and leader special generators plus War Council UI hints to surface the new reasons for war.
+- Ran `npm test -- --run src/lib/__tests__/casusBelliTriggers.test.ts` to verify each trigger produces an available Casus Belli.
