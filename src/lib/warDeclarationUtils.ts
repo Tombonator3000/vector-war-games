@@ -13,8 +13,8 @@ import type {
   WarGoalType,
   WarGoalParameters,
   CasusBelli,
-  PEACE_TERM_COSTS,
 } from '../types/casusBelli';
+import { PEACE_TERM_COSTS } from '../types/casusBelli';
 import type { Grievance, Claim } from '../types/grievancesAndClaims';
 import { useCasusBelli } from './casusBelliUtils';
 import { createGrievance } from './grievancesAndClaimsUtils';

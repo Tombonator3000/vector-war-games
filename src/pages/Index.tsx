@@ -424,6 +424,8 @@ let draggingArmyRef: { current: { sourceId: string; armies: number } | null } = 
 let policySystemRef: ReturnType<typeof usePolicySystem> | null = null;
 let pandemicIntegrationEnabledRef = true;
 let bioWarfareEnabledRef = true;
+let pandemicStateRef: { casualtyTally?: number } | null = null;
+let plagueStateRef: { plagueCompletionStats?: { totalKills?: number } } | null = null;
 
 type NationalFocusSystemApi = ReturnType<typeof useNationalFocus>;
 
@@ -5908,7 +5910,7 @@ function aiTurn(n: Nation) {
     handleDefconChange(1, `${n.name} makes desperate plea for de-escalation to avoid nuclear war`, 'ai', {
       onAudioTransition: AudioSys.handleDefconTransition,
       onLog: log,
-      onNewsItem: (cat, msg) => addNewsItem(cat, msg, 'critical'),
+      onNewsItem: (cat, msg) => window.__gameAddNewsItem?.(cat, msg, 'critical'),
       onUpdateDisplay: updateDisplay,
       onShowModal: setDefconChangeEvent,
     });
@@ -5928,7 +5930,7 @@ function aiTurn(n: Nation) {
       handleDefconChange(-1, messages[Math.floor(Math.random() * messages.length)], 'ai', {
         onAudioTransition: AudioSys.handleDefconTransition,
         onLog: log,
-        onNewsItem: addNewsItem,
+        onNewsItem: (cat, msg, prio) => window.__gameAddNewsItem?.(cat, msg, prio),
         onUpdateDisplay: updateDisplay,
         onShowModal: setDefconChangeEvent,
       });
@@ -5949,7 +5951,7 @@ function aiTurn(n: Nation) {
       handleDefconChange(1, messages[Math.floor(Math.random() * messages.length)], 'ai', {
         onAudioTransition: AudioSys.handleDefconTransition,
         onLog: log,
-        onNewsItem: (cat, msg) => addNewsItem(cat, msg, S.defcon <= 2 ? 'urgent' : 'important'),
+        onNewsItem: (cat, msg) => window.__gameAddNewsItem?.(cat, msg, S.defcon <= 2 ? 'urgent' : 'important'),
         onUpdateDisplay: updateDisplay,
         onShowModal: setDefconChangeEvent,
       });
@@ -6247,7 +6249,7 @@ function endTurn() {
               cabinetApproval: effects.cabinetApprovalModifier || 0,
               instability: effects.instabilityModifier || 0,
             };
-            governanceApiRef.applyDelta(player.id, delta);
+            governanceApiRef.applyGovernanceDelta(player.id, delta);
           }
         }
 
@@ -6307,7 +6309,7 @@ function endTurn() {
 
         if (currentGoldPenalty !== previousGoldPenalty) {
           if (currentGoldPenalty > 0) {
-            addNewsItem(
+            window.__gameAddNewsItem?.(
               'diplomatic',
               `${playerNationName} loses ${currentGoldPenalty} gold per turn to foreign sanctions.`,
               'important',
@@ -6318,7 +6320,7 @@ function endTurn() {
               variant: 'destructive',
             });
           } else if (previousGoldPenalty > 0) {
-            addNewsItem(
+            window.__gameAddNewsItem?.(
               'diplomatic',
               `Sanctions ease and ${playerNationName} regains trade revenues.`,
               'important',
@@ -6332,7 +6334,7 @@ function endTurn() {
 
         if (currentAidGold !== previousAidGold) {
           if (currentAidGold > 0) {
-            addNewsItem(
+            window.__gameAddNewsItem?.(
               'diplomatic',
               `${playerNationName} receives ${currentAidGold} gold per turn from aid coalitions.`,
               'info',
@@ -6343,7 +6345,7 @@ function endTurn() {
               variant: 'success',
             });
           } else if (previousAidGold > 0) {
-            addNewsItem(
+            window.__gameAddNewsItem?.(
               'diplomatic',
               `Aid shipments wind down for ${playerNationName}.`,
               'info',
@@ -6667,8 +6669,8 @@ function endTurn() {
       }
 
       if (pandemicIntegrationEnabledRef || bioWarfareEnabledRef) {
-        const globalPandemicCasualties = pandemicState?.casualtyTally ?? 0;
-        const plagueKillTotal = plagueState?.plagueCompletionStats?.totalKills ?? 0;
+        const globalPandemicCasualties = pandemicStateRef?.casualtyTally ?? 0;
+        const plagueKillTotal = plagueStateRef?.plagueCompletionStats?.totalKills ?? 0;
         const hasTurnCasualties = casualtyEntries.some(([, value]) => (value ?? 0) > 0);
 
         if (hasTurnCasualties || globalPandemicCasualties > 0 || plagueKillTotal > 0) {
@@ -8271,6 +8273,15 @@ export default function NoradVector() {
   const previousLabTierRef = useRef<BioLabTier>(labFacility.tier);
   const casualtyAlertTrackerRef = useRef(createCasualtyAlertTracker());
 
+  // Keep module-level refs in sync with hook state for use in endTurn()
+  useEffect(() => {
+    pandemicStateRef = pandemicState;
+  }, [pandemicState]);
+
+  useEffect(() => {
+    plagueStateRef = plagueState;
+  }, [plagueState]);
+
   const pandemicCasualtyTally = pandemicState?.casualtyTally ?? 0;
   const plagueTotalKills = plagueState?.plagueCompletionStats?.totalKills ?? 0;
   const nonPandemicCasualtyTally = GameStateManager.getStatistics().nonPandemicCasualties ?? 0;
@@ -8596,7 +8607,7 @@ export default function NoradVector() {
   const politicalFactions = usePoliticalFactions({
     currentTurn: S.turn,
     onFactionDemand: (nationId, demand) => {
-      const nation = getNationById(nationId);
+      const nation = getNationById(nations, nationId);
       const severityLabel = demand.severity === 'ultimatum'
         ? 'ULTIMATUM'
         : demand.severity === 'demand'
@@ -8615,7 +8626,7 @@ export default function NoradVector() {
       }
     },
     onCoupAttempt: (nationId, coup) => {
-      const nation = getNationById(nationId);
+      const nation = getNationById(nations, nationId);
       const message = `⚠️ Coup plotting detected in ${nation?.name ?? 'unknown nation'} (success chance ${Math.round(coup.successChance)}%)`;
       log(message, 'warning');
       if (nation?.isPlayer) {
@@ -8628,7 +8639,7 @@ export default function NoradVector() {
       }
     },
     onCoalitionShift: (nationId, factionId, joined) => {
-      const nation = getNationById(nationId);
+      const nation = getNationById(nations, nationId);
       const direction = joined ? 'joined' : 'left';
       log(`Faction ${factionId} has ${direction} the ruling coalition in ${nation?.name ?? 'unknown nation'}.`, 'info');
     },
@@ -8641,7 +8652,7 @@ export default function NoradVector() {
     currentTurn: S.turn,
     onMoraleChange: (territoryId, oldMorale, newMorale) => {
       const territory = territoryMap.get(territoryId);
-      const controllingNation = territory?.controllingNationId ? getNationById(territory.controllingNationId) : null;
+      const controllingNation = territory?.controllingNationId ? getNationById(nations, territory.controllingNationId) : null;
       if (!controllingNation?.isPlayer) {
         return;
       }
@@ -8659,7 +8670,7 @@ export default function NoradVector() {
     },
     onProtestStart: (territoryId, protest) => {
       const territory = territoryMap.get(territoryId);
-      const controllingNation = territory?.controllingNationId ? getNationById(territory.controllingNationId) : null;
+      const controllingNation = territory?.controllingNationId ? getNationById(nations, territory.controllingNationId) : null;
       const cause = protest.causes[0]?.replace(/_/g, ' ') ?? 'unrest';
       const message = `Protest erupts in ${territory?.name ?? 'unknown territory'} over ${cause}.`;
       log(message, 'warning');
@@ -8674,7 +8685,7 @@ export default function NoradVector() {
     },
     onStrikeStart: (territoryId, strike) => {
       const territory = territoryMap.get(territoryId);
-      const controllingNation = territory?.controllingNationId ? getNationById(territory.controllingNationId) : null;
+      const controllingNation = territory?.controllingNationId ? getNationById(nations, territory.controllingNationId) : null;
       const demandType = strike.strikerDemands[0]?.type.replace(/_/g, ' ') ?? 'grievances';
       const message = `Workers strike in ${territory?.name ?? 'unknown territory'} over ${demandType}.`;
       log(message, 'warning');
@@ -8683,7 +8694,7 @@ export default function NoradVector() {
       }
     },
     onCivilWarRisk: (nationId, risk) => {
-      const nation = getNationById(nationId);
+      const nation = getNationById(nations, nationId);
       if (!nation?.isPlayer) {
         return;
       }
@@ -8703,8 +8714,8 @@ export default function NoradVector() {
   const mediaWarfare = useMediaWarfare({
     currentTurn: S.turn,
     onCampaignStarted: (campaign) => {
-      const source = getNationById(campaign.sourceNationId);
-      const target = getNationById(campaign.targetNationId);
+      const source = getNationById(nations, campaign.sourceNationId);
+      const target = getNationById(nations, campaign.targetNationId);
       const description = `${campaign.type.replace(/_/g, ' ')} campaign launched by ${source?.name ?? 'Unknown'} targeting ${target?.name ?? 'Unknown'}.`;
       log(description, 'info');
       if (source?.isPlayer || target?.isPlayer) {
@@ -8712,8 +8723,8 @@ export default function NoradVector() {
       }
     },
     onCampaignExposed: (campaign) => {
-      const source = getNationById(campaign.sourceNationId);
-      const target = getNationById(campaign.targetNationId);
+      const source = getNationById(nations, campaign.sourceNationId);
+      const target = getNationById(nations, campaign.targetNationId);
       const message = `Propaganda campaign from ${source?.name ?? 'Unknown'} exposed by ${target?.name ?? 'Unknown'}!`;
       log(message, 'warning');
       addNewsItem('media', message, 'important');
@@ -8726,7 +8737,7 @@ export default function NoradVector() {
       }
     },
     onMediaEvent: (event) => {
-      const nation = getNationById(event.nationId);
+      const nation = getNationById(nations, event.nationId);
       if (!nation) {
         return;
       }
