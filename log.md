@@ -3445,3 +3445,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Reviewed root-level AGENTS.md guidance and logging requirement before adjustments.
 - Added toast/news outcomes for conventional attacks and movements, gating battle summaries on dice rolls and refreshing the map panel after actions.
 2025-11-17T22:58:53Z - Implemented per-turn reinforcement pools and UI to consume them progressively in the conventional warfare flow (root-level AGENTS.md reviewed first).
+2025-11-17T23:07:00Z - Reviewed root AGENTS.md guidance and scoped enhanced AI action loop refactor priorities (cyber, immigration, conventional).
+2025-11-17T23:07:25Z - Refactored enhancedAIActions to gate cyber, immigration, and conventional checks independently with sequential logging and multi-action support.
+2025-11-17T23:08:05Z - Committed enhanced AI action sequencing updates to repository.

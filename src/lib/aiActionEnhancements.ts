@@ -488,34 +488,58 @@ export function enhancedAIActions(
   log: (message: string) => void
 ): boolean {
   const personality = aiNation.ai || 'balanced';
+  let actionExecuted = false;
 
-  // Random decision tree for action selection
-  const r = Math.random();
+  log(
+    `[AI:${aiNation.name}] Evaluating enhanced actions (priority: cyber → immigration → conventional)`
+  );
 
-  // 1. Cyber warfare (10-25% chance based on personality)
-  const cyberChance = personality === 'trickster' ? 0.25 : 0.10;
-  if (r < cyberChance) {
-    if (aiCyberWarfareAction(aiNation, nations, cyberWarfareHook, log)) {
-      return true;
+  const branches: {
+    name: string;
+    chance: number;
+    attempt: () => boolean;
+  }[] = [
+    {
+      name: 'cyber',
+      chance: personality === 'trickster' ? 0.25 : 0.1,
+      attempt: () => aiCyberWarfareAction(aiNation, nations, cyberWarfareHook, log),
+    },
+    {
+      name: 'immigration',
+      chance: personality === 'trickster' ? 0.15 : 0.08,
+      attempt: () => aiImmigrationAction(aiNation, nations, costs, log),
+    },
+    {
+      name: 'conventional',
+      chance:
+        turn > 15
+          ? personality === 'aggressive'
+            ? 0.35
+            : personality === 'balanced'
+              ? 0.2
+              : 0.1
+          : 0.05,
+      attempt: () =>
+        aiConventionalWarfareAction(aiNation, nations, conventionalWarfareHook, turn, log),
+    },
+  ];
+
+  for (const branch of branches) {
+    const roll = Math.random();
+    log(`[AI:${aiNation.name}] ${branch.name} check (roll=${roll.toFixed(2)} threshold=${branch.chance})`);
+
+    if (roll >= branch.chance) {
+      continue;
+    }
+
+    const executed = branch.attempt();
+    if (executed) {
+      actionExecuted = true;
+      log(`[AI:${aiNation.name}] ${branch.name} action executed during enhanced loop.`);
+    } else {
+      log(`[AI:${aiNation.name}] ${branch.name} action skipped after evaluation (no valid target or hook).`);
     }
   }
 
-  // 2. Immigration (8-15% chance)
-  const immigrationChance = personality === 'trickster' ? 0.15 : 0.08;
-  if (r < 0.10 + immigrationChance) {
-    if (aiImmigrationAction(aiNation, nations, costs, log)) {
-      return true;
-    }
-  }
-
-  // 3. Conventional warfare (15-35% chance based on personality and era)
-  const conventionalChance =
-    turn > 15 ? (personality === 'aggressive' ? 0.35 : personality === 'balanced' ? 0.20 : 0.10) : 0.05;
-  if (r < 0.20 + conventionalChance) {
-    if (aiConventionalWarfareAction(aiNation, nations, conventionalWarfareHook, turn, log)) {
-      return true;
-    }
-  }
-
-  return false;
+  return actionExecuted;
 }
