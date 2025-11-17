@@ -42,6 +42,27 @@ describe('useFlashpoints', () => {
     expect(result.current.activeFlashpoint).toBeNull();
   });
 
+  it('still pulls from the base flashpoint pool when not in the Cuban Crisis scenario', () => {
+    localStorage.setItem('norad_selected_scenario', 'coldWar');
+
+    const randomSpy = vi.spyOn(Math, 'random');
+    const { result } = renderHook(() => useFlashpoints());
+
+    // Force a trigger and pick the first template
+    randomSpy.mockReturnValueOnce(0.01);
+    randomSpy.mockReturnValueOnce(0);
+
+    let flashpoint: FlashpointEvent | null = null;
+    act(() => {
+      flashpoint = result.current.triggerRandomFlashpoint(1, 5);
+    });
+
+    expect(flashpoint).not.toBeNull();
+    expect(flashpoint?.title).toBe('FLASH TRAFFIC: Nuclear Materials Stolen');
+    expect(flashpoint?.followUpId).toBeUndefined();
+    expect(result.current.activeFlashpoint?.title).toBe('FLASH TRAFFIC: Nuclear Materials Stolen');
+  });
+
   it('triggers and resolves flashpoints deterministically and tracks history', () => {
     const randomSpy = vi.spyOn(Math, 'random');
     const { result } = renderHook(() => useFlashpoints());
