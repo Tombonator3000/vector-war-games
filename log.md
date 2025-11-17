@@ -3433,3 +3433,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Refactored `useFogOfWar` to require an injected `SeededRandom` source instead of `Math.random`, using the RNG context when available (`src/hooks/useFogOfWar.ts`).
 - Passed the shared RNG from `useRNG` into fog-of-war calls on the NORAD page and added deterministic RNG coverage for the hook (`src/pages/Index.tsx`, `src/hooks/__tests__/useFogOfWar.test.ts`).
 2025-11-17T22:07:58Z - Guarded policy processing errors from blocking national focus progression by wrapping policy effects in a try/finally so focus bars and news advance each turn (`src/pages/Index.tsx`).
+### 2025-11-17T22:15:57Z - Verified base flashpoints remain available outside Cuban Crisis
+- Added a regression test to the flashpoint hook to confirm non-Cuban scenarios still draw from the standard flashpoint pool (`src/hooks/__tests__/useFlashpoints.test.ts`).
+- Ran `npx vitest run src/hooks/__tests__/useFlashpoints.test.ts` to validate flashpoint triggering across scenarios.
