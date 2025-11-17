@@ -3433,3 +3433,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Refactored `useFogOfWar` to require an injected `SeededRandom` source instead of `Math.random`, using the RNG context when available (`src/hooks/useFogOfWar.ts`).
 - Passed the shared RNG from `useRNG` into fog-of-war calls on the NORAD page and added deterministic RNG coverage for the hook (`src/pages/Index.tsx`, `src/hooks/__tests__/useFogOfWar.test.ts`).
 2025-11-17T22:07:58Z - Guarded policy processing errors from blocking national focus progression by wrapping policy effects in a try/finally so focus bars and news advance each turn (`src/pages/Index.tsx`).
+### 2025-11-17T22:14:07Z - Added treaty visibility to Leaders Screen
+- Reviewed root-level AGENTS.md guidance and logging requirement before coding.
+- Derived alliance, truce (with remaining turns), war, and peace states from `playerNation.treaties` and surfaced them as badges on the Leaders Screen so diplomatic status is visible beside each leader.
