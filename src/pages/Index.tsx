@@ -9975,8 +9975,8 @@ export default function NoradVector() {
           const urgency = milestone >= 90 ? 'CRITICAL' : milestone >= 70 ? 'WARNING' : 'NOTICE';
 
           toast({
-            title: `${emoji} ${urgency}: ${path.name} Victory`,
-            description: `You are ${currentProgress}% toward ${path.name} victory! ${milestone >= 70 ? 'Press your advantage!' : 'Keep pushing forward.'}`,
+            title: `${emoji} ${urgency}: ${path.name}`,
+            description: `You are ${currentProgress}% toward ${path.name}! ${milestone >= 70 ? 'Press your advantage!' : 'Keep pushing forward.'}`,
             duration: milestone >= 70 ? 8000 : 5000,
           });
 
