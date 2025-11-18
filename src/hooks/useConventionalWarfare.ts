@@ -71,11 +71,14 @@ export interface TerritoryState {
   };
 }
 
-export interface DiceRollResult {
-  attackerDice: number[];
-  defenderDice: number[];
+export interface StrengthExchangeLog {
+  round: number;
+  attackerStrength: number;
+  defenderStrength: number;
   attackerLosses: number;
   defenderLosses: number;
+  attackerRemaining: number;
+  defenderRemaining: number;
 }
 
 export interface EngagementLogEntry {
@@ -88,7 +91,7 @@ export interface EngagementLogEntry {
   casualties: Record<string, number>;
   instabilityDelta: Record<string, number>;
   productionDelta: Record<string, number>;
-  diceRolls?: DiceRollResult[]; // Track all dice rolls in battle
+  strengthExchanges?: StrengthExchangeLog[]; // Track each combat exchange in battle
   // Nation IDs involved in the engagement
   attackerNationId?: string;
   defenderNationId?: string;
@@ -435,72 +438,32 @@ const templateLookup = UNIT_TEMPLATES.reduce<Record<string, ConventionalUnitTemp
   return acc;
 }, {});
 
-// Risk-style dice rolling combat system
-function rollDice(count: number, rng: { next: () => number }): number[] {
-  return Array.from({ length: count }, () => Math.floor(rng.next() * 6) + 1)
-    .sort((a, b) => b - a); // Sort highest to lowest
-}
-
-function resolveDiceRoll(
-  attackerArmies: number,
-  defenderArmies: number,
-  attackBonus: number,
-  defenseBonus: number,
-  rng: { next: () => number },
-): DiceRollResult {
-  // Attacker rolls up to 3 dice, defender up to 2 (Risk rules)
-  const attackDiceCount = Math.min(3, attackerArmies);
-  const defendDiceCount = Math.min(2, defenderArmies);
-
-  const attackRolls = rollDice(attackDiceCount, rng);
-  const defendRolls = rollDice(defendDiceCount, rng);
-
-  // Apply unit type bonuses to dice
-  const bonusedAttackRolls = attackRolls.map(die => Math.min(6, die + attackBonus));
-  const bonusedDefendRolls = defendRolls.map(die => Math.min(6, die + defenseBonus));
-
-  // Compare highest dice (ties favor defender in Risk)
-  let attackerLosses = 0;
-  let defenderLosses = 0;
-
-  const comparisons = Math.min(bonusedAttackRolls.length, bonusedDefendRolls.length);
-  for (let i = 0; i < comparisons; i++) {
-    if (bonusedAttackRolls[i] > bonusedDefendRolls[i]) {
-      defenderLosses++;
-    } else {
-      attackerLosses++;
-    }
-  }
-
-  return {
-    attackerDice: bonusedAttackRolls,
-    defenderDice: bonusedDefendRolls,
-    attackerLosses,
-    defenderLosses,
-  };
-}
-
-// Calculate unit type bonuses for a territory
-function getTerritoryBonuses(territory: TerritoryState): { attack: number; defense: number } {
+function getTerritoryBonuses(
+  territory: TerritoryState,
+): { attack: number; defense: number; support: number } {
   let attackBonus = 0;
   let defenseBonus = 0;
+  let supportBonus = 0;
 
-  // Air units give +1 attack per 3 air units
-  if (territory.unitComposition.air >= 3) {
-    attackBonus += Math.floor(territory.unitComposition.air / 3) * UNIT_COMBAT_BONUS.air.attack;
+  // Air units provide sustained strike pressure
+  if (territory.unitComposition.air >= 2) {
+    attackBonus += Math.floor(territory.unitComposition.air / 2) * (UNIT_COMBAT_BONUS.air.attack + 0.5);
+    supportBonus += Math.floor(territory.unitComposition.air / 3) * 0.5;
   }
 
-  // Navy units give +1 defense per 2 navy units
+  // Naval formations bolster area denial and integrated air defense
   if (territory.unitComposition.navy >= 2) {
-    defenseBonus += Math.floor(territory.unitComposition.navy / 2) * UNIT_COMBAT_BONUS.navy.defense;
+    defenseBonus += Math.floor(territory.unitComposition.navy / 2) * (UNIT_COMBAT_BONUS.navy.defense + 0.5);
+    supportBonus += Math.floor(territory.unitComposition.navy / 3) * 0.5;
   }
 
-  // Drone units give +1 attack per 2 drone units (precision strikes)
+  // Drone swarms add precision strike value and ISR
   if (territory.unitComposition.drone >= 2) {
-    attackBonus += Math.floor(territory.unitComposition.drone / 2) * UNIT_COMBAT_BONUS.drone.attack;
+    attackBonus += Math.floor(territory.unitComposition.drone / 2) * (UNIT_COMBAT_BONUS.drone.attack + 0.25);
+    supportBonus += Math.floor(territory.unitComposition.drone / 2) * 0.75;
   }
 
-  return { attack: attackBonus, defense: defenseBonus };
+  return { attack: attackBonus, defense: defenseBonus, support: supportBonus };
 }
 
 // Region definitions for reinforcement bonuses (like Risk continents)
@@ -841,7 +804,10 @@ export function useConventionalWarfare({
     [getSupplyModifier, getTemplateProfile, state.units],
   );
 
-  const toDiceBonus = useCallback((value: number) => Math.max(0, Math.min(3, Math.round(value / 4))), []);
+  const calculateCombinedArmsBonus = useCallback(
+    (value: number) => Number(safeClamp(value * 0.12, 0, 8).toFixed(2)),
+    [],
+  );
 
   const territories = useMemo(() => state.territories, [state.territories]);
 
@@ -1388,29 +1354,57 @@ export function useConventionalWarfare({
       const defenseBonuses = getTerritoryBonuses(toTerritory);
       const attackerCombat = computeTerritoryCombatProfile(fromTerritory, attackerId);
       const defenderCombat = computeTerritoryCombatProfile(toTerritory, defenderId);
-      const effectiveAttackBonus = attackBonuses.attack + toDiceBonus(attackerCombat.attack + attackerCombat.support * 0.5);
-      const effectiveDefenseBonus = defenseBonuses.defense + toDiceBonus(defenderCombat.defense + defenderCombat.support * 0.5);
 
-      // Resolve combat using Risk-style dice until one side is eliminated or attacker retreats
+      const attackerBaseStrength =
+        attackerCombat.attack + attackerCombat.support + attackBonuses.attack + attackBonuses.support;
+      const defenderBaseStrength =
+        defenderCombat.defense + defenderCombat.support + defenseBonuses.defense + defenseBonuses.support;
+
+      const attackerCombinedBonus = calculateCombinedArmsBonus(attackerBaseStrength + attackingArmies);
+      const defenderCombinedBonus = calculateCombinedArmsBonus(defenderBaseStrength + toTerritory.armies);
+
+      // Resolve combat using deterministic strength exchanges capped per round
       let remainingAttackers = attackingArmies;
       let remainingDefenders = toTerritory.armies;
-      const diceRolls: DiceRollResult[] = [];
+      const strengthExchanges: StrengthExchangeLog[] = [];
       const maxRounds = 20; // Prevent infinite loops
+      const MAX_CASUALTY_RATE = 0.38;
+      const MIN_CASUALTY_RATE = 0.06;
 
       for (let round = 0; round < maxRounds && remainingAttackers > 0 && remainingDefenders > 0; round++) {
-        const rollResult = resolveDiceRoll(
-          remainingAttackers,
-          remainingDefenders,
-          effectiveAttackBonus,
-          effectiveDefenseBonus,
-          rng,
+        const attackerStrength = attackerBaseStrength + attackerCombinedBonus + remainingAttackers;
+        const defenderStrength = defenderBaseStrength + defenderCombinedBonus + remainingDefenders;
+        const ratio = safeDivide(attackerStrength, defenderStrength);
+
+        const attackerLossRate = safeClamp(0.2 / Math.max(0.5, ratio), MIN_CASUALTY_RATE, MAX_CASUALTY_RATE);
+        const defenderLossRate = safeClamp(0.2 * Math.max(0.5, ratio), MIN_CASUALTY_RATE, MAX_CASUALTY_RATE);
+
+        const attackerLosses = Math.max(
+          1,
+          Math.min(remainingAttackers, Math.round(remainingAttackers * attackerLossRate)),
+        );
+        const defenderLosses = Math.max(
+          1,
+          Math.min(remainingDefenders, Math.round(remainingDefenders * defenderLossRate)),
         );
 
-        diceRolls.push(rollResult);
-        remainingAttackers -= rollResult.attackerLosses;
-        remainingDefenders -= rollResult.defenderLosses;
+        remainingAttackers -= attackerLosses;
+        remainingDefenders -= defenderLosses;
+
+        strengthExchanges.push({
+          round: round + 1,
+          attackerStrength: Number(attackerStrength.toFixed(2)),
+          defenderStrength: Number(defenderStrength.toFixed(2)),
+          attackerLosses,
+          defenderLosses,
+          attackerRemaining: remainingAttackers,
+          defenderRemaining: remainingDefenders,
+        });
       }
 
+      const initialAttackerStrength = attackerBaseStrength + attackerCombinedBonus + attackingArmies;
+      const initialDefenderStrength = defenderBaseStrength + defenderCombinedBonus + toTerritory.armies;
+      const strengthRatio = Number(safeDivide(initialAttackerStrength, initialDefenderStrength).toFixed(2));
       const attackerVictory = remainingDefenders === 0;
       const attackerLosses = attackingArmies - remainingAttackers;
       const defenderLosses = toTerritory.armies - remainingDefenders;
@@ -1481,17 +1475,17 @@ export function useConventionalWarfare({
           type: 'border',
           outcome: attackerVictory ? 'attacker' : 'defender',
           summary: attackerVictory
-            ? `${attackerNation?.name || attackerId} conquers ${toTerritory.name}! (${diceRolls.length} rounds)`
-            : `${defenderNation?.name || defenderId} holds ${toTerritory.name}! (${diceRolls.length} rounds)`,
+            ? `${attackerNation?.name || attackerId} overruns ${toTerritory.name} after ${strengthExchanges.length} rounds (ratio ${strengthRatio.toFixed(2)}:1)`
+            : `${defenderNation?.name || defenderId} holds ${toTerritory.name} after ${strengthExchanges.length} rounds (ratio ${strengthRatio.toFixed(2)}:1)`,
           attackerNationId: attackerId,
           defenderNationId: defenderId,
           attackerCasualties: attackerLosses,
           defenderCasualties: defenderLosses,
-          rounds: diceRolls.length,
+          rounds: strengthExchanges.length,
           casualties,
           instabilityDelta,
           productionDelta,
-          diceRolls,
+          strengthExchanges,
         }, rng);
       });
 
@@ -1516,7 +1510,7 @@ export function useConventionalWarfare({
       return {
         success: true,
         attackerVictory,
-        diceRolls,
+        strengthExchanges,
         attackerLosses,
         defenderLosses,
         attackerCombatPower: Number((attackerCombat.attack + attackerCombat.support).toFixed(2)),
@@ -1533,6 +1527,7 @@ export function useConventionalWarfare({
       currentTurn,
       getNation,
       computeTerritoryCombatProfile,
+      calculateCombinedArmsBonus,
       moveArmies,
       onConsumeAction,
       onUpdateDisplay,

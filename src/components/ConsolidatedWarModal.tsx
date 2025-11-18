@@ -7,14 +7,14 @@ import type { LocalNation } from '@/state';
 import { PlayerManager } from '@/state';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
-import { BattleResultDisplay } from '@/components/DiceRoller';
+import { BattleStrengthSummary } from '@/components/StrengthExchangeLog';
 import { RESEARCH_LOOKUP } from '@/lib/gameConstants';
 import type {
   TerritoryState,
   ConventionalUnitTemplate,
   EngagementLogEntry,
   NationConventionalProfile,
-  DiceRollResult,
+  StrengthExchangeLog,
 } from '@/hooks/useConventionalWarfare';
 import { createDefaultNationConventionalProfile } from '@/hooks/useConventionalWarfare';
 import type { ArmyGroupSummary } from '@/types/militaryTemplates';
@@ -88,7 +88,7 @@ export function ConsolidatedWarModal({
   const [activeTab, setActiveTab] = useState('council');
   const localPlayer = PlayerManager.get() as LocalNation | null;
   const [lastBattleResult, setLastBattleResult] = useState<{
-    diceRolls: DiceRollResult[];
+    exchanges: StrengthExchangeLog[];
     attackerName: string;
     defenderName: string;
     territory: string;
@@ -171,9 +171,9 @@ export function ConsolidatedWarModal({
       result.attackerVictory ? 'important' : 'notable',
     );
 
-    if (result?.diceRolls?.length) {
+    if (result?.strengthExchanges?.length) {
       setLastBattleResult({
-        diceRolls: result.diceRolls,
+        exchanges: result.strengthExchanges,
         attackerName,
         defenderName,
         territory: territoryName,
@@ -291,8 +291,8 @@ export function ConsolidatedWarModal({
                   Clear
                 </button>
               </div>
-              <BattleResultDisplay
-                diceRolls={lastBattleResult.diceRolls}
+              <BattleStrengthSummary
+                exchanges={lastBattleResult.exchanges}
                 attackerName={lastBattleResult.attackerName}
                 defenderName={lastBattleResult.defenderName}
               />
@@ -337,7 +337,7 @@ export function ConsolidatedWarModal({
                   const defenderCasualties = log.defenderCasualties ?? (log.defenderNationId
                     ? log.casualties?.[log.defenderNationId]
                     : 0) ?? 0;
-                  const rounds = log.rounds ?? log.diceRolls?.length;
+                  const rounds = log.rounds ?? log.strengthExchanges?.length;
 
                   return (
                     <div
@@ -432,7 +432,7 @@ export function ConsolidatedWarModal({
                     ? log.casualties?.[log.defenderNationId]
                     : 0) ?? 0;
                   const totalCasualties = attackerCasualties + defenderCasualties;
-                  const rounds = log.rounds ?? log.diceRolls?.length;
+                  const rounds = log.rounds ?? log.strengthExchanges?.length;
                   const isPlayerInvolved =
                     log.attackerNationId === localPlayer.id ||
                     log.defenderNationId === localPlayer.id;
