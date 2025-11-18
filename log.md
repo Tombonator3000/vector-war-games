@@ -3473,3 +3473,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T07:18:00Z - Reviewed root AGENTS.md guidance and reduced Bio-Lab tier 3 and 4 production costs (200/300) while keeping uranium at 50/100.
 2025-11-18T07:17:53Z - Reworked conventional combat resolution to use strength-based casualty exchanges with capped per-round losses.
 2025-11-18T07:17:54Z - Updated engagement logging and UI panels to show strength exchanges instead of dice rolls.
+### 2025-11-18T08:50:00Z - Raised toast viewport z-index for overlay priority
+- Reviewed root-level AGENTS.md guidance and logging requirement before adjusting toast layering.
+- Increased the ToastViewport z-index above modal/sheet layers while keeping existing responsive positioning for mobile and desktop breakpoints.
+- Manually inspected toast classnames to confirm stacking change should place notifications above dialogs and sheets.
