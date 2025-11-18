@@ -1046,7 +1046,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
           <div className="bg-gradient-to-r from-yellow-900 to-yellow-700 p-4 flex justify-between items-center rounded-t-lg">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <TrendingUp className="w-6 h-6" />
-              Civilization Status Report
+              Status Report
             </h2>
             <div className="flex items-center gap-3">
               <button
