@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-18T07:51:28Z - Toast overlay z-index elevation
+- Reviewed toast providers to ensure notifications render above modals and map overlays.
+- Raised the Radix toast viewport and Sonner toaster containers to `z-[9999]` so triggered toasts remain visible on top of all other UI layers.
+- No automated tests run during this update.
+
 ### 2025-11-17T23:20:33Z - Conventional AI region completion ownership fix
 - Updated `wouldCompleteRegion` to validate ownership across all region territories using the full territory map so bonuses only trigger when the AI would control every member after the capture.
 - Passed the territory collection into attack evaluation so AI scoring correctly detects attacks that finish a regional bonus opportunity.
