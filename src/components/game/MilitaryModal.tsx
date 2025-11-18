@@ -3,14 +3,14 @@ import type { LocalNation } from '@/state';
 import { PlayerManager } from '@/state';
 import { ConventionalForcesPanel } from '@/components/ConventionalForcesPanel';
 import { TerritoryMapPanel } from '@/components/TerritoryMapPanel';
-import { BattleResultDisplay } from '@/components/DiceRoller';
+import { BattleStrengthSummary } from '@/components/StrengthExchangeLog';
 import { RESEARCH_LOOKUP } from '@/lib/gameConstants';
 import type {
   TerritoryState,
   ConventionalUnitTemplate,
   EngagementLogEntry,
   NationConventionalProfile,
-  DiceRollResult,
+  StrengthExchangeLog,
 } from '@/hooks/useConventionalWarfare';
 import { createDefaultNationConventionalProfile } from '@/hooks/useConventionalWarfare';
 
@@ -56,7 +56,7 @@ export function MilitaryModal({
 }: MilitaryModalProps): ReactNode {
   const player = PlayerManager.get() as LocalNation | null;
   const [lastBattleResult, setLastBattleResult] = useState<{
-    diceRolls: DiceRollResult[];
+    exchanges: StrengthExchangeLog[];
     attackerName: string;
     defenderName: string;
     territory: string;
@@ -125,10 +125,10 @@ export function MilitaryModal({
       return;
     }
 
-    // Show dice roll results
-    if (result.diceRolls && result.diceRolls.length > 0) {
+    // Show detailed strength exchanges
+    if (result.strengthExchanges && result.strengthExchanges.length > 0) {
       setLastBattleResult({
-        diceRolls: result.diceRolls,
+        exchanges: result.strengthExchanges,
         attackerName: player.name,
         defenderName: toTerritory.controllingNationId || 'Neutral',
         territory: toTerritory.name,
@@ -138,14 +138,14 @@ export function MilitaryModal({
     toast({
       title: result.attackerVictory ? '🎯 Territory conquered!' : '❌ Attack repelled',
       description: result.attackerVictory
-        ? `${toTerritory.name} captured after ${result.diceRolls?.length || 0} rounds! Lost ${result.attackerLosses} armies.`
+        ? `${toTerritory.name} captured after ${result.strengthExchanges?.length || 0} rounds! Lost ${result.attackerLosses} armies.`
         : `Failed to capture ${toTerritory.name}. Lost ${result.attackerLosses} armies.`,
     });
 
     addNewsItem(
       'military',
       result.attackerVictory
-        ? `${player.name} conquers ${toTerritory.name} (${result.diceRolls?.length || 0} rounds)`
+        ? `${player.name} conquers ${toTerritory.name} (${result.strengthExchanges?.length || 0} rounds)`
         : `${player.name} fails to take ${toTerritory.name}`,
       result.attackerVictory ? 'critical' : 'urgent'
     );
@@ -219,8 +219,8 @@ export function MilitaryModal({
               Clear
             </button>
           </div>
-          <BattleResultDisplay
-            diceRolls={lastBattleResult.diceRolls}
+          <BattleStrengthSummary
+            exchanges={lastBattleResult.exchanges}
             attackerName={lastBattleResult.attackerName}
             defenderName={lastBattleResult.defenderName}
           />
@@ -272,9 +272,9 @@ export function MilitaryModal({
                 <span>{logEntry.summary}</span>
                 <span className="text-gray-400">Turn {logEntry.turn}</span>
               </div>
-              {logEntry.diceRolls && logEntry.diceRolls.length > 0 && (
+              {logEntry.strengthExchanges && logEntry.strengthExchanges.length > 0 && (
                 <div className="mt-2 text-xs text-cyan-400">
-                  🎲 {logEntry.diceRolls.length} combat rounds
+                  ♜ {logEntry.strengthExchanges.length} strength exchanges
                 </div>
               )}
               <div className="mt-2 text-xs text-gray-500">
