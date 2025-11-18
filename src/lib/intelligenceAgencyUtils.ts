@@ -17,6 +17,17 @@ import type {
 } from '@/types/heartsOfIronPhase4';
 import type { SpyAgent } from '@/types/spySystem';
 import { generateId } from './idGenerator';
+import type { PolicyEffects } from '@/types/policy';
+
+function getPolicyEffectsForNation(nationId: string): PolicyEffects | null {
+  if (typeof window === 'undefined') return null;
+
+  const map = (window as any).__policyEffectsByNation as
+    | Record<string, PolicyEffects>
+    | undefined;
+
+  return map?.[nationId] ?? null;
+}
 
 /**
  * Initialize intelligence agency for a nation
@@ -283,6 +294,9 @@ function calculateBaseSuccessChance(
 
   chance += operationBonus;
 
+  const policyBonus = getPolicyEffectsForNation(agency.nationId)?.espionageSuccessBonus ?? 0;
+  chance += policyBonus;
+
   return Math.min(95, Math.max(10, chance));
 }
 
@@ -369,12 +383,25 @@ export function executeIntelOperation(
   operatives: SpyAgent[]
 ): IntelOperationResult {
   // Roll for success
-  const successRoll = Math.random() * 100;
-  const success = successRoll <= operation.modifiedSuccessChance;
+  const attackerPolicy = getPolicyEffectsForNation(agency.nationId);
+  const defenderPolicy = getPolicyEffectsForNation(targetNation.id);
 
-  // Roll for detection
+  const counterIntelPenalty = defenderPolicy?.counterIntelBonus ?? 0;
+  const attackerCounterIntel = attackerPolicy?.counterIntelBonus ?? 0;
+
+  const adjustedSuccessChance = Math.min(
+    95,
+    Math.max(5, operation.modifiedSuccessChance - counterIntelPenalty)
+  );
+  const successRoll = Math.random() * 100;
+  const success = successRoll <= adjustedSuccessChance;
+
+  const adjustedDetectionRisk = Math.min(
+    95,
+    Math.max(5, operation.detectionRisk + counterIntelPenalty - attackerCounterIntel)
+  );
   const detectionRoll = Math.random() * 100;
-  const discovered = detectionRoll <= operation.detectionRisk;
+  const discovered = detectionRoll <= adjustedDetectionRisk;
 
   const result: IntelOperationResult = {
     success,
