@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-18T22:15:58Z - Audio manager import cleanup and build verification
+- Ran `npm run build` to surface bundling warnings, catching the reporter notice about mixing dynamic and static audio manager imports.
+- Updated `src/components/ui/button.tsx` to lazy-load and cache the audio manager on demand so button clicks no longer force a static import that defeats code-splitting.
+- Rebuilt with `npm run build` to ensure the reporter warning cleared; chunk size warnings persist as expected.
+
 ### 2025-11-18T15:47:18Z - DEFCON indicator styling update
 - Bound the top-bar DEFCON badge and value classes to live DEFCON levels with green, yellow, and red glow states.
 - Synced the indicator class updates to the existing display refresh so the HUD styling flips when hitting DEFCON 1.
