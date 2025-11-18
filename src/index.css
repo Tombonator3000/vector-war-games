@@ -417,6 +417,543 @@ body.theme-vectorclassic {
   color: #8fe1ff;
 }
 
+/* ============================================================
+   NORAD BUNKER THEME - Cheyenne Mountain Command Center
+   Military green (120,180,80), amber alerts (255,191,0), concrete grays
+   ============================================================ */
+body.theme-noradBunker {
+  background: linear-gradient(
+    180deg,
+    #1a2618 0%,
+    #0f1a0e 60%,
+    #0a120a 100%
+  );
+  color: #b8d4a0;
+  text-shadow: 0 0 8px rgba(120,180,80,0.2);
+}
+
+body.theme-noradBunker button,
+body.theme-noradBunker [role="button"],
+body.theme-noradBunker .command-button {
+  background: linear-gradient(135deg, #1a2a16, #0f1a0e);
+  color: #b8d4a0;
+  border: 2px solid rgba(120,180,80,0.6);
+  font-weight: 600;
+  text-shadow: 0 0 6px rgba(120,180,80,0.3);
+  box-shadow:
+    0 0 12px rgba(255,191,0,0.15),
+    inset 0 0 8px rgba(120,180,80,0.08);
+  transition: all 0.2s ease;
+}
+
+body.theme-noradBunker button:hover,
+body.theme-noradBunker [role="button"]:hover,
+body.theme-noradBunker .command-button:hover {
+  background: linear-gradient(135deg, #243018, #1a2416);
+  border-color: rgba(255,191,0,0.7);
+  box-shadow:
+    0 0 20px rgba(255,191,0,0.4),
+    0 4px 16px rgba(255,191,0,0.25),
+    inset 0 0 12px rgba(120,180,80,0.15);
+  text-shadow: 0 0 10px rgba(255,191,0,0.5);
+  transform: translateY(-2px) scale(1.01);
+}
+
+body.theme-noradBunker .hud-module,
+body.theme-noradBunker [data-ui-panel],
+body.theme-noradBunker .options-sheet {
+  background: rgba(20,30,18,0.92);
+  border: 2px solid rgba(120,180,80,0.5);
+  box-shadow:
+    0 0 16px rgba(255,191,0,0.2),
+    inset 0 0 16px rgba(50,60,48,0.4);
+}
+
+body.theme-noradBunker input,
+body.theme-noradBunker textarea,
+body.theme-noradBunker select {
+  background: #0f1a0e;
+  color: #b8d4a0;
+  border: 1px solid rgba(120,180,80,0.5);
+  text-shadow: 0 0 4px rgba(120,180,80,0.2);
+}
+
+body.theme-noradBunker input:focus,
+body.theme-noradBunker textarea:focus,
+body.theme-noradBunker select:focus {
+  outline: none;
+  border-color: rgba(255,191,0,0.6);
+  box-shadow: 0 0 12px rgba(255,191,0,0.3);
+}
+
+body.theme-noradBunker .theme-chip,
+body.theme-noradBunker .layout-chip {
+  background: #0f1a0e;
+  border: 2px solid rgba(120,180,80,0.5);
+  color: #b8d4a0;
+  box-shadow: 0 0 8px rgba(120,180,80,0.15);
+}
+
+body.theme-noradBunker .theme-chip.is-active,
+body.theme-noradBunker .layout-chip.is-active {
+  background: linear-gradient(135deg, #2a3a20, #1f2a18);
+  border-color: rgba(255,191,0,0.8);
+  box-shadow:
+    0 0 24px rgba(255,191,0,0.5),
+    0 0 40px rgba(255,191,0,0.3),
+    inset 0 0 16px rgba(120,180,80,0.2);
+  text-shadow: 0 0 10px rgba(255,191,0,0.6);
+  font-weight: bold;
+}
+
+/* Concrete texture overlay */
+body.theme-noradBunker::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(80,90,80,0.02) 0px,
+      rgba(80,90,80,0.02) 1px,
+      transparent 1px,
+      transparent 2px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(80,90,80,0.02) 0px,
+      rgba(80,90,80,0.02) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+  z-index: 9998;
+  opacity: 0.4;
+}
+
+/* ============================================================
+   КРАСНЫЙ (KRASNIY) THEME - Soviet Command War Room
+   Red (220,40,40), golden accents (255,215,0), dark USSR palette
+   ============================================================ */
+body.theme-krasniy {
+  background: linear-gradient(
+    180deg,
+    #2a0a0a 0%,
+    #1a0505 60%,
+    #0f0303 100%
+  );
+  color: #ffcccc;
+  text-shadow: 0 0 8px rgba(220,40,40,0.3);
+}
+
+body.theme-krasniy button,
+body.theme-krasniy [role="button"],
+body.theme-krasniy .command-button {
+  background: linear-gradient(135deg, #3a0f0f, #2a0808);
+  color: #ffcccc;
+  border: 2px solid rgba(220,40,40,0.7);
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(220,40,40,0.4);
+  box-shadow:
+    0 0 14px rgba(255,215,0,0.2),
+    inset 0 0 10px rgba(220,40,40,0.1);
+  transition: all 0.2s ease;
+}
+
+body.theme-krasniy button:hover,
+body.theme-krasniy [role="button"]:hover,
+body.theme-krasniy .command-button:hover {
+  background: linear-gradient(135deg, #4a1515, #3a0f0f);
+  border-color: rgba(255,215,0,0.8);
+  box-shadow:
+    0 0 24px rgba(255,215,0,0.5),
+    0 4px 18px rgba(255,215,0,0.3),
+    inset 0 0 14px rgba(220,40,40,0.2);
+  text-shadow: 0 0 12px rgba(255,215,0,0.7);
+  transform: translateY(-2px) scale(1.01);
+}
+
+body.theme-krasniy .hud-module,
+body.theme-krasniy [data-ui-panel],
+body.theme-krasniy .options-sheet {
+  background: rgba(30,8,8,0.94);
+  border: 2px solid rgba(220,40,40,0.6);
+  box-shadow:
+    0 0 20px rgba(255,215,0,0.25),
+    inset 0 0 20px rgba(60,15,15,0.5);
+}
+
+body.theme-krasniy input,
+body.theme-krasniy textarea,
+body.theme-krasniy select {
+  background: #1a0505;
+  color: #ffcccc;
+  border: 1px solid rgba(220,40,40,0.6);
+  text-shadow: 0 0 4px rgba(220,40,40,0.3);
+}
+
+body.theme-krasniy input:focus,
+body.theme-krasniy textarea:focus,
+body.theme-krasniy select:focus {
+  outline: none;
+  border-color: rgba(255,215,0,0.7);
+  box-shadow: 0 0 14px rgba(255,215,0,0.4);
+}
+
+body.theme-krasniy .theme-chip,
+body.theme-krasniy .layout-chip {
+  background: #2a0808;
+  border: 2px solid rgba(220,40,40,0.6);
+  color: #ffcccc;
+  box-shadow: 0 0 10px rgba(220,40,40,0.2);
+}
+
+body.theme-krasniy .theme-chip.is-active,
+body.theme-krasniy .layout-chip.is-active {
+  background: linear-gradient(135deg, #5a1515, #4a1010);
+  border-color: rgba(255,215,0,0.9);
+  box-shadow:
+    0 0 30px rgba(255,215,0,0.6),
+    0 0 50px rgba(255,215,0,0.4),
+    inset 0 0 20px rgba(220,40,40,0.25);
+  text-shadow: 0 0 14px rgba(255,215,0,0.8);
+  font-weight: bold;
+  animation: pulse-krasniy 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-krasniy {
+  0%, 100% {
+    box-shadow:
+      0 0 30px rgba(255,215,0,0.6),
+      0 0 50px rgba(255,215,0,0.4),
+      inset 0 0 20px rgba(220,40,40,0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 40px rgba(255,215,0,0.7),
+      0 0 65px rgba(255,215,0,0.5),
+      inset 0 0 25px rgba(220,40,40,0.35);
+  }
+}
+
+/* USSR star pattern overlay */
+body.theme-krasniy::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 20% 30%,
+      rgba(255,215,0,0.03) 0%,
+      transparent 50%
+    );
+  z-index: 9998;
+  opacity: 0.5;
+}
+
+/* ============================================================
+   DEFCON 1 THEME - Maximum Alert Status
+   Intense pulsing red (255,30,30), high contrast white, war-red background
+   ============================================================ */
+body.theme-defcon1 {
+  background: linear-gradient(
+    180deg,
+    #330000 0%,
+    #1a0000 60%,
+    #0d0000 100%
+  );
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255,30,30,0.4);
+  animation: defcon1-pulse 3s ease-in-out infinite;
+}
+
+@keyframes defcon1-pulse {
+  0%, 100% {
+    background: linear-gradient(
+      180deg,
+      #330000 0%,
+      #1a0000 60%,
+      #0d0000 100%
+    );
+  }
+  50% {
+    background: linear-gradient(
+      180deg,
+      #440000 0%,
+      #220000 60%,
+      #110000 100%
+    );
+  }
+}
+
+body.theme-defcon1 button,
+body.theme-defcon1 [role="button"],
+body.theme-defcon1 .command-button {
+  background: linear-gradient(135deg, #550000, #330000);
+  color: #ffffff;
+  border: 3px solid rgba(255,30,30,0.9);
+  font-weight: 800;
+  text-shadow: 0 0 8px rgba(255,30,30,0.6);
+  box-shadow:
+    0 0 20px rgba(255,30,30,0.4),
+    inset 0 0 12px rgba(255,30,30,0.15);
+  transition: all 0.15s ease;
+  animation: defcon1-button-pulse 2s ease-in-out infinite;
+}
+
+@keyframes defcon1-button-pulse {
+  0%, 100% {
+    border-color: rgba(255,30,30,0.9);
+    box-shadow:
+      0 0 20px rgba(255,30,30,0.4),
+      inset 0 0 12px rgba(255,30,30,0.15);
+  }
+  50% {
+    border-color: rgba(255,60,60,1);
+    box-shadow:
+      0 0 30px rgba(255,30,30,0.6),
+      inset 0 0 18px rgba(255,30,30,0.25);
+  }
+}
+
+body.theme-defcon1 button:hover,
+body.theme-defcon1 [role="button"]:hover,
+body.theme-defcon1 .command-button:hover {
+  background: linear-gradient(135deg, #770000, #440000);
+  border-color: rgba(255,255,255,0.9);
+  box-shadow:
+    0 0 35px rgba(255,30,30,0.7),
+    0 4px 24px rgba(255,30,30,0.5),
+    inset 0 0 20px rgba(255,30,30,0.3);
+  text-shadow: 0 0 14px rgba(255,255,255,0.8);
+  transform: translateY(-3px) scale(1.02);
+}
+
+body.theme-defcon1 .hud-module,
+body.theme-defcon1 [data-ui-panel],
+body.theme-defcon1 .options-sheet {
+  background: rgba(40,0,0,0.95);
+  border: 3px solid rgba(255,30,30,0.7);
+  box-shadow:
+    0 0 30px rgba(255,30,30,0.4),
+    inset 0 0 25px rgba(80,10,10,0.6);
+  animation: defcon1-panel-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes defcon1-panel-pulse {
+  0%, 100% {
+    border-color: rgba(255,30,30,0.7);
+    box-shadow:
+      0 0 30px rgba(255,30,30,0.4),
+      inset 0 0 25px rgba(80,10,10,0.6);
+  }
+  50% {
+    border-color: rgba(255,30,30,0.9);
+    box-shadow:
+      0 0 40px rgba(255,30,30,0.6),
+      inset 0 0 30px rgba(80,10,10,0.7);
+  }
+}
+
+body.theme-defcon1 input,
+body.theme-defcon1 textarea,
+body.theme-defcon1 select {
+  background: #1a0000;
+  color: #ffffff;
+  border: 2px solid rgba(255,30,30,0.7);
+  text-shadow: 0 0 6px rgba(255,30,30,0.4);
+}
+
+body.theme-defcon1 input:focus,
+body.theme-defcon1 textarea:focus,
+body.theme-defcon1 select:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.8);
+  box-shadow: 0 0 20px rgba(255,30,30,0.6);
+}
+
+body.theme-defcon1 .theme-chip,
+body.theme-defcon1 .layout-chip {
+  background: #330000;
+  border: 2px solid rgba(255,30,30,0.7);
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(255,30,30,0.3);
+}
+
+body.theme-defcon1 .theme-chip.is-active,
+body.theme-defcon1 .layout-chip.is-active {
+  background: linear-gradient(135deg, #660000, #550000);
+  border-color: rgba(255,255,255,0.95);
+  box-shadow:
+    0 0 40px rgba(255,30,30,0.8),
+    0 0 70px rgba(255,30,30,0.6),
+    inset 0 0 25px rgba(255,30,30,0.3);
+  text-shadow: 0 0 16px rgba(255,255,255,0.9);
+  font-weight: 900;
+  border-width: 3px;
+  animation: defcon1-active-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes defcon1-active-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 40px rgba(255,30,30,0.8),
+      0 0 70px rgba(255,30,30,0.6),
+      inset 0 0 25px rgba(255,30,30,0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 50px rgba(255,30,30,1),
+      0 0 90px rgba(255,30,30,0.8),
+      inset 0 0 35px rgba(255,30,30,0.5);
+  }
+}
+
+/* Alert flash overlay */
+body.theme-defcon1::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255,30,30,0.15) 0%,
+    transparent 70%
+  );
+  z-index: 9998;
+  animation: defcon1-flash 4s ease-in-out infinite;
+}
+
+@keyframes defcon1-flash {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* ============================================================
+   STRANGELOVE THEME - Dr. Strangelove War Room
+   Monochrome green/gray, 1960s command bunker aesthetic
+   ============================================================ */
+body.theme-strangelove {
+  background: linear-gradient(
+    180deg,
+    #141414 0%,
+    #0a0a0a 60%,
+    #050505 100%
+  );
+  color: #c8c8c8;
+  text-shadow: 0 0 6px rgba(0,255,0,0.15);
+}
+
+body.theme-strangelove button,
+body.theme-strangelove [role="button"],
+body.theme-strangelove .command-button {
+  background: linear-gradient(135deg, #1a1a1a, #0f0f0f);
+  color: #a0ffa0;
+  border: 2px solid rgba(0,255,0,0.45);
+  font-family: "Courier New", "Courier", monospace;
+  font-weight: 600;
+  text-shadow: 0 0 5px rgba(0,255,0,0.4);
+  box-shadow:
+    0 0 10px rgba(0,255,0,0.2),
+    inset 0 0 8px rgba(50,50,50,0.3);
+  transition: all 0.2s ease;
+}
+
+body.theme-strangelove button:hover,
+body.theme-strangelove [role="button"]:hover,
+body.theme-strangelove .command-button:hover {
+  background: linear-gradient(135deg, #252525, #1a1a1a);
+  border-color: rgba(0,255,0,0.65);
+  box-shadow:
+    0 0 18px rgba(0,255,0,0.35),
+    0 4px 14px rgba(0,255,0,0.2),
+    inset 0 0 12px rgba(0,255,0,0.1);
+  text-shadow: 0 0 8px rgba(0,255,0,0.6);
+  transform: translateY(-2px) scale(1.01);
+}
+
+body.theme-strangelove .hud-module,
+body.theme-strangelove [data-ui-panel],
+body.theme-strangelove .options-sheet {
+  background: rgba(15,15,15,0.93);
+  border: 2px solid rgba(200,200,200,0.35);
+  box-shadow:
+    0 0 14px rgba(0,255,0,0.15),
+    inset 0 0 16px rgba(30,30,30,0.5);
+}
+
+body.theme-strangelove input,
+body.theme-strangelove textarea,
+body.theme-strangelove select {
+  background: #0a0a0a;
+  color: #c8c8c8;
+  border: 1px solid rgba(200,200,200,0.4);
+  font-family: "Courier New", "Courier", monospace;
+  text-shadow: 0 0 3px rgba(0,255,0,0.2);
+}
+
+body.theme-strangelove input:focus,
+body.theme-strangelove textarea:focus,
+body.theme-strangelove select:focus {
+  outline: none;
+  border-color: rgba(0,255,0,0.6);
+  box-shadow: 0 0 10px rgba(0,255,0,0.3);
+}
+
+body.theme-strangelove .theme-chip,
+body.theme-strangelove .layout-chip {
+  background: #0f0f0f;
+  border: 2px solid rgba(200,200,200,0.4);
+  color: #a0ffa0;
+  box-shadow: 0 0 8px rgba(0,255,0,0.15);
+  font-family: "Courier New", "Courier", monospace;
+}
+
+body.theme-strangelove .theme-chip.is-active,
+body.theme-strangelove .layout-chip.is-active {
+  background: linear-gradient(135deg, #1f2f1f, #1a251a);
+  border-color: rgba(0,255,0,0.7);
+  box-shadow:
+    0 0 24px rgba(0,255,0,0.4),
+    0 0 40px rgba(0,255,0,0.25),
+    inset 0 0 16px rgba(0,255,0,0.15);
+  text-shadow: 0 0 10px rgba(0,255,0,0.7);
+  font-weight: bold;
+}
+
+/* Vintage film grain */
+body.theme-strangelove::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,0.01) 0px,
+      rgba(255,255,255,0.01) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  z-index: 9998;
+  opacity: 0.25;
+  animation: strangelove-grain 0.2s steps(2) infinite;
+}
+
+@keyframes strangelove-grain {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.22; }
+}
+
+body.theme-strangelove canvas {
+  filter: contrast(1.1) brightness(0.95);
+}
+
 body.theme-retro80s canvas,
 body.theme-wargames canvas {
   image-rendering: pixelated;
