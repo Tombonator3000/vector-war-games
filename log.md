@@ -3477,3 +3477,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Reviewed root-level AGENTS.md guidance and logging requirement before adjusting toast layering.
 - Increased the ToastViewport z-index above modal/sheet layers while keeping existing responsive positioning for mobile and desktop breakpoints.
 - Manually inspected toast classnames to confirm stacking change should place notifications above dialogs and sheets.
+2025-11-18T08:27:25Z - Reviewed root AGENTS.md logging guidance before updating CivilizationInfoPanel header copy.
+2025-11-18T08:27:26Z - Updated CivilizationInfoPanel title to display "Status Report" while preserving existing icon and styling.
