@@ -97,14 +97,16 @@ export const MARKET_EVENTS: MarketEvent[] = [
     duration: 3,
     globalModifier: 0.5,
     volatilityChange: 0.5,
+    priceModifiers: {},
   },
   {
     id: 'wartime_economy',
     name: 'Wartime Economy',
     description: 'Conflict drives demand for all strategic resources.',
     duration: 7,
-    globalModifier: 1.8,
+    globalModifier: 1.5,
     volatilityChange: 0.3,
+    priceModifiers: {},
   },
   {
     id: 'agricultural_revolution',
@@ -242,8 +244,8 @@ function calculateSupplyDemandFactors(
 
   // Count total armies (oil demand)
   let totalArmies = 0;
-  if (gameState.conventionalState?.territories) {
-    Object.values(gameState.conventionalState.territories).forEach((t: any) => {
+  if (gameState.conventional?.territories) {
+    Object.values(gameState.conventional.territories).forEach((t: any) => {
       totalArmies += t.armies || 0;
     });
   }

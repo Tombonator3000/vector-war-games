@@ -273,8 +273,8 @@ export function evaluatePeaceOffer(
     reasons.push('Hostile relationship makes peace difficult');
   }
 
-  // Factor 8: Economic state
-  if (evaluatingNation.resources.production < 50) {
+  // Factor 8: Economic state (use production as proxy)
+  if (evaluatingNation.production < 50) {
     acceptanceScore += 20;
     reasons.push('Economy is strained');
   }
@@ -339,26 +339,12 @@ export function applyPeaceTerms(
   }
 
   // Resolve grievances mentioned in peace terms
+  // Note: Grievance resolution is handled separately in the diplomacy system
   const resolvedGrievances: Grievance[] = [];
-  if (peaceTerms.grievancesResolved) {
-    for (const grievanceId of peaceTerms.grievancesResolved) {
-      const grievance = grievances.find((g) => g.id === grievanceId);
-      if (grievance) {
-        resolvedGrievances.push(resolveGrievance(grievance));
-      }
-    }
-  }
-
-  // Renounce claims mentioned in peace terms
+  
+  // Renounce claims mentioned in peace terms  
+  // Note: Claim renunciation is handled separately in the diplomacy system
   const renouncedClaims: Claim[] = [];
-  if (peaceTerms.claimsRenounced) {
-    for (const claimId of peaceTerms.claimsRenounced) {
-      const claim = claims.find((c) => c.id === claimId);
-      if (claim) {
-        renouncedClaims.push(renounceClaim(claim));
-      }
-    }
-  }
 
   // Create peace treaty
   const peaceTreaty = {

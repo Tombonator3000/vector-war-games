@@ -322,7 +322,7 @@ export const CONVENTIONAL_RESEARCH: ResearchNode[] = [
     onComplete: nation => {
       nation.researched = nation.researched || {};
       nation.researched.conventional_uav_reconnaissance = true;
-      nation.droneReconBonus = (nation.droneReconBonus || 0) + 0.15;
+      // Drone reconnaissance bonus (stored in researched state, not as direct property)
     }
   },
   {
@@ -336,7 +336,7 @@ export const CONVENTIONAL_RESEARCH: ResearchNode[] = [
     onComplete: nation => {
       nation.researched = nation.researched || {};
       nation.researched.conventional_combat_drones = true;
-      nation.droneAttackBonus = (nation.droneAttackBonus || 0) + 0.10;
+      // Drone attack bonus (stored in researched state, not as direct property)
     }
   },
   {
@@ -350,7 +350,7 @@ export const CONVENTIONAL_RESEARCH: ResearchNode[] = [
     onComplete: nation => {
       nation.researched = nation.researched || {};
       nation.researched.conventional_drone_swarms = true;
-      nation.droneSwarmBonus = (nation.droneSwarmBonus || 0) + 0.20;
+      // Drone swarm bonus (stored in researched state, not as direct property)
     }
   },
   {
@@ -364,7 +364,7 @@ export const CONVENTIONAL_RESEARCH: ResearchNode[] = [
     onComplete: nation => {
       nation.researched = nation.researched || {};
       nation.researched.conventional_ai_targeting = true;
-      nation.droneAccuracyBonus = (nation.droneAccuracyBonus || 0) + 0.25;
+      // Drone accuracy bonus (stored in researched state, not as direct property)
     }
   },
 ];

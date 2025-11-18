@@ -374,12 +374,12 @@ export function useNationalFocus({ currentTurn, nations }: UseNationalFocusOptio
     []
   );
 
-  // Initialize on mount
+  // Initialize on mount - only run once
   useEffect(() => {
-    if (focusStates.size === 0) {
+    if (focusStates.size === 0 && nations.length > 0) {
       initializeFocusTrees();
     }
-  }, [initializeFocusTrees, focusStates.size]);
+  }, [nations.length, focusStates.size]); // Use length to avoid infinite loop
 
   return {
     // State

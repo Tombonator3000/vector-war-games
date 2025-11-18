@@ -1,4 +1,4 @@
-import type { Policy } from '@/types/policy';
+import type { Policy, PolicyCategory, PolicyEffects } from '@/types/policy';
 
 /**
  * Policy Database
