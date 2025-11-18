@@ -3489,3 +3489,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T08:27:26Z - Updated CivilizationInfoPanel title to display "Status Report" while preserving existing icon and styling.
 2025-11-18T14:47:01Z - Reviewed root AGENTS.md instructions for toast wording update.
 2025-11-18T14:47:06Z - Adjusted victory milestone toast wording to avoid duplicating "Victory" in titles and descriptions.
+2025-11-18T15:05:00Z - Reviewed root AGENTS.md to confirm logging and coding guidelines before implementing sanctions UI updates.
+2025-11-18T15:10:54Z - Implemented sanctions rationale plumbing, added sanctions dialog trigger, and updated toast copy for imposing nations.
+2025-11-18T15:11:05Z - Ran 'npm run test -- --run src/hooks/__tests__/useInternationalPressure.test.ts' to verify international pressure updates.
