@@ -168,7 +168,7 @@ export function ConsolidatedWarModal({
       result.attackerVictory
         ? `${attackerName} seized ground at ${territoryName}`
         : `${defenderName} held the line at ${territoryName}`,
-      result.attackerVictory ? 'important' : 'notable',
+      result.attackerVictory ? 'important' : 'medium',
     );
 
     if (result?.diceRolls?.length) {
@@ -204,7 +204,7 @@ export function ConsolidatedWarModal({
       description: `Moved ${count} forces from ${origin} to ${destination}`,
     });
 
-    addNewsItem('military', `${origin} forces repositioned to ${destination}`, 'notable');
+    addNewsItem('military', `${origin} forces repositioned to ${destination}`, 'routine');
   };
 
   const handleProxyEngagement = (territoryId: string, opposingId: string) => {
