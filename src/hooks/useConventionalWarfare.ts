@@ -141,6 +141,7 @@ export interface ConventionalNationRef {
   relationships?: Record<string, number>;
   alliances?: string[];
   treaties?: Record<string, Treaty>;
+  recruitmentPolicyModifier?: number;
   resourceStockpile?: {  // New: Resource stockpile for checking oil/rare earth availability
     oil: number;
     uranium: number;
@@ -914,7 +915,7 @@ export function useConventionalWarfare({
       if ((cost.intel ?? 0) > (nation.intel ?? 0)) {
         return false;
       }
-      initializeResourceStockpile(nation);
+      initializeResourceStockpile(nation as any);
       const stockpile = nation.resourceStockpile!;
       if ((cost.uranium ?? 0) > (stockpile.uranium || 0)) {
         return false;
@@ -932,15 +933,15 @@ export function useConventionalWarfare({
         nation.intel = Math.max(0, nation.intel - (cost.intel ?? 0));
       }
       if (cost.uranium) {
-        spendStrategicResource(nation, 'uranium', cost.uranium);
+        spendStrategicResource(nation as any, 'uranium', cost.uranium);
       }
 
       // Deduct strategic resources
       if (cost.oil) {
-        spendStrategicResource(nation, 'oil', cost.oil);
+        spendStrategicResource(nation as any, 'oil', cost.oil);
       }
       if (cost.rare_earths) {
-        spendStrategicResource(nation, 'rare_earths', cost.rare_earths);
+        spendStrategicResource(nation as any, 'rare_earths', cost.rare_earths);
       }
 
       return true;
