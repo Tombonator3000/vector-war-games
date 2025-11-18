@@ -282,7 +282,7 @@ export function StreamlinedCulturePanel({
       {/* Operations Tab Content */}
       {activeTab === 'operations' && (
         <>
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 xl:grid-cols-3">
         {/* Cultural Wonders */}
         <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
           <h3 className="font-semibold text-yellow-300 flex items-center gap-2 mb-3">
