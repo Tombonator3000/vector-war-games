@@ -8,7 +8,7 @@
  * - DIP currency actions
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { X, Handshake, Gift, Scale, Shield, MessageCircle, AlertTriangle, Star, Users } from 'lucide-react';
 import type { Nation } from '@/types/game';
 import type { DiplomacyPhase3State } from '@/types/diplomacyPhase3';
@@ -18,11 +18,15 @@ import { getFavors } from '@/types/trustAndFavors';
 import { getActivePromises } from '@/lib/trustAndFavorsUtils';
 import { getActiveGrievances } from '@/lib/grievancesAndClaimsUtils';
 import GameStateManager from '@/state/GameStateManager';
+import type { InternationalPressure, SanctionEffects, SanctionPackage } from '@/types/regionalMorale';
 
 interface EnhancedDiplomacyModalProps {
   player: Nation;
   nations: Nation[];
   phase3State?: DiplomacyPhase3State;
+  currentTurn: number;
+  sanctions: SanctionPackage[];
+  getPressure: (nationId: string) => InternationalPressure | undefined;
   onClose: () => void;
   onAction: (action: DiplomaticAction, target?: Nation) => void;
   onOpenLeadersScreen?: () => void;
@@ -90,10 +94,25 @@ function renderTreatyChip(status: TreatyStatus | null) {
   );
 }
 
+type SanctionStatus = 'active' | 'lifted';
+
+interface SanctionStatusEntry {
+  id: string;
+  imposingNations: string[];
+  effects: SanctionEffects;
+  turnsRemaining: number | null;
+  status: SanctionStatus;
+  notedTurn: number;
+  lastUpdatedTurn: number;
+}
+
 export function EnhancedDiplomacyModal({
   player,
   nations,
   phase3State,
+  currentTurn,
+  sanctions,
+  getPressure,
   onClose,
   onAction,
   onOpenLeadersScreen,
@@ -302,6 +321,76 @@ export function EnhancedDiplomacyModal({
   ]);
 
   const otherNations = nations.filter((n) => n.id !== player.id);
+  const nationNameLookup = useMemo(() => new Map(nations.map((nation) => [nation.id, nation.name])), [nations]);
+
+  const playerPressure = useMemo(() => getPressure(player.id), [getPressure, player.id, currentTurn, sanctions]);
+
+  const activeSanctions = useMemo(() => {
+    const activeIds = new Set(playerPressure?.activeSanctions ?? []);
+    return sanctions.filter((sanction) => activeIds.has(sanction.id));
+  }, [playerPressure?.activeSanctions, sanctions]);
+
+  const [sanctionStatuses, setSanctionStatuses] = useState<SanctionStatusEntry[]>([]);
+
+  useEffect(() => {
+    setSanctionStatuses((prev) => {
+      const prevMap = new Map(prev.map((entry) => [entry.id, entry] as const));
+      const nextEntries: SanctionStatusEntry[] = [];
+
+      activeSanctions.forEach((sanction) => {
+        const prevEntry = prevMap.get(sanction.id);
+        const imposingNames = sanction.imposingNations.map((id) => nationNameLookup.get(id) ?? id);
+
+        nextEntries.push({
+          id: sanction.id,
+          imposingNations,
+          effects: sanction.effects,
+          turnsRemaining: sanction.turnsRemaining,
+          status: 'active',
+          notedTurn: prevEntry?.notedTurn ?? currentTurn,
+          lastUpdatedTurn: currentTurn,
+        });
+
+        prevMap.delete(sanction.id);
+      });
+
+      prevMap.forEach((entry) => {
+        const updatedEntry: SanctionStatusEntry =
+          entry.status === 'lifted'
+            ? entry
+            : { ...entry, status: 'lifted', turnsRemaining: 0, lastUpdatedTurn: currentTurn };
+        nextEntries.push(updatedEntry);
+      });
+
+      nextEntries.sort((a, b) => {
+        if (a.status === b.status) {
+          return b.lastUpdatedTurn - a.lastUpdatedTurn;
+        }
+        return a.status === 'active' ? -1 : 1;
+      });
+
+      return nextEntries.slice(0, 8);
+    });
+  }, [activeSanctions, currentTurn, nationNameLookup]);
+
+  const formatSanctionPenalties = (effects: SanctionEffects) => {
+    const penalties: string[] = [];
+
+    if (effects.goldPenalty) {
+      penalties.push(`-${effects.goldPenalty} gold/turn`);
+    }
+    if (effects.productionPenalty) {
+      penalties.push(`-${effects.productionPenalty}% production`);
+    }
+    if (effects.researchPenalty) {
+      penalties.push(`-${effects.researchPenalty}% research`);
+    }
+    if (effects.diplomaticPenalty) {
+      penalties.push(`-${effects.diplomaticPenalty} diplomacy`);
+    }
+
+    return penalties.length > 0 ? penalties.join(' · ') : 'Minor diplomatic pressure';
+  };
 
   const handleAction = (action: DiplomaticAction) => {
     if (action.disabled) {
@@ -477,12 +566,75 @@ export function EnhancedDiplomacyModal({
                 </div>
               )}
 
+              {/* International Sanctions Status */}
+              <div className="rounded-lg border border-rose-500/40 bg-slate-900/50 p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Scale className="h-4 w-4 text-rose-300" />
+                    <div>
+                      <h3 className="text-sm font-semibold text-rose-100">International Sanctions</h3>
+                      <p className="text-xs text-slate-400">Live measures and recent changes affecting your nation.</p>
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-xs font-semibold text-rose-100">
+                    {sanctionStatuses.filter((entry) => entry.status === 'active').length} active
+                  </span>
+                </div>
+
+                {sanctionStatuses.length === 0 ? (
+                  <p className="text-xs text-slate-400">No sanctions have been imposed on your nation so far.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {sanctionStatuses.map((entry) => (
+                      <li
+                        key={entry.id}
+                        className="rounded border border-slate-800 bg-slate-950/60 p-3"
+                      >
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-100">
+                              Imposed by {entry.imposingNations.join(', ')}
+                            </p>
+                            <p className="text-xs text-slate-400">{formatSanctionPenalties(entry.effects)}</p>
+                          </div>
+
+                          <span
+                            className={`self-start rounded-full px-2 py-1 text-xs font-semibold ${
+                              entry.status === 'active'
+                                ? 'border border-rose-500/40 bg-rose-500/15 text-rose-100'
+                                : 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
+                            }`}
+                          >
+                            {entry.status === 'active' ? 'Active' : 'Lifted'}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 flex flex-col gap-1 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+                          <span>
+                            {entry.status === 'active'
+                              ? entry.turnsRemaining && entry.turnsRemaining > 0
+                                ? `${entry.turnsRemaining} turns remaining`
+                                : 'Active this turn'
+                              : `Lifted on turn ${entry.lastUpdatedTurn}`}
+                          </span>
+                          <span className="text-slate-500">
+                            {entry.lastUpdatedTurn === currentTurn
+                              ? 'Updated this turn'
+                              : `Noted on turn ${entry.notedTurn}`}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
               {/* Available Actions Grid */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                 {availableActions.map((action) => {
-                const isEnabled = !action.disabled;
+                  const isEnabled = !action.disabled;
 
-                return (
+                  return (
                   <button
                     key={action.id}
                     onClick={() => handleAction(action)}

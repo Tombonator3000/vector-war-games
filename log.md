@@ -3490,3 +3490,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T14:47:01Z - Reviewed root AGENTS.md instructions for toast wording update.
 2025-11-18T14:47:06Z - Adjusted victory milestone toast wording to avoid duplicating "Victory" in titles and descriptions.
 2025-11-18T15:05:47Z - Routed policy totalEffects into production, recruitment, diplomacy decay, defense, and intel systems during turn processing.
+2025-11-18T15:15:10Z - Reviewed root AGENTS.md instructions and logging requirement before sanctions UI work.
+2025-11-18T15:15:45Z - Inspected useInternationalPressure hook and EnhancedDiplomacyModal to plan player sanctions listing integration.
+2025-11-18T15:16:38Z - Wired useInternationalPressure sanctions data into EnhancedDiplomacyModal and added per-turn sanctions status display for the player.

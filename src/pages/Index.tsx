@@ -9815,6 +9815,8 @@ export default function NoradVector() {
     processTurnUpdates: processInternationalPressureTurn,
     getTotalEconomicImpact,
     getAidBenefits,
+    getPressure,
+    sanctions,
     reset: resetInternationalPressure,
   } = useInternationalPressure({
     currentTurn: S.turn,
@@ -17392,6 +17394,9 @@ export default function NoradVector() {
             player={player}
             nations={nations}
             phase3State={diplomacyPhase3State || undefined}
+            currentTurn={S.turn}
+            sanctions={sanctions}
+            getPressure={getPressure}
             onClose={() => setShowEnhancedDiplomacy(false)}
             onAction={handleEnhancedDiplomacyAction}
             onOpenLeadersScreen={() => {
