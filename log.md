@@ -3465,3 +3465,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T06:39:47Z - Inspected audio-related files to locate music volume initialization.
 2025-11-18T06:40:47Z - Updated initial music volume defaults to 15% in Index.tsx and OptionsMenu to meet start-up requirement.
 2025-11-18T06:41:03Z - Attempted 'npm test -- --runInBand' but vitest executable was missing in environment.
+2025-11-18T07:17:53Z - Reworked conventional combat resolution to use strength-based casualty exchanges with capped per-round losses.
+2025-11-18T07:17:54Z - Updated engagement logging and UI panels to show strength exchanges instead of dice rolls.
