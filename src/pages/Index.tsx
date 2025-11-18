@@ -6286,6 +6286,11 @@ function endTurn() {
             }
 
             // Apply maintenance costs for active policies
+            const maintenanceGovernanceDelta: GovernanceDelta = {
+              morale: 0,
+              publicOpinion: 0,
+            };
+
             policySystem.activePolicies.forEach((activePolicy) => {
               const policy = getPolicyById(activePolicy.policyId);
               if (policy?.maintenanceCost) {
@@ -6295,8 +6300,23 @@ function endTurn() {
                 if (policy.maintenanceCost.intel) {
                   player.intel = Math.max(0, (player.intel || 0) - policy.maintenanceCost.intel);
                 }
+                if (policy.maintenanceCost.moralePerTurn) {
+                  maintenanceGovernanceDelta.morale =
+                    (maintenanceGovernanceDelta.morale || 0) + policy.maintenanceCost.moralePerTurn;
+                }
+                if (policy.maintenanceCost.approvalPerTurn) {
+                  maintenanceGovernanceDelta.publicOpinion =
+                    (maintenanceGovernanceDelta.publicOpinion || 0) + policy.maintenanceCost.approvalPerTurn;
+                }
               }
             });
+
+            if (
+              governanceApiRef?.applyGovernanceDelta &&
+              (maintenanceGovernanceDelta.morale !== 0 || maintenanceGovernanceDelta.publicOpinion !== 0)
+            ) {
+              governanceApiRef.applyGovernanceDelta(player.id, maintenanceGovernanceDelta);
+            }
 
             // Apply governance modifiers from policies
             if (governanceApiRef?.metrics[player.id]) {
