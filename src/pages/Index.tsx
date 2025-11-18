@@ -364,6 +364,33 @@ const DEFAULT_DEFCON_LEVEL = 5;
 const getScenarioDefcon = (scenario: ScenarioConfig) =>
   scenario.id === 'nuclearWar' ? scenario.startingDefcon : DEFAULT_DEFCON_LEVEL;
 
+const DEFCON_BADGE_BASE_CLASSES =
+  'flex items-center gap-1.5 px-2.5 py-0.5 rounded border transition-all duration-200';
+const DEFCON_VALUE_BASE_CLASSES = 'font-bold text-xl leading-none transition-colors duration-200';
+
+function getDefconIndicatorClasses(defcon: number) {
+  if (defcon >= 4) {
+    return {
+      badge: 'bg-emerald-500/10 border-emerald-400/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]',
+      value: 'text-emerald-200 drop-shadow-[0_0_6px_rgba(16,185,129,0.35)]',
+    };
+  }
+
+  if (defcon === 3) {
+    return {
+      badge: 'bg-yellow-500/10 border-yellow-400/50 shadow-[0_0_12px_rgba(234,179,8,0.25)]',
+      value: 'text-yellow-100 drop-shadow-[0_0_6px_rgba(234,179,8,0.4)]',
+    };
+  }
+
+  const criticalGlow = 'shadow-[0_0_18px_rgba(248,113,113,0.45)] ring-1 ring-red-400/60';
+
+  return {
+    badge: `bg-red-500/20 border-red-400/70 ${criticalGlow} ${defcon === 1 ? 'animate-pulse' : ''}`.trim(),
+    value: 'text-red-50 drop-shadow-[0_0_8px_rgba(248,113,113,0.55)]',
+  };
+}
+
 type PressureDeltaState = { goldPenalty: number; aidGold: number };
 
 let processInternationalPressureTurnFn: (() => void) | null = null;
@@ -7019,9 +7046,18 @@ function endTurn() {
 function updateDisplay() {
   const player = PlayerManager.get();
   if (!player) return;
-  
+
+  const defconClasses = getDefconIndicatorClasses(S.defcon);
+  const defconBadgeEl = document.getElementById('defconBadge');
+  if (defconBadgeEl) {
+    defconBadgeEl.className = `${DEFCON_BADGE_BASE_CLASSES} ${defconClasses.badge}`;
+  }
+
   const defconEl = document.getElementById('defcon');
-  if (defconEl) defconEl.textContent = S.defcon.toString();
+  if (defconEl) {
+    defconEl.textContent = S.defcon.toString();
+    defconEl.className = `${DEFCON_VALUE_BASE_CLASSES} ${defconClasses.value}`;
+  }
   AudioSys.updateAmbientForDefcon(S.defcon);
   
   const turnEl = document.getElementById('turn');
@@ -15920,6 +15956,8 @@ export default function NoradVector() {
     globePicker,
   ]);
 
+  const defconIndicatorClasses = useMemo(() => getDefconIndicatorClasses(S.defcon), [S.defcon]);
+
   // Early returns for different phases
   if (gamePhase === 'intro') {
     return renderIntroScreen();
@@ -16128,9 +16166,17 @@ export default function NoradVector() {
             <header className="game-top-bar w-full bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between pointer-events-auto touch-auto">
               <div className="game-top-bar__metrics flex items-center gap-5 text-[11px] font-mono">
               {/* DEFCON - Enlarged for prominence */}
-              <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-red-500/10 border border-red-500/30 rounded">
+              <div
+                id="defconBadge"
+                className={`${DEFCON_BADGE_BASE_CLASSES} ${defconIndicatorClasses.badge}`}
+              >
                 <span className="text-cyan-300 text-xs tracking-wide">DEFCON</span>
-                <span className="text-neon-green font-bold text-xl" id="defcon">5</span>
+                <span
+                  className={`${DEFCON_VALUE_BASE_CLASSES} ${defconIndicatorClasses.value}`}
+                  id="defcon"
+                >
+                  {S.defcon}
+                </span>
               </div>
 
               {/* Global Sanity - Great Old Ones Campaign */}
