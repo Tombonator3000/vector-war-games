@@ -213,7 +213,13 @@ import { useMediaWarfare } from '@/hooks/useMediaWarfare';
 import { IMMIGRATION_POLICIES } from '@/lib/immigrationPoliciesData';
 import { useProductionQueue } from '@/hooks/useProductionQueue';
 import { useResourceRefinement } from '@/hooks/useResourceRefinement';
-import type { SanctionPackage, AidPackage, AidType } from '@/types/regionalMorale';
+import type {
+  SanctionPackage,
+  AidPackage,
+  AidType,
+  InternationalPressure,
+  SanctionType,
+} from '@/types/regionalMorale';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 import type { Unit } from '@/lib/unitModels';
 import { getDefaultScenario, type ScenarioConfig, SCENARIOS } from '@/types/scenario';
@@ -364,11 +370,46 @@ let getTotalEconomicImpactFn:
   | ((nationId: string) => { productionPenalty: number; goldPenalty: number })
   | null = null;
 let getAidBenefitsFn: ((nationId: string) => AidPackage['benefits']) | null = null;
+let getPressureFn: ((nationId: string) => InternationalPressure | undefined) | null = null;
+let getActiveSanctionsFn: (() => SanctionPackage[]) | null = null;
+let presentSanctionDialog: ((packages: SanctionPackage[]) => void) | null = null;
 let pressureDeltaState: PressureDeltaState = { goldPenalty: 0, aidGold: 0 };
 
 const resetPressureDeltaState = () => {
   pressureDeltaState.goldPenalty = 0;
   pressureDeltaState.aidGold = 0;
+};
+
+const resolveNationName = (nationId: string): string => {
+  const nation = getNationById(GameStateManager.getNations(), nationId);
+  return nation?.name ?? nationId;
+};
+
+const getImposingNationNamesFromPackages = (packages: SanctionPackage[]): string[] => {
+  const imposingIds = new Set<string>();
+  packages.forEach((pkg) => {
+    pkg.imposingNations.forEach((nationId) => imposingIds.add(nationId));
+  });
+  return Array.from(imposingIds).map(resolveNationName);
+};
+
+const formatSanctionTypeLabel = (type: SanctionType): string => {
+  switch (type) {
+    case 'trade':
+      return 'Trade';
+    case 'financial':
+      return 'Financial';
+    case 'military':
+      return 'Military';
+    case 'diplomatic':
+      return 'Diplomatic';
+    case 'technology':
+      return 'Technology';
+    case 'travel':
+      return 'Travel';
+    default:
+      return type;
+  }
 };
 
 // Storage wrapper for localStorage
@@ -6401,6 +6442,22 @@ function endTurn() {
           const previousAidGold = pressureDeltaState.aidGold;
           const currentGoldPenalty = economicImpact.goldPenalty ?? 0;
           const currentAidGold = aidBenefits.goldPerTurn ?? 0;
+          const activeSanctionPackages = (() => {
+            if (!player || !getPressureFn || !getActiveSanctionsFn) {
+              return [] as SanctionPackage[];
+            }
+
+            const playerPressure = getPressureFn(player.id);
+            if (!playerPressure?.activeSanctions?.length) {
+              return [] as SanctionPackage[];
+            }
+
+            const activeSanctionIds = new Set(playerPressure.activeSanctions);
+            return getActiveSanctionsFn().filter((pkg) => activeSanctionIds.has(pkg.id));
+          })();
+          const imposingNationNames = getImposingNationNamesFromPackages(activeSanctionPackages);
+          const imposingLabel =
+            imposingNationNames.length > 0 ? imposingNationNames.join(', ') : 'foreign powers';
 
           if (currentGoldPenalty !== previousGoldPenalty) {
             if (currentGoldPenalty > 0) {
@@ -6409,9 +6466,12 @@ function endTurn() {
                 `${playerNationName} loses ${currentGoldPenalty} gold per turn to foreign sanctions.`,
                 'important',
               );
+              if (activeSanctionPackages.length > 0) {
+                presentSanctionDialog?.(activeSanctionPackages);
+              }
               toast({
                 title: 'Sanctions drain treasury',
-                description: `${playerNationName} forfeits ${currentGoldPenalty} gold this turn due to international pressure.`,
+                description: `${playerNationName} forfeits ${currentGoldPenalty} gold this turn under sanctions from ${imposingLabel}.`,
                 variant: 'destructive',
               });
             } else if (previousGoldPenalty > 0) {
@@ -7293,6 +7353,73 @@ export default function NoradVector() {
   const currentPlayerLeaderName = playerNation?.leaderName || playerNation?.leader;
   const playerLeaderImage = useMemo(() => getLeaderImage(currentPlayerLeaderName), [currentPlayerLeaderName]);
   const playerLeaderInitials = useMemo(() => getLeaderInitials(currentPlayerLeaderName), [currentPlayerLeaderName]);
+  const renderSanctionsDialog = useCallback(
+    (packages: SanctionPackage[]) => {
+      const imposingNames = getImposingNationNamesFromPackages(packages);
+      openModal(
+        'Sanctions enacted',
+        () => (
+          <div className="space-y-4">
+            <p className="text-sm text-cyan-200/80">
+              {imposingNames.length > 0
+                ? `${imposingNames.join(', ')} sanctioned ${playerNationName}.`
+                : `${playerNationName} is facing coordinated sanctions.`}
+            </p>
+            <div className="grid gap-4 sm:grid-cols-1">
+              {packages.map((pkg) => {
+                const sanctionImposers = getImposingNationNamesFromPackages([pkg]);
+                const durationLabel =
+                  pkg.duration < 0
+                    ? 'Indefinite duration'
+                    : `${pkg.turnsRemaining}/${pkg.duration} turns remaining`;
+
+                return (
+                  <div
+                    key={pkg.id}
+                    className="rounded-lg border border-cyan-500/30 bg-slate-900/60 p-4 shadow-md shadow-cyan-900/50"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-base font-semibold text-cyan-100">
+                          {sanctionImposers.length > 0
+                            ? `Imposed by ${sanctionImposers.join(', ')}`
+                            : 'Imposed by foreign coalition'}
+                        </p>
+                        <p className="text-xs text-cyan-200/70">
+                          Severity {pkg.severity}/10 • {durationLabel}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {pkg.type.map((type) => (
+                          <span
+                            key={`${pkg.id}-${type}`}
+                            className="rounded-full border border-cyan-500/50 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-100"
+                          >
+                            {formatSanctionTypeLabel(type)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="mt-3 text-sm leading-relaxed text-cyan-100/80">
+                      {pkg.rationale ?? 'No explicit rationale provided.'}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ),
+      );
+    },
+    [openModal, playerNationName],
+  );
+
+  useEffect(() => {
+    presentSanctionDialog = renderSanctionsDialog;
+    return () => {
+      presentSanctionDialog = null;
+    };
+  }, [renderSanctionsDialog]);
   const playerDepletionWarnings = useMemo<DepletionWarning[]>(() => {
     if (!playerNation || !S.depletionWarnings || !S.conventional?.territories) {
       return [];
@@ -9767,6 +9894,8 @@ export default function NoradVector() {
     (sanctions: SanctionPackage) => {
       const targetNation = getNationById(GameStateManager.getNations(), sanctions.targetNationId);
       const targetName = targetNation?.name ?? sanctions.targetNationId;
+      const imposerNames = getImposingNationNamesFromPackages([sanctions]);
+      const imposerLabel = imposerNames.length > 0 ? imposerNames.join(', ') : 'international coalitions';
 
       addNewsItem('diplomatic', `Sanctions imposed on ${targetName}`, 'high');
 
@@ -9776,8 +9905,8 @@ export default function NoradVector() {
           title: penalty > 0 ? 'Sanctions tighten' : 'Sanctions enacted',
           description:
             penalty > 0
-              ? `${playerNationName} will lose ${penalty} gold each turn under the new sanctions.`
-              : `${playerNationName} faces new international sanctions.`,
+              ? `${playerNationName} will lose ${penalty} gold each turn under sanctions from ${imposerLabel}.`
+              : `${playerNationName} faces new international sanctions from ${imposerLabel}.`,
           variant: penalty > 0 ? 'destructive' : 'default',
         });
       }
@@ -9813,6 +9942,7 @@ export default function NoradVector() {
     imposeSanctions: imposeInternationalSanctions,
     grantAid: grantInternationalAid,
     processTurnUpdates: processInternationalPressureTurn,
+    getPressure,
     getTotalEconomicImpact,
     getAidBenefits,
     getPressure,
@@ -9830,6 +9960,8 @@ export default function NoradVector() {
   processInternationalPressureTurnFn = processInternationalPressureTurn;
   getTotalEconomicImpactFn = getTotalEconomicImpact;
   getAidBenefitsFn = getAidBenefits;
+  getPressureFn = getPressure;
+  getActiveSanctionsFn = () => sanctionPackages;
   syncPressureDeltaState();
 
   useEffect(() => {
@@ -9837,6 +9969,8 @@ export default function NoradVector() {
       processInternationalPressureTurnFn = null;
       getTotalEconomicImpactFn = null;
       getAidBenefitsFn = null;
+      getPressureFn = null;
+      getActiveSanctionsFn = null;
       resetPressureDeltaState();
       pressureDeltaRef.current = pressureDeltaState;
     };

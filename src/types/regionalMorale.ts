@@ -407,6 +407,9 @@ export interface SanctionPackage {
   type: SanctionType[];
   severity: number; // 1-10 scale
 
+  // Narrative context
+  rationale?: string;
+
   turn: number;
   duration: number;
   turnsRemaining: number;
