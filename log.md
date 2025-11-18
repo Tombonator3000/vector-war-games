@@ -3505,3 +3505,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T17:28:29Z - Scanned project for DEFCON references using rg to investigate escalation bug.
 2025-11-18T17:28:29Z - Scanned project for DEFCON references using rg to investigate escalation bug.
 2025-11-18T17:32:50Z - Updated GameStateManager.setState to mutate existing state and retain shared references when applying new snapshots.
+2025-11-18T16:20:00Z - Reviewed root AGENTS.md guidance and scoped removal of the legacy MilitaryModal in favor of consolidated warfare UI.
+2025-11-18T16:25:00Z - Deleted the legacy MilitaryModal component, removed its Index.tsx import wiring, and updated documentation to reference ConsolidatedWarModal as the single warfare flow.

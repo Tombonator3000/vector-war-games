@@ -381,7 +381,7 @@ PlayerManager.reset();
 - ✅ **Modal components extracted (1,066 lines reduced)** ⭐
   - BuildModal (257 lines) - Production and construction interface
   - ResearchModal (171 lines) - Research tree management
-  - MilitaryModal (217 lines) - Conventional warfare interface
+  - ConsolidatedWarModal (217 lines) - Unified warfare interface
   - Total extracted: 645 lines of component code
   - Replaced with lightweight wrappers in Index.tsx
 
