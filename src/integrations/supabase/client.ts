@@ -49,8 +49,8 @@ const createFallbackChannel = (): RealtimeChannel => {
     state: REALTIME_CHANNEL_STATES.closed,
     on: () => channel as RealtimeChannel,
     subscribe: () => channel as RealtimeChannel,
-    send: async (): Promise<RealtimeChannelSendResponse> => ({ status: 'ok' }),
-    track: async (): Promise<RealtimeChannelSendResponse> => ({ status: 'ok' }),
+    send: async (): Promise<RealtimeChannelSendResponse> => 'ok' as any,
+    track: async (): Promise<RealtimeChannelSendResponse> => 'ok' as any,
     presenceState: () => ({}),
     unsubscribe: async (): Promise<'ok' | 'timed out' | 'error'> => 'ok',
   };

@@ -343,7 +343,7 @@ export function EnhancedDiplomacyModal({
 
         nextEntries.push({
           id: sanction.id,
-          imposingNations,
+          imposingNations: imposingNames,
           effects: sanction.effects,
           turnsRemaining: sanction.turnsRemaining,
           status: 'active',
