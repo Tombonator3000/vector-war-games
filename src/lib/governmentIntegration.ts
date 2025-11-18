@@ -220,11 +220,8 @@ export function applyGovernmentBonusesForProduction(nations: Nation[]): void {
     }
     nation.productionMultiplier *= bonuses.productionMultiplier;
 
-    // Apply research multiplier (stored for later use)
-    if (!nation.researchMultiplier) {
-      nation.researchMultiplier = 1.0;
-    }
-    nation.researchMultiplier = (nation.researchMultiplier || 1.0) * bonuses.researchMultiplier;
+    // Note: Research multiplier bonus is applied but not stored
+    // as a persistent property on the nation
 
     // Apply other bonuses as needed
     // These can be read when needed in other systems

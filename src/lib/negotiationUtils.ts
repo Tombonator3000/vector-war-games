@@ -1009,11 +1009,11 @@ function applyNegotiationItemEffects(
     }
 
     case 'open-borders': {
-      const duration = item.duration || 10;
+      const duration = typeof item.duration === 'number' ? item.duration : 10;
       const giverTreaty = ensureTreatyRecord(updatedGiver, updatedReceiver);
       const receiverTreaty = ensureTreatyRecord(updatedReceiver, updatedGiver);
-      giverTreaty.openBordersTurns = Math.max(giverTreaty.openBordersTurns || 0, duration as number);
-      receiverTreaty.openBordersTurns = Math.max(receiverTreaty.openBordersTurns || 0, duration as number);
+      giverTreaty.openBordersTurns = Math.max(giverTreaty.openBordersTurns || 0, duration);
+      receiverTreaty.openBordersTurns = Math.max(receiverTreaty.openBordersTurns || 0, duration);
 
       updatedGiver = { ...updatedGiver, bordersClosedTurns: 0 };
       updatedReceiver = { ...updatedReceiver, bordersClosedTurns: 0 };
@@ -1078,16 +1078,16 @@ function applyNegotiationItemEffects(
     }
 
     case 'military-support': {
-      const duration = item.duration || 5;
+      const duration = typeof item.duration === 'number' ? item.duration : 5;
       const treaty = ensureTreatyRecord(updatedReceiver, updatedGiver);
-      treaty.militarySupportTurns = Math.max(treaty.militarySupportTurns || 0, duration as number);
+      treaty.militarySupportTurns = Math.max(treaty.militarySupportTurns || 0, duration);
       updatedReceiver = {
         ...updatedReceiver,
         defense: Math.max(0, (updatedReceiver.defense || 0) + 5),
       };
       updatedGiver = {
         ...updatedGiver,
-        production: Math.max(0, (updatedGiver.production || 0) - Math.floor((duration as number) / 2)),
+        production: Math.max(0, (updatedGiver.production || 0) - Math.floor(duration / 2)),
       };
       break;
     }

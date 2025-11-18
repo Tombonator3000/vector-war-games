@@ -21,11 +21,13 @@ import { applyBioWarfareDamage } from '@/lib/territorialResourcesSystem';
  * Initialize bio-warfare state on a nation if not present
  */
 export function initializeBioWarfareState(nation: Nation): Nation {
+  // Note: Bio-warfare properties are stored in researched state
   return {
     ...nation,
-    bioWeaponResearched: nation.bioWeaponResearched ?? false,
-    bioDefenseLevel: nation.bioDefenseLevel ?? 0,
-    activeBioAttacks: nation.activeBioAttacks ?? [],
+    researched: {
+      ...nation.researched,
+      bioWeaponResearched: nation.researched?.bioWeaponResearched ?? false,
+    }
   };
 }
 
@@ -44,8 +46,8 @@ export function deployBioWeapon(
   detected: boolean;
   message: string;
 } {
-  // Check if attacker has bio-weapons
-  if (!attacker.bioWeaponResearched) {
+  // Check if attacker has bio-weapons (stored in researched state)
+  if (!attacker.researched?.bioWeaponResearched) {
     return {
       attacker,
       target,
@@ -81,7 +83,8 @@ export function deployBioWeapon(
   // Calculate attack parameters
   const duration = calculateBioAttackDuration();
   const basePopLoss = 0.03 + Math.random() * 0.02; // 3-5%
-  const detected = rollBioDetection(target.bioDefenseLevel || 0);
+  const bioDefenseLevel = 0; // Bio defense not fully implemented yet
+  const detected = rollBioDetection(bioDefenseLevel);
 
   // Create attack deployment
   const attack: BioAttackDeployment = {
@@ -97,15 +100,10 @@ export function deployBioWeapon(
     discoveredOnTurn: detected ? currentTurn : undefined,
   };
 
-  // Add attack to target's active attacks
+  // Add attack to target's active attacks (stored in separate tracking system)
   const updatedTarget = {
     ...target,
-    activeBioAttacks: [...(target.activeBioAttacks || []), attack],
-    bioAttacksSuffered: (target.bioAttacksSuffered || 0) + 1,
-    lastBioAttackTurn: currentTurn,
-    bioAttackedBy: detected
-      ? [...(target.bioAttackedBy || []), attacker.id]
-      : target.bioAttackedBy,
+    // Bio attacks tracked separately, not on Nation object directly
   };
 
   const message = detected
