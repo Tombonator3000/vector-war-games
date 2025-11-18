@@ -353,7 +353,6 @@ import { OperationModal, type OperationAction, type OperationModalProps } from '
 import { IntelReportContent } from '@/components/modals/IntelReportContent';
 import { BuildModal } from '@/components/game/BuildModal';
 import { ResearchModal } from '@/components/game/ResearchModal';
-import { MilitaryModal } from '@/components/game/MilitaryModal';
 import { OptionsMenu } from '@/components/OptionsMenu';
 import { COSTS, RESEARCH_TREE, RESEARCH_LOOKUP, WARHEAD_RESEARCH_IDS, WARHEAD_YIELD_TO_ID, type ResourceCost, type ResearchProject } from '@/lib/gameConstants';
 import { useModalManager, type ModalContentValue } from '@/hooks/game/useModalManager';
@@ -11552,8 +11551,6 @@ export default function NoradVector() {
       });
     }
   }, []);
-
-  // MilitaryModal and War Council now consolidated into ConsolidatedWarModal via WAR button
 
   const handleIntelOperations = useCallback(() => {
     AudioSys.playSFX('click');

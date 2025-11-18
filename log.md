@@ -3501,3 +3501,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T15:15:10Z - Reviewed root AGENTS.md instructions and logging requirement before sanctions UI work.
 2025-11-18T15:15:45Z - Inspected useInternationalPressure hook and EnhancedDiplomacyModal to plan player sanctions listing integration.
 2025-11-18T15:16:38Z - Wired useInternationalPressure sanctions data into EnhancedDiplomacyModal and added per-turn sanctions status display for the player.
+2025-11-18T16:20:00Z - Reviewed root AGENTS.md guidance and scoped removal of the legacy MilitaryModal in favor of consolidated warfare UI.
+2025-11-18T16:25:00Z - Deleted the legacy MilitaryModal component, removed its Index.tsx import wiring, and updated documentation to reference ConsolidatedWarModal as the single warfare flow.
