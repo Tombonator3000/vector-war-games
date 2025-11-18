@@ -104,7 +104,7 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 **Major Offenders:**
 - `src/pages/Index.tsx`: 65 instances
 - `src/components/greatOldOnes/SanityHeatMapPanel.tsx`: 7 instances
-- `src/components/game/MilitaryModal.tsx`: 4 instances
+- `src/components/ConsolidatedWarModal.tsx`: 4 instances
 - `src/components/CesiumViewer.tsx`: 3 instances
 - Various other files: 37 instances
 
@@ -235,7 +235,7 @@ let accuracy = 0.8; // Should be const
 - Lines: 116, 117, 206, 207, 208, 401, 402
 - All: `@typescript-eslint/no-explicit-any`
 
-#### `src/components/game/MilitaryModal.tsx` (4 errors)
+#### `src/components/ConsolidatedWarModal.tsx` (4 errors)
 - Lines: 21, 22, 28, 33
 - All: `@typescript-eslint/no-explicit-any`
 

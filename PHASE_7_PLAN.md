@@ -30,7 +30,7 @@ Phase 7 is the final and most complex phase of the Index.tsx refactoring. The No
 - Audio and effect triggers
 
 **Modal Rendering Functions (~882 lines)**
-- `renderMilitaryModal` (172 lines) - Conventional warfare interface
+- `renderConsolidatedWarModal` (172 lines) - Unified warfare interface
 - `renderResearchModal` (327 lines) - Research tree and queue management
 - `renderBuildModal` (383 lines) - Production and construction interface
 
@@ -64,8 +64,8 @@ Phase 7 is the final and most complex phase of the Index.tsx refactoring. The No
 
 ### Priority 1: Extract Modal Components (882 lines)
 
-**1. MilitaryModal Component (172 lines)**
-- Path: `src/components/game/MilitaryModal.tsx`
+**1. ConsolidatedWarModal Component (172 lines)**
+- Path: `src/components/ConsolidatedWarModal.tsx`
 - Dependencies: conventional warfare hooks, PlayerManager
 - Props needed: ~15 (handlers, state, refs)
 - Complexity: Medium
@@ -172,7 +172,7 @@ Phase 7 is the final and most complex phase of the Index.tsx refactoring. The No
 
 **Day 1-2: Extract Modal Components**
 1. Create `src/components/game/` directory
-2. Extract MilitaryModal component
+2. Extract ConsolidatedWarModal component
 3. Extract ResearchModal component
 4. Extract BuildModal component
 5. Update Index.tsx imports
@@ -281,7 +281,7 @@ src/
 │   │   ├── ActionButtonGrid.tsx
 │   │   ├── GameCanvas.tsx
 │   │   ├── GameOverlays.tsx
-│   │   ├── MilitaryModal.tsx
+│   │   ├── ConsolidatedWarModal.tsx
 │   │   ├── ResearchModal.tsx
 │   │   └── BuildModal.tsx
 │   ├── setup/

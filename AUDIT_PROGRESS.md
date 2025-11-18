@@ -208,7 +208,7 @@
     - ✅ **Completed:** Extract game constants (600 lines)
       - gameConstants.ts with COSTS, RESEARCH_TREE, etc.
     - ✅ **Completed:** Extract 3 modal components (1,066 lines reduced)
-      - BuildModal, ResearchModal, MilitaryModal
+      - BuildModal, ResearchModal, ConsolidatedWarModal
     - ✅ **Completed:** Extract 2 custom hooks (30 lines reduced)
       - useModalManager, useNewsManager
     - 📋 **Remaining:** Create 3 additional custom hooks (~470 lines potential)
@@ -237,7 +237,7 @@
   - `src/lib/gameConstants.ts` (600 lines)
   - `src/components/game/BuildModal.tsx` (257 lines)
   - `src/components/game/ResearchModal.tsx` (171 lines)
-  - `src/components/game/MilitaryModal.tsx` (217 lines)
+  - `src/components/ConsolidatedWarModal.tsx` (217 lines)
   - `src/hooks/game/useModalManager.ts` (71 lines)
   - `src/hooks/game/useNewsManager.ts` (57 lines)
 - **Documentation:**
