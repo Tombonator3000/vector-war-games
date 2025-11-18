@@ -3493,3 +3493,6 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T15:10:54Z - Implemented sanctions rationale plumbing, added sanctions dialog trigger, and updated toast copy for imposing nations.
 2025-11-18T15:11:05Z - Ran 'npm run test -- --run src/hooks/__tests__/useInternationalPressure.test.ts' to verify international pressure updates.
 2025-11-18T15:05:47Z - Routed policy totalEffects into production, recruitment, diplomacy decay, defense, and intel systems during turn processing.
+2025-11-18T15:15:10Z - Reviewed root AGENTS.md instructions and logging requirement before sanctions UI work.
+2025-11-18T15:15:45Z - Inspected useInternationalPressure hook and EnhancedDiplomacyModal to plan player sanctions listing integration.
+2025-11-18T15:16:38Z - Wired useInternationalPressure sanctions data into EnhancedDiplomacyModal and added per-turn sanctions status display for the player.
