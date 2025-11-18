@@ -317,8 +317,8 @@ export function OptionsMenu({
     return stored !== 'false';
   });
 
-  // Always start at 10% volume
-  const [musicVolume, setMusicVolume] = useState(0.10);
+  // Always start at 15% volume
+  const [musicVolume, setMusicVolume] = useState(0.15);
 
   const [ambientVolume, setAmbientVolume] = useState(() => {
     const stored = Storage.getItem('audio_ambient_volume');
