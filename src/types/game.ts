@@ -271,6 +271,9 @@ export interface Nation {
   ideologyState?: IdeologyState;                    // Nation's ideology and support levels
   revolutionState?: RevolutionState;                // Revolution risk tracking
 
+  // Government System
+  governmentState?: import('./government').GovernmentState;  // Nation's government type and stability
+
   // NGO System (Immigration & Destabilization Operations)
   ngoState?: import('./ngoSystem').NGOState;        // NGO operations and infrastructure
 
