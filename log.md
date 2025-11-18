@@ -3482,3 +3482,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T08:30:55Z - Added useVictoryTracking regression test for mismatched playerName and ran 'npm run test -- --run src/hooks/__tests__/useVictoryTracking.test.ts'.
 2025-11-18T08:27:25Z - Reviewed root AGENTS.md logging guidance before updating CivilizationInfoPanel header copy.
 2025-11-18T08:27:26Z - Updated CivilizationInfoPanel title to display "Status Report" while preserving existing icon and styling.
+2025-11-18T14:47:01Z - Reviewed root AGENTS.md instructions for toast wording update.
+2025-11-18T14:47:06Z - Adjusted victory milestone toast wording to avoid duplicating "Victory" in titles and descriptions.
