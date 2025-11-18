@@ -47,6 +47,7 @@ interface LeadersScreenProps {
   playerNation: Nation;
   allNations: Nation[];
   onContactLeader: (nationId: string) => void;
+  onOpenCivStyleDiplomacy?: (nationId: string) => void;
 }
 
 /**
@@ -126,6 +127,7 @@ export function LeadersScreen({
   playerNation,
   allNations,
   onContactLeader,
+  onOpenCivStyleDiplomacy,
 }: LeadersScreenProps) {
   // Sort nations by importance
   const sortedNations = useMemo(
@@ -359,19 +361,36 @@ export function LeadersScreen({
                   </div>
 
                   {/* Contact Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full mt-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onContactLeader(nation.id);
-                      onClose();
-                    }}
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Contact Leader
-                  </Button>
+                  <div className="space-y-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onContactLeader(nation.id);
+                        onClose();
+                      }}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Contact Leader
+                    </Button>
+                    {onOpenCivStyleDiplomacy && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="w-full bg-amber-600 hover:bg-amber-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenCivStyleDiplomacy(nation.id);
+                          onClose();
+                        }}
+                      >
+                        <Globe className="h-4 w-4 mr-2" />
+                        Diplomatic Actions
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
