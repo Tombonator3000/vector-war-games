@@ -30,7 +30,10 @@ export function useVictoryTracking({
   diplomacyState,
 }: UseVictoryTrackingProps): VictoryAnalysis {
   return useMemo(() => {
-    const playerNation = nations.find((n) => n.name === playerName);
+    const normalizedPlayerName = playerName?.trim().toLowerCase();
+    const playerNation =
+      nations.find((n) => n.isPlayer) ||
+      nations.find((n) => n.name?.trim().toLowerCase() === normalizedPlayerName);
     if (!playerNation) {
       return createEmptyAnalysis();
     }
