@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-18T14:55:17Z - Governance maintenance cost integration
+- Added per-turn morale and approval maintenance handling for active policies, routing governance deltas through the unified applyGovernanceDelta helper during production.
+- Ensured policy maintenance continues to debit gold/intel and now reduces morale/public opinion when negative costs are present.
+- No automated tests run during this update.
+
 ### 2025-11-18T07:51:28Z - Toast overlay z-index elevation
 - Reviewed toast providers to ensure notifications render above modals and map overlays.
 - Raised the Radix toast viewport and Sonner toaster containers to `z-[9999]` so triggered toasts remain visible on top of all other UI layers.
