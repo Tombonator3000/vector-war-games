@@ -163,12 +163,16 @@ export function calculateMoraleProductionMultiplier(morale: number): number {
   return 0.7;
 }
 
-export function calculateMoraleRecruitmentModifier(morale: number): number {
-  if (morale >= 85) return 1.2;
-  if (morale >= 70) return 1.05;
-  if (morale >= 55) return 1.0;
-  if (morale >= 40) return 0.9;
-  return 0.75;
+export function calculateMoraleRecruitmentModifier(morale: number, policyModifier = 1): number {
+  let baseModifier: number;
+
+  if (morale >= 85) baseModifier = 1.2;
+  else if (morale >= 70) baseModifier = 1.05;
+  else if (morale >= 55) baseModifier = 1.0;
+  else if (morale >= 40) baseModifier = 0.9;
+  else baseModifier = 0.75;
+
+  return baseModifier * policyModifier;
 }
 
 function evaluateOptionExpectation(option: PoliticalEventOption): number {
