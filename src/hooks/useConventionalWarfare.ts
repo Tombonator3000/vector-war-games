@@ -1405,7 +1405,7 @@ export function useConventionalWarfare({
       const initialAttackerStrength = attackerBaseStrength + attackerCombinedBonus + attackingArmies;
       const initialDefenderStrength = defenderBaseStrength + defenderCombinedBonus + toTerritory.armies;
       const strengthRatio = Number(safeDivide(initialAttackerStrength, initialDefenderStrength).toFixed(2));
-      const attackerVictory = remainingDefenders === 0;
+      const attackerVictory = remainingDefenders === 0 && remainingAttackers > 0;
       const attackerLosses = attackingArmies - remainingAttackers;
       const defenderLosses = toTerritory.armies - remainingDefenders;
 

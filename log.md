@@ -3467,3 +3467,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T06:41:03Z - Attempted 'npm test -- --runInBand' but vitest executable was missing in environment.
 2025-11-18T07:17:53Z - Reworked conventional combat resolution to use strength-based casualty exchanges with capped per-round losses.
 2025-11-18T07:17:54Z - Updated engagement logging and UI panels to show strength exchanges instead of dice rolls.
+2025-11-18T07:32:48Z - Reviewed root AGENTS.md logging guidance before addressing conventional warfare mutual elimination outcome.
+2025-11-18T07:32:48Z - Required surviving attackers before declaring conventional assault victories to prevent empty attacker-controlled territories.
