@@ -12,6 +12,7 @@ import type { StrategicOutlinerGroup } from '@/components/StrategicOutliner';
 import { StrategicOutliner } from '@/components/StrategicOutliner';
 import type { GovernanceMetrics } from '@/hooks/useGovernance';
 import { PoliticalStatusWidget } from '@/components/governance/PoliticalStatusWidget';
+import { GovernmentStatusPanel } from '@/components/GovernmentStatusPanel';
 
 interface LeaderOverviewPanelProps {
   nation: Nation;
@@ -156,6 +157,14 @@ export function LeaderOverviewPanel({
             leaderName={leaderName}
             showLeaderButton={false}
           />
+
+          {nation.governmentState && (
+            <GovernmentStatusPanel
+              governmentState={nation.governmentState}
+              nationName={nation.name}
+              className="bg-slate-900/80 border-cyan-500/30 shadow-lg"
+            />
+          )}
 
           <LeaderAbilityPanel
             nation={nation}
