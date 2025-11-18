@@ -222,7 +222,11 @@ export function spendFavors(
  * @param currentTurn - Current game turn
  * @returns Updated nation
  */
-export function applyTrustDecay(nation: Nation, currentTurn: number): Nation {
+export function applyTrustDecay(
+  nation: Nation,
+  currentTurn: number,
+  decayModifier = 1,
+): Nation {
   if (!nation.trustRecords) return nation;
 
   const trustRecords = { ...nation.trustRecords };
@@ -230,7 +234,7 @@ export function applyTrustDecay(nation: Nation, currentTurn: number): Nation {
 
   for (const targetId in trustRecords) {
     const record = trustRecords[targetId];
-    const decay = calculateTrustDecay(record.value);
+    const decay = calculateTrustDecay(record.value) * decayModifier;
 
     if (decay !== 0) {
       const newValue = clampTrust(record.value + decay);

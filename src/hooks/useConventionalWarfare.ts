@@ -1058,7 +1058,10 @@ export function useConventionalWarfare({
       });
 
       const profile = nation.conventional ?? createDefaultNationConventionalProfile();
-      const moraleModifier = calculateMoraleRecruitmentModifier(nation.morale ?? 50);
+      const moraleModifier = calculateMoraleRecruitmentModifier(
+        nation.morale ?? 50,
+        nation.recruitmentPolicyModifier ?? 1,
+      );
       const trainingIntensity = template.readinessImpact;
       const professionalismGain = Math.max(2, Math.round(trainingIntensity * Math.max(0.75, moraleModifier)));
       const readinessPenalty = Math.max(3, Math.round(trainingIntensity * 0.9));

@@ -35,6 +35,7 @@ import {
   assignTerritoryResources,
   addStrategicResource,
 } from '@/lib/territorialResourcesSystem';
+import type { PolicyEffects } from '@/types/policy';
 import type { TerritoryState } from '@/hooks/useConventionalWarfare';
 import {
   initializeResourceMarket,
@@ -92,6 +93,8 @@ export interface ProductionPhaseDependencies {
   PlayerManager: any;
   conventionalState?: any;  // Optional: conventional warfare state with territories
   rng: SeededRandom;
+  policyEffects?: PolicyEffects;
+  policyNationId?: string;
   onGameOver?: (payload: { victory: boolean; message: string; cause?: string }) => void;
 }
 
@@ -354,6 +357,8 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     PlayerManager,
     conventionalState,
     onGameOver,
+    policyEffects,
+    policyNationId,
   } = deps;
 
   const player = PlayerManager?.get?.() ?? null;
@@ -378,6 +383,15 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
   // Apply ideology bonuses to all nations BEFORE resource generation
   applyIdeologyBonusesForProduction(nations);
+
+  const policyEffectsByNation =
+    policyNationId && policyEffects
+      ? { [policyNationId]: policyEffects }
+      : {};
+
+  if (typeof window !== 'undefined') {
+    (window as any).__policyEffectsByNation = policyEffectsByNation;
+  }
 
   // OPTIMIZED: Single loop for base production calculations
   nations.forEach(n => {
@@ -429,15 +443,28 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
       }
     }
 
-    // Apply economy tech bonuses
+    // Apply economy tech bonuses and policy effects
     const economyProdMult = n.productionMultiplier || 1.0;
     const economyUraniumBonus = n.uraniumPerTurn || 0;
 
     const moraleMultiplier = calculateMoraleProductionMultiplier(n.morale ?? 0);
-    n.production += Math.floor(baseProd * prodMult * economyProdMult * moraleMultiplier);
-    const uraniumGain = Math.floor(baseUranium * uranMult * moraleMultiplier) + economyUraniumBonus;
+    const isPolicyNation = policyNationId === n.id;
+    const policyProductionModifier =
+      isPolicyNation && policyEffects?.productionModifier ? policyEffects.productionModifier : 1;
+
+    n.recruitmentPolicyModifier = isPolicyNation ? policyEffects?.militaryRecruitmentModifier ?? 1 : 1;
+    n.defensePolicyBonus = isPolicyNation ? policyEffects?.defenseBonus ?? 0 : 0;
+    n.missileAccuracyBonus = isPolicyNation ? policyEffects?.missileAccuracyBonus ?? 0 : 0;
+    n.intelSuccessBonus = isPolicyNation ? policyEffects?.espionageSuccessBonus ?? 0 : 0;
+    n.counterIntelBonus = isPolicyNation ? policyEffects?.counterIntelBonus ?? 0 : 0;
+
+    const productionGain = Math.floor(
+      baseProd * prodMult * economyProdMult * moraleMultiplier * policyProductionModifier
+    );
+    n.production += productionGain;
+    const uraniumGain = Math.floor(baseUranium * uranMult * moraleMultiplier * policyProductionModifier) + economyUraniumBonus;
     addStrategicResource(n, 'uranium', uraniumGain);
-    n.intel += Math.floor(baseIntel * moraleMultiplier);
+    n.intel += Math.floor(baseIntel * moraleMultiplier * policyProductionModifier);
 
     // Instability effects
     if (n.instability && n.instability > 50) {
@@ -712,7 +739,12 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     if (n.population <= 0) return;
 
     // Phase 1: Apply trust decay and update favors
-    let updatedNation = applyTrustDecay(n, S.turn);
+    const trustDecayModifier =
+      n.id === policyNationId && policyEffects?.relationshipDecayModifier
+        ? policyEffects.relationshipDecayModifier
+        : 1;
+
+    let updatedNation = applyTrustDecay(n, S.turn, trustDecayModifier);
     nations[index] = updatedNation;
 
     // Phase 2: Update grievances, claims, and specialized alliances

@@ -3477,6 +3477,7 @@ function resolutionPhase() {
 
 // Production Phase - wrapper function that delegates to extracted module
 function productionPhase(rng: SeededRandom) {
+  const player = PlayerManager.get();
   const deps: ProductionPhaseDependencies = {
     S,
     nations,
@@ -3486,6 +3487,8 @@ function productionPhase(rng: SeededRandom) {
     leaders,
     PlayerManager,
     rng,
+    policyEffects: policySystemRef?.totalEffects,
+    policyNationId: player?.id,
     onGameOver: ({ victory, message }) => {
       endGame(victory, message);
     },
@@ -3493,7 +3496,6 @@ function productionPhase(rng: SeededRandom) {
   runProductionPhase(deps);
 
   // Automatic de-escalation during peaceful periods
-  const player = PlayerManager.get();
   const currentDefcon = GameStateManager.getDefcon();
 
   if (player && currentDefcon < 5) {
@@ -3980,10 +3982,17 @@ function drawMissiles() {
       // Interception check
       if (m.t >= 0.95 && !m.interceptChecked) {
         m.interceptChecked = true;
+        const getPolicyDefenseBonus = (nation: Nation) => {
+          if (nation.isPlayer && policySystemRef?.totalEffects?.defenseBonus) {
+            return policySystemRef.totalEffects.defenseBonus;
+          }
+          return nation.defensePolicyBonus ?? 0;
+        };
+
         const allies = nations.filter(n => n.treaties?.[m.target.id]?.alliance && n.defense > 0);
-        const alliedDefenses = allies.map((ally) => ally.defense || 0);
+        const alliedDefenses = allies.map((ally) => (ally.defense || 0) + getPolicyDefenseBonus(ally));
         const { totalChance, allyChances } = calculateMissileInterceptChance(
-          m.target.defense || 0,
+          (m.target.defense || 0) + getPolicyDefenseBonus(m.target),
           alliedDefenses
         );
 

@@ -195,6 +195,11 @@ export interface Nation {
   immigrationBonus?: number;
   satelliteIntelBonus?: number;
   treatyLockDuration?: number;
+  recruitmentPolicyModifier?: number;
+  defensePolicyBonus?: number;
+  missileAccuracyBonus?: number;
+  intelSuccessBonus?: number;
+  counterIntelBonus?: number;
 
   // Diplomacy and relationships
   alliances?: string[];
