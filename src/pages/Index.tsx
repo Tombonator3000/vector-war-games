@@ -439,7 +439,12 @@ const isProposalExpired = (proposal: DiplomaticProposal, currentTurn: number): b
 
 type ThemeId =
   | 'synthwave'
-  | 'wargames';
+  | 'wargames'
+  | 'noradBunker'
+  | 'krasniy'
+  | 'defcon1'
+  | 'strangelove'
+  | 'holographic';
 type LayoutDensity = 'expanded' | 'compact' | 'minimal';
 
 type LayoutDensityOption = {
@@ -757,12 +762,62 @@ const THEME_SETTINGS: Record<ThemeId, ThemePalette> = {
     cloud: 'rgba(255,180,220,0.45)',
     mapFill: 'rgba(14,40,96,0.7)',
     mapFillWireframe: 'rgba(143,225,255,0.12)',
+  },
+  noradBunker: {
+    mapOutline: 'rgba(120,180,80,0.6)',
+    grid: 'rgba(255,191,0,0.2)',
+    radar: 'rgba(120,180,80,0.08)',
+    ocean: 'rgba(30,60,90,0.65)',
+    cloud: 'rgba(140,140,130,0.5)',
+    mapFill: 'rgba(50,55,50,0.68)',
+    mapFillWireframe: 'rgba(120,180,80,0.12)',
+  },
+  krasniy: {
+    mapOutline: 'rgba(220,40,40,0.7)',
+    grid: 'rgba(255,215,0,0.25)',
+    radar: 'rgba(220,40,40,0.1)',
+    ocean: 'rgba(20,30,60,0.7)',
+    cloud: 'rgba(180,60,60,0.55)',
+    mapFill: 'rgba(60,15,15,0.7)',
+    mapFillWireframe: 'rgba(220,40,40,0.15)',
+  },
+  defcon1: {
+    mapOutline: 'rgba(255,30,30,0.85)',
+    grid: 'rgba(255,255,255,0.3)',
+    radar: 'rgba(255,30,30,0.15)',
+    ocean: 'rgba(30,0,0,0.75)',
+    cloud: 'rgba(255,100,100,0.6)',
+    mapFill: 'rgba(80,10,10,0.75)',
+    mapFillWireframe: 'rgba(255,30,30,0.18)',
+  },
+  strangelove: {
+    mapOutline: 'rgba(0,255,0,0.45)',
+    grid: 'rgba(200,200,200,0.2)',
+    radar: 'rgba(0,255,0,0.06)',
+    ocean: 'rgba(20,20,20,0.8)',
+    cloud: 'rgba(160,160,160,0.55)',
+    mapFill: 'rgba(30,30,30,0.75)',
+    mapFillWireframe: 'rgba(0,255,0,0.12)',
+  },
+  holographic: {
+    mapOutline: 'rgba(100,200,255,0.75)',
+    grid: 'rgba(100,200,255,0.22)',
+    radar: 'rgba(100,200,255,0.09)',
+    ocean: 'rgba(5,25,45,0.7)',
+    cloud: 'rgba(150,220,255,0.5)',
+    mapFill: 'rgba(10,30,50,0.65)',
+    mapFillWireframe: 'rgba(100,200,255,0.14)',
   }
 };
 
 const themeOptions: { id: ThemeId; label: string }[] = [
   { id: 'synthwave', label: 'Synthwave' },
-  { id: 'wargames', label: 'WARGAMES' }
+  { id: 'wargames', label: 'WARGAMES' },
+  { id: 'noradBunker', label: 'NORAD Bunker' },
+  { id: 'krasniy', label: 'Красный' },
+  { id: 'defcon1', label: 'DEFCON 1' },
+  { id: 'strangelove', label: 'Strangelove' },
+  { id: 'holographic', label: 'Holographic' }
 ];
 
 let currentTheme: ThemeId = 'synthwave';

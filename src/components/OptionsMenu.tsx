@@ -37,7 +37,12 @@ const Storage = {
 
 type ThemeId =
   | 'synthwave'
-  | 'wargames';
+  | 'wargames'
+  | 'noradBunker'
+  | 'krasniy'
+  | 'defcon1'
+  | 'strangelove'
+  | 'holographic';
 
 type LayoutDensity = 'expanded' | 'compact' | 'minimal';
 type ScreenResolution = 'auto' | '1280x720' | '1600x900' | '1920x1080' | '2560x1440' | '3840x2160';
@@ -58,7 +63,12 @@ const DEFAULT_AMBIENT_VOLUME = 0.55;
 
 const themeOptions: { id: ThemeId; label: string }[] = [
   { id: 'synthwave', label: 'Synthwave' },
-  { id: 'wargames', label: 'WARGAMES' }
+  { id: 'wargames', label: 'WARGAMES' },
+  { id: 'noradBunker', label: 'NORAD Bunker' },
+  { id: 'krasniy', label: 'Красный' },
+  { id: 'defcon1', label: 'DEFCON 1' },
+  { id: 'strangelove', label: 'Strangelove' },
+  { id: 'holographic', label: 'Holographic' }
 ];
 
 const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
