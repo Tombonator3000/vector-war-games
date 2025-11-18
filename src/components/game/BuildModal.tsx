@@ -205,29 +205,27 @@ export function BuildModal({
         key={option.key}
         onClick={option.onClick}
         disabled={disabled}
-        className={`w-full text-left p-4 rounded-lg border transition-all ${
+        className={`w-full h-full text-left p-4 rounded-lg border transition-all flex flex-col ${
           disabled
             ? 'bg-slate-900/30 border-gray-700/30 opacity-50 cursor-not-allowed'
             : 'bg-slate-800/50 border-cyan-500/30 hover:bg-slate-700/50 hover:border-cyan-500/50 cursor-pointer'
         }`}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <h4 className="text-lg font-semibold text-cyan-300 font-mono">{option.label}</h4>
-            <p className="text-sm text-gray-400 mt-1">{option.description}</p>
-            <div className="text-xs text-cyan-400 mt-2 uppercase tracking-wide">Cost: {formatCost(option.cost)}</div>
-            {option.statusLine ? (
-              <div className="text-xs text-gray-500 mt-1">{option.statusLine}</div>
-            ) : null}
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            {!disabled && (
-              <span className="text-sm font-semibold text-cyan-400">Available</span>
-            )}
-          </div>
+        <div className="flex-1 space-y-2">
+          <h4 className="text-base font-semibold text-cyan-300 font-mono leading-tight">{option.label}</h4>
+          <p className="text-xs text-gray-400 leading-snug">{option.description}</p>
+          <div className="text-xs text-cyan-400 uppercase tracking-wide">Cost: {formatCost(option.cost)}</div>
+          {option.statusLine ? (
+            <div className="text-xs text-gray-500">{option.statusLine}</div>
+          ) : null}
         </div>
+        {!disabled && (
+          <div className="mt-2 pt-2 border-t border-cyan-500/20">
+            <span className="text-xs font-semibold text-cyan-400">✓ Available</span>
+          </div>
+        )}
         {disabledReason ? (
-          <div className="mt-3 text-xs text-yellow-400">{disabledReason}</div>
+          <div className="mt-2 pt-2 border-t border-yellow-500/20 text-xs text-yellow-400">{disabledReason}</div>
         ) : null}
       </button>
     );
@@ -250,21 +248,21 @@ export function BuildModal({
       <div className="space-y-6">
         <div>
           <h3 className="mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Delivery & Defense</h3>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
             {deliveryOptions.map(renderOption)}
           </div>
         </div>
 
         <div>
           <h3 className="mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Infrastructure</h3>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {infrastructureOptions.map(renderOption)}
           </div>
         </div>
 
         <div>
           <h3 className="mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Warhead Production</h3>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {warheadOptions.map(renderOption)}
           </div>
         </div>

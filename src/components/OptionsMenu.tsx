@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
 import { CoopStatusPanel } from '@/components/coop/CoopStatusPanel';
 import { GameDatabase } from '@/components/GameDatabase';
@@ -537,306 +538,356 @@ export function OptionsMenu({
 
   return (
     <div className="options-sheet__decor">
-      {/* VISUAL THEMES */}
-      <div className="options-section">
-        <h3 className="options-section__heading">VISUAL THEMES</h3>
-        <p className="options-section__subheading">Switch the world feed rendering profile.</p>
-        <div className="theme-grid">
-          {themeOptions.map(opt => {
-            const active = theme === opt.id;
-            return (
-              <Button
-                key={opt.id}
-                onClick={() => setTheme(opt.id)}
-                className={`theme-chip${active ? ' is-active' : ''}`}
-                type="button"
-              >
-                {opt.label.toUpperCase()}
-              </Button>
-            );
-          })}
-        </div>
-      </div>
+      <Tabs defaultValue="visuals" className="w-full">
+        <TabsList className="w-full grid grid-cols-4 bg-black/60 border border-cyan-700/60 mb-6">
+          <TabsTrigger
+            value="visuals"
+            className="data-[state=active]:bg-cyan-900/60 data-[state=active]:text-cyan-100 text-cyan-400"
+          >
+            VISUALS
+          </TabsTrigger>
+          <TabsTrigger
+            value="audio"
+            className="data-[state=active]:bg-cyan-900/60 data-[state=active]:text-cyan-100 text-cyan-400"
+          >
+            AUDIO
+          </TabsTrigger>
+          <TabsTrigger
+            value="gameplay"
+            className="data-[state=active]:bg-cyan-900/60 data-[state=active]:text-cyan-100 text-cyan-400"
+          >
+            GAMEPLAY
+          </TabsTrigger>
+          <TabsTrigger
+            value="help"
+            className="data-[state=active]:bg-cyan-900/60 data-[state=active]:text-cyan-100 text-cyan-400"
+          >
+            HELP
+          </TabsTrigger>
+        </TabsList>
 
-      {/* MAP DISPLAY STYLE */}
-      <div className="options-section">
-        <h3 className="options-section__heading">MAP DISPLAY STYLE</h3>
-        <p className="options-section__subheading">Choose how the global map is rendered.</p>
-        <div className="layout-grid">
-          {MAP_STYLE_OPTIONS.map((option) => {
-            const isActive = mapStyle.visual === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => handleMapStyleChange(option.value)}
-                className={`layout-chip${isActive ? ' is-active' : ''}`}
-                aria-pressed={isActive}
-              >
-                <span className="layout-chip__label">{option.label}</span>
-                <span className="layout-chip__description">{option.description}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="options-toggle mt-4">
-          <div className="flex flex-col text-left">
-            <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Auto Day/Night Cycle</span>
-            <span className="text-[11px] text-cyan-400/80">
-              Rotate the flat-realistic map lighting between daylight and nightfall automatically.
-            </span>
-          </div>
-          <Switch
-            checked={dayNightAutoCycleEnabled}
-            onCheckedChange={handleDayNightAutoCycleToggle}
-            aria-label="Toggle automatic day and night transitions"
-          />
-        </div>
-      </div>
-
-      {/* SCREEN RESOLUTION */}
-      <div className="options-section">
-        <h3 className="options-section__heading">SCREEN RESOLUTION</h3>
-        <p className="options-section__subheading">Set canvas resolution to optimize performance for your PC monitor.</p>
-        <div className="layout-grid">
-          {RESOLUTION_OPTIONS.map((option) => {
-            const isActive = screenResolution === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => handleResolutionSelect(option.value)}
-                className={`layout-chip${isActive ? ' is-active' : ''}`}
-                aria-pressed={isActive}
-              >
-                <span className="layout-chip__label">{option.label}</span>
-                <span className="layout-chip__description">{option.description}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* HUD LAYOUT - Only show in-game */}
-      {showInGameFeatures && (
-        <div className="options-section">
-          <h3 className="options-section__heading">HUD LAYOUT</h3>
-          <p className="options-section__subheading">Choose how much interface overlays the map.</p>
-          <div className="layout-grid">
-            {layoutDensityOptions.map((option) => {
-              const isActive = layoutDensity === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => handleLayoutDensityChange(option.id)}
-                  className={`layout-chip${isActive ? ' is-active' : ''}`}
-                  aria-pressed={isActive}
-                  title={option.description}
-                >
-                  <span className="layout-chip__label">{option.label}</span>
-                  <span className="layout-chip__description">{option.description}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* CO-OP OPERATIONS - Only show in-game */}
-      {showInGameFeatures && (
-        <div className="options-section">
-          <h3 className="options-section__heading">CO-OP OPERATIONS</h3>
-          <p className="options-section__subheading">
-            {coopEnabled
-              ? 'Review allied readiness, sync status, and role assignments.'
-              : 'Single-commander mode active; approvals and state sync are paused.'}
-          </p>
-          <div className="options-toggle">
-            <div className="flex flex-col text-left">
-              <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Shared Command</span>
-              <span className="text-[11px] text-cyan-400/80">
-                {coopEnabled
-                  ? 'Strategic actions may require allied approval to execute.'
-                  : 'Approvals are bypassed and multiplayer messaging is suspended.'}
-              </span>
+        {/* VISUALS TAB */}
+        <TabsContent value="visuals" className="space-y-6">
+          {/* VISUAL THEMES */}
+          <div className="options-section">
+            <h3 className="options-section__heading">VISUAL THEMES</h3>
+            <p className="options-section__subheading">Switch the world feed rendering profile.</p>
+            <div className="theme-grid">
+              {themeOptions.map(opt => {
+                const active = theme === opt.id;
+                return (
+                  <Button
+                    key={opt.id}
+                    onClick={() => setTheme(opt.id)}
+                    className={`theme-chip${active ? ' is-active' : ''}`}
+                    type="button"
+                  >
+                    {opt.label.toUpperCase()}
+                  </Button>
+                );
+              })}
             </div>
-            <div className="flex items-center gap-2">
+          </div>
+
+          {/* MAP DISPLAY STYLE */}
+          <div className="options-section">
+            <h3 className="options-section__heading">MAP DISPLAY STYLE</h3>
+            <p className="options-section__subheading">Choose how the global map is rendered.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {MAP_STYLE_OPTIONS.map((option) => {
+                const isActive = mapStyle.visual === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleMapStyleChange(option.value)}
+                    className={`layout-chip${isActive ? ' is-active' : ''}`}
+                    aria-pressed={isActive}
+                  >
+                    <span className="layout-chip__label">{option.label}</span>
+                    <span className="layout-chip__description">{option.description}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="options-toggle mt-4">
+              <div className="flex flex-col text-left">
+                <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Auto Day/Night Cycle</span>
+                <span className="text-[11px] text-cyan-400/80">
+                  Rotate the flat-realistic map lighting between daylight and nightfall automatically.
+                </span>
+              </div>
               <Switch
-                checked={coopEnabled}
-                onCheckedChange={handleCoopToggle}
-                aria-label="Toggle co-op approvals"
+                checked={dayNightAutoCycleEnabled}
+                onCheckedChange={handleDayNightAutoCycleToggle}
+                aria-label="Toggle automatic day and night transitions"
               />
-              <Button
-                type="button"
-                variant="outline"
-                className="border-cyan-700/60 text-cyan-200 hover:bg-cyan-800/40"
-                onClick={() => handleCoopToggle(!coopEnabled)}
-              >
-                {coopEnabled ? 'Disable' : 'Enable'}
-              </Button>
             </div>
           </div>
-          {coopEnabled ? (
-            <div className="mt-4 space-y-3">
-              <CoopStatusPanel />
+
+          {/* SCREEN RESOLUTION */}
+          <div className="options-section">
+            <h3 className="options-section__heading">SCREEN RESOLUTION</h3>
+            <p className="options-section__subheading">Set canvas resolution to optimize performance for your PC monitor.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {RESOLUTION_OPTIONS.map((option) => {
+                const isActive = screenResolution === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleResolutionSelect(option.value)}
+                    className={`layout-chip${isActive ? ' is-active' : ''}`}
+                    aria-pressed={isActive}
+                  >
+                    <span className="layout-chip__label">{option.label}</span>
+                    <span className="layout-chip__description">{option.description}</span>
+                  </button>
+                );
+              })}
             </div>
-          ) : (
-            <div className="mt-4 rounded border border-cyan-500/40 bg-black/40 p-3 text-xs text-cyan-200">
-              Command approvals will be skipped and multiplayer sync paused until re-enabled.
+          </div>
+
+          {/* HUD LAYOUT - Only show in-game */}
+          {showInGameFeatures && (
+            <div className="options-section">
+              <h3 className="options-section__heading">HUD LAYOUT</h3>
+              <p className="options-section__subheading">Choose how much interface overlays the map.</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {layoutDensityOptions.map((option) => {
+                  const isActive = layoutDensity === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => handleLayoutDensityChange(option.id)}
+                      className={`layout-chip${isActive ? ' is-active' : ''}`}
+                      aria-pressed={isActive}
+                      title={option.description}
+                    >
+                      <span className="layout-chip__label">{option.label}</span>
+                      <span className="layout-chip__description">{option.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
-        </div>
-      )}
+        </TabsContent>
 
-      {/* AUDIO CONTROL */}
-      <div className="options-section">
-        <h3 className="options-section__heading">AUDIO CONTROL</h3>
-        <p className="options-section__subheading">Manage strategic alert audio and briefing ambience.</p>
-        <div className="options-toggle">
-          <span>MUSIC</span>
-          <Switch checked={resolvedMusicEnabled} onCheckedChange={handleMusicToggle} aria-label="Toggle music" />
-        </div>
-        <div className="options-toggle">
-          <span>SOUND FX</span>
-          <Switch checked={resolvedSfxEnabled} onCheckedChange={handleSfxToggle} aria-label="Toggle sound effects" />
-        </div>
-        <div className="options-toggle">
-          <span>AMBIENT ALERTS</span>
-          <Switch checked={resolvedAmbientEnabled} onCheckedChange={handleAmbientToggle} aria-label="Toggle ambient alerts" />
-        </div>
-        <div className="options-slider">
-          <div className="options-slider__label">
-            <span>MUSIC GAIN</span>
-            <span>{Math.round(resolvedMusicVolume * 100)}%</span>
-          </div>
-          <Slider
-            value={[resolvedMusicVolume * 100]}
-            min={0}
-            max={100}
-            step={5}
-            onValueChange={handleMusicVolumeChange}
-            disabled={!resolvedMusicEnabled}
-            aria-label="Adjust music volume"
-          />
-        </div>
-        <div className="options-slider">
-          <div className="options-slider__label">
-            <span>AMBIENT GAIN</span>
-            <span>{Math.round(resolvedAmbientVolume * 100)}%</span>
-          </div>
-          <Slider
-            value={[resolvedAmbientVolume * 100]}
-            min={0}
-            max={100}
-            step={5}
-            onValueChange={handleAmbientVolumeChangeInternal}
-            disabled={!resolvedAmbientEnabled}
-            aria-label="Adjust ambient volume"
-          />
-        </div>
-        <div className="mt-4 space-y-2">
-          <div className="flex flex-col text-left">
-            <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Soundtrack</span>
-            <span className="text-[11px] text-cyan-400/80">{activeTrackMessage}</span>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <select
-              className="bg-black/60 border border-cyan-700 text-cyan-100 text-sm rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 disabled:opacity-50 disabled:cursor-not-allowed"
-              value={resolvedMusicSelection}
-              onChange={(event) => handleMusicTrackChange(event.target.value)}
-              disabled={!resolvedMusicEnabled}
-              aria-label="Select soundtrack"
-            >
-              <option value="random">Random Rotation</option>
-              {availableMusicTracks.map(track => (
-                <option key={track.id} value={track.id}>
-                  {track.title}
-                </option>
-              ))}
-            </select>
-            <Button
-              type="button"
-              className="bg-cyan-900/40 border border-cyan-700/60 text-cyan-200 hover:bg-cyan-800/60 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleNextTrack}
-              disabled={!resolvedMusicEnabled}
-            >
-              Advance Track
-            </Button>
-          </div>
-        </div>
-      </div>
+        {/* AUDIO TAB */}
+        <TabsContent value="audio" className="space-y-6">
+          <div className="options-section">
+            <h3 className="options-section__heading">AUDIO CONTROL</h3>
+            <p className="options-section__subheading">Manage strategic alert audio and briefing ambience.</p>
 
-      {/* UNCONVENTIONAL WARFARE */}
-      <div className="options-section">
-        <h3 className="options-section__heading">UNCONVENTIONAL WARFARE</h3>
-        <p className="options-section__subheading">Control how pandemic and bio-weapon systems factor into conquest planning.</p>
-        <div className="options-toggle">
-          <div className="flex flex-col text-left">
-            <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Pandemic Integration</span>
-            <span className="text-[11px] text-cyan-400/80">Allow engineered outbreaks and containment play a role each turn.</span>
-          </div>
-          <Switch
-            checked={pandemicIntegrationEnabled}
-            onCheckedChange={handlePandemicToggle}
-            aria-label="Toggle pandemic gameplay"
-          />
-        </div>
-        <div className="options-toggle">
-          <div className="flex flex-col text-left">
-            <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Bio-Weapon Conquest Ops</span>
-            <span className="text-[11px] text-cyan-400/80">Enable offensive deployment of pathogens as a conquest vector. Changes are logged to the war-room audit trail.</span>
-          </div>
-          <Switch
-            checked={bioWarfareEnabled}
-            onCheckedChange={handleBioWarfareToggle}
-            aria-label="Toggle bioweapon conquest options"
-          />
-        </div>
-      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="options-toggle">
+                  <span>MUSIC</span>
+                  <Switch checked={resolvedMusicEnabled} onCheckedChange={handleMusicToggle} aria-label="Toggle music" />
+                </div>
+                <div className="options-toggle">
+                  <span>SOUND FX</span>
+                  <Switch checked={resolvedSfxEnabled} onCheckedChange={handleSfxToggle} aria-label="Toggle sound effects" />
+                </div>
+                <div className="options-toggle">
+                  <span>AMBIENT ALERTS</span>
+                  <Switch checked={resolvedAmbientEnabled} onCheckedChange={handleAmbientToggle} aria-label="Toggle ambient alerts" />
+                </div>
+              </div>
 
-      {/* TUTORIALS & REFERENCE */}
-      <div className="options-section">
-        <h3 className="options-section__heading">TUTORIALS & REFERENCE</h3>
-        <p className="options-section__subheading">Access comprehensive game guides, tutorials, and mechanic references.</p>
-
-        <div className="space-y-3 mt-4">
-          <Button
-            type="button"
-            onClick={() => setDatabaseOpen(true)}
-            className="w-full justify-start gap-3 bg-cyan-900/40 border border-cyan-700/60 text-cyan-100 hover:bg-cyan-800/60 h-auto py-4"
-          >
-            <BookOpen className="h-5 w-5" />
-            <div className="flex flex-col text-left">
-              <span className="font-semibold">Game Database</span>
-              <span className="text-xs text-cyan-300/80 font-normal">
-                Complete reference for all game mechanics, weapons, and strategies
-              </span>
+              <div className="space-y-4">
+                <div className="options-slider">
+                  <div className="options-slider__label">
+                    <span>MUSIC GAIN</span>
+                    <span>{Math.round(resolvedMusicVolume * 100)}%</span>
+                  </div>
+                  <Slider
+                    value={[resolvedMusicVolume * 100]}
+                    min={0}
+                    max={100}
+                    step={5}
+                    onValueChange={handleMusicVolumeChange}
+                    disabled={!resolvedMusicEnabled}
+                    aria-label="Adjust music volume"
+                  />
+                </div>
+                <div className="options-slider">
+                  <div className="options-slider__label">
+                    <span>AMBIENT GAIN</span>
+                    <span>{Math.round(resolvedAmbientVolume * 100)}%</span>
+                  </div>
+                  <Slider
+                    value={[resolvedAmbientVolume * 100]}
+                    min={0}
+                    max={100}
+                    step={5}
+                    onValueChange={handleAmbientVolumeChangeInternal}
+                    disabled={!resolvedAmbientEnabled}
+                    aria-label="Adjust ambient volume"
+                  />
+                </div>
+              </div>
             </div>
-          </Button>
 
-          <Button
-            type="button"
-            onClick={() => setTutorialOpen(true)}
-            className="w-full justify-start gap-3 bg-cyan-900/40 border border-cyan-700/60 text-cyan-100 hover:bg-cyan-800/60 h-auto py-4"
-          >
-            <GraduationCap className="h-5 w-5" />
-            <div className="flex flex-col text-left">
-              <span className="font-semibold">Complete Tutorial</span>
-              <span className="text-xs text-cyan-300/80 font-normal">
-                Interactive step-by-step guide through all game systems
-              </span>
+            <div className="mt-6 space-y-2">
+              <div className="flex flex-col text-left">
+                <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Soundtrack</span>
+                <span className="text-[11px] text-cyan-400/80">{activeTrackMessage}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-[1fr,auto] gap-2">
+                <select
+                  className="bg-black/60 border border-cyan-700 text-cyan-100 text-sm rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={resolvedMusicSelection}
+                  onChange={(event) => handleMusicTrackChange(event.target.value)}
+                  disabled={!resolvedMusicEnabled}
+                  aria-label="Select soundtrack"
+                >
+                  <option value="random">Random Rotation</option>
+                  {availableMusicTracks.map(track => (
+                    <option key={track.id} value={track.id}>
+                      {track.title}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  className="bg-cyan-900/40 border border-cyan-700/60 text-cyan-200 hover:bg-cyan-800/60 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleNextTrack}
+                  disabled={!resolvedMusicEnabled}
+                >
+                  Advance Track
+                </Button>
+              </div>
             </div>
-          </Button>
-        </div>
+          </div>
+        </TabsContent>
 
-        <div className="mt-4 p-3 rounded border border-cyan-500/40 bg-black/40">
-          <p className="text-xs text-cyan-200">
-            <strong>Tip:</strong> Use the database as a reference during gameplay.
-            The tutorial covers everything from basic mechanics to advanced strategies.
-          </p>
-        </div>
-      </div>
+        {/* GAMEPLAY TAB */}
+        <TabsContent value="gameplay" className="space-y-6">
+          {/* CO-OP OPERATIONS - Only show in-game */}
+          {showInGameFeatures && (
+            <div className="options-section">
+              <h3 className="options-section__heading">CO-OP OPERATIONS</h3>
+              <p className="options-section__subheading">
+                {coopEnabled
+                  ? 'Review allied readiness, sync status, and role assignments.'
+                  : 'Single-commander mode active; approvals and state sync are paused.'}
+              </p>
+              <div className="options-toggle">
+                <div className="flex flex-col text-left">
+                  <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Shared Command</span>
+                  <span className="text-[11px] text-cyan-400/80">
+                    {coopEnabled
+                      ? 'Strategic actions may require allied approval to execute.'
+                      : 'Approvals are bypassed and multiplayer messaging is suspended.'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={coopEnabled}
+                    onCheckedChange={handleCoopToggle}
+                    aria-label="Toggle co-op approvals"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-cyan-700/60 text-cyan-200 hover:bg-cyan-800/40"
+                    onClick={() => handleCoopToggle(!coopEnabled)}
+                  >
+                    {coopEnabled ? 'Disable' : 'Enable'}
+                  </Button>
+                </div>
+              </div>
+              {coopEnabled ? (
+                <div className="mt-4 space-y-3">
+                  <CoopStatusPanel />
+                </div>
+              ) : (
+                <div className="mt-4 rounded border border-cyan-500/40 bg-black/40 p-3 text-xs text-cyan-200">
+                  Command approvals will be skipped and multiplayer sync paused until re-enabled.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* UNCONVENTIONAL WARFARE */}
+          <div className="options-section">
+            <h3 className="options-section__heading">UNCONVENTIONAL WARFARE</h3>
+            <p className="options-section__subheading">Control how pandemic and bio-weapon systems factor into conquest planning.</p>
+            <div className="space-y-4">
+              <div className="options-toggle">
+                <div className="flex flex-col text-left">
+                  <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Pandemic Integration</span>
+                  <span className="text-[11px] text-cyan-400/80">Allow engineered outbreaks and containment play a role each turn.</span>
+                </div>
+                <Switch
+                  checked={pandemicIntegrationEnabled}
+                  onCheckedChange={handlePandemicToggle}
+                  aria-label="Toggle pandemic gameplay"
+                />
+              </div>
+              <div className="options-toggle">
+                <div className="flex flex-col text-left">
+                  <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Bio-Weapon Conquest Ops</span>
+                  <span className="text-[11px] text-cyan-400/80">Enable offensive deployment of pathogens as a conquest vector. Changes are logged to the war-room audit trail.</span>
+                </div>
+                <Switch
+                  checked={bioWarfareEnabled}
+                  onCheckedChange={handleBioWarfareToggle}
+                  aria-label="Toggle bioweapon conquest options"
+                />
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* HELP TAB */}
+        <TabsContent value="help" className="space-y-6">
+          <div className="options-section">
+            <h3 className="options-section__heading">TUTORIALS & REFERENCE</h3>
+            <p className="options-section__subheading">Access comprehensive game guides, tutorials, and mechanic references.</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <Button
+                type="button"
+                onClick={() => setDatabaseOpen(true)}
+                className="w-full justify-start gap-3 bg-cyan-900/40 border border-cyan-700/60 text-cyan-100 hover:bg-cyan-800/60 h-auto py-6"
+              >
+                <BookOpen className="h-6 w-6" />
+                <div className="flex flex-col text-left">
+                  <span className="font-semibold text-base">Game Database</span>
+                  <span className="text-xs text-cyan-300/80 font-normal">
+                    Complete reference for all game mechanics, weapons, and strategies
+                  </span>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => setTutorialOpen(true)}
+                className="w-full justify-start gap-3 bg-cyan-900/40 border border-cyan-700/60 text-cyan-100 hover:bg-cyan-800/60 h-auto py-6"
+              >
+                <GraduationCap className="h-6 w-6" />
+                <div className="flex flex-col text-left">
+                  <span className="font-semibold text-base">Complete Tutorial</span>
+                  <span className="text-xs text-cyan-300/80 font-normal">
+                    Interactive step-by-step guide through all game systems
+                  </span>
+                </div>
+              </Button>
+            </div>
+
+            <div className="mt-4 p-4 rounded border border-cyan-500/40 bg-black/40">
+              <p className="text-sm text-cyan-200">
+                <strong>Tip:</strong> Use the database as a reference during gameplay.
+                The tutorial covers everything from basic mechanics to advanced strategies.
+              </p>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Modals */}
       <GameDatabase

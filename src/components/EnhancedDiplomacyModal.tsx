@@ -365,7 +365,7 @@ export function EnhancedDiplomacyModal({
         {/* Main Content */}
         <div className="flex h-[calc(100%-5rem)]">
           {/* Left Sidebar - Categories */}
-          <div className="w-64 border-r border-cyan-500/30 bg-black/20 p-4 overflow-y-auto">
+          <div className="w-56 border-r border-cyan-500/30 bg-black/20 p-3 overflow-y-auto">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
               Action Categories
             </h3>
@@ -426,11 +426,12 @@ export function EnhancedDiplomacyModal({
           </div>
 
           {/* Right Content - Actions */}
-          <div className="flex-1 p-6 overflow-y-auto">
+          <div className="flex-1 p-4 overflow-y-auto">
             <div className="space-y-4">
+              {/* Target Info Section */}
               {selectedTarget && (
                 <div className="rounded-lg border border-cyan-500/30 bg-slate-900/40 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2">
                       <div
                         className="w-3 h-3 rounded-full"
@@ -444,6 +445,7 @@ export function EnhancedDiplomacyModal({
                 </div>
               )}
 
+              {/* Phase 3 Display */}
               {phase3State && phase3State.phase3Enabled ? (
                 <div className="rounded-lg border border-cyan-500/30 bg-slate-900/40 p-3">
                   <DiplomacyPhase3Display
@@ -454,15 +456,15 @@ export function EnhancedDiplomacyModal({
                   />
                 </div>
               ) : (
-                <div className="rounded-lg border border-cyan-500/30 bg-slate-900/40 p-6">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3">
-                      <Shield className="w-5 h-5 text-cyan-300" />
-                      <h3 className="text-lg font-semibold text-cyan-200 font-mono">
+                <div className="rounded-lg border border-cyan-500/30 bg-slate-900/40 p-4">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-cyan-300" />
+                      <h3 className="text-base font-semibold text-cyan-200 font-mono">
                         Advanced Diplomacy Locked
                       </h3>
                     </div>
-                    <p className="text-sm text-gray-300 leading-relaxed">
+                    <p className="text-sm text-gray-300 leading-snug">
                       Complete Era III objectives or progress major treaties to unlock advanced diplomacy metrics. Once
                       enabled, you&apos;ll gain access to council influence, treaty leverage, and world opinion tracking for
                       every nation.
@@ -475,7 +477,9 @@ export function EnhancedDiplomacyModal({
                 </div>
               )}
 
-              {availableActions.map((action) => {
+              {/* Available Actions Grid */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                {availableActions.map((action) => {
                 const isEnabled = !action.disabled;
 
                 return (
@@ -483,18 +487,18 @@ export function EnhancedDiplomacyModal({
                     key={action.id}
                     onClick={() => handleAction(action)}
                     disabled={!isEnabled}
-                    className={`w-full text-left p-4 rounded-lg border transition-all ${
+                    className={`w-full h-full text-left p-3 rounded-lg border transition-all flex flex-col ${
                       isEnabled
                         ? 'bg-slate-800/50 border-cyan-500/30 hover:bg-slate-700/50 hover:border-cyan-500/50 cursor-pointer'
                         : 'bg-slate-900/30 border-gray-700/30 opacity-50 cursor-not-allowed'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="text-lg font-semibold text-cyan-300 font-mono">
+                    <div className="flex items-start justify-between gap-2 flex-1">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-base font-semibold text-cyan-300 font-mono leading-tight">
                           {action.title}
                         </h4>
-                        <p className="text-sm text-gray-400 mt-1">{action.subtitle}</p>
+                        <p className="text-xs text-gray-400 mt-1 leading-snug">{action.subtitle}</p>
 
                         {action.requiresTarget && selectedTarget && (
                           <p className="text-xs text-green-400 mt-2">
@@ -507,10 +511,10 @@ export function EnhancedDiplomacyModal({
                         )}
                       </div>
 
-                      <div className="flex flex-col items-end gap-2">
+                      <div className="flex flex-col items-end gap-2 shrink-0">
                         {action.dipCost && (
                           <div
-                            className={`flex items-center gap-1 px-3 py-1 rounded ${
+                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
                               playerDIP >= (action.dipCost ?? 0)
                                 ? 'bg-yellow-500/10 border border-yellow-500/30'
                                 : 'bg-red-500/10 border border-red-500/30'
@@ -524,13 +528,13 @@ export function EnhancedDiplomacyModal({
                               }`}
                             />
                             <span
-                              className={`text-sm font-semibold ${
+                              className={`font-semibold ${
                                 playerDIP >= (action.dipCost ?? 0)
                                   ? 'text-yellow-400'
                                   : 'text-red-400'
                               }`}
                             >
-                              {action.dipCost} DIP
+                              {action.dipCost}
                             </span>
                           </div>
                         )}
@@ -539,6 +543,7 @@ export function EnhancedDiplomacyModal({
                   </button>
                 );
               })}
+              </div>
             </div>
           </div>
         </div>
