@@ -190,11 +190,23 @@ class GameStateManager {
    * Sets the entire state object (use with caution)
    */
   static setState(state: LocalGameState): void {
+    const targetState = this._state;
+
     if (Array.isArray(state.nations)) {
       this._nations = state.nations;
     }
-    this._state = state;
-    this._state.nations = this._nations;
+
+    // Remove properties that no longer exist on the incoming state while
+    // preserving the original object reference used by legacy consumers.
+    Object.keys(targetState).forEach((key) => {
+      if (!(key in state)) {
+        // @ts-expect-error - dynamic cleanup for legacy state fields
+        delete targetState[key];
+      }
+    });
+
+    Object.assign(targetState, state);
+    targetState.nations = this._nations;
   }
 
   /**

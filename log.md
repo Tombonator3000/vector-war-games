@@ -3501,3 +3501,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T15:15:10Z - Reviewed root AGENTS.md instructions and logging requirement before sanctions UI work.
 2025-11-18T15:15:45Z - Inspected useInternationalPressure hook and EnhancedDiplomacyModal to plan player sanctions listing integration.
 2025-11-18T15:16:38Z - Wired useInternationalPressure sanctions data into EnhancedDiplomacyModal and added per-turn sanctions status display for the player.
+2025-11-18T17:28:29Z - Reviewed root AGENTS.md for repository guidelines and logging requirement.
+2025-11-18T17:28:29Z - Scanned project for DEFCON references using rg to investigate escalation bug.
+2025-11-18T17:28:29Z - Scanned project for DEFCON references using rg to investigate escalation bug.
+2025-11-18T17:32:50Z - Updated GameStateManager.setState to mutate existing state and retain shared references when applying new snapshots.
