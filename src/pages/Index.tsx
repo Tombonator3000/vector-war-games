@@ -9984,7 +9984,6 @@ export default function NoradVector() {
     getPressure,
     getTotalEconomicImpact,
     getAidBenefits,
-    getPressure,
     sanctions,
     reset: resetInternationalPressure,
   } = useInternationalPressure({
