@@ -7679,8 +7679,8 @@ export default function NoradVector() {
   const initialSfxEnabled = storedSfxEnabled === 'true' ? true : storedSfxEnabled === 'false' ? false : AudioSys.sfxEnabled;
   const storedAmbientEnabled = Storage.getItem('audio_ambient_enabled');
   const initialAmbientEnabled = storedAmbientEnabled === 'true' ? true : storedAmbientEnabled === 'false' ? false : AudioSys.ambientEnabled;
-  // Always start at 30% volume
-  const initialMusicVolume = 0.3;
+  // Always start at 15% volume
+  const initialMusicVolume = 0.15;
   const storedAmbientVolume = Storage.getItem('audio_ambient_volume');
   const initialAmbientVolume = (() => {
     if (storedAmbientVolume) {
@@ -10721,7 +10721,7 @@ export default function NoradVector() {
   const handleMusicVolumeChange = useCallback((volume: number) => {
     const normalizedVolume = Math.min(1, Math.max(0, volume));
     AudioSys.setMusicVolume(normalizedVolume);
-    // Don't save to storage - always reset to 30% on page load
+    // Don't save to storage - always reset to 15% on page load
     setMusicVolume(normalizedVolume);
   }, []);
 
