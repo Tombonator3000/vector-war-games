@@ -85,79 +85,81 @@ export function ResearchModal({ closeModal, startResearch }: ResearchModalProps)
 
         return (
           <div key={category.id} className="space-y-3">
-            <h4 className="text-sm font-semibold uppercase tracking-wide text-cyan-400">
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-cyan-400 border-b border-cyan-500/30 pb-2">
               {category.label}
             </h4>
-            {projects.map(project => {
-              const isUnlocked = !!player.researched?.[project.id];
-              const prerequisitesMet = (project.prerequisites || []).every(req => player.researched?.[req]);
-              const affordable = canAfford(player, project.cost);
-              const disabled = isUnlocked || !prerequisitesMet || !!activeQueue || !affordable;
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {projects.map(project => {
+                const isUnlocked = !!player.researched?.[project.id];
+                const prerequisitesMet = (project.prerequisites || []).every(req => player.researched?.[req]);
+                const affordable = canAfford(player, project.cost);
+                const disabled = isUnlocked || !prerequisitesMet || !!activeQueue || !affordable;
 
-              return (
-                <div key={project.id} className="border border-cyan-700/70 rounded p-4 bg-black/50 space-y-2">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="font-semibold text-cyan-200">{project.name}</div>
-                      <div className="text-xs text-cyan-200/70 uppercase">
-                        {project.turns} turns • Cost: {formatCost(project.cost)}
+                return (
+                  <div key={project.id} className="border border-cyan-700/70 rounded p-3 bg-black/50 space-y-2 flex flex-col">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-cyan-200 text-sm leading-tight">{project.name}</div>
+                        <div className="text-xs text-cyan-200/70 mt-1">
+                          {project.turns} turns • {formatCost(project.cost)}
+                        </div>
                       </div>
+                      {isUnlocked ? (
+                        <span className="text-green-400 text-xs font-semibold whitespace-nowrap">✓ DONE</span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="bg-cyan-700 hover:bg-cyan-600 text-black text-xs h-7 px-2 whitespace-nowrap"
+                          disabled={disabled}
+                          onClick={() => startResearch(project.id)}
+                        >
+                          START
+                        </Button>
+                      )}
                     </div>
-                    {isUnlocked ? (
-                      <span className="text-green-400 text-xs font-semibold">UNLOCKED</span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        className="bg-cyan-700 hover:bg-cyan-600 text-black"
-                        disabled={disabled}
-                        onClick={() => startResearch(project.id)}
-                      >
-                        START
-                      </Button>
-                    )}
+                    <p className="text-xs text-cyan-100/80 leading-snug">{project.description}</p>
+                    {project.yield ? (
+                      <div className="text-xs text-cyan-200/70">
+                        Unlocks {project.yield}MT warheads
+                      </div>
+                    ) : null}
+                    {project.prerequisites && project.prerequisites.length > 0 ? (
+                      <div className="text-xs text-cyan-200/70">
+                        Requires:{' '}
+                        {project.prerequisites.map(req => {
+                          const met = !!player.researched?.[req];
+                          const name = RESEARCH_LOOKUP[req]?.name || req;
+                          return (
+                            <span key={req} className={met ? 'text-green-400' : 'text-red-400'}>
+                              {name}
+                            </span>
+                          );
+                        }).reduce((acc, elem, idx, arr) => {
+                          acc.push(elem);
+                          if (idx < arr.length - 1) acc.push(<span key={`sep-${project.id}-${idx}`}> • </span>);
+                          return acc;
+                        }, [] as ReactNode[])}
+                      </div>
+                    ) : null}
+                    {!isUnlocked && !prerequisitesMet ? (
+                      <div className="text-xs text-yellow-300/80 mt-auto">
+                        ⚠ Complete prerequisites first
+                      </div>
+                    ) : null}
+                    {!isUnlocked && prerequisitesMet && !affordable ? (
+                      <div className="text-xs text-yellow-300/80 mt-auto">
+                        ⚠ Insufficient resources
+                      </div>
+                    ) : null}
+                    {!isUnlocked && prerequisitesMet && affordable && activeQueue ? (
+                      <div className="text-xs text-yellow-300/80 mt-auto">
+                        ⚠ Research queue occupied
+                      </div>
+                    ) : null}
                   </div>
-                  <p className="text-sm text-cyan-100/80">{project.description}</p>
-                  {project.yield ? (
-                    <div className="text-xs text-cyan-200/70">
-                      Unlocks deployment of {project.yield}MT warheads.
-                    </div>
-                  ) : null}
-                  {project.prerequisites && project.prerequisites.length > 0 ? (
-                    <div className="text-xs text-cyan-200/70">
-                      Prerequisites:{' '}
-                      {project.prerequisites.map(req => {
-                        const met = !!player.researched?.[req];
-                        const name = RESEARCH_LOOKUP[req]?.name || req;
-                        return (
-                          <span key={req} className={met ? 'text-green-400' : 'text-red-400'}>
-                            {name}
-                          </span>
-                        );
-                      }).reduce((acc, elem, idx, arr) => {
-                        acc.push(elem);
-                        if (idx < arr.length - 1) acc.push(<span key={`sep-${project.id}-${idx}`}> • </span>);
-                        return acc;
-                      }, [] as ReactNode[])}
-                    </div>
-                  ) : null}
-                  {!isUnlocked && !prerequisitesMet ? (
-                    <div className="text-xs text-yellow-300/80">
-                      Complete prerequisite programs first.
-                    </div>
-                  ) : null}
-                  {!isUnlocked && prerequisitesMet && !affordable ? (
-                    <div className="text-xs text-yellow-300/80">
-                      Additional resources required to begin this project.
-                    </div>
-                  ) : null}
-                  {!isUnlocked && prerequisitesMet && affordable && activeQueue ? (
-                    <div className="text-xs text-yellow-300/80">
-                      Another project is currently underway.
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         );
       })}

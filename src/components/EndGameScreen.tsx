@@ -119,142 +119,77 @@ export const EndGameScreen: React.FC<EndGameScreenProps> = ({
                 Game Statistics
               </h2>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-4">
                 {/* Score & Duration */}
-                <div className="col-span-2 md:col-span-3 bg-gray-800/50 p-4 rounded border border-gray-700">
-                  <div className="flex items-center justify-between">
+                <div className="bg-gray-800/50 p-4 rounded border border-gray-700">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-gray-400">Final Score</p>
                       <p className="text-4xl font-bold text-yellow-400">{statistics.finalScore.toLocaleString()}</p>
                     </div>
-                    <div className="text-right">
+                    <div>
                       <p className="text-sm text-gray-400">Turns Survived</p>
                       <p className="text-4xl font-bold text-blue-400">{statistics.turns}</p>
                     </div>
-                    <div className="text-right">
+                    <div>
                       <p className="text-sm text-gray-400">Doctrine</p>
                       <p className="text-2xl font-bold text-purple-400">{statistics.doctrine}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Population & Cities */}
-                <StatCard
-                  icon={<Users className="w-5 h-5" />}
-                  label="Population"
-                  value={`${statistics.finalPopulation.toLocaleString()}M`}
-                  color="text-green-400"
-                />
-                <StatCard
-                  icon={<Building2 className="w-5 h-5" />}
-                  label="Cities"
-                  value={statistics.finalCities.toString()}
-                  color="text-blue-400"
-                />
-                <StatCard
-                  icon={<TrendingUp className="w-5 h-5" />}
-                  label="Production"
-                  value={statistics.finalProduction.toString()}
-                  color="text-yellow-400"
-                />
+                {/* Nation Stats */}
+                <div className="bg-gray-800/50 p-4 rounded border border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">Nation Statistics</h3>
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                    <StatCard icon={<Users className="w-4 h-4" />} label="Population" value={`${statistics.finalPopulation.toLocaleString()}M`} color="text-green-400" />
+                    <StatCard icon={<Building2 className="w-4 h-4" />} label="Cities" value={statistics.finalCities.toString()} color="text-blue-400" />
+                    <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Production" value={statistics.finalProduction.toString()} color="text-yellow-400" />
+                    <StatCard icon={<Target className="w-4 h-4" />} label="Uranium" value={statistics.finalUranium.toString()} color="text-green-400" />
+                    <StatCard icon={<Target className="w-4 h-4" />} label="Intel" value={statistics.finalIntel.toString()} color="text-purple-400" />
+                    <StatCard icon={<Clock className="w-4 h-4" />} label="DEFCON" value={statistics.finalDefcon.toString()} color={statistics.finalDefcon >= 4 ? "text-green-400" : statistics.finalDefcon === 3 ? "text-yellow-400" : "text-red-400"} />
+                  </div>
+                </div>
 
-                {/* Military */}
-                <StatCard
-                  icon={<Rocket className="w-5 h-5" />}
-                  label="ICBMs"
-                  value={statistics.finalMissiles.toString()}
-                  color="text-red-400"
-                />
-                <StatCard
-                  icon={<Rocket className="w-5 h-5" />}
-                  label="Bombers"
-                  value={statistics.finalBombers.toString()}
-                  color="text-orange-400"
-                />
-                <StatCard
-                  icon={<Rocket className="w-5 h-5" />}
-                  label="Submarines"
-                  value={statistics.finalSubmarines.toString()}
-                  color="text-cyan-400"
-                />
-                <StatCard
-                  icon={<Shield className="w-5 h-5" />}
-                  label="Defense"
-                  value={statistics.finalDefense.toString()}
-                  color="text-blue-400"
-                />
-                <StatCard
-                  icon={<Target className="w-5 h-5" />}
-                  label="Uranium"
-                  value={statistics.finalUranium.toString()}
-                  color="text-green-400"
-                />
-                <StatCard
-                  icon={<Target className="w-5 h-5" />}
-                  label="Intel"
-                  value={statistics.finalIntel.toString()}
-                  color="text-purple-400"
-                />
+                {/* Military Arsenal */}
+                <div className="bg-gray-800/50 p-4 rounded border border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">Military Arsenal</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <StatCard icon={<Rocket className="w-4 h-4" />} label="ICBMs" value={statistics.finalMissiles.toString()} color="text-red-400" />
+                    <StatCard icon={<Rocket className="w-4 h-4" />} label="Bombers" value={statistics.finalBombers.toString()} color="text-orange-400" />
+                    <StatCard icon={<Rocket className="w-4 h-4" />} label="Submarines" value={statistics.finalSubmarines.toString()} color="text-cyan-400" />
+                    <StatCard icon={<Shield className="w-4 h-4" />} label="Defense" value={statistics.finalDefense.toString()} color="text-blue-400" />
+                  </div>
+                </div>
 
                 {/* Governance */}
-                <StatCard
-                  icon={<Users className="w-5 h-5" />}
-                  label="Morale"
-                  value={`${statistics.finalMorale}%`}
-                  color={statistics.finalMorale > 70 ? "text-green-400" : statistics.finalMorale > 40 ? "text-yellow-400" : "text-red-400"}
-                />
-                <StatCard
-                  icon={<Users className="w-5 h-5" />}
-                  label="Public Opinion"
-                  value={`${statistics.finalPublicOpinion}%`}
-                  color={statistics.finalPublicOpinion > 70 ? "text-green-400" : statistics.finalPublicOpinion > 40 ? "text-yellow-400" : "text-red-400"}
-                />
-                <StatCard
-                  icon={<Users className="w-5 h-5" />}
-                  label="Cabinet Approval"
-                  value={`${statistics.finalCabinetApproval}%`}
-                  color={statistics.finalCabinetApproval > 70 ? "text-green-400" : statistics.finalCabinetApproval > 40 ? "text-yellow-400" : "text-red-400"}
-                />
+                <div className="bg-gray-800/50 p-4 rounded border border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">Governance Metrics</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <StatCard icon={<Users className="w-4 h-4" />} label="Morale" value={`${statistics.finalMorale}%`} color={statistics.finalMorale > 70 ? "text-green-400" : statistics.finalMorale > 40 ? "text-yellow-400" : "text-red-400"} />
+                    <StatCard icon={<Users className="w-4 h-4" />} label="Public Opinion" value={`${statistics.finalPublicOpinion}%`} color={statistics.finalPublicOpinion > 70 ? "text-green-400" : statistics.finalPublicOpinion > 40 ? "text-yellow-400" : "text-red-400"} />
+                    <StatCard icon={<Users className="w-4 h-4" />} label="Cabinet Approval" value={`${statistics.finalCabinetApproval}%`} color={statistics.finalCabinetApproval > 70 ? "text-green-400" : statistics.finalCabinetApproval > 40 ? "text-yellow-400" : "text-red-400"} />
+                  </div>
+                </div>
 
-                {/* Military Actions */}
-                <StatCard
-                  icon={<Rocket className="w-5 h-5" />}
-                  label="Nukes Launched"
-                  value={statistics.nukesLaunched.toString()}
-                  color="text-red-400"
-                />
-                <StatCard
-                  icon={<Shield className="w-5 h-5" />}
-                  label="Nukes Received"
-                  value={statistics.nukesReceived.toString()}
-                  color="text-orange-400"
-                />
-                <StatCard
-                  icon={<Target className="w-5 h-5" />}
-                  label="Enemies Destroyed"
-                  value={statistics.enemiesDestroyed.toString()}
-                  color="text-red-400"
-                />
-
-                {/* Diplomacy */}
-                <StatCard
-                  icon={<Users className="w-5 h-5" />}
-                  label="Alliances"
-                  value={statistics.alliances.toString()}
-                  color="text-green-400"
-                />
-                <StatCard
-                  icon={<Target className="w-5 h-5" />}
-                  label="Wars"
-                  value={statistics.wars.toString()}
-                  color="text-red-400"
-                />
-                <StatCard
-                  icon={<Clock className="w-5 h-5" />}
-                  label="Final DEFCON"
-                  value={statistics.finalDefcon.toString()}
-                  color={statistics.finalDefcon >= 4 ? "text-green-400" : statistics.finalDefcon === 3 ? "text-yellow-400" : "text-red-400"}
-                />
+                {/* Combat & Diplomacy */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gray-800/50 p-4 rounded border border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">Military Actions</h3>
+                    <div className="grid grid-cols-3 gap-3">
+                      <StatCard icon={<Rocket className="w-4 h-4" />} label="Nukes Launched" value={statistics.nukesLaunched.toString()} color="text-red-400" />
+                      <StatCard icon={<Shield className="w-4 h-4" />} label="Nukes Received" value={statistics.nukesReceived.toString()} color="text-orange-400" />
+                      <StatCard icon={<Target className="w-4 h-4" />} label="Enemies Destroyed" value={statistics.enemiesDestroyed.toString()} color="text-red-400" />
+                    </div>
+                  </div>
+                  <div className="bg-gray-800/50 p-4 rounded border border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">Diplomacy</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <StatCard icon={<Users className="w-4 h-4" />} label="Alliances" value={statistics.alliances.toString()} color="text-green-400" />
+                      <StatCard icon={<Target className="w-4 h-4" />} label="Wars" value={statistics.wars.toString()} color="text-red-400" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </Card>
 
@@ -344,11 +279,11 @@ const StatCard: React.FC<{
   value: string;
   color: string;
 }> = ({ icon, label, value, color }) => (
-  <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-    <div className="flex items-center gap-2 mb-1 text-gray-400 text-sm">
+  <div className="bg-gray-800/30 p-2 rounded border border-gray-700/50 flex flex-col items-center text-center">
+    <div className="flex items-center gap-1 mb-1 text-gray-400 text-xs">
       {icon}
-      <span>{label}</span>
+      <span className="truncate">{label}</span>
     </div>
-    <p className={`text-2xl font-bold ${color}`}>{value}</p>
+    <p className={`text-lg font-bold ${color} leading-tight`}>{value}</p>
   </div>
 );
