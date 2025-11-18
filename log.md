@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-18T15:47:18Z - DEFCON indicator styling update
+- Bound the top-bar DEFCON badge and value classes to live DEFCON levels with green, yellow, and red glow states.
+- Synced the indicator class updates to the existing display refresh so the HUD styling flips when hitting DEFCON 1.
+- No automated tests run for this update.
+
 ### 2025-11-18T14:55:17Z - Governance maintenance cost integration
 - Added per-turn morale and approval maintenance handling for active policies, routing governance deltas through the unified applyGovernanceDelta helper during production.
 - Ensured policy maintenance continues to debit gold/intel and now reduces morale/public opinion when negative costs are present.
