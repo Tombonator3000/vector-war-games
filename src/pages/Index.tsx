@@ -68,6 +68,12 @@ import {
   calculateMoraleRecruitmentModifier,
 } from '@/hooks/useGovernance';
 import { useOpposition } from '@/hooks/useOpposition';
+import {
+  useGovernment,
+  type GovernmentNationRef,
+  type UseGovernmentReturn,
+} from '@/hooks/useGovernment';
+import { GOVERNMENT_BONUSES, type GovernmentState } from '@/types/government';
 import { TutorialGuide } from '@/components/TutorialGuide';
 import { TutorialOverlay } from '@/components/TutorialOverlay';
 import { useTutorial } from '@/hooks/useTutorial';
@@ -104,6 +110,7 @@ import { LeadersScreen } from '@/components/LeadersScreen';
 import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
 import { PopulationImpactFeedback } from '@/components/PopulationImpactFeedback';
 import { LeaderOverviewPanel } from '@/components/LeaderOverviewPanel';
+import { GovernmentStatusPanel } from '@/components/GovernmentStatusPanel';
 import { StrategicOutliner } from '@/components/StrategicOutliner';
 import type { StrategicOutlinerGroup } from '@/components/StrategicOutliner';
 import { OrderOfBattlePanel } from '@/components/OrderOfBattlePanel';
@@ -183,6 +190,17 @@ import {
   applyIdeologyBonusesForProduction,
   generateIdeologicalGrievances,
 } from '@/lib/ideologyIntegration';
+import {
+  initializeGovernmentSystem,
+  applyGovernmentBonuses,
+  applyGovernmentBonusesForProduction,
+  getGovernmentProductionMultiplier,
+  getGovernmentResearchMultiplier,
+  getGovernmentRecruitmentMultiplier,
+  getGovernmentMilitaryCostReduction,
+  getGovernmentOppositionSuppression,
+  getGovernmentPropagandaEffectiveness,
+} from '@/lib/governmentIntegration';
 import {
   addStrategicResource,
   initializeResourceStockpile,
@@ -3020,6 +3038,9 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   // Initialize ideology system for all nations
   initializeIdeologySystem(nations);
 
+  // Initialize government system for all nations
+  initializeGovernmentSystem(nations);
+
   // Initialize DIP (Diplomatic Influence Points) for all nations
   nations.forEach((nation, index) => {
     nations[index] = initializeDIP(nation);
@@ -3330,6 +3351,9 @@ function initNations() {
 
   // Initialize ideology system for all nations
   initializeIdeologySystem(nations);
+
+  // Initialize government system for all nations
+  initializeGovernmentSystem(nations);
 
   // Initialize DIP (Diplomatic Influence Points) for all nations
   nations.forEach((nation, index) => {
@@ -9247,6 +9271,42 @@ export default function NoradVector() {
     getNations: getGovernanceNations,
     onMetricsSync: handleGovernanceMetricsSync,
     onApplyDelta: handleGovernanceDelta,
+    onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
+    nationsVersion: governanceNationsVersion,
+  });
+
+  // Government system
+  const government = useGovernment({
+    currentTurn: S.turn,
+    getNations: () => nations.map(n => ({
+      id: n.id,
+      name: n.name,
+      isPlayer: n.isPlayer,
+      morale: n.morale,
+      publicOpinion: n.publicOpinion,
+      cabinetApproval: n.cabinetApproval,
+      instability: n.instability,
+      electionTimer: n.electionTimer,
+      missiles: n.missiles,
+      bombers: n.bombers,
+      submarines: n.submarines,
+      governmentState: n.governmentState,
+    })),
+    onGovernmentSync: (nationId, state) => {
+      setNations(prev => prev.map(n =>
+        n.id === nationId ? { ...n, governmentState: state } : n
+      ));
+    },
+    onGovernmentTransition: (nationId, transition) => {
+      const nation = nations.find(n => n.id === nationId);
+      if (nation) {
+        addNewsItem(
+          'governance',
+          `${nation.name}: ${transition.description}`,
+          transition.peaceful ? 'important' : 'critical'
+        );
+      }
+    },
     onAddNewsItem: (category, text, priority) => addNewsItem(category, text, priority),
     nationsVersion: governanceNationsVersion,
   });

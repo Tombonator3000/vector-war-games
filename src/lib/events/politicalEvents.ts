@@ -711,4 +711,224 @@ export const politicalEvents: PoliticalEventDefinition[] = [
     fallbackDelta: { morale: -10, publicOpinion: -12, instability: 18 },
     fallbackSummary: 'Youth movement grows. Universities shut down as student strikes spread nationwide.',
   },
+  {
+    id: 'dictatorship_coup_threat',
+    title: 'Coup Conspiracy Uncovered',
+    summary: 'Intelligence reports reveal military officers plotting to overthrow the government.',
+    severity: 'critical',
+    cooldownTurns: 15,
+    conditions: {
+      minTurn: 8,
+      moraleBelow: 45,
+      customCondition: (nation: any) => {
+        const govType = nation.governmentState?.currentGovernment;
+        return govType === 'dictatorship' || govType === 'military_junta';
+      },
+    },
+    options: [
+      {
+        id: 'purge_officers',
+        label: 'Purge the Officer Corps',
+        description: 'Arrest suspected conspirators and replace them with loyalists.',
+        outcomes: [
+          {
+            id: 'purge_success',
+            description: 'Coup plotters arrested. Loyalist officers promoted. Government secure.',
+            chance: 0.6,
+            effects: { morale: -5, publicOpinion: -8, cabinetApproval: 5, instability: 15 },
+          },
+          {
+            id: 'purge_backfire',
+            description: 'Purge triggers immediate coup attempt! Military seizes power!',
+            chance: 0.4,
+            effects: { morale: -20, publicOpinion: -25, cabinetApproval: -40, instability: 50 },
+          },
+        ],
+      },
+      {
+        id: 'buy_loyalty',
+        label: 'Buy Military Loyalty',
+        description: 'Increase military salaries and benefits to secure their support.',
+        outcomes: [
+          {
+            id: 'loyalty_secured',
+            description: 'Generous pay raises defuse coup plot. Military remains loyal.',
+            chance: 0.7,
+            effects: { morale: 5, cabinetApproval: 8, production: -10, instability: -10 },
+          },
+          {
+            id: 'loyalty_insufficient',
+            description: 'Pay raises buy time but conspirators remain active.',
+            chance: 0.3,
+            effects: { morale: -2, production: -10, instability: 10 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -15, publicOpinion: -20, instability: 30 },
+    fallbackSummary: 'Coup plot spreads. Military loyalty uncertain.',
+  },
+  {
+    id: 'democracy_constitutional_crisis',
+    title: 'Constitutional Crisis',
+    summary: 'Legislature deadlocked over crucial reforms. Constitutional procedures in question.',
+    severity: 'serious',
+    cooldownTurns: 12,
+    conditions: {
+      minTurn: 6,
+      cabinetApprovalBelow: 50,
+      customCondition: (nation: any) => {
+        const govType = nation.governmentState?.currentGovernment;
+        return govType === 'democracy' || govType === 'constitutional_monarchy';
+      },
+    },
+    options: [
+      {
+        id: 'compromise_solution',
+        label: 'Negotiate Cross-Party Compromise',
+        description: 'Work with opposition to find middle ground on reforms.',
+        outcomes: [
+          {
+            id: 'compromise_success',
+            description: 'Bipartisan deal reached. Democracy strengthened.',
+            chance: 0.6,
+            effects: { morale: 8, publicOpinion: 10, cabinetApproval: 12, instability: -15 },
+          },
+          {
+            id: 'compromise_fail',
+            description: 'Negotiations collapse. Both sides harden positions.',
+            chance: 0.4,
+            effects: { morale: -5, publicOpinion: -8, cabinetApproval: -10, instability: 12 },
+          },
+        ],
+      },
+      {
+        id: 'executive_action',
+        label: 'Use Emergency Executive Powers',
+        description: 'Bypass legislature using emergency constitutional provisions.',
+        outcomes: [
+          {
+            id: 'executive_backlash',
+            description: 'Opposition cries tyranny! Democratic norms eroded.',
+            chance: 0.6,
+            effects: { morale: 5, publicOpinion: -15, cabinetApproval: -8, instability: 18 },
+          },
+          {
+            id: 'executive_accepted',
+            description: 'Public accepts emergency measures as necessary.',
+            chance: 0.4,
+            effects: { morale: 8, publicOpinion: 5, cabinetApproval: 3, instability: 8 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -8, publicOpinion: -12, cabinetApproval: -15, instability: 20 },
+    fallbackSummary: 'Constitutional gridlock worsens. Public confidence in democracy fading.',
+  },
+  {
+    id: 'monarchy_succession_crisis',
+    title: 'Royal Succession Crisis',
+    summary: 'Rival claimants to the throne emerge. Succession law ambiguous.',
+    severity: 'critical',
+    cooldownTurns: 20,
+    conditions: {
+      minTurn: 10,
+      customCondition: (nation: any) => {
+        const govType = nation.governmentState?.currentGovernment;
+        const successionClarity = nation.governmentState?.successionClarity ?? 100;
+        return (govType === 'absolute_monarchy' || govType === 'constitutional_monarchy') && successionClarity < 60;
+      },
+    },
+    options: [
+      {
+        id: 'support_heir',
+        label: 'Support Legitimate Heir',
+        description: 'Back the traditional line of succession against rival claimants.',
+        outcomes: [
+          {
+            id: 'heir_secured',
+            description: 'Legitimate heir confirmed. Rival claimants withdraw.',
+            chance: 0.7,
+            effects: { morale: 10, publicOpinion: 8, cabinetApproval: 12, instability: -10 },
+          },
+          {
+            id: 'civil_war_threat',
+            description: 'Rival claimants refuse to yield. Civil war threatens!',
+            chance: 0.3,
+            effects: { morale: -15, publicOpinion: -10, cabinetApproval: -8, instability: 40 },
+          },
+        ],
+      },
+      {
+        id: 'reform_succession',
+        label: 'Reform Succession Laws',
+        description: 'Use crisis to modernize and clarify succession procedures.',
+        outcomes: [
+          {
+            id: 'reform_success',
+            description: 'New succession law enacted. Crisis resolved peacefully.',
+            chance: 0.5,
+            effects: { morale: 12, publicOpinion: 15, cabinetApproval: 10, instability: -20 },
+          },
+          {
+            id: 'reform_traditionalist_backlash',
+            description: 'Traditionalists outraged! Reform seen as attack on monarchy.',
+            chance: 0.5,
+            effects: { morale: -10, publicOpinion: -12, cabinetApproval: -5, instability: 25 },
+          },
+        ],
+      },
+    ],
+    fallbackDelta: { morale: -20, publicOpinion: -18, instability: 35 },
+    fallbackSummary: 'Succession crisis deepens. Royal family divided.',
+  },
+  {
+    id: 'authoritarian_propaganda_success',
+    title: 'Propaganda Triumph',
+    summary: 'State media campaign achieves exceptional success in shaping public opinion.',
+    severity: 'routine',
+    cooldownTurns: 8,
+    conditions: {
+      minTurn: 5,
+      moraleBelow: 60,
+      customCondition: (nation: any) => {
+        const govType = nation.governmentState?.currentGovernment;
+        return govType === 'dictatorship' || govType === 'military_junta' || govType === 'one_party_state';
+      },
+    },
+    options: [
+      {
+        id: 'exploit_propaganda',
+        label: 'Capitalize on Success',
+        description: 'Launch major policy initiative while public opinion is favorable.',
+        outcomes: [
+          {
+            id: 'initiative_success',
+            description: 'Policy initiative succeeds. Public rallies behind leadership.',
+            chance: 0.7,
+            effects: { morale: 12, publicOpinion: 15, cabinetApproval: 10, production: 8 },
+          },
+          {
+            id: 'overreach',
+            description: 'Initiative seen as exploitative. Propaganda backlash.',
+            chance: 0.3,
+            effects: { morale: -5, publicOpinion: -8, instability: 10 },
+          },
+        ],
+      },
+      {
+        id: 'maintain_narrative',
+        label: 'Maintain Current Narrative',
+        description: 'Continue successful propaganda without major changes.',
+        outcomes: [
+          {
+            id: 'steady_gains',
+            description: 'Consistent messaging gradually improves public mood.',
+            chance: 1.0,
+            effects: { morale: 6, publicOpinion: 8, cabinetApproval: 5 },
+          },
+        ],
+      },
+    ],
+  },
 ];

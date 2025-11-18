@@ -26,6 +26,7 @@ import { updateAlliancesPerTurn } from '@/lib/specializedAlliancesUtils';
 import { updatePhase2PerTurn } from '@/lib/diplomacyPhase2Integration';
 import { applyDIPIncome, updateDIPIncome } from '@/lib/diplomaticCurrencyUtils';
 import { applyIdeologyBonusesForProduction } from '@/lib/ideologyIntegration';
+import { applyGovernmentBonusesForProduction } from '@/lib/governmentIntegration';
 import { updateDoctrineIncidentSystem } from '@/lib/doctrineIncidentSystem';
 import { updateFalloutImpacts } from '@/lib/falloutEffects';
 import {
@@ -383,6 +384,9 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
 
   // Apply ideology bonuses to all nations BEFORE resource generation
   applyIdeologyBonusesForProduction(nations);
+
+  // Apply government bonuses to all nations BEFORE resource generation
+  applyGovernmentBonusesForProduction(nations);
 
   const policyEffectsByNation =
     policyNationId && policyEffects

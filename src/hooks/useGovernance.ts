@@ -7,6 +7,7 @@ import {
   type PoliticalEventThresholdKey,
 } from '@/lib/events/politicalEvents';
 import { useRNG } from '@/contexts/RNGContext';
+import { GOVERNMENT_BONUSES, getElectionInterval } from '@/types/government';
 
 const politicalEventIndex = new Map<string, PoliticalEventDefinition>(
   politicalEvents.map((event) => [event.id, event]),
@@ -101,6 +102,7 @@ export interface GovernanceNationRef {
   intel: number;
   uranium: number;
   lastNukedTurn?: number;
+  governmentState?: import('@/types/government').GovernmentState;
 }
 
 export interface GovernanceEventState {
@@ -390,6 +392,20 @@ export function useGovernance({
     for (const nation of nations) {
       const nationMetrics = metrics[nation.id] ?? seedMetrics(nation);
       if (nationMetrics.electionTimer <= 0) {
+        // Check if this government type holds elections
+        const governmentType = nation.governmentState?.currentGovernment ?? 'democracy';
+        const electionInterval = getElectionInterval(governmentType);
+
+        // Skip elections for governments that don't hold them
+        if (electionInterval === 0) {
+          // Reset timer to prevent constant checking
+          syncNationMetrics(nation.id, (current) => ({
+            ...current,
+            electionTimer: 999,
+          }));
+          continue;
+        }
+
         const electionEvent = politicalEvents.find((event) => event.conditions?.electionImminent);
         if (!electionEvent) {
           ensureElectionTimer();

@@ -193,6 +193,21 @@ function calculateRelationshipScore(nation1: Nation, nation2: Nation): number {
     }
   }
 
+  // *** GOVERNMENT SYSTEM: Government compatibility ***
+  // Government types affect diplomatic relations
+  if (nation1.governmentState?.currentGovernment && nation2.governmentState?.currentGovernment) {
+    try {
+      const { calculateGovernmentCompatibility } = require('@/types/government');
+      const governmentModifier = calculateGovernmentCompatibility(
+        nation1.governmentState.currentGovernment,
+        nation2.governmentState.currentGovernment
+      );
+      score += governmentModifier; // -15 to +20 based on government compatibility
+    } catch {
+      // Government system not available, skip modifier
+    }
+  }
+
   return score;
 }
 
