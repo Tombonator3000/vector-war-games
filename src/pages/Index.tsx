@@ -99,6 +99,7 @@ import type { SeededRandom } from '@/lib/seededRandom';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
 import { EnhancedDiplomacyModal, type DiplomaticAction } from '@/components/EnhancedDiplomacyModal';
 import { LeaderContactModal } from '@/components/LeaderContactModal';
+import { CivStyleDiplomacyModal } from '@/components/CivStyleDiplomacyModal';
 import { LeadersScreen } from '@/components/LeadersScreen';
 import { AgendaRevelationNotification } from '@/components/AgendaRevelationNotification';
 import { PopulationImpactFeedback } from '@/components/PopulationImpactFeedback';
@@ -7259,6 +7260,8 @@ export default function NoradVector() {
   const [activeDiplomacyProposal, setActiveDiplomacyProposal] = useState<DiplomacyProposal | null>(null);
   const [pendingAIProposals, setPendingAIProposals] = useState<DiplomacyProposal[]>([]);
   const [showEnhancedDiplomacy, setShowEnhancedDiplomacy] = useState(false);
+  const [showCivStyleDiplomacy, setShowCivStyleDiplomacy] = useState(false);
+  const [civStyleDiplomacyTarget, setCivStyleDiplomacyTarget] = useState<string | null>(null);
 
   const triggerDefconWarning = useCallback(() => {
     setIsDefconWarningVisible(true);
@@ -14062,6 +14065,437 @@ export default function NoradVector() {
     setShowEnhancedDiplomacy(false);
   }, [toast, updateDisplay, consumeAction, setDiplomacyPhase3State]);
 
+  const handleCivStyleDiplomacyAction = useCallback((actionId: string, response?: 'accept' | 'support' | 'reject') => {
+    const player = PlayerManager.get();
+    if (!player || !civStyleDiplomacyTarget) return;
+
+    const target = getNationById(nations, civStyleDiplomacyTarget);
+    if (!target) return;
+
+    const currentTurn = S.turn;
+    let updatedPlayer: Nation = player;
+    let updatedTarget: Nation = target;
+    let newsItem: { text: string; priority: 'info' | 'important' | 'critical' } | null = null;
+    let toastPayload: { title: string; description: string; variant?: 'default' | 'destructive' | 'success' } | null = null;
+
+    // Handle different diplomatic actions
+    switch (actionId) {
+      case 'research-collaboration': {
+        const cost = response === 'support' ? 75 : 60;
+        const playerInfluence = player.diplomaticInfluence?.currentInfluence || 0;
+
+        if (playerInfluence < cost) {
+          toast({
+            title: 'Insufficient Influence',
+            description: `You need ${cost} Influence for this action.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Deduct influence
+        updatedPlayer = {
+          ...updatedPlayer,
+          diplomaticInfluence: {
+            ...updatedPlayer.diplomaticInfluence,
+            currentInfluence: playerInfluence - cost,
+            points: (updatedPlayer.diplomaticInfluence?.points || 0) - cost,
+          },
+        } as Nation;
+
+        // Apply effects
+        updatedPlayer = modifyRelationship(updatedPlayer, target.id, response === 'support' ? 12 : 5, 'Research collaboration', currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, player.id, response === 'support' ? 12 : 5, 'Research collaboration', currentTurn);
+
+        toastPayload = {
+          title: 'Research Collaboration Started',
+          description: `You and ${target.name} are now collaborating on research.`,
+          variant: 'success',
+        };
+        newsItem = {
+          text: `${player.name} initiates research collaboration with ${target.name}.`,
+          priority: 'important',
+        };
+        break;
+      }
+      case 'military-aid': {
+        const cost = 60;
+        const playerInfluence = player.diplomaticInfluence?.currentInfluence || 0;
+
+        if (playerInfluence < cost) {
+          toast({
+            title: 'Insufficient Influence',
+            description: `You need ${cost} Influence for this action.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        updatedPlayer = {
+          ...updatedPlayer,
+          diplomaticInfluence: {
+            ...updatedPlayer.diplomaticInfluence,
+            currentInfluence: playerInfluence - cost,
+            points: (updatedPlayer.diplomaticInfluence?.points || 0) - cost,
+          },
+        } as Nation;
+
+        updatedPlayer = modifyRelationship(updatedPlayer, target.id, 8, 'Military aid', currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, player.id, 8, 'Military aid', currentTurn);
+
+        toastPayload = {
+          title: 'Military Aid Provided',
+          description: `${target.name} receives military support.`,
+          variant: 'success',
+        };
+        newsItem = {
+          text: `${player.name} provides military aid to ${target.name}.`,
+          priority: 'important',
+        };
+        break;
+      }
+      case 'economic-support': {
+        const cost = 50;
+        const playerInfluence = player.diplomaticInfluence?.currentInfluence || 0;
+
+        if (playerInfluence < cost) {
+          toast({
+            title: 'Insufficient Influence',
+            description: `You need ${cost} Influence for this action.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        updatedPlayer = {
+          ...updatedPlayer,
+          diplomaticInfluence: {
+            ...updatedPlayer.diplomaticInfluence,
+            currentInfluence: playerInfluence - cost,
+            points: (updatedPlayer.diplomaticInfluence?.points || 0) - cost,
+          },
+        } as Nation;
+
+        updatedPlayer = modifyRelationship(updatedPlayer, target.id, 10, 'Economic support', currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, player.id, 10, 'Economic support', currentTurn);
+
+        toastPayload = {
+          title: 'Economic Support Provided',
+          description: `${target.name} receives financial aid.`,
+          variant: 'success',
+        };
+        newsItem = {
+          text: `${player.name} extends economic support to ${target.name}.`,
+          priority: 'important',
+        };
+        break;
+      }
+      case 'cultural-exchange': {
+        const cost = 40;
+        const playerInfluence = player.diplomaticInfluence?.currentInfluence || 0;
+
+        if (playerInfluence < cost) {
+          toast({
+            title: 'Insufficient Influence',
+            description: `You need ${cost} Influence for this action.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        updatedPlayer = {
+          ...updatedPlayer,
+          diplomaticInfluence: {
+            ...updatedPlayer.diplomaticInfluence,
+            currentInfluence: playerInfluence - cost,
+            points: (updatedPlayer.diplomaticInfluence?.points || 0) - cost,
+          },
+        } as Nation;
+
+        updatedPlayer = modifyRelationship(updatedPlayer, target.id, 15, 'Cultural exchange', currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, player.id, 15, 'Cultural exchange', currentTurn);
+
+        toastPayload = {
+          title: 'Cultural Exchange Established',
+          description: `Cultural programs with ${target.name} improve relations.`,
+          variant: 'success',
+        };
+        newsItem = {
+          text: `${player.name} and ${target.name} establish cultural exchange programs.`,
+          priority: 'info',
+        };
+        break;
+      }
+      case 'reconciliation': {
+        const cost = 60;
+        const playerInfluence = player.diplomaticInfluence?.currentInfluence || 0;
+
+        if (playerInfluence < cost) {
+          toast({
+            title: 'Insufficient Influence',
+            description: `You need ${cost} Influence for this action.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        updatedPlayer = {
+          ...updatedPlayer,
+          diplomaticInfluence: {
+            ...updatedPlayer.diplomaticInfluence,
+            currentInfluence: playerInfluence - cost,
+            points: (updatedPlayer.diplomaticInfluence?.points || 0) - cost,
+          },
+        } as Nation;
+
+        updatedPlayer = modifyRelationship(updatedPlayer, target.id, 20, 'Reconciliation', currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, player.id, 20, 'Reconciliation', currentTurn);
+
+        toastPayload = {
+          title: 'Reconciliation Successful',
+          description: `Relations with ${target.name} significantly improved.`,
+          variant: 'success',
+        };
+        newsItem = {
+          text: `${player.name} and ${target.name} reconcile past grievances.`,
+          priority: 'important',
+        };
+        break;
+      }
+      case 'hinder-research': {
+        const cost = 80;
+        const playerInfluence = player.diplomaticInfluence?.currentInfluence || 0;
+
+        if (playerInfluence < cost) {
+          toast({
+            title: 'Insufficient Influence',
+            description: `You need ${cost} Influence for this action.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        updatedPlayer = {
+          ...updatedPlayer,
+          diplomaticInfluence: {
+            ...updatedPlayer.diplomaticInfluence,
+            currentInfluence: playerInfluence - cost,
+            points: (updatedPlayer.diplomaticInfluence?.points || 0) - cost,
+          },
+        } as Nation;
+
+        updatedPlayer = modifyRelationship(updatedPlayer, target.id, -15, 'Research sanctions', currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, player.id, -15, 'Research sanctions', currentTurn);
+
+        toastPayload = {
+          title: 'Sanctions Imposed',
+          description: `${target.name}'s research is being hindered.`,
+          variant: 'default',
+        };
+        newsItem = {
+          text: `${player.name} imposes research sanctions on ${target.name}.`,
+          priority: 'important',
+        };
+        break;
+      }
+      case 'hinder-production': {
+        const cost = 80;
+        const playerInfluence = player.diplomaticInfluence?.currentInfluence || 0;
+
+        if (playerInfluence < cost) {
+          toast({
+            title: 'Insufficient Influence',
+            description: `You need ${cost} Influence for this action.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        updatedPlayer = {
+          ...updatedPlayer,
+          diplomaticInfluence: {
+            ...updatedPlayer.diplomaticInfluence,
+            currentInfluence: playerInfluence - cost,
+            points: (updatedPlayer.diplomaticInfluence?.points || 0) - cost,
+          },
+        } as Nation;
+
+        updatedPlayer = modifyRelationship(updatedPlayer, target.id, -15, 'Production sanctions', currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, player.id, -15, 'Production sanctions', currentTurn);
+
+        toastPayload = {
+          title: 'Sanctions Imposed',
+          description: `${target.name}'s production is being hindered.`,
+          variant: 'default',
+        };
+        newsItem = {
+          text: `${player.name} imposes production sanctions on ${target.name}.`,
+          priority: 'important',
+        };
+        break;
+      }
+      case 'denounce': {
+        const cost = 60;
+        const playerInfluence = player.diplomaticInfluence?.currentInfluence || 0;
+
+        if (playerInfluence < cost) {
+          toast({
+            title: 'Insufficient Influence',
+            description: `You need ${cost} Influence for this action.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        updatedPlayer = {
+          ...updatedPlayer,
+          diplomaticInfluence: {
+            ...updatedPlayer.diplomaticInfluence,
+            currentInfluence: playerInfluence - cost,
+            points: (updatedPlayer.diplomaticInfluence?.points || 0) - cost,
+          },
+        } as Nation;
+
+        updatedPlayer = modifyRelationship(updatedPlayer, target.id, -20, 'Public denunciation', currentTurn);
+        updatedTarget = modifyRelationship(updatedTarget, player.id, -20, 'Public denunciation', currentTurn);
+
+        toastPayload = {
+          title: 'Denunciation Successful',
+          description: `You publicly condemned ${target.name}.`,
+          variant: 'default',
+        };
+        newsItem = {
+          text: `${player.name} publicly denounces ${target.name} on the world stage.`,
+          priority: 'critical',
+        };
+        break;
+      }
+      case 'steal-tech': {
+        const cost = 100;
+        const playerInfluence = player.diplomaticInfluence?.currentInfluence || 0;
+
+        if (playerInfluence < cost) {
+          toast({
+            title: 'Insufficient Influence',
+            description: `You need ${cost} Influence for this action.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        updatedPlayer = {
+          ...updatedPlayer,
+          diplomaticInfluence: {
+            ...updatedPlayer.diplomaticInfluence,
+            currentInfluence: playerInfluence - cost,
+            points: (updatedPlayer.diplomaticInfluence?.points || 0) - cost,
+          },
+        } as Nation;
+
+        // 30% chance of detection
+        const detected = Math.random() < 0.3;
+        if (detected) {
+          updatedPlayer = modifyRelationship(updatedPlayer, target.id, -30, 'Espionage detected', currentTurn);
+          updatedTarget = modifyRelationship(updatedTarget, player.id, -30, 'Espionage detected', currentTurn);
+
+          toastPayload = {
+            title: 'Espionage Detected!',
+            description: `${target.name} discovered your spy operation. Relations severely damaged.`,
+            variant: 'destructive',
+          };
+          newsItem = {
+            text: `${target.name} catches ${player.name} attempting to steal technology!`,
+            priority: 'critical',
+          };
+        } else {
+          toastPayload = {
+            title: 'Technology Stolen',
+            description: `Successfully acquired technology from ${target.name} without detection.`,
+            variant: 'success',
+          };
+        }
+        break;
+      }
+      case 'sabotage': {
+        const cost = 90;
+        const playerInfluence = player.diplomaticInfluence?.currentInfluence || 0;
+
+        if (playerInfluence < cost) {
+          toast({
+            title: 'Insufficient Influence',
+            description: `You need ${cost} Influence for this action.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        updatedPlayer = {
+          ...updatedPlayer,
+          diplomaticInfluence: {
+            ...updatedPlayer.diplomaticInfluence,
+            currentInfluence: playerInfluence - cost,
+            points: (updatedPlayer.diplomaticInfluence?.points || 0) - cost,
+          },
+        } as Nation;
+
+        // 40% chance of detection
+        const detected = Math.random() < 0.4;
+        if (detected) {
+          updatedPlayer = modifyRelationship(updatedPlayer, target.id, -35, 'Sabotage detected', currentTurn);
+          updatedTarget = modifyRelationship(updatedTarget, player.id, -35, 'Sabotage detected', currentTurn);
+
+          toastPayload = {
+            title: 'Sabotage Detected!',
+            description: `${target.name} discovered your sabotage operation. Relations severely damaged.`,
+            variant: 'destructive',
+          };
+          newsItem = {
+            text: `${target.name} catches ${player.name} attempting sabotage!`,
+            priority: 'critical',
+          };
+        } else {
+          toastPayload = {
+            title: 'Sabotage Successful',
+            description: `Successfully sabotaged ${target.name}'s production without detection.`,
+            variant: 'success',
+          };
+        }
+        break;
+      }
+      default:
+        toast({
+          title: 'Action Not Implemented',
+          description: `The action "${actionId}" is not yet implemented.`,
+          variant: 'destructive',
+        });
+        return;
+    }
+
+    // Update nations
+    const updatedNations = nations.map(nation => {
+      if (nation.id === player.id) return updatedPlayer;
+      if (nation.id === target.id) return updatedTarget;
+      return nation;
+    });
+
+    nations = updatedNations;
+    GameStateManager.setNations(updatedNations);
+    PlayerManager.setNations(updatedNations);
+
+    if (newsItem) {
+      window.__gameAddNewsItem?.('diplomatic', newsItem.text, newsItem.priority);
+    }
+
+    if (toastPayload) {
+      toast(toastPayload);
+    }
+
+    updateDisplay();
+    consumeAction();
+    setShowCivStyleDiplomacy(false);
+    setCivStyleDiplomacyTarget(null);
+  }, [toast, updateDisplay, consumeAction, civStyleDiplomacyTarget, getNationById]);
+
   const handlePhase2Operation = useCallback((operation: Phase2Operation) => {
     if (!greatOldOnesState || !phase2State) return;
 
@@ -17572,6 +18006,27 @@ export default function NoradVector() {
         );
       })()}
 
+      {/* Civ Style Diplomacy Modal (Civilization-inspired diplomatic actions) */}
+      {showCivStyleDiplomacy && civStyleDiplomacyTarget && (() => {
+        const player = PlayerManager.get();
+        const targetNation = getNationById(nations, civStyleDiplomacyTarget);
+
+        if (!player || !targetNation) return null;
+
+        return (
+          <CivStyleDiplomacyModal
+            isOpen={showCivStyleDiplomacy}
+            onClose={() => {
+              setShowCivStyleDiplomacy(false);
+              setCivStyleDiplomacyTarget(null);
+            }}
+            player={player}
+            target={targetNation}
+            onAction={handleCivStyleDiplomacyAction}
+          />
+        );
+      })()}
+
       {/* Leaders Screen (Civilization-style leader overview) */}
       {leadersScreenOpen && (() => {
         const player = PlayerManager.get();
@@ -17584,6 +18039,10 @@ export default function NoradVector() {
             playerNation={player}
             allNations={nations}
             onContactLeader={handleContactLeader}
+            onOpenCivStyleDiplomacy={(nationId) => {
+              setCivStyleDiplomacyTarget(nationId);
+              setShowCivStyleDiplomacy(true);
+            }}
           />
         );
       })()}
