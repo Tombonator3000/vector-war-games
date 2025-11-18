@@ -23,6 +23,7 @@ import {
   getCulturalWonderBonuses,
 } from '@/types/streamlinedCulture';
 import { NGOOperationsPanel } from '@/components/NGOOperationsPanel';
+import { toast } from '@/components/ui/use-toast';
 
 interface StreamlinedCulturePanelProps {
   player: Nation;
@@ -49,7 +50,11 @@ export function StreamlinedCulturePanel({
   onNGORefresh,
   onClose,
 }: StreamlinedCulturePanelProps) {
-  const [selectedPropagandaTarget, setSelectedPropagandaTarget] = useState<string | null>(null);
+  const [selectedPropagandaTargets, setSelectedPropagandaTargets] = useState<Record<PropagandaType, string | null>>({
+    attraction: null,
+    demoralization: null,
+    subversion: null,
+  });
   const [activeTab, setActiveTab] = useState<'operations' | 'active' | 'ngo'>('operations');
 
   const culturalPower = calculateCulturalPower(player);
@@ -352,6 +357,7 @@ export function StreamlinedCulturePanel({
           <div className="space-y-2 mb-3">
             {(Object.entries(PROPAGANDA_DEFINITIONS) as [PropagandaType, any][]).map(([type, def]) => {
               const canAfford = player.intel >= def.intelCost;
+              const selectedTarget = selectedPropagandaTargets[type] ?? '';
 
               return (
                 <div key={type} className="p-2 rounded bg-gray-900/50 border border-gray-700">
@@ -366,15 +372,14 @@ export function StreamlinedCulturePanel({
                     Duration: {def.duration} turns
                   </div>
                   <select
-                    value={selectedPropagandaTarget || ''}
+                    value={selectedTarget}
                     onChange={(e) => {
-                      setSelectedPropagandaTarget(e.target.value);
-                      if (e.target.value && canAfford) {
-                        onLaunchPropaganda?.(type, e.target.value);
-                        setSelectedPropagandaTarget(null);
-                      }
+                      const value = e.target.value || null;
+                      setSelectedPropagandaTargets(prev => ({
+                        ...prev,
+                        [type]: value,
+                      }));
                     }}
-                    disabled={!canAfford}
                     className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded disabled:opacity-50"
                   >
                     <option value="">Select target...</option>
@@ -384,6 +389,58 @@ export function StreamlinedCulturePanel({
                       </option>
                     ))}
                   </select>
+                  <Button
+                    size="sm"
+                    className="mt-2 w-full bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/50 text-xs"
+                    onClick={async () => {
+                      const targetId = selectedPropagandaTargets[type];
+
+                      if (!targetId) {
+                        toast({
+                          title: 'Select a target',
+                          description: 'Choose a nation before launching this campaign.',
+                        });
+                        setSelectedPropagandaTargets(prev => ({
+                          ...prev,
+                          [type]: null,
+                        }));
+                        return;
+                      }
+
+                      if (!canAfford) {
+                        toast({
+                          title: 'Insufficient intel',
+                          description: `You need ${def.intelCost} intel to launch ${def.name}.`,
+                          variant: 'destructive',
+                        });
+                        setSelectedPropagandaTargets(prev => ({
+                          ...prev,
+                          [type]: null,
+                        }));
+                        return;
+                      }
+
+                      try {
+                        await onLaunchPropaganda?.(type, targetId);
+                      } catch (error) {
+                        const description = error instanceof Error
+                          ? error.message
+                          : 'Unable to launch propaganda campaign.';
+                        toast({
+                          title: 'Launch failed',
+                          description,
+                          variant: 'destructive',
+                        });
+                      } finally {
+                        setSelectedPropagandaTargets(prev => ({
+                          ...prev,
+                          [type]: null,
+                        }));
+                      }
+                    }}
+                  >
+                    Launch
+                  </Button>
                 </div>
               );
             })}

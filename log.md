@@ -3456,3 +3456,5 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-17T23:07:00Z - Reviewed root AGENTS.md guidance and scoped enhanced AI action loop refactor priorities (cyber, immigration, conventional).
 2025-11-17T23:07:25Z - Refactored enhancedAIActions to gate cyber, immigration, and conventional checks independently with sequential logging and multi-action support.
 2025-11-17T23:08:05Z - Committed enhanced AI action sequencing updates to repository.
+2025-11-18T06:22:07Z - Added explicit propaganda launch controls with in-panel error feedback after reviewing root AGENTS.md logging guidance.
+- Introduced per-campaign target tracking, launch buttons, and toast feedback in StreamlinedCulturePanel so failed launches reset selection and resource validation runs on click.
