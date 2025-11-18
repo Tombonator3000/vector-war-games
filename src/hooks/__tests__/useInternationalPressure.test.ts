@@ -62,6 +62,7 @@ describe('useInternationalPressure', () => {
     });
 
     expect(result.current.sanctions).toHaveLength(1);
+    expect(result.current.sanctions[0]?.rationale).toBeTruthy();
     expect(result.current.aidPackages).toHaveLength(1);
     expect(result.current.getPressure('nation-1')?.activeSanctions).toHaveLength(1);
     expect(result.current.getPressure('nation-1')?.activeAid).toHaveLength(1);
@@ -91,6 +92,7 @@ describe('useInternationalPressure', () => {
     });
 
     expect(result.current.sanctions[0]?.id).toBe('sanction_0');
+    expect(result.current.sanctions[0]?.rationale).toBeTruthy();
     expect(result.current.aidPackages[0]?.id).toBe('aid_0');
   });
 });

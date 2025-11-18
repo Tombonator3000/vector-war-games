@@ -232,7 +232,8 @@ export function useInternationalPressure(options: UseInternationalPressureOption
       imposingNations: string[],
       sanctionTypes: SanctionType[],
       severity: number,
-      duration: number
+      duration: number,
+      rationale?: string,
     ): SanctionPackage => {
       const effects = calculateSanctionEffects(sanctionTypes, severity);
 
@@ -242,6 +243,7 @@ export function useInternationalPressure(options: UseInternationalPressureOption
         imposingNations,
         type: sanctionTypes,
         severity,
+        rationale: rationale ?? buildSanctionRationale(sanctionTypes, severity),
         turn: currentTurn,
         duration,
         turnsRemaining: duration,
@@ -730,6 +732,32 @@ export function useInternationalPressure(options: UseInternationalPressureOption
 }
 
 // Helper functions
+
+function buildSanctionRationale(types: SanctionType[], severity: number): string {
+  const severityLabel = severity >= 8 ? 'crippling' : severity >= 5 ? 'punitive' : 'measured';
+  const typeList = types
+    .map((type) => {
+      switch (type) {
+        case 'trade':
+          return 'trade restrictions';
+        case 'financial':
+          return 'financial freezes';
+        case 'military':
+          return 'arms embargoes';
+        case 'diplomatic':
+          return 'diplomatic isolation';
+        case 'technology':
+          return 'technology bans';
+        case 'travel':
+          return 'travel controls';
+        default:
+          return type;
+      }
+    })
+    .join(', ');
+
+  return `${severityLabel} sanctions citing ${typeList || 'international norm violations'}.`;
+}
 
 function calculateSanctionEffects(types: SanctionType[], severity: number): SanctionEffects {
   const effects: SanctionEffects = {
