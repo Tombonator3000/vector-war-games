@@ -7,6 +7,7 @@
 
 import type { Nation } from '../types/game';
 import type { GovernmentState, GovernmentType } from '../types/government';
+import { GOVERNMENT_BONUSES, getElectionInterval } from '../types/government';
 
 /**
  * Determine default government type for a nation based on characteristics
@@ -118,7 +119,6 @@ export function applyGovernmentBonuses(nation: Nation): {
     };
   }
 
-  const { GOVERNMENT_BONUSES } = require('../types/government');
   const bonuses = GOVERNMENT_BONUSES[nation.governmentState.currentGovernment];
 
   return {
@@ -188,7 +188,6 @@ export function getGovernmentPropagandaEffectiveness(nation: Nation): number {
 export function shouldNationHoldElections(nation: Nation): boolean {
   if (!nation.governmentState) return true; // Default to yes if no gov state
 
-  const { getElectionInterval } = require('../types/government');
   const interval = getElectionInterval(nation.governmentState.currentGovernment);
   return interval > 0; // Elections if interval > 0
 }
@@ -199,7 +198,6 @@ export function shouldNationHoldElections(nation: Nation): boolean {
 export function getNationElectionInterval(nation: Nation): number {
   if (!nation.governmentState) return 12; // Default interval
 
-  const { getElectionInterval } = require('../types/government');
   return getElectionInterval(nation.governmentState.currentGovernment);
 }
 
