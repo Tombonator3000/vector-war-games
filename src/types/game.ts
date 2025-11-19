@@ -273,6 +273,7 @@ export interface Nation {
 
   // Government System
   governmentState?: import('./government').GovernmentState;  // Nation's government type and stability
+  unlockedGovernments?: import('./government').GovernmentType[];  // Government types unlocked via research (default: ['democracy'])
 
   // NGO System (Immigration & Destabilization Operations)
   ngoState?: import('./ngoSystem').NGOState;        // NGO operations and infrastructure

@@ -86,6 +86,10 @@ export function initializeGovernmentSystem(nations: Nation[]): void {
       const defaultGovernment = determineDefaultGovernment(nation);
       nation.governmentState = initializeDefaultGovernmentState(defaultGovernment);
     }
+    // Initialize unlocked governments (all nations start with democracy unlocked)
+    if (!nation.unlockedGovernments) {
+      nation.unlockedGovernments = ['democracy'];
+    }
   });
 }
 

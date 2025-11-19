@@ -14,7 +14,8 @@ export type ResearchCategory =
   | 'space'
   | 'intelligence'
   | 'defense'
-  | 'delivery';
+  | 'delivery'
+  | 'civics';
 
 export type ResourceCost = Partial<Record<'production' | 'intel' | 'uranium' | 'oil' | 'rare_earths', number>>;
 
@@ -673,6 +674,125 @@ export const INTELLIGENCE_RESEARCH: ResearchNode[] = [
   },
 ];
 
+// ==================== CIVICS/GOVERNMENT TREE ====================
+export const CIVICS_RESEARCH: ResearchNode[] = [
+  {
+    id: 'civics_constitutional_monarchy',
+    name: 'Constitutional Monarchy',
+    description: 'Establish a ceremonial monarch with elected parliament. Balanced governance with strong diplomatic prestige.',
+    category: 'civics',
+    turns: 3,
+    cost: { production: 15, intel: 10 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.civics_constitutional_monarchy = true;
+      nation.unlockedGovernments = nation.unlockedGovernments || ['democracy'];
+      if (!nation.unlockedGovernments.includes('constitutional_monarchy')) {
+        nation.unlockedGovernments.push('constitutional_monarchy');
+      }
+    }
+  },
+  {
+    id: 'civics_technocracy',
+    name: 'Technocracy',
+    description: 'Rule by technical experts and scientists. Exceptional research (+30%) and production (+15%), evidence-based policy.',
+    category: 'civics',
+    turns: 4,
+    cost: { production: 20, intel: 15 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.civics_technocracy = true;
+      nation.unlockedGovernments = nation.unlockedGovernments || ['democracy'];
+      if (!nation.unlockedGovernments.includes('technocracy')) {
+        nation.unlockedGovernments.push('technocracy');
+      }
+    }
+  },
+  {
+    id: 'civics_absolute_monarchy',
+    name: 'Absolute Monarchy',
+    description: 'Hereditary ruler with unlimited power. Excellent stability (+20) and clear succession, but limited freedoms.',
+    category: 'civics',
+    turns: 4,
+    cost: { production: 25, intel: 15 },
+    prerequisites: ['civics_constitutional_monarchy'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.civics_absolute_monarchy = true;
+      nation.unlockedGovernments = nation.unlockedGovernments || ['democracy'];
+      if (!nation.unlockedGovernments.includes('absolute_monarchy')) {
+        nation.unlockedGovernments.push('absolute_monarchy');
+      }
+    }
+  },
+  {
+    id: 'civics_one_party_state',
+    name: 'One-Party State',
+    description: 'Single party controls all government. Strong production (+10%) and effective propaganda (+40%), organized mobilization.',
+    category: 'civics',
+    turns: 4,
+    cost: { production: 30, intel: 20 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.civics_one_party_state = true;
+      nation.unlockedGovernments = nation.unlockedGovernments || ['democracy'];
+      if (!nation.unlockedGovernments.includes('one_party_state')) {
+        nation.unlockedGovernments.push('one_party_state');
+      }
+    }
+  },
+  {
+    id: 'civics_theocracy',
+    name: 'Theocracy',
+    description: 'Religious leaders govern by divine law. Strong cultural power (+25) and propaganda (+50%), devoted population.',
+    category: 'civics',
+    turns: 5,
+    cost: { production: 35, intel: 25 },
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.civics_theocracy = true;
+      nation.unlockedGovernments = nation.unlockedGovernments || ['democracy'];
+      if (!nation.unlockedGovernments.includes('theocracy')) {
+        nation.unlockedGovernments.push('theocracy');
+      }
+    }
+  },
+  {
+    id: 'civics_dictatorship',
+    name: 'Dictatorship',
+    description: 'Autocratic rule by single leader. Fast military mobilization (+30%), strong intel (+15), heavy suppression.',
+    category: 'civics',
+    turns: 5,
+    cost: { production: 40, intel: 30 },
+    prerequisites: ['civics_one_party_state'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.civics_dictatorship = true;
+      nation.unlockedGovernments = nation.unlockedGovernments || ['democracy'];
+      if (!nation.unlockedGovernments.includes('dictatorship')) {
+        nation.unlockedGovernments.push('dictatorship');
+      }
+    }
+  },
+  {
+    id: 'civics_military_junta',
+    name: 'Military Junta',
+    description: 'Military officers rule directly. Rapid military expansion (+50%), cheap units (-20% cost), efficient war machine.',
+    category: 'civics',
+    turns: 6,
+    cost: { production: 50, intel: 35 },
+    prerequisites: ['civics_dictatorship'],
+    onComplete: nation => {
+      nation.researched = nation.researched || {};
+      nation.researched.civics_military_junta = true;
+      nation.unlockedGovernments = nation.unlockedGovernments || ['democracy'];
+      if (!nation.unlockedGovernments.includes('military_junta')) {
+        nation.unlockedGovernments.push('military_junta');
+      }
+    }
+  },
+];
+
 // ==================== BIO-LAB INFRASTRUCTURE TREE ====================
 // Linear tier progression (handled separately via BioLab system)
 export interface BioLabNode {
@@ -738,6 +858,7 @@ export const ALL_RESEARCH_NODES: ResearchNode[] = [
   ...CULTURE_RESEARCH,
   ...SPACE_RESEARCH,
   ...INTELLIGENCE_RESEARCH,
+  ...CIVICS_RESEARCH,
 ];
 
 export const RESEARCH_LOOKUP: Record<string, ResearchNode> = ALL_RESEARCH_NODES.reduce(
@@ -759,6 +880,7 @@ export const CATEGORY_COLORS: Record<ResearchCategory, string> = {
   intelligence: '#a855f7', // purple-500
   defense: '#10b981', // emerald-500
   delivery: '#f59e0b', // amber-500
+  civics: '#3b82f6', // blue-500
 };
 
 export const CATEGORY_NAMES: Record<ResearchCategory, string> = {
@@ -771,6 +893,7 @@ export const CATEGORY_NAMES: Record<ResearchCategory, string> = {
   intelligence: 'INTELLIGENCE OPS',
   defense: 'DEFENSE SYSTEMS',
   delivery: 'DELIVERY SYSTEMS',
+  civics: 'CIVICS & GOVERNMENT',
 };
 
 // ==================== HELPER FUNCTIONS ====================
