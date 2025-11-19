@@ -9294,9 +9294,10 @@ export default function NoradVector() {
       governmentState: n.governmentState,
     })),
     onGovernmentSync: (nationId, state) => {
-      setNations(prev => prev.map(n =>
-        n.id === nationId ? { ...n, governmentState: state } : n
-      ));
+      const nation = getNationById(governanceNationsRef.current, nationId);
+      if (nation) {
+        nation.governmentState = state;
+      }
     },
     onGovernmentTransition: (nationId, transition) => {
       const nation = nations.find(n => n.id === nationId);
