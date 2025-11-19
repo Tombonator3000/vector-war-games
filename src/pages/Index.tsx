@@ -6068,7 +6068,7 @@ function aiTurn(n: Nation) {
       onLog: log,
       onNewsItem: (cat, msg) => window.__gameAddNewsItem?.(cat, msg, 'critical'),
       onUpdateDisplay: updateDisplay,
-      onShowModal: setDefconChangeEvent,
+      onShowModal: window.__gameSetDefconChangeEvent,
     });
     log(`☮️ ${n.name} urgently proposes peace talks to avert catastrophe!`, 'diplomatic');
     return;
@@ -6088,7 +6088,7 @@ function aiTurn(n: Nation) {
         onLog: log,
         onNewsItem: (cat, msg, prio) => window.__gameAddNewsItem?.(cat, msg, prio),
         onUpdateDisplay: updateDisplay,
-        onShowModal: setDefconChangeEvent,
+        onShowModal: window.__gameSetDefconChangeEvent,
       });
       maybeBanter(n, 0.7); // Increased visibility
       return;
@@ -6104,12 +6104,12 @@ function aiTurn(n: Nation) {
         `${n.name} signals willingness to reduce military readiness`,
         `${n.name} calls for diplomatic crisis resolution`,
       ];
-      handleDefconChange(1, messages[Math.floor(Math.random() * messages.length)], 'ai', {
+        handleDefconChange(1, messages[Math.floor(Math.random() * messages.length)], 'ai', {
         onAudioTransition: AudioSys.handleDefconTransition,
         onLog: log,
         onNewsItem: (cat, msg) => window.__gameAddNewsItem?.(cat, msg, S.defcon <= 2 ? 'urgent' : 'important'),
         onUpdateDisplay: updateDisplay,
-        onShowModal: setDefconChangeEvent,
+        onShowModal: window.__gameSetDefconChangeEvent,
       });
       return;
     }
@@ -6124,7 +6124,7 @@ function aiTurn(n: Nation) {
         onLog: log,
         onNewsItem: addNewsItem,
         onUpdateDisplay: updateDisplay,
-        onShowModal: setDefconChangeEvent,
+        onShowModal: window.__gameSetDefconChangeEvent,
       });
       return;
     }
@@ -6135,7 +6135,7 @@ function aiTurn(n: Nation) {
         onLog: log,
         onNewsItem: addNewsItem,
         onUpdateDisplay: updateDisplay,
-        onShowModal: setDefconChangeEvent,
+        onShowModal: window.__gameSetDefconChangeEvent,
       });
       return;
     }
@@ -6149,7 +6149,7 @@ function aiTurn(n: Nation) {
         onLog: log,
         onNewsItem: addNewsItem,
         onUpdateDisplay: updateDisplay,
-        onShowModal: setDefconChangeEvent,
+        onShowModal: window.__gameSetDefconChangeEvent,
       });
       maybeBanter(n, 0.3);
       return;
@@ -10771,11 +10771,12 @@ export default function NoradVector() {
 
     // Make available globally
     window.__gameAddNewsItem = addNewsItem;
+    window.__gameSetDefconChangeEvent = setDefconChangeEvent;
     window.__gameTriggerFlashpoint = (turn: number, defcon: number) => triggerRandomFlashpointRef.current(turn, defcon);
     window.__pandemicTrigger = (payload: unknown) => triggerPandemicRef.current(payload as any);
     window.__pandemicCountermeasure = (payload: unknown) => applyPandemicCountermeasureRef.current(payload as any);
     window.__pandemicAdvance = (context: unknown) => advancePandemicTurnRef.current(context as any);
-  }, [addNewsItem, triggerRandomFlashpoint, handlePandemicTrigger, handlePandemicCountermeasure, handlePandemicAdvance]);
+  }, [addNewsItem, setDefconChangeEvent, triggerRandomFlashpoint, handlePandemicTrigger, handlePandemicCountermeasure, handlePandemicAdvance]);
 
   useEffect(() => {
     Storage.setItem('layout_density', layoutDensity);
