@@ -7,6 +7,11 @@
 
 ---
 
+### 2025-11-19T07:19:49Z - Disable flat overlay while viewing Vector globe
+- Audited the `gameLoop` overlay pipeline to confirm the coarse flat projection was still being drawn above the 3D globe even when players selected the Vector (wireframe) mode.
+- Added a `currentMapStyle === 'wireframe'` guard so Atmosphere/Ocean rendering and all flat map painting routines stay paused, leaving only missiles, units, and FX on the transparent overlay canvas while the vector globe remains visible underneath.
+- Skipped automated tests for this visual regression fix.
+
 ### 2025-11-18T22:15:58Z - Audio manager import cleanup and build verification
 - Ran `npm run build` to surface bundling warnings, catching the reporter notice about mixing dynamic and static audio manager imports.
 - Updated `src/components/ui/button.tsx` to lazy-load and cache the audio manager on demand so button clicks no longer force a static import that defeats code-splitting.

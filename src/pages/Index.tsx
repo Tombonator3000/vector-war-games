@@ -7224,22 +7224,28 @@ function gameLoop() {
   applyCanvasDefaults();
 
   const nowMs = Date.now();
+  const isWireframeStyle = currentMapStyle === 'wireframe';
 
   ctx.clearRect(0, 0, W, H);
 
-  // Always update and draw map elements, regardless of game state
+  // Always advance atmospheric/ocean animations so swapping styles stays seamless
   Atmosphere.update();
-  Atmosphere.draw(ctx, currentMapStyle);
-
   Ocean.update();
-  Ocean.draw(ctx, currentMapStyle);
+
+  if (!isWireframeStyle) {
+    Atmosphere.draw(ctx, currentMapStyle);
+    Ocean.draw(ctx, currentMapStyle);
+  }
 
   cam.zoom += (cam.targetZoom - cam.zoom) * 0.1;
 
-  drawWorld(currentMapStyle);
-  CityLights.draw(ctx, currentMapStyle);
-  drawNations(currentMapStyle);
-  drawTerritoriesWrapper();
+  if (!isWireframeStyle) {
+    drawWorld(currentMapStyle);
+    CityLights.draw(ctx, currentMapStyle);
+    drawNations(currentMapStyle);
+    drawTerritoriesWrapper();
+  }
+
   drawSatellites(nowMs);
   drawMissiles();
   drawBombers();
