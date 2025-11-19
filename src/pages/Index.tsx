@@ -8140,6 +8140,7 @@ export default function NoradVector() {
   const selectedLeaderGlobal = S.selectedLeader;
   const selectedDoctrineGlobal = S.selectedDoctrine;
   const playerNameGlobal = S.playerName;
+  const hasOverlayCanvas = Boolean(globeSceneRef.current?.overlayCanvas);
 
   useEffect(() => {
     if (isGameStarted) {
@@ -8255,7 +8256,7 @@ export default function NoradVector() {
 
     isGameplayLoopEnabled = true;
     isAttractModeActive = false;
-  }, [isGameStarted, setConventionalState]);
+  }, [hasOverlayCanvas, isGameStarted, setConventionalState]);
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible') {

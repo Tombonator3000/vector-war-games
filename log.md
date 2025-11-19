@@ -3512,3 +3512,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T17:32:50Z - Updated GameStateManager.setState to mutate existing state and retain shared references when applying new snapshots.
 2025-11-18T16:20:00Z - Reviewed root AGENTS.md guidance and scoped removal of the legacy MilitaryModal in favor of consolidated warfare UI.
 2025-11-18T16:25:00Z - Deleted the legacy MilitaryModal component, removed its Index.tsx import wiring, and updated documentation to reference ConsolidatedWarModal as the single warfare flow.
+2025-11-18T23:26:42Z - Reviewed root AGENTS.md instructions before overlay canvas bootstrap update.
+2025-11-18T23:26:56Z - Added overlay canvas readiness flag and dependency to bootstrap effect to reinitialize once available.
+2025-11-18T23:27:12Z - Committed overlay canvas bootstrap readiness fix.
+2025-11-18T23:27:18Z - Amended overlay canvas bootstrap commit to capture logging entry.
