@@ -37,6 +37,7 @@ import {
   CULTURE_RESEARCH,
   SPACE_RESEARCH,
   INTELLIGENCE_RESEARCH,
+  CIVICS_RESEARCH,
   CATEGORY_COLORS,
   RESEARCH_LOOKUP,
   canResearch,
@@ -159,6 +160,13 @@ const DISPLAY_CATEGORY_CONFIG: Record<DisplayCategory, {
     label: 'Bio-Lab Infrastructure',
     description: 'Upgrade clandestine research facilities to unlock advanced pathogen programs.',
   },
+  civics: {
+    icon: Users,
+    color: CATEGORY_COLORS.civics,
+    label: 'Civics & Government',
+    description: 'Reform governance structures and unlock new government types.',
+    gridColumns: 4,
+  },
 };
 
 // Map categories to their research arrays
@@ -174,6 +182,7 @@ const CATEGORY_RESEARCH_MAP: Record<ResearchCategory, ResearchNode[]> = {
   intelligence: INTELLIGENCE_RESEARCH,
   defense: [], // Combined with nuclear
   delivery: [], // Combined with nuclear
+  civics: CIVICS_RESEARCH,
 };
 
 const RESEARCH_DEPENDENTS: Record<string, string[]> = (() => {

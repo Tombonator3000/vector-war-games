@@ -36,6 +36,7 @@ const CATEGORY_ICONS: Record<ResearchCategory, LucideIcon> = {
   intelligence: Brain,
   defense: ShieldAlert,
   delivery: Zap,
+  civics: Brain,
 };
 
 function getCategoryColors(category: ResearchCategory) {

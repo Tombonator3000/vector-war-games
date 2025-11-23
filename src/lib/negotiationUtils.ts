@@ -1009,7 +1009,7 @@ function applyNegotiationItemEffects(
     }
 
     case 'open-borders': {
-      const duration = typeof item.duration === 'number' ? item.duration : 10;
+      const duration: number = typeof item.duration === 'number' ? item.duration : 10;
       const giverTreaty = ensureTreatyRecord(updatedGiver, updatedReceiver);
       const receiverTreaty = ensureTreatyRecord(updatedReceiver, updatedGiver);
       giverTreaty.openBordersTurns = Math.max(giverTreaty.openBordersTurns || 0, duration);
@@ -1078,7 +1078,7 @@ function applyNegotiationItemEffects(
     }
 
     case 'military-support': {
-      const duration = typeof item.duration === 'number' ? item.duration : 5;
+      const duration: number = typeof item.duration === 'number' ? item.duration : 5;
       const treaty = ensureTreatyRecord(updatedReceiver, updatedGiver);
       treaty.militarySupportTurns = Math.max(treaty.militarySupportTurns || 0, duration);
       updatedReceiver = {
