@@ -880,7 +880,7 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
     const pad = 4 * z;
 
     // Fade nation labels in once we zoom past the style-specific clarity threshold
-    const labelVisibilityThreshold = style === 'flat-realistic' ? 1 : 0.5;
+    const labelVisibilityThreshold = style === 'flat-realistic' ? 0.4 : 0.5;
     const labelFadeRange = 0.2;
     const fadeStart = labelVisibilityThreshold - labelFadeRange;
     const labelVisibility = cam.zoom <= fadeStart
