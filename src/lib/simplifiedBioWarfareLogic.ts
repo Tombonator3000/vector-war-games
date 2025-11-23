@@ -142,8 +142,9 @@ export function processBioAttackTurn(
     };
   }
 
-  // Calculate damage
-  const damage = calculateBioWeaponDamage(nation.population, nation.bioDefenseLevel || 0);
+  // Calculate damage - bioDefenseLevel stored in researched or defaults to 0
+  const bioDefenseLevel = (nation.researched?.bioDefenseLevel as unknown as number) || 0;
+  const damage = calculateBioWeaponDamage(nation.population, bioDefenseLevel);
 
   // Apply damage
   const updatedNation = {
@@ -184,7 +185,9 @@ export function processAllBioAttacks(
   messages: string[];
   totalDamage: number;
 } {
-  if (!nation.activeBioAttacks || nation.activeBioAttacks.length === 0) {
+  // Access activeBioAttacks from researched - it should be an array
+  const activeBioAttacks = (nation.researched?.activeBioAttacks as unknown as any[]) || [];
+  if (activeBioAttacks.length === 0) {
     return {
       nation,
       messages: [],
@@ -205,7 +208,7 @@ export function processAllBioAttacks(
 
     // Each active bio-attack reduces food production by 10% per turn
     const damagePerAttack = 0.10;
-    const totalFoodDamage = Math.min(0.90, damagePerAttack * nation.activeBioAttacks.length);
+    const totalFoodDamage = Math.min(0.90, damagePerAttack * activeBioAttacks.length);
 
     controlledTerritories.forEach((territory: any) => {
       const territoryResource = gameState.territoryResources![territory.id];
@@ -219,7 +222,7 @@ export function processAllBioAttacks(
     }
   }
 
-  for (const attack of nation.activeBioAttacks) {
+  for (const attack of activeBioAttacks) {
     const result = processBioAttackTurn(updatedNation, attack, currentTurn);
     updatedNation = result.nation;
     totalDamage += result.damage;
@@ -241,7 +244,10 @@ export function processAllBioAttacks(
   return {
     nation: {
       ...updatedNation,
-      activeBioAttacks: updatedAttacks,
+      researched: {
+        ...updatedNation.researched,
+        activeBioAttacks: updatedAttacks as any,
+      },
     },
     messages,
     totalDamage,
@@ -304,7 +310,7 @@ export function canDeployBioWeapon(nation: Nation): {
   canDeploy: boolean;
   reason?: string;
 } {
-  if (!nation.bioWeaponResearched) {
+  if (!nation.researched?.bioWeaponResearched) {
     return { canDeploy: false, reason: 'Bio-weapons not researched' };
   }
 
@@ -332,8 +338,9 @@ export function getAllActiveBioAttacks(nations: Nation[]): BioAttackDeployment[]
   const attacks: BioAttackDeployment[] = [];
 
   for (const nation of nations) {
-    if (nation.activeBioAttacks) {
-      attacks.push(...nation.activeBioAttacks);
+    const activeBioAttacks = (nation.researched?.activeBioAttacks as unknown as any[]) || [];
+    if (activeBioAttacks.length > 0) {
+      attacks.push(...activeBioAttacks);
     }
   }
 
