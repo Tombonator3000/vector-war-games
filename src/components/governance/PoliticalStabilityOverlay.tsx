@@ -51,7 +51,7 @@ export function PoliticalStabilityOverlay({
       className="absolute inset-0 pointer-events-none"
       width={canvasWidth}
       height={canvasHeight}
-      style={{ zIndex: 5 }}
+      style={{ zIndex: 15 }}
     >
       {/* Heat map circles */}
       {overlayData.map(data => (

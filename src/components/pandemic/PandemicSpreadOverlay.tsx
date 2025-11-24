@@ -420,7 +420,7 @@ export function PandemicSpreadOverlay({
   const globalCasualties = pandemic.globalCasualties ?? 0;
 
   return (
-    <svg className="absolute inset-0 pointer-events-none" width={canvasWidth} height={canvasHeight} style={{ zIndex: 6 }}>
+    <svg className="absolute inset-0 pointer-events-none" width={canvasWidth} height={canvasHeight} style={{ zIndex: 15 }}>
       {territories.length > 0 && (
         <defs>
           {territories.map(territory => (
