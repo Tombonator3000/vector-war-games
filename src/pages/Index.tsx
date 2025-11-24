@@ -16123,6 +16123,8 @@ export default function NoradVector() {
           nations={nations}
           worldCountries={worldCountries}
           territories={territoryPolygons}
+          territoryStates={territoryList}
+          playerId={playerNationId}
           units={globeUnits}
           onProjectorReady={handleProjectorReady}
           onProjectorUpdate={handleProjectorUpdate}
@@ -16130,6 +16132,7 @@ export default function NoradVector() {
           mapStyle={mapStyle}
           modeData={mapModeData}
           showTerritories={showTerritories}
+          showTerritoryMarkers={true}
           showUnits={showUnits}
           flatMapVariant={isFlatMapDay}
         />
