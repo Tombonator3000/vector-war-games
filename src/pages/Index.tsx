@@ -1356,8 +1356,8 @@ const leaders: LeaderDefinition[] = [
   { name: 'Leonid Brezhnev', ai: 'defensive', color: '#DA291C', scenarios: ['default'] }, // Soviet General Secretary
   { name: 'Richard Nixon', ai: 'balanced', color: '#0047AB', scenarios: ['default'] }, // 37th US President
   { name: 'Jimmy Carter', ai: 'balanced', color: '#0047AB', scenarios: ['default'] }, // 39th US President, peace-focused
-  { name: 'Dwight Eisenhower', ai: 'balanced', color: '#0047AB', scenarios: ['default'] }, // 34th US President, general
-  { name: 'Lyndon Johnson', ai: 'aggressive', color: '#0047AB', scenarios: ['default'] }, // 36th US President
+  { name: 'Dwight D. Eisenhower', ai: 'balanced', color: '#0047AB', scenarios: ['default'] }, // 34th US President, general
+  { name: 'Lyndon B. Johnson', ai: 'aggressive', color: '#0047AB', scenarios: ['default'] }, // 36th US President
   { name: 'Gerald Ford', ai: 'balanced', color: '#0047AB', scenarios: ['default'] }, // 38th US President
   { name: 'Winston Churchill', ai: 'defensive', color: '#00247D', scenarios: ['default'] }, // UK Prime Minister, steadfast defender
   { name: 'Harry S. Truman', ai: 'balanced', color: '#3C3B6E', scenarios: ['default'] }, // US President, Truman Doctrine
