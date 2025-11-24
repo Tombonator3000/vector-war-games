@@ -409,8 +409,9 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
         if (!worldCountries || typeof worldCountries !== 'object') return;
         
         ctx.save();
-        ctx.strokeStyle = 'rgba(100, 100, 100, 0.4)'; // Semi-transparent gray borders
-        ctx.lineWidth = 0.8;
+        // High-contrast neon-style borders for flat realistic map
+        ctx.strokeStyle = 'rgba(120, 255, 180, 0.75)';
+        ctx.lineWidth = 1.4;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
@@ -523,13 +524,13 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
       if (isWireframe) {
         ctx.strokeStyle = 'rgba(80,240,255,0.75)';
       } else if (isFlatRealistic) {
-        // Draw borders twice for better visibility: first a dark outline, then light inner line
-        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-        ctx.lineWidth = 2.5;
+        // Strong, glowing-style borders for flat realistic texture
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.lineWidth = 3;
         ctx.stroke();
         
-        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = 'rgba(120, 255, 180, 0.9)';
+        ctx.lineWidth = 1.6;
       } else {
         ctx.strokeStyle = palette.mapOutline;
       }
