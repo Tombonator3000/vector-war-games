@@ -21,6 +21,30 @@ export function initializeNationLeaderAbility(nation: Nation): void {
   if (ability) {
     nation.leaderAbilityState = initializeLeaderAbilityState(nation.leader, ability);
     console.log(`Initialized leader ability for ${nation.name}: ${ability.name}`);
+  } else {
+    // Initialize empty state for leaders without abilities so modal still works
+    nation.leaderAbilityState = {
+      leaderName: nation.leader,
+      ability: {
+        id: 'no_ability',
+        name: 'No Special Ability',
+        description: 'This leader does not have a unique ability.',
+        icon: '❓',
+        maxUses: 0,
+        usesRemaining: 0,
+        cooldownTurns: 0,
+        currentCooldown: 0,
+        lastUsedTurn: null,
+        effect: { type: 'emergency-funding', value: 0 },
+        targetType: 'self',
+        category: 'special',
+        requirements: [],
+      },
+      isAvailable: false,
+      unavailableReason: 'This leader has no special ability',
+      history: [],
+    };
+    console.log(`Initialized empty ability state for ${nation.name}: ${nation.leader}`);
   }
 }
 
