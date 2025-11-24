@@ -8,7 +8,7 @@
  * - Monitor exposure risk
  */
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, Building2, AlertTriangle, TrendingUp, Info, Eye, EyeOff, X } from 'lucide-react';
@@ -30,13 +30,13 @@ interface NGOOperationsPanelProps {
   onClose?: () => void;
 }
 
-export function NGOOperationsPanel({
+const NGOOperationsPanelComponent = ({
   player,
   allNations,
   currentTurn,
   onRefresh,
   onClose,
-}: NGOOperationsPanelProps) {
+}: NGOOperationsPanelProps) => {
   const [activeTab, setActiveTab] = useState<'launch' | 'active' | 'infrastructure'>('active');
   const [selectedNGOType, setSelectedNGOType] = useState<NGOType | null>(null);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
@@ -493,4 +493,7 @@ export function NGOOperationsPanel({
       )}
     </div>
   );
-}
+};
+
+// Export memoized version to prevent unnecessary re-renders
+export const NGOOperationsPanel = memo(NGOOperationsPanelComponent);

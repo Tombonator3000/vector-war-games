@@ -27,7 +27,7 @@ class AudioManager {
       audio.preload = 'auto';
       this.sounds.set(key, audio);
     } catch (err) {
-      console.warn(`Failed to preload sound "${key}":`, err);
+      // Silently fail - sound preload not critical
     }
   }
 

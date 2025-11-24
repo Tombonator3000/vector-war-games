@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, memo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,7 +45,7 @@ function renderJustificationBadge(justification: number) {
   return <Badge className="bg-red-500/20 text-red-300">Invalid</Badge>;
 }
 
-export function WarCouncilPanel({
+const WarCouncilPanelComponent = ({
   player,
   nations,
   currentTurn,
@@ -53,7 +53,7 @@ export function WarCouncilPanel({
   onOfferPeace,
   onAcceptPeace,
   onRejectPeace,
-}: WarCouncilPanelProps) {
+}: WarCouncilPanelProps) => {
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [selectedCasusBelliId, setSelectedCasusBelliId] = useState<string | null>(null);
 
@@ -365,6 +365,8 @@ export function WarCouncilPanel({
       </div>
     </div>
   );
-}
+};
 
+// Export memoized version to prevent unnecessary re-renders
+export const WarCouncilPanel = memo(WarCouncilPanelComponent);
 export default WarCouncilPanel;

@@ -3,7 +3,7 @@
  * UI for managing useful idiots, phobia campaigns, and religious weapons
  */
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import type { Nation, GameState } from '../types/game';
 import {
   UsefulIdiot,
@@ -33,13 +33,13 @@ interface AdvancedPropagandaPanelProps {
   onLog: (message: string, type?: string) => void;
 }
 
-export function AdvancedPropagandaPanel({
+const AdvancedPropagandaPanelComponent = ({
   gameState,
   nation,
   allNations,
   onUpdate,
   onLog,
-}: AdvancedPropagandaPanelProps) {
+}: AdvancedPropagandaPanelProps) => {
   const [activeTab, setActiveTab] = useState<'idiots' | 'phobias' | 'religious'>('idiots');
   const [selectedTarget, setSelectedTarget] = useState<string>('');
 
@@ -608,4 +608,7 @@ export function AdvancedPropagandaPanel({
       </div>
     </div>
   );
-}
+};
+
+// Export memoized version to prevent unnecessary re-renders
+export const AdvancedPropagandaPanel = memo(AdvancedPropagandaPanelComponent);
