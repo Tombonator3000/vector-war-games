@@ -15076,6 +15076,9 @@ export default function NoradVector() {
         const [focalLon, focalLat] = toLonLatLocal(focalX, focalY);
         const prevZoom = cam.zoom;
 
+        // Project the focal point BEFORE changing zoom (critical for correct zoom-to-mouse behavior)
+        const focalProjection = projectLocal(focalLon, focalLat);
+
         const zoomIntensity = 0.0015;
         const delta = Math.exp(-e.deltaY * zoomIntensity);
         const newZoom = Math.max(minZoom, Math.min(3, cam.targetZoom * delta));
@@ -15083,9 +15086,6 @@ export default function NoradVector() {
 
         cam.targetZoom = newZoom;
         cam.zoom = newZoom;
-
-        // Try to zoom towards focal point if it's visible
-        const focalProjection = projectLocal(focalLon, focalLat);
 
         // Auto-center in bounded flat projections only when at exact minimum zoom
         if (isBoundedFlatProjection() && Math.abs(newZoom - minZoom) < 0.01) {
