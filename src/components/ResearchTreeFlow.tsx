@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, memo } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -447,7 +447,7 @@ function CategoryFlowPanel({
   );
 }
 
-export function ResearchTreeFlow({
+const ResearchTreeFlowComponent = ({
   nation,
   onStartResearch,
   onCancelResearch,
@@ -455,7 +455,7 @@ export function ResearchTreeFlow({
   bioLabFacility,
   onStartBioLabConstruction,
   onCancelBioLabConstruction,
-}: ResearchTreeFlowProps) {
+}: ResearchTreeFlowProps) => {
   const [activeTab, setActiveTab] = useState<DisplayCategory>('nuclear');
   const [selectedTech, setSelectedTech] = useState<string | null>(null);
 
@@ -622,4 +622,7 @@ export function ResearchTreeFlow({
       />
     </div>
   );
-}
+};
+
+// Export memoized version to prevent unnecessary re-renders
+export const ResearchTreeFlow = memo(ResearchTreeFlowComponent);

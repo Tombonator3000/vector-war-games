@@ -8,7 +8,7 @@
  * - Simple cultural power calculation
  */
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Building, Users, TrendingUp, Info } from 'lucide-react';
@@ -38,7 +38,7 @@ interface StreamlinedCulturePanelProps {
   onClose?: () => void;
 }
 
-export function StreamlinedCulturePanel({
+const StreamlinedCulturePanelComponent = ({
   player,
   enemies,
   allNations,
@@ -49,7 +49,7 @@ export function StreamlinedCulturePanel({
   currentImmigrationPolicy = 'selective',
   onNGORefresh,
   onClose,
-}: StreamlinedCulturePanelProps) {
+}: StreamlinedCulturePanelProps) => {
   const [selectedPropagandaTargets, setSelectedPropagandaTargets] = useState<Record<PropagandaType, string | null>>({
     attraction: null,
     demoralization: null,
@@ -651,4 +651,7 @@ export function StreamlinedCulturePanel({
       </div>
     </div>
   );
-}
+};
+
+// Export memoized version to prevent unnecessary re-renders
+export const StreamlinedCulturePanel = memo(StreamlinedCulturePanelComponent);

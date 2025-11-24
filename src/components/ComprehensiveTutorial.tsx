@@ -5,7 +5,7 @@
  * Progressive learning with practical examples and practice tasks.
  */
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -752,7 +752,7 @@ const TUTORIAL_SECTIONS: TutorialSection[] = [
   }
 ];
 
-export function ComprehensiveTutorial({ open, onClose }: { open: boolean; onClose: () => void }) {
+const ComprehensiveTutorialComponent = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const [currentSection, setCurrentSection] = useState(0);
   const [currentLesson, setCurrentLesson] = useState(0);
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
@@ -1016,4 +1016,7 @@ export function ComprehensiveTutorial({ open, onClose }: { open: boolean; onClos
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+// Export memoized version to prevent unnecessary re-renders
+export const ComprehensiveTutorial = memo(ComprehensiveTutorialComponent);

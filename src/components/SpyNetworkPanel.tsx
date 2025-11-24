@@ -4,7 +4,7 @@
  * Comprehensive interface for managing individual spies, missions, and counter-intelligence
  */
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -194,7 +194,7 @@ const getReputationColor = (reputation: string): string => {
   }
 };
 
-export const SpyNetworkPanel: React.FC<SpyNetworkPanelProps> = ({
+const SpyNetworkPanelComponent: React.FC<SpyNetworkPanelProps> = ({
   player,
   enemies,
   onRecruitSpy,
@@ -760,3 +760,6 @@ export const SpyNetworkPanel: React.FC<SpyNetworkPanelProps> = ({
     </Card>
   );
 };
+
+// Export memoized version to prevent unnecessary re-renders
+export const SpyNetworkPanel = memo(SpyNetworkPanelComponent);
