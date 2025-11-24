@@ -7225,6 +7225,10 @@ function gameLoop() {
 
   const nowMs = Date.now();
   const isWireframeStyle = currentMapStyle === 'wireframe';
+  const isFlatRealisticStandard = currentMapStyle === 'flat-realistic' && currentMapMode === 'standard';
+  // Skip 2D overlay rendering in wireframe mode or when using flat-realistic with standard mode
+  // (flat-realistic with standard mode shows only the clean satellite texture from WebGL layer)
+  const shouldSkipOverlayRendering = isWireframeStyle || isFlatRealisticStandard;
 
   ctx.clearRect(0, 0, W, H);
 
@@ -7232,14 +7236,14 @@ function gameLoop() {
   Atmosphere.update();
   Ocean.update();
 
-  if (!isWireframeStyle) {
+  if (!shouldSkipOverlayRendering) {
     Atmosphere.draw(ctx, currentMapStyle);
     Ocean.draw(ctx, currentMapStyle);
   }
 
   cam.zoom += (cam.targetZoom - cam.zoom) * 0.1;
 
-  if (!isWireframeStyle) {
+  if (!shouldSkipOverlayRendering) {
     drawWorld(currentMapStyle);
     CityLights.draw(ctx, currentMapStyle);
     drawNations(currentMapStyle);
