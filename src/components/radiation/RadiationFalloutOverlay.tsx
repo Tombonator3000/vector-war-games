@@ -454,7 +454,8 @@ export function RadiationFalloutOverlay({
 
   return (
     <svg
-      className="pointer-events-none absolute inset-0 z-20"
+      className="pointer-events-none absolute inset-0"
+      style={{ zIndex: 15 }}
       width={canvasWidth}
       height={canvasHeight}
       viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}

@@ -711,7 +711,11 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
     let overlayOpacity = 0;
     let normalizedPandemicForMarker = 0;
 
-    if (overlayEnabled) {
+    // Modes with dedicated SVG overlay components should not draw on canvas to avoid layer stacking
+    const modesWithSVGOverlays = ['unrest', 'pandemic', 'radiation', 'migration'];
+    const shouldDrawCanvasOverlay = overlayEnabled && !modesWithSVGOverlays.includes(currentMode);
+
+    if (shouldDrawCanvasOverlay) {
       const overlayKey = n.id;
       const pandemicData = modeData?.pandemic;
       const pandemicInfection = pandemicData?.infections?.[overlayKey] ?? 0;
@@ -750,24 +754,6 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
           }
           break;
         }
-        case 'unrest': {
-          const unrestMetrics = modeData?.unrest?.[overlayKey];
-          if (unrestMetrics) {
-            const stability = (unrestMetrics.morale + unrestMetrics.publicOpinion) / 2 - unrestMetrics.instability * 0.35;
-            overlayColor = computeUnrestColor(stability);
-            overlayScale = 0.24 + MathUtils.clamp((70 - stability) / 200, 0, 0.3);
-            overlayOpacity = stability < 55 ? 0.5 : 0.35;
-          }
-          break;
-        }
-        case 'pandemic': {
-          if (normalizedPandemic > 0) {
-            overlayColor = computePandemicColor(normalizedPandemic);
-            overlayScale = 0.22 + normalizedPandemic * 0.55;
-            overlayOpacity = 0.28 + normalizedHeat * 0.5;
-          }
-          break;
-        }
         default:
           break;
       }
@@ -791,7 +777,8 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
     }
 
     const baseColor = typeof n.color === 'string' ? n.color : '#ff6b6b';
-    const pandemicMarkerColor = currentMode === 'pandemic' && !n.isPlayer && normalizedPandemicForMarker > 0
+    // Only apply overlay colors to markers if using canvas overlays (not SVG overlays)
+    const pandemicMarkerColor = currentMode === 'pandemic' && !n.isPlayer && normalizedPandemicForMarker > 0 && shouldDrawCanvasOverlay
       ? computePandemicColor(normalizedPandemicForMarker)
       : null;
     let markerColor = baseColor;
@@ -799,7 +786,7 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       markerColor = '#7cff6b';
     } else if (pandemicMarkerColor) {
       markerColor = pandemicMarkerColor;
-    } else if (currentMode !== 'standard' && overlayEnabled && overlayColor) {
+    } else if (currentMode !== 'standard' && shouldDrawCanvasOverlay && overlayColor) {
       markerColor = overlayColor;
     }
 

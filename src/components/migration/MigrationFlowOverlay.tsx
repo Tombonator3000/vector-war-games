@@ -456,7 +456,7 @@ export function MigrationFlowOverlay({
       className="absolute inset-0 pointer-events-none"
       width={canvasWidth}
       height={canvasHeight}
-      style={{ zIndex: 6 }}
+      style={{ zIndex: 15 }}
     >
       {territories.map(territory => (
         <g key={territory.id}>
