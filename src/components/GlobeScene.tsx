@@ -44,6 +44,8 @@ import {
   type UnitVisualization,
 } from '@/lib/unitModels';
 import { resolvePublicAssetPath } from '@/lib/renderingUtils';
+import { TerritoryMarkers } from '@/components/TerritoryMarkers';
+import type { TerritoryState } from '@/hooks/useConventionalWarfare';
 
 const EARTH_RADIUS = 1.8;
 const MARKER_OFFSET = 0.06;
@@ -168,8 +170,11 @@ export interface GlobeSceneProps {
   }>;
   worldCountries?: FeatureCollection<Polygon | MultiPolygon> | null;
   territories?: TerritoryPolygon[];
+  territoryStates?: TerritoryState[];
+  playerId?: string | null;
   units?: Unit[];
   showTerritories?: boolean;
+  showTerritoryMarkers?: boolean;
   showUnits?: boolean;
   onNationClick?: (nationId: string) => void;
   onTerritoryClick?: (territoryId: string) => void;
@@ -1081,8 +1086,11 @@ function SceneContent({
   cam,
   nations,
   territories = [],
+  territoryStates = [],
+  playerId = null,
   units = [],
   showTerritories = false,
+  showTerritoryMarkers = false,
   showUnits = false,
   onNationClick,
   onTerritoryClick,
@@ -1099,8 +1107,11 @@ function SceneContent({
   cam: GlobeSceneProps['cam'];
   nations: GlobeSceneProps['nations'];
   territories?: TerritoryPolygon[];
+  territoryStates?: TerritoryState[];
+  playerId?: string | null;
   units?: Unit[];
   showTerritories?: boolean;
+  showTerritoryMarkers?: boolean;
   showUnits?: boolean;
   onNationClick?: GlobeSceneProps['onNationClick'];
   onTerritoryClick?: GlobeSceneProps['onTerritoryClick'];
@@ -1506,6 +1517,17 @@ function SceneContent({
           />
         ))}
 
+        {/* Territory markers with troop counts */}
+        {showTerritoryMarkers && territoryStates.length > 0 && (
+          <TerritoryMarkers
+            territories={territoryStates}
+            playerId={playerId}
+            latLonToVector={latLonToSceneVector}
+            earthRadius={EARTH_RADIUS}
+            showLabels={true}
+          />
+        )}
+
         {/* Active missile trajectories */}
         {Array.from(missilesRef.current.values()).map(missile => (
           <group key={`missile-${missile.id}`}>
@@ -1547,8 +1569,11 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     nations,
     worldCountries,
     territories,
+    territoryStates,
+    playerId,
     units,
     showTerritories = false,
+    showTerritoryMarkers = false,
     showUnits = false,
     onNationClick,
     onTerritoryClick,
@@ -1913,8 +1938,11 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           cam={cam}
           nations={nations}
           territories={territories}
+          territoryStates={territoryStates}
+          playerId={playerId}
           units={units}
           showTerritories={showTerritories}
+          showTerritoryMarkers={showTerritoryMarkers}
           showUnits={showUnits}
           onNationClick={onNationClick}
           onTerritoryClick={onTerritoryClick}
