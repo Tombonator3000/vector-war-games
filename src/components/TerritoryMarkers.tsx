@@ -53,10 +53,8 @@ export function TerritoryMarkers({
           {/* 3D Marker Sphere */}
           <mesh scale={[scale, scale, scale]}>
             <sphereGeometry args={[0.05, 16, 16]} />
-            <meshStandardMaterial
+            <meshBasicMaterial
               color={color}
-              emissive={color}
-              emissiveIntensity={0.5}
               transparent
               opacity={0.8}
             />
