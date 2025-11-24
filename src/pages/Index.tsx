@@ -16627,7 +16627,7 @@ export default function NoradVector() {
                       <span className="text-[8px] font-mono">WAR</span>
                     </Button>
 
-                    {playerNation && playerGovernanceMetrics && playerNation.leaderAbilityState && governance.metrics[playerNation.id] ? (
+                    {playerNation && playerGovernanceMetrics && governance.metrics[playerNation.id] ? (
                       <Button
                         onClick={() => setLeaderOverviewOpen(true)}
                         variant="ghost"
@@ -17544,7 +17544,7 @@ export default function NoradVector() {
 
       {(() => {
         const player = PlayerManager.get();
-        if (!player?.leaderAbilityState) {
+        if (!player) {
           return null;
         }
 
