@@ -7225,10 +7225,9 @@ function gameLoop() {
 
   const nowMs = Date.now();
   const isWireframeStyle = currentMapStyle === 'wireframe';
-  const isFlatRealisticStandard = currentMapStyle === 'flat-realistic' && currentMapMode === 'standard';
-  // Skip 2D overlay rendering in wireframe mode or when using flat-realistic with standard mode
-  // (flat-realistic with standard mode shows only the clean satellite texture from WebGL layer)
-  const shouldSkipOverlayRendering = isWireframeStyle || isFlatRealisticStandard;
+  // Skip 2D overlay rendering only in wireframe mode
+  // All other modes (including flat-realistic) will show all features: city lights, nations, territories, borders
+  const shouldSkipOverlayRendering = isWireframeStyle;
 
   ctx.clearRect(0, 0, W, H);
 
