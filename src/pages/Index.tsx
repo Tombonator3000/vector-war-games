@@ -7225,6 +7225,9 @@ function gameLoop() {
 
   const nowMs = Date.now();
   const isWireframeStyle = currentMapStyle === 'wireframe';
+  // Skip 2D overlay rendering only in wireframe mode
+  // All other modes (including flat-realistic) will show all features: city lights, nations, territories, borders
+  const shouldSkipOverlayRendering = isWireframeStyle;
 
   ctx.clearRect(0, 0, W, H);
 
@@ -7232,14 +7235,14 @@ function gameLoop() {
   Atmosphere.update();
   Ocean.update();
 
-  if (!isWireframeStyle) {
+  if (!shouldSkipOverlayRendering) {
     Atmosphere.draw(ctx, currentMapStyle);
     Ocean.draw(ctx, currentMapStyle);
   }
 
   cam.zoom += (cam.targetZoom - cam.zoom) * 0.1;
 
-  if (!isWireframeStyle) {
+  if (!shouldSkipOverlayRendering) {
     drawWorld(currentMapStyle);
     CityLights.draw(ctx, currentMapStyle);
     drawNations(currentMapStyle);
