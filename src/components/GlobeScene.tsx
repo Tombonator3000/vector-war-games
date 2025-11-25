@@ -1394,8 +1394,7 @@ function SceneContent({
       {renderEarth()}
       {visualStyle === 'realistic' && <CityLights nations={nations} />}
       <group>
-        {/* Only render 3D nation markers in realistic mode - flat modes use 2D canvas overlay */}
-        {!isFlat && nations.map(nation => {
+        {nations.map(nation => {
             if (Number.isNaN(nation.lon) || Number.isNaN(nation.lat)) return null;
             const position = latLonToSceneVector(nation.lon, nation.lat, EARTH_RADIUS + MARKER_OFFSET);
             const overlayKey = nation.id;
@@ -1501,8 +1500,8 @@ function SceneContent({
             );
           })}
 
-        {/* Territory boundaries - only in realistic mode, flat modes use 2D canvas */}
-        {!isFlat && territoryGroups.map((group, i) => (
+        {/* Territory boundaries */}
+        {territoryGroups.map((group, i) => (
           <primitive key={`territory-${i}`} object={group} />
         ))}
 
@@ -1518,8 +1517,8 @@ function SceneContent({
           />
         ))}
 
-        {/* Territory markers with troop counts - only in realistic mode, flat modes use 2D canvas */}
-        {!isFlat && showTerritoryMarkers && territoryStates.length > 0 && (
+        {/* Territory markers with troop counts */}
+        {showTerritoryMarkers && territoryStates.length > 0 && (
           <TerritoryMarkers
             territories={territoryStates}
             playerId={playerId}

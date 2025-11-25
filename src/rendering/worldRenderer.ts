@@ -451,11 +451,40 @@ export function drawWorld(style: MapVisualStyle, context: WorldRenderContext): v
         ctx.restore();
       };
 
-      // NOTE: Don't draw texture here - THREE.js FlatEarthBackdrop handles it
-      // This avoids double-rendering of textures on separate layers
-      // Only draw vector graphics (borders) on top of the THREE.js texture
+      const drawTexture = (texture: HTMLImageElement, alpha = 1) => {
+        if (alpha <= 0) return;
+        const sourceWidth = texture.naturalWidth || texture.width || W;
+        const sourceHeight = texture.naturalHeight || texture.height || H;
+        const destWidth = W * cam.zoom;
+        const destHeight = H * cam.zoom;
+        if (alpha < 1) {
+          ctx.globalAlpha = alpha;
+        }
+        ctx.drawImage(
+          texture,
+          0,
+          0,
+          sourceWidth,
+          sourceHeight,
+          cam.x,
+          cam.y,
+          destWidth,
+          destHeight
+        );
+        if (alpha < 1) {
+          ctx.globalAlpha = 1;
+        }
+      };
 
-      // Draw country borders on top of the THREE.js texture
+      drawTexture(baseTexture);
+
+      if (overlayTexture && blend > 0) {
+        drawTexture(overlayTexture, blend);
+      } else if (!hasDayTexture && hasNightTexture) {
+        // Already drew night texture as base; nothing else to overlay.
+      }
+
+      // Draw country borders on top of the texture
       drawWorldBorders();
 
       ctx.restore();
