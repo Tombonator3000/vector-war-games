@@ -89,6 +89,7 @@ import { checkVictory } from '@/types/streamlinedVictoryConditions';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
 import { DefconWarningOverlay } from '@/components/DefconWarningOverlay';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
+import { EraProgressionBanner } from '@/components/EraProgressionBanner';
 import { LockedFeatureWrapper } from '@/components/LockedFeatureBadge';
 import { FEATURE_UNLOCK_INFO, type EraDefinition, type GameEra } from '@/types/era';
 import type { ActionConsequences, ConsequenceCalculationContext } from '@/types/consequences';
@@ -117,6 +118,7 @@ import { OrderOfBattlePanel } from '@/components/OrderOfBattlePanel';
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { AIDiplomacyProposalModal } from '@/components/AIDiplomacyProposalModal';
 import { EndGameScreen } from '@/components/EndGameScreen';
+import { VictoryDashboard } from '@/components/VictoryDashboard';
 import type {
   GameState,
   Nation,
@@ -7877,6 +7879,15 @@ export default function NoradVector() {
   // Consequence preview state
   const [consequencePreview, setConsequencePreview] = useState<ActionConsequences | null>(null);
   const [consequenceCallback, setConsequenceCallback] = useState<(() => void) | null>(null);
+  const queueConsequencePreview = useCallback(
+    (consequences: ActionConsequences | null, onConfirm?: () => void) => {
+      if (!consequences) return false;
+      setConsequencePreview(consequences);
+      setConsequenceCallback(onConfirm ?? null);
+      return true;
+    },
+    [],
+  );
 
   useEffect(() => {
     const listener: PhaseTransitionListener = (active) => {
@@ -11485,8 +11496,10 @@ export default function NoradVector() {
       }
     };
 
-    setConsequenceCallback(() => executeLaunch);
-    setConsequencePreview(consequences);
+    if (!queueConsequencePreview(consequences, executeLaunch)) {
+      setConsequencePreview(consequences);
+      setConsequenceCallback(() => executeLaunch);
+    }
   }, [
     pendingLaunch,
     selectedWarheadYield,
@@ -11494,6 +11507,7 @@ export default function NoradVector() {
     resetLaunchControl,
     triggerConsequenceAlerts,
     consumeAction,
+    queueConsequencePreview,
   ]);
 
   const startGame = useCallback((leaderOverride?: string, doctrineOverride?: string) => {
@@ -12524,14 +12538,78 @@ export default function NoradVector() {
       return total + (method?.intelCost || 0);
     }, 0);
 
-    // Deduct intel from player
     const player = PlayerManager.get();
-    if (player) {
-      player.intel = Math.max(0, (player.intel || 0) - totalIntelCost);
+    if (!player) return;
+
+    const targetNations = selections
+      .map((selection) => getNationById(nations, selection.nationId))
+      .filter((nation): nation is Nation => Boolean(nation));
+
+    if (targetNations.length === 0) {
+      toast({
+        title: 'No valid targets',
+        description: 'Select at least one valid nation for bio-weapon deployment.',
+        variant: 'destructive',
+      });
+      return;
     }
 
-    deployBioWeapon(selections, S.turn);
-  }, [deployBioWeapon, S.turn]);
+    const bioContext: ConsequenceCalculationContext = {
+      playerNation: player,
+      targetNation: targetNations[0],
+      allNations: GameStateManager.getNations(),
+      currentDefcon: S.defcon,
+      currentTurn: S.turn,
+      gameState: S as GameState,
+    };
+
+    const preview = calculateActionConsequences('deploy_bio_weapon', bioContext, {
+      targetNations,
+      plagueType: plagueState.selectedPlagueType || 'Bio-weapon',
+    });
+
+    const blockedReasons = preview?.blockedReasons ? [...preview.blockedReasons] : [];
+    if ((player.intel || 0) < totalIntelCost) {
+      blockedReasons.push(`Requires ${totalIntelCost} Intel. Current: ${Math.floor(player.intel || 0)}`);
+    }
+
+    const previewToShow = preview
+      ? {
+          ...preview,
+          costs: { ...(preview.costs ?? {}), intel: totalIntelCost },
+          blockedReasons: blockedReasons.length > 0 ? blockedReasons : preview.blockedReasons,
+        }
+      : null;
+
+    const executeDeploy = () => {
+      player.intel = Math.max(0, (player.intel || 0) - totalIntelCost);
+      deployBioWeapon(selections, S.turn);
+    };
+
+    if (queueConsequencePreview(previewToShow, blockedReasons.length === 0 ? executeDeploy : undefined)) {
+      return;
+    }
+
+    if ((player.intel || 0) < totalIntelCost) {
+      toast({
+        title: 'Insufficient Intel',
+        description: `You need ${totalIntelCost} Intel to deploy this bio-weapon strike.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    executeDeploy();
+  }, [
+    deployBioWeapon,
+    S.turn,
+    S.defcon,
+    plagueState.selectedPlagueType,
+    getNationById,
+    nations,
+    queueConsequencePreview,
+    toast,
+  ]);
 
   // ========== SIMPLIFIED SYSTEM HANDLERS ==========
 
@@ -12603,6 +12681,66 @@ export default function NoradVector() {
     } else if (type === 'alliance') {
       // Check if relationship is high enough
       const relationship = getRelationship(player, targetId, nations);
+      const allianceContext: ConsequenceCalculationContext = {
+        playerNation: player,
+        targetNation: target,
+        allNations: nations,
+        currentDefcon: S.defcon,
+        currentTurn: S.turn,
+        gameState: S as GameState,
+      };
+
+      const executeAlliance = () => {
+        const { updatedPlayer, updatedTarget } = applyAllianceProposal(player, target);
+        const updatedNations = nations.map(n => {
+          if (n.id === updatedPlayer.id) {
+            return updatedPlayer;
+          }
+          if (n.id === updatedTarget.id) {
+            return updatedTarget;
+          }
+          return n;
+        });
+
+        nations = updatedNations;
+        GameStateManager.setNations(updatedNations);
+        PlayerManager.setNations(updatedNations);
+        log(`Alliance formed between ${player.name} and ${target.name}!`, 'diplomatic');
+
+        // Alliance formation reduces global tensions
+        handleDefconChange(1, `Alliance between ${player.name} and ${target.name} reduces global tensions`, 'player', {
+          onAudioTransition: AudioSys.handleDefconTransition,
+          onLog: log,
+          onNewsItem: addNewsItem,
+          onUpdateDisplay: updateDisplay,
+          onShowModal: setDefconChangeEvent,
+        });
+
+        toast({
+          title: 'Alliance Formed',
+          description: `You are now allied with ${target.name}. Global tensions reduced.`,
+        });
+      };
+
+      const alliancePreview = calculateActionConsequences('form_alliance', allianceContext, { targetNation: target });
+      if (alliancePreview) {
+        const blockedReasons = alliancePreview.blockedReasons ? [...alliancePreview.blockedReasons] : [];
+        if (!canFormAlliance(relationship)) {
+          blockedReasons.push(
+            `${target.name} requires a relationship of at least +${RELATIONSHIP_ALLIED}. Current: ${relationship}`,
+          );
+        }
+
+        const previewToShow = {
+          ...alliancePreview,
+          blockedReasons: blockedReasons.length > 0 ? blockedReasons : alliancePreview.blockedReasons,
+        };
+
+        if (queueConsequencePreview(previewToShow, canFormAlliance(relationship) ? executeAlliance : undefined)) {
+          return;
+        }
+      }
+
       if (!canFormAlliance(relationship)) {
         toast({
           title: 'Alliance Rejected',
@@ -12612,36 +12750,7 @@ export default function NoradVector() {
         return;
       }
 
-      // Form alliance and persist treaty metadata
-      const { updatedPlayer, updatedTarget } = applyAllianceProposal(player, target);
-      const updatedNations = nations.map(n => {
-        if (n.id === updatedPlayer.id) {
-          return updatedPlayer;
-        }
-        if (n.id === updatedTarget.id) {
-          return updatedTarget;
-        }
-        return n;
-      });
-
-      nations = updatedNations;
-      GameStateManager.setNations(updatedNations);
-      PlayerManager.setNations(updatedNations);
-      log(`Alliance formed between ${player.name} and ${target.name}!`, 'diplomatic');
-
-      // Alliance formation reduces global tensions
-      handleDefconChange(1, `Alliance between ${player.name} and ${target.name} reduces global tensions`, 'player', {
-        onAudioTransition: AudioSys.handleDefconTransition,
-        onLog: log,
-        onNewsItem: addNewsItem,
-        onUpdateDisplay: updateDisplay,
-        onShowModal: setDefconChangeEvent,
-      });
-
-      toast({
-        title: 'Alliance Formed',
-        description: `You are now allied with ${target.name}. Global tensions reduced.`,
-      });
+      executeAlliance();
     } else if (type === 'truce') {
       // Establish temporary peace treaty
       const truceDuration = terms?.duration || 10; // Default 10 turns
@@ -12994,63 +13103,81 @@ export default function NoradVector() {
         return;
       }
 
-      const result = processWarDeclaration(
-        player,
-        defender,
-        casusBelli,
-        GameStateManager.getNations(),
-        GameStateManager.getState(),
-        S.turn
-      );
+      const context: ConsequenceCalculationContext = {
+        playerNation: player,
+        targetNation: defender,
+        allNations: GameStateManager.getNations(),
+        currentDefcon: S.defcon,
+        currentTurn: S.turn,
+        gameState: S as GameState,
+      };
 
-      if (!result.success || !result.warState) {
-        toast({
-          title: 'War declaration blocked',
-          description: result.message,
-          variant: 'destructive',
+      const executeDeclaration = () => {
+        const result = processWarDeclaration(
+          player,
+          defender,
+          casusBelli,
+          GameStateManager.getNations(),
+          GameStateManager.getState(),
+          S.turn
+        );
+
+        if (!result.success || !result.warState) {
+          toast({
+            title: 'War declaration blocked',
+            description: result.message,
+            variant: 'destructive',
+          });
+          log(result.message, 'warning');
+          return;
+        }
+
+        const currentNations = GameStateManager.getNations();
+        const replacementMap = new Map<string, Nation>();
+        result.updatedNations.forEach((nation) => {
+          replacementMap.set(nation.id, nation);
         });
-        log(result.message, 'warning');
+        replacementMap.set(result.updatedAttacker.id, result.updatedAttacker);
+        replacementMap.set(result.updatedDefender.id, result.updatedDefender);
+
+        const merged = currentNations.map((nation) => {
+          const update = replacementMap.get(nation.id);
+          return update ? ({ ...nation, ...update } as LocalNation) : nation;
+        });
+
+        refreshGameState(merged);
+
+        const casusState = S.casusBelliState ?? { allWars: [], warHistory: [] };
+        casusState.allWars = [
+          ...(casusState.allWars || []).filter((war) => war.id !== result.warState.id),
+          result.warState,
+        ];
+        casusState.warHistory = casusState.warHistory || [];
+        S.casusBelliState = casusState;
+
+        log(result.message, 'alert');
+        toast({ title: 'War Declared', description: result.message });
+        addNewsItem('military', result.message, 'critical');
+
+        if (result.councilResolution) {
+          const resolutionTitle = result.councilResolution.title ?? 'Council intervention triggered';
+          const resolutionDescription =
+            result.councilResolution.description ?? 'International Council responds to the conflict.';
+          addNewsItem('diplomatic', resolutionTitle, 'important');
+          toast({ title: 'Council Intervention', description: resolutionDescription });
+        }
+
+        triggerNationsUpdate?.();
+      };
+
+      const preview = calculateActionConsequences('declare_war', context, { targetNation: defender });
+      if (queueConsequencePreview(preview, executeDeclaration)) {
         return;
       }
 
-      const currentNations = GameStateManager.getNations();
-      const replacementMap = new Map<string, Nation>();
-      result.updatedNations.forEach((nation) => {
-        replacementMap.set(nation.id, nation);
-      });
-      replacementMap.set(result.updatedAttacker.id, result.updatedAttacker);
-      replacementMap.set(result.updatedDefender.id, result.updatedDefender);
-
-      const merged = currentNations.map((nation) => {
-        const update = replacementMap.get(nation.id);
-        return update ? ({ ...nation, ...update } as LocalNation) : nation;
-      });
-
-      refreshGameState(merged);
-
-      const casusState = S.casusBelliState ?? { allWars: [], warHistory: [] };
-      casusState.allWars = [
-        ...(casusState.allWars || []).filter((war) => war.id !== result.warState.id),
-        result.warState,
-      ];
-      casusState.warHistory = casusState.warHistory || [];
-      S.casusBelliState = casusState;
-
-      log(result.message, 'alert');
-      toast({ title: 'War Declared', description: result.message });
-      addNewsItem('military', result.message, 'critical');
-
-      if (result.councilResolution) {
-        const resolutionTitle = result.councilResolution.title ?? 'Council intervention triggered';
-        const resolutionDescription =
-          result.councilResolution.description ?? 'International Council responds to the conflict.';
-        addNewsItem('diplomatic', resolutionTitle, 'important');
-        toast({ title: 'Council Intervention', description: resolutionDescription });
-      }
-
-      triggerNationsUpdate?.();
+      executeDeclaration();
     },
-    [refreshGameState, toast, addNewsItem]
+    [refreshGameState, toast, addNewsItem, queueConsequencePreview]
   );
 
   const handleOfferPeace = useCallback(
@@ -18019,6 +18146,20 @@ export default function NoradVector() {
           isVisible={consequencePreview !== null}
         />
       )}
+
+      <div className="fixed bottom-4 left-4 z-40 flex w-full max-w-[420px] flex-col gap-3 pointer-events-none sm:pointer-events-auto">
+        <VictoryDashboard
+          analysis={victoryAnalysis}
+          currentTurn={S.turn}
+          defcon={S.defcon}
+          className="pointer-events-auto"
+        />
+        <EraProgressionBanner
+          era={gameEra}
+          currentTurn={S.turn}
+          className="pointer-events-auto"
+        />
+      </div>
 
       <CivilizationInfoPanel
         nations={nations}

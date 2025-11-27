@@ -5,7 +5,7 @@ import type {
 } from '@/types/consequences';
 import type { Nation } from '@/types/game';
 import { safePercentage } from '@/lib/safeMath';
-import { getRelationship } from '@/lib/relationshipUtils';
+import { canFormAlliance, getRelationship, RELATIONSHIP_ALLIED } from '@/lib/relationshipUtils';
 import { calculateMissileInterceptChance } from '@/lib/missileDefense';
 
 /**
@@ -235,6 +235,13 @@ export function calculateAllianceConsequences(
   const currentRelation = getRelationship(playerNation, targetNation.id);
   const successProbability = Math.min(90, Math.max(10, currentRelation + 20));
 
+  const blockedReasons: string[] = [];
+  if (!canFormAlliance(currentRelation)) {
+    blockedReasons.push(
+      `Requires relationship of +${RELATIONSHIP_ALLIED}. Current: ${currentRelation}`
+    );
+  }
+
   const immediate: Consequence[] = [
     {
       description: `+20 Global Influence (→ ${(context.gameState?.diplomacy?.influenceScore || 0) + 20})`,
@@ -270,20 +277,19 @@ export function calculateAllianceConsequences(
       !targetNation.alliances.includes(n.name)
   );
 
+  const risks: Consequence[] = [];
   const relationshipChanges = targetEnemies.slice(0, 3).map((nation) => ({
     nation: nation.name,
     change: -15,
   }));
 
   if (relationshipChanges.length > 0) {
-    const risks: Consequence[] = [
-      {
-        description: `${relationshipChanges.length} nations may view you as hostile`,
-        severity: 'negative',
-        probability: 60,
-        icon: '😠',
-      },
-    ];
+    risks.push({
+      description: `${relationshipChanges.length} nations may view you as hostile`,
+      severity: 'negative',
+      probability: 60,
+      icon: '😠',
+    });
   }
 
   // Calculate progress toward diplomatic victory
@@ -304,7 +310,7 @@ export function calculateAllianceConsequences(
     targetName: targetNation.name,
     immediate,
     longTerm,
-    risks: [],
+    risks,
     relationshipChanges,
     victoryImpact,
     successProbability,
@@ -313,6 +319,7 @@ export function calculateAllianceConsequences(
       production: 50,
       actions: 1,
     },
+    blockedReasons: blockedReasons.length > 0 ? blockedReasons : undefined,
     warnings:
       successProbability < 50
         ? ['Low acceptance chance - improve relations first']
@@ -670,6 +677,9 @@ export function calculateBioWeaponDeploymentConsequences(
   const totalPopulation = targetNations.reduce((sum, n) => sum + n.population, 0);
   const estimatedCasualties = Math.floor(totalPopulation * 0.3); // 30% infection rate
 
+  const defconChange = currentDefcon > 2 ? -1 : 0;
+  const newDefcon = Math.max(1, currentDefcon + defconChange);
+
   const immediate: Consequence[] = [
     {
       description: `Deploy ${plagueType} to ${targetNations.length} nation${
@@ -719,6 +729,7 @@ export function calculateBioWeaponDeploymentConsequences(
       },
     ],
     risks,
+    defconChange: { from: currentDefcon, to: newDefcon },
     costs: {
       intel: 50,
       actions: 1,

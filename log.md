@@ -3521,3 +3521,13 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 2025-11-18T23:26:56Z - Added overlay canvas readiness flag and dependency to bootstrap effect to reinitialize once available.
 2025-11-18T23:27:12Z - Committed overlay canvas bootstrap readiness fix.
 2025-11-18T23:27:18Z - Amended overlay canvas bootstrap commit to capture logging entry.
+### 2025-11-27T22:24:38Z - Gameplay improvement suggestions review
+- Reviewed project contribution guidelines and gameplay improvement plan to propose player-facing enhancements and onboarding ideas for Vector War Games.
+- Highlighted potential improvements aligned with existing era unlock structure, victory tracking, and action preview systems for clearer user guidance.
+### 2025-11-27T22:32:38Z - Reviewed root AGENTS guidance and scoped gameplay improvement implementation
+- Confirmed logging requirements and gameplay UI standards before coding the requested onboarding, victory, and consequence preview changes.
+### 2025-11-27T22:35:13Z - Implemented era onboarding cues and visible victory guidance
+- Added fixed overlays for the new Victory Dashboard and Era Progression Banner to surface progress, blocks, and upcoming unlocks without leaving the map (`src/components/VictoryDashboard.tsx`, `src/components/EraProgressionBanner.tsx`, `src/pages/Index.tsx`).
+- Enhanced victory tracking metadata with actionable milestones and block reasons keyed to DEFCON, wars, and survival pressure for clearer player direction (`src/hooks/useVictoryTracking.ts`).
+### 2025-11-27T22:35:18Z - Added consequence previews for high-risk decisions
+- Routed war declarations, alliance offers, and bio-weapon deployments through the Action Consequence Preview system with DEFCON deltas, resource checks, and target intel before confirming (`src/pages/Index.tsx`, `src/lib/consequenceCalculator.ts`).
