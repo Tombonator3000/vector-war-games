@@ -61,16 +61,57 @@ export function useVictoryTracking({
       }));
 
       const milestones: VictoryMilestone[] = [];
+      const blockReasons: string[] = [];
+
+      const activeWars = playerNation.activeWars?.length ?? 0;
+      const livingEnemies = nations.filter((n) => !n.eliminated && !n.isPlayer);
 
       // Generate milestones based on unmet conditions
       conditions.forEach((cond) => {
         if (!cond.isMet) {
+          let actionHint: string | undefined;
+
+          if (pathData.type === 'diplomatic') {
+            actionHint =
+              cond.id === 'alliance-ratio'
+                ? 'Open Diplomacy → Alliances to secure new pacts.'
+                : 'Hold DEFCON 4+ and avoid new conflicts for five turns.';
+          } else if (pathData.type === 'domination') {
+            actionHint = 'Use Warfare Command to target remaining enemy nations.';
+          } else if (pathData.type === 'economic') {
+            actionHint =
+              cond.id === 'city-count'
+                ? 'Construct or annex cities via the Operations bar.'
+                : 'Invest in production tech and market trades to reach 200/turn.';
+          } else if (pathData.type === 'survival') {
+            actionHint =
+              cond.id === 'turn-count'
+                ? 'Stabilize the map and cycle turns while avoiding DEFCON drops.'
+                : 'Protect population centers with shelters and defense spending.';
+          }
+
           milestones.push({
             description: cond.description,
             priority: 'critical',
+            actionHint,
           });
         }
       });
+
+      if (pathData.type === 'diplomatic') {
+        if (defcon < 4) {
+          blockReasons.push('Maintain DEFCON 4+ for five turns to keep diplomacy credible.');
+        }
+        if (activeWars > 0) {
+          blockReasons.push('Ongoing wars block diplomatic victory progress—seek truces or peace.');
+        }
+      }
+      if (pathData.type === 'domination' && livingEnemies.length === 0 && pathData.progress < 100) {
+        blockReasons.push('All opponents are eliminated—resolve remaining objectives to finalize victory.');
+      }
+      if (pathData.type === 'survival' && defcon <= 2) {
+        blockReasons.push('DEFCON 2 undermines survival; de-escalate to keep population stable.');
+      }
 
       // Estimate turns to victory
       const unmetConditions = conditions.filter(c => !c.isMet).length;
@@ -85,7 +126,8 @@ export function useVictoryTracking({
         conditions,
         nextMilestones: milestones,
         estimatedTurnsToVictory: estimatedTurns > 0 ? estimatedTurns : 0,
-        isBlocked: false,
+        isBlocked: blockReasons.length > 0,
+        blockReason: blockReasons.length > 0 ? blockReasons.join(' ') : undefined,
         color: pathData.color.replace('text-', '').replace('-500', ''),
       };
     });
