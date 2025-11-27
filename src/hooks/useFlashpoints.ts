@@ -3043,6 +3043,66 @@ const FLASHPOINT_TEMPLATES: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] = [
     consequences: {}
   },
   {
+    title: 'OSINT ALERT: Narco Sub Corridor Detected',
+    description:
+      'Polyglobe-style NASA VIIRS heat blooms reveal a repeating corridor of maritime fires and wakes between the Caribbean and West Africa. Pentagon Pizza Index chatter suggests cartel-linked semi-submersibles are riding the pattern to avoid radar. Decide whether to act before the next launch window closes.',
+    category: 'terrorist',
+    severity: 'major',
+    timeLimit: 70,
+    minYear: 2012,
+    options: [
+      {
+        id: 'interdict_corridor',
+        text: 'Deploy Littoral Interdiction Task Force',
+        description: 'Coast Guard cutters, P-8s, and drones surge to the narco lane',
+        advisorSupport: ['military', 'intel'],
+        advisorOppose: ['economic'],
+        outcome: {
+          probability: 0.65,
+          success: { morale: +5, intel: +15, contrabandSeized: true },
+          failure: { morale: -8, casualties: 150, internationalIncident: true }
+        },
+        successNarrative:
+          'ISR coverage finds three low-riding narco subs. Boarding teams seize cocaine caches and seize encrypted satphones that map the full route. Regional partners praise the rapid interdiction.',
+        failureNarrative:
+          'A narco sub scuttles itself as teams close in, spilling fuel and sparking a fire visible on VIIRS. Two sailors are injured, and a coastal state files a protest over sovereignty violations.'
+      },
+      {
+        id: 'share_heatmap',
+        text: 'Share Heatmap with Allies',
+        description: 'Distribute Polyglobe-style overlays to regional partners and NATO',
+        advisorSupport: ['diplomatic', 'intel'],
+        advisorOppose: ['military'],
+        outcome: {
+          probability: 0.55,
+          success: { diplomacy: +10, intel: +10, jointTaskForce: true },
+          failure: { intel: -10, leak: true, smugglersAdapt: true }
+        },
+        successNarrative:
+          'Allies fold the Pentagon Pizza Index overlays into their maritime C2. A combined task force shadows the corridor, capturing chatter that hints at cartel financiers. Trust and data-sharing surge.',
+        failureNarrative:
+          'The overlay leaks to open forums. Smugglers shift routes within hours, leaving your heatmap stale. Partners question why you shared partially vetted intelligence.'
+      },
+      {
+        id: 'monitor_only',
+        text: 'Classify as Atmospheric False Positive',
+        description: 'Treat the blooms as geologic fires and hold assets in port',
+        advisorSupport: ['economic'],
+        advisorOppose: ['intel'],
+        outcome: {
+          probability: 0.5,
+          success: { morale: -2, resourcesSaved: true },
+          failure: { morale: -15, casualties: 1200, coastlineInfiltrated: true }
+        },
+        successNarrative:
+          'Follow-up passes show reduced heat signatures. Your restraint preserves budget and avoids diplomatic friction, though some analysts grumble about missed intel.',
+        failureNarrative:
+          'The "false positives" prove to be narco subs piggybacking on industrial flares. One beaches and offloads weapons, fueling a deadly cartel surge that claims 1,200 lives before forces respond.'
+      }
+    ],
+    consequences: {}
+  },
+  {
     title: 'COVID-19 PANDEMIC: Global Health Emergency',
     description: 'Novel coronavirus spreading globally. WHO declares pandemic. Models predict millions of deaths without intervention. Economy facing collapse. Must balance public health, economic survival, civil liberties, and geopolitics.',
     category: 'blackswan',

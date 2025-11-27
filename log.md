@@ -3531,3 +3531,10 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Enhanced victory tracking metadata with actionable milestones and block reasons keyed to DEFCON, wars, and survival pressure for clearer player direction (`src/hooks/useVictoryTracking.ts`).
 ### 2025-11-27T22:35:18Z - Added consequence previews for high-risk decisions
 - Routed war declarations, alliance offers, and bio-weapon deployments through the Action Consequence Preview system with DEFCON deltas, resource checks, and target intel before confirming (`src/pages/Index.tsx`, `src/lib/consequenceCalculator.ts`).
+2025-11-27T22:51:42Z - Reviewed root AGENTS.md instructions and logging requirement before investigating external site for potential assets.
+2025-11-27T22:51:50Z - Fetched https://www.pizzint.watch/polyglobe headers and began inspecting content for potential game assets.
+2025-11-27T22:52:21Z - Downloaded polyglobe Next.js chunk from pizzint.watch for analysis of potential integration.
+### 2025-11-27T22:55:16Z - Added Polyglobe-inspired narco corridor flashpoint
+- Reviewed root-level AGENTS.md guidance and prior Polyglobe research notes before coding.
+- Added a Polyglobe-inspired maritime interdiction flashpoint with allied data-sharing and false-positive handling options (`src/hooks/useFlashpoints.ts`).
+- Tests not run (scenario content update only).
