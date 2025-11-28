@@ -3538,3 +3538,8 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Reviewed root-level AGENTS.md guidance and prior Polyglobe research notes before coding.
 - Added a Polyglobe-inspired maritime interdiction flashpoint with allied data-sharing and false-positive handling options (`src/hooks/useFlashpoints.ts`).
 - Tests not run (scenario content update only).
+### 2025-11-27T23:05:37Z - Reviewed map navigation brief and AGENTS instructions
+- Re-read root AGENTS.md guidance and confirmed logging requirements before implementing Polyglobe-style navigation controls.
+### 2025-11-27T23:06:23Z - Implemented Polyglobe-style map gestures
+- Added shared zoom-to-point helper with pointer-anchored zooming and fallback centering for flat projections.
+- Updated wheel, pinch, and double-click handlers to support trackpad panning, ctrl+pinch zoom detection, and consistent focus-aware zooming.

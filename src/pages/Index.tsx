@@ -14971,6 +14971,33 @@ export default function NoradVector() {
         cam.x = Math.min(Math.max(cam.x, minX), maxX);
       };
 
+      const applyZoomToPoint = (
+        requestedZoom: number,
+        focalX: number,
+        focalY: number,
+        focalProjection: ReturnType<typeof projectLocal>,
+      ) => {
+        const prevZoom = cam.zoom;
+        const clampedZoom = Math.max(minZoom, Math.min(3, requestedZoom));
+        const zoomScale = prevZoom > 0 ? clampedZoom / prevZoom : 1;
+
+        cam.targetZoom = clampedZoom;
+        cam.zoom = clampedZoom;
+
+        if (isBoundedFlatProjection() && Math.abs(clampedZoom - minZoom) < 0.01) {
+          cam.x = (W - W * cam.zoom) / 2;
+          cam.y = (H - H * cam.zoom) / 2;
+        } else if (focalProjection.visible) {
+          cam.x = focalX - (focalProjection.x - cam.x) * zoomScale;
+          cam.y = focalY - (focalProjection.y - cam.y) * zoomScale;
+        } else {
+          cam.x = W / 2 - (W / 2 - cam.x) * zoomScale;
+          cam.y = H / 2 - (H / 2 - cam.y) * zoomScale;
+        }
+
+        clampPanBounds();
+      };
+
       let activePointerId: number | null = null;
 
       const handlePointerUp = (e: PointerEvent) => {
@@ -15200,36 +15227,27 @@ export default function NoradVector() {
         const rect = canvas.getBoundingClientRect();
         const focalX = e.clientX - rect.left;
         const focalY = e.clientY - rect.top;
-        const [focalLon, focalLat] = toLonLatLocal(focalX, focalY);
-        const prevZoom = cam.zoom;
 
-        // Project the focal point BEFORE changing zoom (critical for correct zoom-to-mouse behavior)
-        const focalProjection = projectLocal(focalLon, focalLat);
+        const isCtrlZoom = e.ctrlKey;
+        const isTrackpadScroll = Math.abs(e.deltaX) > 0.01 || Math.abs(e.deltaY) < 40;
 
-        const zoomIntensity = 0.0015;
-        const delta = Math.exp(-e.deltaY * zoomIntensity);
-        const newZoom = Math.max(minZoom, Math.min(3, cam.targetZoom * delta));
-        const zoomScale = prevZoom > 0 ? newZoom / prevZoom : 1;
-
-        cam.targetZoom = newZoom;
-        cam.zoom = newZoom;
-
-        // Auto-center in bounded flat projections only when at exact minimum zoom
-        if (isBoundedFlatProjection() && Math.abs(newZoom - minZoom) < 0.01) {
-          cam.x = (W - W * cam.zoom) / 2;
-          cam.y = (H - H * cam.zoom) / 2;
-        } else if (focalProjection.visible) {
-          // Focal point is visible - zoom towards it
-          const { x: projectedX, y: projectedY } = focalProjection;
-          cam.x = focalX - (projectedX - cam.x) * zoomScale;
-          cam.y = focalY - (projectedY - cam.y) * zoomScale;
-        } else {
-          // Focal point not visible (e.g., on back of globe) - simple center zoom
-          cam.x = W / 2 - (W / 2 - cam.x) * zoomScale;
-          cam.y = H / 2 - (H / 2 - cam.y) * zoomScale;
+        // Trackpad pan (two-finger swipe) to match Polyglobe's gesture mapping
+        if (isTrackpadScroll && !isCtrlZoom) {
+          const panDampening = Math.max(0.35, Math.min(1.25, 1 / Math.max(0.2, cam.zoom)));
+          const panScale = 0.65 * panDampening;
+          cam.x -= e.deltaX * panScale;
+          cam.y -= e.deltaY * panScale;
+          clampPanBounds();
+          return;
         }
 
-        clampPanBounds();
+        const [focalLon, focalLat] = toLonLatLocal(focalX, focalY);
+        const focalProjection = projectLocal(focalLon, focalLat);
+        const zoomIntensity = isCtrlZoom ? 0.003 : 0.0015;
+        const delta = Math.exp(-e.deltaY * zoomIntensity);
+        const newZoom = cam.targetZoom * delta;
+
+        applyZoomToPoint(newZoom, focalX, focalY, focalProjection);
       };
 
       let touchStartTime = 0;
@@ -15272,29 +15290,13 @@ export default function NoradVector() {
             const midpointX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
             const midpointY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
             const [focalLon, focalLat] = toLonLatLocal(midpointX, midpointY);
-            const prevZoom = cam.zoom;
             const focalProjection = projectLocal(focalLon, focalLat);
-            if (!focalProjection.visible) {
-              return;
-            }
-            const { x: projectedX, y: projectedY } = focalProjection;
             const newZoom = Math.max(minZoom, Math.min(3, initialPinchZoom * scaleFactor));
-            const zoomScale = prevZoom > 0 ? newZoom / prevZoom : 1;
-
-            cam.targetZoom = newZoom;
-            cam.zoom = newZoom;
-            
-            // Auto-center in bounded flat projections only when at exact minimum zoom
-            if (isBoundedFlatProjection() && Math.abs(newZoom - minZoom) < 0.01) {
-              cam.x = (W - W * cam.zoom) / 2;
-              cam.y = (H - H * cam.zoom) / 2;
-            } else {
-              cam.x = midpointX - (projectedX - cam.x) * zoomScale;
-              cam.y = midpointY - (projectedY - cam.y) * zoomScale;
-            }
+            applyZoomToPoint(newZoom, midpointX, midpointY, focalProjection.visible
+              ? focalProjection
+              : { ...focalProjection, visible: true, x: midpointX, y: midpointY });
 
             lastTouchDistance = newDistance;
-            clampPanBounds();
           }
         } else if(touching && e.touches.length === 1) {
           // Single finger pan
@@ -15458,22 +15460,17 @@ export default function NoradVector() {
         const my = e.clientY - rect.top;
         
         if (zoomedIn) {
-          cam.targetZoom = minZoom;
-          cam.zoom = minZoom;
-          cam.x = (W - W * cam.zoom) / 2;
-          cam.y = (H - H * cam.zoom) / 2;
-          clampPanBounds();
+          applyZoomToPoint(minZoom, W / 2, H / 2, { x: W / 2, y: H / 2, visible: true });
           zoomedIn = false;
           return;
         }
-        
+
         const [lon, lat] = toLonLatLocal(mx, my);
         const newZoom = Math.max(minZoom, Math.min(3, cam.targetZoom * 1.5));
-        cam.targetZoom = newZoom;
-        cam.zoom = newZoom;
-        cam.x = W / 2 - ((lon + 180) / 360) * W * newZoom;
-        cam.y = H / 2 - ((90 - lat) / 180) * H * newZoom;
-        clampPanBounds();
+        const focalProjection = projectLocal(lon, lat);
+        applyZoomToPoint(newZoom, mx, my, focalProjection.visible
+          ? focalProjection
+          : { ...focalProjection, visible: true, x: mx, y: my });
         zoomedIn = true;
         
         let nearest = null;
