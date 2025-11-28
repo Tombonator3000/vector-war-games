@@ -1836,12 +1836,15 @@ function mapAbilityCategoryToNewsCategory(category: string): NewsItem['category'
 
 // DoomsdayClock now imported from @/state (Phase 6 refactoring)
 
-// Audio System
+// Audio System - All tracks from Muzak folder for random playback during gameplay
 const MUSIC_TRACKS = [
   { id: 'vector-command', title: 'Vector Command Briefing', file: '/Muzak/vector-command.mp3' },
   { id: 'night-operations', title: 'Night Operations', file: '/Muzak/night-operations.mp3' },
   { id: 'diplomatic-channel', title: 'Diplomatic Channel', file: '/Muzak/diplomatic-channel.mp3' },
-  { id: 'tactical-escalation', title: 'Tactical Escalation', file: '/Muzak/tactical-escalation.mp3' }
+  { id: 'tactical-escalation', title: 'Tactical Escalation', file: '/Muzak/tactical-escalation.mp3' },
+  { id: 'cthulhu-1', title: 'Church of Cthulhu I', file: '/Muzak/Church of Cthulhu 1.mp3' },
+  { id: 'cthulhu-2', title: 'Church of Cthulhu II', file: '/Muzak/Church of Cthulhu 2.mp3' },
+  { id: 'run-run', title: 'Run Run', file: '/Muzak/Run Run.mp3' },
 ] as const;
 type MusicTrack = (typeof MUSIC_TRACKS)[number];
 type MusicTrackId = MusicTrack['id'];
