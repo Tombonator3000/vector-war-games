@@ -83,6 +83,11 @@ const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: st
     label: 'Flat Realistic',
     description: 'High-resolution satellite texture rendered on the flat map.',
   },
+  {
+    value: 'morphing',
+    label: 'Morphing Globe',
+    description: 'Seamless animated transition between 3D globe and flat map with one click.',
+  },
 ];
 
 const RESOLUTION_OPTIONS: { value: ScreenResolution; label: string; description: string; width?: number; height?: number }[] = [

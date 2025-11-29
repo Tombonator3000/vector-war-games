@@ -46,6 +46,7 @@ import {
 import { resolvePublicAssetPath } from '@/lib/renderingUtils';
 import { TerritoryMarkers } from '@/components/TerritoryMarkers';
 import type { TerritoryState } from '@/hooks/useConventionalWarfare';
+import { MorphingGlobe, getMorphedPosition, type MorphingGlobeHandle } from '@/components/MorphingGlobe';
 
 const EARTH_RADIUS = 1.8;
 const MARKER_OFFSET = 0.06;
@@ -68,9 +69,9 @@ const NOOP_PICKER: PickerFn = () => null;
 export type ProjectorFn = (lon: number, lat: number) => { x: number; y: number; visible: boolean };
 export type PickerFn = (x: number, y: number) => { lon: number; lat: number } | null;
 
-export type MapVisualStyle = 'realistic' | 'wireframe' | 'flat-realistic';
+export type MapVisualStyle = 'realistic' | 'wireframe' | 'flat-realistic' | 'morphing';
 
-export const MAP_VISUAL_STYLES: MapVisualStyle[] = ['realistic', 'wireframe', 'flat-realistic'];
+export const MAP_VISUAL_STYLES: MapVisualStyle[] = ['realistic', 'wireframe', 'flat-realistic', 'morphing'];
 
 export type MapMode =
   | 'standard'
@@ -155,6 +156,14 @@ export interface GlobeSceneHandle {
   addExplosion: (lon: number, lat: number, radiusKm?: number) => void;
   clearMissiles: () => void;
   clearExplosions: () => void;
+  /** Toggle between globe and flat map with smooth morphing animation */
+  toggleMorphView: () => void;
+  /** Morph to globe view */
+  morphToGlobe: (duration?: number) => void;
+  /** Morph to flat map view */
+  morphToFlat: (duration?: number) => void;
+  /** Get current morph factor (0 = globe, 1 = flat) */
+  getMorphFactor: () => number;
 }
 
 export interface GlobeSceneProps {
@@ -1103,6 +1112,7 @@ function SceneContent({
   flatMapVariant,
   worldCountries,
   onCameraPoseUpdate,
+  onMorphingGlobeReady,
 }: {
   cam: GlobeSceneProps['cam'];
   nations: GlobeSceneProps['nations'];
@@ -1124,17 +1134,29 @@ function SceneContent({
   flatMapVariant?: GlobeSceneProps['flatMapVariant'];
   worldCountries?: GlobeSceneProps['worldCountries'];
   onCameraPoseUpdate?: (camera: THREE.PerspectiveCamera) => void;
+  onMorphingGlobeReady?: (handle: MorphingGlobeHandle | null) => void;
 }) {
   const { camera, size, clock, gl } = useThree();
   const earthRef = useRef<THREE.Mesh | null>(null);
+  const morphingGlobeRef = useRef<MorphingGlobeHandle>(null);
   const visualStyle = mapStyle?.visual ?? 'realistic';
   const currentMode = mapStyle?.mode ?? 'standard';
   const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
+  const isMorphing = visualStyle === 'morphing';
   const cameraPoseUpdateRef = useRef<typeof onCameraPoseUpdate>();
 
   useEffect(() => {
     cameraPoseUpdateRef.current = onCameraPoseUpdate;
   }, [onCameraPoseUpdate]);
+
+  // Notify parent when morphing globe ref is available
+  useEffect(() => {
+    if (isMorphing) {
+      onMorphingGlobeReady?.(morphingGlobeRef.current);
+    } else {
+      onMorphingGlobeReady?.(null);
+    }
+  }, [isMorphing, onMorphingGlobeReady]);
 
   const cssDimensions = useMemo(
     () =>
@@ -1377,6 +1399,17 @@ function SceneContent({
         );
       case 'flat-realistic':
         return <FlatEarthBackdrop cam={cam} flatMapVariant={flatMapVariant} />;
+      case 'morphing':
+        return (
+          <Suspense fallback={fallback}>
+            <MorphingGlobe
+              ref={morphingGlobeRef}
+              initialView="globe"
+              animationDuration={1.2}
+              textureVariant={flatMapVariant === false ? 'night' : 'day'}
+            />
+          </Suspense>
+        );
       default:
         return fallback;
     }
@@ -1384,7 +1417,7 @@ function SceneContent({
 
   return (
     <>
-      {!isFlat && (
+      {!isFlat && !isMorphing && (
         <>
           <ambientLight intensity={0.5} />
           <directionalLight position={[6, 4, 3]} intensity={1.5} castShadow />
@@ -1614,6 +1647,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   const missileIdCounterRef = useRef(0);
   const explosionIdCounterRef = useRef(0);
   const clockRef = useRef<THREE.Clock | null>(null);
+  const morphingGlobeHandleRef = useRef<MorphingGlobeHandle | null>(null);
 
   const emitInitialProjector = useCallback(
     (projector: ProjectorFn) => {
@@ -1909,6 +1943,10 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   const projectLonLat = useCallback<ProjectorFn>((lon, lat) => projectorRef.current(lon, lat), []);
   const pickLonLat = useCallback<PickerFn>((x, y) => pickerRef.current(x, y), []);
 
+  const handleMorphingGlobeReady = useCallback((handle: MorphingGlobeHandle | null) => {
+    morphingGlobeHandleRef.current = handle;
+  }, []);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -1921,6 +1959,18 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       addExplosion,
       clearMissiles,
       clearExplosions,
+      toggleMorphView: () => {
+        morphingGlobeHandleRef.current?.toggle();
+      },
+      morphToGlobe: (duration?: number) => {
+        morphingGlobeHandleRef.current?.morphToGlobe(duration);
+      },
+      morphToFlat: (duration?: number) => {
+        morphingGlobeHandleRef.current?.morphToFlat(duration);
+      },
+      getMorphFactor: () => {
+        return morphingGlobeHandleRef.current?.getMorphFactor() ?? 0;
+      },
     }),
     [projectLonLat, pickLonLat, fireMissile, addExplosion, clearMissiles, clearExplosions],
   );
@@ -1955,6 +2005,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           flatMapVariant={flatMapVariant}
           worldCountries={worldCountries}
           onCameraPoseUpdate={handleCameraPoseUpdate}
+          onMorphingGlobeReady={handleMorphingGlobeReady}
         />
       </Canvas>
       <canvas
@@ -1976,3 +2027,6 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
 });
 
 export default GlobeScene;
+
+// Re-export morphing utilities for external use
+export { getMorphedPosition, type MorphingGlobeHandle } from '@/components/MorphingGlobe';
