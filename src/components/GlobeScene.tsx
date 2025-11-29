@@ -1144,6 +1144,7 @@ function SceneContent({
   const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
   const isMorphing = visualStyle === 'morphing';
   const cameraPoseUpdateRef = useRef<typeof onCameraPoseUpdate>();
+  const [morphFactor, setMorphFactorState] = useState(0);
 
   useEffect(() => {
     cameraPoseUpdateRef.current = onCameraPoseUpdate;
@@ -1157,6 +1158,21 @@ function SceneContent({
       onMorphingGlobeReady?.(null);
     }
   }, [isMorphing, onMorphingGlobeReady]);
+
+  // Track morph factor for updating marker positions during transition
+  useEffect(() => {
+    if (!isMorphing) {
+      setMorphFactorState(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const factor = morphingGlobeRef.current?.getMorphFactor() ?? 0;
+      setMorphFactorState(factor);
+    }, 16); // ~60fps update
+
+    return () => clearInterval(interval);
+  }, [isMorphing]);
 
   const cssDimensions = useMemo(
     () =>
@@ -1222,13 +1238,17 @@ function SceneContent({
 
   const latLonToSceneVector = useCallback(
     (lon: number, lat: number, radius: number) => {
+      // For morphing mode, interpolate between globe and flat positions
+      if (isMorphing) {
+        return getMorphedPosition(lon, lat, morphFactor, radius);
+      }
       if (!isFlat) {
         return latLonToVector3(lon, lat, radius);
       }
       const altitude = radius - EARTH_RADIUS;
       return computeFlatPosition(lon, lat, altitude);
     },
-    [computeFlatPosition, isFlat],
+    [computeFlatPosition, isFlat, isMorphing, morphFactor],
   );
 
   // Territory boundaries state
@@ -1575,23 +1595,28 @@ function SceneContent({
         ))}
       </group>
 
-      {/* OrbitControls for pan and zoom */}
-      <OrbitControls 
-        enableRotate={true}
-        enableZoom={true}
-        enablePan={true}
-        minDistance={EARTH_RADIUS + 1.3}
-        maxDistance={EARTH_RADIUS + 5}
-        mouseButtons={{
-          LEFT: THREE.MOUSE.ROTATE,
-          MIDDLE: THREE.MOUSE.DOLLY,
-          RIGHT: THREE.MOUSE.PAN,
-        }}
-        touches={{
-          ONE: THREE.TOUCH.ROTATE,
-          TWO: THREE.TOUCH.DOLLY_PAN,
-        }}
-      />
+      {/* OrbitControls for 3D modes (realistic, morphing) - disabled for flat modes */}
+      {!isFlat && (
+        <OrbitControls
+          enableRotate={!isMorphing || morphFactor < 0.8}
+          enableZoom={true}
+          enablePan={isMorphing && morphFactor > 0.5}
+          minDistance={EARTH_RADIUS + 1.3}
+          maxDistance={EARTH_RADIUS + 5}
+          mouseButtons={{
+            LEFT: THREE.MOUSE.ROTATE,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.PAN,
+          }}
+          touches={{
+            ONE: THREE.TOUCH.ROTATE,
+            TWO: THREE.TOUCH.DOLLY_PAN,
+          }}
+          rotateSpeed={0.8}
+          zoomSpeed={1.0}
+          panSpeed={0.8}
+        />
+      )}
     </>
   );
 }
@@ -1975,6 +2000,11 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     [projectLonLat, pickLonLat, fireMissile, addExplosion, clearMissiles, clearExplosions],
   );
 
+  // For 3D modes (realistic, morphing), let Three.js canvas handle pointer events via OrbitControls
+  // For flat modes (flat-realistic, wireframe), use overlay canvas for custom pan/zoom
+  const visualStyle = mapStyle?.visual ?? 'flat-realistic';
+  const is3DMode = visualStyle === 'realistic' || visualStyle === 'morphing';
+
   return (
     <div ref={containerRef} className="globe-scene" style={{ position: 'relative', width: '100%', height: '100%' }}>
       <Canvas
@@ -1982,7 +2012,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         dpr={[1, 1.75]}
         camera={{ position: [0, 0, EARTH_RADIUS + 3], fov: 40, near: 0.1, far: 100 }}
         shadows
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: is3DMode ? 10 : 0 }}
       >
         <SceneContent
           cam={cam}
@@ -2012,15 +2042,15 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         ref={overlayRef}
         className="globe-scene__overlay"
         style={{
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
-          width: '100%', 
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
           height: '100%',
-          pointerEvents: 'auto',
-          zIndex: 10,
+          pointerEvents: is3DMode ? 'none' : 'auto',
+          zIndex: is3DMode ? 0 : 10,
           ...(DEBUG_OVERLAY ? { border: '2px solid red' } : {})
-        }} 
+        }}
       />
     </div>
   );
