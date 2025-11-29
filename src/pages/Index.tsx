@@ -221,6 +221,7 @@ import { PoliticalStabilityOverlay } from '@/components/governance/PoliticalStab
 import { PandemicSpreadOverlay } from '@/components/pandemic/PandemicSpreadOverlay';
 import { CasualtyImpactSummary } from '@/components/pandemic/CasualtyImpactSummary';
 import { MapModeBar } from '@/components/MapModeBar';
+import { MorphToggleButton } from '@/components/MorphToggleButton';
 import { RadiationFalloutOverlay } from '@/components/radiation/RadiationFalloutOverlay';
 import { MigrationFlowOverlay } from '@/components/migration/MigrationFlowOverlay';
 import { usePolicySystem } from '@/hooks/usePolicySystem';
@@ -15589,6 +15590,13 @@ export default function NoradVector() {
               handleDayNightToggle();
             }
             break;
+          case 'm':
+          case 'M':
+            if (mapStyle.visual === 'morphing') {
+              e.preventDefault();
+              globeSceneRef.current?.toggleMorphView();
+            }
+            break;
           case 'Enter': /* end turn */ break;
           case ' ':
             e.preventDefault();
@@ -16466,6 +16474,13 @@ export default function NoradVector() {
                   descriptions={MAP_MODE_DESCRIPTIONS}
                   hotkeys={MAP_MODE_HOTKEYS}
                 />
+
+                {mapStyle.visual === 'morphing' && (
+                  <MorphToggleButton
+                    globeRef={globeSceneRef}
+                    visible={true}
+                  />
+                )}
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
