@@ -2002,7 +2002,6 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
 
   // For 3D modes (realistic, morphing), let Three.js canvas handle pointer events via OrbitControls
   // For flat modes (flat-realistic, wireframe), use overlay canvas for custom pan/zoom
-  const visualStyle = mapStyle?.visual ?? 'flat-realistic';
   const is3DMode = visualStyle === 'realistic' || visualStyle === 'morphing';
 
   return (
