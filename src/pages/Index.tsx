@@ -89,7 +89,7 @@ import { checkVictory } from '@/types/streamlinedVictoryConditions';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
 import { DefconWarningOverlay } from '@/components/DefconWarningOverlay';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
-import { EraProgressionBanner } from '@/components/EraProgressionBanner';
+import { GameSidebar } from '@/components/GameSidebar';
 import { LockedFeatureWrapper } from '@/components/LockedFeatureBadge';
 import { FEATURE_UNLOCK_INFO, type EraDefinition, type GameEra } from '@/types/era';
 import type { ActionConsequences, ConsequenceCalculationContext } from '@/types/consequences';
@@ -118,7 +118,6 @@ import { OrderOfBattlePanel } from '@/components/OrderOfBattlePanel';
 import { AINegotiationNotificationQueue } from '@/components/AINegotiationNotification';
 import { AIDiplomacyProposalModal } from '@/components/AIDiplomacyProposalModal';
 import { EndGameScreen } from '@/components/EndGameScreen';
-import { VictoryDashboard } from '@/components/VictoryDashboard';
 import type {
   GameState,
   Nation,
@@ -18159,19 +18158,13 @@ export default function NoradVector() {
         />
       )}
 
-      <div className="fixed bottom-4 left-4 z-40 flex w-full max-w-[420px] flex-col gap-3 pointer-events-none sm:pointer-events-auto">
-        <VictoryDashboard
-          analysis={victoryAnalysis}
-          currentTurn={S.turn}
-          defcon={S.defcon}
-          className="pointer-events-auto"
-        />
-        <EraProgressionBanner
-          era={gameEra}
-          currentTurn={S.turn}
-          className="pointer-events-auto"
-        />
-      </div>
+      <GameSidebar
+        victoryAnalysis={victoryAnalysis}
+        era={gameEra}
+        currentTurn={S.turn}
+        defcon={S.defcon}
+        className="fixed bottom-4 left-4 z-40 pointer-events-auto"
+      />
 
       <CivilizationInfoPanel
         nations={nations}
