@@ -7,6 +7,15 @@
 
 ---
 
+### 2025-11-30 - Added AI Agent Guidelines Documentation
+- **Branch:** `claude/add-agents-documentation-01BNsvMby7sCieHFbsbzf7nJ`
+- **Agent:** Claude (Opus 4)
+- Created `agents.md` - comprehensive documentation for AI agents working on the project
+- Includes: mandatory logging requirements, game rule compliance with `deep-regrets-rulebook.pdf`, development guidelines, architecture overview, code standards, commit conventions, prohibited actions, and quick start checklist
+- All future AI agent PRs must update this log file
+
+---
+
 ### 2025-11-19T07:19:49Z - Disable flat overlay while viewing Vector globe
 - Audited the `gameLoop` overlay pipeline to confirm the coarse flat projection was still being drawn above the 3D globe even when players selected the Vector (wireframe) mode.
 - Added a `currentMapStyle === 'wireframe'` guard so Atmosphere/Ocean rendering and all flat map painting routines stay paused, leaving only missiles, units, and FX on the transparent overlay canvas while the vector globe remains visible underneath.
