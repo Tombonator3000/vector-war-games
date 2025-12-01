@@ -15199,11 +15199,12 @@ export default function NoradVector() {
         const dy = e.clientY - dragStart.y;
         dragStart = { x: e.clientX, y: e.clientY };
 
-        const rotationFactor = 0.85;
-        const tiltFactor = 0.75;
+        // Pan factors for "grab and move" style - map follows drag direction
+        const panFactorX = 0.85;
+        const panFactorY = 0.75;
 
-        cam.x -= dx * rotationFactor;
-        cam.y -= dy * tiltFactor;
+        cam.x += dx * panFactorX;
+        cam.y += dy * panFactorY;
         clampPanBounds();
       };
 
@@ -15231,12 +15232,12 @@ export default function NoradVector() {
         const isCtrlZoom = e.ctrlKey;
         const isTrackpadScroll = Math.abs(e.deltaX) > 0.01 || Math.abs(e.deltaY) < 40;
 
-        // Trackpad pan (two-finger swipe) to match Polyglobe's gesture mapping
+        // Trackpad pan (two-finger swipe) - "grab and move" style for consistency
         if (isTrackpadScroll && !isCtrlZoom) {
           const panDampening = Math.max(0.35, Math.min(1.25, 1 / Math.max(0.2, cam.zoom)));
           const panScale = 0.65 * panDampening;
-          cam.x -= e.deltaX * panScale;
-          cam.y -= e.deltaY * panScale;
+          cam.x += e.deltaX * panScale;
+          cam.y += e.deltaY * panScale;
           clampPanBounds();
           return;
         }
@@ -15308,11 +15309,12 @@ export default function NoradVector() {
 
           // Only pan if moved more than 5px (prevents accidental pan on tap)
           if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-            const rotationFactor = 0.85;
-            const tiltFactor = 0.75;
+            // Pan factors for "grab and move" style - map follows finger direction
+            const panFactorX = 0.85;
+            const panFactorY = 0.75;
 
-            cam.x -= dx * rotationFactor;
-            cam.y -= dy * tiltFactor;
+            cam.x += dx * panFactorX;
+            cam.y += dy * panFactorY;
             clampPanBounds();
             touchStart = {x: nx, y: ny};
           }

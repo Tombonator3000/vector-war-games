@@ -16,6 +16,10 @@ const FLAT_ASPECT = 2; // Equirectangular map is 2:1 aspect ratio
 const FLAT_HEIGHT = EARTH_RADIUS * 1.5;
 const FLAT_WIDTH = FLAT_HEIGHT * FLAT_ASPECT;
 
+// Export flat dimensions for use in picker/projector calculations
+export const MORPHING_FLAT_WIDTH = FLAT_WIDTH;
+export const MORPHING_FLAT_HEIGHT = FLAT_HEIGHT;
+
 export interface MorphingGlobeHandle {
   /** Current morph factor (0 = globe, 1 = flat) */
   getMorphFactor: () => number;
