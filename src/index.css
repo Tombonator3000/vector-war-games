@@ -3440,3 +3440,318 @@ body.theme-wargames [role="tab"][data-state="active"]::after {
     gap: 0.5rem;
   }
 }
+
+/* ============================================================================
+   9:16 PORTRAIT MOBILE OPTIMIZATION
+   Optimized for modern smartphone screens (iPhone, Android) in portrait mode
+   ============================================================================ */
+
+/* Portrait mobile detection: aspect ratio taller than 9:16 AND narrow width */
+@media (max-aspect-ratio: 9/16) and (max-width: 480px) {
+  :root {
+    /* Significantly reduce top bar height for maximum map visibility */
+    --game-top-bar-height: 2rem;
+    --game-top-ticker-height: 1.5rem;
+    --game-top-stack-gap: 0rem;
+
+    /* Compact HUD variables for portrait */
+    --hud-column-width: 100%;
+    --hud-gap: 0.5rem;
+    --hud-module-padding: 0.5rem;
+    --hud-module-radius: 8px;
+    --hud-font-size: 0.5rem;
+    --hud-heading-size: 0.45rem;
+  }
+
+  /* Full height map shell with safe area support */
+  .map-shell {
+    height: 100svh;
+    height: 100dvh;
+  }
+
+  /* Compact command interface */
+  .command-interface {
+    padding-top: var(--game-top-stack-offset);
+    overflow-y: hidden;
+  }
+
+  /* Streamlined top bar - single row metrics */
+  .game-top-bar {
+    min-height: var(--game-top-bar-height);
+    padding: 0.25rem 0.5rem;
+    gap: 0.35rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .game-top-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .game-top-bar__metrics {
+    flex-shrink: 0;
+    gap: 0.4rem;
+    font-size: 9px;
+  }
+
+  .game-top-bar__actions {
+    flex-shrink: 0;
+    gap: 0.35rem;
+  }
+
+  /* Compact news ticker */
+  .game-top-ticker {
+    min-height: var(--game-top-ticker-height);
+    padding-block: 0.2rem;
+    font-size: 10px;
+  }
+
+  /* Hide side HUD panels in portrait - show controls via overlay instead */
+  .hud-body {
+    display: none;
+  }
+
+  .hud-left,
+  .hud-right {
+    display: none;
+  }
+
+  /* Globe scene takes full viewport in portrait */
+  .globe-scene {
+    position: fixed;
+    inset: 0;
+    top: var(--game-top-stack-offset);
+    bottom: 4.5rem; /* Space for bottom action bar */
+    z-index: 1;
+  }
+}
+
+/* Standard portrait mobile (up to 9:16 aspect ratio) */
+@media (max-aspect-ratio: 9/16) and (max-width: 640px) {
+  :root {
+    --game-top-bar-height: 2.25rem;
+    --game-top-ticker-height: 1.75rem;
+  }
+
+  /* Scrollable top metrics on narrow portrait screens */
+  .game-top-bar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .game-top-bar__metrics {
+    flex-wrap: nowrap;
+    min-width: max-content;
+  }
+}
+
+/* Taller portrait screens (longer than 2:1) - maximum map optimization */
+@media (max-aspect-ratio: 1/2) and (max-width: 480px) {
+  :root {
+    --game-top-bar-height: 1.75rem;
+    --game-top-ticker-height: 1.25rem;
+  }
+
+  .game-top-bar__metrics {
+    font-size: 8px;
+  }
+
+  .game-top-ticker {
+    font-size: 9px;
+  }
+}
+
+/* Bottom action bar optimization for portrait mobile */
+@media (max-width: 480px) and (max-aspect-ratio: 3/4) {
+  /* Fixed bottom action bar - horizontal scroll for many buttons */
+  .fixed.bottom-0 {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Action button container - horizontal scroll */
+  .fixed.bottom-0 .flex-wrap {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    justify-content: flex-start;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .fixed.bottom-0 .flex-wrap::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Compact action buttons */
+  .fixed.bottom-0 button {
+    flex-shrink: 0;
+    min-width: 48px;
+    min-height: 48px;
+  }
+}
+
+/* Small mobile portrait (iPhone SE, small Android) */
+@media (max-width: 375px) and (max-aspect-ratio: 9/16) {
+  :root {
+    --game-top-bar-height: 1.75rem;
+    --game-top-ticker-height: 1.25rem;
+  }
+
+  .game-top-bar {
+    padding: 0.2rem 0.35rem;
+  }
+
+  .game-top-bar__metrics {
+    font-size: 8px;
+    gap: 0.3rem;
+  }
+
+  .game-top-bar__actions button {
+    padding: 0.25rem 0.4rem;
+    font-size: 8px;
+  }
+
+  /* Ultra-compact bottom bar */
+  .fixed.bottom-0 .h-16 {
+    height: 3.5rem;
+  }
+
+  .fixed.bottom-0 button[class*="h-12"] {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+/* Touch device optimizations for mobile */
+@media (hover: none) and (pointer: coarse) and (max-width: 640px) {
+  /* Ensure minimum touch target sizes */
+  button,
+  [role="button"],
+  .game-top-bar__actions > *,
+  .fixed.bottom-0 button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Larger tap targets for metrics that might be interactive */
+  .game-top-bar__metrics > div {
+    padding: 0.25rem;
+  }
+
+  /* Disable text selection on game UI */
+  .command-interface,
+  .game-top-bar,
+  .game-top-ticker,
+  .hud-module {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Active state feedback for touch */
+  button:active,
+  [role="button"]:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* Landscape mobile - wider aspect ratios on small devices */
+@media (min-aspect-ratio: 16/9) and (max-height: 500px) {
+  :root {
+    --game-top-bar-height: 2rem;
+    --game-top-ticker-height: 1.5rem;
+  }
+
+  /* Single-row compact top bar for landscape */
+  .game-top-bar {
+    flex-wrap: nowrap;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .game-top-bar__metrics,
+  .game-top-bar__actions {
+    width: auto;
+    flex-wrap: nowrap;
+  }
+
+  /* Side panels as slide-out overlays in landscape mobile */
+  .hud-left,
+  .hud-right {
+    position: fixed;
+    top: var(--game-top-stack-offset);
+    bottom: 4rem;
+    width: min(280px, 45vw);
+    z-index: 100;
+    background: rgba(2, 6, 16, 0.95);
+    backdrop-filter: blur(12px);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .hud-right {
+    right: 0;
+    left: auto;
+    transform: translateX(100%);
+  }
+
+  /* Show side panels when active (controlled via JS) */
+  .hud-left.is-visible,
+  .hud-right.is-visible {
+    transform: translateX(0);
+  }
+
+  /* Compact bottom action bar for landscape */
+  .fixed.bottom-0 .h-16 {
+    height: 3.5rem;
+  }
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 480px) {
+    .command-interface {
+      /* Prevent iOS rubber-band scrolling issues */
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .map-shell {
+      /* iOS safe area handling */
+      height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      padding-top: env(safe-area-inset-top);
+    }
+
+    /* Fix for iOS notch */
+    .game-top-stack {
+      padding-top: env(safe-area-inset-top);
+    }
+  }
+}
+
+/* Android Chrome specific optimizations */
+@media (max-width: 480px) {
+  /* Handle Android navigation bar */
+  .fixed.bottom-0 {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Reduced motion preference for mobile */
+@media (prefers-reduced-motion: reduce) and (max-width: 640px) {
+  .command-interface,
+  .hud-module,
+  .game-top-bar,
+  button,
+  [role="button"] {
+    transition: none;
+  }
+
+  .globe-scene__overlay {
+    animation: none;
+  }
+}
