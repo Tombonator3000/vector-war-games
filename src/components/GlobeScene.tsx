@@ -46,7 +46,7 @@ import {
 import { resolvePublicAssetPath } from '@/lib/renderingUtils';
 import { TerritoryMarkers } from '@/components/TerritoryMarkers';
 import type { TerritoryState } from '@/hooks/useConventionalWarfare';
-import { MorphingGlobe, getMorphedPosition, type MorphingGlobeHandle } from '@/components/MorphingGlobe';
+import { MorphingGlobe, getMorphedPosition, MORPHING_FLAT_WIDTH, MORPHING_FLAT_HEIGHT, type MorphingGlobeHandle } from '@/components/MorphingGlobe';
 
 const EARTH_RADIUS = 1.8;
 const MARKER_OFFSET = 0.06;
@@ -1742,10 +1742,11 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       const size = sizeRef.current;
       const overlay = overlayRef.current;
       const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
+      const isMorphing = visualStyle === 'morphing';
 
       // Get the devicePixelRatio to account for high-DPI scaling
       const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-      
+
       const overlayWidth = overlay && overlay.width > 0 ? overlay.width / dpr : undefined;
       const overlayHeight = overlay && overlay.height > 0 ? overlay.height / dpr : undefined;
       const width = overlayWidth ?? size?.width ?? 1;
@@ -1771,13 +1772,22 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         };
       }
 
-      const worldVector = latLonToVector3(lon, lat, EARTH_RADIUS + MARKER_OFFSET * 0.5);
+      // For morphing mode, use morphed position based on current morph factor
+      let worldVector: THREE.Vector3;
+      if (isMorphing) {
+        const morphFactor = morphingGlobeHandleRef.current?.getMorphFactor() ?? 0;
+        worldVector = getMorphedPosition(lon, lat, morphFactor, EARTH_RADIUS + MARKER_OFFSET * 0.5);
+      } else {
+        worldVector = latLonToVector3(lon, lat, EARTH_RADIUS + MARKER_OFFSET * 0.5);
+      }
 
       camera.getWorldPosition(cameraWorldPosition);
       surfaceNormal.copy(worldVector).normalize();
       cameraToSurface.subVectors(cameraWorldPosition, worldVector);
 
-      const facingCamera = cameraToSurface.dot(surfaceNormal) > 0;
+      // For morphing mode with high morph factor (flat view), always consider visible
+      const morphFactor = isMorphing ? (morphingGlobeHandleRef.current?.getMorphFactor() ?? 0) : 0;
+      const facingCamera = morphFactor > 0.5 ? true : cameraToSurface.dot(surfaceNormal) > 0;
 
       projectedVector.copy(worldVector).project(camera);
       const isVisible = facingCamera && projectedVector.z < 1;
@@ -1800,13 +1810,15 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       if (!container) return null;
 
       const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
+      const isMorphing = visualStyle === 'morphing';
+
       if (isFlat) {
         const rect = overlay?.getBoundingClientRect() ?? container.getBoundingClientRect();
         const size = sizeRef.current;
-        
+
         // Get the devicePixelRatio to account for high-DPI scaling
         const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-        
+
         const overlayWidth = overlay && overlay.width > 0 ? overlay.width / dpr : undefined;
         const overlayHeight = overlay && overlay.height > 0 ? overlay.height / dpr : undefined;
         const width = overlayWidth ?? size?.width ?? (rect.width || 1);
@@ -1834,9 +1846,37 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         return null;
       }
 
-      const point = intersections[0].point.clone().normalize();
-      const lat = THREE.MathUtils.radToDeg(Math.asin(point.y));
-      const theta = Math.atan2(point.z, -point.x);
+      const point = intersections[0].point.clone();
+
+      // For morphing mode, handle both sphere and flat coordinate systems
+      if (isMorphing) {
+        const morphFactor = morphingGlobeHandleRef.current?.getMorphFactor() ?? 0;
+
+        // Calculate coordinates from sphere (for low morph factor)
+        const normalizedPoint = point.clone().normalize();
+        const sphereLat = THREE.MathUtils.radToDeg(Math.asin(normalizedPoint.y));
+        const sphereTheta = Math.atan2(normalizedPoint.z, -normalizedPoint.x);
+        const sphereLon = normalizeLon(THREE.MathUtils.radToDeg(sphereTheta) - 180);
+
+        // Calculate coordinates from flat plane (for high morph factor)
+        // Flat position formula: x = (u - 0.5) * FLAT_WIDTH, y = (v - 0.5) * FLAT_HEIGHT
+        // Where u = (lon + 180) / 360, v = (90 - lat) / 180
+        const u = point.x / MORPHING_FLAT_WIDTH + 0.5;
+        const v = point.y / MORPHING_FLAT_HEIGHT + 0.5;
+        const flatLon = normalizeLon(u * 360 - 180);
+        const flatLat = THREE.MathUtils.clamp(90 - v * 180, -90, 90);
+
+        // Interpolate between sphere and flat coordinates based on morph factor
+        const lon = THREE.MathUtils.lerp(sphereLon, flatLon, morphFactor);
+        const lat = THREE.MathUtils.lerp(sphereLat, flatLat, morphFactor);
+
+        return { lon, lat };
+      }
+
+      // Standard sphere picking for realistic mode
+      const normalizedPoint = point.normalize();
+      const lat = THREE.MathUtils.radToDeg(Math.asin(normalizedPoint.y));
+      const theta = Math.atan2(normalizedPoint.z, -normalizedPoint.x);
       const lon = normalizeLon(THREE.MathUtils.radToDeg(theta) - 180);
       return { lon, lat };
     };
