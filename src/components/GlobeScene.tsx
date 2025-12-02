@@ -1348,7 +1348,9 @@ function SceneContent({
   }, [camera, isFlat]);
 
   useFrame(() => {
-    if (!isFlat) {
+    // Only apply cam-based camera positioning for realistic (non-morphing) 3D mode
+    // Morphing mode uses OrbitControls for camera, so we skip this to allow free rotation/pan
+    if (!isFlat && !isMorphing) {
       const { width, height } = size;
       const centerLon = ((width / 2 - cam.x) / (width * cam.zoom)) * 360 - 180;
       const centerLat = 90 - ((height / 2 - cam.y) / (height * cam.zoom)) * 180;
