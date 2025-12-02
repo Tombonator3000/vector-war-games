@@ -181,6 +181,10 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         texture.magFilter = THREE.LinearFilter;
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
+        // Disable flipY to match shader UV mapping:
+        // - uv.y = 0 should sample south pole (bottom of equirectangular image)
+        // - uv.y = 1 should sample north pole (top of equirectangular image)
+        texture.flipY = false;
         texture.needsUpdate = true;
       }
     }, [texture]);
@@ -352,8 +356,10 @@ export function getMorphedPosition(
   );
 
   // Flat position (normalized 0-1, then scaled)
+  // u: longitude maps from -180..+180 to 0..1
+  // v: latitude maps from -90..+90 to 0..1 (south at bottom, north at top)
   const u = (lon + 180) / 360;
-  const v = (90 - lat) / 180;
+  const v = (lat + 90) / 180;
 
   const flatPos = new THREE.Vector3(
     (u - 0.5) * FLAT_WIDTH,
