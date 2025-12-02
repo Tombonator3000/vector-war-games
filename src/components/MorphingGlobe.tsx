@@ -307,6 +307,8 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
           fragmentShader={morphFragmentShader}
           uniforms={uniforms}
           side={THREE.DoubleSide}
+          transparent={true}
+          depthWrite={true}
         />
       </mesh>
     );

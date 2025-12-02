@@ -28,14 +28,14 @@ function MorphToggleButtonComponent({
   const [isFlat, setIsFlat] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Poll morph factor to update button state
+  // Poll morph factor to update button state (16ms = ~60fps for smooth feedback)
   useEffect(() => {
     if (!visible) return;
 
     const interval = setInterval(() => {
       const factor = globeRef.current?.getMorphFactor() ?? 0;
       setIsFlat(factor > 0.5);
-    }, 100);
+    }, 16);
 
     return () => clearInterval(interval);
   }, [globeRef, visible]);

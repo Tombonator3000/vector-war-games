@@ -1113,6 +1113,7 @@ function SceneContent({
   worldCountries,
   onCameraPoseUpdate,
   onMorphingGlobeReady,
+  onMorphProgress,
 }: {
   cam: GlobeSceneProps['cam'];
   nations: GlobeSceneProps['nations'];
@@ -1135,6 +1136,7 @@ function SceneContent({
   worldCountries?: GlobeSceneProps['worldCountries'];
   onCameraPoseUpdate?: (camera: THREE.PerspectiveCamera) => void;
   onMorphingGlobeReady?: (handle: MorphingGlobeHandle | null) => void;
+  onMorphProgress?: (factor: number) => void;
 }) {
   const { camera, size, clock, gl } = useThree();
   const earthRef = useRef<THREE.Mesh | null>(null);
@@ -1159,20 +1161,19 @@ function SceneContent({
     }
   }, [isMorphing, onMorphingGlobeReady]);
 
-  // Track morph factor for updating marker positions during transition
+  // Handle morph progress updates from MorphingGlobe
+  const handleMorphProgressInternal = useCallback((factor: number) => {
+    setMorphFactorState(factor);
+    onMorphProgress?.(factor);
+  }, [onMorphProgress]);
+
+  // Reset morph factor when not in morphing mode
   useEffect(() => {
     if (!isMorphing) {
       setMorphFactorState(0);
-      return;
+      onMorphProgress?.(0);
     }
-
-    const interval = setInterval(() => {
-      const factor = morphingGlobeRef.current?.getMorphFactor() ?? 0;
-      setMorphFactorState(factor);
-    }, 16); // ~60fps update
-
-    return () => clearInterval(interval);
-  }, [isMorphing]);
+  }, [isMorphing, onMorphProgress]);
 
   const cssDimensions = useMemo(
     () =>
@@ -1429,6 +1430,7 @@ function SceneContent({
               initialView="globe"
               animationDuration={1.2}
               textureVariant={flatMapVariant === false ? 'night' : 'day'}
+              onMorphProgress={handleMorphProgressInternal}
             />
           </Suspense>
         );
@@ -1600,18 +1602,18 @@ function SceneContent({
       {/* OrbitControls for 3D modes (realistic, morphing) - disabled for flat modes */}
       {!isFlat && (
         <OrbitControls
-          enableRotate={!isMorphing || morphFactor < 0.8}
+          enableRotate={!isMorphing || morphFactor < 0.7}
           enableZoom={true}
-          enablePan={isMorphing && morphFactor > 0.5}
+          enablePan={isMorphing && morphFactor > 0.3}
           minDistance={EARTH_RADIUS + 1.3}
           maxDistance={EARTH_RADIUS + 5}
           mouseButtons={{
-            LEFT: THREE.MOUSE.ROTATE,
+            LEFT: isMorphing && morphFactor > 0.7 ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
             MIDDLE: THREE.MOUSE.DOLLY,
             RIGHT: THREE.MOUSE.PAN,
           }}
           touches={{
-            ONE: THREE.TOUCH.ROTATE,
+            ONE: isMorphing && morphFactor > 0.7 ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE,
             TWO: THREE.TOUCH.DOLLY_PAN,
           }}
           rotateSpeed={0.8}
@@ -1675,6 +1677,12 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   const explosionIdCounterRef = useRef(0);
   const clockRef = useRef<THREE.Clock | null>(null);
   const morphingGlobeHandleRef = useRef<MorphingGlobeHandle | null>(null);
+  const [morphFactorState, setMorphFactorState] = useState(0);
+
+  // Callback to receive morph factor updates from SceneContent
+  const handleMorphProgress = useCallback((factor: number) => {
+    setMorphFactorState(factor);
+  }, []);
 
   const emitInitialProjector = useCallback(
     (projector: ProjectorFn) => {
@@ -2044,7 +2052,10 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
 
   // For 3D modes (realistic, morphing), let Three.js canvas handle pointer events via OrbitControls
   // For flat modes (flat-realistic, wireframe), use overlay canvas for custom pan/zoom
-  const is3DMode = visualStyle === 'realistic' || visualStyle === 'morphing';
+  // In morphing mode, use morph factor to determine which canvas should be on top
+  const isMorphingMode = visualStyle === 'morphing';
+  const is3DMode = visualStyle === 'realistic' || (isMorphingMode && morphFactorState < 0.95);
+  const isFullyFlat = isMorphingMode && morphFactorState >= 0.95;
 
   return (
     <div ref={containerRef} className="globe-scene" style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -2053,7 +2064,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         dpr={[1, 1.75]}
         camera={{ position: [0, 0, EARTH_RADIUS + 3], fov: 40, near: 0.1, far: 100 }}
         shadows
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: is3DMode ? 10 : 0 }}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10 }}
       >
         <SceneContent
           cam={cam}
@@ -2077,6 +2088,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           worldCountries={worldCountries}
           onCameraPoseUpdate={handleCameraPoseUpdate}
           onMorphingGlobeReady={handleMorphingGlobeReady}
+          onMorphProgress={handleMorphProgress}
         />
       </Canvas>
       <canvas
@@ -2088,8 +2100,8 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           left: 0,
           width: '100%',
           height: '100%',
-          pointerEvents: is3DMode ? 'none' : 'auto',
-          zIndex: is3DMode ? 0 : 10,
+          pointerEvents: (is3DMode || isMorphingMode) ? 'none' : 'auto',
+          zIndex: (is3DMode || isMorphingMode) ? 0 : 10,
           ...(DEBUG_OVERLAY ? { border: '2px solid red' } : {})
         }}
       />
