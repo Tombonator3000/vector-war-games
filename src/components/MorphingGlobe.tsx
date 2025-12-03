@@ -385,10 +385,10 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         texture.magFilter = THREE.LinearFilter;
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
-        // Enable flipY (default Three.js behavior) for standard equirectangular mapping:
-        // - uv.y = 0 samples top of image (north pole)
-        // - uv.y = 1 samples bottom of image (south pole)
-        texture.flipY = true;
+        // Disable flipY to match shader UV coordinate expectations:
+        // - uv.y = 0 maps to north pole in shader
+        // - uv.y = 1 maps to south pole in shader
+        texture.flipY = false;
         texture.needsUpdate = true;
       }
     }, [texture]);
