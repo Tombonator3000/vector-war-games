@@ -1199,12 +1199,34 @@ function SceneContent({
   }, [onCameraPoseUpdate]);
 
   // Notify parent when morphing globe ref is available
+  // Use polling to ensure the ref is actually set (handles race condition)
   useEffect(() => {
-    // Wait for next frame to ensure ref is set after render
-    const frameId = requestAnimationFrame(() => {
-      onMorphingGlobeReady?.(morphingGlobeRef.current);
-    });
-    return () => cancelAnimationFrame(frameId);
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 50; // ~1 second at 20ms intervals
+
+    const checkAndNotify = () => {
+      if (cancelled) return;
+
+      const handle = morphingGlobeRef.current;
+      if (handle) {
+        onMorphingGlobeReady?.(handle);
+        return;
+      }
+
+      // Retry if ref not yet set (race condition with useImperativeHandle)
+      attempts++;
+      if (attempts < maxAttempts) {
+        requestAnimationFrame(checkAndNotify);
+      }
+    };
+
+    // Start checking after a small delay to let MorphingGlobe render
+    requestAnimationFrame(checkAndNotify);
+
+    return () => {
+      cancelled = true;
+    };
   }, [onMorphingGlobeReady]);
 
   // Handle morph progress updates from MorphingGlobe

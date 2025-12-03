@@ -52,7 +52,6 @@ function MapViewToggleComponent({
     if (isAnimating || targetFlat === isFlat) return;
 
     setIsAnimating(true);
-    const targetFactor = targetFlat ? 1 : 0;
 
     if (targetFlat) {
       globeRef.current?.morphToFlat();
@@ -60,16 +59,22 @@ function MapViewToggleComponent({
       globeRef.current?.morphToGlobe();
     }
 
-    // Poll for animation completion instead of fixed timeout
+    // Poll for animation completion with safety timeout
+    const startTime = Date.now();
+    const maxDuration = 3000; // Safety timeout: 3 seconds max
+
     const checkCompletion = () => {
       const currentFactor = globeRef.current?.getMorphFactor() ?? 0;
+      const elapsed = Date.now() - startTime;
       const isComplete = targetFlat
         ? currentFactor > 0.95
         : currentFactor < 0.05;
 
-      if (isComplete) {
+      if (isComplete || elapsed > maxDuration) {
         setIsAnimating(false);
-        setIsFlat(targetFlat);
+        // Use actual factor to determine final state (handles edge cases)
+        const finalFactor = globeRef.current?.getMorphFactor() ?? (targetFlat ? 1 : 0);
+        setIsFlat(finalFactor > 0.5);
       } else {
         requestAnimationFrame(checkCompletion);
       }
@@ -91,16 +96,22 @@ function MapViewToggleComponent({
           globeRef.current?.toggleMorphView();
           setIsAnimating(true);
 
-          // Poll for animation completion
+          // Poll for animation completion with safety timeout
+          const startTime = Date.now();
+          const maxDuration = 3000; // Safety timeout: 3 seconds max
+
           const checkCompletion = () => {
             const factor = globeRef.current?.getMorphFactor() ?? 0;
+            const elapsed = Date.now() - startTime;
             const isComplete = targetFlat
               ? factor > 0.95
               : factor < 0.05;
 
-            if (isComplete) {
+            if (isComplete || elapsed > maxDuration) {
               setIsAnimating(false);
-              setIsFlat(targetFlat);
+              // Use actual factor to determine final state
+              const finalFactor = globeRef.current?.getMorphFactor() ?? (targetFlat ? 1 : 0);
+              setIsFlat(finalFactor > 0.5);
             } else {
               requestAnimationFrame(checkCompletion);
             }
