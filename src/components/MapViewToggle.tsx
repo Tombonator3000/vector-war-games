@@ -29,51 +29,91 @@ function MapViewToggleComponent({
   const [isFlat, setIsFlat] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Poll morph factor to update toggle state
+  // Poll morph factor to update toggle state - only during animation for efficiency
   useEffect(() => {
     if (!visible) return;
 
+    // Initial state sync
+    const factor = globeRef.current?.getMorphFactor() ?? 0;
+    setIsFlat(factor > 0.5);
+
+    // Only poll during animation (when isAnimating is true)
+    if (!isAnimating) return;
+
     const interval = setInterval(() => {
-      const factor = globeRef.current?.getMorphFactor() ?? 0;
-      setIsFlat(factor > 0.5);
+      const currentFactor = globeRef.current?.getMorphFactor() ?? 0;
+      setIsFlat(currentFactor > 0.5);
     }, 50);
 
     return () => clearInterval(interval);
-  }, [globeRef, visible]);
+  }, [globeRef, visible, isAnimating]);
 
   const handleToggle = useCallback((targetFlat: boolean) => {
     if (isAnimating || targetFlat === isFlat) return;
 
     setIsAnimating(true);
-    
+    const targetFactor = targetFlat ? 1 : 0;
+
     if (targetFlat) {
       globeRef.current?.morphToFlat();
     } else {
       globeRef.current?.morphToGlobe();
     }
 
-    // Reset animating state after animation completes
-    setTimeout(() => {
-      setIsAnimating(false);
-    }, 1400);
+    // Poll for animation completion instead of fixed timeout
+    const checkCompletion = () => {
+      const currentFactor = globeRef.current?.getMorphFactor() ?? 0;
+      const isComplete = targetFlat
+        ? currentFactor > 0.95
+        : currentFactor < 0.05;
+
+      if (isComplete) {
+        setIsAnimating(false);
+        setIsFlat(targetFlat);
+      } else {
+        requestAnimationFrame(checkCompletion);
+      }
+    };
+
+    // Start checking after a small delay to let animation begin
+    setTimeout(checkCompletion, 100);
   }, [globeRef, isAnimating, isFlat]);
 
   // Keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'm' || e.key === 'M') {
-        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && !isAnimating) {
           e.preventDefault();
+          const currentFactor = globeRef.current?.getMorphFactor() ?? 0;
+          const targetFlat = currentFactor < 0.5;
+
           globeRef.current?.toggleMorphView();
           setIsAnimating(true);
-          setTimeout(() => setIsAnimating(false), 1400);
+
+          // Poll for animation completion
+          const checkCompletion = () => {
+            const factor = globeRef.current?.getMorphFactor() ?? 0;
+            const isComplete = targetFlat
+              ? factor > 0.95
+              : factor < 0.05;
+
+            if (isComplete) {
+              setIsAnimating(false);
+              setIsFlat(targetFlat);
+            } else {
+              requestAnimationFrame(checkCompletion);
+            }
+          };
+
+          setTimeout(checkCompletion, 100);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [globeRef]);
+  }, [globeRef, isAnimating]);
 
   if (!visible) return null;
 

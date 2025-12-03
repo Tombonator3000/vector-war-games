@@ -226,12 +226,15 @@ interface SceneRegistration {
 }
 
 function latLonToVector3(lon: number, lat: number, radius: number) {
+  // Match the MorphingGlobe shader's coordinate system:
+  // phi = (90 - lat) in radians, theta = lon in radians
+  // This ensures markers align with the rendered globe surface
   const phi = THREE.MathUtils.degToRad(90 - lat);
-  const theta = THREE.MathUtils.degToRad(lon + 180);
+  const theta = THREE.MathUtils.degToRad(lon);
 
-  const x = -radius * Math.sin(phi) * Math.cos(theta);
-  const z = radius * Math.sin(phi) * Math.sin(theta);
+  const x = radius * Math.sin(phi) * Math.cos(theta);
   const y = radius * Math.cos(phi);
+  const z = radius * Math.sin(phi) * Math.sin(theta);
 
   return new THREE.Vector3(x, y, z);
 }
@@ -1842,16 +1845,20 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       const morphFactor = morphingGlobeHandleRef.current?.getMorphFactor() ?? 0;
 
       // Calculate coordinates from sphere (for low morph factor)
+      // Match the shader's coordinate system: theta = lon * PI/180
+      // So lon = atan2(z, x) * 180/PI
       const normalizedPoint = point.clone().normalize();
       const sphereLat = THREE.MathUtils.radToDeg(Math.asin(normalizedPoint.y));
-      const sphereTheta = Math.atan2(normalizedPoint.z, -normalizedPoint.x);
-      const sphereLon = normalizeLon(THREE.MathUtils.radToDeg(sphereTheta) - 180);
+      const sphereTheta = Math.atan2(normalizedPoint.z, normalizedPoint.x);
+      const sphereLon = normalizeLon(THREE.MathUtils.radToDeg(sphereTheta));
 
       // Calculate coordinates from flat plane (for high morph factor)
-      // Flat position formula: x = (u - 0.5) * FLAT_WIDTH, y = (v - 0.5) * FLAT_HEIGHT
-      // Where u = (lon + 180) / 360, v = (90 - lat) / 180
+      // Flat position formula from shader:
+      //   x = (uv.x - 0.5) * FLAT_WIDTH  ->  uv.x = x / FLAT_WIDTH + 0.5
+      //   y = (0.5 - uv.y) * FLAT_HEIGHT  ->  uv.y = 0.5 - y / FLAT_HEIGHT
+      // Where uv.x = (lon + 180) / 360, uv.y = (90 - lat) / 180
       const u = point.x / MORPHING_FLAT_WIDTH + 0.5;
-      const v = point.y / MORPHING_FLAT_HEIGHT + 0.5;
+      const v = 0.5 - point.y / MORPHING_FLAT_HEIGHT; // Inverted to match shader formula
       const flatLon = normalizeLon(u * 360 - 180);
       const flatLat = THREE.MathUtils.clamp(90 - v * 180, -90, 90);
 
@@ -2026,9 +2033,6 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     }),
     [projectLonLat, pickLonLat, fireMissile, addExplosion, clearMissiles, clearExplosions],
   );
-
-  // Unified morphing mode - use morph factor to determine behavior
-  const is3DMode = morphFactorState < 0.95;
 
   return (
     <div ref={containerRef} className="globe-scene" style={{ position: 'relative', width: '100%', height: '100%' }}>
