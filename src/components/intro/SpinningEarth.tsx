@@ -7,4 +7,8 @@
 
 import { Globe3D } from '@/components/Globe3D';
 
-export const SpinningEarth = () => <Globe3D />;
+export const SpinningEarth = () => (
+  <div className="earth-container">
+    <Globe3D />
+  </div>
+);
