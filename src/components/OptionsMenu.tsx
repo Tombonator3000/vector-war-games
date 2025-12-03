@@ -71,22 +71,13 @@ const themeOptions: { id: ThemeId; label: string }[] = [
   { id: 'holographic', label: 'Holographic' }
 ];
 
+// Deprecated: Map style options are no longer needed as we use a unified MorphingGlobe
+// Keep for backwards compatibility but internally only 'morphing' is used
 const MAP_STYLE_OPTIONS: { value: MapVisualStyle; label: string; description: string }[] = [
-  { value: 'realistic', label: 'Realistic', description: 'Satellite imagery with terrain overlays.' },
-  {
-    value: 'wireframe',
-    label: 'Vector',
-    description: 'Neon vector grid with luminous borders and elevation lines.',
-  },
-  {
-    value: 'flat-realistic',
-    label: 'Flat Realistic',
-    description: 'High-resolution satellite texture rendered on the flat map.',
-  },
   {
     value: 'morphing',
-    label: 'Morphing Globe',
-    description: 'Seamless animated transition between 3D globe and flat map with one click.',
+    label: 'Unified Globe',
+    description: 'Seamless transition between 3D globe and flat map. Toggle vector overlay for borders.',
   },
 ];
 
@@ -156,11 +147,15 @@ export interface OptionsMenuProps {
   theme?: ThemeId;
   onThemeChange?: (theme: ThemeId) => void;
 
-  /** Controlled map style selection */
+  /** Controlled map style selection (deprecated - now uses unified morphing globe) */
   mapStyle: MapStyle;
   onMapStyleChange: (style: MapVisualStyle) => void;
   dayNightAutoCycleEnabled: boolean;
   onDayNightAutoCycleToggle: (enabled: boolean) => void;
+
+  /** Vector overlay control */
+  showVectorOverlay?: boolean;
+  onVectorOverlayToggle?: (enabled: boolean) => void;
 
   /** Whether to show in-game only features (like co-op, HUD layout) */
   showInGameFeatures?: boolean;
@@ -196,6 +191,8 @@ export function OptionsMenu({
   onMapStyleChange,
   dayNightAutoCycleEnabled,
   onDayNightAutoCycleToggle,
+  showVectorOverlay = false,
+  onVectorOverlayToggle,
   showInGameFeatures = true,
   onChange,
   currentTurn = 1,
@@ -604,39 +601,58 @@ export function OptionsMenu({
             </div>
           </div>
 
-          {/* MAP DISPLAY STYLE */}
+          {/* MAP DISPLAY */}
           <div className="options-section">
-            <h3 className="options-section__heading">MAP DISPLAY STYLE</h3>
-            <p className="options-section__subheading">Choose how the global map is rendered.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {MAP_STYLE_OPTIONS.map((option) => {
-                const isActive = mapStyle.visual === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => handleMapStyleChange(option.value)}
-                    className={`layout-chip${isActive ? ' is-active' : ''}`}
-                    aria-pressed={isActive}
-                  >
-                    <span className="layout-chip__label">{option.label}</span>
-                    <span className="layout-chip__description">{option.description}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="options-toggle mt-4">
-              <div className="flex flex-col text-left">
-                <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Auto Day/Night Cycle</span>
-                <span className="text-[11px] text-cyan-400/80">
-                  Rotate the flat-realistic map lighting between daylight and nightfall automatically.
-                </span>
+            <h3 className="options-section__heading">MAP DISPLAY</h3>
+            <p className="options-section__subheading">
+              Unified globe system with seamless 3D to flat map transitions. Use the toggle button on the map to switch views.
+            </p>
+
+            <div className="space-y-4 mt-4">
+              <div className="options-toggle">
+                <div className="flex flex-col text-left">
+                  <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Vector Overlay</span>
+                  <span className="text-[11px] text-cyan-400/80">
+                    Show country borders as glowing vector lines over the satellite texture.
+                  </span>
+                </div>
+                <Switch
+                  checked={showVectorOverlay}
+                  onCheckedChange={(checked) => {
+                    onVectorOverlayToggle?.(checked);
+                    toast({
+                      title: checked ? 'Vector overlay enabled' : 'Vector overlay disabled',
+                      description: checked
+                        ? 'Country borders are now visible as luminous vector lines.'
+                        : 'Vector overlay hidden. Satellite view only.',
+                    });
+                    if (onChange) {
+                      onChange();
+                    }
+                  }}
+                  aria-label="Toggle vector border overlay"
+                />
               </div>
-              <Switch
-                checked={dayNightAutoCycleEnabled}
-                onCheckedChange={handleDayNightAutoCycleToggle}
-                aria-label="Toggle automatic day and night transitions"
-              />
+
+              <div className="options-toggle">
+                <div className="flex flex-col text-left">
+                  <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Auto Day/Night Cycle</span>
+                  <span className="text-[11px] text-cyan-400/80">
+                    Rotate map lighting between daylight and nightfall automatically.
+                  </span>
+                </div>
+                <Switch
+                  checked={dayNightAutoCycleEnabled}
+                  onCheckedChange={handleDayNightAutoCycleToggle}
+                  aria-label="Toggle automatic day and night transitions"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 rounded border border-cyan-500/30 bg-cyan-900/20">
+              <p className="text-xs text-cyan-200/80">
+                <strong>Tip:</strong> Click the globe/flat toggle button on the map to switch between 3D globe and 2D flat views with smooth animation.
+              </p>
             </div>
           </div>
 

@@ -1,14 +1,18 @@
 /**
- * MorphingGlobe - Seamless globe-to-flat-map transition component
+ * MorphingGlobe - Unified map system with seamless globe-to-flat morphing
  *
- * Inspired by Polyglobe (pizzint.watch/polyglobe), this component provides
- * a smooth animated transition between a 3D spherical globe view and a
- * 2D flat equirectangular map projection using vertex shader interpolation.
+ * This is the consolidated map renderer that replaces all previous map styles:
+ * - Realistic globe (morphFactor = 0)
+ * - Flat map (morphFactor = 1)
+ * - Optional vector overlay (borders rendered on top)
+ *
+ * Inspired by Polyglobe (pizzint.watch/polyglobe), uses vertex shader interpolation.
  */
-import { forwardRef, useEffect, useMemo, useRef, useState, useImperativeHandle } from 'react';
+import { forwardRef, useEffect, useMemo, useRef, useState, useImperativeHandle, useCallback } from 'react';
 import type { MutableRefObject } from 'react';
 import { useFrame, useLoader, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson';
 import { resolvePublicAssetPath } from '@/lib/renderingUtils';
 
 const EARTH_RADIUS = 1.8;
@@ -33,6 +37,10 @@ export interface MorphingGlobeHandle {
   toggle: (duration?: number) => void;
   /** Check if currently in flat mode */
   isFlat: () => boolean;
+  /** Toggle vector overlay visibility */
+  setVectorOverlay: (visible: boolean) => void;
+  /** Get vector overlay visibility */
+  getVectorOverlay: () => boolean;
 }
 
 export interface MorphingGlobeProps {
@@ -52,6 +60,14 @@ export interface MorphingGlobeProps {
   onMorphProgress?: (factor: number) => void;
   /** Reference to the mesh for external access */
   meshRef?: MutableRefObject<THREE.Mesh | null>;
+  /** GeoJSON data for vector overlay borders */
+  worldCountries?: FeatureCollection<Polygon | MultiPolygon> | null;
+  /** Show vector overlay (country borders) */
+  showVectorOverlay?: boolean;
+  /** Vector overlay color */
+  vectorColor?: string;
+  /** Vector overlay opacity */
+  vectorOpacity?: number;
 }
 
 // Vertex shader that interpolates between sphere and flat plane
@@ -159,6 +175,159 @@ function easeInOutSmooth(t: number): number {
   return Math.min(1, base + overshoot);
 }
 
+// Vertex shader for vector overlay lines that morph with the globe
+const vectorOverlayVertexShader = /* glsl */ `
+  uniform float uMorphFactor;
+  uniform float uRadius;
+  uniform float uFlatWidth;
+  uniform float uFlatHeight;
+
+  attribute vec2 uv2; // UV coordinates for the line endpoints
+
+  varying float vAlpha;
+
+  void main() {
+    // Calculate sphere position from UV
+    float phi = uv2.y * 3.14159265359;
+    float theta = uv2.x * 2.0 * 3.14159265359 - 3.14159265359;
+
+    vec3 spherePos = vec3(
+      (uRadius + 0.005) * sin(phi) * cos(theta),
+      (uRadius + 0.005) * cos(phi),
+      (uRadius + 0.005) * sin(phi) * sin(theta)
+    );
+
+    // Calculate flat position
+    vec3 flatPos = vec3(
+      (uv2.x - 0.5) * uFlatWidth,
+      (0.5 - uv2.y) * uFlatHeight,
+      0.01
+    );
+
+    // Interpolate
+    vec3 morphedPosition = mix(spherePos, flatPos, uMorphFactor);
+
+    // Fade alpha for backfacing lines on globe
+    vec3 sphereNormal = normalize(spherePos);
+    vec3 viewDir = normalize(cameraPosition - morphedPosition);
+    float facing = dot(sphereNormal, viewDir);
+    vAlpha = mix(smoothstep(-0.1, 0.3, facing), 1.0, uMorphFactor);
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(morphedPosition, 1.0);
+  }
+`;
+
+const vectorOverlayFragmentShader = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uOpacity;
+
+  varying float vAlpha;
+
+  void main() {
+    gl_FragColor = vec4(uColor, uOpacity * vAlpha);
+  }
+`;
+
+/**
+ * Convert GeoJSON FeatureCollection to line segment UV coordinates
+ * Returns Float32Array of UV pairs (u1, v1, u2, v2, ...)
+ */
+function collectBorderSegments(
+  collection?: FeatureCollection<Polygon | MultiPolygon> | null,
+): Float32Array | null {
+  if (!collection?.features?.length) {
+    return null;
+  }
+
+  const segments: number[] = [];
+
+  const pushSegment = (start: readonly [number, number], end: readonly [number, number]) => {
+    const [startLon, startLat] = start;
+    const [endLon, endLat] = end;
+
+    if (!Number.isFinite(startLon) || !Number.isFinite(startLat)) return;
+    if (!Number.isFinite(endLon) || !Number.isFinite(endLat)) return;
+
+    // Convert lon/lat to UV coordinates (0-1 range)
+    const startU = THREE.MathUtils.clamp((startLon + 180) / 360, 0, 1);
+    const startV = THREE.MathUtils.clamp((90 - startLat) / 180, 0, 1);
+    const endU = THREE.MathUtils.clamp((endLon + 180) / 360, 0, 1);
+    const endV = THREE.MathUtils.clamp((90 - endLat) / 180, 0, 1);
+
+    segments.push(startU, startV, endU, endV);
+  };
+
+  const appendRing = (ring: readonly number[][]) => {
+    if (!ring || ring.length < 2) return;
+
+    for (let i = 1; i < ring.length; i += 1) {
+      pushSegment(ring[i - 1] as [number, number], ring[i] as [number, number]);
+    }
+
+    const first = ring[0] as [number, number];
+    const last = ring[ring.length - 1] as [number, number];
+    if (first[0] !== last[0] || first[1] !== last[1]) {
+      pushSegment(last, first);
+    }
+  };
+
+  const appendPolygon = (polygon: Polygon['coordinates']) => {
+    polygon.forEach(ring => appendRing(ring));
+  };
+
+  for (const feature of collection.features) {
+    if (!feature) continue;
+    const geometry = feature.geometry;
+    if (!geometry) continue;
+
+    if (geometry.type === 'Polygon') {
+      appendPolygon(geometry.coordinates);
+    } else if (geometry.type === 'MultiPolygon') {
+      geometry.coordinates.forEach(polygon => appendPolygon(polygon));
+    }
+  }
+
+  if (!segments.length) {
+    return null;
+  }
+
+  return new Float32Array(segments);
+}
+
+/**
+ * Create vector overlay line geometry from UV segments
+ */
+function createVectorOverlayGeometry(uvSegments: Float32Array): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+
+  // Each segment has 4 values (u1, v1, u2, v2), creating 2 vertices
+  const vertexCount = uvSegments.length / 2;
+  const positions = new Float32Array(vertexCount * 3);
+  const uvs = new Float32Array(vertexCount * 2);
+
+  // Fill in positions (will be overridden by vertex shader, but needed for buffer)
+  // and UV coordinates for the shader
+  for (let i = 0; i < uvSegments.length; i += 2) {
+    const vertexIndex = i / 2;
+    const u = uvSegments[i];
+    const v = uvSegments[i + 1];
+
+    // Set UV for shader
+    uvs[i] = u;
+    uvs[i + 1] = v;
+
+    // Placeholder positions (will be computed in shader)
+    positions[vertexIndex * 3] = 0;
+    positions[vertexIndex * 3 + 1] = 0;
+    positions[vertexIndex * 3 + 2] = 0;
+  }
+
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('uv2', new THREE.BufferAttribute(uvs, 2));
+
+  return geometry;
+}
+
 export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>(
   function MorphingGlobe(
     {
@@ -170,13 +339,20 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
       onMorphComplete,
       onMorphProgress,
       meshRef: externalMeshRef,
+      worldCountries,
+      showVectorOverlay = false,
+      vectorColor = '#2ef1ff',
+      vectorOpacity = 0.7,
     },
     ref
   ) {
     const internalMeshRef = useRef<THREE.Mesh>(null);
     const meshRef = externalMeshRef ?? internalMeshRef;
     const materialRef = useRef<THREE.ShaderMaterial>(null);
+    const vectorMaterialRef = useRef<THREE.ShaderMaterial>(null);
+    const vectorLinesRef = useRef<THREE.LineSegments | null>(null);
     const { camera } = useThree();
+    const [vectorOverlayVisible, setVectorOverlayVisible] = useState(showVectorOverlay);
 
     // Animation state
     const [morphFactor, setMorphFactor] = useState(initialView === 'flat' ? 1 : 0);
@@ -228,6 +404,19 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
       [texture, initialView]
     );
 
+    // Vector overlay uniforms
+    const vectorUniforms = useMemo(
+      () => ({
+        uMorphFactor: { value: initialView === 'flat' ? 1.0 : 0.0 },
+        uRadius: { value: EARTH_RADIUS },
+        uFlatWidth: { value: FLAT_WIDTH },
+        uFlatHeight: { value: FLAT_HEIGHT },
+        uColor: { value: new THREE.Color(vectorColor) },
+        uOpacity: { value: vectorOpacity },
+      }),
+      [initialView, vectorColor, vectorOpacity]
+    );
+
     // Update texture uniform when it changes
     useEffect(() => {
       if (materialRef.current && texture) {
@@ -235,6 +424,27 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         materialRef.current.needsUpdate = true;
       }
     }, [texture]);
+
+    // Update vector overlay visibility from prop
+    useEffect(() => {
+      setVectorOverlayVisible(showVectorOverlay);
+    }, [showVectorOverlay]);
+
+    // Update vector color and opacity
+    useEffect(() => {
+      if (vectorMaterialRef.current) {
+        vectorMaterialRef.current.uniforms.uColor.value.set(vectorColor);
+        vectorMaterialRef.current.uniforms.uOpacity.value = vectorOpacity;
+      }
+    }, [vectorColor, vectorOpacity]);
+
+    // Create vector overlay geometry from world countries
+    const vectorGeometry = useMemo(() => {
+      if (!worldCountries) return null;
+      const segments = collectBorderSegments(worldCountries);
+      if (!segments) return null;
+      return createVectorOverlayGeometry(segments);
+    }, [worldCountries]);
 
     // Animation frame update
     useFrame((_, delta) => {
@@ -253,6 +463,11 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
 
         if (materialRef.current) {
           materialRef.current.uniforms.uMorphFactor.value = newValue;
+        }
+
+        // Sync vector overlay morph factor
+        if (vectorMaterialRef.current) {
+          vectorMaterialRef.current.uniforms.uMorphFactor.value = newValue;
         }
 
         if (progress >= 1) {
@@ -284,6 +499,9 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
           setMorphFactor(clamped);
           if (materialRef.current) {
             materialRef.current.uniforms.uMorphFactor.value = clamped;
+          }
+          if (vectorMaterialRef.current) {
+            vectorMaterialRef.current.uniforms.uMorphFactor.value = clamped;
           }
         },
         morphToGlobe: (duration = animationDuration) => {
@@ -318,8 +536,12 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
           };
         },
         isFlat: () => morphFactor > 0.5,
+        setVectorOverlay: (visible: boolean) => {
+          setVectorOverlayVisible(visible);
+        },
+        getVectorOverlay: () => vectorOverlayVisible,
       }),
-      [morphFactor, animationDuration, onMorphStart]
+      [morphFactor, animationDuration, onMorphStart, vectorOverlayVisible]
     );
 
     // Create geometry with enough segments for smooth morphing
@@ -329,17 +551,36 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
     }, []);
 
     return (
-      <mesh ref={meshRef} geometry={geometry}>
-        <shaderMaterial
-          ref={materialRef}
-          vertexShader={morphVertexShader}
-          fragmentShader={morphFragmentShader}
-          uniforms={uniforms}
-          side={THREE.DoubleSide}
-          transparent={true}
-          depthWrite={true}
-        />
-      </mesh>
+      <group>
+        {/* Main earth mesh */}
+        <mesh ref={meshRef} geometry={geometry}>
+          <shaderMaterial
+            ref={materialRef}
+            vertexShader={morphVertexShader}
+            fragmentShader={morphFragmentShader}
+            uniforms={uniforms}
+            side={THREE.DoubleSide}
+            transparent={true}
+            depthWrite={true}
+          />
+        </mesh>
+
+        {/* Vector overlay (country borders) */}
+        {vectorOverlayVisible && vectorGeometry && (
+          <lineSegments geometry={vectorGeometry} frustumCulled={false}>
+            <shaderMaterial
+              ref={vectorMaterialRef}
+              vertexShader={vectorOverlayVertexShader}
+              fragmentShader={vectorOverlayFragmentShader}
+              uniforms={vectorUniforms}
+              transparent={true}
+              depthWrite={false}
+              depthTest={true}
+              blending={THREE.NormalBlending}
+            />
+          </lineSegments>
+        )}
+      </group>
     );
   }
 );
@@ -357,6 +598,8 @@ export function useMorphingGlobe() {
     toggle: (duration?: number) => ref.current?.toggle(duration),
     getMorphFactor: () => ref.current?.getMorphFactor() ?? 0,
     isFlat: () => ref.current?.isFlat() ?? false,
+    setVectorOverlay: (visible: boolean) => ref.current?.setVectorOverlay(visible),
+    getVectorOverlay: () => ref.current?.getVectorOverlay() ?? false,
   };
 }
 
