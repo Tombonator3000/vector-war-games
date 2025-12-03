@@ -3518,14 +3518,7 @@ body.theme-wargames [role="tab"][data-state="active"]::after {
     display: none;
   }
 
-  /* Globe scene takes full viewport in portrait */
-  .globe-scene {
-    position: fixed;
-    inset: 0;
-    top: var(--game-top-stack-offset);
-    bottom: 4.5rem; /* Space for bottom action bar */
-    z-index: 1;
-  }
+  /* Globe scene positioning is handled by the newer 10/16 media query below */
 }
 
 /* Standard portrait mobile (up to 9:16 aspect ratio) */
@@ -3901,8 +3894,7 @@ body.theme-wargames [role="tab"][data-state="active"]::after {
     right: 0;
     bottom: var(--mobile-bottom-bar-height);
     z-index: 1;
-    height: auto !important;
-    min-height: auto !important;
+    /* Height is calculated automatically from top/bottom constraints */
   }
 
   /* Globe scene WebGL canvas */
