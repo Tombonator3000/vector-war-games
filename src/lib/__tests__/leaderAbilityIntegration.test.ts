@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { initializeNationLeaderAbility, useLeaderAbility } from '../leaderAbilityIntegration';
+import { initializeNationLeaderAbility, activateLeaderAbility } from '../leaderAbilityIntegration';
 import PlayerManager from '@/state/PlayerManager';
 import type { Nation, GameState } from '@/types/game';
 
@@ -73,7 +73,7 @@ describe('leaderAbilityIntegration', () => {
     const gameState = createTestGameState(PlayerManager.getNations());
     const missingTargetId = 'non-existent-target';
 
-    const result = useLeaderAbility(nation, gameState, missingTargetId);
+    const result = activateLeaderAbility(nation, gameState, missingTargetId);
 
     expect(result.success).toBe(true);
     expect(nation.leaderAbilityState).toBeDefined();
