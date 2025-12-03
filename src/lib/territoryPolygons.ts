@@ -31,8 +31,12 @@ export function createTerritoryBoundary(
 ): THREE.Line {
   const points: THREE.Vector3[] = [];
 
-  // Convert each coordinate to 3D position
-  coordinates.forEach(([lon, lat]) => {
+  // Convert each coordinate to 3D position with validation
+  coordinates.forEach((coord) => {
+    // Validate coordinate is an array with at least 2 numbers
+    if (!Array.isArray(coord) || coord.length < 2) return;
+    const [lon, lat] = coord;
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
     points.push(latLonToVector3(lon, lat, radius + 0.01));
   });
 
@@ -104,22 +108,49 @@ export async function loadTerritoryData(): Promise<TerritoryPolygon[]> {
   // Import existing Cesium territory boundaries
   const { TERRITORY_BOUNDARIES } = await import('@/utils/cesiumTerritoryData');
 
-  return Object.entries(TERRITORY_BOUNDARIES).map(([id, data]) => {
-    // Convert from simplified format to GeoJSON Polygon
-    const geometry: Polygon = {
-      type: 'Polygon',
-      coordinates: data.type === 'polygon'
-        ? (data.coordinates as number[][][])
-        : ((data.coordinates as number[][][][])[0] || [])
-    };
+  return Object.entries(TERRITORY_BOUNDARIES)
+    .filter(([_, data]) => {
+      // Validate data has required fields
+      if (!data || typeof data !== 'object') return false;
+      if (!data.type || !data.coordinates) return false;
+      if (!Array.isArray(data.coordinates)) return false;
+      return true;
+    })
+    .map(([id, data]) => {
+      // Convert from simplified format to GeoJSON Polygon with validation
+      let coordinates: number[][][] = [];
 
-    return {
-      id,
-      name: data.name || id,
-      geometry,
-      color: '#4a90e2' // Default strategic territory color
-    };
-  });
+      if (data.type === 'polygon') {
+        const coords = data.coordinates as number[][][];
+        // Validate polygon coordinates structure
+        if (Array.isArray(coords) && coords.length > 0 && Array.isArray(coords[0])) {
+          coordinates = coords;
+        }
+      } else if (data.type === 'multipolygon') {
+        const multiCoords = data.coordinates as number[][][][];
+        // Extract first polygon from multipolygon with validation
+        if (Array.isArray(multiCoords) && multiCoords.length > 0 && Array.isArray(multiCoords[0])) {
+          coordinates = multiCoords[0];
+        }
+      }
+
+      // Ensure we have valid coordinates
+      if (coordinates.length === 0) {
+        coordinates = [[]]; // Empty polygon as fallback
+      }
+
+      const geometry: Polygon = {
+        type: 'Polygon',
+        coordinates
+      };
+
+      return {
+        id,
+        name: data.name || id,
+        geometry,
+        color: '#4a90e2' // Default strategic territory color
+      };
+    });
 }
 
 /**
@@ -138,10 +169,17 @@ export function createTerritoryFill(
   const vertices: number[] = [];
   const indices: number[] = [];
 
-  // Convert coordinates to 3D vertices
-  const positions = coordinates.map(([lon, lat]) =>
-    latLonToVector3(lon, lat, radius + 0.005)
-  );
+  // Convert coordinates to 3D vertices with validation
+  const positions = coordinates
+    .filter(coord => {
+      if (!Array.isArray(coord) || coord.length < 2) return false;
+      return Number.isFinite(coord[0]) && Number.isFinite(coord[1]);
+    })
+    .map(([lon, lat]) =>
+      latLonToVector3(lon, lat, radius + 0.005)
+    );
+
+  if (positions.length < 3) return null;
 
   // Simple fan triangulation from first vertex
   positions.forEach((pos, i) => {
@@ -173,15 +211,27 @@ export function createTerritoryFill(
 export function getTerritoryCenter(coordinates: number[][]): { lon: number; lat: number } {
   let lon = 0;
   let lat = 0;
+  let validCount = 0;
 
-  coordinates.forEach(([lng, lt]) => {
+  coordinates.forEach((coord) => {
+    // Validate coordinate
+    if (!Array.isArray(coord) || coord.length < 2) return;
+    const [lng, lt] = coord;
+    if (!Number.isFinite(lng) || !Number.isFinite(lt)) return;
+
     lon += lng;
     lat += lt;
+    validCount++;
   });
 
+  // Return center or fallback to 0,0 if no valid coordinates
+  if (validCount === 0) {
+    return { lon: 0, lat: 0 };
+  }
+
   return {
-    lon: lon / coordinates.length,
-    lat: lat / coordinates.length
+    lon: lon / validCount,
+    lat: lat / validCount
   };
 }
 

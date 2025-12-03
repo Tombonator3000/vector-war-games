@@ -28,28 +28,51 @@ function MorphToggleButtonComponent({
   const [isFlat, setIsFlat] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Poll morph factor to update button state (16ms = ~60fps for smooth feedback)
+  // Poll morph factor to update button state - only during animation for efficiency
   useEffect(() => {
     if (!visible) return;
 
+    // Initial state sync
+    const factor = globeRef.current?.getMorphFactor() ?? 0;
+    setIsFlat(factor > 0.5);
+
+    // Only poll during animation for smooth feedback
+    if (!isAnimating) return;
+
     const interval = setInterval(() => {
-      const factor = globeRef.current?.getMorphFactor() ?? 0;
-      setIsFlat(factor > 0.5);
-    }, 16);
+      const currentFactor = globeRef.current?.getMorphFactor() ?? 0;
+      setIsFlat(currentFactor > 0.5);
+    }, 32); // 30fps is sufficient for button state feedback
 
     return () => clearInterval(interval);
-  }, [globeRef, visible]);
+  }, [globeRef, visible, isAnimating]);
 
   const handleToggle = useCallback(() => {
     if (isAnimating) return;
 
+    const currentFactor = globeRef.current?.getMorphFactor() ?? 0;
+    const targetFlat = currentFactor < 0.5;
+
     setIsAnimating(true);
     globeRef.current?.toggleMorphView();
 
-    // Reset animating state after animation completes
-    setTimeout(() => {
-      setIsAnimating(false);
-    }, 1300); // Slightly longer than animation duration
+    // Poll for animation completion instead of fixed timeout
+    const checkCompletion = () => {
+      const factor = globeRef.current?.getMorphFactor() ?? 0;
+      const isComplete = targetFlat
+        ? factor > 0.95
+        : factor < 0.05;
+
+      if (isComplete) {
+        setIsAnimating(false);
+        setIsFlat(targetFlat);
+      } else {
+        requestAnimationFrame(checkCompletion);
+      }
+    };
+
+    // Start checking after a small delay to let animation begin
+    setTimeout(checkCompletion, 100);
   }, [globeRef, isAnimating]);
 
   if (!visible) return null;

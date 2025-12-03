@@ -447,7 +447,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
     }, [worldCountries]);
 
     // Animation frame update
-    useFrame((_, delta) => {
+    useFrame(() => {
       const animation = animationRef.current;
 
       if (animation?.active) {
@@ -613,9 +613,11 @@ export function getMorphedPosition(
   morphFactor: number,
   radius: number = EARTH_RADIUS
 ): THREE.Vector3 {
-  // Sphere position
+  // Sphere position - match the vertex shader formula exactly:
+  // Shader: phi = uv.y * PI, theta = uv.x * 2*PI - PI
+  // Where uv.x = (lon + 180) / 360, so theta = lon * PI/180
   const phi = THREE.MathUtils.degToRad(90 - lat);
-  const theta = THREE.MathUtils.degToRad(lon + 180);
+  const theta = THREE.MathUtils.degToRad(lon); // Match shader: theta ranges -PI to PI
 
   const spherePos = new THREE.Vector3(
     radius * Math.sin(phi) * Math.cos(theta),
@@ -624,14 +626,16 @@ export function getMorphedPosition(
   );
 
   // Flat position (normalized 0-1, then scaled)
-  // u: longitude maps from -180..+180 to 0..1
-  // v: latitude maps from -90..+90 to 0..1, north (v=1) at top, south (v=0) at bottom
+  // Match the vertex shader formula exactly:
+  // Shader: flatPos.x = (uv.x - 0.5) * uFlatWidth
+  // Shader: flatPos.y = (0.5 - uv.y) * uFlatHeight
+  // Where uv.x = (lon + 180) / 360, uv.y = (90 - lat) / 180
   const u = (lon + 180) / 360;
-  const v = (lat + 90) / 180;
+  const v = (90 - lat) / 180; // uv.y in shader terms
 
   const flatPos = new THREE.Vector3(
     (u - 0.5) * FLAT_WIDTH,
-    (v - 0.5) * FLAT_HEIGHT, // v=1 (north) gives positive Y (top)
+    (0.5 - v) * FLAT_HEIGHT, // Match shader: (0.5 - uv.y) * uFlatHeight
     0
   );
 
