@@ -4333,3 +4333,105 @@ body.theme-wargames [role="tab"][data-state="active"]::after {
     border: 2px solid currentColor;
   }
 }
+
+/* ===== macOS Dock-Style Button Animation ===== */
+/* Bottom command dock container */
+.dock-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+/* Base dock button styling - starts smaller */
+.dock-button {
+  transform: scale(0.85);
+  transform-origin: bottom center;
+  transition: transform 0.15s cubic-bezier(0.25, 0.1, 0.25, 1.5);
+  will-change: transform;
+}
+
+/* Hovered button - grows large */
+.dock-button:hover {
+  transform: scale(1.25);
+  z-index: 10;
+}
+
+/* Adjacent buttons (next sibling) - grow medium */
+.dock-button:hover + .dock-button,
+.dock-button:hover + .dock-divider + .dock-button {
+  transform: scale(1.1);
+}
+
+/* Two buttons away (next next sibling) - grow slightly */
+.dock-button:hover + .dock-button + .dock-button,
+.dock-button:hover + .dock-button + .dock-divider + .dock-button,
+.dock-button:hover + .dock-divider + .dock-button + .dock-button {
+  transform: scale(0.95);
+}
+
+/* Previous sibling support using :has() - button before hovered one */
+.dock-button:has(+ .dock-button:hover),
+.dock-button:has(+ .dock-divider + .dock-button:hover) {
+  transform: scale(1.1);
+}
+
+/* Two buttons before hovered one */
+.dock-button:has(+ .dock-button + .dock-button:hover),
+.dock-button:has(+ .dock-button + .dock-divider + .dock-button:hover),
+.dock-button:has(+ .dock-divider + .dock-button + .dock-button:hover) {
+  transform: scale(0.95);
+}
+
+/* Dock divider styling */
+.dock-divider {
+  transition: transform 0.15s cubic-bezier(0.25, 0.1, 0.25, 1.5);
+  transform-origin: bottom center;
+}
+
+/* Active/pressed state */
+.dock-button:active {
+  transform: scale(1.15) !important;
+  transition: transform 0.08s ease;
+}
+
+/* Desktop only - disable on touch devices for better UX */
+@media (hover: none) and (pointer: coarse) {
+  .dock-button {
+    transform: scale(1);
+  }
+
+  .dock-button:hover,
+  .dock-button:hover + .dock-button,
+  .dock-button:hover + .dock-button + .dock-button,
+  .dock-button:has(+ .dock-button:hover),
+  .dock-button:has(+ .dock-button + .dock-button:hover) {
+    transform: scale(1);
+  }
+
+  .dock-button:active {
+    transform: scale(0.95) !important;
+  }
+}
+
+/* Small screens - reduce magnification effect */
+@media (max-width: 640px) and (hover: hover) {
+  .dock-button {
+    transform: scale(0.9);
+  }
+
+  .dock-button:hover {
+    transform: scale(1.15);
+  }
+
+  .dock-button:hover + .dock-button,
+  .dock-button:has(+ .dock-button:hover) {
+    transform: scale(1.05);
+  }
+
+  .dock-button:hover + .dock-button + .dock-button,
+  .dock-button:has(+ .dock-button + .dock-button:hover) {
+    transform: scale(0.95);
+  }
+}

@@ -16714,14 +16714,14 @@ export default function NoradVector() {
             >
               <div className="flex flex-col gap-1">
                 <div className="h-16 sm:h-20 pointer-events-auto touch-auto">
-                  <div className="h-full flex flex-wrap items-center justify-center gap-1 px-4 sm:flex-nowrap">
+                  <div className="h-full flex flex-wrap items-end justify-center gap-1 px-4 sm:flex-nowrap dock-container">
                     <Button
                       onClick={handleBuild}
                       variant="ghost"
                       size="icon"
                       data-role-locked={!buildAllowed}
                       data-tutorial="build-button"
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
                         buildAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                       }`}
                       title={buildAllowed ? 'BUILD - Production and construction' : 'Await strategist approval or request authorization'}
@@ -16736,7 +16736,7 @@ export default function NoradVector() {
                       size="icon"
                       data-role-locked={!researchAllowed}
                       data-tutorial="research-button"
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
                         researchAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                       }`}
                       title={researchAllowed ? 'RESEARCH - Technology advancement' : 'Strategist approval required to manage research'}
@@ -16751,7 +16751,7 @@ export default function NoradVector() {
                       size="icon"
                       data-role-locked={!intelAllowed}
                       data-tutorial="intel-button"
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
                         intelAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                       }`}
                       title={intelAllowed ? 'INTEL - Intelligence & spy operations' : 'Tactician authorization required to operate intel'}
@@ -16767,7 +16767,7 @@ export default function NoradVector() {
                         size="icon"
                         data-role-locked={!bioWarfareAllowed}
                         disabled={!hasBioForgeAccess}
-                        className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                        className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
                           hasBioForgeAccess
                             ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10'
                             : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
@@ -16788,7 +16788,7 @@ export default function NoradVector() {
                       variant="ghost"
                       size="icon"
                       data-role-locked={!cultureAllowed}
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
                         cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                       }`}
                       title={cultureAllowed ? 'CULTURE - Cultural warfare & NGO operations' : 'Requires co-commander approval to launch culture ops'}
@@ -16801,7 +16801,7 @@ export default function NoradVector() {
                       onClick={() => setShowPolicyPanel(true)}
                       variant="ghost"
                       size="icon"
-                      className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                      className="dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
                       title="POLICY - National strategic policies"
                     >
                       <Shield className="h-5 w-5" />
@@ -16813,7 +16813,7 @@ export default function NoradVector() {
                       variant="ghost"
                       size="icon"
                       data-role-locked={!diplomacyAllowed}
-                      className={`h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform ${
+                      className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
                         diplomacyAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
                       }`}
                       title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
@@ -16826,7 +16826,7 @@ export default function NoradVector() {
                       onClick={() => setIsWarCouncilOpen(true)}
                       variant="ghost"
                       size="icon"
-                      className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                      className="dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
                       title="WAR - Unified warfare command: declarations, conventional forces, and peace"
                     >
                       <Swords className="h-5 w-5" />
@@ -16838,7 +16838,7 @@ export default function NoradVector() {
                         onClick={() => setLeaderOverviewOpen(true)}
                         variant="ghost"
                         size="icon"
-                        className="h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                        className="dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
                         title="LEADER - Review biography and abilities"
                       >
                         <Avatar className="h-6 w-6 border border-cyan-500/40 bg-black/60 text-[10px]">
@@ -16854,25 +16854,25 @@ export default function NoradVector() {
                       </Button>
                     ) : null}
 
-                    <div className="w-px h-8 bg-cyan-500/30 mx-2" />
+                    <div className="dock-divider w-px h-8 bg-cyan-500/30 mx-2" />
 
                     <Button
                       onClick={handleAttack}
                       variant="ghost"
                       size="icon"
-                      className="h-12 w-12 sm:h-14 sm:w-14 text-red-400 hover:text-red-300 hover:bg-red-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                      className="dock-button h-12 w-12 sm:h-14 sm:w-14 text-red-400 hover:text-red-300 hover:bg-red-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation"
                       title="ATTACK - Launch nuclear strike (select target in Strike Planner)"
                     >
                       <Zap className="h-5 w-5" />
                       <span className="text-[8px] font-mono">ATTACK</span>
                     </Button>
 
-                    <div className="w-px h-8 bg-cyan-500/30 mx-2" />
+                    <div className="dock-divider w-px h-8 bg-cyan-500/30 mx-2" />
 
                     <Button
                       onClick={handleEndTurn}
                       variant="ghost"
-                      className="h-12 sm:h-14 px-4 sm:px-6 text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation active:scale-95 transition-transform"
+                      className="dock-button h-12 sm:h-14 px-4 sm:px-6 text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation"
                       title="END TURN"
                     >
                       <ArrowRight className="h-5 w-5" />
