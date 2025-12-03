@@ -7671,6 +7671,7 @@ export default function NoradVector() {
     return { visual, mode };
   });
   const [isFlatMapDay, setIsFlatMapDay] = useState<boolean>(true);
+  const [showVectorOverlay, setShowVectorOverlay] = useState<boolean>(true);
   const flatRealisticBlendRef = useRef<number>(0);
   const dayNightBlendAnimationFrameRef = useRef<number | null>(null);
   const dayNightBlendAnimationStartRef = useRef<number | null>(null);
@@ -16268,6 +16269,7 @@ export default function NoradVector() {
           showTerritoryMarkers={true}
           showUnits={showUnits}
           flatMapVariant={isFlatMapDay}
+          showVectorOverlay={showVectorOverlay}
         />
 
         {draggingArmy && draggingArmyPosition && (
@@ -17078,6 +17080,8 @@ export default function NoradVector() {
             onNextTrack={handleNextTrack}
             activeTrackMessage={activeTrackMessage}
             musicTracks={musicTracks}
+            showVectorOverlay={showVectorOverlay}
+            onVectorOverlayToggle={setShowVectorOverlay}
           />
         </SheetContent>
       </Sheet>
