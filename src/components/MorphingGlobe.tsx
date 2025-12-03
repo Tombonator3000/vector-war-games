@@ -356,6 +356,9 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
 
     // Animation state
     const [morphFactor, setMorphFactor] = useState(initialView === 'flat' ? 1 : 0);
+    // Use a ref to track the actual current morph factor for getMorphFactor()
+    // This ensures we return the real-time value, not a stale state value
+    const morphFactorRef = useRef(initialView === 'flat' ? 1 : 0);
     const animationRef = useRef<{
       active: boolean;
       startTime: number;
@@ -458,6 +461,8 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         const newValue =
           animation.startValue + (animation.endValue - animation.startValue) * easedProgress;
 
+        // Update both state and ref - ref is used for real-time getMorphFactor() calls
+        morphFactorRef.current = newValue;
         setMorphFactor(newValue);
         onMorphProgress?.(newValue);
 
@@ -493,9 +498,11 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
     useImperativeHandle(
       ref,
       () => ({
-        getMorphFactor: () => morphFactor,
+        // Use ref for real-time value (not stale state)
+        getMorphFactor: () => morphFactorRef.current,
         setMorphFactor: (value: number) => {
           const clamped = Math.max(0, Math.min(1, value));
+          morphFactorRef.current = clamped;
           setMorphFactor(clamped);
           if (materialRef.current) {
             materialRef.current.uniforms.uMorphFactor.value = clamped;
@@ -509,7 +516,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
           animationRef.current = {
             active: true,
             startTime: performance.now() / 1000,
-            startValue: morphFactor,
+            startValue: morphFactorRef.current,
             endValue: 0,
             duration,
           };
@@ -519,29 +526,29 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
           animationRef.current = {
             active: true,
             startTime: performance.now() / 1000,
-            startValue: morphFactor,
+            startValue: morphFactorRef.current,
             endValue: 1,
             duration,
           };
         },
         toggle: (duration = animationDuration) => {
-          const targetFlat = morphFactor < 0.5;
+          const targetFlat = morphFactorRef.current < 0.5;
           onMorphStart?.(targetFlat ? 'flat' : 'globe');
           animationRef.current = {
             active: true,
             startTime: performance.now() / 1000,
-            startValue: morphFactor,
+            startValue: morphFactorRef.current,
             endValue: targetFlat ? 1 : 0,
             duration,
           };
         },
-        isFlat: () => morphFactor > 0.5,
+        isFlat: () => morphFactorRef.current > 0.5,
         setVectorOverlay: (visible: boolean) => {
           setVectorOverlayVisible(visible);
         },
         getVectorOverlay: () => vectorOverlayVisible,
       }),
-      [morphFactor, animationDuration, onMorphStart, vectorOverlayVisible]
+      [animationDuration, onMorphStart, vectorOverlayVisible]
     );
 
     // Create geometry with enough segments for smooth morphing
