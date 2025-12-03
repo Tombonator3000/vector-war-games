@@ -1187,6 +1187,9 @@ function SceneContent({
   const currentMode = mapStyle?.mode ?? 'standard';
   const cameraPoseUpdateRef = useRef<typeof onCameraPoseUpdate>();
   const [morphFactor, setMorphFactorState] = useState(0);
+  // Define isFlat and isMorphing based on morph factor for unified map system
+  const isMorphing = true; // Always morphing mode now
+  const isFlat = morphFactor > 0.5; // Considered "flat" when morph factor is above 0.5
 
   useEffect(() => {
     cameraPoseUpdateRef.current = onCameraPoseUpdate;
