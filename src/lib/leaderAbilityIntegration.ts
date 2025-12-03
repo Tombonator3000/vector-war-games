@@ -139,9 +139,11 @@ function updateTemporaryEffects(nation: Nation): void {
 }
 
 /**
- * Use a leader ability
+ * Activate a leader ability
+ * Note: Named activateLeaderAbility (not useLeaderAbility) to avoid
+ * confusion with React hooks and build tool issues
  */
-export function useLeaderAbility(
+export function activateLeaderAbility(
   nation: Nation,
   gameState: GameState,
   targetId?: string

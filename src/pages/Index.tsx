@@ -275,7 +275,7 @@ import {
 import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, type LocalNation, createDefaultDiplomacyState } from '@/state';
 import type { GreatOldOnesState } from '@/types/greatOldOnes';
 import { initializeGreatOldOnesState } from '@/lib/greatOldOnesHelpers';
-import { initializeNationLeaderAbility, useLeaderAbility } from '@/lib/leaderAbilityIntegration';
+import { initializeNationLeaderAbility, activateLeaderAbility } from '@/lib/leaderAbilityIntegration';
 import type { ArmyGroupSummary } from '@/types/militaryTemplates';
 import { getLeaderImage } from '@/lib/leaderImages';
 import { initializeWeek3State, updateWeek3Systems, type Week3ExtendedState } from '@/lib/greatOldOnesWeek3Integration';
@@ -8701,7 +8701,7 @@ export default function NoradVector() {
       const { ability } = player.leaderAbilityState;
       const abilityName = ability.name;
       const abilityCategory = ability.category;
-      const result = useLeaderAbility(player, S, targetId);
+      const result = activateLeaderAbility(player, S, targetId);
 
       if (result.success) {
         toast({
