@@ -69,9 +69,19 @@ const NOOP_PICKER: PickerFn = () => null;
 export type ProjectorFn = (lon: number, lat: number) => { x: number; y: number; visible: boolean };
 export type PickerFn = (x: number, y: number) => { lon: number; lat: number } | null;
 
+/**
+ * @deprecated MapVisualStyle is deprecated. The system now uses a unified MorphingGlobe.
+ * Keep for backwards compatibility but internally only 'morphing' is used.
+ */
 export type MapVisualStyle = 'realistic' | 'wireframe' | 'flat-realistic' | 'morphing';
 
-export const MAP_VISUAL_STYLES: MapVisualStyle[] = ['realistic', 'wireframe', 'flat-realistic', 'morphing'];
+export const MAP_VISUAL_STYLES: MapVisualStyle[] = ['morphing'];
+
+/**
+ * Unified map style - no longer uses multiple visual styles.
+ * Globe/flat is controlled by morph factor, vector overlay is a separate toggle.
+ */
+export const UNIFIED_MAP_STYLE: MapVisualStyle = 'morphing';
 
 export type MapMode =
   | 'standard'
@@ -138,7 +148,7 @@ export interface RadiationOverlayPayload {
   globalRadiation: number;
 }
 
-export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'flat-realistic', mode: 'standard' };
+export const DEFAULT_MAP_STYLE: MapStyle = { visual: 'morphing', mode: 'standard' };
 
 /**
  * Handle interface for imperative GlobeScene methods
@@ -164,6 +174,10 @@ export interface GlobeSceneHandle {
   morphToFlat: (duration?: number) => void;
   /** Get current morph factor (0 = globe, 1 = flat) */
   getMorphFactor: () => number;
+  /** Toggle vector overlay (country borders) visibility */
+  setVectorOverlay: (visible: boolean) => void;
+  /** Get vector overlay visibility */
+  getVectorOverlay: () => boolean;
 }
 
 export interface GlobeSceneProps {
@@ -191,9 +205,16 @@ export interface GlobeSceneProps {
   onProjectorReady?: (projector: ProjectorFn) => void;
   onProjectorUpdate?: (projector: ProjectorFn, revision: number) => void;
   onPickerReady?: (picker: PickerFn) => void;
+  /** @deprecated Use morphing globe with toggle instead */
   mapStyle?: MapStyle;
   modeData?: MapModeOverlayData;
   flatMapVariant?: boolean | string | null;
+  /** Show vector overlay (country borders) on the map */
+  showVectorOverlay?: boolean;
+  /** Vector overlay color (default: cyan) */
+  vectorColor?: string;
+  /** Vector overlay opacity (0-1, default: 0.7) */
+  vectorOpacity?: number;
 }
 
 interface SceneRegistration {
@@ -579,6 +600,11 @@ function Atmosphere() {
   );
 }
 
+/**
+ * @deprecated EarthRealistic is no longer used. The unified MorphingGlobe component
+ * now handles all map rendering with seamless globe/flat transitions.
+ * This component is kept for backwards compatibility but may be removed in a future version.
+ */
 function EarthRealistic({
   earthRef,
 }: {
@@ -627,6 +653,11 @@ function EarthRealistic({
   );
 }
 
+/**
+ * @deprecated EarthWireframe is no longer used. The unified MorphingGlobe component
+ * now handles all map rendering with an optional vector overlay for borders.
+ * This component is kept for backwards compatibility but may be removed in a future version.
+ */
 function EarthWireframe({
   earthRef,
   worldCountries,
@@ -851,6 +882,11 @@ function EarthWireframe({
   );
 }
 
+/**
+ * @deprecated FlatEarthBackdrop is no longer used. The unified MorphingGlobe component
+ * now handles flat map rendering with morphFactor = 1.
+ * This component is kept for backwards compatibility but may be removed in a future version.
+ */
 function FlatEarthBackdrop({
   cam,
   flatMapVariant,
@@ -1114,6 +1150,9 @@ function SceneContent({
   onCameraPoseUpdate,
   onMorphingGlobeReady,
   onMorphProgress,
+  showVectorOverlay = false,
+  vectorColor = '#2ef1ff',
+  vectorOpacity = 0.7,
 }: {
   cam: GlobeSceneProps['cam'];
   nations: GlobeSceneProps['nations'];
@@ -1137,14 +1176,15 @@ function SceneContent({
   onCameraPoseUpdate?: (camera: THREE.PerspectiveCamera) => void;
   onMorphingGlobeReady?: (handle: MorphingGlobeHandle | null) => void;
   onMorphProgress?: (factor: number) => void;
+  showVectorOverlay?: boolean;
+  vectorColor?: string;
+  vectorOpacity?: number;
 }) {
   const { camera, size, clock, gl } = useThree();
   const earthRef = useRef<THREE.Mesh | null>(null);
   const morphingGlobeRef = useRef<MorphingGlobeHandle>(null);
-  const visualStyle = mapStyle?.visual ?? 'realistic';
+  // Always use morphing mode - unified map system
   const currentMode = mapStyle?.mode ?? 'standard';
-  const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
-  const isMorphing = visualStyle === 'morphing';
   const cameraPoseUpdateRef = useRef<typeof onCameraPoseUpdate>();
   const [morphFactor, setMorphFactorState] = useState(0);
 
@@ -1153,32 +1193,19 @@ function SceneContent({
   }, [onCameraPoseUpdate]);
 
   // Notify parent when morphing globe ref is available
-  // Use a small delay to ensure the MorphingGlobe component has mounted and set its ref
   useEffect(() => {
-    if (isMorphing) {
-      // Wait for next frame to ensure ref is set after render
-      const frameId = requestAnimationFrame(() => {
-        onMorphingGlobeReady?.(morphingGlobeRef.current);
-      });
-      return () => cancelAnimationFrame(frameId);
-    } else {
-      onMorphingGlobeReady?.(null);
-    }
-  }, [isMorphing, onMorphingGlobeReady]);
+    // Wait for next frame to ensure ref is set after render
+    const frameId = requestAnimationFrame(() => {
+      onMorphingGlobeReady?.(morphingGlobeRef.current);
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [onMorphingGlobeReady]);
 
   // Handle morph progress updates from MorphingGlobe
   const handleMorphProgressInternal = useCallback((factor: number) => {
     setMorphFactorState(factor);
     onMorphProgress?.(factor);
   }, [onMorphProgress]);
-
-  // Reset morph factor when not in morphing mode
-  useEffect(() => {
-    if (!isMorphing) {
-      setMorphFactorState(0);
-      onMorphProgress?.(0);
-    }
-  }, [isMorphing, onMorphProgress]);
 
   const cssDimensions = useMemo(
     () =>
@@ -1406,6 +1433,7 @@ function SceneContent({
     }
   });
 
+  // Unified map rendering - always uses MorphingGlobe
   const renderEarth = () => {
     const fallback = (
       <mesh ref={earthRef}>
@@ -1414,47 +1442,30 @@ function SceneContent({
       </mesh>
     );
 
-    switch (visualStyle) {
-      case 'realistic':
-        return (
-          <Suspense fallback={fallback}>
-            <EarthRealistic earthRef={earthRef} />
-          </Suspense>
-        );
-      case 'wireframe':
-        return (
-          <EarthWireframe earthRef={earthRef} worldCountries={worldCountries} cam={cam} />
-        );
-      case 'flat-realistic':
-        return <FlatEarthBackdrop cam={cam} flatMapVariant={flatMapVariant} />;
-      case 'morphing':
-        return (
-          <Suspense fallback={fallback}>
-            <MorphingGlobe
-              ref={morphingGlobeRef}
-              initialView="globe"
-              animationDuration={1.2}
-              textureVariant={flatMapVariant === false ? 'night' : 'day'}
-              onMorphProgress={handleMorphProgressInternal}
-            />
-          </Suspense>
-        );
-      default:
-        return fallback;
-    }
+    return (
+      <Suspense fallback={fallback}>
+        <MorphingGlobe
+          ref={morphingGlobeRef}
+          initialView="globe"
+          animationDuration={1.2}
+          textureVariant={flatMapVariant === false ? 'night' : 'day'}
+          onMorphProgress={handleMorphProgressInternal}
+          worldCountries={worldCountries}
+          showVectorOverlay={showVectorOverlay}
+          vectorColor={vectorColor}
+          vectorOpacity={vectorOpacity}
+        />
+      </Suspense>
+    );
   };
+
+  // Determine if we're in "flat" mode based on morph factor
+  const isEffectivelyFlat = morphFactor > 0.7;
 
   return (
     <>
-      {!isFlat && !isMorphing && (
-        <>
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[6, 4, 3]} intensity={1.5} castShadow />
-          <directionalLight position={[-5, -3, -6]} intensity={0.5} color={new THREE.Color('#0af')} />
-        </>
-      )}
+      {/* MorphingGlobe handles its own lighting, no additional lights needed */}
       {renderEarth()}
-      {visualStyle === 'realistic' && <CityLights nations={nations} />}
       <group>
         {nations.map(nation => {
             if (Number.isNaN(nation.lon) || Number.isNaN(nation.lat)) return null;
@@ -1604,28 +1615,26 @@ function SceneContent({
         ))}
       </group>
 
-      {/* OrbitControls for 3D modes (realistic, morphing) - disabled for flat modes */}
-      {!isFlat && (
-        <OrbitControls
-          enableRotate={!isMorphing || morphFactor < 0.7}
-          enableZoom={true}
-          enablePan={isMorphing && morphFactor > 0.3}
-          minDistance={EARTH_RADIUS + 1.3}
-          maxDistance={EARTH_RADIUS + 5}
-          mouseButtons={{
-            LEFT: isMorphing && morphFactor > 0.7 ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
-            MIDDLE: THREE.MOUSE.DOLLY,
-            RIGHT: THREE.MOUSE.PAN,
-          }}
-          touches={{
-            ONE: isMorphing && morphFactor > 0.7 ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE,
-            TWO: THREE.TOUCH.DOLLY_PAN,
-          }}
-          rotateSpeed={0.8}
-          zoomSpeed={1.0}
-          panSpeed={0.8}
-        />
-      )}
+      {/* OrbitControls - behavior adapts based on morph factor */}
+      <OrbitControls
+        enableRotate={morphFactor < 0.7}
+        enableZoom={true}
+        enablePan={morphFactor > 0.3}
+        minDistance={EARTH_RADIUS + 1.3}
+        maxDistance={EARTH_RADIUS + 5}
+        mouseButtons={{
+          LEFT: isEffectivelyFlat ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
+          MIDDLE: THREE.MOUSE.DOLLY,
+          RIGHT: THREE.MOUSE.PAN,
+        }}
+        touches={{
+          ONE: isEffectivelyFlat ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE,
+          TWO: THREE.TOUCH.DOLLY_PAN,
+        }}
+        rotateSpeed={0.8}
+        zoomSpeed={1.0}
+        panSpeed={0.8}
+      />
     </>
   );
 }
@@ -1651,6 +1660,9 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     mapStyle = DEFAULT_MAP_STYLE,
     modeData,
     flatMapVariant,
+    showVectorOverlay = false,
+    vectorColor = '#2ef1ff',
+    vectorOpacity = 0.7,
   }: GlobeSceneProps,
   ref,
 ) {
@@ -1671,7 +1683,6 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   const lastCameraPositionRef = useRef(new THREE.Vector3());
   const lastCameraZoomRef = useRef(0);
   const hasCameraPoseRef = useRef(false);
-  const visualStyle = mapStyle?.visual ?? DEFAULT_MAP_STYLE.visual;
   const [, triggerRender] = useReducer((value: number) => value + 1, 0);
   const isMountedRef = useRef(true);
 
@@ -1756,8 +1767,6 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     const projector: ProjectorFn = (lon, lat) => {
       const size = sizeRef.current;
       const overlay = overlayRef.current;
-      const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
-      const isMorphing = visualStyle === 'morphing';
 
       // Get the devicePixelRatio to account for high-DPI scaling
       const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
@@ -1767,19 +1776,10 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       const width = overlayWidth ?? size?.width ?? 1;
       const height = overlayHeight ?? size?.height ?? 1;
 
-      const baseX = ((lon + 180) / 360) * width;
-      const baseY = ((90 - lat) / 180) * height;
-
-      if (isFlat) {
-        return {
-          x: baseX * cam.zoom + cam.x,
-          y: baseY * cam.zoom + cam.y,
-          visible: true,
-        };
-      }
-
       const camera = cameraRef.current;
       if (!camera) {
+        const baseX = ((lon + 180) / 360) * width;
+        const baseY = ((90 - lat) / 180) * height;
         return {
           x: baseX,
           y: baseY,
@@ -1787,21 +1787,15 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         };
       }
 
-      // For morphing mode, use morphed position based on current morph factor
-      let worldVector: THREE.Vector3;
-      if (isMorphing) {
-        const morphFactor = morphingGlobeHandleRef.current?.getMorphFactor() ?? 0;
-        worldVector = getMorphedPosition(lon, lat, morphFactor, EARTH_RADIUS + MARKER_OFFSET * 0.5);
-      } else {
-        worldVector = latLonToVector3(lon, lat, EARTH_RADIUS + MARKER_OFFSET * 0.5);
-      }
+      // Unified morphing mode - use morphed position based on current morph factor
+      const morphFactor = morphingGlobeHandleRef.current?.getMorphFactor() ?? 0;
+      const worldVector = getMorphedPosition(lon, lat, morphFactor, EARTH_RADIUS + MARKER_OFFSET * 0.5);
 
       camera.getWorldPosition(cameraWorldPosition);
       surfaceNormal.copy(worldVector).normalize();
       cameraToSurface.subVectors(cameraWorldPosition, worldVector);
 
-      // For morphing mode with high morph factor (flat view), always consider visible
-      const morphFactor = isMorphing ? (morphingGlobeHandleRef.current?.getMorphFactor() ?? 0) : 0;
+      // For flat view (high morph factor), always consider visible
       const facingCamera = morphFactor > 0.5 ? true : cameraToSurface.dot(surfaceNormal) > 0;
 
       projectedVector.copy(worldVector).project(camera);
@@ -1816,34 +1810,12 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     projectorRef.current = projector;
     projectorRevisionRef.current = 0;
     emitInitialProjector(projector);
-  }, [cam.x, cam.y, cam.zoom, visualStyle, emitInitialProjector]);
+  }, [cam.x, cam.y, cam.zoom, emitInitialProjector]);
 
   const updatePicker = useCallback(() => {
     const picker: PickerFn = (pointerX, pointerY) => {
       const container = containerRef.current;
-      const overlay = overlayRef.current;
       if (!container) return null;
-
-      const isFlat = visualStyle === 'flat-realistic' || visualStyle === 'wireframe';
-      const isMorphing = visualStyle === 'morphing';
-
-      if (isFlat) {
-        const rect = overlay?.getBoundingClientRect() ?? container.getBoundingClientRect();
-        const size = sizeRef.current;
-
-        // Get the devicePixelRatio to account for high-DPI scaling
-        const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-
-        const overlayWidth = overlay && overlay.width > 0 ? overlay.width / dpr : undefined;
-        const overlayHeight = overlay && overlay.height > 0 ? overlay.height / dpr : undefined;
-        const width = overlayWidth ?? size?.width ?? (rect.width || 1);
-        const height = overlayHeight ?? size?.height ?? (rect.height || 1);
-        const adjustedX = (pointerX - cam.x) / cam.zoom;
-        const adjustedY = (pointerY - cam.y) / cam.zoom;
-        const lon = normalizeLon((adjustedX / width) * 360 - 180);
-        const lat = THREE.MathUtils.clamp(90 - (adjustedY / height) * 180, -90, 90);
-        return { lon, lat };
-      }
 
       const camera = cameraRef.current;
       const earth = earthMeshRef.current;
@@ -1863,43 +1835,34 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
 
       const point = intersections[0].point.clone();
 
-      // For morphing mode, handle both sphere and flat coordinate systems
-      if (isMorphing) {
-        const morphFactor = morphingGlobeHandleRef.current?.getMorphFactor() ?? 0;
+      // Unified morphing mode - handle both sphere and flat coordinate systems
+      const morphFactor = morphingGlobeHandleRef.current?.getMorphFactor() ?? 0;
 
-        // Calculate coordinates from sphere (for low morph factor)
-        const normalizedPoint = point.clone().normalize();
-        const sphereLat = THREE.MathUtils.radToDeg(Math.asin(normalizedPoint.y));
-        const sphereTheta = Math.atan2(normalizedPoint.z, -normalizedPoint.x);
-        const sphereLon = normalizeLon(THREE.MathUtils.radToDeg(sphereTheta) - 180);
+      // Calculate coordinates from sphere (for low morph factor)
+      const normalizedPoint = point.clone().normalize();
+      const sphereLat = THREE.MathUtils.radToDeg(Math.asin(normalizedPoint.y));
+      const sphereTheta = Math.atan2(normalizedPoint.z, -normalizedPoint.x);
+      const sphereLon = normalizeLon(THREE.MathUtils.radToDeg(sphereTheta) - 180);
 
-        // Calculate coordinates from flat plane (for high morph factor)
-        // Flat position formula: x = (u - 0.5) * FLAT_WIDTH, y = (v - 0.5) * FLAT_HEIGHT
-        // Where u = (lon + 180) / 360, v = (90 - lat) / 180
-        const u = point.x / MORPHING_FLAT_WIDTH + 0.5;
-        const v = point.y / MORPHING_FLAT_HEIGHT + 0.5;
-        const flatLon = normalizeLon(u * 360 - 180);
-        const flatLat = THREE.MathUtils.clamp(90 - v * 180, -90, 90);
+      // Calculate coordinates from flat plane (for high morph factor)
+      // Flat position formula: x = (u - 0.5) * FLAT_WIDTH, y = (v - 0.5) * FLAT_HEIGHT
+      // Where u = (lon + 180) / 360, v = (90 - lat) / 180
+      const u = point.x / MORPHING_FLAT_WIDTH + 0.5;
+      const v = point.y / MORPHING_FLAT_HEIGHT + 0.5;
+      const flatLon = normalizeLon(u * 360 - 180);
+      const flatLat = THREE.MathUtils.clamp(90 - v * 180, -90, 90);
 
-        // Interpolate between sphere and flat coordinates based on morph factor
-        const lon = THREE.MathUtils.lerp(sphereLon, flatLon, morphFactor);
-        const lat = THREE.MathUtils.lerp(sphereLat, flatLat, morphFactor);
+      // Interpolate between sphere and flat coordinates based on morph factor
+      const lon = THREE.MathUtils.lerp(sphereLon, flatLon, morphFactor);
+      const lat = THREE.MathUtils.lerp(sphereLat, flatLat, morphFactor);
 
-        return { lon, lat };
-      }
-
-      // Standard sphere picking for realistic mode
-      const normalizedPoint = point.normalize();
-      const lat = THREE.MathUtils.radToDeg(Math.asin(normalizedPoint.y));
-      const theta = Math.atan2(normalizedPoint.z, -normalizedPoint.x);
-      const lon = normalizeLon(THREE.MathUtils.radToDeg(theta) - 180);
       return { lon, lat };
     };
     pickerRef.current = picker;
     if (onPickerReady) {
       onPickerReady(picker);
     }
-  }, [cam.x, cam.y, cam.zoom, visualStyle, onPickerReady]);
+  }, [cam.x, cam.y, cam.zoom, onPickerReady]);
 
   const handleRegister = useCallback(
     ({ camera, size, earth, clock, projectPosition }: SceneRegistration) => {
@@ -2051,16 +2014,18 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       getMorphFactor: () => {
         return morphingGlobeHandleRef.current?.getMorphFactor() ?? 0;
       },
+      setVectorOverlay: (visible: boolean) => {
+        morphingGlobeHandleRef.current?.setVectorOverlay(visible);
+      },
+      getVectorOverlay: () => {
+        return morphingGlobeHandleRef.current?.getVectorOverlay() ?? false;
+      },
     }),
     [projectLonLat, pickLonLat, fireMissile, addExplosion, clearMissiles, clearExplosions],
   );
 
-  // For 3D modes (realistic, morphing), let Three.js canvas handle pointer events via OrbitControls
-  // For flat modes (flat-realistic, wireframe), use overlay canvas for custom pan/zoom
-  // In morphing mode, use morph factor to determine which canvas should be on top
-  const isMorphingMode = visualStyle === 'morphing';
-  const is3DMode = visualStyle === 'realistic' || (isMorphingMode && morphFactorState < 0.95);
-  const isFullyFlat = isMorphingMode && morphFactorState >= 0.95;
+  // Unified morphing mode - use morph factor to determine behavior
+  const is3DMode = morphFactorState < 0.95;
 
   return (
     <div ref={containerRef} className="globe-scene" style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -2094,6 +2059,9 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           onCameraPoseUpdate={handleCameraPoseUpdate}
           onMorphingGlobeReady={handleMorphingGlobeReady}
           onMorphProgress={handleMorphProgress}
+          showVectorOverlay={showVectorOverlay}
+          vectorColor={vectorColor}
+          vectorOpacity={vectorOpacity}
         />
       </Canvas>
       <canvas
@@ -2105,8 +2073,9 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           left: 0,
           width: '100%',
           height: '100%',
-          pointerEvents: (is3DMode || isMorphingMode) ? 'none' : 'auto',
-          zIndex: (is3DMode || isMorphingMode) ? 0 : 10,
+          // Unified morphing mode - always let Three.js handle interactions
+          pointerEvents: 'none',
+          zIndex: 0,
           ...(DEBUG_OVERLAY ? { border: '2px solid red' } : {})
         }}
       />
