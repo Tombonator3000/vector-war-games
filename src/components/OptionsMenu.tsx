@@ -157,6 +157,10 @@ export interface OptionsMenuProps {
   showVectorOverlay?: boolean;
   onVectorOverlayToggle?: (enabled: boolean) => void;
 
+  /** VIIRS satellite fire detection layer */
+  showVIIRSLayer?: boolean;
+  onVIIRSLayerToggle?: (enabled: boolean) => void;
+
   /** Whether to show in-game only features (like co-op, HUD layout) */
   showInGameFeatures?: boolean;
 
@@ -193,6 +197,8 @@ export function OptionsMenu({
   onDayNightAutoCycleToggle,
   showVectorOverlay = false,
   onVectorOverlayToggle,
+  showVIIRSLayer = false,
+  onVIIRSLayerToggle,
   showInGameFeatures = true,
   onChange,
   currentTurn = 1,
@@ -631,6 +637,31 @@ export function OptionsMenu({
                     }
                   }}
                   aria-label="Toggle vector border overlay"
+                />
+              </div>
+
+              <div className="options-toggle">
+                <div className="flex flex-col text-left">
+                  <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">VIIRS Satellite Fires</span>
+                  <span className="text-[11px] text-cyan-400/80">
+                    Display NASA VIIRS thermal detection data showing active fires worldwide.
+                  </span>
+                </div>
+                <Switch
+                  checked={showVIIRSLayer}
+                  onCheckedChange={(checked) => {
+                    onVIIRSLayerToggle?.(checked);
+                    toast({
+                      title: checked ? 'VIIRS fire layer enabled' : 'VIIRS fire layer disabled',
+                      description: checked
+                        ? 'Real-time thermal anomalies from NASA satellites now visible.'
+                        : 'Satellite fire detection overlay hidden.',
+                    });
+                    if (onChange) {
+                      onChange();
+                    }
+                  }}
+                  aria-label="Toggle VIIRS satellite fire detection layer"
                 />
               </div>
 
