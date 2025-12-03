@@ -232,7 +232,7 @@ function latLonToVector3(lon: number, lat: number, radius: number) {
   const phi = THREE.MathUtils.degToRad(90 - lat);
   const theta = THREE.MathUtils.degToRad(lon);
 
-  const x = radius * Math.sin(phi) * Math.cos(theta);
+  const x = -radius * Math.sin(phi) * Math.cos(theta); // Negate X to fix texture mirroring
   const y = radius * Math.cos(phi);
   const z = radius * Math.sin(phi) * Math.sin(theta);
 

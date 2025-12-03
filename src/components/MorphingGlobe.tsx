@@ -90,7 +90,7 @@ const morphVertexShader = /* glsl */ `
     float theta = uv.x * 2.0 * 3.14159265359 - 3.14159265359; // longitude: -PI to PI
 
     vec3 spherePos = vec3(
-      uRadius * sin(phi) * cos(theta),
+      -uRadius * sin(phi) * cos(theta),  // Negate X to fix texture mirroring
       uRadius * cos(phi),
       uRadius * sin(phi) * sin(theta)
     );
@@ -192,7 +192,7 @@ const vectorOverlayVertexShader = /* glsl */ `
     float theta = uv2.x * 2.0 * 3.14159265359 - 3.14159265359;
 
     vec3 spherePos = vec3(
-      (uRadius + 0.005) * sin(phi) * cos(theta),
+      -(uRadius + 0.005) * sin(phi) * cos(theta),  // Negate X to fix texture mirroring
       (uRadius + 0.005) * cos(phi),
       (uRadius + 0.005) * sin(phi) * sin(theta)
     );
@@ -627,7 +627,7 @@ export function getMorphedPosition(
   const theta = THREE.MathUtils.degToRad(lon); // Match shader: theta ranges -PI to PI
 
   const spherePos = new THREE.Vector3(
-    radius * Math.sin(phi) * Math.cos(theta),
+    -radius * Math.sin(phi) * Math.cos(theta),  // Negate X to fix texture mirroring
     radius * Math.cos(phi),
     radius * Math.sin(phi) * Math.sin(theta)
   );
