@@ -1153,9 +1153,14 @@ function SceneContent({
   }, [onCameraPoseUpdate]);
 
   // Notify parent when morphing globe ref is available
+  // Use a small delay to ensure the MorphingGlobe component has mounted and set its ref
   useEffect(() => {
     if (isMorphing) {
-      onMorphingGlobeReady?.(morphingGlobeRef.current);
+      // Wait for next frame to ensure ref is set after render
+      const frameId = requestAnimationFrame(() => {
+        onMorphingGlobeReady?.(morphingGlobeRef.current);
+      });
+      return () => cancelAnimationFrame(frameId);
     } else {
       onMorphingGlobeReady?.(null);
     }

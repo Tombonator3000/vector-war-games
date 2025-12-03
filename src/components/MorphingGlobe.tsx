@@ -69,7 +69,8 @@ const morphVertexShader = /* glsl */ `
     vUv = uv;
 
     // Sphere position (from UV to spherical coordinates)
-    float phi = (1.0 - uv.y) * 3.14159265359; // latitude: 0 at top, PI at bottom
+    // With flipY=true: uv.y=0 is top of image (north pole), uv.y=1 is bottom (south pole)
+    float phi = uv.y * 3.14159265359; // latitude: 0 at north pole, PI at south pole
     float theta = uv.x * 2.0 * 3.14159265359 - 3.14159265359; // longitude: -PI to PI
 
     vec3 spherePos = vec3(
@@ -79,9 +80,10 @@ const morphVertexShader = /* glsl */ `
     );
 
     // Flat position (centered plane)
+    // Flip Y for flat map so north is at top (uv.y=0 -> top, uv.y=1 -> bottom)
     vec3 flatPos = vec3(
       (uv.x - 0.5) * uFlatWidth,
-      (uv.y - 0.5) * uFlatHeight,
+      (0.5 - uv.y) * uFlatHeight,
       0.0
     );
 
@@ -204,10 +206,10 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         texture.magFilter = THREE.LinearFilter;
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
-        // Disable flipY to match shader UV mapping:
-        // - uv.y = 0 should sample south pole (bottom of equirectangular image)
-        // - uv.y = 1 should sample north pole (top of equirectangular image)
-        texture.flipY = false;
+        // Enable flipY (default Three.js behavior) for standard equirectangular mapping:
+        // - uv.y = 0 samples top of image (north pole)
+        // - uv.y = 1 samples bottom of image (south pole)
+        texture.flipY = true;
         texture.needsUpdate = true;
       }
     }, [texture]);
@@ -380,13 +382,13 @@ export function getMorphedPosition(
 
   // Flat position (normalized 0-1, then scaled)
   // u: longitude maps from -180..+180 to 0..1
-  // v: latitude maps from -90..+90 to 0..1 (south at bottom, north at top)
+  // v: latitude maps from -90..+90 to 0..1, north (v=1) at top, south (v=0) at bottom
   const u = (lon + 180) / 360;
   const v = (lat + 90) / 180;
 
   const flatPos = new THREE.Vector3(
     (u - 0.5) * FLAT_WIDTH,
-    (v - 0.5) * FLAT_HEIGHT,
+    (v - 0.5) * FLAT_HEIGHT, // v=1 (north) gives positive Y (top)
     0
   );
 
