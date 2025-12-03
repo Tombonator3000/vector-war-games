@@ -56,16 +56,22 @@ function MorphToggleButtonComponent({
     setIsAnimating(true);
     globeRef.current?.toggleMorphView();
 
-    // Poll for animation completion instead of fixed timeout
+    // Poll for animation completion with safety timeout
+    const startTime = Date.now();
+    const maxDuration = 3000; // Safety timeout: 3 seconds max
+
     const checkCompletion = () => {
       const factor = globeRef.current?.getMorphFactor() ?? 0;
+      const elapsed = Date.now() - startTime;
       const isComplete = targetFlat
         ? factor > 0.95
         : factor < 0.05;
 
-      if (isComplete) {
+      if (isComplete || elapsed > maxDuration) {
         setIsAnimating(false);
-        setIsFlat(targetFlat);
+        // Use actual factor to determine final state (handles edge cases)
+        const finalFactor = globeRef.current?.getMorphFactor() ?? (targetFlat ? 1 : 0);
+        setIsFlat(finalFactor > 0.5);
       } else {
         requestAnimationFrame(checkCompletion);
       }
