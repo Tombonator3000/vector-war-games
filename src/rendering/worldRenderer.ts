@@ -898,15 +898,19 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       const lyTop = (y - 36 * z) - (bh - (12 * z));
 
       const isMorphing = style === 'morphing';
-      const frameFill = isWireframeStyle || isMorphing
-        ? 'rgba(0,0,0,0.7)'
-        : 'rgba(0,0,0,0.45)';
 
-      ctx.save();
-      ctx.globalAlpha = labelVisibility;
-      ctx.fillStyle = frameFill;
-      ctx.fillRect(lx - bw / 2, lyTop, bw, bh);
-      ctx.restore();
+      // Only draw background fill for non-morphing modes
+      if (!isMorphing) {
+        const frameFill = isWireframeStyle
+          ? 'rgba(0,0,0,0.7)'
+          : 'rgba(0,0,0,0.45)';
+
+        ctx.save();
+        ctx.globalAlpha = labelVisibility;
+        ctx.fillStyle = frameFill;
+        ctx.fillRect(lx - bw / 2, lyTop, bw, bh);
+        ctx.restore();
+      }
 
       ctx.save();
       ctx.globalAlpha = labelVisibility * (isWireframeStyle || isMorphing ? 0.65 : 0.4);
