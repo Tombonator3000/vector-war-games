@@ -559,16 +559,17 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
 
     return (
       <group>
-        {/* Main earth mesh */}
-        <mesh ref={meshRef} geometry={geometry}>
+        {/* Main earth mesh - renderOrder 0 ensures it renders first */}
+        <mesh ref={meshRef} geometry={geometry} renderOrder={0}>
           <shaderMaterial
             ref={materialRef}
             vertexShader={morphVertexShader}
             fragmentShader={morphFragmentShader}
             uniforms={uniforms}
             side={THREE.DoubleSide}
-            transparent={true}
+            transparent={false}
             depthWrite={true}
+            depthTest={true}
           />
         </mesh>
 

@@ -406,24 +406,47 @@ function collectWireframeSegments(
 }
 
 interface CityLightInstance {
-  position: THREE.Vector3;
+  lon: number;
+  lat: number;
   innerColor: THREE.Color;
   outerColor: THREE.Color;
   brightness: number;
 }
 
-function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
+interface CityLightsProps {
+  nations: GlobeSceneProps['nations'];
+  morphFactor: number;
+  isNightMode: boolean;
+}
+
+function CityLights({ nations, morphFactor, isNightMode }: CityLightsProps) {
   const innerMeshRef = useRef<THREE.InstancedMesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>>(null);
   const glowMeshRef = useRef<THREE.InstancedMesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>>(null);
 
+  // Calculate visibility based on night mode and morph factor
+  // City lights are more visible at night, and fade with day
+  const baseOpacity = isNightMode ? 1.0 : 0.3;
+
   const baseGeometry = useMemo(() => new THREE.SphereGeometry(1, 8, 8), []);
   const coreMaterial = useMemo(() => {
-    const material = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.95, toneMapped: false });
+    const material = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0.95,
+      toneMapped: false,
+      depthWrite: false,
+      depthTest: true,
+    });
     material.vertexColors = true;
     return material;
   }, []);
   const glowMaterial = useMemo(() => {
-    const material = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.25, toneMapped: false });
+    const material = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0.25,
+      toneMapped: false,
+      depthWrite: false,
+      depthTest: true,
+    });
     material.vertexColors = true;
     return material;
   }, []);
@@ -504,7 +527,8 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
         );
 
         lights.push({
-          position: latLonToVector3(lon, lat, CITY_LIGHT_ALTITUDE),
+          lon,
+          lat,
           innerColor,
           outerColor,
           brightness: intensity,
@@ -515,6 +539,7 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
     return lights;
   }, [nations]);
 
+  // Update positions when morphFactor or cityLights change
   useEffect(() => {
     const innerMesh = innerMeshRef.current;
     const glowMesh = glowMeshRef.current;
@@ -528,8 +553,14 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
     innerMesh.count = cityLights.length;
     glowMesh.count = cityLights.length;
 
+    // Update material opacity based on night mode
+    coreMaterial.opacity = 0.95 * baseOpacity;
+    glowMaterial.opacity = 0.25 * baseOpacity;
+
     cityLights.forEach((light, index) => {
-      dummy.position.copy(light.position);
+      // Use getMorphedPosition to calculate position based on current morphFactor
+      const position = getMorphedPosition(light.lon, light.lat, morphFactor, CITY_LIGHT_ALTITUDE);
+      dummy.position.copy(position);
 
       const scale = CITY_LIGHT_CORE_BASE_RADIUS * THREE.MathUtils.lerp(CITY_LIGHT_MIN_SCALE, CITY_LIGHT_MAX_SCALE, light.brightness);
       const glowScale = scale * CITY_LIGHT_GLOW_SCALE;
@@ -554,25 +585,34 @@ function CityLights({ nations }: { nations: GlobeSceneProps['nations'] }) {
     if (glowMesh.instanceColor) {
       glowMesh.instanceColor.needsUpdate = true;
     }
-  }, [cityLights]);
+  }, [cityLights, morphFactor, baseOpacity, coreMaterial, glowMaterial]);
 
   return (
-    <group>
-      <instancedMesh
-        ref={innerMeshRef}
-        args={[baseGeometry, coreMaterial, MAX_CITY_LIGHT_INSTANCES]}
-        frustumCulled={false}
-      />
+    <group renderOrder={10}>
       <instancedMesh
         ref={glowMeshRef}
         args={[baseGeometry, glowMaterial, MAX_CITY_LIGHT_INSTANCES]}
         frustumCulled={false}
+        renderOrder={10}
+      />
+      <instancedMesh
+        ref={innerMeshRef}
+        args={[baseGeometry, coreMaterial, MAX_CITY_LIGHT_INSTANCES]}
+        frustumCulled={false}
+        renderOrder={11}
       />
     </group>
   );
 }
 
-function Atmosphere() {
+interface AtmosphereProps {
+  morphFactor: number;
+}
+
+function Atmosphere({ morphFactor }: AtmosphereProps) {
+  // Fade atmosphere as we transition to flat map
+  const opacity = Math.max(0, 1 - morphFactor * 1.5);
+
   const atmosphereVertexShader = `
     varying vec3 vNormal;
     void main() {
@@ -582,22 +622,30 @@ function Atmosphere() {
   `;
 
   const atmosphereFragmentShader = `
+    uniform float uOpacity;
     varying vec3 vNormal;
     void main() {
       float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
-      gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
+      gl_FragColor = vec4(0.3, 0.6, 1.0, uOpacity) * intensity;
     }
   `;
 
+  // Don't render if fully flat
+  if (morphFactor > 0.7) {
+    return null;
+  }
+
   return (
-    <mesh scale={1.12}>
+    <mesh scale={1.12} renderOrder={5}>
       <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
       <shaderMaterial
         vertexShader={atmosphereVertexShader}
         fragmentShader={atmosphereFragmentShader}
+        uniforms={{ uOpacity: { value: opacity } }}
         blending={THREE.AdditiveBlending}
         side={THREE.BackSide}
         transparent
+        depthWrite={false}
       />
     </mesh>
   );
@@ -1461,6 +1509,9 @@ function SceneContent({
     }
   });
 
+  // Determine if night mode based on flatMapVariant prop
+  const isNightMode = flatMapVariant === false || flatMapVariant === 'night';
+
   // Unified map rendering - always uses MorphingGlobe
   const renderEarth = () => {
     const fallback = (
@@ -1476,12 +1527,20 @@ function SceneContent({
           ref={morphingGlobeRef}
           initialView="globe"
           animationDuration={1.2}
-          textureVariant={flatMapVariant === false ? 'night' : 'day'}
+          textureVariant={isNightMode ? 'night' : 'day'}
           onMorphProgress={handleMorphProgressInternal}
           worldCountries={worldCountries}
           showVectorOverlay={showVectorOverlay}
           vectorColor={vectorColor}
           vectorOpacity={vectorOpacity}
+        />
+        {/* Atmosphere - fades out as we transition to flat */}
+        <Atmosphere morphFactor={morphFactor} />
+        {/* City lights - more visible at night */}
+        <CityLights
+          nations={nations}
+          morphFactor={morphFactor}
+          isNightMode={isNightMode}
         />
       </Suspense>
     );
