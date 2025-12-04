@@ -15,13 +15,8 @@ import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson';
-import {
-  computeDiplomaticColor,
-  computeIntelColor,
-  computePandemicColor,
-  computeResourceColor,
-  computeUnrestColor,
-} from '@/lib/mapColorUtils';
+// Note: Map color utils (computeDiplomaticColor, etc.) are used by SVG overlay components,
+// not by the 3D scene. Overlays are now rendered via dedicated components for better territory matching.
 import type { FalloutMark, RadiationZone } from '@/types/game';
 import type { PandemicStage } from '@/hooks/usePandemic';
 import {
@@ -1301,8 +1296,8 @@ function SceneContent({
   const { camera, size, clock, gl } = useThree();
   const earthRef = useRef<THREE.Mesh | null>(null);
   const morphingGlobeRef = useRef<MorphingGlobeHandle>(null);
-  // Always use morphing mode - unified map system
-  const currentMode = mapStyle?.mode ?? 'standard';
+  // Map mode overlays are handled by dedicated SVG components (e.g. PoliticalStabilityOverlay)
+  // The 3D scene only renders the base map and nation markers
   const cameraPoseUpdateRef = useRef<typeof onCameraPoseUpdate>();
   const [morphFactor, setMorphFactorState] = useState(0);
   // Define isFlat and isMorphing based on morph factor for unified map system
@@ -1433,26 +1428,9 @@ function SceneContent({
   // Unit visualizations state
   const [unitVisualizations, setUnitVisualizations] = useState<UnitVisualization[]>([]);
 
-  const maxIntelLevel = useMemo(() => {
-    if (!modeData) return 1;
-    const values = Object.values(modeData.intelLevels ?? {});
-    return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
-  }, [modeData]);
-
-  const maxResourceTotal = useMemo(() => {
-    if (!modeData) return 1;
-    const values = Object.values(modeData.resourceTotals ?? {});
-    return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
-  }, [modeData]);
-
-  const maxPandemicInfection = useMemo(() => {
-    if (!modeData?.pandemic) return 1;
-    const values = Object.values(modeData.pandemic.infections ?? {});
-    return values.length ? Math.max(1, ...values.map(value => (Number.isFinite(value) ? value : 0))) : 1;
-  }, [modeData]);
-
-  // Color computation functions now imported from @/lib/mapColorUtils
-  // This eliminates duplication with worldRenderer.ts
+  // Note: Map mode overlays (diplomatic, intel, resources, unrest, pandemic, radiation, migration)
+  // are now handled by dedicated SVG overlay components rather than 3D spherical overlays.
+  // This provides better territory-based visualization that matches the map boundaries.
 
   useEffect(() => {
     register({
@@ -1622,86 +1600,14 @@ function SceneContent({
       {/* MorphingGlobe handles its own lighting, no additional lights needed */}
       {renderEarth()}
       <group>
+        {/* Nation capital markers - simple dots only, overlays handled by dedicated SVG components */}
         {nations.map(nation => {
             if (Number.isNaN(nation.lon) || Number.isNaN(nation.lat)) return null;
             const position = latLonToSceneVector(nation.lon, nation.lat, EARTH_RADIUS + MARKER_OFFSET);
-            const overlayKey = nation.id;
-            let overlayColor: string | null = null;
-            let overlayScale = 0.28;
-            let overlayOpacity = 0.35;
 
-            const pandemicData = modeData?.pandemic;
-            const infectionValue = pandemicData?.infections?.[overlayKey] ?? 0;
-            const normalizedPandemic = infectionValue > 0 ? infectionValue / (maxPandemicInfection || 1) : 0;
-            const heatValue = pandemicData?.heat?.[overlayKey] ?? 0;
-            const normalizedHeat = heatValue > 0 ? THREE.MathUtils.clamp(heatValue / 100, 0, 1) : normalizedPandemic;
-
-            if (modeData && currentMode !== 'standard') {
-              switch (currentMode) {
-                case 'diplomatic': {
-                  if (modeData.playerId && modeData.playerId !== overlayKey) {
-                    const score = modeData.relationships?.[overlayKey] ?? 0;
-                    overlayColor = computeDiplomaticColor(score);
-                    overlayScale = 0.22 + Math.abs(score) / 500;
-                    overlayOpacity = 0.4;
-                  }
-                  break;
-                }
-                case 'intel': {
-                  const intelValue = modeData.intelLevels?.[overlayKey] ?? 0;
-                  if (intelValue > 0) {
-                    const normalized = intelValue / (maxIntelLevel || 1);
-                    overlayColor = computeIntelColor(normalized);
-                    overlayScale = 0.18 + normalized * 0.35;
-                    overlayOpacity = 0.45;
-                  }
-                  break;
-                }
-                case 'resources': {
-                  const total = modeData.resourceTotals?.[overlayKey] ?? 0;
-                  if (total > 0) {
-                    const normalized = total / (maxResourceTotal || 1);
-                    overlayColor = computeResourceColor(normalized);
-                    overlayScale = 0.2 + normalized * 0.4;
-                    overlayOpacity = 0.42;
-                  }
-                  break;
-                }
-                case 'unrest': {
-                  const unrestMetrics = modeData.unrest?.[overlayKey];
-                  if (unrestMetrics) {
-                    const stability = (unrestMetrics.morale + unrestMetrics.publicOpinion) / 2 - unrestMetrics.instability * 0.35;
-                    overlayColor = computeUnrestColor(stability);
-                    overlayScale = 0.24 + THREE.MathUtils.clamp((70 - stability) / 200, 0, 0.3);
-                    overlayOpacity = stability < 55 ? 0.5 : 0.35;
-                  }
-                  break;
-                }
-                case 'pandemic': {
-                  if (normalizedPandemic > 0) {
-                    overlayColor = computePandemicColor(normalizedPandemic);
-                    overlayScale = 0.22 + normalizedPandemic * 0.55;
-                    overlayOpacity = 0.28 + normalizedHeat * 0.5;
-                  }
-                  break;
-                }
-                default:
-                  break;
-              }
-            }
-
+            // Simple marker coloring - player is green, others use their nation color
             const baseColor = nation.color || '#ff6b6b';
-            const pandemicColor = currentMode === 'pandemic' && normalizedPandemic > 0
-              ? computePandemicColor(normalizedPandemic)
-              : null;
-            const markerColor =
-              nation.isPlayer
-                ? '#7cff6b'
-                : pandemicColor
-                  ? pandemicColor
-                  : currentMode !== 'standard' && overlayColor
-                    ? overlayColor
-                    : baseColor;
+            const markerColor = nation.isPlayer ? '#7cff6b' : baseColor;
 
             return (
               <group key={nation.id}>
@@ -1715,15 +1621,6 @@ function SceneContent({
                   <sphereGeometry args={[0.06, 16, 16]} />
                   <meshStandardMaterial color={markerColor} emissive={markerColor} emissiveIntensity={0.6} />
                 </mesh>
-                {overlayColor && currentMode !== 'standard' && (
-                  <mesh
-                    position={position.toArray() as [number, number, number]}
-                    scale={[overlayScale, overlayScale, overlayScale]}
-                  >
-                    <sphereGeometry args={[0.12, 24, 24]} />
-                    <meshBasicMaterial color={overlayColor} transparent opacity={overlayOpacity} />
-                  </mesh>
-                )}
               </group>
             );
           })}
