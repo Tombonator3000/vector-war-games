@@ -1625,8 +1625,8 @@ function SceneContent({
             );
           })}
 
-        {/* Territory boundaries */}
-        {territoryGroups.map((group, i) => (
+        {/* Territory boundaries - only render if vector overlay is disabled to avoid duplication */}
+        {!showVectorOverlay && territoryGroups.map((group, i) => (
           <primitive key={`territory-${i}`} object={group} />
         ))}
 
