@@ -147,8 +147,8 @@ const morphFragmentShader = /* glsl */ `
     float lightInfluence = mix(1.0, 0.3, uMorphFactor);
     float lighting = mix(uAmbientIntensity, 1.0, diffuse * lightInfluence);
 
-    // Slight brightness boost for flat view
-    float flatBoost = mix(1.0, 1.15, uMorphFactor);
+    // Brightness boost for flat view (increased for better visibility)
+    float flatBoost = mix(1.0, 1.4, uMorphFactor);
 
     vec3 finalColor = texColor.rgb * lighting * flatBoost;
 
@@ -441,7 +441,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         uNightTexture: { value: nightTexture },
         uDayNightBlend: { value: effectiveBlend },
         uLightDirection: { value: new THREE.Vector3(1, 0.5, 1).normalize() },
-        uAmbientIntensity: { value: 0.4 },
+        uAmbientIntensity: { value: 0.55 },
       }),
       [dayTexture, nightTexture, effectiveBlend, initialView]
     );

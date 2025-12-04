@@ -16427,7 +16427,7 @@ export default function NoradVector() {
           onPickerReady={handlePickerReady}
           mapStyle={mapStyle}
           modeData={mapModeData}
-          showTerritories={showTerritories}
+          showTerritories={false}
           showTerritoryMarkers={true}
           showUnits={showUnits}
           flatMapVariant={isFlatMapDay}
