@@ -2539,6 +2539,32 @@ const AudioSys = {
         this.musicGainNode.gain.value = volume;
       }
     }
+  },
+
+  /**
+   * Cleanup audio resources to prevent memory leaks.
+   * Call this when the game is reset or the component unmounts.
+   */
+  cleanup() {
+    // Stop all playing audio
+    this.stopMusic();
+    this.stopAmbient();
+
+    // Clear audio caches
+    this.musicCache.clear();
+    this.ambientCache.clear();
+    this.trackPromises.clear();
+    this.ambientPromises.clear();
+
+    // Clear listeners
+    this.trackListeners.clear();
+
+    // Reset state
+    this.currentTrackId = null;
+    this.pendingTrackId = null;
+    this.preferredTrackId = null;
+    this.ambientClipId = null;
+    this.ambientDesiredClipId = null;
   }
 };
 
@@ -3616,6 +3642,14 @@ function productionPhase(rng: SeededRandom) {
     },
   };
   runProductionPhase(deps);
+
+  // Clean up refugee camps with expired TTL to prevent memory leaks
+  if (S.refugeeCamps && S.refugeeCamps.length > 0) {
+    S.refugeeCamps = S.refugeeCamps.filter((camp: { ttl: number }) => {
+      camp.ttl--;
+      return camp.ttl > 0;
+    });
+  }
 
   // Automatic de-escalation during peaceful periods
   const currentDefcon = GameStateManager.getDefcon();
@@ -6339,10 +6373,18 @@ function aiTurn(n: Nation) {
 
 // Global flag to prevent multiple simultaneous endTurn calls
 let turnInProgress = false;
+// Track all AI turn timeouts for proper cleanup
+let aiTurnTimeouts: ReturnType<typeof setTimeout>[] = [];
 
 // End turn
 function endTurn() {
   console.log('[Turn Debug] endTurn called, current phase:', S.phase, 'gameOver:', S.gameOver, 'turnInProgress:', turnInProgress);
+
+  // Clear any pending AI turn timeouts from previous turn to prevent memory leaks
+  if (aiTurnTimeouts.length > 0) {
+    aiTurnTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+    aiTurnTimeouts = [];
+  }
 
   // Guard: prevent multiple simultaneous calls
   if (turnInProgress) {
@@ -6387,7 +6429,7 @@ function endTurn() {
   let aiActionCount = 0;
   aiNations.forEach(ai => {
     for (let i = 0; i < actionsPerAI; i++) {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         try {
           console.log('[Turn Debug] AI turn executing for', ai.name);
           aiTurn(ai);
@@ -6395,6 +6437,7 @@ function endTurn() {
           console.error('[Turn Debug] ERROR in AI turn for', ai.name, ':', error);
         }
       }, 500 * aiActionCount++);
+      aiTurnTimeouts.push(timeoutId);
     }
   });
   
@@ -6421,6 +6464,7 @@ function endTurn() {
     }
     safetyTimeout = null;
   }, computedSafetyTimeout);
+  aiTurnTimeouts.push(safetyTimeout);
 
   console.log(
     '[Turn Debug] Resolution phase scheduled in',
@@ -6430,7 +6474,7 @@ function endTurn() {
     'ms)'
   );
   
-  setTimeout(() => {
+  const resolutionTimeoutId = setTimeout(() => {
     try {
       console.log('[Turn Debug] RESOLUTION phase starting');
       S.phase = 'RESOLUTION';
@@ -6441,7 +6485,7 @@ function endTurn() {
       log('⚠️ Error in resolution phase - continuing turn', 'warning');
     }
 
-    setTimeout(() => {
+    const productionTimeoutId = setTimeout(() => {
       try {
         console.log('[Turn Debug] PRODUCTION phase starting');
         S.phase = 'PRODUCTION';
@@ -7154,7 +7198,9 @@ function endTurn() {
       checkVictory();
       checkVictoryProgress();
     }, productionPhaseDelay);
+    aiTurnTimeouts.push(productionTimeoutId);
   }, resolutionDelay);
+  aiTurnTimeouts.push(resolutionTimeoutId);
 }
 
 // Update display
