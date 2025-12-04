@@ -453,7 +453,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         uNightTexture: { value: nightTexture },
         uDayNightBlend: { value: effectiveBlend },
         uLightDirection: { value: new THREE.Vector3(1, 0.5, 1).normalize() },
-        uAmbientIntensity: { value: 0.55 },
+        uAmbientIntensity: { value: 0.95 },
       }),
       [dayTexture, nightTexture, effectiveBlend, initialView]
     );
