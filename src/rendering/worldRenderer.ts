@@ -868,12 +868,13 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
     const pad = 4 * z;
 
     // Fade nation labels in once we zoom past the style-specific clarity threshold
-    const labelVisibilityThreshold = style === 'flat-realistic' ? 0.4 : 0.5;
+    // For morphing (3D globe), always show labels since zoom works differently
+    const labelVisibilityThreshold = style === 'flat-realistic' ? 0.4 : (style === 'morphing' ? 0 : 0.5);
     const labelFadeRange = 0.2;
     const fadeStart = labelVisibilityThreshold - labelFadeRange;
-    const labelVisibility = cam.zoom <= fadeStart
-      ? 0
-      : Math.min(1, (cam.zoom - fadeStart) / labelFadeRange);
+    const labelVisibility = style === 'morphing'
+      ? 1 // Always visible in morphing mode
+      : (cam.zoom <= fadeStart ? 0 : Math.min(1, (cam.zoom - fadeStart) / labelFadeRange));
 
     if (labelVisibility > 0) {
       // Nation labels
@@ -896,7 +897,8 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       const lx = x;
       const lyTop = (y - 36 * z) - (bh - (12 * z));
 
-      const frameFill = isWireframeStyle
+      const isMorphing = style === 'morphing';
+      const frameFill = isWireframeStyle || isMorphing
         ? 'rgba(0,0,0,0.7)'
         : 'rgba(0,0,0,0.45)';
 
@@ -907,16 +909,18 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       ctx.restore();
 
       ctx.save();
-      ctx.globalAlpha = labelVisibility * (isWireframeStyle ? 0.65 : 0.4);
-      ctx.strokeStyle = isWireframeStyle ? '#4ef6ff' : markerColor;
+      ctx.globalAlpha = labelVisibility * (isWireframeStyle || isMorphing ? 0.65 : 0.4);
+      ctx.strokeStyle = isWireframeStyle ? '#4ef6ff' : (isMorphing ? '#00ff00' : markerColor);
       ctx.strokeRect(lx - bw / 2, lyTop, bw, bh);
       ctx.restore();
 
       ctx.save();
       ctx.globalAlpha = labelVisibility;
       ctx.font = `bold ${Math.round(12 * z)}px monospace`;
-      ctx.fillStyle = isWireframeStyle ? '#4ef6ff' : markerColor;
-      ctx.shadowColor = markerColor;
+      const isMorphingStyle = style === 'morphing';
+      const displayNameColor = isWireframeStyle ? '#4ef6ff' : (isMorphingStyle ? '#00ff00' : markerColor);
+      ctx.fillStyle = displayNameColor;
+      ctx.shadowColor = isMorphingStyle ? '#00ff00' : markerColor;
       ctx.shadowBlur = 6;
       ctx.fillText(displayName, lx, lyTop + pad + 12 * z);
       ctx.shadowBlur = 0;
@@ -928,6 +932,8 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
             return '#4ef6ff';
           case 'flat-realistic':
             return isPoliticalStyle ? '#ffecd1' : '#ffffff';
+          case 'morphing':
+            return '#00ff00'; // Green for morphing mode to match WARGAMES theme
           case 'realistic':
           default:
             return '#ffffff';
@@ -951,6 +957,8 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
               return 'rgba(248, 113, 113, 0.9)';
             }
             return isPoliticalStyle ? '#ffd166' : '#00ff00';
+          case 'morphing':
+            return '#00ff00'; // Green for morphing mode
           case 'realistic':
           default:
             return '#00ff00';
