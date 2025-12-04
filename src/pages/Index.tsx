@@ -5812,7 +5812,7 @@ function log(msg: string, type: string = 'normal') {
 
 // AI Turn - Complete strategic decision making
 function aiTurn(n: Nation) {
-  emitOverlayMessage('AI: ' + (n.leader || n.name), 800);
+  // AI name already shown in right-side panel during AI turns
   if (n.population <= 0) return;
 
   maybeBanter(n, 0.5); // Increased visibility
