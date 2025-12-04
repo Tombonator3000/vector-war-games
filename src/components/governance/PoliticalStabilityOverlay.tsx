@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import type { ProjectorFn } from '@/components/GlobeScene';
 
 interface PoliticalStabilityOverlayProps {
   nations: Array<{
@@ -14,35 +15,54 @@ interface PoliticalStabilityOverlayProps {
   canvasWidth: number;
   canvasHeight: number;
   visible: boolean;
+  projector?: ProjectorFn | null;
+  projectorRevision?: number;
 }
 
-export function PoliticalStabilityOverlay({ 
-  nations, 
-  canvasWidth, 
+export function PoliticalStabilityOverlay({
+  nations,
+  canvasWidth,
   canvasHeight,
-  visible 
+  visible,
+  projector,
+  projectorRevision,
 }: PoliticalStabilityOverlayProps) {
   const overlayData = useMemo(() => {
-    return nations.map(nation => {
-      const x = ((nation.lon + 180) / 360) * canvasWidth;
-      const y = ((90 - nation.lat) / 180) * canvasHeight;
-      
-      const stability = (nation.morale + nation.publicOpinion) / 2;
-      const isCrisis = stability < 35 || nation.instability > 75;
-      const isUnstable = stability < 55 || nation.instability > 55;
-      
-      return {
-        id: nation.id,
-        name: nation.name,
-        x,
-        y,
-        stability,
-        isCrisis,
-        isUnstable,
-        color: getStabilityColor(stability, nation.instability)
-      };
-    });
-  }, [nations, canvasWidth, canvasHeight]);
+    return nations
+      .map(nation => {
+        // Use projector if available, otherwise fall back to equirectangular projection
+        let x: number;
+        let y: number;
+        let isVisible = true;
+
+        if (projector) {
+          const projected = projector(nation.lon, nation.lat);
+          x = projected.x;
+          y = projected.y;
+          isVisible = projected.visible;
+        } else {
+          x = ((nation.lon + 180) / 360) * canvasWidth;
+          y = ((90 - nation.lat) / 180) * canvasHeight;
+        }
+
+        const stability = (nation.morale + nation.publicOpinion) / 2;
+        const isCrisis = stability < 35 || nation.instability > 75;
+        const isUnstable = stability < 55 || nation.instability > 55;
+
+        return {
+          id: nation.id,
+          name: nation.name,
+          x,
+          y,
+          isVisible,
+          stability,
+          isCrisis,
+          isUnstable,
+          color: getStabilityColor(stability, nation.instability)
+        };
+      })
+      .filter(data => data.isVisible); // Only show visible points (front of globe)
+  }, [nations, canvasWidth, canvasHeight, projector, projectorRevision]);
 
   if (!visible) return null;
 
