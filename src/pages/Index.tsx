@@ -7765,7 +7765,8 @@ export default function NoradVector() {
     return { visual, mode };
   });
   const [isFlatMapDay, setIsFlatMapDay] = useState<boolean>(true);
-  const [showVectorOverlay, setShowVectorOverlay] = useState<boolean>(true);
+  // Vector overlay (country borders) disabled by default - too distracting
+  const [showVectorOverlay, setShowVectorOverlay] = useState<boolean>(false);
   const [dayNightBlend, setDayNightBlend] = useState<number>(0);
   const dayNightBlendAnimationFrameRef = useRef<number | null>(null);
   const dayNightBlendAnimationStartRef = useRef<number | null>(null);
