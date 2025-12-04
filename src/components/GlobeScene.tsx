@@ -213,6 +213,8 @@ export interface GlobeSceneProps {
   vectorColor?: string;
   /** Vector overlay opacity (0-1, default: 0.7) */
   vectorOpacity?: number;
+  /** Vector-only mode: hide earth texture and show only vector borders (for WARGAMES theme) */
+  vectorOnlyMode?: boolean;
 }
 
 interface SceneRegistration {
@@ -1266,6 +1268,7 @@ function SceneContent({
   showVectorOverlay = false,
   vectorColor = '#2ef1ff',
   vectorOpacity = 0.7,
+  vectorOnlyMode = false,
 }: {
   cam: GlobeSceneProps['cam'];
   nations: GlobeSceneProps['nations'];
@@ -1293,6 +1296,7 @@ function SceneContent({
   showVectorOverlay?: boolean;
   vectorColor?: string;
   vectorOpacity?: number;
+  vectorOnlyMode?: boolean;
 }) {
   const { camera, size, clock, gl } = useThree();
   const earthRef = useRef<THREE.Mesh | null>(null);
@@ -1590,6 +1594,7 @@ function SceneContent({
           showVectorOverlay={showVectorOverlay}
           vectorColor={vectorColor}
           vectorOpacity={vectorOpacity}
+          vectorOnlyMode={vectorOnlyMode}
         />
         {/* Atmosphere - fades out as we transition to flat */}
         <Atmosphere morphFactor={morphFactor} />
@@ -1727,6 +1732,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     showVectorOverlay = false,
     vectorColor = '#2ef1ff',
     vectorOpacity = 0.7,
+    vectorOnlyMode = false,
   }: GlobeSceneProps,
   ref,
 ) {
@@ -2128,6 +2134,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           showVectorOverlay={showVectorOverlay}
           vectorColor={vectorColor}
           vectorOpacity={vectorOpacity}
+          vectorOnlyMode={vectorOnlyMode}
         />
       </Canvas>
       <canvas

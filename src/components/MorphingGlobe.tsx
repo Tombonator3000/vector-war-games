@@ -70,6 +70,8 @@ export interface MorphingGlobeProps {
   vectorColor?: string;
   /** Vector overlay opacity */
   vectorOpacity?: number;
+  /** Vector-only mode: hide earth texture and show only vector borders (for WARGAMES theme) */
+  vectorOnlyMode?: boolean;
 }
 
 // Vertex shader that interpolates between sphere and flat plane
@@ -153,6 +155,15 @@ const morphFragmentShader = /* glsl */ `
     vec3 finalColor = texColor.rgb * lighting * flatBoost;
 
     gl_FragColor = vec4(finalColor, texColor.a);
+  }
+`;
+
+// Simple dark fragment shader for vectorOnlyMode (no texture, just dark color)
+const darkFragmentShader = /* glsl */ `
+  uniform vec3 uDarkColor;
+
+  void main() {
+    gl_FragColor = vec4(uDarkColor, 1.0);
   }
 `;
 
@@ -353,6 +364,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
       showVectorOverlay = false,
       vectorColor = '#2ef1ff',
       vectorOpacity = 0.7,
+      vectorOnlyMode = false,
     },
     ref
   ) {
@@ -459,6 +471,21 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
       [initialView, vectorColor, vectorOpacity]
     );
 
+    // Dark background uniforms for vectorOnlyMode (WARGAMES theme)
+    const darkUniforms = useMemo(
+      () => ({
+        uMorphFactor: { value: initialView === 'flat' ? 1.0 : 0.0 },
+        uRadius: { value: EARTH_RADIUS },
+        uFlatWidth: { value: FLAT_WIDTH },
+        uFlatHeight: { value: FLAT_HEIGHT },
+        uDarkColor: { value: new THREE.Color('#020a02') }, // Very dark green for WARGAMES aesthetic
+      }),
+      [initialView]
+    );
+
+    // Ref for dark material
+    const darkMaterialRef = useRef<THREE.ShaderMaterial>(null);
+
     // Update texture uniforms when they change
     useEffect(() => {
       if (materialRef.current) {
@@ -526,6 +553,11 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
           vectorMaterialRef.current.uniforms.uMorphFactor.value = newValue;
         }
 
+        // Sync dark background morph factor (for vectorOnlyMode)
+        if (darkMaterialRef.current) {
+          darkMaterialRef.current.uniforms.uMorphFactor.value = newValue;
+        }
+
         if (progress >= 1) {
           animation.active = false;
           const finalView = animation.endValue >= 0.5 ? 'flat' : 'globe';
@@ -560,6 +592,9 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
           }
           if (vectorMaterialRef.current) {
             vectorMaterialRef.current.uniforms.uMorphFactor.value = clamped;
+          }
+          if (darkMaterialRef.current) {
+            darkMaterialRef.current.uniforms.uMorphFactor.value = clamped;
           }
         },
         morphToGlobe: (duration = animationDuration) => {
@@ -608,24 +643,45 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
       return geo;
     }, []);
 
+    // In vectorOnlyMode, force vector overlay to be visible
+    const effectiveVectorOverlayVisible = vectorOnlyMode || vectorOverlayVisible;
+
     return (
       <group>
-        {/* Main earth mesh - renderOrder 0 ensures it renders first */}
-        <mesh ref={meshRef} geometry={geometry} renderOrder={0}>
-          <shaderMaterial
-            ref={materialRef}
-            vertexShader={morphVertexShader}
-            fragmentShader={morphFragmentShader}
-            uniforms={uniforms}
-            side={THREE.DoubleSide}
-            transparent={false}
-            depthWrite={true}
-            depthTest={true}
-          />
-        </mesh>
+        {/* Main earth mesh - hidden in vectorOnlyMode, shows only dark background */}
+        {!vectorOnlyMode && (
+          <mesh ref={meshRef} geometry={geometry} renderOrder={0}>
+            <shaderMaterial
+              ref={materialRef}
+              vertexShader={morphVertexShader}
+              fragmentShader={morphFragmentShader}
+              uniforms={uniforms}
+              side={THREE.DoubleSide}
+              transparent={false}
+              depthWrite={true}
+              depthTest={true}
+            />
+          </mesh>
+        )}
+
+        {/* Dark background mesh for vectorOnlyMode (WARGAMES theme) - morphs with globe */}
+        {vectorOnlyMode && (
+          <mesh ref={meshRef} geometry={geometry} renderOrder={0}>
+            <shaderMaterial
+              ref={darkMaterialRef}
+              vertexShader={morphVertexShader}
+              fragmentShader={darkFragmentShader}
+              uniforms={darkUniforms}
+              side={THREE.DoubleSide}
+              transparent={false}
+              depthWrite={true}
+              depthTest={true}
+            />
+          </mesh>
+        )}
 
         {/* Vector overlay (country borders) */}
-        {vectorOverlayVisible && vectorGeometry && (
+        {effectiveVectorOverlayVisible && vectorGeometry && (
           <lineSegments geometry={vectorGeometry} frustumCulled={false}>
             <shaderMaterial
               ref={vectorMaterialRef}
