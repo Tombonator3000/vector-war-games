@@ -2,6 +2,12 @@ import { useState, useCallback } from 'react';
 import type { NewsItem } from '@/components/NewsTicker';
 
 /**
+ * Maximum number of news items to keep in memory.
+ * Older items are automatically removed to prevent memory leaks.
+ */
+const MAX_NEWS_ITEMS = 100;
+
+/**
  * Return type for useNewsManager hook
  */
 export interface UseNewsManagerReturn {
@@ -41,7 +47,14 @@ export function useNewsManager(): UseNewsManagerReturn {
         category,
         timestamp: Date.now(),
       };
-      setNewsItems((prev) => [...prev, item]);
+      setNewsItems((prev) => {
+        const updated = [...prev, item];
+        // Keep only the most recent items to prevent memory leaks
+        if (updated.length > MAX_NEWS_ITEMS) {
+          return updated.slice(-MAX_NEWS_ITEMS);
+        }
+        return updated;
+      });
     },
     []
   );
