@@ -613,20 +613,54 @@ function Atmosphere({ morphFactor }: AtmosphereProps) {
   // Fade atmosphere as we transition to flat map
   const opacity = Math.max(0, 1 - morphFactor * 1.5);
 
-  const atmosphereVertexShader = `
+  // Outer glow - visible from behind (rim lighting effect)
+  const outerGlowVertexShader = `
     varying vec3 vNormal;
+    varying vec3 vPosition;
     void main() {
       vNormal = normalize(normalMatrix * normal);
+      vPosition = position;
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }
   `;
 
-  const atmosphereFragmentShader = `
+  const outerGlowFragmentShader = `
     uniform float uOpacity;
     varying vec3 vNormal;
     void main() {
-      float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
-      gl_FragColor = vec4(0.3, 0.6, 1.0, uOpacity) * intensity;
+      // Fresnel-based rim lighting - stronger at edges
+      float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 3.0);
+      // Atmospheric blue color with gradient
+      vec3 atmosphereColor = mix(vec3(0.1, 0.4, 0.8), vec3(0.4, 0.7, 1.0), fresnel);
+      float intensity = fresnel * 0.8;
+      gl_FragColor = vec4(atmosphereColor, intensity * uOpacity);
+    }
+  `;
+
+  // Inner fresnel glow - visible from front (surface glow)
+  const innerGlowVertexShader = `
+    varying vec3 vNormal;
+    varying vec3 vViewPosition;
+    void main() {
+      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      vViewPosition = -mvPosition.xyz;
+      vNormal = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `;
+
+  const innerGlowFragmentShader = `
+    uniform float uOpacity;
+    varying vec3 vNormal;
+    varying vec3 vViewPosition;
+    void main() {
+      vec3 viewDir = normalize(vViewPosition);
+      // Fresnel effect - glow at edges
+      float fresnel = pow(1.0 - max(0.0, dot(viewDir, vNormal)), 4.0);
+      // Soft blue atmospheric glow
+      vec3 glowColor = vec3(0.3, 0.6, 1.0);
+      float intensity = fresnel * 0.6;
+      gl_FragColor = vec4(glowColor, intensity * uOpacity);
     }
   `;
 
@@ -636,18 +670,47 @@ function Atmosphere({ morphFactor }: AtmosphereProps) {
   }
 
   return (
-    <mesh scale={1.12} renderOrder={5}>
-      <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
-      <shaderMaterial
-        vertexShader={atmosphereVertexShader}
-        fragmentShader={atmosphereFragmentShader}
-        uniforms={{ uOpacity: { value: opacity } }}
-        blending={THREE.AdditiveBlending}
-        side={THREE.BackSide}
-        transparent
-        depthWrite={false}
-      />
-    </mesh>
+    <group>
+      {/* Inner fresnel glow on earth surface */}
+      <mesh scale={1.005} renderOrder={3}>
+        <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
+        <shaderMaterial
+          vertexShader={innerGlowVertexShader}
+          fragmentShader={innerGlowFragmentShader}
+          uniforms={{ uOpacity: { value: opacity } }}
+          blending={THREE.AdditiveBlending}
+          side={THREE.FrontSide}
+          transparent
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Mid atmosphere layer */}
+      <mesh scale={1.08} renderOrder={4}>
+        <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
+        <shaderMaterial
+          vertexShader={outerGlowVertexShader}
+          fragmentShader={outerGlowFragmentShader}
+          uniforms={{ uOpacity: { value: opacity * 0.7 } }}
+          blending={THREE.AdditiveBlending}
+          side={THREE.BackSide}
+          transparent
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Outer atmosphere halo */}
+      <mesh scale={1.15} renderOrder={5}>
+        <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
+        <shaderMaterial
+          vertexShader={outerGlowVertexShader}
+          fragmentShader={outerGlowFragmentShader}
+          uniforms={{ uOpacity: { value: opacity * 0.5 } }}
+          blending={THREE.AdditiveBlending}
+          side={THREE.BackSide}
+          transparent
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
   );
 }
 
