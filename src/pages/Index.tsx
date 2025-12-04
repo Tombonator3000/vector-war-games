@@ -7384,9 +7384,11 @@ function gameLoop() {
   if (!isWireframeStyle && !isMorphingStyle) {
     drawWorld(currentMapStyle);
     CityLights.draw(ctx, currentMapStyle);
-    drawNations(currentMapStyle);
-    drawTerritoriesWrapper();
   }
+
+  // Always draw nation labels and territory markers (they use the projector which handles all modes)
+  drawNations(currentMapStyle);
+  drawTerritoriesWrapper();
 
   drawSatellites(nowMs);
   drawVIIRSFires(nowMs);
