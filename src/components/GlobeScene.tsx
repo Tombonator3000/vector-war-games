@@ -2233,7 +2233,8 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           height: '100%',
           // Unified morphing mode - always let Three.js handle interactions
           pointerEvents: 'none',
-          zIndex: 0,
+          // Overlay must be above WebGL canvas (zIndex: 10) to show missiles, explosions, trails
+          zIndex: 20,
           ...(DEBUG_OVERLAY ? { border: '2px solid red' } : {})
         }}
       />
