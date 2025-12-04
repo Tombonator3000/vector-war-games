@@ -378,38 +378,11 @@ export function MigrationFlowOverlay({
       const fillOpacity = 0.2 + intensity * 0.5;
 
       const center = projectPoint(nation.lon, nation.lat);
-      const feature = geometryLookup ? findFeatureForNation(nation.id, nation.name, geometryLookup) : null;
-      let renderedViaGeometry = false;
-
-      if (feature) {
-        const projected = projectFeatureGeometry(feature, projectPoint);
-        if (projected) {
-          const labelPosition = center ?? {
-            x: (projected.bounds.minX + projected.bounds.maxX) / 2,
-            y: (projected.bounds.minY + projected.bounds.maxY) / 2,
-          };
-
-          territories.push({
-            id: nation.id,
-            name: nation.name,
-            net,
-            inflow,
-            outflow,
-            attraction,
-            pressure,
-            intensity,
-            color,
-            strokeColor,
-            fillOpacity,
-            labelPosition,
-            bounds: projected.bounds,
-            paths: projected.paths,
-          });
-          renderedViaGeometry = true;
-        }
-      }
-
-      if (!renderedViaGeometry && center) {
+      // Territory fills are disabled due to projection issues when viewing the globe.
+      // Points on the back of the globe are skipped, causing polygons to render incorrectly
+      // as large rectangles or diagonal lines instead of proper country boundaries.
+      // We now always use fallback point markers instead.
+      if (center) {
         const baseRadius = 8 + intensity * 24;
         const glowRadius = baseRadius * 1.65;
         fallbackPoints.push({
@@ -458,72 +431,7 @@ export function MigrationFlowOverlay({
       height={canvasHeight}
       style={{ zIndex: 15 }}
     >
-      {territories.map(territory => (
-        <g key={territory.id}>
-          {territory.paths.map((path, index) => (
-            <path
-              key={`${territory.id}-path-${index}`}
-              d={path}
-              fill={territory.color}
-              fillOpacity={territory.fillOpacity}
-              stroke={territory.strokeColor}
-              strokeWidth={1}
-              strokeOpacity={0.6}
-            />
-          ))}
-
-          {territory.labelPosition && (
-            <g transform={`translate(${territory.labelPosition.x}, ${territory.labelPosition.y - 12})`}>
-              <rect
-                x={-70}
-                y={-30}
-                width={140}
-                height={58}
-                rx={6}
-                fill="rgba(15,23,42,0.78)"
-                stroke={territory.strokeColor}
-                strokeOpacity={0.55}
-              />
-              <text
-                x={0}
-                y={-12}
-                textAnchor="middle"
-                className="text-xs font-semibold fill-cyan-100"
-                style={{ fontSize: '11px' }}
-              >
-                {territory.name}
-              </text>
-              <text
-                x={0}
-                y={2}
-                textAnchor="middle"
-                className="text-[10px] fill-cyan-200"
-                style={{ fontSize: '10px' }}
-              >
-                Net {formatNet(territory.net)}
-              </text>
-              <text
-                x={0}
-                y={16}
-                textAnchor="middle"
-                className="text-[10px] fill-cyan-200"
-                style={{ fontSize: '10px' }}
-              >
-                In {formatFlow(territory.inflow)} | Out {formatFlow(territory.outflow)}
-              </text>
-              <text
-                x={0}
-                y={30}
-                textAnchor="middle"
-                className="text-[10px] fill-cyan-300"
-                style={{ fontSize: '10px' }}
-              >
-                Attr {Math.round(territory.attraction)}% • Pressure {Math.round(territory.pressure)}%
-              </text>
-            </g>
-          )}
-        </g>
-      ))}
+      {/* Territory fills are disabled - using fallback points only */}
 
       {fallbackPoints.map(point => (
         <g key={point.id}>

@@ -357,32 +357,11 @@ export function PandemicSpreadOverlay({
       const isDetected = Boolean(pandemic.detections?.[nation.id]);
       const center = projectPoint(nation.lon, nation.lat);
 
-      const feature = geometryLookup ? findFeatureForNation(nation.id, nation.name, geometryLookup) : null;
-      let renderedViaGeometry = false;
-
-      if (feature) {
-        const projected = projectFeatureGeometry(feature, projectPoint);
-        if (projected) {
-          territories.push({
-            id: nation.id,
-            name: nation.name,
-            infection: infectionRaw,
-            fillRatio,
-            normalized,
-            casualties,
-            color,
-            isDetected,
-            clipId: createUniqueDomId('pandemic', nation.id, 'clip'),
-            gradientId: createUniqueDomId('pandemic', nation.id, 'gradient'),
-            bounds: projected.bounds,
-            paths: projected.paths,
-            labelPosition: center,
-          });
-          renderedViaGeometry = true;
-        }
-      }
-
-      if (!renderedViaGeometry && center) {
+      // Territory fills are disabled due to projection issues when viewing the globe.
+      // Points on the back of the globe are skipped, causing polygons to render incorrectly
+      // as large rectangles or diagonal lines instead of proper country boundaries.
+      // We now always use fallback point markers instead.
+      if (center) {
         const baseRadius = 8 + fillRatio * 22;
         const glowRadius = baseRadius * 1.7;
         fallbackPoints.push({
@@ -421,122 +400,7 @@ export function PandemicSpreadOverlay({
 
   return (
     <svg className="absolute inset-0 pointer-events-none" width={canvasWidth} height={canvasHeight} style={{ zIndex: 15 }}>
-      {territories.length > 0 && (
-        <defs>
-          {territories.map(territory => (
-            <clipPath key={territory.clipId} id={territory.clipId} clipPathUnits="userSpaceOnUse">
-              {territory.paths.map((path, index) => (
-                <path key={`${territory.clipId}-path-${index}`} d={path} fillRule="evenodd" />
-              ))}
-            </clipPath>
-          ))}
-          {territories.map(territory => (
-            <linearGradient
-              key={territory.gradientId}
-              id={territory.gradientId}
-              x1="0"
-              x2="0"
-              y1={territory.bounds.maxY}
-              y2={territory.bounds.minY}
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop offset="0%" stopColor={territory.color} stopOpacity={0.9} />
-              <stop offset="100%" stopColor={territory.color} stopOpacity={0.35} />
-            </linearGradient>
-          ))}
-        </defs>
-      )}
-
-      {territories.map(territory => {
-        const casualtyLabel =
-          territory.casualties > 0 ? casualtyFormatter.format(Math.max(0, territory.casualties)) : null;
-        const width = Math.max(1, territory.bounds.maxX - territory.bounds.minX);
-        const height = Math.max(1, territory.bounds.maxY - territory.bounds.minY);
-        const fillHeight = Math.max(0, Math.min(height, height * territory.fillRatio));
-        const rectY = territory.bounds.maxY - fillHeight;
-        const labelX =
-          territory.labelPosition?.x ?? territory.bounds.minX + (territory.bounds.maxX - territory.bounds.minX) / 2;
-        const labelY =
-          territory.labelPosition?.y ?? territory.bounds.minY + (territory.bounds.maxY - territory.bounds.minY) / 2;
-        const labelOffset = Math.max(16, Math.min(32, height * 0.25));
-        const strokeColor = territory.isDetected ? 'rgba(248, 113, 113, 0.85)' : 'rgba(248, 113, 113, 0.4)';
-
-        return (
-          <g key={territory.id}>
-            <g clipPath={`url(#${territory.clipId})`}>
-              <rect
-                x={territory.bounds.minX}
-                y={territory.bounds.minY}
-                width={width}
-                height={height}
-                fill={territory.color}
-                opacity={0.18}
-              />
-              <rect
-                x={territory.bounds.minX}
-                y={rectY}
-                width={width}
-                height={fillHeight}
-                fill={`url(#${territory.gradientId})`}
-                style={{ mixBlendMode: 'screen', transition: 'all 0.6s ease-out' }}
-              />
-            </g>
-            {territory.paths.map((path, index) => (
-              <path
-                key={`${territory.id}-outline-${index}`}
-                d={path}
-                fill="none"
-                stroke={strokeColor}
-                strokeWidth={territory.isDetected ? 1.8 : 1.2}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                vectorEffect="non-scaling-stroke"
-                fillRule="evenodd"
-              />
-            ))}
-            <text
-              x={labelX}
-              y={labelY - (labelOffset + 6)}
-              textAnchor="middle"
-              className="text-[11px] font-semibold fill-rose-100"
-              style={{ fontSize: '11px' }}
-            >
-              {territory.name}
-            </text>
-            <text
-              x={labelX}
-              y={labelY + labelOffset}
-              textAnchor="middle"
-              className="text-[10px] font-mono fill-rose-200"
-              style={{ fontSize: '10px' }}
-            >
-              {infectionLabel(territory.infection)}
-            </text>
-            {casualtyLabel ? (
-              <text
-                x={labelX}
-                y={labelY + labelOffset + 16}
-                textAnchor="middle"
-                className="text-[10px] font-mono fill-rose-300"
-                style={{ fontSize: '10px' }}
-              >
-                {`Casualties: ${casualtyLabel}`}
-              </text>
-            ) : null}
-            {territory.isDetected ? (
-              <text
-                x={labelX}
-                y={labelY}
-                textAnchor="middle"
-                className="text-[12px] font-bold fill-yellow-200"
-                style={{ fontSize: '12px' }}
-              >
-                ☣
-              </text>
-            ) : null}
-          </g>
-        );
-      })}
+      {/* Territory fills are disabled - using fallback points only */}
 
       {fallbackPoints.map(point => {
         const casualtyLabel =

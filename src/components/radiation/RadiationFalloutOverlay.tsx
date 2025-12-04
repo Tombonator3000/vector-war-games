@@ -356,28 +356,11 @@ export function RadiationFalloutOverlay({
       const color = getRadiationColor(normalized);
       const center = projectPoint(nation.lon, nation.lat);
 
-      let renderedViaGeometry = false;
-      const feature = geometryLookup ? findFeatureForNation(nation.id, nation.name, geometryLookup) : null;
-      if (feature) {
-        const projected = projectFeatureGeometry(feature, projectPoint);
-        if (projected) {
-          territories.push({
-            id: nation.id,
-            name: nation.name,
-            exposure: Math.round(exposureScore * 10) / 10,
-            normalized,
-            sickness: Number(radiation.sickness?.[nation.id] ?? 0),
-            refugee: Number(radiation.refugeePressure?.[nation.id] ?? 0),
-            color: color.fill,
-            stroke: color.stroke,
-            paths: projected.paths,
-            labelPosition: center,
-          });
-          renderedViaGeometry = true;
-        }
-      }
-
-      if (!renderedViaGeometry && center) {
+      // Territory fills are disabled due to projection issues when viewing the globe.
+      // Points on the back of the globe are skipped, causing polygons to render incorrectly
+      // as large rectangles or diagonal lines instead of proper country boundaries.
+      // We now always use fallback point markers instead.
+      if (center) {
         const baseRadius = 14 + normalized * 26;
         fallbackPoints.push({
           id: nation.id,
@@ -447,7 +430,7 @@ export function RadiationFalloutOverlay({
 
   if (
     !visible ||
-    (!territories.length && !fallbackPoints.length && !zoneGlows.length && !falloutMarkers.length)
+    (!fallbackPoints.length && !zoneGlows.length && !falloutMarkers.length)
   ) {
     return null;
   }
@@ -480,43 +463,7 @@ export function RadiationFalloutOverlay({
         ))}
       </g>
 
-      <g className="pointer-events-none">
-        {territories.map(territory => (
-          <g key={territory.id} opacity={Math.max(0.35, territory.normalized)}>
-            {territory.paths.map((path, index) => (
-              <path
-                key={`${territory.id}-path-${index}`}
-                d={path}
-                fill={territory.color}
-                stroke={territory.stroke}
-                strokeWidth={1.2}
-                strokeOpacity={0.6}
-                fillOpacity={0.65}
-              >
-                <title>
-                  {`${territory.name}: ${territory.exposure.toFixed(1)}% fallout exposure\n` +
-                    `Sickness: ${Math.round(territory.sickness)} | Refugees: ${Math.round(territory.refugee)}`}
-                </title>
-              </path>
-            ))}
-            {territory.labelPosition ? (
-              <text
-                x={territory.labelPosition.x}
-                y={territory.labelPosition.y}
-                textAnchor="middle"
-                fontSize={10}
-                fontWeight={600}
-                fill="rgba(8,8,12,0.85)"
-                stroke="rgba(248,250,252,0.7)"
-                strokeWidth={0.6}
-                paintOrder="stroke"
-              >
-                {`${Math.round(territory.exposure)}%`}
-              </text>
-            ) : null}
-          </g>
-        ))}
-      </g>
+      {/* Territory fills are disabled - using fallback points only */}
 
       <g className="pointer-events-none">
         {fallbackPoints.map(point => (
