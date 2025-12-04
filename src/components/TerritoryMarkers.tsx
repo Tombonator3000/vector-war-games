@@ -76,16 +76,16 @@ export function TerritoryMarkers({
                   transform: 'translate(-50%, -120%)',
                 }}
               >
-                {/* Territory name */}
+                {/* Territory name - WCAG compliant: white text on dark backgrounds */}
                 <div
                   className="whitespace-nowrap rounded px-2 py-0.5 text-[10px] font-bold shadow-lg"
                   style={{
                     backgroundColor: isPlayerOwned
-                      ? 'rgba(34, 211, 238, 0.9)'
+                      ? 'rgba(14, 116, 144, 0.95)'  // Dark cyan for player
                       : territory.controllingNationId
-                        ? 'rgba(239, 68, 68, 0.9)'
-                        : 'rgba(161, 161, 170, 0.9)',
-                    color: '#000',
+                        ? 'rgba(153, 27, 27, 0.95)' // Dark red for enemies
+                        : 'rgba(63, 63, 70, 0.95)', // Dark gray for neutral
+                    color: '#fff',
                   }}
                 >
                   {territory.name}
