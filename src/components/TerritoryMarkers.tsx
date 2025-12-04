@@ -109,6 +109,34 @@ export function TerritoryMarkers({
                   </span>
                 </div>
 
+                {/* Contested territory indicator */}
+                {territory.contestedBy && territory.contestedBy.length > 0 && (
+                  <div
+                    className="flex items-center gap-0.5 rounded px-1.5 py-0.5 animate-pulse"
+                    style={{
+                      backgroundColor: 'rgba(239, 68, 68, 0.9)',
+                      border: '1px solid rgba(248, 113, 113, 0.8)',
+                    }}
+                  >
+                    <Swords className="h-2.5 w-2.5 text-white" />
+                    <span className="text-[8px] font-bold text-white">CONTESTED</span>
+                  </div>
+                )}
+
+                {/* High conflict risk indicator */}
+                {territory.conflictRisk > 50 && (!territory.contestedBy || territory.contestedBy.length === 0) && (
+                  <div
+                    className="flex items-center gap-0.5 rounded px-1.5 py-0.5"
+                    style={{
+                      backgroundColor: 'rgba(251, 146, 60, 0.9)',
+                      border: '1px solid rgba(253, 186, 116, 0.8)',
+                    }}
+                  >
+                    <Swords className="h-2 w-2 text-white" />
+                    <span className="text-[8px] text-white">HIGH RISK</span>
+                  </div>
+                )}
+
                 {/* Unit composition indicators */}
                 {(territory.unitComposition.army > 0 ||
                   territory.unitComposition.navy > 0 ||
