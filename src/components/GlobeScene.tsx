@@ -27,6 +27,7 @@ import {
 import {
   createMissileTrajectory,
   updateMissileAnimation,
+  updateMissileTrajectoryPositions,
   createExplosion,
   animateExplosion,
   type MissileTrajectory,
@@ -1300,6 +1301,7 @@ function SceneContent({
   // The 3D scene only renders the base map and nation markers
   const cameraPoseUpdateRef = useRef<typeof onCameraPoseUpdate>();
   const [morphFactor, setMorphFactorState] = useState(0);
+  const prevMorphFactorRef = useRef(morphFactor);
   // Define isFlat and isMorphing based on morph factor for unified map system
   const isMorphing = true; // Always morphing mode now
   const isFlat = morphFactor > 0.5; // Considered "flat" when morph factor is above 0.5
@@ -1522,6 +1524,15 @@ function SceneContent({
     }
 
     const currentTime = clock.getElapsedTime();
+
+    // Update missile positions when morphFactor changes (2D/3D view transition)
+    if (morphFactor !== prevMorphFactorRef.current) {
+      prevMorphFactorRef.current = morphFactor;
+      missilesRef.current.forEach((missile) => {
+        updateMissileTrajectoryPositions(missile, latLonToSceneVector, EARTH_RADIUS);
+      });
+    }
+
     let missilesRemoved = false;
     missilesRef.current.forEach((missile, id) => {
       updateMissileAnimation(missile, currentTime);

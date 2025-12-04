@@ -24,6 +24,11 @@ export interface MissileTrajectoryInstance {
   markerPosition: THREE.Vector3;
   allPoints: THREE.Vector3[];
   isComplete: boolean;
+  // Original coordinates for dynamic recalculation when morphFactor changes
+  from: { lon: number; lat: number };
+  to: { lon: number; lat: number };
+  type: 'ballistic' | 'cruise' | 'orbital';
+  color: string;
 }
 
 /**
@@ -182,7 +187,12 @@ export function createMissileTrajectory(
     progress: 0,
     markerPosition: fromVec.clone(),
     allPoints,
-    isComplete: false
+    isComplete: false,
+    // Store original coordinates for dynamic recalculation
+    from: trajectory.from,
+    to: trajectory.to,
+    type: trajectory.type || 'ballistic',
+    color: trajectory.color || '#ff0000',
   };
 }
 
@@ -258,6 +268,66 @@ export function updateMissileAnimation(
   // Update marker position (for optional missile icon)
   if (visiblePoints < instance.allPoints.length) {
     instance.markerPosition.copy(instance.allPoints[visiblePoints]);
+  }
+}
+
+/**
+ * Recalculate missile trajectory positions for current morphFactor
+ * Call this when morphFactor changes to update missiles for 2D/3D view transitions
+ */
+export function updateMissileTrajectoryPositions(
+  instance: MissileTrajectoryInstance,
+  latLonToVector3: LatLonToVector3Fn,
+  radius: number
+): void {
+  const fromVec = latLonToVector3(instance.from.lon, instance.from.lat, radius);
+  const toVec = latLonToVector3(instance.to.lon, instance.to.lat, radius);
+
+  // Recalculate path based on trajectory type
+  let newPoints: THREE.Vector3[];
+  switch (instance.type) {
+    case 'cruise':
+      newPoints = calculateCruisePath(fromVec, toVec, 0.05);
+      break;
+    case 'orbital':
+      newPoints = calculateOrbitalPath(fromVec, toVec, 1.0);
+      break;
+    case 'ballistic':
+    default:
+      newPoints = calculateBallisticArc(fromVec, toVec, 0.5);
+      break;
+  }
+
+  // Update the stored points
+  instance.allPoints = newPoints;
+
+  // Update line geometry with current progress
+  const visiblePoints = Math.floor(newPoints.length * instance.progress);
+  if (visiblePoints > 0) {
+    const currentPoints = instance.isComplete
+      ? newPoints
+      : newPoints.slice(0, visiblePoints + 1);
+    instance.line.geometry.setFromPoints(currentPoints);
+  }
+
+  // Update trail geometry
+  if (instance.trail && visiblePoints > 5) {
+    const trailStart = instance.isComplete
+      ? Math.max(0, newPoints.length - 11)
+      : Math.max(0, visiblePoints - 10);
+    const trailEnd = instance.isComplete
+      ? newPoints.length
+      : visiblePoints + 1;
+    const trailPoints = newPoints.slice(trailStart, trailEnd);
+    instance.trail.geometry.setFromPoints(trailPoints);
+  }
+
+  // Update marker position
+  const markerIndex = instance.isComplete
+    ? newPoints.length - 1
+    : Math.min(visiblePoints, newPoints.length - 1);
+  if (markerIndex >= 0) {
+    instance.markerPosition.copy(newPoints[markerIndex]);
   }
 }
 
