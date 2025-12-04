@@ -209,6 +209,8 @@ export interface GlobeSceneProps {
   mapStyle?: MapStyle;
   modeData?: MapModeOverlayData;
   flatMapVariant?: boolean | string | null;
+  /** Blend factor between day (0) and night (1) textures for smooth transitions */
+  dayNightBlend?: number;
   /** Show vector overlay (country borders) on the map */
   showVectorOverlay?: boolean;
   /** Vector overlay color (default: cyan) */
@@ -1260,6 +1262,7 @@ function SceneContent({
   missilesRef,
   explosionsRef,
   flatMapVariant,
+  dayNightBlend,
   worldCountries,
   onCameraPoseUpdate,
   onMorphingGlobeReady,
@@ -1286,6 +1289,7 @@ function SceneContent({
   missilesRef: MutableRefObject<Map<string, MissileTrajectoryInstance>>;
   explosionsRef: MutableRefObject<Map<string, { group: THREE.Group; startTime: number }>>;
   flatMapVariant?: GlobeSceneProps['flatMapVariant'];
+  dayNightBlend?: number;
   worldCountries?: GlobeSceneProps['worldCountries'];
   onCameraPoseUpdate?: (camera: THREE.PerspectiveCamera) => void;
   onMorphingGlobeReady?: (handle: MorphingGlobeHandle | null) => void;
@@ -1591,6 +1595,7 @@ function SceneContent({
           initialView="globe"
           animationDuration={1.2}
           textureVariant={isNightMode ? 'night' : 'day'}
+          dayNightBlend={dayNightBlend}
           onMorphProgress={handleMorphProgressInternal}
           worldCountries={worldCountries}
           showVectorOverlay={showVectorOverlay}
@@ -1810,6 +1815,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     mapStyle = DEFAULT_MAP_STYLE,
     modeData,
     flatMapVariant,
+    dayNightBlend,
     showVectorOverlay = false,
     vectorColor = '#2ef1ff',
     vectorOpacity = 0.7,
@@ -2206,6 +2212,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           missilesRef={missilesRef}
           explosionsRef={explosionsRef}
           flatMapVariant={flatMapVariant}
+          dayNightBlend={dayNightBlend}
           worldCountries={worldCountries}
           onCameraPoseUpdate={handleCameraPoseUpdate}
           onMorphingGlobeReady={handleMorphingGlobeReady}

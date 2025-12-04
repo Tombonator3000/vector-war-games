@@ -48,8 +48,10 @@ export interface MorphingGlobeProps {
   initialView?: 'globe' | 'flat';
   /** Animation duration in seconds */
   animationDuration?: number;
-  /** Texture variant: 'day' or 'night' */
+  /** Texture variant: 'day' or 'night' (used when dayNightBlend is not provided) */
   textureVariant?: 'day' | 'night';
+  /** Blend factor between day (0) and night (1) textures for smooth transitions */
+  dayNightBlend?: number;
   /** Custom texture URL */
   customTextureUrl?: string;
   /** Callback when morph starts */
@@ -117,9 +119,11 @@ const morphVertexShader = /* glsl */ `
   }
 `;
 
-// Fragment shader with lighting
+// Fragment shader with lighting and day/night blending
 const morphFragmentShader = /* glsl */ `
-  uniform sampler2D uTexture;
+  uniform sampler2D uDayTexture;
+  uniform sampler2D uNightTexture;
+  uniform float uDayNightBlend;
   uniform float uMorphFactor;
   uniform vec3 uLightDirection;
   uniform float uAmbientIntensity;
@@ -129,7 +133,12 @@ const morphFragmentShader = /* glsl */ `
   varying vec3 vPosition;
 
   void main() {
-    vec4 texColor = texture2D(uTexture, vUv);
+    // Sample both day and night textures
+    vec4 dayColor = texture2D(uDayTexture, vUv);
+    vec4 nightColor = texture2D(uNightTexture, vUv);
+
+    // Blend between day and night based on uDayNightBlend (0 = day, 1 = night)
+    vec4 texColor = mix(dayColor, nightColor, uDayNightBlend);
 
     // Simple diffuse lighting
     float diffuse = max(dot(vNormal, normalize(uLightDirection)), 0.0);
@@ -334,6 +343,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
       initialView = 'globe',
       animationDuration = 1.2,
       textureVariant = 'day',
+      dayNightBlend,
       customTextureUrl,
       onMorphStart,
       onMorphComplete,
@@ -367,31 +377,58 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
       duration: number;
     } | null>(null);
 
-    // Load texture
-    const textureUrl = useMemo(() => {
-      if (customTextureUrl) return customTextureUrl;
-      const variant = textureVariant === 'night' ? 'earth_night_flat' : 'earth_day_flat';
-      return resolvePublicAssetPath(`textures/${variant}.jpg`);
+    // Load both day and night textures for blending
+    const dayTextureUrl = useMemo(() => {
+      if (customTextureUrl && textureVariant === 'day') return customTextureUrl;
+      return resolvePublicAssetPath('textures/earth_day_flat.jpg');
     }, [customTextureUrl, textureVariant]);
 
-    const texture = useLoader(THREE.TextureLoader, textureUrl);
+    const nightTextureUrl = useMemo(() => {
+      if (customTextureUrl && textureVariant === 'night') return customTextureUrl;
+      return resolvePublicAssetPath('textures/earth_night_flat.jpg');
+    }, [customTextureUrl, textureVariant]);
 
+    const dayTexture = useLoader(THREE.TextureLoader, dayTextureUrl);
+    const nightTexture = useLoader(THREE.TextureLoader, nightTextureUrl);
+
+    // Configure day texture
     useEffect(() => {
-      if (texture) {
-        texture.colorSpace = THREE.SRGBColorSpace;
-        texture.anisotropy = 16;
-        texture.generateMipmaps = true;
-        texture.minFilter = THREE.LinearMipmapLinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
-        // Disable flipY to match shader UV coordinate expectations:
-        // - uv.y = 0 maps to north pole in shader
-        // - uv.y = 1 maps to south pole in shader
-        texture.flipY = false;
-        texture.needsUpdate = true;
+      if (dayTexture) {
+        dayTexture.colorSpace = THREE.SRGBColorSpace;
+        dayTexture.anisotropy = 16;
+        dayTexture.generateMipmaps = true;
+        dayTexture.minFilter = THREE.LinearMipmapLinearFilter;
+        dayTexture.magFilter = THREE.LinearFilter;
+        dayTexture.wrapS = THREE.RepeatWrapping;
+        dayTexture.wrapT = THREE.ClampToEdgeWrapping;
+        dayTexture.flipY = false;
+        dayTexture.needsUpdate = true;
       }
-    }, [texture]);
+    }, [dayTexture]);
+
+    // Configure night texture
+    useEffect(() => {
+      if (nightTexture) {
+        nightTexture.colorSpace = THREE.SRGBColorSpace;
+        nightTexture.anisotropy = 16;
+        nightTexture.generateMipmaps = true;
+        nightTexture.minFilter = THREE.LinearMipmapLinearFilter;
+        nightTexture.magFilter = THREE.LinearFilter;
+        nightTexture.wrapS = THREE.RepeatWrapping;
+        nightTexture.wrapT = THREE.ClampToEdgeWrapping;
+        nightTexture.flipY = false;
+        nightTexture.needsUpdate = true;
+      }
+    }, [nightTexture]);
+
+    // Calculate effective blend value
+    // If dayNightBlend is provided, use it; otherwise fall back to textureVariant
+    const effectiveBlend = useMemo(() => {
+      if (typeof dayNightBlend === 'number') {
+        return Math.max(0, Math.min(1, dayNightBlend));
+      }
+      return textureVariant === 'night' ? 1 : 0;
+    }, [dayNightBlend, textureVariant]);
 
     // Create shader material uniforms
     const uniforms = useMemo(
@@ -400,11 +437,13 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         uRadius: { value: EARTH_RADIUS },
         uFlatWidth: { value: FLAT_WIDTH },
         uFlatHeight: { value: FLAT_HEIGHT },
-        uTexture: { value: texture },
+        uDayTexture: { value: dayTexture },
+        uNightTexture: { value: nightTexture },
+        uDayNightBlend: { value: effectiveBlend },
         uLightDirection: { value: new THREE.Vector3(1, 0.5, 1).normalize() },
         uAmbientIntensity: { value: 0.4 },
       }),
-      [texture, initialView]
+      [dayTexture, nightTexture, effectiveBlend, initialView]
     );
 
     // Vector overlay uniforms
@@ -420,13 +459,25 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
       [initialView, vectorColor, vectorOpacity]
     );
 
-    // Update texture uniform when it changes
+    // Update texture uniforms when they change
     useEffect(() => {
-      if (materialRef.current && texture) {
-        materialRef.current.uniforms.uTexture.value = texture;
+      if (materialRef.current) {
+        if (dayTexture) {
+          materialRef.current.uniforms.uDayTexture.value = dayTexture;
+        }
+        if (nightTexture) {
+          materialRef.current.uniforms.uNightTexture.value = nightTexture;
+        }
         materialRef.current.needsUpdate = true;
       }
-    }, [texture]);
+    }, [dayTexture, nightTexture]);
+
+    // Update day/night blend uniform when it changes
+    useEffect(() => {
+      if (materialRef.current) {
+        materialRef.current.uniforms.uDayNightBlend.value = effectiveBlend;
+      }
+    }, [effectiveBlend]);
 
     // Update vector overlay visibility from prop
     useEffect(() => {

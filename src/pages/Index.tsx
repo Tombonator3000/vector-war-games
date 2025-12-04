@@ -1037,6 +1037,33 @@ function notifyPhaseTransition(active: boolean) {
   phaseTransitionListener?.(active);
 }
 
+// Day/night cycle update listener for smooth texture blending
+type DayNightUpdateListener = (targetBlend: number) => void;
+let dayNightUpdateListener: DayNightUpdateListener | null = null;
+
+function registerDayNightUpdateListener(listener: DayNightUpdateListener | null) {
+  dayNightUpdateListener = listener;
+}
+
+function notifyDayNightUpdate(turn: number) {
+  // Calculate blend based on turn (4-round cycle: day -> night -> day)
+  // Rounds 1-2: Day to Night (blend 0 -> 1)
+  // Rounds 3-4: Night to Day (blend 1 -> 0)
+  const turnInCycle = ((turn - 1) % 4); // 0-3
+  let targetBlend: number;
+
+  if (turnInCycle < 2) {
+    // First half of cycle: fade to night (0 -> 0.5 -> 1)
+    targetBlend = turnInCycle / 2 + 0.5 / 2; // 0.25 at turn 1, 0.75 at turn 2
+    targetBlend = turnInCycle === 0 ? 0 : turnInCycle === 1 ? 0.5 : 1;
+  } else {
+    // Second half of cycle: fade to day (1 -> 0.5 -> 0)
+    targetBlend = turnInCycle === 2 ? 0.5 : 0;
+  }
+
+  dayNightUpdateListener?.(targetBlend);
+}
+
 const setMultiplayerPublisher = (publisher: (() => void) | null) => {
   multiplayerPublisher = publisher;
 };
@@ -6638,6 +6665,9 @@ function endTurn() {
       S.phase = 'PLAYER';
       S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
 
+      // Trigger day/night cycle animation
+      notifyDayNightUpdate(S.turn);
+
       // Update formal war state and espionage systems for the new turn
       const casusUpdatedNations = updateCasusBelliForAllNations(nations, S.turn) as LocalNation[];
       nations = casusUpdatedNations;
@@ -6662,7 +6692,10 @@ function endTurn() {
         S.turn++;
         S.phase = 'PLAYER';
         S.actionsRemaining = S.defcon >= 4 ? 1 : S.defcon >= 2 ? 2 : 3;
-        
+
+        // Trigger day/night cycle animation
+        notifyDayNightUpdate(S.turn);
+
         // Release turn lock
         turnInProgress = false;
         if (safetyTimeout) {
@@ -7733,9 +7766,10 @@ export default function NoradVector() {
   });
   const [isFlatMapDay, setIsFlatMapDay] = useState<boolean>(true);
   const [showVectorOverlay, setShowVectorOverlay] = useState<boolean>(true);
-  const flatRealisticBlendRef = useRef<number>(0);
+  const [dayNightBlend, setDayNightBlend] = useState<number>(0);
   const dayNightBlendAnimationFrameRef = useRef<number | null>(null);
   const dayNightBlendAnimationStartRef = useRef<number | null>(null);
+  const dayNightBlendRef = useRef<number>(0); // Track current value for animation
   const stopDayNightBlendAnimation = useCallback(() => {
     if (dayNightBlendAnimationFrameRef.current) {
       cancelAnimationFrame(dayNightBlendAnimationFrameRef.current);
@@ -7746,10 +7780,11 @@ export default function NoradVector() {
   const animateDayNightBlendTo = useCallback((targetBlend: number) => {
     const clampedTarget = Math.min(Math.max(targetBlend, 0), 1);
 
-    const startBlend = flatRealisticBlendRef.current;
+    const startBlend = dayNightBlendRef.current;
     if (Math.abs(startBlend - clampedTarget) < 0.001) {
       stopDayNightBlendAnimation();
-      flatRealisticBlendRef.current = clampedTarget;
+      dayNightBlendRef.current = clampedTarget;
+      setDayNightBlend(clampedTarget);
       return;
     }
 
@@ -7768,13 +7803,15 @@ export default function NoradVector() {
         : -1 + (4 - 2 * progress) * progress;
       const nextBlend = startBlend + (clampedTarget - startBlend) * easedProgress;
 
-      flatRealisticBlendRef.current = nextBlend;
+      dayNightBlendRef.current = nextBlend;
+      setDayNightBlend(nextBlend);
 
       if (progress < 1) {
         dayNightBlendAnimationFrameRef.current = requestAnimationFrame(step);
       } else {
         stopDayNightBlendAnimation();
-        flatRealisticBlendRef.current = clampedTarget;
+        dayNightBlendRef.current = clampedTarget;
+        setDayNightBlend(clampedTarget);
       }
     };
 
@@ -7960,6 +7997,19 @@ export default function NoradVector() {
       registerPhaseTransitionListener(null);
     };
   }, []);
+
+  // Register day/night update listener for smooth texture blending
+  useEffect(() => {
+    const listener: DayNightUpdateListener = (targetBlend) => {
+      animateDayNightBlendTo(targetBlend);
+    };
+    registerDayNightUpdateListener(listener);
+    // Trigger initial blend based on current turn
+    notifyDayNightUpdate(S.turn);
+    return () => {
+      registerDayNightUpdateListener(null);
+    };
+  }, [animateDayNightBlendTo]);
 
   useEffect(() => {
     const listener: OverlayListener = (message) => {
@@ -16330,6 +16380,7 @@ export default function NoradVector() {
           showTerritoryMarkers={true}
           showUnits={showUnits}
           flatMapVariant={isFlatMapDay}
+          dayNightBlend={dayNightBlend}
           showVectorOverlay={showVectorOverlay}
         />
 
