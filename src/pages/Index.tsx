@@ -7363,6 +7363,7 @@ function gameLoop() {
 
   const nowMs = Date.now();
   const isWireframeStyle = currentMapStyle === 'wireframe';
+  const isMorphingStyle = currentMapStyle === 'morphing';
 
   ctx.clearRect(0, 0, W, H);
 
@@ -7370,14 +7371,17 @@ function gameLoop() {
   Atmosphere.update();
   Ocean.update();
 
-  if (!isWireframeStyle) {
+  // Skip 2D canvas rendering for morphing style - the 3D MorphingGlobe handles all map rendering
+  if (!isWireframeStyle && !isMorphingStyle) {
     Atmosphere.draw(ctx, currentMapStyle);
     Ocean.draw(ctx, currentMapStyle);
   }
 
   cam.zoom += (cam.targetZoom - cam.zoom) * 0.1;
 
-  if (!isWireframeStyle) {
+  // Skip 2D land mass rendering for morphing and wireframe styles
+  // Morphing uses 3D MorphingGlobe, wireframe uses 3D vector overlay
+  if (!isWireframeStyle && !isMorphingStyle) {
     drawWorld(currentMapStyle);
     CityLights.draw(ctx, currentMapStyle);
     drawNations(currentMapStyle);
@@ -16462,6 +16466,8 @@ export default function NoradVector() {
             }))}
             canvasWidth={overlayCanvas.width}
             canvasHeight={overlayCanvas.height}
+            projector={effectiveOverlayProjector}
+            projectorRevision={overlayProjectorVersion}
             visible={mapStyle.mode === 'unrest'}
           />
         )}
