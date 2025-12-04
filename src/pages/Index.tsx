@@ -7817,6 +7817,8 @@ export default function NoradVector() {
   const [isFlatMapDay, setIsFlatMapDay] = useState<boolean>(true);
   // Vector overlay (country borders) disabled by default - too distracting
   const [showVectorOverlay, setShowVectorOverlay] = useState<boolean>(false);
+  // Vector-only mode: hide earth texture and show only vector borders (for WARGAMES theme)
+  const [vectorOnlyMode, setVectorOnlyMode] = useState<boolean>(false);
   const [dayNightBlend, setDayNightBlend] = useState<number>(0);
   const dayNightBlendAnimationFrameRef = useRef<number | null>(null);
   const dayNightBlendAnimationStartRef = useRef<number | null>(null);
@@ -11295,12 +11297,18 @@ export default function NoradVector() {
     if (overlayCanvas) {
       overlayCanvas.style.imageRendering = theme === 'retro80s' || theme === 'wargames' ? 'pixelated' : 'auto';
     }
-    
-    // Auto-switch to wireframe map when wargames theme is selected
-    if (theme === 'wargames' && mapStyle.visual !== 'wireframe') {
-      handleMapStyleChange('wireframe');
+
+    // WARGAMES theme: enable vector-only mode (hide earth texture, show only vector borders)
+    // This applies to both globe and flat 2D views
+    if (theme === 'wargames') {
+      setVectorOnlyMode(true);
+      setShowVectorOverlay(true); // Ensure vector overlay is visible
+    } else {
+      setVectorOnlyMode(false);
+      // Don't auto-disable vector overlay when switching away from wargames
+      // User may have explicitly enabled it
     }
-  }, [theme, mapStyle.visual, handleMapStyleChange]);
+  }, [theme]);
 
   useEffect(() => {
     uiUpdateCallback = () => setUiTick(prev => prev + 1);
@@ -16433,6 +16441,9 @@ export default function NoradVector() {
           flatMapVariant={isFlatMapDay}
           dayNightBlend={dayNightBlend}
           showVectorOverlay={showVectorOverlay}
+          vectorOnlyMode={vectorOnlyMode}
+          vectorColor={theme === 'wargames' ? '#00ff00' : '#2ef1ff'}
+          vectorOpacity={theme === 'wargames' ? 0.9 : 0.7}
         />
 
         {draggingArmy && draggingArmyPosition && (
