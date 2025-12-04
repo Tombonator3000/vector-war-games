@@ -1,5 +1,5 @@
 import { SignalHigh, SignalLow, RefreshCcw } from 'lucide-react';
-import { useMultiplayer } from '@/contexts/MultiplayerProvider';
+import { useMultiplayer, MULTIPLAYER_ENABLED } from '@/contexts/MultiplayerProvider';
 
 const STATUS_COPY: Record<string, { label: string; tone: string; icon: typeof SignalHigh }> = {
   idle: { label: 'Idle', tone: 'text-cyan-300/70', icon: SignalLow },
@@ -11,6 +11,12 @@ const STATUS_COPY: Record<string, { label: string; tone: string; icon: typeof Si
 
 export const SyncStatusBadge = () => {
   const { connection, sessionId } = useMultiplayer();
+
+  // Don't render anything when multiplayer feature is disabled
+  if (!MULTIPLAYER_ENABLED) {
+    return null;
+  }
+
   const copy = STATUS_COPY[connection] ?? STATUS_COPY.idle;
   const Icon = copy.icon;
 

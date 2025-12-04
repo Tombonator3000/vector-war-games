@@ -4,6 +4,13 @@ import { supabase, isSupabaseFallback } from '@/integrations/supabase/client';
 import { MultiplayerTransport, type MultiplayerPresenceState, type MultiplayerStateEnvelope, type MultiplayerApprovalRequest, type MultiplayerApprovalResponse, type MultiplayerRole } from '@/integrations/multiplayer/service';
 import type { MultiplayerActionType, MultiplayerSharedState } from '@/types/game';
 
+/**
+ * Feature flag to enable/disable multiplayer functionality globally.
+ * Set to false to disable all multiplayer features, popups, and connection attempts.
+ * The code is preserved for future use - just set this to true to re-enable.
+ */
+export const MULTIPLAYER_ENABLED = false;
+
 const ROLE_PERMISSIONS: Record<MultiplayerRole, Set<MultiplayerActionType>> = {
   STRATEGIST: new Set(['BUILD', 'RESEARCH', 'DIPLOMACY', 'PRODUCTION', 'BIOWARFARE']),
   TACTICIAN: new Set(['INTEL', 'CULTURE', 'IMMIGRATION', 'PRODUCTION', 'BIOWARFARE']),
@@ -140,6 +147,12 @@ export const MultiplayerProvider = ({ children }: { children: React.ReactNode })
   const fallbackToastRef = useRef(false);
 
   useEffect(() => {
+    // Skip all multiplayer initialization when feature is disabled
+    if (!MULTIPLAYER_ENABLED) {
+      setConnection('unavailable');
+      return;
+    }
+
     const notifyUnavailable = () => {
       setConnection('unavailable');
       if (!fallbackToastRef.current) {
@@ -188,6 +201,11 @@ export const MultiplayerProvider = ({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
+    // Skip transport initialization when multiplayer is disabled
+    if (!MULTIPLAYER_ENABLED) {
+      return;
+    }
+
     const transport = new MultiplayerTransport();
     transportRef.current = transport;
     setConnection(isSupabaseFallback ? 'unavailable' : 'connecting');

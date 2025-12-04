@@ -16,6 +16,7 @@ import { GameDatabase } from '@/components/GameDatabase';
 import { ComprehensiveTutorial } from '@/components/ComprehensiveTutorial';
 import type { MapStyle, MapVisualStyle } from '@/components/GlobeScene';
 import { BookOpen, GraduationCap } from 'lucide-react';
+import { MULTIPLAYER_ENABLED } from '@/contexts/MultiplayerProvider';
 
 // Storage wrapper for localStorage
 const Storage = {
@@ -828,8 +829,8 @@ export function OptionsMenu({
 
         {/* GAMEPLAY TAB */}
         <TabsContent value="gameplay" className="space-y-6">
-          {/* CO-OP OPERATIONS - Only show in-game */}
-          {showInGameFeatures && (
+          {/* CO-OP OPERATIONS - Only show in-game and when multiplayer feature is enabled */}
+          {showInGameFeatures && MULTIPLAYER_ENABLED && (
             <div className="options-section">
               <h3 className="options-section__heading">CO-OP OPERATIONS</h3>
               <p className="options-section__subheading">
