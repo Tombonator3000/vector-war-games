@@ -910,7 +910,7 @@ const themeOptions: { id: ThemeId; label: string }[] = [
 ];
 
 let currentTheme: ThemeId = 'synthwave';
-let currentMapStyle: MapVisualStyle = 'realistic';
+let currentMapStyle: MapVisualStyle = 'morphing';
 let currentMapMode: MapMode = 'standard';
 let currentMapModeData: MapModeOverlayData | null = null;
 let selectedTargetRefId: string | null = null;
