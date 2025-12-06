@@ -37,6 +37,9 @@ import { useEconomicDepth } from '@/hooks/useEconomicDepth';
 import { useMilitaryTemplates } from '@/hooks/useMilitaryTemplates';
 import { useSupplySystem } from '@/hooks/useSupplySystem';
 import { useVIIRS, getFireColor, getFireRadius, type VIIRSFirePoint } from '@/hooks/useVIIRS';
+import { useSatelliteSignals } from '@/hooks/useSatelliteSignals';
+import { SatelliteGroundStationPanel } from '@/components/SatelliteGroundStationPanel';
+import type { SignalSatellite, SignalTransmission, GroundStation as SignalGroundStation, SignalInterference } from '@/types/satelliteSignal';
 import { initializeAllAINations, processAllAINationsBioWarfare } from '@/lib/aiBioWarfareIntegration';
 import { PopSystemManager } from '@/lib/popSystemManager';
 import { DEPLOYMENT_METHODS } from '@/types/bioDeployment';
@@ -4104,6 +4107,255 @@ function drawVIIRSFires(nowMs: number) {
   ctx.restore();
 }
 
+/**
+ * Draw satellite signal transmissions and ground stations
+ * Visualizes signal paths as animated waves from satellites to ground receivers
+ */
+function drawSatelliteSignals(nowMs: number) {
+  if (!ctx) return;
+
+  // Get satellite signal state from window (set by useSatelliteSignals hook)
+  const signalState = (window as any).__satelliteSignalState;
+  if (!signalState) return;
+
+  const { satellites, groundStations, activeTransmissions, interferenceZones } = signalState;
+
+  // Draw interference zones
+  interferenceZones.forEach((zone: SignalInterference) => {
+    const { x, y, visible } = projectLocal(zone.lon, zone.lat);
+    if (!visible || !Number.isFinite(x) || !Number.isFinite(y)) return;
+
+    const elapsed = nowMs - zone.startedAt;
+    const remaining = zone.duration - elapsed;
+    if (remaining <= 0) return;
+
+    const fadeOut = Math.min(1, remaining / 2000);
+    const pulse = 0.6 + 0.4 * Math.sin(nowMs / 300);
+    const radius = zone.radius * 3 * (1 + 0.1 * pulse);
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalAlpha = zone.intensity * 0.4 * fadeOut * pulse;
+
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    gradient.addColorStop(0, 'rgba(255,50,50,0.8)');
+    gradient.addColorStop(0.5, 'rgba(255,100,50,0.4)');
+    gradient.addColorStop(1, 'rgba(255,150,50,0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Interference label
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.8 * fadeOut;
+    ctx.font = 'bold 9px monospace';
+    ctx.fillStyle = 'rgba(255,100,100,0.9)';
+    ctx.textAlign = 'center';
+    ctx.fillText(`⚠ ${zone.type.toUpperCase()}`, x, y - radius - 8);
+    ctx.restore();
+  });
+
+  // Draw ground stations
+  groundStations.forEach((station: SignalGroundStation) => {
+    const { x, y, visible } = projectLocal(station.lon, station.lat);
+    if (!visible || !Number.isFinite(x) || !Number.isFinite(y)) return;
+
+    const hasActiveSignal = station.receivedSignals.some((s: { active: boolean }) => s.active);
+    const pulse = 0.7 + 0.3 * Math.sin(nowMs / 400);
+
+    ctx.save();
+
+    // Ground station base
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = station.operational
+      ? hasActiveSignal
+        ? 'rgba(80,200,120,0.9)'
+        : 'rgba(200,180,80,0.8)'
+      : 'rgba(150,80,80,0.7)';
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Antenna dish visualization
+    ctx.strokeStyle = station.operational ? 'rgba(150,220,255,0.8)' : 'rgba(100,100,100,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y - 4, 8, Math.PI * 0.8, Math.PI * 0.2, true);
+    ctx.stroke();
+
+    // Receiving pulse animation when active
+    if (hasActiveSignal && station.operational) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.3 + 0.3 * pulse;
+      ctx.strokeStyle = 'rgba(100,200,255,0.8)';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 3; i++) {
+        const ringRadius = 10 + i * 6 + (nowMs / 100 + i * 10) % 18;
+        ctx.globalAlpha = 0.4 * (1 - (ringRadius - 10) / 28);
+        ctx.beginPath();
+        ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    // Station label
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.9;
+    ctx.font = 'bold 8px monospace';
+    ctx.fillStyle = 'rgba(200,220,255,0.9)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.lineWidth = 2;
+    ctx.textAlign = 'center';
+    const label = `📡 ${station.name.slice(0, 12)}`;
+    ctx.strokeText(label, x, y + 18);
+    ctx.fillText(label, x, y + 18);
+
+    // Signal strength indicator
+    if (hasActiveSignal) {
+      const avgQuality = station.receivedSignals
+        .filter((s: { active: boolean }) => s.active)
+        .reduce((sum: number, s: { quality: number }) => sum + s.quality, 0) /
+        station.receivedSignals.filter((s: { active: boolean }) => s.active).length;
+
+      const barWidth = 24;
+      const barHeight = 3;
+      const barX = x - barWidth / 2;
+      const barY = y + 22;
+
+      ctx.fillStyle = 'rgba(40,40,40,0.8)';
+      ctx.fillRect(barX, barY, barWidth, barHeight);
+
+      const qualityColor = avgQuality >= 80 ? 'rgba(80,200,120,0.9)' :
+                          avgQuality >= 60 ? 'rgba(100,180,220,0.9)' :
+                          avgQuality >= 40 ? 'rgba(200,180,80,0.9)' :
+                          avgQuality >= 20 ? 'rgba(220,140,60,0.9)' :
+                          'rgba(200,80,80,0.9)';
+      ctx.fillStyle = qualityColor;
+      ctx.fillRect(barX, barY, barWidth * (avgQuality / 100), barHeight);
+    }
+
+    ctx.restore();
+  });
+
+  // Draw satellites with signal capability indicator
+  satellites.forEach((sat: SignalSatellite) => {
+    const { x, y, visible } = projectLocal(sat.currentPosition.lon, sat.currentPosition.lat);
+    if (!visible || !Number.isFinite(x) || !Number.isFinite(y)) return;
+
+    const pulse = 0.7 + 0.3 * Math.sin(nowMs / 350 + sat.currentPosition.lon * 0.1);
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    // Satellite glow
+    ctx.globalAlpha = 0.4 * pulse;
+    const glowGradient = ctx.createRadialGradient(x, y, 0, x, y, 20);
+    glowGradient.addColorStop(0, 'rgba(100,200,255,0.8)');
+    glowGradient.addColorStop(1, 'rgba(100,200,255,0)');
+    ctx.fillStyle = glowGradient;
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Satellite body
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = sat.operational ? 'rgba(180,220,255,1)' : 'rgba(100,100,100,0.7)';
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Solar panels
+    ctx.fillStyle = sat.operational ? 'rgba(100,150,200,0.9)' : 'rgba(80,80,80,0.6)';
+    ctx.fillRect(x - 12, y - 2, 8, 4);
+    ctx.fillRect(x + 4, y - 2, 8, 4);
+
+    // Type indicator
+    const typeColors: Record<string, string> = {
+      communication: 'rgba(100,200,255,0.9)',
+      reconnaissance: 'rgba(255,200,100,0.9)',
+      navigation: 'rgba(100,255,150,0.9)',
+      weather: 'rgba(200,150,255,0.9)',
+    };
+    ctx.fillStyle = typeColors[sat.type] || 'rgba(200,200,200,0.9)';
+    ctx.beginPath();
+    ctx.arc(x, y - 8, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  });
+
+  // Draw active signal transmissions
+  activeTransmissions.forEach((tx: SignalTransmission) => {
+    const sat = satellites.find((s: SignalSatellite) => s.id === tx.satelliteId);
+    if (!sat) return;
+
+    const { x: satX, y: satY, visible: satVisible } = projectLocal(sat.currentPosition.lon, sat.currentPosition.lat);
+    if (!satVisible) return;
+
+    // Draw signal beams to each target ground station
+    tx.targetStationIds.forEach((stationId: string) => {
+      const station = groundStations.find((s: SignalGroundStation) => s.id === stationId);
+      if (!station) return;
+
+      const { x: gsX, y: gsY, visible: gsVisible } = projectLocal(station.lon, station.lat);
+      if (!gsVisible) return;
+
+      const dx = gsX - satX;
+      const dy = gsY - satY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 1) return;
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+
+      // Signal beam with wave effect
+      const waveCount = Math.floor(dist / 20);
+      const waveProgress = (nowMs / 500) % 1;
+
+      for (let i = 0; i < waveCount; i++) {
+        const t = ((i / waveCount) + waveProgress) % 1;
+        const waveX = satX + dx * t;
+        const waveY = satY + dy * t;
+        const alpha = Math.sin(t * Math.PI) * 0.6 * (1 - tx.progress);
+
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = 'rgba(100,200,255,0.9)';
+        ctx.beginPath();
+        ctx.arc(waveX, waveY, 2 + Math.sin(t * Math.PI) * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Main signal line
+      ctx.globalAlpha = 0.4 * (1 - tx.progress);
+      ctx.strokeStyle = 'rgba(100,200,255,0.7)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 8]);
+      ctx.lineDashOffset = -nowMs / 50;
+      ctx.beginPath();
+      ctx.moveTo(satX, satY);
+      ctx.lineTo(gsX, gsY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Signal front wave
+      const frontT = tx.progress;
+      const frontX = satX + dx * frontT;
+      const frontY = satY + dy * frontT;
+      const frontPulse = 0.6 + 0.4 * Math.sin(tx.wavePhase);
+
+      ctx.globalAlpha = 0.8 * (1 - tx.progress) * frontPulse;
+      ctx.fillStyle = 'rgba(150,220,255,1)';
+      ctx.beginPath();
+      ctx.arc(frontX, frontY, 4 + frontPulse * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    });
+  });
+}
+
 function drawMissiles() {
   if (!ctx) return;
 
@@ -7392,6 +7644,7 @@ function gameLoop() {
 
   drawSatellites(nowMs);
   drawVIIRSFires(nowMs);
+  drawSatelliteSignals(nowMs);
   drawMissiles();
   drawBombers();
   drawSubmarines();
@@ -7675,6 +7928,18 @@ export default function NoradVector() {
 
   // NASA VIIRS satellite fire detection layer
   const viirsHook = useVIIRS();
+
+  // Satellite signal simulation
+  const satelliteSignals = useSatelliteSignals({
+    currentTurn: S.turn,
+    getNation: (id) => nations.find((n) => n.id === id),
+    nations,
+    onLog: (msg) => log(msg, 'info'),
+    enabled: isGameStarted && gamePhase === 'playing',
+  });
+
+  // Satellite communications panel state
+  const [isSatelliteCommsOpen, setIsSatelliteCommsOpen] = useState(false);
 
   // Great Old Ones state - MUST be declared before blockingModalActive useMemo
   const [greatOldOnesState, setGreatOldOnesState] = useState<GreatOldOnesState | null>(null);
@@ -11811,6 +12076,11 @@ export default function NoradVector() {
   const handleIntelOperations = useCallback(() => {
     AudioSys.playSFX('click');
     setIsIntelOperationsOpen(true);
+  }, []);
+
+  const handleSatelliteComms = useCallback(() => {
+    AudioSys.playSFX('click');
+    setIsSatelliteCommsOpen(true);
   }, []);
 
   const handleDeploySatellite = useCallback((targetId: string) => {
@@ -16877,6 +17147,18 @@ export default function NoradVector() {
                       <span className="text-[8px] font-mono">INTEL</span>
                     </Button>
 
+                    <Button
+                      onClick={handleSatelliteComms}
+                      variant="ghost"
+                      size="icon"
+                      data-tutorial="satcom-button"
+                      className="dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
+                      title="SATCOM - Satellite communications & signal monitoring"
+                    >
+                      <Radio className="h-5 w-5" />
+                      <span className="text-[8px] font-mono">SATCOM</span>
+                    </Button>
+
                     {bioForgeUnlocked ? (
                       <Button
                         onClick={() => setIsBioWarfareOpen(true)}
@@ -17750,6 +18032,30 @@ export default function NoradVector() {
               )}
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Satellite Communications Panel */}
+      <Dialog open={isSatelliteCommsOpen} onOpenChange={setIsSatelliteCommsOpen}>
+        <DialogContent className="max-w-4xl border border-cyan-500/40 bg-gradient-to-br from-slate-900/95 to-slate-800/95 text-cyan-100 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b border-cyan-500/30 bg-black/40 -m-4 sm:-m-6 mb-4 sm:mb-6 p-4 sm:p-6">
+            <DialogTitle className="text-2xl font-bold text-cyan-300 font-mono uppercase tracking-wider flex items-center gap-2">
+              <Satellite className="w-6 h-6" />
+              Satellite Communications
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-400 mt-1">
+              Monitor satellite orbits, ground stations, and signal transmissions
+            </DialogDescription>
+          </DialogHeader>
+          <SatelliteGroundStationPanel
+            state={satelliteSignals.state}
+            playerId={playerNationId ?? undefined}
+            onDeploySatellite={(type) => {
+              if (playerNationId) {
+                satelliteSignals.deploySatellite(playerNationId, type);
+              }
+            }}
+          />
         </DialogContent>
       </Dialog>
 
