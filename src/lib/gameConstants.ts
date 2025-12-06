@@ -57,7 +57,60 @@ export const COSTS = {
   cultural_wonder_academy: { production: 60, intel: 40 },
   cultural_wonder_heritage: { production: 50, intel: 30 },
   cultural_wonder_university: { production: 70, intel: 50 },
-  cultural_wonder_propaganda: { production: 55, intel: 70 }
+  cultural_wonder_propaganda: { production: 55, intel: 70 },
+
+  // Satellite Signal System
+  ground_station: { production: 25, intel: 15 },
+  communication_satellite: { production: 40, intel: 20 },
+  reconnaissance_satellite: { production: 35, intel: 30 },
+  navigation_satellite: { production: 45, intel: 25 },
+  weather_satellite: { production: 30, intel: 15 },
+  signal_booster: { production: 15, intel: 10 },
+  interference_jammer: { intel: 25 }
+};
+
+/**
+ * Satellite Signal Simulation Constants
+ */
+export const SATELLITE_SIGNAL_CONSTANTS = {
+  /** Speed of light for delay calculation (km/ms) */
+  SPEED_OF_LIGHT: 299.792458,
+  /** Earth radius in km */
+  EARTH_RADIUS: 6378.137,
+  /** Standard LEO altitude (km) */
+  LEO_ALTITUDE: 400,
+  /** Standard MEO altitude (km) */
+  MEO_ALTITUDE: 20200,
+  /** Geostationary altitude (km) */
+  GEO_ALTITUDE: 35786,
+  /** Base signal transmission power (dBW) */
+  BASE_TRANSMIT_POWER: 20,
+  /** Base antenna gain (dBi) */
+  BASE_ANTENNA_GAIN: 35,
+  /** Atmospheric attenuation factor (dB/km) */
+  ATMOSPHERIC_ATTENUATION: 0.1,
+  /** Rain fade factor (dB) */
+  RAIN_FADE: 0.5,
+  /** Minimum elevation angle for satellite visibility (degrees) */
+  MIN_ELEVATION_ANGLE: 5,
+  /** Signal quality thresholds */
+  SIGNAL_QUALITY: {
+    EXCELLENT: 80,
+    GOOD: 60,
+    FAIR: 40,
+    POOR: 20,
+    LOST: 0
+  },
+  /** Probability of random interference per update cycle */
+  INTERFERENCE_PROBABILITY: 0.02,
+  /** Base signal update interval (ms) */
+  UPDATE_INTERVAL: 100,
+  /** Signal visualization duration (ms) */
+  VISUALIZATION_DURATION: 2000,
+  /** Maximum ground stations per nation */
+  MAX_GROUND_STATIONS: 5,
+  /** Satellite time-to-live (ms) - 2 hours */
+  SATELLITE_TTL: 7200000
 };
 
 /**
