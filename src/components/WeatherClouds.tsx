@@ -158,6 +158,9 @@ const shadowVertexShader = /* glsl */ `
 `;
 
 // Shadow fragment shader
+// Note: With MultiplyBlending, we need to output colors that blend toward white (1,1,1)
+// when alpha decreases, since multiplying by 1 = no change. We pre-multiply the alpha
+// into the color and output solid alpha to avoid black box artifacts.
 const shadowFragmentShader = /* glsl */ `
   uniform float uGlobalOpacity;
 
@@ -172,8 +175,13 @@ const shadowFragmentShader = /* glsl */ `
     float alpha = smoothstep(0.5, 0.25, dist);
     alpha *= vOpacity * uGlobalOpacity;
 
-    // Dark shadow color
-    gl_FragColor = vec4(0.05, 0.05, 0.1, alpha);
+    // For multiply blending: interpolate between white (no effect) and dark shadow
+    // When alpha=0 → output white (1,1,1) → multiply has no effect
+    // When alpha=1 → output shadow color → multiply darkens
+    vec3 shadowColor = vec3(0.05, 0.05, 0.1);
+    vec3 finalColor = mix(vec3(1.0), shadowColor, alpha);
+
+    gl_FragColor = vec4(finalColor, 1.0);
   }
 `;
 

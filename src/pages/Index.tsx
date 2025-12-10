@@ -7639,9 +7639,13 @@ function gameLoop() {
     CityLights.draw(ctx, currentMapStyle);
   }
 
-  // Always draw nation labels and territory markers (they use the projector which handles all modes)
+  // Draw nation labels and territory markers
+  // In morphing mode, territory markers are rendered by TerritoryMarkers component in 3D scene
+  // so we skip 2D canvas territory rendering to avoid duplication
   drawNations(currentMapStyle);
-  drawTerritoriesWrapper();
+  if (!isMorphingStyle) {
+    drawTerritoriesWrapper();
+  }
 
   drawSatellites(nowMs);
   drawVIIRSFires(nowMs);
