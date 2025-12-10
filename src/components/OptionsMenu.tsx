@@ -46,6 +46,7 @@ type ThemeId =
   | 'holographic';
 
 type LayoutDensity = 'expanded' | 'compact' | 'minimal';
+export type CardStoryPosition = 'left' | 'right' | 'disabled';
 type ScreenResolution = 'auto' | '1280x720' | '1600x900' | '1920x1080' | '2560x1440' | '3840x2160';
 
 const MUSIC_TRACKS = [
@@ -143,6 +144,24 @@ const layoutDensityOptions: { id: LayoutDensity; label: string; description: str
   },
 ];
 
+const cardStoryPositionOptions: { id: CardStoryPosition; label: string; description: string }[] = [
+  {
+    id: 'left',
+    label: 'Left',
+    description: 'Story modal appears on the left side of the screen.',
+  },
+  {
+    id: 'right',
+    label: 'Right',
+    description: 'Story modal appears on the right side of the screen.',
+  },
+  {
+    id: 'disabled',
+    label: 'Disabled',
+    description: 'No story modal when playing cards.',
+  },
+];
+
 export interface OptionsMenuProps {
   /** Optional external theme state control */
   theme?: ThemeId;
@@ -191,6 +210,10 @@ export interface OptionsMenuProps {
   onNextTrack?: () => void;
   activeTrackMessage?: string;
   musicTracks?: MusicTrack[];
+
+  /** Card story modal position control */
+  cardStoryPosition?: CardStoryPosition;
+  onCardStoryPositionChange?: (position: CardStoryPosition) => void;
 }
 
 export function OptionsMenu({
@@ -224,6 +247,8 @@ export function OptionsMenu({
   onNextTrack,
   activeTrackMessage: externalActiveTrackMessage,
   musicTracks,
+  cardStoryPosition: controlledCardStoryPosition,
+  onCardStoryPositionChange,
 }: OptionsMenuProps) {
   // Theme state
   const [theme, setThemeState] = useState<ThemeId>(() => {
@@ -326,6 +351,36 @@ export function OptionsMenu({
       onChange();
     }
   }, [onChange]);
+
+  // Card story modal position state
+  const [cardStoryPosition, setCardStoryPosition] = useState<CardStoryPosition>(() => {
+    const stored = Storage.getItem('card_story_position');
+    if (stored === 'left' || stored === 'right' || stored === 'disabled') {
+      return stored;
+    }
+    return 'left'; // Default to left side like Cultist Simulator
+  });
+
+  const isCardStoryPositionControlled = typeof controlledCardStoryPosition === 'string';
+  const resolvedCardStoryPosition = isCardStoryPositionControlled ? controlledCardStoryPosition : cardStoryPosition;
+
+  const handleCardStoryPositionChange = useCallback((position: CardStoryPosition) => {
+    if (!isCardStoryPositionControlled) {
+      setCardStoryPosition(position);
+      Storage.setItem('card_story_position', position);
+    }
+    const option = cardStoryPositionOptions.find(o => o.id === position);
+    toast({
+      title: 'Card story modal updated',
+      description: option?.description ?? `Position set to ${position}`,
+    });
+    if (onCardStoryPositionChange) {
+      onCardStoryPositionChange(position);
+    }
+    if (onChange) {
+      onChange();
+    }
+  }, [isCardStoryPositionControlled, onCardStoryPositionChange, onChange]);
 
   // Audio state
   const [musicEnabled, setMusicEnabled] = useState(() => {
@@ -860,6 +915,41 @@ export function OptionsMenu({
 
         {/* GAMEPLAY TAB */}
         <TabsContent value="gameplay" className="space-y-6">
+          {/* CARD STORY MODAL - Only show in-game */}
+          {showInGameFeatures && (
+            <div className="options-section">
+              <h3 className="options-section__heading">CARD STORY MODAL</h3>
+              <p className="options-section__subheading">
+                When playing cards, display narrative flavor text inspired by Cultist Simulator.
+                Choose which side of the screen the story modal appears on.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {cardStoryPositionOptions.map((option) => {
+                  const isActive = resolvedCardStoryPosition === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => handleCardStoryPositionChange(option.id)}
+                      className={`layout-chip${isActive ? ' is-active' : ''}`}
+                      aria-pressed={isActive}
+                      title={option.description}
+                    >
+                      <span className="layout-chip__label">{option.label}</span>
+                      <span className="layout-chip__description">{option.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-4 p-3 rounded border border-cyan-500/30 bg-cyan-900/20">
+                <p className="text-xs text-cyan-200/80">
+                  <strong>Tip:</strong> The card story modal provides immersive narrative context when
+                  playing warhead cards, deploying delivery systems, or activating secret abilities.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* CO-OP OPERATIONS - Only show in-game and when multiplayer feature is enabled */}
           {showInGameFeatures && MULTIPLAYER_ENABLED && (
             <div className="options-section">
