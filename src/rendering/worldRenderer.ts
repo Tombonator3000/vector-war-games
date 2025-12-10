@@ -813,37 +813,40 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       ctx.restore();
     }
 
-    // Nation marker (triangle)
-    ctx.save();
-    ctx.strokeStyle = markerColor;
-    ctx.lineWidth = isWireframeStyle ? 1.5 : 2;
-    if (isWireframeStyle) {
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.moveTo(x, y - 18);
-      ctx.lineTo(x - 14, y + 14);
-      ctx.lineTo(x + 14, y + 14);
-      ctx.closePath();
-      ctx.stroke();
-    } else {
-      ctx.fillStyle = markerColor;
-      ctx.shadowColor = markerColor;
-      ctx.shadowBlur = 20;
-      ctx.beginPath();
-      ctx.moveTo(x, y - 20);
-      ctx.lineTo(x - 15, y + 12);
-      ctx.lineTo(x + 15, y + 12);
-      ctx.closePath();
-      ctx.stroke();
-      ctx.globalAlpha = 0.3;
-      ctx.fill();
+    // Nation marker (triangle) - skip in morphing mode since 3D scene renders markers
+    const isMorphingStyle = style === 'morphing';
+    if (!isMorphingStyle) {
+      ctx.save();
+      ctx.strokeStyle = markerColor;
+      ctx.lineWidth = isWireframeStyle ? 1.5 : 2;
+      if (isWireframeStyle) {
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x, y - 18);
+        ctx.lineTo(x - 14, y + 14);
+        ctx.lineTo(x + 14, y + 14);
+        ctx.closePath();
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = markerColor;
+        ctx.shadowColor = markerColor;
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.moveTo(x, y - 20);
+        ctx.lineTo(x - 15, y + 12);
+        ctx.lineTo(x + 15, y + 12);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.globalAlpha = 0.3;
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
     }
-    ctx.globalAlpha = 1;
-    ctx.restore();
 
-    // Draw city squares around nation
+    // Draw city squares around nation - skip in morphing mode since 3D scene renders markers
     const cityCount = n.cities || 1;
-    if (cityCount > 1) {
+    if (cityCount > 1 && !isMorphingStyle) {
       ctx.save();
       for (let i = 1; i < cityCount; i++) {
         const angle = (i / (cityCount - 1)) * Math.PI * 2;
@@ -921,7 +924,6 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       ctx.save();
       ctx.globalAlpha = labelVisibility;
       ctx.font = `bold ${Math.round(12 * z)}px monospace`;
-      const isMorphingStyle = style === 'morphing';
       const displayNameColor = isWireframeStyle ? '#4ef6ff' : (isMorphingStyle ? '#00ff00' : markerColor);
       ctx.fillStyle = displayNameColor;
       ctx.shadowColor = isMorphingStyle ? '#00ff00' : markerColor;

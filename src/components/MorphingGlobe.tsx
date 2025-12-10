@@ -507,6 +507,22 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
       }
     }, [effectiveBlend]);
 
+    // Ensure morph factor uniform is synced when morphFactor state changes
+    // This handles cases where the uniforms object is recreated (e.g., texture changes)
+    // and prevents the flat plane from showing inside the globe
+    useEffect(() => {
+      const currentFactor = morphFactorRef.current;
+      if (materialRef.current) {
+        materialRef.current.uniforms.uMorphFactor.value = currentFactor;
+      }
+      if (vectorMaterialRef.current) {
+        vectorMaterialRef.current.uniforms.uMorphFactor.value = currentFactor;
+      }
+      if (darkMaterialRef.current) {
+        darkMaterialRef.current.uniforms.uMorphFactor.value = currentFactor;
+      }
+    }, [morphFactor]);
+
     // Update vector overlay visibility from prop
     useEffect(() => {
       setVectorOverlayVisible(showVectorOverlay);
@@ -650,6 +666,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
     return (
       <group>
         {/* Main earth mesh - hidden in vectorOnlyMode, shows only dark background */}
+        {/* Use FrontSide to prevent seeing inside of sphere during globe mode */}
         {!vectorOnlyMode && (
           <mesh ref={meshRef} geometry={geometry} renderOrder={0}>
             <shaderMaterial
@@ -657,7 +674,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
               vertexShader={morphVertexShader}
               fragmentShader={morphFragmentShader}
               uniforms={uniforms}
-              side={THREE.DoubleSide}
+              side={THREE.FrontSide}
               transparent={false}
               depthWrite={true}
               depthTest={true}
@@ -673,7 +690,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
               vertexShader={morphVertexShader}
               fragmentShader={darkFragmentShader}
               uniforms={darkUniforms}
-              side={THREE.DoubleSide}
+              side={THREE.FrontSide}
               transparent={false}
               depthWrite={true}
               depthTest={true}
