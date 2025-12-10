@@ -162,6 +162,10 @@ export interface OptionsMenuProps {
   showVIIRSLayer?: boolean;
   onVIIRSLayerToggle?: (enabled: boolean) => void;
 
+  /** Weather radar cloud layer */
+  showWeatherClouds?: boolean;
+  onWeatherCloudsToggle?: (enabled: boolean) => void;
+
   /** Whether to show in-game only features (like co-op, HUD layout) */
   showInGameFeatures?: boolean;
 
@@ -200,6 +204,8 @@ export function OptionsMenu({
   onVectorOverlayToggle,
   showVIIRSLayer = false,
   onVIIRSLayerToggle,
+  showWeatherClouds = false,
+  onWeatherCloudsToggle,
   showInGameFeatures = true,
   onChange,
   currentTurn = 1,
@@ -663,6 +669,31 @@ export function OptionsMenu({
                     }
                   }}
                   aria-label="Toggle VIIRS satellite fire detection layer"
+                />
+              </div>
+
+              <div className="options-toggle">
+                <div className="flex flex-col text-left">
+                  <span className="tracking-[0.2em] text-[10px] text-cyan-300 uppercase">Weather Radar Clouds</span>
+                  <span className="text-[11px] text-cyan-400/80">
+                    Display 3D cloud formations derived from weather radar data with floating shadows.
+                  </span>
+                </div>
+                <Switch
+                  checked={showWeatherClouds}
+                  onCheckedChange={(checked) => {
+                    onWeatherCloudsToggle?.(checked);
+                    toast({
+                      title: checked ? 'Weather clouds enabled' : 'Weather clouds disabled',
+                      description: checked
+                        ? 'Atmospheric cloud layer now visible above the globe.'
+                        : 'Weather radar cloud overlay hidden.',
+                    });
+                    if (onChange) {
+                      onChange();
+                    }
+                  }}
+                  aria-label="Toggle weather radar cloud layer"
                 />
               </div>
 

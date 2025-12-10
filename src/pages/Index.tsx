@@ -37,6 +37,7 @@ import { useEconomicDepth } from '@/hooks/useEconomicDepth';
 import { useMilitaryTemplates } from '@/hooks/useMilitaryTemplates';
 import { useSupplySystem } from '@/hooks/useSupplySystem';
 import { useVIIRS, getFireColor, getFireRadius, type VIIRSFirePoint } from '@/hooks/useVIIRS';
+import { useWeatherRadar } from '@/hooks/useWeatherRadar';
 import { useSatelliteSignals } from '@/hooks/useSatelliteSignals';
 import { SatelliteGroundStationPanel } from '@/components/SatelliteGroundStationPanel';
 import type { SignalSatellite, SignalTransmission, GroundStation as SignalGroundStation, SignalInterference } from '@/types/satelliteSignal';
@@ -7928,6 +7929,9 @@ export default function NoradVector() {
 
   // NASA VIIRS satellite fire detection layer
   const viirsHook = useVIIRS();
+
+  // Weather radar cloud layer
+  const weatherRadarHook = useWeatherRadar();
 
   // Satellite signal simulation
   const satelliteSignals = useSatelliteSignals({
@@ -16716,6 +16720,10 @@ export default function NoradVector() {
           vectorOnlyMode={vectorOnlyMode}
           vectorColor={theme === 'wargames' ? '#00ff00' : '#2ef1ff'}
           vectorOpacity={theme === 'wargames' ? 0.9 : 0.7}
+          weatherClouds={weatherRadarHook.clouds}
+          showWeatherClouds={weatherRadarHook.enabled}
+          weatherCloudOpacity={0.75}
+          showCloudShadows={true}
         />
 
         {draggingArmy && draggingArmyPosition && (
@@ -17544,6 +17552,8 @@ export default function NoradVector() {
             onVectorOverlayToggle={setShowVectorOverlay}
             showVIIRSLayer={viirsHook.enabled}
             onVIIRSLayerToggle={viirsHook.setEnabled}
+            showWeatherClouds={weatherRadarHook.enabled}
+            onWeatherCloudsToggle={weatherRadarHook.setEnabled}
           />
         </SheetContent>
       </Sheet>
