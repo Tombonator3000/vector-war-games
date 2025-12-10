@@ -43,6 +43,8 @@ import { resolvePublicAssetPath } from '@/lib/renderingUtils';
 import { TerritoryMarkers } from '@/components/TerritoryMarkers';
 import type { TerritoryState } from '@/hooks/useConventionalWarfare';
 import { MorphingGlobe, getMorphedPosition, MORPHING_FLAT_WIDTH, MORPHING_FLAT_HEIGHT, type MorphingGlobeHandle } from '@/components/MorphingGlobe';
+import { WeatherClouds } from '@/components/WeatherClouds';
+import type { CloudRegion } from '@/hooks/useWeatherRadar';
 
 const EARTH_RADIUS = 1.8;
 const MARKER_OFFSET = 0.06;
@@ -215,6 +217,14 @@ export interface GlobeSceneProps {
   vectorOpacity?: number;
   /** Vector-only mode: hide earth texture and show only vector borders (for WARGAMES theme) */
   vectorOnlyMode?: boolean;
+  /** Weather cloud regions to display */
+  weatherClouds?: CloudRegion[];
+  /** Whether to show weather clouds */
+  showWeatherClouds?: boolean;
+  /** Weather cloud opacity (0-1) */
+  weatherCloudOpacity?: number;
+  /** Whether to show cloud shadows */
+  showCloudShadows?: boolean;
 }
 
 interface SceneRegistration {
@@ -1269,6 +1279,10 @@ function SceneContent({
   vectorColor = '#2ef1ff',
   vectorOpacity = 0.7,
   vectorOnlyMode = false,
+  weatherClouds = [],
+  showWeatherClouds = false,
+  weatherCloudOpacity = 0.8,
+  showCloudShadows = true,
 }: {
   cam: GlobeSceneProps['cam'];
   nations: GlobeSceneProps['nations'];
@@ -1297,6 +1311,10 @@ function SceneContent({
   vectorColor?: string;
   vectorOpacity?: number;
   vectorOnlyMode?: boolean;
+  weatherClouds?: CloudRegion[];
+  showWeatherClouds?: boolean;
+  weatherCloudOpacity?: number;
+  showCloudShadows?: boolean;
 }) {
   const { camera, size, clock, gl } = useThree();
   const earthRef = useRef<THREE.Mesh | null>(null);
@@ -1598,6 +1616,15 @@ function SceneContent({
         />
         {/* Atmosphere - fades out as we transition to flat */}
         <Atmosphere morphFactor={morphFactor} />
+        {/* Weather clouds - rendered above atmosphere with shadows */}
+        {showWeatherClouds && weatherClouds.length > 0 && (
+          <WeatherClouds
+            clouds={weatherClouds}
+            morphFactor={morphFactor}
+            opacity={weatherCloudOpacity}
+            showShadows={showCloudShadows}
+          />
+        )}
         {/* City lights - more visible at night */}
         <CityLights
           nations={nations}
@@ -1733,6 +1760,10 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
     vectorColor = '#2ef1ff',
     vectorOpacity = 0.7,
     vectorOnlyMode = false,
+    weatherClouds = [],
+    showWeatherClouds = false,
+    weatherCloudOpacity = 0.8,
+    showCloudShadows = true,
   }: GlobeSceneProps,
   ref,
 ) {
@@ -2135,6 +2166,10 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
           vectorColor={vectorColor}
           vectorOpacity={vectorOpacity}
           vectorOnlyMode={vectorOnlyMode}
+          weatherClouds={weatherClouds}
+          showWeatherClouds={showWeatherClouds}
+          weatherCloudOpacity={weatherCloudOpacity}
+          showCloudShadows={showCloudShadows}
         />
       </Canvas>
       <canvas
