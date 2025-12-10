@@ -918,6 +918,9 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       ctx.save();
       ctx.globalAlpha = labelVisibility * (isWireframeStyle || isMorphing ? 0.65 : 0.4);
       ctx.strokeStyle = isWireframeStyle ? '#4ef6ff' : (isMorphing ? '#00ff00' : markerColor);
+      // Clear any inherited shadow settings to prevent black clump artifacts
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
       ctx.strokeRect(lx - bw / 2, lyTop, bw, bh);
       ctx.restore();
 

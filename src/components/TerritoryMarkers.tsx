@@ -78,14 +78,16 @@ export function TerritoryMarkers({
               >
                 {/* Territory name - WCAG compliant: white text on dark backgrounds */}
                 <div
-                  className="whitespace-nowrap rounded px-2 py-0.5 text-[10px] font-bold shadow-lg"
+                  className="whitespace-nowrap rounded px-2 py-0.5 text-[10px] font-bold"
                   style={{
                     backgroundColor: isPlayerOwned
-                      ? 'rgba(14, 116, 144, 0.95)'  // Dark cyan for player
+                      ? 'rgba(14, 116, 144, 0.9)'  // Dark cyan for player
                       : territory.controllingNationId
-                        ? 'rgba(153, 27, 27, 0.95)' // Dark red for enemies
-                        : 'rgba(63, 63, 70, 0.95)', // Dark gray for neutral
+                        ? 'rgba(153, 27, 27, 0.9)' // Dark red for enemies
+                        : 'rgba(63, 63, 70, 0.9)', // Dark gray for neutral
                     color: '#fff',
+                    // Subtle shadow instead of shadow-lg to prevent black clump artifacts
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
                   }}
                 >
                   {territory.name}
@@ -93,14 +95,16 @@ export function TerritoryMarkers({
 
                 {/* Troop count badge */}
                 <div
-                  className="flex items-center gap-1 rounded-full px-2 py-1 shadow-lg"
+                  className="flex items-center gap-1 rounded-full px-2 py-1"
                   style={{
                     backgroundColor: isPlayerOwned
-                      ? 'rgba(6, 182, 212, 0.95)'
+                      ? 'rgba(6, 182, 212, 0.9)'
                       : territory.controllingNationId
-                        ? 'rgba(220, 38, 38, 0.95)'
-                        : 'rgba(113, 113, 122, 0.95)',
+                        ? 'rgba(220, 38, 38, 0.9)'
+                        : 'rgba(113, 113, 122, 0.9)',
                     border: `2px solid ${color}`,
+                    // Subtle shadow to prevent black clump artifacts
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
                   }}
                 >
                   <Users className="h-3 w-3 text-white" />
