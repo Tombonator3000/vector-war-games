@@ -1,26 +1,39 @@
 /**
  * Warhead Hand Display Component
- * 
- * Shows a nation's current hand of warhead cards in the Nuclear War campaign
+ *
+ * Shows a nation's current hand of warhead cards in the Nuclear War campaign.
+ * When clicked, cards can trigger story modals with narrative flavor text.
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { NuclearWarHandState } from '@/types/nuclearWarCampaign';
+import type { NuclearWarHandState, WarheadCard, DeliverySystem, SecretCard } from '@/types/nuclearWarCampaign';
 
 interface WarheadHandDisplayProps {
   hand: NuclearWarHandState;
   nationName: string;
   isPlayer: boolean;
   compact?: boolean;
+  /** Callback when a warhead card is clicked */
+  onWarheadClick?: (card: WarheadCard) => void;
+  /** Callback when a delivery system is clicked */
+  onDeliveryClick?: (system: DeliverySystem) => void;
+  /** Callback when a secret card is clicked */
+  onSecretClick?: (secret: SecretCard) => void;
+  /** Whether cards are selectable/clickable */
+  interactive?: boolean;
 }
 
-export function WarheadHandDisplay({ 
-  hand, 
-  nationName, 
+export function WarheadHandDisplay({
+  hand,
+  nationName,
   isPlayer,
-  compact = false 
+  compact = false,
+  onWarheadClick,
+  onDeliveryClick,
+  onSecretClick,
+  interactive = false,
 }: WarheadHandDisplayProps) {
   if (compact) {
     return (
@@ -65,18 +78,32 @@ export function WarheadHandDisplay({
               {hand.warheadCards.map((card, idx) => (
                 <TooltipProvider key={`${card.id}-${idx}`}>
                   <Tooltip>
-                    <TooltipTrigger>
-                      <Badge 
-                        variant="destructive" 
-                        className="text-base py-1 px-3 cursor-help"
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => interactive && onWarheadClick?.(card)}
+                        disabled={!interactive}
+                        className="focus:outline-none focus:ring-2 focus:ring-red-500/50 rounded disabled:cursor-default"
                       >
-                        {card.icon} {card.megatons}MT
-                      </Badge>
+                        <Badge
+                          variant="destructive"
+                          className={`text-base py-1 px-3 transition-all ${
+                            interactive
+                              ? 'cursor-pointer hover:scale-110 hover:shadow-lg hover:shadow-red-500/30 active:scale-95'
+                              : 'cursor-help'
+                          }`}
+                        >
+                          {card.icon} {card.megatons}MT
+                        </Badge>
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="text-center">
                         <div className="font-bold">{card.name}</div>
                         <div className="text-xs text-muted-foreground">{card.description}</div>
+                        {interactive && (
+                          <div className="text-xs text-cyan-400 mt-1">Click to view story</div>
+                        )}
                       </div>
                     </TooltipContent>
                   </Tooltip>
@@ -104,10 +131,24 @@ export function WarheadHandDisplay({
               {hand.deliverySystems.map(system => (
                 <TooltipProvider key={system.id}>
                   <Tooltip>
-                    <TooltipTrigger>
-                      <Badge variant="outline" className="gap-1 cursor-help">
-                        {system.icon} {system.type}
-                      </Badge>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => interactive && onDeliveryClick?.(system)}
+                        disabled={!interactive}
+                        className="focus:outline-none focus:ring-2 focus:ring-cyan-500/50 rounded disabled:cursor-default"
+                      >
+                        <Badge
+                          variant="outline"
+                          className={`gap-1 transition-all ${
+                            interactive
+                              ? 'cursor-pointer hover:scale-110 hover:shadow-lg hover:shadow-cyan-500/30 hover:border-cyan-400 active:scale-95'
+                              : 'cursor-help'
+                          }`}
+                        >
+                          {system.icon} {system.type}
+                        </Badge>
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="space-y-1">
@@ -117,6 +158,9 @@ export function WarheadHandDisplay({
                         <div className="text-xs">
                           {system.interceptable ? '⚠️ Interceptable' : '✓ Uninterceptable'}
                         </div>
+                        {interactive && (
+                          <div className="text-xs text-cyan-400 mt-1">Click to view story</div>
+                        )}
                       </div>
                     </TooltipContent>
                   </Tooltip>
@@ -136,14 +180,27 @@ export function WarheadHandDisplay({
               {hand.secrets.map(secret => (
                 <TooltipProvider key={secret.id}>
                   <Tooltip>
-                    <TooltipTrigger>
-                      <Badge 
-                        variant={secret.used ? "secondary" : "default"}
-                        className="gap-1 cursor-help"
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => interactive && !secret.used && onSecretClick?.(secret)}
+                        disabled={!interactive || secret.used}
+                        className="focus:outline-none focus:ring-2 focus:ring-purple-500/50 rounded disabled:cursor-default"
                       >
-                        🕵️ {secret.name}
-                        {secret.used && " (Used)"}
-                      </Badge>
+                        <Badge
+                          variant={secret.used ? 'secondary' : 'default'}
+                          className={`gap-1 transition-all ${
+                            interactive && !secret.used
+                              ? 'cursor-pointer hover:scale-110 hover:shadow-lg hover:shadow-purple-500/30 active:scale-95'
+                              : secret.used
+                              ? 'opacity-50 cursor-not-allowed'
+                              : 'cursor-help'
+                          }`}
+                        >
+                          🕵️ {secret.name}
+                          {secret.used && ' (Used)'}
+                        </Badge>
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="space-y-1">
@@ -152,6 +209,9 @@ export function WarheadHandDisplay({
                         <div className="text-xs text-muted-foreground">
                           {secret.usageLimit === 'once' ? 'One-time use' : 'Permanent'}
                         </div>
+                        {interactive && !secret.used && (
+                          <div className="text-xs text-purple-400 mt-1">Click to view story</div>
+                        )}
                       </div>
                     </TooltipContent>
                   </Tooltip>
