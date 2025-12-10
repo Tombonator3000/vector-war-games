@@ -17,7 +17,8 @@ import { resolvePublicAssetPath } from '@/lib/renderingUtils';
 
 const EARTH_RADIUS = 1.8;
 const FLAT_ASPECT = 2; // Equirectangular map is 2:1 aspect ratio
-const FLAT_HEIGHT = EARTH_RADIUS * 1.5;
+// Flat map height must be at least sphere diameter (2 * radius) to fully cover the globe during morph
+const FLAT_HEIGHT = EARTH_RADIUS * 2;
 const FLAT_WIDTH = FLAT_HEIGHT * FLAT_ASPECT;
 
 // Export flat dimensions for use in picker/projector calculations
