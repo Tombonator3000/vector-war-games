@@ -3633,88 +3633,109 @@ function generateNarrativeOutcome(option: FlashpointOption, success: boolean, ou
   return narrative || (success ? 'The situation has been resolved favorably.' : 'The situation has deteriorated.');
 }
 
+// Configuration for consequence field mappings
+type ConsequenceType = 'positive' | 'negative' | 'neutral';
+
+interface NumericFieldConfig {
+  kind: 'numeric';
+  field: string;
+  label: string;
+}
+
+interface LocalizedFieldConfig {
+  kind: 'localized';
+  field: string;
+  label: string;
+  type: ConsequenceType;
+}
+
+interface ThresholdFieldConfig {
+  kind: 'threshold';
+  field: string;
+  label: string;
+  threshold: number;
+  belowType: ConsequenceType;
+  aboveOrEqualType: ConsequenceType;
+}
+
+interface BooleanFlagConfig {
+  kind: 'boolean';
+  field: string;
+  label: string;
+  staticValue: string;
+  type: ConsequenceType;
+}
+
+type ConsequenceFieldConfig = NumericFieldConfig | LocalizedFieldConfig | ThresholdFieldConfig | BooleanFlagConfig;
+
+const CONSEQUENCE_FIELD_CONFIGS: ConsequenceFieldConfig[] = [
+  // Numeric fields with +/- formatting (type based on sign)
+  { kind: 'numeric', field: 'morale', label: 'Morale' },
+  { kind: 'numeric', field: 'intel', label: 'Intelligence' },
+  { kind: 'numeric', field: 'production', label: 'Production' },
+
+  // Localized number field with fixed type
+  { kind: 'localized', field: 'casualties', label: 'Casualties', type: 'negative' },
+
+  // Threshold-based type determination
+  { kind: 'threshold', field: 'defcon', label: 'DEFCON', threshold: 3, belowType: 'negative', aboveOrEqualType: 'neutral' },
+
+  // Boolean flags with static display values
+  { kind: 'boolean', field: 'madCounterstrikeInitiated', label: 'Strategic Status', staticValue: 'MAD Counterstrike Initiated', type: 'negative' },
+  { kind: 'boolean', field: 'threatNeutralized', label: 'Status', staticValue: 'Threat Neutralized', type: 'positive' },
+  { kind: 'boolean', field: 'newAlliance', label: 'Diplomacy', staticValue: 'New Alliance Formed', type: 'positive' },
+  { kind: 'boolean', field: 'war', label: 'War Status', staticValue: 'War Declared', type: 'negative' },
+  { kind: 'boolean', field: 'nuclearExplosion', label: 'Critical Event', staticValue: 'Nuclear Detonation', type: 'negative' },
+];
+
 // Helper function to format consequences for display
-function formatConsequences(outcome: Record<string, any>): Array<{ label: string; value: string | number; type: 'positive' | 'negative' | 'neutral' }> {
-  const consequences: Array<{ label: string; value: string | number; type: 'positive' | 'negative' | 'neutral' }> = [];
+function formatConsequences(outcome: Record<string, any>): Array<{ label: string; value: string | number; type: ConsequenceType }> {
+  const consequences: Array<{ label: string; value: string | number; type: ConsequenceType }> = [];
 
-  if (typeof outcome.morale === 'number') {
-    consequences.push({
-      label: 'Morale',
-      value: outcome.morale > 0 ? `+${outcome.morale}` : `${outcome.morale}`,
-      type: outcome.morale > 0 ? 'positive' : 'negative'
-    });
-  }
+  for (const config of CONSEQUENCE_FIELD_CONFIGS) {
+    const value = outcome[config.field];
 
-  if (typeof outcome.intel === 'number') {
-    consequences.push({
-      label: 'Intelligence',
-      value: outcome.intel > 0 ? `+${outcome.intel}` : `${outcome.intel}`,
-      type: outcome.intel > 0 ? 'positive' : 'negative'
-    });
-  }
+    switch (config.kind) {
+      case 'numeric':
+        if (typeof value === 'number') {
+          consequences.push({
+            label: config.label,
+            value: value > 0 ? `+${value}` : `${value}`,
+            type: value > 0 ? 'positive' : 'negative'
+          });
+        }
+        break;
 
-  if (typeof outcome.production === 'number') {
-    consequences.push({
-      label: 'Production',
-      value: outcome.production > 0 ? `+${outcome.production}` : `${outcome.production}`,
-      type: outcome.production > 0 ? 'positive' : 'negative'
-    });
-  }
+      case 'localized':
+        if (value) {
+          consequences.push({
+            label: config.label,
+            value: value.toLocaleString(),
+            type: config.type
+          });
+        }
+        break;
 
-  if (outcome.casualties) {
-    consequences.push({
-      label: 'Casualties',
-      value: outcome.casualties.toLocaleString(),
-      type: 'negative'
-    });
-  }
+      case 'threshold':
+        if (value) {
+          consequences.push({
+            label: config.label,
+            value: value,
+            type: value < config.threshold ? config.belowType : config.aboveOrEqualType
+          });
+        }
+        break;
 
-  if (outcome.defcon) {
-    consequences.push({
-      label: 'DEFCON',
-      value: outcome.defcon,
-      type: outcome.defcon < 3 ? 'negative' : 'neutral'
-    });
-  }
-
-  if (outcome.madCounterstrikeInitiated) {
-    consequences.push({
-      label: 'Strategic Status',
-      value: 'MAD Counterstrike Initiated',
-      type: 'negative'
-    });
-  }
-
-  if (outcome.threatNeutralized) {
-    consequences.push({
-      label: 'Status',
-      value: 'Threat Neutralized',
-      type: 'positive'
-    });
-  }
-
-  if (outcome.newAlliance) {
-    consequences.push({
-      label: 'Diplomacy',
-      value: 'New Alliance Formed',
-      type: 'positive'
-    });
-  }
-
-  if (outcome.war) {
-    consequences.push({
-      label: 'War Status',
-      value: 'War Declared',
-      type: 'negative'
-    });
-  }
-
-  if (outcome.nuclearExplosion) {
-    consequences.push({
-      label: 'Critical Event',
-      value: 'Nuclear Detonation',
-      type: 'negative'
-    });
+      case 'boolean':
+        if (value) {
+          consequences.push({
+            label: config.label,
+            value: config.staticValue,
+            type: config.type
+          });
+        }
+        break;
+    }
   }
 
   return consequences;
