@@ -18,6 +18,140 @@ import {
   initializeResourceStockpile,
 } from '@/lib/territorialResourcesSystem';
 
+// ============================================================================
+// ABILITY HANDLER TYPES AND REGISTRY
+// ============================================================================
+
+/**
+ * Context passed to each ability handler
+ */
+interface AbilityHandlerContext {
+  ability: LeaderAbility;
+  nation: Nation;
+  gameState: GameState;
+  nations: Nation[];
+  targetId?: string;
+}
+
+/**
+ * Result from an ability handler
+ */
+interface AbilityHandlerResult {
+  effects: AbilityEffectResult[];
+  message: string;
+}
+
+/**
+ * Handler function type for executing ability effects
+ */
+type AbilityHandler = (ctx: AbilityHandlerContext) => AbilityHandlerResult;
+
+/**
+ * Registry mapping effect types to their handlers.
+ * Using a registry pattern makes the code more extensible and eliminates the switch statement.
+ */
+const ABILITY_HANDLERS: Record<string, AbilityHandler> = {
+  'force-peace': (ctx) => {
+    const effects = executeForcePeace(ctx.nation, ctx.nations, ctx.ability.effect);
+    return {
+      effects,
+      message: `${ctx.nation.name} has invoked ${ctx.ability.name}! All wars are temporarily suspended.`,
+    };
+  },
+
+  'first-strike': (ctx) => {
+    const effect = executeFirstStrike(ctx.nation, ctx.targetId, ctx.gameState, ctx.ability.effect, ctx.nations);
+    return {
+      effects: [effect],
+      message: `${ctx.nation.name} launches a devastating ${ctx.ability.name}!`,
+    };
+  },
+
+  'rapid-mobilization': (ctx) => {
+    const effect = executeRapidMobilization(ctx.nation, ctx.ability.effect);
+    return {
+      effects: [effect],
+      message: `${ctx.nation.name} activates ${ctx.ability.name}! Military production surges!`,
+    };
+  },
+
+  'summon-entity': (ctx) => {
+    const effect = executeSummonEntity(ctx.nation, ctx.targetId, ctx.gameState, ctx.ability.effect, ctx.nations);
+    return {
+      effects: [effect],
+      message: `${ctx.nation.name} summons a Great Old One! Reality trembles!`,
+    };
+  },
+
+  'reality-warp': (ctx) => {
+    const effects = executeRealityWarp(ctx.nation, ctx.gameState, ctx.ability, ctx.nations);
+    return {
+      effects,
+      message: `${ctx.nation.name} tears the fabric of reality with ${ctx.ability.name}!`,
+    };
+  },
+
+  'false-flag': (ctx) => {
+    const effect = executeFalseFlag(ctx.nation, ctx.targetId, ctx.gameState, ctx.ability.effect, ctx.nations);
+    return {
+      effects: [effect],
+      message: `${ctx.nation.name} executes a masterful deception!`,
+    };
+  },
+
+  'corruption-surge': (ctx) => {
+    const effect = executeCorruptionSurge(ctx.nation, ctx.targetId, ctx.gameState, ctx.ability.effect, ctx.nations);
+    return {
+      effects: [effect],
+      message: `${ctx.nation.name} spreads corruption across ${effect.targetName || 'the target'}!`,
+    };
+  },
+
+  'missile-shield': (ctx) => {
+    const effect = executeMissileShield(ctx.nation, ctx.ability.effect);
+    return {
+      effects: [effect],
+      message: `${ctx.nation.name} activates impenetrable missile defense!`,
+    };
+  },
+
+  'steal-resources': (ctx) => {
+    const effects = executeStealResources(ctx.nation, ctx.targetId, ctx.gameState, ctx.ability.effect, ctx.nations);
+    return {
+      effects,
+      message: `${ctx.nation.name} conducts covert resource acquisition!`,
+    };
+  },
+
+  'boost-relationships': (ctx) => {
+    const effects = executeBoostRelationships(ctx.nation, ctx.gameState, ctx.ability.effect, ctx.nations);
+    return {
+      effects,
+      message: `${ctx.nation.name} improves international relations!`,
+    };
+  },
+
+  'economic-boom': (ctx) => {
+    const effect = executeEconomicBoom(ctx.nation, ctx.ability.effect);
+    return {
+      effects: [effect],
+      message: `${ctx.nation.name} experiences an economic miracle!`,
+    };
+  },
+
+  'propaganda-wave': (ctx) => {
+    const effect = executePropagandaWave(ctx.nation, ctx.targetId, ctx.gameState, ctx.ability.effect, ctx.nations);
+    return {
+      effects: [effect],
+      message: `${ctx.nation.name} unleashes a devastating propaganda campaign!`,
+    };
+  },
+};
+
+// ============================================================================
+// MAIN EXECUTOR
+// ============================================================================
+
 /**
  * Execute a leader ability
  */
@@ -27,8 +161,6 @@ export function executeLeaderAbility(
   gameState: GameState,
   targetId?: string
 ): AbilityUseResult {
-  const effects: AbilityEffectResult[] = [];
-  let message = '';
   const nations = PlayerManager.getNations().length
     ? PlayerManager.getNations()
     : gameState.nations || [];
@@ -37,83 +169,23 @@ export function executeLeaderAbility(
     // Update ability state (decrement uses, set cooldown)
     const newAbilityState = useAbility(ability, gameState.turn);
 
-    // Execute the effect based on type
-    switch (ability.effect.type) {
-      case 'force-peace':
-        const peaceEffects = executeForcePeace(nation, nations, ability.effect);
-        effects.push(...peaceEffects);
-        message = `${nation.name} has invoked ${ability.name}! All wars are temporarily suspended.`;
-        break;
+    // Build handler context
+    const ctx: AbilityHandlerContext = {
+      ability,
+      nation,
+      gameState,
+      nations,
+      targetId,
+    };
 
-      case 'first-strike':
-        const strikeEffect = executeFirstStrike(nation, targetId, gameState, ability.effect, nations);
-        effects.push(strikeEffect);
-        message = `${nation.name} launches a devastating ${ability.name}!`;
-        break;
-
-      case 'rapid-mobilization':
-        const mobilizationEffect = executeRapidMobilization(nation, ability.effect);
-        effects.push(mobilizationEffect);
-        message = `${nation.name} activates ${ability.name}! Military production surges!`;
-        break;
-
-      case 'summon-entity':
-        const summonEffect = executeSummonEntity(nation, targetId, gameState, ability.effect, nations);
-        effects.push(summonEffect);
-        message = `${nation.name} summons a Great Old One! Reality trembles!`;
-        break;
-
-      case 'reality-warp':
-        const warpEffects = executeRealityWarp(nation, gameState, ability, nations);
-        effects.push(...warpEffects);
-        message = `${nation.name} tears the fabric of reality with ${ability.name}!`;
-        break;
-
-      case 'false-flag':
-        const flagEffect = executeFalseFlag(nation, targetId, gameState, ability.effect, nations);
-        effects.push(flagEffect);
-        message = `${nation.name} executes a masterful deception!`;
-        break;
-
-      case 'corruption-surge':
-        const corruptionEffect = executeCorruptionSurge(nation, targetId, gameState, ability.effect, nations);
-        effects.push(corruptionEffect);
-        message = `${nation.name} spreads corruption across ${effects[0]?.targetName || 'the target'}!`;
-        break;
-
-      case 'missile-shield':
-        const shieldEffect = executeMissileShield(nation, ability.effect);
-        effects.push(shieldEffect);
-        message = `${nation.name} activates impenetrable missile defense!`;
-        break;
-
-      case 'steal-resources':
-        const stealEffects = executeStealResources(nation, targetId, gameState, ability.effect, nations);
-        effects.push(...stealEffects);
-        message = `${nation.name} conducts covert resource acquisition!`;
-        break;
-
-      case 'boost-relationships':
-        const boostEffects = executeBoostRelationships(nation, gameState, ability.effect, nations);
-        effects.push(...boostEffects);
-        message = `${nation.name} improves international relations!`;
-        break;
-
-      case 'economic-boom':
-        const boomEffect = executeEconomicBoom(nation, ability.effect);
-        effects.push(boomEffect);
-        message = `${nation.name} experiences an economic miracle!`;
-        break;
-
-      case 'propaganda-wave':
-        const propagandaEffect = executePropagandaWave(nation, targetId, gameState, ability.effect, nations);
-        effects.push(propagandaEffect);
-        message = `${nation.name} unleashes a devastating propaganda campaign!`;
-        break;
-
-      default:
-        message = `${nation.name} uses ${ability.name}, but the effect is not yet implemented.`;
-    }
+    // Look up and execute the handler from the registry
+    const handler = ABILITY_HANDLERS[ability.effect.type];
+    const { effects, message } = handler
+      ? handler(ctx)
+      : {
+          effects: [] as AbilityEffectResult[],
+          message: `${nation.name} uses ${ability.name}, but the effect is not yet implemented.`,
+        };
 
     return {
       success: true,
