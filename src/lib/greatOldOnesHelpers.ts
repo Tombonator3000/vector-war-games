@@ -273,6 +273,7 @@ export function updateGreatOldOnesResources(
  * Calculate global corruption index from all regions
  */
 function calculateGlobalCorruption(regions: RegionalState[]): number {
+  if (regions.length === 0) return 0;
   const totalCorruption = regions.reduce((sum, r) => sum + r.corruption, 0);
   return Math.floor(totalCorruption / regions.length);
 }
@@ -539,6 +540,7 @@ function generateRitualSiteName(biome: RitualSite['biome']): string {
  */
 export function checkVictoryConditions(state: GreatOldOnesState): string | null {
   if (!state.doctrine) return null;
+  if (state.regions.length === 0) return null;
 
   const globalSanity = state.regions.reduce((sum, r) => sum + r.sanitySanity, 0) / state.regions.length;
   const regionsControlled = state.regions.filter(r => r.corruption > 70).length;
