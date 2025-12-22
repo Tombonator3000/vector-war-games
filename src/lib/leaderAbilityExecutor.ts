@@ -423,186 +423,216 @@ function executeSummonEntity(
   };
 }
 
+// ============================================================================
+// REALITY WARP EFFECT HANDLERS
+// ============================================================================
+
+/**
+ * Context for reality warp effects
+ */
+interface RealityWarpContext {
+  nation: Nation;
+  nations: Nation[];
+  getUranium: () => number;
+  setUranium: (amount: number) => void;
+}
+
+/**
+ * Creates a standard reality warp result
+ */
+function createWarpResult(nation: Nation, description: string): AbilityEffectResult {
+  return {
+    targetId: nation.id,
+    targetName: nation.name,
+    effectType: 'reality-warp',
+    description,
+  };
+}
+
+/**
+ * Yog-Sothoth: Grant an extra turn
+ */
+function handleExtraTurnWarp(ctx: RealityWarpContext): AbilityEffectResult[] {
+  ctx.nation.extraTurnGranted = true;
+  return [createWarpResult(ctx.nation, 'Granted extra turn - can act twice!')];
+}
+
+/**
+ * Odd'n Wild Card: Coin flip gamble - double or halve resources
+ */
+function handleCoinFlipWarp(ctx: RealityWarpContext): AbilityEffectResult[] {
+  const success = Math.random() > 0.5;
+
+  if (success) {
+    ctx.nation.gold = (ctx.nation.gold || 0) * 2;
+    ctx.nation.production = Math.floor(ctx.nation.production * 2);
+    ctx.nation.intel = Math.floor(ctx.nation.intel * 2);
+    ctx.setUranium(Math.floor(ctx.getUranium() * 2));
+
+    if (ctx.nation.relationships) {
+      for (const otherId in ctx.nation.relationships) {
+        ctx.nation.relationships[otherId] = Math.min(100, ctx.nation.relationships[otherId] + 50);
+      }
+    }
+
+    return [createWarpResult(ctx.nation, 'JACKPOT! All resources doubled, +50 to all relationships!')];
+  }
+
+  ctx.nation.gold = Math.floor((ctx.nation.gold || 0) / 2);
+  ctx.nation.production = Math.floor(ctx.nation.production / 2);
+  ctx.nation.intel = Math.floor(ctx.nation.intel / 2);
+  ctx.setUranium(Math.floor(ctx.getUranium() / 2));
+
+  return [createWarpResult(ctx.nation, 'BUST! All resources halved. The gamble failed.')];
+}
+
+// --- Random outcome handlers for Krazy Re-Entry ---
+
+function randomOutcomeTripleProduction(ctx: RealityWarpContext): AbilityEffectResult {
+  ctx.nation.production *= 3;
+  return createWarpResult(ctx.nation, 'Production tripled!');
+}
+
+function randomOutcomeHalveMissiles(ctx: RealityWarpContext): AbilityEffectResult {
+  ctx.nation.missiles = Math.floor(ctx.nation.missiles / 2);
+  return createWarpResult(ctx.nation, 'Missiles vanish into thin air!');
+}
+
+function randomOutcomeShuffleRelationships(ctx: RealityWarpContext): AbilityEffectResult {
+  const pairs: string[] = [];
+
+  for (let i = 0; i < ctx.nations.length; i++) {
+    for (let j = i + 1; j < ctx.nations.length; j++) {
+      const first = ctx.nations[i];
+      const second = ctx.nations[j];
+      if (!first.relationships) first.relationships = {};
+      if (!second.relationships) second.relationships = {};
+
+      const delta = Math.floor(Math.random() * 61) - 30; // -30 to +30
+      first.relationships[second.id] = clamp(
+        (first.relationships[second.id] ?? 0) + delta,
+        -100,
+        100
+      );
+      second.relationships[first.id] = clamp(
+        (second.relationships[first.id] ?? 0) + delta,
+        -100,
+        100
+      );
+      pairs.push(`${first.name}↔${second.name} (${delta >= 0 ? '+' : ''}${delta})`);
+    }
+  }
+
+  return createWarpResult(ctx.nation, `Relationships reshuffled: ${pairs.join(', ')}`);
+}
+
+function randomOutcomePopulationBoom(ctx: RealityWarpContext): AbilityEffectResult {
+  ctx.nation.morale = 100;
+  ctx.nation.population *= 1.5;
+  return createWarpResult(ctx.nation, 'Population boom and morale maximized!');
+}
+
+function randomOutcomeTeleport(ctx: RealityWarpContext): AbilityEffectResult {
+  ctx.nation.lon = Math.random() * 360 - 180;
+  ctx.nation.lat = Math.random() * 180 - 90;
+  return createWarpResult(ctx.nation, 'Nation teleported to random location!');
+}
+
+function randomOutcomeDoubleUraniumAndIntel(ctx: RealityWarpContext): AbilityEffectResult {
+  ctx.setUranium(ctx.getUranium() * 2);
+  ctx.nation.intel *= 2;
+  return createWarpResult(ctx.nation, 'Uranium and intel doubled!');
+}
+
+/**
+ * Registry of random outcome handlers for Krazy Re-Entry
+ */
+const RANDOM_OUTCOME_HANDLERS: Array<(ctx: RealityWarpContext) => AbilityEffectResult> = [
+  randomOutcomeTripleProduction,
+  randomOutcomeHalveMissiles,
+  randomOutcomeShuffleRelationships,
+  randomOutcomePopulationBoom,
+  randomOutcomeTeleport,
+  randomOutcomeDoubleUraniumAndIntel,
+];
+
+/**
+ * Krazy Re-Entry: Completely random effect from the outcome registry
+ */
+function handleRandomWarp(ctx: RealityWarpContext): AbilityEffectResult[] {
+  const randomIndex = Math.floor(Math.random() * RANDOM_OUTCOME_HANDLERS.length);
+  const handler = RANDOM_OUTCOME_HANDLERS[randomIndex];
+  return [handler(ctx)];
+}
+
+/**
+ * Azathoth's chaos storm: Apply random multipliers to all nations
+ */
+function handleChaosStormWarp(ctx: RealityWarpContext): AbilityEffectResult[] {
+  const affected: string[] = [];
+
+  for (const other of ctx.nations) {
+    const multiplier = 1 + (Math.random() * 0.6 - 0.3); // ±30%
+    other.production = Math.max(0, Math.floor(other.production * multiplier));
+    other.population = Math.max(0, Math.floor(other.population * multiplier));
+    other.morale = clamp(Math.round(other.morale * multiplier), 0, 100);
+    other.publicOpinion = clamp(Math.round(other.publicOpinion * multiplier), 0, 100);
+
+    if (other !== ctx.nation) {
+      other.alliances = other.alliances || [];
+      if (Math.random() < 0.5) {
+        if (!other.alliances.includes(ctx.nation.id)) {
+          other.alliances.push(ctx.nation.id);
+        }
+      } else {
+        other.alliances = other.alliances.filter(id => id !== ctx.nation.id);
+      }
+    }
+
+    affected.push(other.name);
+  }
+
+  return [createWarpResult(ctx.nation, `Azathoth's chaos storm warps reality for: ${affected.join(', ')}`)];
+}
+
+// ============================================================================
+// MAIN REALITY WARP EXECUTOR
+// ============================================================================
+
+/**
+ * Execute reality warp ability based on metadata type.
+ * Dispatches to specialized handlers for each warp variant.
+ */
 function executeRealityWarp(
   nation: Nation,
   gameState: GameState,
   ability: LeaderAbility,
   nations: Nation[]
 ): AbilityEffectResult[] {
-  const results: AbilityEffectResult[] = [];
-
   initializeResourceStockpile(nation);
-  const getUranium = () => nation.resourceStockpile?.uranium ?? 0;
-  const setUranium = (amount: number) => {
-    const current = getUranium();
-    addStrategicResource(nation, 'uranium', amount - current);
+
+  const ctx: RealityWarpContext = {
+    nation,
+    nations,
+    getUranium: () => nation.resourceStockpile?.uranium ?? 0,
+    setUranium: (amount: number) => {
+      const current = nation.resourceStockpile?.uranium ?? 0;
+      addStrategicResource(nation, 'uranium', amount - current);
+    },
   };
 
-  // Handle special reality warp effects
-  if (ability.effect.metadata?.extraTurn) {
-    // Yog-Sothoth: Extra turn
-    nation.extraTurnGranted = true;
-    results.push({
-      targetId: nation.id,
-      targetName: nation.name,
-      effectType: 'reality-warp',
-      description: 'Granted extra turn - can act twice!',
-    });
-  } else if (ability.effect.metadata?.coinFlip) {
-    // Odd'n Wild Card: Coin flip gamble
-    const success = Math.random() > 0.5;
+  const metadata = ability.effect.metadata;
 
-    if (success) {
-      nation.gold = (nation.gold || 0) * 2;
-      nation.production = Math.floor(nation.production * 2);
-      nation.intel = Math.floor(nation.intel * 2);
-      setUranium(Math.floor(getUranium() * 2));
-
-      // Boost all relationships
-      if (nation.relationships) {
-        for (const otherId in nation.relationships) {
-          nation.relationships[otherId] = Math.min(100, nation.relationships[otherId] + 50);
-        }
-      }
-
-      results.push({
-        targetId: nation.id,
-        targetName: nation.name,
-        effectType: 'reality-warp',
-        description: 'JACKPOT! All resources doubled, +50 to all relationships!',
-      });
-    } else {
-      nation.gold = Math.floor((nation.gold || 0) / 2);
-      nation.production = Math.floor(nation.production / 2);
-      nation.intel = Math.floor(nation.intel / 2);
-      setUranium(Math.floor(getUranium() / 2));
-
-      results.push({
-        targetId: nation.id,
-        targetName: nation.name,
-        effectType: 'reality-warp',
-        description: 'BUST! All resources halved. The gamble failed.',
-      });
-    }
-  } else if (ability.effect.metadata?.random) {
-    // Krazy Re-Entry: Completely random
-    const randomOutcome = Math.floor(Math.random() * 6);
-
-    switch (randomOutcome) {
-      case 0:
-        nation.production *= 3;
-        results.push({
-          targetId: nation.id,
-          targetName: nation.name,
-          effectType: 'reality-warp',
-          description: 'Production tripled!',
-        });
-        break;
-      case 1:
-        nation.missiles = Math.floor(nation.missiles / 2);
-        results.push({
-          targetId: nation.id,
-          targetName: nation.name,
-          effectType: 'reality-warp',
-          description: 'Missiles vanish into thin air!',
-        });
-        break;
-      case 2:
-        {
-          const pairs: string[] = [];
-          for (let i = 0; i < nations.length; i++) {
-            for (let j = i + 1; j < nations.length; j++) {
-              const first = nations[i];
-              const second = nations[j];
-              if (!first.relationships) first.relationships = {};
-              if (!second.relationships) second.relationships = {};
-              const delta = Math.floor(Math.random() * 61) - 30; // -30 to +30
-              first.relationships[second.id] = clamp(
-                (first.relationships[second.id] ?? 0) + delta,
-                -100,
-                100
-              );
-              second.relationships[first.id] = clamp(
-                (second.relationships[first.id] ?? 0) + delta,
-                -100,
-                100
-              );
-              pairs.push(`${first.name}↔${second.name} (${delta >= 0 ? '+' : ''}${delta})`);
-            }
-          }
-
-          results.push({
-            targetId: nation.id,
-            targetName: nation.name,
-            effectType: 'reality-warp',
-            description: `Relationships reshuffled: ${pairs.join(', ')}`,
-          });
-        }
-        break;
-      case 3:
-        nation.morale = 100;
-        nation.population *= 1.5;
-        results.push({
-          targetId: nation.id,
-          targetName: nation.name,
-          effectType: 'reality-warp',
-          description: 'Population boom and morale maximized!',
-        });
-        break;
-      case 4:
-        // Teleport to random location
-        nation.lon = Math.random() * 360 - 180;
-        nation.lat = Math.random() * 180 - 90;
-        results.push({
-          targetId: nation.id,
-          targetName: nation.name,
-          effectType: 'reality-warp',
-          description: 'Nation teleported to random location!',
-        });
-        break;
-      case 5:
-        setUranium(getUranium() * 2);
-        nation.intel *= 2;
-        results.push({
-          targetId: nation.id,
-          targetName: nation.name,
-          effectType: 'reality-warp',
-          description: 'Uranium and intel doubled!',
-        });
-        break;
-    }
-  } else {
-    const affected: string[] = [];
-    for (const other of nations) {
-      const multiplier = 1 + (Math.random() * 0.6 - 0.3); // ±30%
-      other.production = Math.max(0, Math.floor(other.production * multiplier));
-      other.population = Math.max(0, Math.floor(other.population * multiplier));
-      other.morale = clamp(Math.round(other.morale * multiplier), 0, 100);
-      other.publicOpinion = clamp(Math.round(other.publicOpinion * multiplier), 0, 100);
-
-      if (other !== nation) {
-        if (Math.random() < 0.5) {
-          other.alliances = other.alliances || [];
-          if (!other.alliances.includes(nation.id)) {
-            other.alliances.push(nation.id);
-          }
-        } else if (other.alliances) {
-          other.alliances = other.alliances.filter(id => id !== nation.id);
-        }
-      }
-
-      affected.push(other.name);
-    }
-
-    results.push({
-      targetId: nation.id,
-      targetName: nation.name,
-      effectType: 'reality-warp',
-      description: `Azathoth's chaos storm warps reality for: ${affected.join(', ')}`,
-    });
+  if (metadata?.extraTurn) {
+    return handleExtraTurnWarp(ctx);
   }
-
-  return results;
+  if (metadata?.coinFlip) {
+    return handleCoinFlipWarp(ctx);
+  }
+  if (metadata?.random) {
+    return handleRandomWarp(ctx);
+  }
+  return handleChaosStormWarp(ctx);
 }
 
 function executeFalseFlag(
