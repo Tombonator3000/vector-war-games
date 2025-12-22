@@ -52,6 +52,18 @@ import {
   calculateAgencyReputation,
 } from '@/lib/intelligenceAgencyUtils';
 import type { SeededRandom } from '@/lib/seededRandom';
+import {
+  calculateProductionMultipliers,
+  calculateBaseProduction,
+  getEconomyBonuses,
+  getPolicyEffects,
+  applyPolicyEffectsToNation,
+  calculateFinalProduction,
+  calculateInstabilityEffects,
+  applyInstabilityEffects,
+  updateNationTimers,
+  type ModifierContext,
+} from '@/lib/productionModifiers';
 
 // Types for dependencies that will be injected
 export interface LaunchDependencies {
@@ -397,105 +409,65 @@ export function productionPhase(deps: ProductionPhaseDependencies): void {
     (window as any).__policyEffectsByNation = policyEffectsByNation;
   }
 
-  // OPTIMIZED: Single loop for base production calculations
+  // Process base production calculations using the modifier pipeline
   nations.forEach(n => {
     if (n.population <= 0) return;
 
-    // Base production - balanced for all nations
-    const baseProduction = Math.floor(n.population * 0.20);
-    const baseProd = baseProduction + (n.cities || 1) * 20;
-    const baseUranium = Math.floor(n.population * 0.025) + (n.cities || 1) * 4;
-    const baseIntel = Math.floor(n.population * 0.04) + (n.cities || 1) * 3;
+    // Calculate base production values
+    const baseProduction = calculateBaseProduction(n);
 
-    // Apply green shift debuff if active
-    let prodMult = 1;
-    let uranMult = 1;
-    const hungerPenalty = Math.min(0.50, (n.falloutHunger ?? 0) / 100);
-    if (hungerPenalty > 0) {
-      prodMult *= 1 - hungerPenalty;
-      if (player && n === player && hungerPenalty > 0.5) {
-        log(`${n.name} agricultural collapse: fallout starvation cripples output`, 'warning');
-      }
-    }
-
-    const sicknessPenalty = Math.min(0.40, (n.radiationSickness ?? 0) / 130);
-    if (sicknessPenalty > 0) {
-      const penaltyFactor = 1 - sicknessPenalty;
-      prodMult *= penaltyFactor;
-      uranMult *= Math.max(0.1, penaltyFactor - 0.1 * sicknessPenalty);
-    }
-
-    if (n.refugeeFlow && n.refugeeFlow > 0) {
-      const laborLoss = Math.min(0.4, n.refugeeFlow / Math.max(1, n.population + n.refugeeFlow));
-      prodMult *= 1 - laborLoss;
-    }
-    if (n.greenShiftTurns && n.greenShiftTurns > 0) {
-      prodMult = 0.7;
-      uranMult = 0.5;
-      n.greenShiftTurns--;
-      if (player && n === player) {
-        log('Eco movement reduces nuclear production', 'warning');
-      }
-    }
-
-    if (n.environmentPenaltyTurns && n.environmentPenaltyTurns > 0) {
-      prodMult *= 0.7;
-      uranMult *= 0.7;
-      n.environmentPenaltyTurns--;
-      if (n.environmentPenaltyTurns === 0 && n.isPlayer) {
-        log('Environmental treaty penalties have expired.', 'success');
-      }
-    }
-
-    // Apply economy tech bonuses and policy effects
-    const economyProdMult = n.productionMultiplier || 1.0;
-    const economyUraniumBonus = n.uraniumPerTurn || 0;
-
-    const moraleMultiplier = calculateMoraleProductionMultiplier(n.morale ?? 0);
+    // Build modifier context
     const isPolicyNation = policyNationId === n.id;
-    const policyProductionModifier =
-      isPolicyNation && policyEffects?.productionModifier ? policyEffects.productionModifier : 1;
+    const modifierContext: ModifierContext = {
+      nation: n,
+      player,
+      policyEffects,
+      isPolicyNation,
+      log,
+    };
 
-    n.recruitmentPolicyModifier = isPolicyNation ? policyEffects?.militaryRecruitmentModifier ?? 1 : 1;
-    n.defensePolicyBonus = isPolicyNation ? policyEffects?.defenseBonus ?? 0 : 0;
-    n.missileAccuracyBonus = isPolicyNation ? policyEffects?.missileAccuracyBonus ?? 0 : 0;
-    n.intelSuccessBonus = isPolicyNation ? policyEffects?.espionageSuccessBonus ?? 0 : 0;
-    n.counterIntelBonus = isPolicyNation ? policyEffects?.counterIntelBonus ?? 0 : 0;
+    // Apply all production modifiers through the pipeline
+    const { multipliers, logMessages } = calculateProductionMultipliers(modifierContext);
 
-    const productionGain = Math.floor(
-      baseProd * prodMult * economyProdMult * moraleMultiplier * policyProductionModifier
+    // Log any modifier messages
+    logMessages.forEach(msg => log(msg.text, msg.type));
+
+    // Get economy bonuses from tech/research
+    const economyBonuses = getEconomyBonuses(n);
+
+    // Calculate morale multiplier
+    const moraleMultiplier = calculateMoraleProductionMultiplier(n.morale ?? 0);
+
+    // Get and apply policy effects
+    const appliedPolicyEffects = getPolicyEffects(policyEffects, isPolicyNation);
+    applyPolicyEffectsToNation(n, appliedPolicyEffects);
+
+    // Calculate final production gains
+    const productionResult = calculateFinalProduction(
+      baseProduction,
+      multipliers,
+      economyBonuses,
+      moraleMultiplier,
+      appliedPolicyEffects.productionModifier,
+      Boolean(n.researched?.counterintel)
     );
-    n.production += productionGain;
-    const uraniumGain = Math.floor(baseUranium * uranMult * moraleMultiplier * policyProductionModifier) + economyUraniumBonus;
-    addStrategicResource(n, 'uranium', uraniumGain);
-    n.intel += Math.floor(baseIntel * moraleMultiplier * policyProductionModifier);
 
-    // Instability effects
-    if (n.instability && n.instability > 50) {
-      const unrest = Math.floor(n.instability / 10);
-      n.population = Math.max(0, n.population - unrest);
-      n.production = Math.max(0, n.production - unrest);
-      if (n.instability > 100) {
-        log(`${n.name} suffers civil war! Major losses!`, 'alert');
-        n.population *= 0.8;
-        n.instability = 50;
-      }
+    // Apply production gains
+    n.production += productionResult.productionGain;
+    addStrategicResource(n, 'uranium', productionResult.uraniumGain);
+    n.intel += productionResult.intelGain;
+
+    // Handle instability effects
+    const instabilityEffects = calculateInstabilityEffects(n);
+    if (instabilityEffects.populationLoss > 0 || instabilityEffects.civilWarTriggered) {
+      applyInstabilityEffects(n, instabilityEffects, log);
+    } else {
+      // Just decay instability
+      n.instability = instabilityEffects.newInstability;
     }
 
-    // Decay instability slowly
-    if (n.instability) {
-      n.instability = Math.max(0, n.instability - 2);
-    }
-
-    // Border closure effects
-    if (n.bordersClosedTurns && n.bordersClosedTurns > 0) {
-      n.bordersClosedTurns--;
-    }
-
-    if (n.researched?.counterintel) {
-      const intelBonus = Math.ceil(baseIntel * 0.2);
-      n.intel += intelBonus;
-    }
+    // Update timers (green shift, environment penalty, border closure)
+    updateNationTimers(n, log);
   });
 
   // Process territorial resources generation and consumption
