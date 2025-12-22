@@ -734,6 +734,10 @@ export function applyNegotiationDeal(
   };
 }
 
+// ============================================================================
+// Negotiation Item Effect Types & Helpers
+// ============================================================================
+
 interface ApplyNegotiationItemContext {
   currentTurn: number;
   side: 'offer' | 'request';
@@ -746,6 +750,17 @@ interface ApplyNegotiationItemResult {
   receiver: Nation;
   gameState?: GameState;
 }
+
+/**
+ * Handler function type for applying negotiation item effects.
+ * Each handler is responsible for a single item type.
+ */
+type ItemEffectHandler = (
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation,
+  context: ApplyNegotiationItemContext
+) => ApplyNegotiationItemResult;
 
 function addAlliance(nation: Nation, allyId: string): Nation {
   const alliances = new Set([...(nation.alliances || []), allyId]);
@@ -783,10 +798,79 @@ function cloneResourceTrades(state?: GameState) {
   };
 }
 
-/**
- * Apply a single negotiation item and return the updated nations and optional game state changes
- */
-function applyNegotiationItemEffects(
+// ============================================================================
+// Individual Item Effect Handlers
+// ============================================================================
+
+/** Transfers gold (production) from giver to receiver */
+function handleGoldTransfer(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation
+): ApplyNegotiationItemResult {
+  const amount = item.amount || 0;
+  return {
+    giver: { ...giver, production: (giver.production || 0) - amount },
+    receiver: { ...receiver, production: (receiver.production || 0) + amount },
+  };
+}
+
+/** Transfers intel from giver to receiver */
+function handleIntelTransfer(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation
+): ApplyNegotiationItemResult {
+  const amount = item.amount || 0;
+  return {
+    giver: { ...giver, intel: (giver.intel || 0) - amount },
+    receiver: { ...receiver, intel: (receiver.intel || 0) + amount },
+  };
+}
+
+/** Transfers production capacity from giver to receiver */
+function handleProductionTransfer(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation
+): ApplyNegotiationItemResult {
+  const amount = item.amount || 0;
+  return {
+    giver: { ...giver, production: (giver.production || 0) - amount },
+    receiver: { ...receiver, production: (receiver.production || 0) + amount },
+  };
+}
+
+/** Forms an alliance between both nations */
+function handleAllianceFormation(
+  _item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation,
+  context: ApplyNegotiationItemContext
+): ApplyNegotiationItemResult {
+  let updatedGiver = addAlliance(giver, receiver.id);
+  let updatedReceiver = addAlliance(receiver, giver.id);
+
+  updatedGiver = adjustRelationshipScore(
+    updatedGiver,
+    receiver.id,
+    10,
+    'Alliance formed via negotiation',
+    context.currentTurn
+  );
+  updatedReceiver = adjustRelationshipScore(
+    updatedReceiver,
+    giver.id,
+    10,
+    'Alliance formed via negotiation',
+    context.currentTurn
+  );
+
+  return { giver: updatedGiver, receiver: updatedReceiver };
+}
+
+/** Establishes a treaty between nations (truce, peace, mutual-defense, etc.) */
+function handleTreatyEstablishment(
   item: NegotiableItem,
   giver: Nation,
   receiver: Nation,
@@ -796,362 +880,459 @@ function applyNegotiationItemEffects(
   let updatedReceiver = { ...receiver };
   let updatedGameState = context.gameState;
 
-  switch (item.type) {
-    case 'gold': {
-      const amount = item.amount || 0;
-      updatedGiver.production = (updatedGiver.production || 0) - amount;
-      updatedReceiver.production = (updatedReceiver.production || 0) + amount;
-      break;
-    }
+  const treatyType = (item.subtype || 'truce').toLowerCase();
+  const duration = item.duration || 10;
+  const expiryTurn = context.currentTurn + duration;
 
-    case 'intel': {
-      const amount = item.amount || 0;
-      updatedGiver.intel = (updatedGiver.intel || 0) - amount;
-      updatedReceiver.intel = (updatedReceiver.intel || 0) + amount;
-      break;
-    }
+  const giverTreaty = ensureTreatyRecord(updatedGiver, updatedReceiver);
+  const receiverTreaty = ensureTreatyRecord(updatedReceiver, updatedGiver);
 
-    case 'production': {
-      const amount = item.amount || 0;
-      updatedGiver.production = (updatedGiver.production || 0) - amount;
-      updatedReceiver.production = (updatedReceiver.production || 0) + amount;
-      break;
-    }
+  // Handle truce-type treaties
+  if (['truce', 'non-aggression', 'ceasefire', 'peace'].includes(treatyType)) {
+    giverTreaty.truceTurns = Math.max(giverTreaty.truceTurns || 0, duration);
+    receiverTreaty.truceTurns = Math.max(receiverTreaty.truceTurns || 0, duration);
 
-    case 'alliance': {
-      updatedGiver = addAlliance(updatedGiver, receiver.id);
-      updatedReceiver = addAlliance(updatedReceiver, giver.id);
-      updatedGiver = adjustRelationshipScore(
-        updatedGiver,
-        receiver.id,
-        10,
-        'Alliance formed via negotiation',
-        context.currentTurn
-      );
-      updatedReceiver = adjustRelationshipScore(
-        updatedReceiver,
-        giver.id,
-        10,
-        'Alliance formed via negotiation',
-        context.currentTurn
-      );
-      break;
-    }
+    const treatyKind = treatyType === 'peace' ? 'peace' : 'truce';
+    updatedGiver = addActiveTreaty(updatedGiver, receiver.id, expiryTurn, treatyKind);
+    updatedReceiver = addActiveTreaty(updatedReceiver, giver.id, expiryTurn, treatyKind);
 
-    case 'treaty': {
-      const treatyType = (item.subtype || 'truce').toLowerCase();
-      const duration = item.duration || 10;
-      const expiryTurn = context.currentTurn + duration;
+    updatedGiver = updateTrustScore(
+      updatedGiver,
+      receiver.id,
+      4,
+      `Treaty signed: ${treatyType}`,
+      context.currentTurn
+    );
+    updatedReceiver = updateTrustScore(
+      updatedReceiver,
+      giver.id,
+      4,
+      `Treaty signed: ${treatyType}`,
+      context.currentTurn
+    );
+  }
 
-      const giverTreaty = ensureTreatyRecord(updatedGiver, updatedReceiver);
-      const receiverTreaty = ensureTreatyRecord(updatedReceiver, updatedGiver);
+  // Handle mutual-defense treaties (form alliance)
+  if (treatyType === 'mutual-defense') {
+    giverTreaty.alliance = true;
+    receiverTreaty.alliance = true;
+    updatedGiver = addAlliance(updatedGiver, receiver.id);
+    updatedReceiver = addAlliance(updatedReceiver, giver.id);
+  }
 
-      if (['truce', 'non-aggression', 'ceasefire', 'peace'].includes(treatyType)) {
-        giverTreaty.truceTurns = Math.max(giverTreaty.truceTurns || 0, duration);
-        receiverTreaty.truceTurns = Math.max(receiverTreaty.truceTurns || 0, duration);
+  // Handle territory transfer if specified
+  const territoryId =
+    (item.metadata && (item.metadata.territoryId || item.metadata.territoryTransfer)) || undefined;
+  if (territoryId && updatedGameState?.conventional?.territories?.[territoryId]) {
+    updatedGameState = cloneConventionalTerritories(updatedGameState);
+    const territories = updatedGameState!.conventional!.territories;
+    const territory = { ...territories[territoryId] };
+    territory.controllingNationId = receiver.id;
+    territory.contestedBy = territory.contestedBy?.filter(id => id !== receiver.id) || [];
+    territories[territoryId] = territory;
 
-        const treatyKind = treatyType === 'peace' ? 'peace' : 'truce';
-        updatedGiver = addActiveTreaty(updatedGiver, receiver.id, expiryTurn, treatyKind);
-        updatedReceiver = addActiveTreaty(updatedReceiver, giver.id, expiryTurn, treatyKind);
-
-        updatedGiver = updateTrustScore(
-          updatedGiver,
-          receiver.id,
-          4,
-          `Treaty signed: ${treatyType}`,
-          context.currentTurn
-        );
-        updatedReceiver = updateTrustScore(
-          updatedReceiver,
-          giver.id,
-          4,
-          `Treaty signed: ${treatyType}`,
-          context.currentTurn
-        );
-      }
-
-      if (treatyType === 'mutual-defense') {
-        giverTreaty.alliance = true;
-        receiverTreaty.alliance = true;
-        updatedGiver = addAlliance(updatedGiver, receiver.id);
-        updatedReceiver = addAlliance(updatedReceiver, giver.id);
-      }
-
-      const territoryId =
-        (item.metadata && (item.metadata.territoryId || item.metadata.territoryTransfer)) || undefined;
-      if (territoryId && updatedGameState?.conventional?.territories?.[territoryId]) {
-        updatedGameState = cloneConventionalTerritories(updatedGameState);
-        const territories = updatedGameState!.conventional!.territories;
-        const territory = { ...territories[territoryId] };
-        territory.controllingNationId = receiver.id;
-        territory.contestedBy = territory.contestedBy?.filter(id => id !== receiver.id) || [];
-        territories[territoryId] = territory;
-
-        if (updatedGiver.controlledTerritories) {
-          updatedGiver = {
-            ...updatedGiver,
-            controlledTerritories: updatedGiver.controlledTerritories.filter(t => t !== territoryId),
-          };
-        }
-        const receiverTerritories = new Set([...(updatedReceiver.controlledTerritories || []), territoryId]);
-        updatedReceiver = {
-          ...updatedReceiver,
-          controlledTerritories: Array.from(receiverTerritories),
-        };
-      }
-
-      break;
-    }
-
-    case 'promise': {
-      const mappedType = (() => {
-        switch (item.subtype) {
-          case 'not-attack':
-            return 'no-attack' as const;
-          case 'support-war':
-            return 'help-if-attacked' as const;
-          case 'not-compete':
-            return 'no-ally-with' as const;
-          case 'share-intel':
-            return 'support-council' as const;
-          default:
-            return 'neutral-mediator' as const;
-        }
-      })();
-
-      const terms = {
-        duration: item.duration || 10,
-        targetNationId: item.metadata?.targetNationId,
-        trustReward: 6,
-        relationshipPenalty: 10,
-      };
-
-      updatedGiver = createPromise(updatedGiver, receiver.id, mappedType, terms, context.currentTurn);
-      break;
-    }
-
-    case 'favor-exchange': {
-      const amount = item.amount || 0;
-      if (amount !== 0) {
-        updatedGiver = modifyFavors(
-          updatedGiver,
-          receiver.id,
-          -amount,
-          'Favor exchange via negotiation',
-          context.currentTurn
-        );
-        updatedReceiver = modifyFavors(
-          updatedReceiver,
-          giver.id,
-          amount,
-          'Favor exchange via negotiation',
-          context.currentTurn
-        );
-      }
-      break;
-    }
-
-    case 'sanction-lift': {
-      if (updatedReceiver.sanctionedBy?.[giver.id]) {
-        const sanctionedBy = { ...updatedReceiver.sanctionedBy };
-        delete sanctionedBy[giver.id];
-        updatedReceiver = {
-          ...updatedReceiver,
-          sanctionedBy,
-          sanctioned: Object.keys(sanctionedBy).length > 0,
-        };
-      }
-      break;
-    }
-
-    case 'join-war': {
-      if (item.targetId) {
-        const threatIncrease = item.amount ?? 20;
-        const giverThreats = { ...(updatedGiver.threats || {}) };
-        const receiverThreats = { ...(updatedReceiver.threats || {}) };
-
-        giverThreats[item.targetId] = Math.max((giverThreats[item.targetId] || 0) + threatIncrease / 2, 10);
-        receiverThreats[item.targetId] = Math.max((receiverThreats[item.targetId] || 0) + threatIncrease, 20);
-
-        updatedGiver = { ...updatedGiver, threats: giverThreats };
-        updatedReceiver = { ...updatedReceiver, threats: receiverThreats };
-
-        adjustThreat(updatedReceiver, item.targetId, 15);
-      }
-      break;
-    }
-
-    case 'share-tech': {
-      if (item.techId) {
-        const giverTech = { ...(updatedGiver.researched || {}) };
-        const receiverTech = { ...(updatedReceiver.researched || {}) };
-        receiverTech[item.techId] = true;
-
-        updatedReceiver = {
-          ...updatedReceiver,
-          researched: receiverTech,
-          researchQueue:
-            updatedReceiver.researchQueue?.projectId === item.techId
-              ? null
-              : updatedReceiver.researchQueue,
-        };
-        updatedGiver = { ...updatedGiver, researched: giverTech };
-
-        updatedReceiver = updateTrustScore(
-          updatedReceiver,
-          giver.id,
-          5,
-          `Technology shared: ${item.techId}`,
-          context.currentTurn
-        );
-      }
-      break;
-    }
-
-    case 'open-borders': {
-      const duration: number = typeof item.duration === 'number' ? item.duration : 10;
-      const giverTreaty = ensureTreatyRecord(updatedGiver, updatedReceiver);
-      const receiverTreaty = ensureTreatyRecord(updatedReceiver, updatedGiver);
-      giverTreaty.openBordersTurns = Math.max(giverTreaty.openBordersTurns || 0, duration);
-      receiverTreaty.openBordersTurns = Math.max(receiverTreaty.openBordersTurns || 0, duration);
-
-      updatedGiver = { ...updatedGiver, bordersClosedTurns: 0 };
-      updatedReceiver = { ...updatedReceiver, bordersClosedTurns: 0 };
-
-      updatedGiver = updateTrustScore(
-        updatedGiver,
-        receiver.id,
-        3,
-        'Open borders agreement',
-        context.currentTurn
-      );
-      updatedReceiver = updateTrustScore(
-        updatedReceiver,
-        giver.id,
-        3,
-        'Open borders agreement',
-        context.currentTurn
-      );
-      break;
-    }
-
-    case 'grievance-apology': {
-      const grievanceId = item.grievanceId || item.metadata?.grievanceId;
-      if (grievanceId) {
-        updatedReceiver = resolveGrievance(
-          updatedReceiver,
-          grievanceId,
-          context.currentTurn
-        );
-      }
-      break;
-    }
-
-    case 'resource-share': {
-      const amountPerTurn = item.amount || 0;
-      const duration = item.duration || 10;
-      if (amountPerTurn > 0 && updatedGameState) {
-        const resource = (item.metadata?.resource || item.metadata?.resourceType || 'oil') as StrategyResourceType;
-        const nextState = cloneResourceTrades(updatedGameState);
-        initializeResourceStockpile(updatedGiver);
-        initializeResourceStockpile(updatedReceiver);
-        const trade = createResourceTrade(
-          giver.id,
-          receiver.id,
-          resource,
-          amountPerTurn,
-          duration,
-          context.currentTurn,
-          item.metadata?.pricePerTurn
-        );
-        nextState.resourceTrades = [...(nextState.resourceTrades || []), trade];
-        updatedGameState = nextState;
-      } else if (amountPerTurn > 0) {
-        const resource = (item.metadata?.resource || item.metadata?.resourceType || 'oil') as StrategyResourceType;
-        initializeResourceStockpile(updatedReceiver);
-        if (updatedReceiver.resourceStockpile) {
-          updatedReceiver.resourceStockpile[resource] =
-            (updatedReceiver.resourceStockpile[resource] || 0) + amountPerTurn;
-        }
-      }
-      break;
-    }
-
-    case 'military-support': {
-      const duration: number = typeof item.duration === 'number' ? item.duration : 5;
-      const treaty = ensureTreatyRecord(updatedReceiver, updatedGiver);
-      treaty.militarySupportTurns = Math.max(treaty.militarySupportTurns || 0, duration);
-      updatedReceiver = {
-        ...updatedReceiver,
-        defense: Math.max(0, (updatedReceiver.defense || 0) + 5),
-      };
+    if (updatedGiver.controlledTerritories) {
       updatedGiver = {
         ...updatedGiver,
-        production: Math.max(0, (updatedGiver.production || 0) - Math.floor(duration / 2)),
+        controlledTerritories: updatedGiver.controlledTerritories.filter(t => t !== territoryId),
       };
-      break;
     }
-
-    case 'trade-agreement': {
-      const duration = item.duration || 10;
-      const exports = item.metadata?.exports as
-        | { resource: StrategyResourceType; amount: number; pricePerTurn?: number }
-        | undefined;
-      const imports = item.metadata?.imports as
-        | { resource: StrategyResourceType; amount: number; pricePerTurn?: number }
-        | undefined;
-
-      let nextState = updatedGameState ? cloneResourceTrades(updatedGameState) : undefined;
-
-      if (exports && exports.amount > 0 && nextState) {
-        initializeResourceStockpile(updatedGiver);
-        initializeResourceStockpile(updatedReceiver);
-        nextState.resourceTrades!.push(
-          createResourceTrade(
-            giver.id,
-            receiver.id,
-            exports.resource,
-            exports.amount,
-            duration,
-            context.currentTurn,
-            exports.pricePerTurn
-          )
-        );
-      }
-
-      if (imports && imports.amount > 0 && nextState) {
-        initializeResourceStockpile(updatedGiver);
-        initializeResourceStockpile(updatedReceiver);
-        nextState.resourceTrades!.push(
-          createResourceTrade(
-            receiver.id,
-            giver.id,
-            imports.resource,
-            imports.amount,
-            duration,
-            context.currentTurn,
-            imports.pricePerTurn
-          )
-        );
-      }
-
-      if (!nextState && (exports || imports)) {
-        nextState = cloneResourceTrades(updatedGameState);
-      }
-
-      if (!exports && !imports && item.amount) {
-        const productionBoost = item.amount;
-        updatedReceiver.production = (updatedReceiver.production || 0) + productionBoost;
-        updatedGiver.production = Math.max(0, (updatedGiver.production || 0) - Math.floor(productionBoost / 2));
-      }
-
-      updatedGameState = nextState ?? updatedGameState;
-      break;
-    }
-
-    default:
-      break;
+    const receiverTerritories = new Set([...(updatedReceiver.controlledTerritories || []), territoryId]);
+    updatedReceiver = {
+      ...updatedReceiver,
+      controlledTerritories: Array.from(receiverTerritories),
+    };
   }
 
   return { giver: updatedGiver, receiver: updatedReceiver, gameState: updatedGameState };
+}
+
+/** Maps promise subtypes to internal promise types */
+function mapPromiseSubtype(subtype?: string): 'no-attack' | 'help-if-attacked' | 'no-ally-with' | 'support-council' | 'neutral-mediator' {
+  switch (subtype) {
+    case 'not-attack':
+      return 'no-attack';
+    case 'support-war':
+      return 'help-if-attacked';
+    case 'not-compete':
+      return 'no-ally-with';
+    case 'share-intel':
+      return 'support-council';
+    default:
+      return 'neutral-mediator';
+  }
+}
+
+/** Creates a promise from giver to receiver */
+function handlePromiseCreation(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation,
+  context: ApplyNegotiationItemContext
+): ApplyNegotiationItemResult {
+  const mappedType = mapPromiseSubtype(item.subtype);
+  const terms = {
+    duration: item.duration || 10,
+    targetNationId: item.metadata?.targetNationId,
+    trustReward: 6,
+    relationshipPenalty: 10,
+  };
+
+  const updatedGiver = createPromise(giver, receiver.id, mappedType, terms, context.currentTurn);
+  return { giver: updatedGiver, receiver };
+}
+
+/** Exchanges favors between nations */
+function handleFavorExchange(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation,
+  context: ApplyNegotiationItemContext
+): ApplyNegotiationItemResult {
+  const amount = item.amount || 0;
+  if (amount === 0) {
+    return { giver, receiver };
+  }
+
+  const updatedGiver = modifyFavors(
+    giver,
+    receiver.id,
+    -amount,
+    'Favor exchange via negotiation',
+    context.currentTurn
+  );
+  const updatedReceiver = modifyFavors(
+    receiver,
+    giver.id,
+    amount,
+    'Favor exchange via negotiation',
+    context.currentTurn
+  );
+
+  return { giver: updatedGiver, receiver: updatedReceiver };
+}
+
+/** Lifts sanctions from the giver against the receiver */
+function handleSanctionLift(
+  _item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation
+): ApplyNegotiationItemResult {
+  if (!receiver.sanctionedBy?.[giver.id]) {
+    return { giver, receiver };
+  }
+
+  const sanctionedBy = { ...receiver.sanctionedBy };
+  delete sanctionedBy[giver.id];
+  const updatedReceiver = {
+    ...receiver,
+    sanctionedBy,
+    sanctioned: Object.keys(sanctionedBy).length > 0,
+  };
+
+  return { giver, receiver: updatedReceiver };
+}
+
+/** Joins a war against a target nation */
+function handleJoinWar(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation
+): ApplyNegotiationItemResult {
+  if (!item.targetId) {
+    return { giver, receiver };
+  }
+
+  const threatIncrease = item.amount ?? 20;
+  const giverThreats = { ...(giver.threats || {}) };
+  const receiverThreats = { ...(receiver.threats || {}) };
+
+  giverThreats[item.targetId] = Math.max((giverThreats[item.targetId] || 0) + threatIncrease / 2, 10);
+  receiverThreats[item.targetId] = Math.max((receiverThreats[item.targetId] || 0) + threatIncrease, 20);
+
+  const updatedGiver = { ...giver, threats: giverThreats };
+  const updatedReceiver = { ...receiver, threats: receiverThreats };
+
+  adjustThreat(updatedReceiver, item.targetId, 15);
+
+  return { giver: updatedGiver, receiver: updatedReceiver };
+}
+
+/** Shares technology from giver to receiver */
+function handleTechSharing(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation,
+  context: ApplyNegotiationItemContext
+): ApplyNegotiationItemResult {
+  if (!item.techId) {
+    return { giver, receiver };
+  }
+
+  const giverTech = { ...(giver.researched || {}) };
+  const receiverTech = { ...(receiver.researched || {}) };
+  receiverTech[item.techId] = true;
+
+  let updatedReceiver: Nation = {
+    ...receiver,
+    researched: receiverTech,
+    researchQueue:
+      receiver.researchQueue?.projectId === item.techId
+        ? null
+        : receiver.researchQueue,
+  };
+  const updatedGiver = { ...giver, researched: giverTech };
+
+  updatedReceiver = updateTrustScore(
+    updatedReceiver,
+    giver.id,
+    5,
+    `Technology shared: ${item.techId}`,
+    context.currentTurn
+  );
+
+  return { giver: updatedGiver, receiver: updatedReceiver };
+}
+
+/** Establishes open borders between nations */
+function handleOpenBorders(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation,
+  context: ApplyNegotiationItemContext
+): ApplyNegotiationItemResult {
+  const duration: number = typeof item.duration === 'number' ? item.duration : 10;
+
+  let updatedGiver = { ...giver };
+  let updatedReceiver = { ...receiver };
+
+  const giverTreaty = ensureTreatyRecord(updatedGiver, updatedReceiver);
+  const receiverTreaty = ensureTreatyRecord(updatedReceiver, updatedGiver);
+  giverTreaty.openBordersTurns = Math.max(giverTreaty.openBordersTurns || 0, duration);
+  receiverTreaty.openBordersTurns = Math.max(receiverTreaty.openBordersTurns || 0, duration);
+
+  updatedGiver = { ...updatedGiver, bordersClosedTurns: 0 };
+  updatedReceiver = { ...updatedReceiver, bordersClosedTurns: 0 };
+
+  updatedGiver = updateTrustScore(
+    updatedGiver,
+    receiver.id,
+    3,
+    'Open borders agreement',
+    context.currentTurn
+  );
+  updatedReceiver = updateTrustScore(
+    updatedReceiver,
+    giver.id,
+    3,
+    'Open borders agreement',
+    context.currentTurn
+  );
+
+  return { giver: updatedGiver, receiver: updatedReceiver };
+}
+
+/** Resolves a grievance through apology */
+function handleGrievanceApology(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation,
+  context: ApplyNegotiationItemContext
+): ApplyNegotiationItemResult {
+  const grievanceId = item.grievanceId || item.metadata?.grievanceId;
+  if (!grievanceId) {
+    return { giver, receiver };
+  }
+
+  const updatedReceiver = resolveGrievance(receiver, grievanceId, context.currentTurn);
+  return { giver, receiver: updatedReceiver };
+}
+
+/** Establishes a resource sharing agreement */
+function handleResourceShare(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation,
+  context: ApplyNegotiationItemContext
+): ApplyNegotiationItemResult {
+  const amountPerTurn = item.amount || 0;
+  const duration = item.duration || 10;
+  let updatedReceiver = { ...receiver };
+  let updatedGameState = context.gameState;
+
+  if (amountPerTurn <= 0) {
+    return { giver, receiver, gameState: updatedGameState };
+  }
+
+  const resource = (item.metadata?.resource || item.metadata?.resourceType || 'oil') as StrategyResourceType;
+
+  if (updatedGameState) {
+    const nextState = cloneResourceTrades(updatedGameState);
+    initializeResourceStockpile(giver);
+    initializeResourceStockpile(updatedReceiver);
+    const trade = createResourceTrade(
+      giver.id,
+      receiver.id,
+      resource,
+      amountPerTurn,
+      duration,
+      context.currentTurn,
+      item.metadata?.pricePerTurn
+    );
+    nextState.resourceTrades = [...(nextState.resourceTrades || []), trade];
+    updatedGameState = nextState;
+  } else {
+    initializeResourceStockpile(updatedReceiver);
+    if (updatedReceiver.resourceStockpile) {
+      updatedReceiver.resourceStockpile[resource] =
+        (updatedReceiver.resourceStockpile[resource] || 0) + amountPerTurn;
+    }
+  }
+
+  return { giver, receiver: updatedReceiver, gameState: updatedGameState };
+}
+
+/** Provides military support to receiver */
+function handleMilitarySupport(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation
+): ApplyNegotiationItemResult {
+  const duration: number = typeof item.duration === 'number' ? item.duration : 5;
+
+  const treaty = ensureTreatyRecord(receiver, giver);
+  treaty.militarySupportTurns = Math.max(treaty.militarySupportTurns || 0, duration);
+
+  const updatedReceiver = {
+    ...receiver,
+    defense: Math.max(0, (receiver.defense || 0) + 5),
+  };
+  const updatedGiver = {
+    ...giver,
+    production: Math.max(0, (giver.production || 0) - Math.floor(duration / 2)),
+  };
+
+  return { giver: updatedGiver, receiver: updatedReceiver };
+}
+
+/** Establishes a trade agreement with exports and imports */
+function handleTradeAgreement(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation,
+  context: ApplyNegotiationItemContext
+): ApplyNegotiationItemResult {
+  let updatedGiver = { ...giver };
+  let updatedReceiver = { ...receiver };
+  let updatedGameState = context.gameState;
+
+  const duration = item.duration || 10;
+  const exports = item.metadata?.exports as
+    | { resource: StrategyResourceType; amount: number; pricePerTurn?: number }
+    | undefined;
+  const imports = item.metadata?.imports as
+    | { resource: StrategyResourceType; amount: number; pricePerTurn?: number }
+    | undefined;
+
+  let nextState = updatedGameState ? cloneResourceTrades(updatedGameState) : undefined;
+
+  // Handle exports (giver -> receiver)
+  if (exports && exports.amount > 0 && nextState) {
+    initializeResourceStockpile(updatedGiver);
+    initializeResourceStockpile(updatedReceiver);
+    nextState.resourceTrades!.push(
+      createResourceTrade(
+        giver.id,
+        receiver.id,
+        exports.resource,
+        exports.amount,
+        duration,
+        context.currentTurn,
+        exports.pricePerTurn
+      )
+    );
+  }
+
+  // Handle imports (receiver -> giver)
+  if (imports && imports.amount > 0 && nextState) {
+    initializeResourceStockpile(updatedGiver);
+    initializeResourceStockpile(updatedReceiver);
+    nextState.resourceTrades!.push(
+      createResourceTrade(
+        receiver.id,
+        giver.id,
+        imports.resource,
+        imports.amount,
+        duration,
+        context.currentTurn,
+        imports.pricePerTurn
+      )
+    );
+  }
+
+  // Ensure state is cloned if we have trades but no state yet
+  if (!nextState && (exports || imports)) {
+    nextState = cloneResourceTrades(updatedGameState);
+  }
+
+  // Fallback: production boost if no specific exports/imports
+  if (!exports && !imports && item.amount) {
+    const productionBoost = item.amount;
+    updatedReceiver.production = (updatedReceiver.production || 0) + productionBoost;
+    updatedGiver.production = Math.max(0, (updatedGiver.production || 0) - Math.floor(productionBoost / 2));
+  }
+
+  updatedGameState = nextState ?? updatedGameState;
+
+  return { giver: updatedGiver, receiver: updatedReceiver, gameState: updatedGameState };
+}
+
+// ============================================================================
+// Item Effect Handler Registry
+// ============================================================================
+
+/**
+ * Registry mapping item types to their effect handlers.
+ * This pattern makes it easy to add new item types and keeps each handler focused.
+ */
+const ITEM_EFFECT_HANDLERS: Partial<Record<NegotiableItemType, ItemEffectHandler>> = {
+  'gold': handleGoldTransfer,
+  'intel': handleIntelTransfer,
+  'production': handleProductionTransfer,
+  'alliance': handleAllianceFormation,
+  'treaty': handleTreatyEstablishment,
+  'promise': handlePromiseCreation,
+  'favor-exchange': handleFavorExchange,
+  'sanction-lift': handleSanctionLift,
+  'join-war': handleJoinWar,
+  'share-tech': handleTechSharing,
+  'open-borders': handleOpenBorders,
+  'grievance-apology': handleGrievanceApology,
+  'resource-share': handleResourceShare,
+  'military-support': handleMilitarySupport,
+  'trade-agreement': handleTradeAgreement,
+};
+
+// ============================================================================
+// Main Effect Application Function
+// ============================================================================
+
+/**
+ * Apply a single negotiation item and return the updated nations and optional game state changes.
+ * Uses a registry-based dispatch pattern for clarity and extensibility.
+ */
+function applyNegotiationItemEffects(
+  item: NegotiableItem,
+  giver: Nation,
+  receiver: Nation,
+  context: ApplyNegotiationItemContext
+): ApplyNegotiationItemResult {
+  const handler = ITEM_EFFECT_HANDLERS[item.type];
+
+  if (handler) {
+    return handler(item, giver, receiver, context);
+  }
+
+  // Default: return unchanged if no handler found
+  return { giver: { ...giver }, receiver: { ...receiver }, gameState: context.gameState };
 }
