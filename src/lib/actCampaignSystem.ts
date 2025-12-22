@@ -1094,7 +1094,7 @@ export function resolveActProgressionVote(
   // Calculate vote outcome
   const totalVotes = vote.votes.length;
   const votesFor = vote.votes.filter(v => v.vote === 'for').length;
-  const majority = votesFor / totalVotes;
+  const majority = totalVotes > 0 ? votesFor / totalVotes : 0;
 
   let passed = false;
 
