@@ -106,112 +106,161 @@ function calculateMilitaryPower(nation: Nation): number {
 }
 
 /**
- * Calculate relationship score based on actual relationships and treaties
- * Primary component is the relationship value (-100 to +100), with treaty modifiers
- * Enhanced with Trust and Favors systems
+ * Context passed to each relationship modifier function
  */
-function calculateRelationshipScore(nation1: Nation, nation2: Nation): number {
-  // Start with actual relationship value (-100 to +100), scaled to reasonable range
-  const baseRelationship = getRelationship(nation1, nation2.id);
-  let score = baseRelationship / 2; // Scale to -50 to +50
+interface RelationshipModifierContext {
+  nation1: Nation;
+  nation2: Nation;
+}
 
-  // Check for existing alliance
-  if (nation1.treaties?.[nation2.id]?.alliance) {
-    score += 30;
-  }
+/**
+ * A modifier function that calculates a score adjustment
+ */
+type RelationshipModifier = (ctx: RelationshipModifierContext) => number;
 
-  // Check for active truce
+/**
+ * Treaty modifier: bonus for existing alliance
+ */
+const allianceModifier: RelationshipModifier = ({ nation1, nation2 }) => {
+  return nation1.treaties?.[nation2.id]?.alliance ? 30 : 0;
+};
+
+/**
+ * Treaty modifier: bonus for active truce
+ */
+const truceModifier: RelationshipModifier = ({ nation1, nation2 }) => {
   const truceTurns = nation1.treaties?.[nation2.id]?.truceTurns || 0;
-  if (truceTurns > 0) {
-    score += 15;
-  }
+  return truceTurns > 0 ? 15 : 0;
+};
 
-  // Check if sanctioned
-  if (nation1.sanctionedBy?.[nation2.id]) {
-    score -= 20;
-  }
+/**
+ * Treaty modifier: penalty for being sanctioned
+ */
+const sanctionModifier: RelationshipModifier = ({ nation1, nation2 }) => {
+  return nation1.sanctionedBy?.[nation2.id] ? -20 : 0;
+};
 
-  // *** PHASE 1 ENHANCEMENT: Trust modifier ***
-  // Trust affects how reliable they seem (0-100 scale)
+/**
+ * Trust modifier: how reliable they seem (0-100 scale)
+ * Returns -25 to +25 based on trust level
+ */
+const trustModifier: RelationshipModifier = ({ nation1, nation2 }) => {
   const trust = getTrust(nation1, nation2.id);
-  const trustBonus = (trust - 50) / 2; // -25 to +25 based on trust
-  score += trustBonus;
+  return (trust - 50) / 2;
+};
 
-  // *** PHASE 1 ENHANCEMENT: Favors modifier ***
-  // Favors owed make proposals more likely to be accepted
+/**
+ * Favors modifier: favors owed increase acceptance
+ * Returns 0 to +20 based on favors
+ */
+const favorsModifier: RelationshipModifier = ({ nation1, nation2 }) => {
   const favors = getFavors(nation1, nation2.id);
-  const favorBonus = Math.min(20, favors / 2); // Max +20 bonus from favors
-  score += favorBonus;
+  return Math.min(20, favors / 2);
+};
 
-  // *** PHASE 1 ENHANCEMENT: Promise trustworthiness ***
-  // Nations that keep promises are more trusted
+/**
+ * Promise modifier: nations that keep promises are trusted more
+ * Returns -10 to +10 based on promise history
+ */
+const promiseModifier: RelationshipModifier = ({ nation2 }) => {
   const promiseScore = getPromiseTrustworthiness(nation2);
-  const promiseBonus = (promiseScore - 50) / 5; // -10 to +10 based on promise history
-  score += promiseBonus;
+  return (promiseScore - 50) / 5;
+};
 
-  // *** PHASE 2 ENHANCEMENT: Grievances penalty ***
-  // Active grievances reduce willingness to cooperate
-  const grievancePenalty = getGrievanceDiplomacyPenalty(nation1, nation2.id);
-  score += grievancePenalty; // This is negative, reducing score
+/**
+ * Grievances modifier: active grievances reduce cooperation
+ * Returns negative value
+ */
+const grievancesModifier: RelationshipModifier = ({ nation1, nation2 }) => {
+  return getGrievanceDiplomacyPenalty(nation1, nation2.id);
+};
 
-  // *** PHASE 2 ENHANCEMENT: Specialized alliance bonus ***
-  // Having a specialized alliance increases cooperation
-  const specializedAlliance = getAllianceBetween(nation1, nation2.id);
-  if (specializedAlliance && specializedAlliance.active) {
-    const allianceBonus = 10 + (specializedAlliance.level * 5) + (specializedAlliance.cooperation / 5);
-    score += allianceBonus; // Up to 10 + 25 (level 5) + 20 (100 cooperation) = +55 bonus
+/**
+ * Specialized alliance modifier: bonus for active specialized alliances
+ * Returns up to +55 based on alliance level and cooperation
+ */
+const specializedAllianceModifier: RelationshipModifier = ({ nation1, nation2 }) => {
+  const alliance = getAllianceBetween(nation1, nation2.id);
+  if (alliance && alliance.active) {
+    return 10 + (alliance.level * 5) + (alliance.cooperation / 5);
   }
+  return 0;
+};
 
-  // *** PHASE 3 ENHANCEMENT: Diplomatic Influence bonus ***
-  // High DIP indicates diplomatic sophistication and influence
+/**
+ * Diplomatic influence modifier: high DIP indicates sophistication
+ * Returns 0 to +15 based on influence points
+ */
+const diplomaticInfluenceModifier: RelationshipModifier = ({ nation2 }) => {
   if (nation2.diplomaticInfluence) {
-    const dipBonus = Math.min(15, nation2.diplomaticInfluence.points / 10);
-    score += dipBonus; // Up to +15 bonus for high DIP
+    return Math.min(15, nation2.diplomaticInfluence.points / 10);
   }
+  return 0;
+};
 
-  // *** PHASE 3 ENHANCEMENT: Council membership respect ***
-  // Council members have more diplomatic clout
-  if (nation2.councilMembership === 'permanent') {
-    score += 20; // Permanent members get significant respect
-  } else if (nation2.councilMembership === 'elected') {
-    score += 10; // Elected members get moderate respect
-  } else if (nation2.councilMembership === 'observer') {
-    score += 5; // Observers get slight respect
-  }
+/**
+ * Council membership modifier: council members have diplomatic clout
+ * Returns +5 to +20 based on membership type
+ */
+const councilMembershipModifier: RelationshipModifier = ({ nation2 }) => {
+  const membershipBonuses: Record<string, number> = {
+    permanent: 20,
+    elected: 10,
+    observer: 5
+  };
+  return membershipBonuses[nation2.councilMembership || ''] || 0;
+};
 
-  // *** DOCTRINE SYSTEM: Doctrine compatibility ***
-  // Military doctrines affect diplomatic compatibility
+/**
+ * Doctrine compatibility modifier: military doctrines affect relations
+ * Returns -25 to +20 based on doctrine compatibility
+ */
+const doctrineCompatibilityModifier: RelationshipModifier = ({ nation1, nation2 }) => {
   if (nation1.doctrine && nation2.doctrine) {
     try {
-      const doctrineModifier = getDoctrineCompatibilityModifier(
+      return getDoctrineCompatibilityModifier(
         nation1.doctrine as any,
         nation2.doctrine as any
       );
-      score += doctrineModifier; // -25 to +20 based on doctrine compatibility
     } catch {
-      // Doctrine system not available, skip modifier
+      return 0;
     }
   }
+  return 0;
+};
 
-  // *** GOVERNMENT SYSTEM: Government compatibility ***
-  // Government types affect diplomatic relations - temporarily disabled due to import issues
-  // TODO: Re-enable once circular dependency is resolved
-  /*
-  if (nation1.governmentState?.currentGovernment && nation2.governmentState?.currentGovernment) {
-    try {
-      const governmentModule = await import('@/types/government');
-      const governmentModifier = governmentModule.calculateGovernmentCompatibility(
-        nation1.governmentState.currentGovernment,
-        nation2.governmentState.currentGovernment
-      );
-      score += governmentModifier; // -15 to +20 based on government compatibility
-    } catch {
-      // Government system not available, skip modifier
-    }
-  }
-  */
+/**
+ * Registry of all relationship modifiers applied in sequence
+ */
+const relationshipModifiers: RelationshipModifier[] = [
+  allianceModifier,
+  truceModifier,
+  sanctionModifier,
+  trustModifier,
+  favorsModifier,
+  promiseModifier,
+  grievancesModifier,
+  specializedAllianceModifier,
+  diplomaticInfluenceModifier,
+  councilMembershipModifier,
+  doctrineCompatibilityModifier
+];
 
-  return score;
+/**
+ * Calculate relationship score based on actual relationships and treaties
+ * Uses a modifier registry pattern for clarity and testability
+ */
+function calculateRelationshipScore(nation1: Nation, nation2: Nation): number {
+  // Base relationship value (-100 to +100), scaled to -50 to +50
+  const baseRelationship = getRelationship(nation1, nation2.id);
+  const baseScore = baseRelationship / 2;
+
+  // Apply all modifiers
+  const ctx: RelationshipModifierContext = { nation1, nation2 };
+  return relationshipModifiers.reduce(
+    (score, modifier) => score + modifier(ctx),
+    baseScore
+  );
 }
 
 /**
