@@ -8,6 +8,401 @@ import { safePercentage } from '@/lib/safeMath';
 import { canFormAlliance, getRelationship, RELATIONSHIP_ALLIED } from '@/lib/relationshipUtils';
 import { calculateMissileInterceptChance } from '@/lib/missileDefense';
 
+// ============================================================================
+// Probability Configuration Constants
+// ============================================================================
+
+/** Probability calculation configuration for missile strike consequences */
+const PROBABILITY_CONFIG = {
+  retaliation: { max: 95, base: 35, capacityMultiplier: 8, yieldMultiplier: 2 },
+  radiation: { max: 100, base: 50, yieldMultiplier: 4, populationMultiplier: 0.5 },
+  healthCollapse: { max: 95, base: 30, yieldMultiplier: 3, instabilityMultiplier: 0.5 },
+  famine: { max: 90, base: 15, yieldMultiplier: 2.5, winterMultiplier: 20, radiationMultiplier: 15 },
+  diplomaticCollapse: { max: 95, base: 25, allyMultiplier: 10, capacityMultiplier: 5, defconBonus: 20 },
+  environmental: { max: 90, base: 20, yieldMultiplier: 3.5, radiationMultiplier: 25, winterMultiplier: 25 },
+  civilUnrest: { max: 85, base: 20, instabilityMultiplier: 5, yieldMultiplier: 2 },
+} as const;
+
+/** Warning thresholds for generating critical warnings */
+const WARNING_THRESHOLDS = {
+  diplomaticCollapse: 50,
+  environmental: 45,
+  civilUnrest: 40,
+  minAlliesForWarning: 2,
+  weakDefense: 10,
+} as const;
+
+/** Casualty calculation constants */
+const CASUALTY_CONFIG = {
+  baseMultiplier: 1000000,
+  randomVariance: 0.5,
+  rangeVariance: 0.3,
+} as const;
+
+// ============================================================================
+// Types for Missile Launch Calculations
+// ============================================================================
+
+interface StrikeProbabilities {
+  retaliation: number;
+  radiation: number;
+  healthCollapse: number;
+  famine: number;
+  diplomaticCollapse: number;
+  environmental: number;
+  civilUnrest: number;
+}
+
+interface StrikeContext {
+  retaliationCapacity: number;
+  alliedCount: number;
+  averageInstability: number;
+  populationPressure: number;
+  globalRadiation: number;
+  nuclearWinterLevel: number;
+  playerInstability: number;
+  defconIsCritical: boolean;
+}
+
+interface CasualtyRange {
+  min: number;
+  max: number;
+}
+
+interface DefconChange {
+  from: number;
+  to: number;
+  delta: number;
+}
+
+// ============================================================================
+// Helper Functions for Missile Launch Calculations
+// ============================================================================
+
+/**
+ * Gather contextual data needed for probability calculations
+ */
+function gatherStrikeContext(
+  context: ConsequenceCalculationContext,
+  targetNation: Nation
+): StrikeContext {
+  const { playerNation, allNations } = context;
+
+  const retaliationCapacity =
+    (targetNation.missiles || 0) + (targetNation.bombers || 0) + (targetNation.submarines || 0);
+
+  const averageInstability =
+    allNations.length > 0
+      ? allNations.reduce((sum, nation) => sum + (nation.instability ?? 0), 0) / allNations.length
+      : 0;
+
+  return {
+    retaliationCapacity,
+    alliedCount: targetNation.alliances?.length ?? 0,
+    averageInstability,
+    populationPressure: safePercentage(targetNation.population, 1500, 0),
+    globalRadiation: context.gameState?.globalRadiation ?? 0,
+    nuclearWinterLevel: context.gameState?.nuclearWinterLevel ?? 0,
+    playerInstability: playerNation.instability ?? 0,
+    defconIsCritical: context.currentDefcon <= 2,
+  };
+}
+
+/**
+ * Calculate all strike-related probabilities based on context and warhead yield
+ */
+function calculateStrikeProbabilities(
+  warheadYield: number,
+  strikeContext: StrikeContext
+): StrikeProbabilities {
+  const cfg = PROBABILITY_CONFIG;
+  const ctx = strikeContext;
+
+  return {
+    retaliation: Math.min(
+      cfg.retaliation.max,
+      cfg.retaliation.base +
+        ctx.retaliationCapacity * cfg.retaliation.capacityMultiplier +
+        Math.round(warheadYield * cfg.retaliation.yieldMultiplier)
+    ),
+    radiation: Math.min(
+      cfg.radiation.max,
+      cfg.radiation.base +
+        Math.round(warheadYield * cfg.radiation.yieldMultiplier) +
+        Math.round(ctx.populationPressure * cfg.radiation.populationMultiplier)
+    ),
+    healthCollapse: Math.min(
+      cfg.healthCollapse.max,
+      cfg.healthCollapse.base +
+        Math.round(warheadYield * cfg.healthCollapse.yieldMultiplier) +
+        Math.max(0, Math.round(ctx.averageInstability * cfg.healthCollapse.instabilityMultiplier))
+    ),
+    famine: Math.min(
+      cfg.famine.max,
+      cfg.famine.base +
+        Math.round(warheadYield * cfg.famine.yieldMultiplier) +
+        Math.round(ctx.nuclearWinterLevel * cfg.famine.winterMultiplier) +
+        Math.round(ctx.globalRadiation * cfg.famine.radiationMultiplier)
+    ),
+    diplomaticCollapse: Math.min(
+      cfg.diplomaticCollapse.max,
+      cfg.diplomaticCollapse.base +
+        ctx.alliedCount * cfg.diplomaticCollapse.allyMultiplier +
+        Math.round(ctx.retaliationCapacity * cfg.diplomaticCollapse.capacityMultiplier) +
+        (ctx.defconIsCritical ? cfg.diplomaticCollapse.defconBonus : 0)
+    ),
+    environmental: Math.min(
+      cfg.environmental.max,
+      cfg.environmental.base +
+        Math.round(warheadYield * cfg.environmental.yieldMultiplier) +
+        Math.round(ctx.globalRadiation * cfg.environmental.radiationMultiplier) +
+        Math.round(ctx.nuclearWinterLevel * cfg.environmental.winterMultiplier)
+    ),
+    civilUnrest: Math.min(
+      cfg.civilUnrest.max,
+      cfg.civilUnrest.base +
+        Math.round(ctx.playerInstability * cfg.civilUnrest.instabilityMultiplier) +
+        Math.round(warheadYield * cfg.civilUnrest.yieldMultiplier)
+    ),
+  };
+}
+
+/**
+ * Calculate casualty estimates based on warhead yield
+ */
+function calculateCasualtyRange(warheadYield: number): CasualtyRange {
+  const { baseMultiplier, randomVariance, rangeVariance } = CASUALTY_CONFIG;
+  const estimatedCasualties = Math.floor(
+    warheadYield * baseMultiplier * (1 + Math.random() * randomVariance)
+  );
+  return {
+    min: Math.floor(estimatedCasualties * (1 - rangeVariance)),
+    max: Math.floor(estimatedCasualties * (1 + rangeVariance)),
+  };
+}
+
+/**
+ * Calculate DEFCON level changes based on current level and warhead yield
+ */
+function calculateDefconChange(currentDefcon: number, warheadYield: number): DefconChange {
+  let delta = 0;
+  if (currentDefcon > 2) delta = -1;
+  if (currentDefcon > 3 && warheadYield >= 10) delta = -2;
+
+  return {
+    from: currentDefcon,
+    to: Math.max(1, currentDefcon + delta),
+    delta,
+  };
+}
+
+/**
+ * Calculate interception probability using missile defense systems
+ */
+function calculateInterceptionData(
+  targetNation: Nation,
+  allNations: Nation[]
+): { interceptionChance: number; successProbability: number } {
+  const defenseStrength = targetNation.defense || 0;
+  const alliedInterceptors = allNations
+    .filter(
+      (nation) =>
+        nation.id !== targetNation.id &&
+        nation.treaties?.[targetNation.id]?.alliance &&
+        nation.defense > 0
+    )
+    .map((nation) => nation.defense || 0);
+
+  const interceptBreakdown = calculateMissileInterceptChance(defenseStrength, alliedInterceptors);
+  const interceptionChance = Math.round(interceptBreakdown.totalChance * 100);
+
+  return {
+    interceptionChance,
+    successProbability: 100 - interceptionChance,
+  };
+}
+
+/**
+ * Calculate relationship changes with other nations after a nuclear strike
+ */
+function calculateRelationshipChanges(
+  playerNation: Nation,
+  targetNation: Nation,
+  allNations: Nation[]
+): Array<{ nation: string; change: number }> {
+  return allNations
+    .filter((n) => n.name !== playerNation.name && n.name !== targetNation.name)
+    .map((nation) => {
+      if (targetNation.alliances?.includes(nation.name)) {
+        return { nation: nation.name, change: -30 }; // Allies of target are angry
+      }
+      if (nation.alliances?.includes(playerNation.name)) {
+        return { nation: nation.name, change: +10 }; // Player's allies might approve
+      }
+      return { nation: nation.name, change: -15 }; // Neutral nations condemn nuclear use
+    });
+}
+
+/**
+ * Build immediate consequences for the strike
+ */
+function buildImmediateConsequences(
+  defconChange: DefconChange,
+  casualtyRange: CasualtyRange,
+  interceptionChance: number,
+  successProbability: number
+): Consequence[] {
+  const consequences: Consequence[] = [
+    {
+      description: `DEFCON ${defconChange.from} → ${defconChange.to} (${defconChange.delta < 0 ? 'ESCALATION' : 'Unchanged'})`,
+      severity: defconChange.delta < 0 ? 'critical' : 'neutral',
+      icon: '⚠️',
+    },
+    {
+      description: `Estimated casualties: ${casualtyRange.min.toLocaleString()}-${casualtyRange.max.toLocaleString()}`,
+      severity: 'negative',
+      icon: '💀',
+    },
+  ];
+
+  if (successProbability < 100) {
+    consequences.push({
+      description: `${interceptionChance}% chance of interception`,
+      severity: 'negative',
+      probability: interceptionChance,
+      icon: '🛡️',
+    });
+  }
+
+  return consequences;
+}
+
+/**
+ * Build long-term consequences for the strike
+ */
+function buildLongTermConsequences(
+  targetNationName: string,
+  probabilities: StrikeProbabilities
+): Consequence[] {
+  return [
+    {
+      description: `${targetNationName} will lash back with whatever nuclear fire survives—retaliatory launches are almost certain`,
+      severity: 'critical',
+      probability: probabilities.retaliation,
+      icon: '☢️',
+    },
+    {
+      description: 'Radiation burns will flay survivors alive; field hospitals drown in screams and melted flesh',
+      severity: 'critical',
+      probability: probabilities.radiation,
+      icon: '🔥',
+    },
+    {
+      description: `${targetNationName}'s health system collapses as doctors triage in blacked-out corridors and supplies run dry`,
+      severity: 'negative',
+      probability: probabilities.healthCollapse,
+      icon: '🚑',
+    },
+    {
+      description: 'Ash-choked skies poison harvests—the world staggers toward synchronized famine and ration riots',
+      severity: 'critical',
+      probability: probabilities.famine,
+      icon: '🌍',
+    },
+  ];
+}
+
+/**
+ * Build risk consequences for the strike
+ */
+function buildRiskConsequences(
+  playerNationName: string,
+  probabilities: StrikeProbabilities
+): Consequence[] {
+  return [
+    {
+      description: `Diplomatic collapse looms—alliances fracture and neutral states spit venom at ${playerNationName}`,
+      severity: 'critical',
+      probability: probabilities.diplomaticCollapse,
+      icon: '💔',
+    },
+    {
+      description: 'Environmental catastrophe kindles: black rain, toxic seas, and choking fallout storms',
+      severity: 'critical',
+      probability: probabilities.environmental,
+      icon: '🌪️',
+    },
+    {
+      description: `${playerNationName} may erupt in civil unrest as terrified citizens flood the streets and demand answers`,
+      severity: 'negative',
+      probability: probabilities.civilUnrest,
+      icon: '🔥',
+    },
+  ];
+}
+
+/**
+ * Generate warnings based on calculated probabilities and context
+ */
+function generateWarnings(
+  playerNation: Nation,
+  targetNation: Nation,
+  newDefcon: number,
+  probabilities: StrikeProbabilities
+): string[] {
+  const warnings: string[] = [];
+  const thresholds = WARNING_THRESHOLDS;
+
+  if (targetNation.alliances && targetNation.alliances.length > thresholds.minAlliesForWarning) {
+    warnings.push(`${targetNation.name} has ${targetNation.alliances.length} allies who may join the war!`);
+  }
+  if (newDefcon === 1) {
+    warnings.push('DEFCON 1: Total nuclear war imminent - mutual destruction likely!');
+  }
+  if ((playerNation.defense || 0) < thresholds.weakDefense) {
+    warnings.push('Your defense is weak - expect heavy retaliation casualties!');
+  }
+  if (probabilities.diplomaticCollapse >= thresholds.diplomaticCollapse) {
+    warnings.push('Diplomatic backchannels are shattering—ambassadors are calling for evacuations in tears.');
+  }
+  if (probabilities.environmental >= thresholds.environmental) {
+    warnings.push('Scientists whisper about black rain and poisoned oceans—this launch could make their nightmares real.');
+  }
+  if (probabilities.civilUnrest >= thresholds.civilUnrest) {
+    warnings.push(`${playerNation.name} faces riots and candlelight vigils collapsing into chaos once the sirens wail.`);
+  }
+
+  return warnings;
+}
+
+/**
+ * Get the display name for a delivery method
+ */
+function getDeliveryMethodDisplayName(deliveryMethod: 'missile' | 'bomber' | 'submarine'): string {
+  const displayNames: Record<typeof deliveryMethod, string> = {
+    missile: 'Missile',
+    bomber: 'Bomber',
+    submarine: 'Submarine',
+  };
+  return displayNames[deliveryMethod];
+}
+
+/**
+ * Get the production cost for a delivery method
+ */
+function getDeliveryMethodCost(deliveryMethod: 'missile' | 'bomber' | 'submarine'): number {
+  const costs: Record<typeof deliveryMethod, number> = {
+    missile: 10,
+    bomber: 20,
+    submarine: 30,
+  };
+  return costs[deliveryMethod];
+}
+
+// ============================================================================
+// Main Function
+// ============================================================================
+
 /**
  * Calculate consequences for launching a nuclear missile
  */
@@ -22,200 +417,42 @@ export function calculateMissileLaunchConsequences(
     throw new Error('Target nation required for missile launch');
   }
 
-  // Calculate interception probability
-  const defenseStrength = targetNation.defense || 0;
-  const alliedInterceptors = allNations
-    .filter(
-      (nation) =>
-        nation.id !== targetNation.id && nation.treaties?.[targetNation.id]?.alliance && nation.defense > 0
-    )
-    .map((nation) => nation.defense || 0);
-  const interceptBreakdown = calculateMissileInterceptChance(defenseStrength, alliedInterceptors);
-  const interceptionChance = Math.round(interceptBreakdown.totalChance * 100);
-  const successProbability = 100 - interceptionChance;
+  // Gather context and calculate core data
+  const strikeContext = gatherStrikeContext(context, targetNation);
+  const probabilities = calculateStrikeProbabilities(warheadYield, strikeContext);
+  const { interceptionChance, successProbability } = calculateInterceptionData(targetNation, allNations);
+  const casualtyRange = calculateCasualtyRange(warheadYield);
+  const defconChange = calculateDefconChange(currentDefcon, warheadYield);
 
-  const retaliationCapacity =
-    (targetNation.missiles || 0) + (targetNation.bombers || 0) + (targetNation.submarines || 0);
-  const alliedCount = targetNation.alliances?.length ?? 0;
-  const averageInstability =
-    allNations.length > 0
-      ? allNations.reduce((sum, nation) => sum + (nation.instability ?? 0), 0) / allNations.length
-      : 0;
-  const populationPressure = safePercentage(targetNation.population, 1500, 0);
-  const globalRadiation = context.gameState?.globalRadiation ?? 0;
-  const nuclearWinterLevel = context.gameState?.nuclearWinterLevel ?? 0;
+  // Build consequences
+  const relationshipChanges = calculateRelationshipChanges(playerNation, targetNation, allNations);
+  const immediate = buildImmediateConsequences(defconChange, casualtyRange, interceptionChance, successProbability);
+  const longTerm = buildLongTermConsequences(targetNation.name, probabilities);
+  const risks = buildRiskConsequences(playerNation.name, probabilities);
+  const warnings = generateWarnings(playerNation, targetNation, defconChange.to, probabilities);
 
-  const retaliationProbability = Math.min(95, 35 + retaliationCapacity * 8 + Math.round(warheadYield * 2));
-  const radiationHellProbability = Math.min(
-    100,
-    50 + Math.round(warheadYield * 4) + Math.round(populationPressure / 2)
-  );
-  const healthCollapseProbability = Math.min(
-    95,
-    30 + Math.round(warheadYield * 3) + Math.max(0, Math.round(averageInstability / 2))
-  );
-  const famineProbability = Math.min(
-    90,
-    15 + Math.round(warheadYield * 2.5) + Math.round(nuclearWinterLevel * 20) + Math.round(globalRadiation * 15)
-  );
-  const diplomaticCollapseChance = Math.min(
-    95,
-    25 + alliedCount * 10 + Math.round(retaliationCapacity * 5) + (context.currentDefcon <= 2 ? 20 : 0)
-  );
-  const environmentalMeltdownChance = Math.min(
-    90,
-    20 + Math.round(warheadYield * 3.5) + Math.round(globalRadiation * 25) + Math.round(nuclearWinterLevel * 25)
-  );
-  const civilUnrestChance = Math.min(
-    85,
-    20 + Math.round((playerNation.instability ?? 0) * 5) + Math.round(warheadYield * 2)
-  );
-
-  // Calculate casualties
-  const estimatedCasualties = Math.floor(warheadYield * 1000000 * (1 + Math.random() * 0.5));
-  const casualtyRange = {
-    min: Math.floor(estimatedCasualties * 0.7),
-    max: Math.floor(estimatedCasualties * 1.3),
-  };
-
-  // Calculate DEFCON change
-  let defconChange = 0;
-  if (currentDefcon > 2) defconChange = -1;
-  if (currentDefcon > 3 && warheadYield >= 10) defconChange = -2;
-  const newDefcon = Math.max(1, currentDefcon + defconChange);
-
-  // Calculate relationship impacts
-  const relationshipChanges = allNations
-    .filter((n) => n.name !== playerNation.name && n.name !== targetNation.name)
-    .map((nation) => {
-      // Allies of target are angry
-      if (targetNation.alliances?.includes(nation.name)) {
-        return { nation: nation.name, change: -30 };
-      }
-      // Enemies of target might approve
-      if (nation.alliances?.includes(playerNation.name)) {
-        return { nation: nation.name, change: +10 };
-      }
-      // Neutral nations condemn nuclear use
-      return { nation: nation.name, change: -15 };
-    });
-
-  const immediate: Consequence[] = [
-    {
-      description: `DEFCON ${currentDefcon} → ${newDefcon} (${defconChange < 0 ? 'ESCALATION' : 'Unchanged'})`,
-      severity: defconChange < 0 ? 'critical' : 'neutral',
-      icon: '⚠️',
-    },
-    {
-      description: `Estimated casualties: ${casualtyRange.min.toLocaleString()}-${casualtyRange.max.toLocaleString()}`,
-      severity: 'negative',
-      icon: '💀',
-    },
-  ];
-
-  if (successProbability < 100) {
-    immediate.push({
-      description: `${interceptionChance}% chance of interception`,
-      severity: 'negative',
-      probability: interceptionChance,
-      icon: '🛡️',
-    });
-  }
-
-  const longTerm: Consequence[] = [
-    {
-      description: `${targetNation.name} will lash back with whatever nuclear fire survives—retaliatory launches are almost certain`,
-      severity: 'critical',
-      probability: retaliationProbability,
-      icon: '☢️',
-    },
-    {
-      description: 'Radiation burns will flay survivors alive; field hospitals drown in screams and melted flesh',
-      severity: 'critical',
-      probability: radiationHellProbability,
-      icon: '🔥',
-    },
-    {
-      description: `${targetNation.name}'s health system collapses as doctors triage in blacked-out corridors and supplies run dry`,
-      severity: 'negative',
-      probability: healthCollapseProbability,
-      icon: '🚑',
-    },
-    {
-      description: 'Ash-choked skies poison harvests—the world staggers toward synchronized famine and ration riots',
-      severity: 'critical',
-      probability: famineProbability,
-      icon: '🌍',
-    },
-  ];
-
-  const risks: Consequence[] = [
-    {
-      description: `Diplomatic collapse looms—alliances fracture and neutral states spit venom at ${playerNation.name}`,
-      severity: 'critical',
-      probability: diplomaticCollapseChance,
-      icon: '💔',
-    },
-    {
-      description: 'Environmental catastrophe kindles: black rain, toxic seas, and choking fallout storms',
-      severity: 'critical',
-      probability: environmentalMeltdownChance,
-      icon: '🌪️',
-    },
-    {
-      description: `${playerNation.name} may erupt in civil unrest as terrified citizens flood the streets and demand answers`,
-      severity: 'negative',
-      probability: civilUnrestChance,
-      icon: '🔥',
-    },
-  ];
-
-  // Check if this blocks diplomatic victory
+  // Determine victory impact
   const victoryImpact =
-    newDefcon <= 2
-      ? {
-          victoryType: 'Diplomatic Victory',
-          impact: 'BLOCKED - Peace requirement violated',
-        }
+    defconChange.to <= 2
+      ? { victoryType: 'Diplomatic Victory', impact: 'BLOCKED - Peace requirement violated' }
       : undefined;
-
-  const warnings: string[] = [];
-  if (targetNation.alliances && targetNation.alliances.length > 2) {
-    warnings.push(`${targetNation.name} has ${targetNation.alliances.length} allies who may join the war!`);
-  }
-  if (newDefcon === 1) {
-    warnings.push('DEFCON 1: Total nuclear war imminent - mutual destruction likely!');
-  }
-  if ((playerNation.defense || 0) < 10) {
-    warnings.push('Your defense is weak - expect heavy retaliation casualties!');
-  }
-  if (diplomaticCollapseChance >= 50) {
-    warnings.push('Diplomatic backchannels are shattering—ambassadors are calling for evacuations in tears.');
-  }
-  if (environmentalMeltdownChance >= 45) {
-    warnings.push('Scientists whisper about black rain and poisoned oceans—this launch could make their nightmares real.');
-  }
-  if (civilUnrestChance >= 40) {
-    warnings.push(`${playerNation.name} faces riots and candlelight vigils collapsing into chaos once the sirens wail.`);
-  }
-
 
   return {
     actionType: 'launch_missile',
-    actionTitle: `Launch ${warheadYield}MT Nuclear ${deliveryMethod === 'missile' ? 'Missile' : deliveryMethod === 'bomber' ? 'Bomber' : 'Submarine'}`,
+    actionTitle: `Launch ${warheadYield}MT Nuclear ${getDeliveryMethodDisplayName(deliveryMethod)}`,
     actionDescription: `Strike ${targetNation.name} with nuclear weapons`,
     targetName: targetNation.name,
     immediate,
     longTerm,
     risks,
-    defconChange: { from: currentDefcon, to: newDefcon },
+    defconChange: { from: defconChange.from, to: defconChange.to },
     relationshipChanges,
     victoryImpact,
     successProbability,
     successDescription: `${successProbability}% chance of successful strike`,
     costs: {
       uranium: warheadYield,
-      production: deliveryMethod === 'missile' ? 10 : deliveryMethod === 'bomber' ? 20 : 30,
+      production: getDeliveryMethodCost(deliveryMethod),
       actions: 1,
     },
     warnings,
