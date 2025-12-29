@@ -9,6 +9,56 @@
  */
 
 import type { Nation } from '@/types/game';
+
+// ============================================================================
+// AI DIPLOMACY CONFIGURATION CONSTANTS
+// ============================================================================
+
+/** Threat level thresholds for different diplomatic actions */
+const AI_DIPLOMACY_THREAT_CONFIG = {
+  /** Minimum threat to consider diplomatic response */
+  HIGH_THREAT_THRESHOLD: 8,
+  /** Threat level requiring non-aggression pact consideration */
+  NON_AGGRESSION_THRESHOLD: 12,
+  /** Threat level that may trigger treaty breaking */
+  TREATY_BREAK_THRESHOLD: 15,
+  /** Moderate threat requiring de-escalation */
+  MODERATE_THREAT_THRESHOLD: 5,
+  /** Minimum threat for sanction consideration */
+  SANCTION_THREAT_THRESHOLD: 10,
+  /** Maximum threat for alliance consideration */
+  ALLIANCE_MAX_THREAT: 2,
+} as const;
+
+/** Probability settings for AI diplomatic decisions */
+const AI_DIPLOMACY_PROBABILITY_CONFIG = {
+  /** Base chance to form alliance */
+  BASE_ALLIANCE_CHANCE: 0.15,
+  /** Bonus alliance chance when desperate */
+  DESPERATE_ALLIANCE_BONUS: 0.35,
+  /** Bonus alliance chance with shared threat */
+  SHARED_THREAT_ALLIANCE_BONUS: 0.25,
+  /** Chance to impose sanctions on hostile nation */
+  SANCTION_CHANCE: 0.6,
+  /** Chance to offer truce to moderate threat */
+  MODERATE_TRUCE_CHANCE: 0.6,
+} as const;
+
+/** Nation state thresholds for desperation calculation */
+const AI_DIPLOMACY_DESPERATION_CONFIG = {
+  /** Territory count considered desperate */
+  DESPERATE_TERRITORY_THRESHOLD: 3,
+  /** Population considered desperate */
+  DESPERATE_POPULATION_THRESHOLD: 30,
+  /** Ally instability requiring aid consideration */
+  ALLY_INSTABILITY_THRESHOLD: 10,
+  /** Threat level for identifying powerful enemy */
+  POWERFUL_ENEMY_THREAT: 8,
+  /** Military power for identifying powerful enemy */
+  POWERFUL_ENEMY_MILITARY: 10,
+  /** Minimum relationship for alliance consideration */
+  MIN_ALLIANCE_RELATIONSHIP: -10,
+} as const;
 import type { AllianceType } from '@/types/specializedAlliances';
 import type { AIInitiatedNegotiation } from '@/types/negotiation';
 import type { AidType, SanctionType } from '@/types/regionalMorale';
@@ -318,107 +368,280 @@ export function aiHandleDiplomaticUrgencies(
   return false;
 }
 
+// ============================================================================
+// AI DIPLOMACY HELPER FUNCTIONS
+// ============================================================================
+
+interface ThreatEntry {
+  target: Nation;
+  threat: number;
+}
+
 /**
- * Attempt various diplomatic actions based on threats and relationships
+ * Sort nations by threat level (highest first)
+ */
+function sortNationsByThreat(actor: Nation, others: Nation[]): ThreatEntry[] {
+  return others
+    .map(target => ({ target, threat: actor.threats?.[target.id] || 0 }))
+    .sort((a, b) => b.threat - a.threat);
+}
+
+/**
+ * Handle diplomacy with the highest threat target.
+ * Returns true if an action was taken.
+ */
+function handleHighThreatDiplomacy(
+  actor: Nation,
+  highest: ThreatEntry,
+  logFn: (msg: string, type?: string) => void
+): boolean {
+  const { HIGH_THREAT_THRESHOLD, NON_AGGRESSION_THRESHOLD, TREATY_BREAK_THRESHOLD } = AI_DIPLOMACY_THREAT_CONFIG;
+
+  if (!highest || highest.threat < HIGH_THREAT_THRESHOLD) {
+    return false;
+  }
+
+  const treaty = actor.treaties?.[highest.target.id];
+
+  // No truce exists - try to establish one
+  if (!treaty?.truceTurns) {
+    if (highest.threat >= NON_AGGRESSION_THRESHOLD && aiSignNonAggressionPact(actor, highest.target, logFn)) {
+      return true;
+    }
+    aiSignMutualTruce(actor, highest.target, 2, logFn, 'to diffuse tensions');
+    return true;
+  }
+
+  // Very high threat with no alliance - consider breaking treaties
+  if (!treaty?.alliance && highest.threat >= TREATY_BREAK_THRESHOLD) {
+    return aiBreakTreaties(actor, highest.target, logFn, 'after repeated provocations');
+  }
+
+  return false;
+}
+
+/**
+ * Attempt to impose sanctions on a hostile nation.
+ * Returns true if sanctions were imposed.
+ */
+function attemptSanctionHostileNation(
+  actor: Nation,
+  sortedByThreat: ThreatEntry[],
+  logFn: (msg: string, type?: string) => void
+): boolean {
+  const { SANCTION_THREAT_THRESHOLD } = AI_DIPLOMACY_THREAT_CONFIG;
+  const { SANCTION_CHANCE } = AI_DIPLOMACY_PROBABILITY_CONFIG;
+
+  const sanctionTarget = sortedByThreat.find(
+    entry => entry.threat >= SANCTION_THREAT_THRESHOLD && !actor.treaties?.[entry.target.id]?.alliance
+  );
+
+  if (sanctionTarget && Math.random() < SANCTION_CHANCE) {
+    return aiImposeSanctions(actor, sanctionTarget.target, logFn);
+  }
+
+  return false;
+}
+
+/**
+ * Find and send aid to an unstable ally.
+ * Returns true if aid was sent.
+ */
+function attemptAidToUnstableAlly(
+  actor: Nation,
+  others: Nation[],
+  logFn: (msg: string, type?: string) => void
+): boolean {
+  const { ALLY_INSTABILITY_THRESHOLD } = AI_DIPLOMACY_DESPERATION_CONFIG;
+
+  const aidCandidate = others
+    .filter(target => {
+      const treaty = actor.treaties?.[target.id];
+      const isAllyOrTruce = treaty?.alliance || treaty?.truceTurns;
+      const isUnstable = (target.instability || 0) >= ALLY_INSTABILITY_THRESHOLD;
+      return isAllyOrTruce && isUnstable;
+    })
+    .sort((a, b) => (b.instability || 0) - (a.instability || 0))[0];
+
+  if (aidCandidate) {
+    return aiSendAid(actor, aidCandidate, logFn);
+  }
+
+  return false;
+}
+
+/**
+ * Check if the actor is in a desperate state (low territories or population).
+ */
+function isNationDesperate(actor: Nation): boolean {
+  const { DESPERATE_TERRITORY_THRESHOLD, DESPERATE_POPULATION_THRESHOLD } = AI_DIPLOMACY_DESPERATION_CONFIG;
+
+  const actorTerritories = (actor as any).controlledTerritories?.length || 5;
+  const actorPopulation = actor.population || 0;
+
+  return actorTerritories <= DESPERATE_TERRITORY_THRESHOLD || actorPopulation < DESPERATE_POPULATION_THRESHOLD;
+}
+
+/**
+ * Check if there is a shared powerful threat that should encourage alliance formation.
+ */
+function hasSharedPowerfulThreat(actor: Nation, others: Nation[]): boolean {
+  const { POWERFUL_ENEMY_THREAT, POWERFUL_ENEMY_MILITARY } = AI_DIPLOMACY_DESPERATION_CONFIG;
+
+  return others.some(enemy => {
+    const actorThreat = actor.threats?.[enemy.id] || 0;
+    const enemyMilitaryPower =
+      (enemy.missiles || 0) +
+      (enemy.bombers || 0) +
+      ((enemy as any).conventionalUnits?.length || 0);
+
+    return actorThreat >= POWERFUL_ENEMY_THREAT && enemyMilitaryPower > POWERFUL_ENEMY_MILITARY;
+  });
+}
+
+/**
+ * Calculate the dynamic probability of attempting alliance formation.
+ * Factors in desperation and shared threats.
+ */
+function calculateAllianceProbability(actor: Nation, others: Nation[]): number {
+  const { BASE_ALLIANCE_CHANCE, DESPERATE_ALLIANCE_BONUS, SHARED_THREAT_ALLIANCE_BONUS } = AI_DIPLOMACY_PROBABILITY_CONFIG;
+
+  let allianceChance = BASE_ALLIANCE_CHANCE;
+
+  if (isNationDesperate(actor)) {
+    allianceChance += DESPERATE_ALLIANCE_BONUS;
+  }
+
+  if (hasSharedPowerfulThreat(actor, others)) {
+    allianceChance += SHARED_THREAT_ALLIANCE_BONUS;
+  }
+
+  return allianceChance;
+}
+
+/**
+ * Find a suitable alliance candidate from other nations.
+ */
+function findAllianceCandidate(actor: Nation, others: Nation[]): Nation | undefined {
+  const { ALLIANCE_MAX_THREAT } = AI_DIPLOMACY_THREAT_CONFIG;
+  const { MIN_ALLIANCE_RELATIONSHIP } = AI_DIPLOMACY_DESPERATION_CONFIG;
+
+  return others
+    .filter(target => {
+      const threat = actor.threats?.[target.id] || 0;
+      const treaty = actor.treaties?.[target.id];
+      const relationship = actor.relationships?.[target.id] || 0;
+
+      return threat <= ALLIANCE_MAX_THREAT && !treaty?.alliance && relationship >= MIN_ALLIANCE_RELATIONSHIP;
+    })
+    .sort((a, b) => {
+      // Sort by relationship first, then by low threat
+      const relA = actor.relationships?.[a.id] || 0;
+      const relB = actor.relationships?.[b.id] || 0;
+      if (relA !== relB) return relB - relA;
+      return (actor.threats?.[a.id] || 0) - (actor.threats?.[b.id] || 0);
+    })[0];
+}
+
+/**
+ * Attempt to form an alliance based on dynamic probability.
+ * Returns true if alliance was formed.
+ */
+function attemptAllianceFormation(
+  actor: Nation,
+  others: Nation[],
+  logFn: (msg: string, type?: string) => void
+): boolean {
+  const allianceChance = calculateAllianceProbability(actor, others);
+
+  if (Math.random() >= allianceChance) {
+    return false;
+  }
+
+  const allianceCandidate = findAllianceCandidate(actor, others);
+  if (allianceCandidate) {
+    return aiFormAlliance(actor, allianceCandidate, logFn);
+  }
+
+  return false;
+}
+
+/**
+ * Attempt to offer a truce to a moderately threatening nation.
+ * Returns true if truce was offered.
+ */
+function attemptModerateThreatDefuse(
+  actor: Nation,
+  sortedByThreat: ThreatEntry[],
+  logFn: (msg: string, type?: string) => void
+): boolean {
+  const { MODERATE_THREAT_THRESHOLD } = AI_DIPLOMACY_THREAT_CONFIG;
+  const { MODERATE_TRUCE_CHANCE } = AI_DIPLOMACY_PROBABILITY_CONFIG;
+
+  const moderateThreat = sortedByThreat.find(
+    entry => entry.threat >= MODERATE_THREAT_THRESHOLD && !actor.treaties?.[entry.target.id]?.truceTurns
+  );
+
+  if (moderateThreat && Math.random() < MODERATE_TRUCE_CHANCE) {
+    aiSignMutualTruce(actor, moderateThreat.target, 2, logFn);
+    return true;
+  }
+
+  return false;
+}
+
+// ============================================================================
+// MAIN AI DIPLOMACY FUNCTION
+// ============================================================================
+
+/**
+ * Attempt various diplomatic actions based on threats and relationships.
+ *
+ * This function evaluates the diplomatic landscape and takes appropriate action:
+ * 1. Handle high-threat situations (truces, non-aggression pacts, treaty breaks)
+ * 2. Impose sanctions on hostile nations
+ * 3. Send aid to unstable allies
+ * 4. Form alliances based on situation (desperation, shared threats)
+ * 5. Defuse moderate threats with truces
+ *
+ * @param actor - The AI nation making diplomatic decisions
+ * @param nations - All nations in the game
+ * @param logFn - Logging function for diplomatic events
+ * @returns true if a diplomatic action was taken, false otherwise
  */
 export function aiAttemptDiplomacy(
   actor: Nation,
   nations: Nation[],
   logFn: (msg: string, type?: string) => void
 ): boolean {
+  // Step 1: Get eligible nations and sort by threat
   const others = nations.filter(n => n !== actor && n.population > 0);
   if (others.length === 0) return false;
 
-  const sortedByThreat = others
-    .map(target => ({ target, threat: actor.threats?.[target.id] || 0 }))
-    .sort((a, b) => b.threat - a.threat);
+  const sortedByThreat = sortNationsByThreat(actor, others);
 
-  const highest = sortedByThreat[0];
-  if (highest && highest.threat >= 8) {
-    const treaty = actor.treaties?.[highest.target.id];
-    if (!treaty?.truceTurns) {
-      if (highest.threat >= 12 && aiSignNonAggressionPact(actor, highest.target, logFn)) {
-        return true;
-      }
-      aiSignMutualTruce(actor, highest.target, 2, logFn, 'to diffuse tensions');
-      return true;
-    }
-    if (!treaty?.alliance && highest.threat >= 15 && aiBreakTreaties(actor, highest.target, logFn, 'after repeated provocations')) {
-      return true;
-    }
-  }
-
-  // Sanction persistently hostile nations
-  const sanctionTarget = sortedByThreat.find(entry => entry.threat >= 10 && !actor.treaties?.[entry.target.id]?.alliance);
-  if (sanctionTarget && Math.random() < 0.6 && aiImposeSanctions(actor, sanctionTarget.target, logFn)) {
+  // Step 2: Handle high-threat diplomacy (truces, pacts, or treaty breaks)
+  if (handleHighThreatDiplomacy(actor, sortedByThreat[0], logFn)) {
     return true;
   }
 
-  // Support unstable allies or low-threat partners
-  const aidCandidate = others
-    .filter(target => (actor.treaties?.[target.id]?.alliance || actor.treaties?.[target.id]?.truceTurns) && (target.instability || 0) >= 10)
-    .sort((a, b) => (b.instability || 0) - (a.instability || 0))[0];
-
-  if (aidCandidate && aiSendAid(actor, aidCandidate, logFn)) {
+  // Step 3: Attempt to sanction persistently hostile nations
+  if (attemptSanctionHostileNation(actor, sortedByThreat, logFn)) {
     return true;
   }
 
-  // Form alliances with trusted nations - DYNAMIC probability based on situation
-  // Calculate dynamic alliance probability based on:
-  // 1. Shared threats (common enemy with high military power)
-  // 2. Relationship strength
-  // 3. Desperation (low territories, low population)
-
-  let allianceChance = 0.15; // Base 15% chance
-
-  // Check for desperation (nation is weak)
-  const actorTerritories = (actor as any).controlledTerritories?.length || 5;
-  const actorPopulation = actor.population || 0;
-  if (actorTerritories <= 3 || actorPopulation < 30) {
-    allianceChance += 0.35; // +35% when desperate (total 50%)
+  // Step 4: Support unstable allies with aid
+  if (attemptAidToUnstableAlly(actor, others, logFn)) {
+    return true;
   }
 
-  // Check for shared threats (common powerful enemy)
-  const sharedThreatBonus = others.some(enemy => {
-    const actorThreat = actor.threats?.[enemy.id] || 0;
-    const enemyMilitaryPower = (enemy.missiles || 0) + (enemy.bombers || 0) + ((enemy as any).conventionalUnits?.length || 0);
-    // If enemy is threatening (threat >= 8) and has strong military (>10), increase alliance desire
-    if (actorThreat >= 8 && enemyMilitaryPower > 10) {
-      return true;
-    }
-    return false;
-  });
-
-  if (sharedThreatBonus) {
-    allianceChance += 0.25; // +25% when facing powerful enemy (total 40% or 75% if desperate)
+  // Step 5: Attempt alliance formation based on situation
+  if (attemptAllianceFormation(actor, others, logFn)) {
+    return true;
   }
 
-  if (Math.random() < allianceChance) {
-    const allianceCandidate = others
-      .filter(target => {
-        const threat = actor.threats?.[target.id] || 0;
-        const treaty = actor.treaties?.[target.id];
-        // Also consider relationship - prefer targets with positive relationship
-        const relationship = actor.relationships?.[target.id] || 0;
-        return threat <= 2 && !(treaty?.alliance) && relationship >= -10;
-      })
-      .sort((a, b) => {
-        // Sort by relationship first, then by low threat
-        const relA = actor.relationships?.[a.id] || 0;
-        const relB = actor.relationships?.[b.id] || 0;
-        if (relA !== relB) return relB - relA; // Higher relationship first
-        return (actor.threats?.[a.id] || 0) - (actor.threats?.[b.id] || 0);
-      })[0];
-
-    if (allianceCandidate && aiFormAlliance(actor, allianceCandidate, logFn)) {
-      return true;
-    }
-  }
-
-  // Offer truces when moderately threatened
-  const moderateThreat = sortedByThreat.find(entry => entry.threat >= 5 && !(actor.treaties?.[entry.target.id]?.truceTurns));
-  if (moderateThreat && Math.random() < 0.6) {
-    aiSignMutualTruce(actor, moderateThreat.target, 2, logFn);
+  // Step 6: Offer truces to moderate threats
+  if (attemptModerateThreatDefuse(actor, sortedByThreat, logFn)) {
     return true;
   }
 
