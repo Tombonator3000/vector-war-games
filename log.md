@@ -3569,3 +3569,7 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added configuration constants (PRODUCTION_CONFIG, PENALTY_CONFIG, INSTABILITY_CONFIG)
 - Reduced main function from ~582 lines to ~60 lines with 11 numbered steps
 - Improved main function readability with clear documentation
+### 2025-12-29T10:12:37Z - Fixed division by zero bug in intelligenceAgencyUtils.ts
+- Added guards against empty operatives array in calculateBaseSuccessChance and calculateDetectionRisk functions
+- When operatives array is empty, avgSkill now defaults to 0 instead of causing NaN
+- TypeScript check passes

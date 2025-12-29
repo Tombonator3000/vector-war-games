@@ -271,8 +271,10 @@ function calculateBaseSuccessChance(
 
   let chance = baseChances[type];
 
-  // Add operative skill bonuses
-  const avgSkill = operatives.reduce((sum, op) => sum + op.skill, 0) / operatives.length;
+  // Add operative skill bonuses (guard against empty array)
+  const avgSkill = operatives.length > 0
+    ? operatives.reduce((sum, op) => sum + op.skill, 0) / operatives.length
+    : 0;
   chance += avgSkill / 5; // Up to +20 from maxed operatives
 
   // Add agency capability bonuses
@@ -329,8 +331,10 @@ function calculateDetectionRisk(
 
   let risk = baseRisks[type];
 
-  // Operative skill reduces detection
-  const avgSkill = operatives.reduce((sum, op) => sum + op.skill, 0) / operatives.length;
+  // Operative skill reduces detection (guard against empty array)
+  const avgSkill = operatives.length > 0
+    ? operatives.reduce((sum, op) => sum + op.skill, 0) / operatives.length
+    : 0;
   risk -= avgSkill / 5;
 
   // Agency upgrades reduce detection
