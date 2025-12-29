@@ -226,122 +226,239 @@ export function launch(
   return true;
 }
 
+// ============================================================================
+// Resolution Phase Helper Functions
+// ============================================================================
+
+/** Threat calculation thresholds */
+const THREAT_CONFIG = {
+  MISSILE_THRESHOLD: 10,
+  WARHEAD_THRESHOLD: 15,
+  ARSENAL_THREAT_INCREMENT: 1,
+  PLAYER_THREAT_INCREMENT: 2,
+  DECAY_RATE: 0.5,
+  MAX_THREAT: 100,
+} as const;
+
 /**
- * Process resolution phase - handle missile impacts, radiation, and threats
+ * Update threat levels between nations based on arsenals and player status.
+ * Each nation evaluates other nations as threats based on their military capability.
+ */
+function updateThreatLevels(nations: Nation[]): void {
+  for (const attacker of nations) {
+    if (attacker.population <= 0) continue;
+
+    attacker.threats = attacker.threats || {};
+
+    for (const target of nations) {
+      if (target.id === attacker.id || target.population <= 0) continue;
+
+      const currentThreat = attacker.threats[target.id] || 0;
+      let threatDelta = 0;
+
+      // Increase threat if target has large arsenal
+      const targetMissiles = target.missiles || 0;
+      const targetWarheads = Object.values(target.warheads || {}).reduce(
+        (sum, count) => sum + (count || 0),
+        0
+      );
+
+      if (targetMissiles > THREAT_CONFIG.MISSILE_THRESHOLD ||
+          targetWarheads > THREAT_CONFIG.WARHEAD_THRESHOLD) {
+        threatDelta += THREAT_CONFIG.ARSENAL_THREAT_INCREMENT;
+      }
+
+      // Player is always considered a threat
+      if (target.isPlayer) {
+        threatDelta += THREAT_CONFIG.PLAYER_THREAT_INCREMENT;
+      }
+
+      // Apply threat change and decay
+      const newThreat = currentThreat + threatDelta - THREAT_CONFIG.DECAY_RATE;
+      attacker.threats[target.id] = Math.max(0, Math.min(THREAT_CONFIG.MAX_THREAT, newThreat));
+    }
+  }
+}
+
+/**
+ * Process missile impacts - explode missiles that have reached their targets.
+ * Returns the count of missiles that impacted.
+ */
+function processMissileImpacts(
+  S: GameState,
+  projectLocal: (lon: number, lat: number) => ProjectedPoint,
+  explode: ResolutionPhaseDependencies['explode']
+): number {
+  let impactCount = 0;
+
+  for (const missile of S.missiles) {
+    if (missile.t >= 1 && !missile.hasExploded) {
+      const { x, y, visible } = projectLocal(missile.toLon, missile.toLat);
+      if (!visible) continue;
+
+      missile.hasExploded = true;
+      explode(x, y, missile.target, missile.yield, missile.from || null, 'missile');
+      impactCount++;
+    }
+  }
+
+  // Clear completed missiles
+  S.missiles = S.missiles.filter((m: any) => m.t < 1);
+
+  return impactCount;
+}
+
+/**
+ * Process radiation zones - apply decay and damage to nations within range.
+ */
+function processRadiationZones(
+  S: GameState,
+  nations: Nation[],
+  projectLocal: (lon: number, lat: number) => ProjectedPoint
+): void {
+  const radiationMitigation = typeof window !== 'undefined'
+    ? window.__bioDefenseStats?.radiationMitigation ?? 0
+    : 0;
+
+  for (const zone of S.radiationZones) {
+    // Decay radiation intensity
+    zone.intensity *= 0.95;
+
+    // Apply damage to nations within zone
+    for (const nation of nations) {
+      const { x, y } = projectLocal(nation.lon, nation.lat);
+      const distance = Math.hypot(x - zone.x, y - zone.y);
+
+      if (distance < zone.radius) {
+        const baseDamage = zone.intensity * 3;
+        const mitigatedDamage = baseDamage * (1 - radiationMitigation);
+        nation.population = Math.max(0, nation.population - mitigatedDamage);
+      }
+    }
+  }
+}
+
+/** Nuclear winter severity thresholds and effects */
+const NUCLEAR_WINTER_CONFIG = {
+  MAX_SEVERITY: 0.5,
+  SEVERITY_DIVISOR: 10,
+  POPULATION_LOSS_RATE: 0.05,
+  ALERT_THRESHOLD: 5,
+  DECAY_RATE: 0.95,
+} as const;
+
+/**
+ * Process nuclear winter effects - apply global population and production penalties.
+ */
+function processNuclearWinterEffects(
+  S: GameState,
+  nations: Nation[],
+  log: (msg: string, type?: string) => void
+): void {
+  if (!S.nuclearWinterLevel || S.nuclearWinterLevel <= 0) return;
+
+  const winterSeverity = Math.min(
+    S.nuclearWinterLevel / NUCLEAR_WINTER_CONFIG.SEVERITY_DIVISOR,
+    NUCLEAR_WINTER_CONFIG.MAX_SEVERITY
+  );
+
+  for (const nation of nations) {
+    // Population loss
+    const popLoss = Math.floor(
+      (nation.population || 0) * winterSeverity * NUCLEAR_WINTER_CONFIG.POPULATION_LOSS_RATE
+    );
+    if (popLoss > 0) {
+      nation.population = Math.max(0, (nation.population || 0) - popLoss);
+    }
+
+    // Production penalty
+    if (typeof nation.production === 'number') {
+      nation.production = Math.max(0, Math.floor(nation.production * (1 - winterSeverity)));
+    }
+  }
+
+  // Alert and overlay for severe nuclear winter
+  if (S.nuclearWinterLevel > NUCLEAR_WINTER_CONFIG.ALERT_THRESHOLD) {
+    log(`☢️ NUCLEAR WINTER! Global population declining!`, 'alert');
+    S.overlay = { text: 'NUCLEAR WINTER', ttl: 2000 };
+  }
+
+  // Decay nuclear winter level
+  S.nuclearWinterLevel *= NUCLEAR_WINTER_CONFIG.DECAY_RATE;
+}
+
+/**
+ * Update doctrine incident system for the player nation.
+ */
+function processDoctrineIncidents(
+  S: GameState,
+  nations: Nation[],
+  log: (msg: string, type?: string) => void
+): void {
+  const playerNation = nations.find(n => n.isPlayer);
+  if (!playerNation || !S.doctrineIncidentState) return;
+
+  try {
+    S.doctrineIncidentState = updateDoctrineIncidentSystem(
+      S,
+      playerNation,
+      S.doctrineIncidentState,
+      nations
+    );
+
+    if (S.doctrineIncidentState.activeIncident) {
+      log('⚠️ Doctrine incident requires your attention!', 'alert');
+    }
+  } catch (err) {
+    console.error('[Doctrine System] Error updating incidents:', err);
+  }
+}
+
+// ============================================================================
+// Main Resolution Phase Function
+// ============================================================================
+
+/**
+ * Process resolution phase - handle missile impacts, radiation, and threats.
+ *
+ * This phase handles:
+ * 1. Threat level updates between nations
+ * 2. Missile impact processing
+ * 3. Fallout and radiation effects
+ * 4. Research and construction advancement
+ * 5. Nuclear winter effects
+ * 6. Doctrine incident system
  */
 export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
   const { S, nations, log, projectLocal, explode, advanceResearch, advanceCityConstruction } = deps;
 
   log('=== RESOLUTION PHASE ===', 'success');
 
-  // Update threat levels based on actions
-  nations.forEach(attacker => {
-    if (attacker.population <= 0) return;
+  // 1. Update threat levels between nations
+  updateThreatLevels(nations);
 
-    nations.forEach(target => {
-      if (target.id === attacker.id || target.population <= 0) return;
+  // 2. Process missile impacts
+  processMissileImpacts(S, projectLocal, explode);
 
-      // Initialize threats object if needed
-      attacker.threats = attacker.threats || {};
-
-      // Increase threat if target has attacked us or has large arsenal
-      const targetMissiles = target.missiles || 0;
-      const targetWarheads = Object.values(target.warheads || {}).reduce((sum, count) => sum + (count || 0), 0);
-
-      if (targetMissiles > 10 || targetWarheads > 15) {
-        attacker.threats[target.id] = Math.min(100, (attacker.threats[target.id] || 0) + 1);
-      }
-
-      // Player is always considered a threat
-      if (target.isPlayer) {
-        attacker.threats[target.id] = Math.min(100, (attacker.threats[target.id] || 0) + 2);
-      }
-
-      // Decay old threats
-      if (attacker.threats[target.id]) {
-        attacker.threats[target.id] = Math.max(0, attacker.threats[target.id] - 0.5);
-      }
-    });
-  });
-
-  // Missile impacts and effects
-  S.missiles.forEach((missile: any) => {
-    if (missile.t >= 1 && !missile.hasExploded) {
-      const { x, y, visible } = projectLocal(missile.toLon, missile.toLat);
-      if (!visible) {
-        return;
-      }
-      missile.hasExploded = true;
-      explode(x, y, missile.target, missile.yield, missile.from || null, 'missile');
-    }
-  });
-
-  // Clear completed missiles
-  S.missiles = S.missiles.filter((m: any) => m.t < 1);
-
-  // Update fallout impacts for each nation based on lingering radiation
+  // 3. Update fallout impacts for each nation based on lingering radiation
   updateFalloutImpacts(S, nations, projectLocal, log);
 
-  const radiationMitigation = typeof window !== 'undefined'
-    ? window.__bioDefenseStats?.radiationMitigation ?? 0
-    : 0;
+  // 4. Process radiation zones
+  processRadiationZones(S, nations, projectLocal);
 
-  // Process radiation zones
-  S.radiationZones.forEach((zone: any) => {
-    zone.intensity *= 0.95;
-
-    nations.forEach(n => {
-      const { x, y } = projectLocal(n.lon, n.lat);
-      const dist = Math.hypot(x - zone.x, y - zone.y);
-      if (dist < zone.radius) {
-        const damage = zone.intensity * 3;
-        const mitigatedDamage = damage * (1 - radiationMitigation);
-        n.population = Math.max(0, n.population - mitigatedDamage);
-      }
-    });
-  });
-
-  nations.forEach(n => advanceResearch(n, 'RESOLUTION'));
-  nations.forEach(n => advanceCityConstruction(n, 'RESOLUTION'));
+  // 5. Advance research and city construction
+  for (const nation of nations) {
+    advanceResearch(nation, 'RESOLUTION');
+    advanceCityConstruction(nation, 'RESOLUTION');
+  }
 
   log('=== RESOLUTION PHASE COMPLETE ===', 'success');
 
-  // Nuclear winter effects
-  if (S.nuclearWinterLevel && S.nuclearWinterLevel > 0) {
-    const winterSeverity = Math.min(S.nuclearWinterLevel / 10, 0.5);
-    nations.forEach(n => {
-      const popLoss = Math.floor((n.population || 0) * winterSeverity * 0.05);
-      if (popLoss > 0) n.population = Math.max(0, (n.population || 0) - popLoss);
-      if (typeof n.production === 'number') {
-        n.production = Math.max(0, Math.floor(n.production * (1 - winterSeverity)));
-      }
-    });
+  // 6. Process nuclear winter effects
+  processNuclearWinterEffects(S, nations, log);
 
-    if (S.nuclearWinterLevel > 5) {
-      log(`☢️ NUCLEAR WINTER! Global population declining!`, 'alert');
-      S.overlay = { text: 'NUCLEAR WINTER', ttl: 2000 };
-    }
-    S.nuclearWinterLevel *= 0.95;
-  }
-
-  // Update Doctrine Incident System (only for player)
-  const playerNation = nations.find(n => n.isPlayer);
-  if (playerNation && S.doctrineIncidentState) {
-    try {
-      S.doctrineIncidentState = updateDoctrineIncidentSystem(
-        S,
-        playerNation,
-        S.doctrineIncidentState,
-        nations
-      );
-
-      if (S.doctrineIncidentState.activeIncident) {
-        log('⚠️ Doctrine incident requires your attention!', 'alert');
-      }
-    } catch (err) {
-      console.error('[Doctrine System] Error updating incidents:', err);
-    }
-  }
+  // 7. Update doctrine incident system
+  processDoctrineIncidents(S, nations, log);
 }
 
 /**

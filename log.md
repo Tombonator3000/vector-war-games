@@ -3543,3 +3543,13 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 ### 2025-11-27T23:06:23Z - Implemented Polyglobe-style map gestures
 - Added shared zoom-to-point helper with pointer-anchored zooming and fallback centering for flat projections.
 - Updated wheel, pinch, and double-click handlers to support trackpad panning, ctrl+pinch zoom detection, and consistent focus-aware zooming.
+### 2025-12-29T05:49:43Z - Refactored resolutionPhase for clarity
+- Extracted helper functions from resolutionPhase in gamePhaseHandlers.ts:
+  - updateThreatLevels(): Handles O(n²) threat calculation between nations
+  - processMissileImpacts(): Processes missile explosions and cleanup
+  - processRadiationZones(): Handles radiation decay and damage
+  - processNuclearWinterEffects(): Applies nuclear winter penalties
+  - processDoctrineIncidents(): Updates doctrine incident system
+- Added configuration constants (THREAT_CONFIG, NUCLEAR_WINTER_CONFIG) for magic numbers
+- Improved main function readability with numbered steps and clear documentation
+- All tests pass, build succeeds
