@@ -333,90 +333,123 @@ function calculatePlanetaryAlignment(turn: number): number {
 }
 
 /**
+ * Configuration for celestial events
+ */
+interface CelestialEventConfig {
+  idPrefix: string;
+  name: string;
+  description: string;
+  type: CelestialEvent['type'];
+  powerBonus: number;
+  duration: number;
+  condition: (turn: number, lunarPhase: number) => boolean;
+}
+
+const CELESTIAL_EVENT_CONFIGS: CelestialEventConfig[] = [
+  {
+    idPrefix: 'full_moon',
+    name: 'Full Moon',
+    description: 'The moon is full, amplifying ritual power.',
+    type: 'solstice',
+    powerBonus: 1.2,
+    duration: 1,
+    condition: (_turn, lunarPhase) => lunarPhase === 4,
+  },
+  {
+    idPrefix: 'new_moon',
+    name: 'New Moon',
+    description: 'The moon is dark, perfect for hidden rituals.',
+    type: 'solstice',
+    powerBonus: 1.1,
+    duration: 1,
+    condition: (_turn, lunarPhase) => lunarPhase === 0,
+  },
+  {
+    idPrefix: 'eclipse',
+    name: 'Solar Eclipse',
+    description: 'The sun is consumed by darkness. Reality weakens.',
+    type: 'eclipse',
+    powerBonus: 1.8,
+    duration: 1,
+    condition: (turn) => turn > 0 && turn % 36 === 0,
+  },
+  {
+    idPrefix: 'comet',
+    name: 'Crimson Comet',
+    description: 'A blood-red comet streaks across the sky. The stars are aligning.',
+    type: 'comet',
+    powerBonus: 2.0,
+    duration: 3,
+    condition: (turn) => turn > 0 && turn % 100 === 0,
+  },
+  {
+    idPrefix: 'stars_right',
+    name: 'THE STARS ARE RIGHT',
+    description: 'The cosmos aligns in a configuration not seen in millennia. The Great Old Ones can be awakened.',
+    type: 'stars_right',
+    powerBonus: 5.0,
+    duration: 10,
+    condition: (turn) => turn === 200,
+  },
+];
+
+/**
+ * Lunar phase power bonus configuration
+ */
+const LUNAR_PHASE_BONUSES: Record<number, number> = {
+  4: 0.2, // Full moon
+  0: 0.1, // New moon
+};
+
+/**
+ * Calculate ritual power modifier based on planetary alignment
+ */
+function getPlanetaryAlignmentBonus(alignment: number): number {
+  if (alignment > 80) return 0.3;
+  if (alignment > 60) return 0.15;
+  return 0;
+}
+
+/**
+ * Generate celestial events for a given turn
+ */
+function generateCelestialEvents(turn: number, lunarPhase: number): CelestialEvent[] {
+  return CELESTIAL_EVENT_CONFIGS
+    .filter(config => config.condition(turn, lunarPhase))
+    .map(config => ({
+      id: config.idPrefix === 'stars_right' ? config.idPrefix : `${config.idPrefix}_${turn}`,
+      name: config.name,
+      description: config.description,
+      type: config.type,
+      powerBonus: config.powerBonus,
+      duration: config.duration,
+    }));
+}
+
+/**
+ * Calculate total ritual power modifier from all sources
+ */
+function calculateRitualPowerModifier(
+  lunarPhase: number,
+  planetaryAlignment: number,
+  celestialEvents: CelestialEvent[]
+): number {
+  const baseModifier = 1.0;
+  const lunarBonus = LUNAR_PHASE_BONUSES[lunarPhase] ?? 0;
+  const planetaryBonus = getPlanetaryAlignmentBonus(planetaryAlignment);
+  const eventBonus = celestialEvents.reduce((sum, event) => sum + (event.powerBonus - 1.0), 0);
+
+  return baseModifier + lunarBonus + planetaryBonus + eventBonus;
+}
+
+/**
  * Update cosmic alignment for a new turn
  */
 function updateCosmicAlignment(current: CosmicAlignment, turn: number): CosmicAlignment {
   const lunarPhase = calculateLunarPhase(turn);
   const planetaryAlignment = calculatePlanetaryAlignment(turn);
-
-  // Check for special celestial events
-  const celestialEvents: CelestialEvent[] = [];
-
-  // Full moon (every 8 turns)
-  if (lunarPhase === 4) {
-    celestialEvents.push({
-      id: `full_moon_${turn}`,
-      name: 'Full Moon',
-      description: 'The moon is full, amplifying ritual power.',
-      type: 'solstice',
-      powerBonus: 1.2,
-      duration: 1,
-    });
-  }
-
-  // New moon (every 8 turns)
-  if (lunarPhase === 0) {
-    celestialEvents.push({
-      id: `new_moon_${turn}`,
-      name: 'New Moon',
-      description: 'The moon is dark, perfect for hidden rituals.',
-      type: 'solstice',
-      powerBonus: 1.1,
-      duration: 1,
-    });
-  }
-
-  // Eclipse (rare, every 36 turns)
-  if (turn % 36 === 0 && turn > 0) {
-    celestialEvents.push({
-      id: `eclipse_${turn}`,
-      name: 'Solar Eclipse',
-      description: 'The sun is consumed by darkness. Reality weakens.',
-      type: 'eclipse',
-      powerBonus: 1.8,
-      duration: 1,
-    });
-  }
-
-  // Comet (very rare, every 100 turns)
-  if (turn % 100 === 0 && turn > 0) {
-    celestialEvents.push({
-      id: `comet_${turn}`,
-      name: 'Crimson Comet',
-      description: 'A blood-red comet streaks across the sky. The stars are aligning.',
-      type: 'comet',
-      powerBonus: 2.0,
-      duration: 3,
-    });
-  }
-
-  // The Stars Are Right (legendary, turn 200)
-  if (turn === 200) {
-    celestialEvents.push({
-      id: 'stars_right',
-      name: 'THE STARS ARE RIGHT',
-      description: 'The cosmos aligns in a configuration not seen in millennia. The Great Old Ones can be awakened.',
-      type: 'stars_right',
-      powerBonus: 5.0,
-      duration: 10,
-    });
-  }
-
-  // Calculate overall ritual power modifier
-  let ritualPowerModifier = 1.0;
-
-  // Lunar phase modifier
-  if (lunarPhase === 4) ritualPowerModifier += 0.2; // Full moon
-  else if (lunarPhase === 0) ritualPowerModifier += 0.1; // New moon
-
-  // Planetary alignment modifier
-  if (planetaryAlignment > 80) ritualPowerModifier += 0.3;
-  else if (planetaryAlignment > 60) ritualPowerModifier += 0.15;
-
-  // Celestial event modifiers
-  celestialEvents.forEach(event => {
-    ritualPowerModifier += event.powerBonus - 1.0;
-  });
+  const celestialEvents = generateCelestialEvents(turn, lunarPhase);
+  const ritualPowerModifier = calculateRitualPowerModifier(lunarPhase, planetaryAlignment, celestialEvents);
 
   return {
     turn,
