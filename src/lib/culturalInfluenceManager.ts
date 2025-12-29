@@ -223,7 +223,7 @@ export class CulturalInfluenceManager {
       ? PopSystemManager.getTotalPopulation(nation.popGroups)
       : nation.population;
 
-    const populationShare = (nationPop / totalWorldPop) * 100;
+    const populationShare = totalWorldPop > 0 ? (nationPop / totalWorldPop) * 100 : 0;
 
     const allies = allNations.filter(n =>
       n.id !== nation.id && nation.treaties?.[n.id]?.alliance

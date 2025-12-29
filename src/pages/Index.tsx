@@ -5788,7 +5788,7 @@ function checkVictoryProgress() {
   }
 
   // Demographic Victory Progress (60% population)
-  const popPercent = (player.population / totalPop) * 100;
+  const popPercent = totalPop > 0 ? (player.population / totalPop) * 100 : 0;
   if (popPercent >= 45 && popPercent < 60 && (player.instability || 0) < 30 && !S.victoryProgressNotifications.demographic) {
     S.victoryProgressNotifications.demographic = true;
     toast({
@@ -5908,7 +5908,7 @@ function checkVictory() {
     return;
   }
 
-  if (player.population / totalPop > 0.6 && (player.instability || 0) < 30) {
+  if (totalPop > 0 && player.population / totalPop > 0.6 && (player.instability || 0) < 30) {
     endGame(true, 'DEMOGRAPHIC VICTORY - You control the world through immigration!');
     return;
   }
@@ -5918,7 +5918,7 @@ function checkVictory() {
   const totalCulturalPower = alive.reduce((sum, n) => sum + (n.culturalPower || 0), 0);
 
   if (totalIntel > 0 || totalCulturalPower > 0) {
-    const influenceShare = (player.intel || 0) / totalIntel;
+    const influenceShare = totalIntel > 0 ? (player.intel || 0) / totalIntel : 0;
     const culturalShare = totalCulturalPower > 0 ? (player.culturalPower || 0) / totalCulturalPower : 0;
 
     // Active propaganda campaigns count toward victory
