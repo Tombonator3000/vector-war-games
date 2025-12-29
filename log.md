@@ -3569,3 +3569,21 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added configuration constants (PRODUCTION_CONFIG, PENALTY_CONFIG, INSTABILITY_CONFIG)
 - Reduced main function from ~582 lines to ~60 lines with 11 numbered steps
 - Improved main function readability with clear documentation
+### 2025-12-29T12:00:00Z - Refactored aiAttemptDiplomacy for clarity
+- Extracted helper functions from aiAttemptDiplomacy in aiDiplomacyActions.ts:
+  - sortNationsByThreat(): Sort nations by threat level
+  - handleHighThreatDiplomacy(): Handle truces, pacts, treaty breaks for high threats
+  - attemptSanctionHostileNation(): Impose sanctions on hostile nations
+  - attemptAidToUnstableAlly(): Send aid to unstable allied nations
+  - isNationDesperate(): Check if nation is in desperate state
+  - hasSharedPowerfulThreat(): Check for shared powerful enemy
+  - calculateAllianceProbability(): Calculate dynamic alliance chance
+  - findAllianceCandidate(): Find suitable alliance partner
+  - attemptAllianceFormation(): Form alliance based on situation
+  - attemptModerateThreatDefuse(): Offer truces to moderate threats
+- Added configuration constants:
+  - AI_DIPLOMACY_THREAT_CONFIG: Threat thresholds (8, 12, 15, 5, 10, 2)
+  - AI_DIPLOMACY_PROBABILITY_CONFIG: Decision probabilities (0.15, 0.35, 0.25, 0.6)
+  - AI_DIPLOMACY_DESPERATION_CONFIG: Nation state thresholds (3, 30, 10, 8, 10, -10)
+- Main function now reads as 6 clear numbered steps with JSDoc documentation
+- TypeScript compilation successful, all behavior preserved
