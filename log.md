@@ -3553,3 +3553,19 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added configuration constants (THREAT_CONFIG, NUCLEAR_WINTER_CONFIG) for magic numbers
 - Improved main function readability with numbered steps and clear documentation
 - All tests pass, build succeeds
+### 2025-12-29T08:18:33Z - Refactored productionPhase for clarity
+- Extracted 15+ helper functions from productionPhase in gamePhaseHandlers.ts:
+  - initializeTerritorialResourcesSystem(): Init territorial resources
+  - initializeNationStockpiles(): Init stockpiles for nations
+  - calculateProductionMultipliers(): Calculate penalty/bonus multipliers
+  - applyPolicyEffectsToNation(): Apply policy effects
+  - processInstabilityEffects(): Handle instability and civil war
+  - calculateNationBaseProduction(): Calculate production for single nation
+  - processTerritorialResourceSystems(): Market, depletion, trades, maintenance
+  - processNationTimerDecays(): Timer countdowns for sanctions, treaties, etc.
+  - processElectionSystem(): Election handling
+  - updateDiplomacyPhaseSystems(): Diplomacy phases 1-3
+  - processExternalIntegrationAPIs(): Window API integrations
+- Added configuration constants (PRODUCTION_CONFIG, PENALTY_CONFIG, INSTABILITY_CONFIG)
+- Reduced main function from ~582 lines to ~60 lines with 11 numbered steps
+- Improved main function readability with clear documentation
