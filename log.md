@@ -3573,3 +3573,11 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added guards against empty operatives array in calculateBaseSuccessChance and calculateDetectionRisk functions
 - When operatives array is empty, avgSkill now defaults to 0 instead of causing NaN
 - TypeScript check passes
+3575→### 2025-12-30T12:00:00Z - Cleaned up UI controls for minimal layout mode
+3576→- Reviewed Chill n Fish UI reference screenshot showing minimal corner-based controls
+3577→- Hidden GameSidebar (victory/era dashboard) in minimal layout mode to reduce clutter
+3578→- Hidden news ticker in minimal layout mode for cleaner header
+3579→- Hidden header buttons (EMPIRE INFO, MapModeBar, DOOMSDAY timer) in minimal mode
+3580→- Hidden detailed resource statistics in header (keeping only DEFCON and TURN) in minimal mode
+3581→- Result: Much cleaner UI with focus on map and corner controls, similar to Chill n Fish reference
+3582→- Committed and pushed changes to branch claude/cleanup-ui-controls-KEHBB
