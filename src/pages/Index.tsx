@@ -16851,98 +16851,106 @@ export default function NoradVector() {
                 <span className="text-cyan-300 text-[11px] tracking-wide">TURN</span>
                 <span className="text-neon-green font-semibold text-sm" id="turn">1</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-cyan-300 text-[11px] tracking-wide">ACTIONS</span>
-                <span className="text-neon-green font-semibold text-sm" id="actionsDisplay">1/1</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-cyan-300 text-[11px] tracking-wide">DATE</span>
-                <span className="text-neon-green font-semibold text-sm" id="gameTimeDisplay">—</span>
-              </div>
-              {/* Strategic Resources Display */}
-              {(() => {
-                const playerNation = nations.find(n => n.isPlayer);
-                const hasStockpile = !!playerNation?.resourceStockpile;
-                const hasMarket = !!S.resourceMarket;
-
-                if (!hasStockpile && !hasMarket) {
-                  return null;
-                }
-
-                return (
-                  <div className="flex items-center gap-3 pl-3 ml-3 border-l border-cyan-500/30">
-                    {playerNation && (
-                      <div className="flex items-center gap-3 text-[11px]">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-cyan-300 tracking-wide">PROD</span>
-                          <span
-                            className="font-mono font-semibold text-neon-green"
-                            id="productionDisplay"
-                          >
-                            {Math.floor(playerNation.production ?? 0)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-cyan-300 tracking-wide">INTEL</span>
-                          <span
-                            className="font-mono font-semibold text-neon-green"
-                            id="intelDisplay"
-                          >
-                            {Math.floor(playerNation.intel ?? 0)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-cyan-300 tracking-wide">GOLD</span>
-                          <span
-                            className="font-mono font-semibold text-neon-green"
-                            id="goldDisplay"
-                          >
-                            {Math.floor(playerNation.gold ?? 0)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    {hasStockpile && (
-                      <ResourceStockpileDisplay nation={playerNation!} compact={true} />
-                    )}
-                    {hasMarket && S.resourceMarket && (
-                      <MarketStatusBadge market={S.resourceMarket} />
-                    )}
+              {layoutDensity !== 'minimal' && (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-cyan-300 text-[11px] tracking-wide">ACTIONS</span>
+                    <span className="text-neon-green font-semibold text-sm" id="actionsDisplay">1/1</span>
                   </div>
-                );
-              })()}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-cyan-300 text-[11px] tracking-wide">DATE</span>
+                    <span className="text-neon-green font-semibold text-sm" id="gameTimeDisplay">—</span>
+                  </div>
+                  {/* Strategic Resources Display */}
+                  {(() => {
+                    const playerNation = nations.find(n => n.isPlayer);
+                    const hasStockpile = !!playerNation?.resourceStockpile;
+                    const hasMarket = !!S.resourceMarket;
+
+                    if (!hasStockpile && !hasMarket) {
+                      return null;
+                    }
+
+                    return (
+                      <div className="flex items-center gap-3 pl-3 ml-3 border-l border-cyan-500/30">
+                        {playerNation && (
+                          <div className="flex items-center gap-3 text-[11px]">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-cyan-300 tracking-wide">PROD</span>
+                              <span
+                                className="font-mono font-semibold text-neon-green"
+                                id="productionDisplay"
+                              >
+                                {Math.floor(playerNation.production ?? 0)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-cyan-300 tracking-wide">INTEL</span>
+                              <span
+                                className="font-mono font-semibold text-neon-green"
+                                id="intelDisplay"
+                              >
+                                {Math.floor(playerNation.intel ?? 0)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-cyan-300 tracking-wide">GOLD</span>
+                              <span
+                                className="font-mono font-semibold text-neon-green"
+                                id="goldDisplay"
+                              >
+                                {Math.floor(playerNation.gold ?? 0)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        {hasStockpile && (
+                          <ResourceStockpileDisplay nation={playerNation!} compact={true} />
+                        )}
+                        {hasMarket && S.resourceMarket && (
+                          <MarketStatusBadge market={S.resourceMarket} />
+                        )}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
               </div>
 
               <div className="game-top-bar__actions flex items-center gap-2.5">
-                <div className="text-[11px] font-mono text-neon-magenta mr-3">
-                  <span className="text-cyan-300 tracking-wide">DOOMSDAY</span>{' '}
-                  <span id="doomsdayTime" className="font-bold">7:00</span>
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setCivInfoPanelOpen(true);
-                    AudioSys.playSFX('click');
-                  }}
-                  className="h-6 px-2 text-[11px] text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10"
-                  title="Empire Status (Press I)"
-                >
-                  EMPIRE INFO
-                </Button>
+                {layoutDensity !== 'minimal' && (
+                  <>
+                    <div className="text-[11px] font-mono text-neon-magenta mr-3">
+                      <span className="text-cyan-300 tracking-wide">DOOMSDAY</span>{' '}
+                      <span id="doomsdayTime" className="font-bold">7:00</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setCivInfoPanelOpen(true);
+                        AudioSys.playSFX('click');
+                      }}
+                      className="h-6 px-2 text-[11px] text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10"
+                      title="Empire Status (Press I)"
+                    >
+                      EMPIRE INFO
+                    </Button>
 
-                <MapModeBar
-                  mode={mapStyle.mode}
-                  onModeChange={handleMapModeChange}
-                  descriptions={MAP_MODE_DESCRIPTIONS}
-                  hotkeys={MAP_MODE_HOTKEYS}
-                />
+                    <MapModeBar
+                      mode={mapStyle.mode}
+                      onModeChange={handleMapModeChange}
+                      descriptions={MAP_MODE_DESCRIPTIONS}
+                      hotkeys={MAP_MODE_HOTKEYS}
+                    />
 
-                {mapStyle.visual === 'morphing' && (
-                  <MorphToggleButton
-                    globeRef={globeSceneRef}
-                    visible={true}
-                  />
+                    {mapStyle.visual === 'morphing' && (
+                      <MorphToggleButton
+                        globeRef={globeSceneRef}
+                        visible={true}
+                      />
+                    )}
+                  </>
                 )}
 
                 <DropdownMenu>
@@ -17023,12 +17031,14 @@ export default function NoradVector() {
               </div>
             </header>
 
-            <div className="game-top-ticker pointer-events-auto touch-auto">
-              <NewsTicker
-                items={newsItems}
-                className="pointer-events-auto touch-auto"
-              />
-            </div>
+            {layoutDensity !== 'minimal' && (
+              <div className="game-top-ticker pointer-events-auto touch-auto">
+                <NewsTicker
+                  items={newsItems}
+                  className="pointer-events-auto touch-auto"
+                />
+              </div>
+            )}
           </div>
 
           {coopEnabled ? (
@@ -18664,13 +18674,15 @@ export default function NoradVector() {
         />
       )}
 
-      <GameSidebar
-        victoryAnalysis={victoryAnalysis}
-        era={gameEra}
-        currentTurn={S.turn}
-        defcon={S.defcon}
-        className="fixed bottom-4 left-4 z-40 pointer-events-auto"
-      />
+      {layoutDensity !== 'minimal' && (
+        <GameSidebar
+          victoryAnalysis={victoryAnalysis}
+          era={gameEra}
+          currentTurn={S.turn}
+          defcon={S.defcon}
+          className="fixed bottom-4 left-4 z-40 pointer-events-auto"
+        />
+      )}
 
       <CivilizationInfoPanel
         nations={nations}
