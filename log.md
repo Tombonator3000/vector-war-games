@@ -3705,3 +3705,36 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - **Verified TypeScript compilation:**
   - Ran `npx tsc --noEmit` to verify all changes compile without errors
 
+
+### 2025-12-31T14:00:00Z - Fixed upside-down Earth graphics on globe and flat map
+- **Root cause identified:**
+  - The vertex shader in `src/components/MorphingGlobe.tsx` had incorrect UV to spherical coordinate mapping
+  - With `flipY = true` (default for Three.js textures), UV coordinates are:
+    - `uv.y = 0` at the BOTTOM of the texture image (south pole)
+    - `uv.y = 1` at the TOP of the texture image (north pole)
+  - The previous shader code mapped `phi = uv.y * π`, which treated:
+    - `uv.y = 0` → `phi = 0` → north pole (incorrect - should be south pole)
+    - `uv.y = 1` → `phi = π` → south pole (incorrect - should be north pole)
+  - This caused the Earth texture to render upside-down on both 3D globe and flat 2D map
+
+- **Fixes applied:**
+  - Updated `src/components/MorphingGlobe.tsx` main vertex shader (line 95):
+    - Changed `float phi = uv.y * 3.14159265359;`
+    - To `float phi = (1.0 - uv.y) * 3.14159265359;`
+    - Added comment: "Invert uv.y so phi=0 at north pole (top of image) and phi=PI at south pole (bottom of image)"
+    - This correctly maps UV coordinates to spherical coordinates with flipY=true
+  - Updated `src/components/MorphingGlobe.tsx` vector overlay shader (line 215):
+    - Changed `float phi = uv2.y * 3.14159265359;`
+    - To `float phi = (1.0 - uv2.y) * 3.14159265359;`
+    - Added comment: "Invert uv2.y to match flipY=true texture orientation"
+    - This ensures country borders render correctly aligned with the fixed texture
+
+- **Why this works:**
+  - By inverting the UV.y coordinate before calculating phi, we correctly map:
+    - `uv.y = 0` (bottom of texture) → `phi = π` → south pole (Y = -radius)
+    - `uv.y = 1` (top of texture) → `phi = 0` → north pole (Y = radius)
+  - This matches the standard equirectangular map convention (north at top, south at bottom)
+  - Both 3D globe and flat 2D map use the same shader, so fixing the UV mapping fixes both
+
+- **Verified TypeScript compilation:**
+  - Ran `npx tsc --noEmit` to verify all changes compile without errors
