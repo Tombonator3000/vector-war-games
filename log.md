@@ -7,6 +7,50 @@
 
 ---
 
+### 2025-12-31T09:30:00Z - Fix GitHub Pages deployment routing issues
+**Branch:** `claude/fix-github-deployment-IBHUG`
+
+**Problem:**
+GitHub Pages deployment was set up correctly with proper build configuration, but the deployed site did not work due to routing issues:
+1. React Router (BrowserRouter) was not configured with the correct `basename` for the `/vector-war-games/` base path
+2. Direct navigation to sub-routes (e.g., `/vector-war-games/fase-1`) returned 404 errors from GitHub Pages
+3. Client-side routing failed because the app assumed it was running at the root path `/`
+
+**Solution implemented:**
+1. **Added basename to BrowserRouter** (`src/App.tsx:47`)
+   - Updated BrowserRouter to use `basename={import.meta.env.BASE_URL}`
+   - Vite automatically sets `BASE_URL` to `/vector-war-games/` when `GITHUB_PAGES=true` env var is set
+   - This ensures React Router correctly handles paths relative to the deployment base path
+
+2. **Implemented SPA redirect hack for GitHub Pages** (`public/404.html`)
+   - Created 404.html that redirects to index.html with query parameters encoding the requested path
+   - This solves GitHub Pages' limitation where direct navigation to sub-routes returns 404
+   - Based on the [spa-github-pages](https://github.com/rafgraph/spa-github-pages) solution
+
+3. **Added redirect handler** (`index.html:6-26`)
+   - Added script in index.html that processes redirects from 404.html
+   - Converts query parameters back to the correct URL using `window.history.replaceState`
+   - Allows client-side router to handle the restored URL correctly
+
+**Files changed:**
+- `src/App.tsx` - Added basename prop to BrowserRouter
+- `index.html` - Added SPA redirect handler script
+- `public/404.html` - Created 404 redirect page for GitHub Pages
+
+**Testing:**
+After merging and deployment, the following URLs should work:
+- https://tombonator3000.github.io/vector-war-games/ (main page)
+- https://tombonator3000.github.io/vector-war-games/fase-1 (direct navigation to sub-route)
+- https://tombonator3000.github.io/vector-war-games/fase-2 (direct navigation to sub-route)
+
+**Build verification:**
+- Ran `GITHUB_PAGES=true npm run build` to verify correct asset paths
+- Confirmed all assets are prefixed with `/vector-war-games/`
+- Verified 404.html is copied to dist directory
+- Verified redirect script is included in built index.html
+
+---
+
 ### 2025-11-19T07:19:49Z - Disable flat overlay while viewing Vector globe
 - Audited the `gameLoop` overlay pipeline to confirm the coarse flat projection was still being drawn above the 3D globe even when players selected the Vector (wireframe) mode.
 - Added a `currentMapStyle === 'wireframe'` guard so Atmosphere/Ocean rendering and all flat map painting routines stay paused, leaving only missiles, units, and FX on the transparent overlay canvas while the vector globe remains visible underneath.
