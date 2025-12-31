@@ -5,6 +5,8 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Set base path for GitHub Pages deployment
+  base: process.env.GITHUB_PAGES === 'true' ? '/vector-war-games/' : '/',
   plugins: [
     react(),
     mode === 'development' &&
