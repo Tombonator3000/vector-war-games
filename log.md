@@ -3595,3 +3595,18 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - TypeScript compilation verified to pass with `npx tsc --noEmit`
 - This follows the same pattern as previous division by zero fixes in MultiPartyDiplomacyPanel.tsx (2025-12-31) and intelligenceAgencyUtils.ts (2025-12-29)
 
+
+### 2025-12-31T11:00:00Z - Fixed graphics path issues and texture inversions
+- Updated `src/lib/leaderImages.ts` to use `resolvePublicAssetPath()` utility function for all leader portrait paths
+  - Imported `resolvePublicAssetPath` from `./renderingUtils`
+  - Changed all hardcoded paths from `/leaders/*.jpg` to `leaders/*.jpg` and wrapped them with `resolvePublicAssetPath()`
+  - This ensures leader portraits work correctly when deployed to GitHub Pages at `/vector-war-games/` subpath
+- Fixed inverted graphics on 3D globe by setting `texture.flipY = false` in multiple components:
+  - `src/components/GlobeScene.tsx` (EarthRealistic component, line 756)
+  - `src/components/Globe3D.tsx` (added useEffect to configure textures with flipY = false, line 82)
+  - Added `useEffect` import to `Globe3D.tsx` to support texture configuration
+- Fixed missing/inverted graphics on flat 2D map:
+  - Updated `src/components/GlobeScene.tsx` FlatEarthBackdrop texture loading to set `flipY = false` (line 1139)
+  - This ensures textures render correctly when morphing from 3D globe to flat 2D map
+- All changes follow existing patterns in `MorphingGlobe.tsx` which already used `flipY = false` for textures
+- TypeScript compilation verified to pass with no errors
