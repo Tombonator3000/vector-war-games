@@ -3610,3 +3610,35 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
   - This ensures textures render correctly when morphing from 3D globe to flat 2D map
 - All changes follow existing patterns in `MorphingGlobe.tsx` which already used `flipY = false` for textures
 - TypeScript compilation verified to pass with no errors
+
+### 2025-12-31T12:00:00Z - Fixed music paths and corrected texture flipY settings
+- **Fixed music paths to work with GitHub Pages deployment:**
+  - Updated `src/pages/Index.tsx` to use `resolvePublicAssetPath()` for all music track paths:
+    - Changed `/Muzak/vector-command.mp3` to `resolvePublicAssetPath('Muzak/vector-command.mp3')`
+    - Changed `/Muzak/night-operations.mp3` to `resolvePublicAssetPath('Muzak/night-operations.mp3')`
+    - Changed `/Muzak/diplomatic-channel.mp3` to `resolvePublicAssetPath('Muzak/diplomatic-channel.mp3')`
+    - Changed `/Muzak/tactical-escalation.mp3` to `resolvePublicAssetPath('Muzak/tactical-escalation.mp3')`
+  - Updated ambient clip paths in `src/pages/Index.tsx`:
+    - Changed `/sfx/defcon1-siren.mp3` to `resolvePublicAssetPath('sfx/defcon1-siren.mp3')`
+    - Changed `/sfx/defcon2-siren.mp3` to `resolvePublicAssetPath('sfx/defcon2-siren.mp3')`
+  - Updated `src/utils/audioManager.ts` to use `resolvePublicAssetPath()` for all sound effect paths:
+    - Added import: `import { resolvePublicAssetPath } from '@/lib/renderingUtils';`
+    - Updated all preload calls to use `resolvePublicAssetPath()` wrapper
+  - This ensures music and sound effects load correctly when deployed to GitHub Pages at `/vector-war-games/` subpath
+
+- **Fixed inverted globe graphics (corrected previous incorrect fix):**
+  - The previous fix (setting `flipY = false`) was incorrect and caused textures to appear inverted
+  - **Removed `flipY = false` from `src/components/Globe3D.tsx` (line 82)**
+    - Three.js defaults to `flipY = true` which is correct for equirectangular sphere textures
+    - The shader code in MorphingGlobe.tsx was designed for `flipY = true` (see comment at line 93)
+  - **Removed `flipY = false` from `src/components/GlobeScene.tsx` (line 756)**
+    - EarthRealistic component now uses default `flipY = true` for sphere textures
+  - **Removed `flipY = false` from `src/components/MorphingGlobe.tsx` (lines 417, 432)**
+    - Both day and night textures now use default `flipY = true`
+  - **Removed `flipY = false` from flat 2D map texture in `src/components/GlobeScene.tsx` (line 1139)**
+    - FlatEarthBackdrop now uses default `flipY = true` for standard image textures
+  - This fixes the issue where Earth textures appeared inside-out on the 3D globe
+  - This also fixes the black flat 2D map issue
+
+- **Verified TypeScript compilation:**
+  - Ran `npx tsc --noEmit` to verify all changes compile without errors

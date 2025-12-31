@@ -79,7 +79,7 @@ function Earth() {
         texture.generateMipmaps = true;
         texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.magFilter = THREE.LinearFilter;
-        texture.flipY = false; // Prevent texture inversion on globe
+        // flipY defaults to true, which is correct for sphere textures
         texture.needsUpdate = true;
       }
     });

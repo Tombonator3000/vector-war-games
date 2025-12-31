@@ -1870,10 +1870,10 @@ function mapAbilityCategoryToNewsCategory(category: string): NewsItem['category'
 
 // Audio System
 const MUSIC_TRACKS = [
-  { id: 'vector-command', title: 'Vector Command Briefing', file: '/Muzak/vector-command.mp3' },
-  { id: 'night-operations', title: 'Night Operations', file: '/Muzak/night-operations.mp3' },
-  { id: 'diplomatic-channel', title: 'Diplomatic Channel', file: '/Muzak/diplomatic-channel.mp3' },
-  { id: 'tactical-escalation', title: 'Tactical Escalation', file: '/Muzak/tactical-escalation.mp3' }
+  { id: 'vector-command', title: 'Vector Command Briefing', file: resolvePublicAssetPath('Muzak/vector-command.mp3') },
+  { id: 'night-operations', title: 'Night Operations', file: resolvePublicAssetPath('Muzak/night-operations.mp3') },
+  { id: 'diplomatic-channel', title: 'Diplomatic Channel', file: resolvePublicAssetPath('Muzak/diplomatic-channel.mp3') },
+  { id: 'tactical-escalation', title: 'Tactical Escalation', file: resolvePublicAssetPath('Muzak/tactical-escalation.mp3') }
 ] as const;
 type MusicTrack = (typeof MUSIC_TRACKS)[number];
 type MusicTrackId = MusicTrack['id'];
@@ -1887,8 +1887,8 @@ const TRACK_METADATA: Record<MusicTrackId, MusicTrack> = MUSIC_TRACKS.reduce(
 );
 
 const AMBIENT_CLIPS = [
-  { id: 'defcon1-siren', title: 'DEFCON 1 Critical Siren', file: '/sfx/defcon1-siren.mp3' },
-  { id: 'defcon2-siren', title: 'DEFCON 2 Standby Siren', file: '/sfx/defcon2-siren.mp3' },
+  { id: 'defcon1-siren', title: 'DEFCON 1 Critical Siren', file: resolvePublicAssetPath('sfx/defcon1-siren.mp3') },
+  { id: 'defcon2-siren', title: 'DEFCON 2 Standby Siren', file: resolvePublicAssetPath('sfx/defcon2-siren.mp3') },
 ] as const;
 
 type AmbientClip = (typeof AMBIENT_CLIPS)[number];
