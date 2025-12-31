@@ -1,4 +1,4 @@
-import { useMemo, useRef, Suspense, Component, ReactNode } from 'react';
+import { useMemo, useRef, useEffect, Suspense, Component, ReactNode } from 'react';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { OrbitControls, Stars, Sphere } from '@react-three/drei';
 import * as THREE from 'three';
@@ -70,6 +70,20 @@ function Earth() {
     ];
   }, []);
   const [colorMap, normalMap, specularMap] = useLoader(THREE.TextureLoader, textureUrls);
+
+  useEffect(() => {
+    [colorMap, normalMap, specularMap].forEach(texture => {
+      if (texture) {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = 16;
+        texture.generateMipmaps = true;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.flipY = false; // Prevent texture inversion on globe
+        texture.needsUpdate = true;
+      }
+    });
+  }, [colorMap, normalMap, specularMap]);
 
   useFrame(() => {
     if (meshRef.current) {
