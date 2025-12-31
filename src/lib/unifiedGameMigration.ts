@@ -166,7 +166,10 @@ export function logMigrationStatus(nations: Nation[]): void {
 
   console.group('📊 Migration Status Report');
   console.log(`Total nations: ${status.totalNations}`);
-  console.log(`Fully migrated: ${status.fullyMigrated} (${Math.round(status.fullyMigrated / status.totalNations * 100)}%)`);
+  const migrationPercentage = status.totalNations > 0
+    ? Math.round(status.fullyMigrated / status.totalNations * 100)
+    : 0;
+  console.log(`Fully migrated: ${status.fullyMigrated} (${migrationPercentage}%)`);
   console.log(`Needing diplomacy migration: ${status.needingDiplomacyMigration}`);
   console.log(`Needing pop migration: ${status.needingPopMigration}`);
 

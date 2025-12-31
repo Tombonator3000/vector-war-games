@@ -3587,3 +3587,11 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - Added guard to check if `totalVotes > 0` before calculating percentage to prevent `Infinity` result when `participantIds` array is empty
 - Changed percentage calculation from `(yesVotes / totalVotes) * 100` to `totalVotes > 0 ? (yesVotes / totalVotes) * 100 : 0`
 - TypeScript compilation verified to pass with `npx tsc --noEmit`
+
+### 2025-12-31T08:42:08Z - Fixed division by zero bug in unifiedGameMigration.ts
+- Found and fixed division by zero bug in `logMigrationStatus` function in `src/lib/unifiedGameMigration.ts:169`
+- Added guard to check if `totalNations > 0` before calculating migration percentage to prevent `NaN` or `Infinity` result when nations array is empty
+- Extracted calculation into `migrationPercentage` variable with ternary operator: `status.totalNations > 0 ? Math.round(status.fullyMigrated / status.totalNations * 100) : 0`
+- TypeScript compilation verified to pass with `npx tsc --noEmit`
+- This follows the same pattern as previous division by zero fixes in MultiPartyDiplomacyPanel.tsx (2025-12-31) and intelligenceAgencyUtils.ts (2025-12-29)
+
