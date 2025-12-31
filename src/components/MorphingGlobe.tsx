@@ -102,10 +102,11 @@ const morphVertexShader = /* glsl */ `
     );
 
     // Flat position (centered plane)
-    // Flip Y for flat map so north is at top (uv.y=0 -> top, uv.y=1 -> bottom)
+    // With flipY=true: uv.y=0 is south pole (bottom), uv.y=1 is north pole (top)
+    // Map to screen: south (uv.y=0) -> bottom (-Y), north (uv.y=1) -> top (+Y)
     vec3 flatPos = vec3(
       (uv.x - 0.5) * uFlatWidth,
-      (0.5 - uv.y) * uFlatHeight,
+      (uv.y - 0.5) * uFlatHeight,
       0.0
     );
 
@@ -222,9 +223,10 @@ const vectorOverlayVertexShader = /* glsl */ `
     );
 
     // Calculate flat position
+    // Map UV to screen coordinates: south (uv2.y=0) -> bottom, north (uv2.y=1) -> top
     vec3 flatPos = vec3(
       (uv2.x - 0.5) * uFlatWidth,
-      (0.5 - uv2.y) * uFlatHeight,
+      (uv2.y - 0.5) * uFlatHeight,
       0.01
     );
 
@@ -670,8 +672,8 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
     return (
       <group>
         {/* Main earth mesh - hidden in vectorOnlyMode, shows only dark background */}
-        {/* Use BackSide because X negation in vertex shader reverses winding order */}
-        {/* With negated X, the outside of the sphere has back-facing triangles */}
+        {/* Use FrontSide: vertex shader transforms don't affect winding order (determined by geometry indices) */}
+        {/* PlaneGeometry has front faces pointing outward, so FrontSide renders the outside */}
         {!vectorOnlyMode && (
           <mesh ref={meshRef} geometry={geometry} renderOrder={0}>
             <shaderMaterial
@@ -679,7 +681,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
               vertexShader={morphVertexShader}
               fragmentShader={morphFragmentShader}
               uniforms={uniforms}
-              side={THREE.BackSide}
+              side={THREE.FrontSide}
               transparent={false}
               depthWrite={true}
               depthTest={true}
@@ -688,7 +690,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         )}
 
         {/* Dark background mesh for vectorOnlyMode (WARGAMES theme) - morphs with globe */}
-        {/* Use BackSide because X negation in vertex shader reverses winding order */}
+        {/* Use FrontSide: vertex shader transforms don't affect winding order */}
         {vectorOnlyMode && (
           <mesh ref={meshRef} geometry={geometry} renderOrder={0}>
             <shaderMaterial
@@ -696,7 +698,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
               vertexShader={morphVertexShader}
               fragmentShader={darkFragmentShader}
               uniforms={darkUniforms}
-              side={THREE.BackSide}
+              side={THREE.FrontSide}
               transparent={false}
               depthWrite={true}
               depthTest={true}
@@ -767,14 +769,14 @@ export function getMorphedPosition(
   // Flat position (normalized 0-1, then scaled)
   // Match the vertex shader formula exactly:
   // Shader: flatPos.x = (uv.x - 0.5) * uFlatWidth
-  // Shader: flatPos.y = (0.5 - uv.y) * uFlatHeight
+  // Shader: flatPos.y = (uv.y - 0.5) * uFlatHeight
   // Where uv.x = (lon + 180) / 360, uv.y = (90 - lat) / 180
   const u = (lon + 180) / 360;
   const v = (90 - lat) / 180; // uv.y in shader terms
 
   const flatPos = new THREE.Vector3(
     (u - 0.5) * FLAT_WIDTH,
-    (0.5 - v) * FLAT_HEIGHT, // Match shader: (0.5 - uv.y) * uFlatHeight
+    (v - 0.5) * FLAT_HEIGHT, // Match shader: (uv.y - 0.5) * uFlatHeight
     0
   );
 

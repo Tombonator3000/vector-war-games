@@ -3738,3 +3738,33 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 
 - **Verified TypeScript compilation:**
   - Ran `npx tsc --noEmit` to verify all changes compile without errors
+
+### 2025-12-31T15:00:00Z - Fixed globe texture inside-out and upside-down flat map (CRITICAL FIX)
+- **ROOT CAUSE ANALYSIS:**
+  - Previous commit 6706807 incorrectly changed from `FrontSide` to `BackSide` culling based on flawed reasoning
+  - The commit assumed that negating X in vertex shader would reverse triangle winding order
+  - **CRITICAL INSIGHT: Vertex shader transformations do NOT affect winding order!**
+  - Winding order is determined by the geometry's index buffer, which remains unchanged by vertex shader coordinate transformations
+  - PlaneGeometry has front faces pointing outward by default
+  - Using `BackSide` was rendering the BACK faces (inside of sphere), causing textures to appear inverted
+  - Flat map Y coordinate calculation `(0.5 - uv.y)` was inverting the map vertically
+
+- **FIXES APPLIED:**
+  - **src/components/MorphingGlobe.tsx (line 682)**: Changed `side={THREE.BackSide}` to `side={THREE.FrontSide}` for main earth mesh
+  - **src/components/MorphingGlobe.tsx (line 699)**: Changed `side={THREE.BackSide}` to `side={THREE.FrontSide}` for dark background mesh (vectorOnlyMode)
+  - Added clarifying comments: "vertex shader transforms don't affect winding order (determined by geometry indices)"
+  - **src/components/MorphingGlobe.tsx (line 109)**: Fixed flat map Y coordinate from `(0.5 - uv.y) * uFlatHeight` to `(uv.y - 0.5) * uFlatHeight`
+  - **src/components/MorphingGlobe.tsx (line 229)**: Fixed vector overlay flat Y coordinate from `(0.5 - uv2.y)` to `(uv2.y - 0.5)` to match
+  - **src/components/MorphingGlobe.tsx (line 779)**: Fixed getMorphedPosition helper function flat Y from `(0.5 - v)` to `(v - 0.5)` to match shader
+  - Updated all comments to accurately reflect the coordinate mapping with flipY=true
+
+- **WHY THIS WORKS:**
+  - FrontSide correctly renders the outside of the sphere (front-facing triangles from PlaneGeometry)
+  - The corrected flat Y formula `(uv.y - 0.5)` properly maps:
+    - uv.y = 0 (south pole) → -0.5 * height (bottom of screen)
+    - uv.y = 1 (north pole) → +0.5 * height (top of screen)
+  - This ensures north is at top and south is at bottom for the flat 2D map
+
+- **VERIFIED:**
+  - TypeScript compilation passes with `npx tsc --noEmit`
+  - Both 3D globe and flat 2D map should now render correctly with textures on the outside and proper orientation
