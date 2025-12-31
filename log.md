@@ -3642,3 +3642,35 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 
 - **Verified TypeScript compilation:**
   - Ran `npx tsc --noEmit` to verify all changes compile without errors
+### 2025-12-31T13:00:00Z - Fixed globe graphics inside-out and upside-down rendering issue
+- **Root cause identified:**
+  - The vertex shader in `src/components/MorphingGlobe.tsx` had a negated X-coordinate (line 98: `-uRadius * sin(phi) * cos(theta)`)
+  - This was intended to fix texture mirroring but inadvertently reversed the winding order of triangles
+  - With reversed winding order, normals calculated as `normalize(spherePos)` pointed INWARD instead of OUTWARD
+  - With `side={THREE.FrontSide}`, only front-facing triangles are rendered, but the front faces were now on the INSIDE of the sphere
+  - This caused the globe to appear inside-out, with textures inverted and lighting incorrect
+  - The same shader is used for flat 2D map (with morphFactor = 1), so the black flat map was caused by the same normal issue
+
+- **Fixes applied:**
+  - Updated `src/components/MorphingGlobe.tsx` main vertex shader (line 116):
+    - Changed `vec3 sphereNormal = normalize(spherePos);` 
+    - To `vec3 sphereNormal = -normalize(spherePos);`
+    - Added comment: "Negate sphereNormal because we negated X in spherePos, which reverses winding order"
+    - This compensates for the reversed winding order by flipping the normals back to point OUTWARD
+  - Updated `src/components/MorphingGlobe.tsx` vector overlay shader (line 234):
+    - Changed `vec3 sphereNormal = normalize(spherePos);`
+    - To `vec3 sphereNormal = -normalize(spherePos);`
+    - Added same explanatory comment
+    - This ensures country borders (vector overlay lines) render correctly with proper backface culling
+
+- **Why this works:**
+  - By negating both X coordinate AND normal, we:
+    1. Keep the texture orientation correct (X negation fixes mirroring)
+    2. Fix the winding order issue (normal negation makes normals point outward again)
+    3. Render the sphere correctly with `side={THREE.FrontSide}`
+  - The flat 2D map now renders correctly because the normals point in the right direction for lighting
+  - Both 3D globe and flat 2D map use the same shader, so fixing the normals fixes both
+
+- **Verified TypeScript compilation:**
+  - Ran `npx tsc --noEmit` to verify all changes compile without errors
+

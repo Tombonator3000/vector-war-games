@@ -112,7 +112,8 @@ const morphVertexShader = /* glsl */ `
     vec3 morphedPosition = mix(spherePos, flatPos, uMorphFactor);
 
     // Normal interpolation
-    vec3 sphereNormal = normalize(spherePos);
+    // Negate sphereNormal because we negated X in spherePos, which reverses winding order
+    vec3 sphereNormal = -normalize(spherePos);
     vec3 flatNormal = vec3(0.0, 0.0, 1.0);
     vNormal = normalize(mix(sphereNormal, flatNormal, uMorphFactor));
 
@@ -229,7 +230,8 @@ const vectorOverlayVertexShader = /* glsl */ `
     vec3 morphedPosition = mix(spherePos, flatPos, uMorphFactor);
 
     // Fade alpha for backfacing lines on globe
-    vec3 sphereNormal = normalize(spherePos);
+    // Negate sphereNormal because we negated X in spherePos, which reverses winding order
+    vec3 sphereNormal = -normalize(spherePos);
     vec3 viewDir = normalize(cameraPosition - morphedPosition);
     float facing = dot(sphereNormal, viewDir);
     vAlpha = mix(smoothstep(-0.1, 0.3, facing), 1.0, uMorphFactor);
