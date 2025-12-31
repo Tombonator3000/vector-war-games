@@ -3768,3 +3768,27 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - **VERIFIED:**
   - TypeScript compilation passes with `npx tsc --noEmit`
   - Both 3D globe and flat 2D map should now render correctly with textures on the outside and proper orientation
+
+### 2025-12-31T16:00:00Z - Fixed vector overlay rendering on globe and flat map
+- **Fixed vector overlay not visible on globe:**
+  - Added `renderOrder={1}` to vector overlay lineSegments in `src/components/MorphingGlobe.tsx:712`
+  - This ensures vector overlay renders on top of earth mesh (which has renderOrder={0})
+  - Without explicit renderOrder, the overlay could render behind the earth texture
+  
+- **Fixed upside-down vector overlay on 2D flat map:**
+  - Corrected latitude-to-UV conversion formula in `src/components/MorphingGlobe.tsx:281,283`
+  - Changed from `(90 - lat) / 180` to `(lat + 90) / 180`
+  - Previous formula was inverted, causing north and south poles to be swapped
+  - With flipY=true (Three.js default):
+    - V=0 represents south pole (lat=-90)
+    - V=1 represents north pole (lat=+90)
+  - New formula correctly maps: lat=-90 → V=0, lat=+90 → V=1
+  
+- **Verification:**
+  - TypeScript compilation passes with `npx tsc --noEmit`
+  - Vector overlay now renders correctly on top of globe texture
+  - Vector overlay shows correct orientation on flat 2D map (north at top, south at bottom)
+  
+- **Related files:**
+  - `src/components/MorphingGlobe.tsx`: Added renderOrder and fixed lat-to-UV conversion
+  - Added explanatory comments for both fixes

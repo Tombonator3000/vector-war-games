@@ -276,10 +276,11 @@ function collectBorderSegments(
     if (!Number.isFinite(endLon) || !Number.isFinite(endLat)) return;
 
     // Convert lon/lat to UV coordinates (0-1 range)
+    // With flipY=true: V=0 at south pole (lat=-90), V=1 at north pole (lat=+90)
     const startU = THREE.MathUtils.clamp((startLon + 180) / 360, 0, 1);
-    const startV = THREE.MathUtils.clamp((90 - startLat) / 180, 0, 1);
+    const startV = THREE.MathUtils.clamp((startLat + 90) / 180, 0, 1);
     const endU = THREE.MathUtils.clamp((endLon + 180) / 360, 0, 1);
-    const endV = THREE.MathUtils.clamp((90 - endLat) / 180, 0, 1);
+    const endV = THREE.MathUtils.clamp((endLat + 90) / 180, 0, 1);
 
     segments.push(startU, startV, endU, endV);
   };
@@ -707,8 +708,9 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         )}
 
         {/* Vector overlay (country borders) */}
+        {/* renderOrder={1} ensures vector overlay renders on top of earth mesh (renderOrder={0}) */}
         {effectiveVectorOverlayVisible && vectorGeometry && (
-          <lineSegments geometry={vectorGeometry} frustumCulled={false}>
+          <lineSegments geometry={vectorGeometry} frustumCulled={false} renderOrder={1}>
             <shaderMaterial
               ref={vectorMaterialRef}
               vertexShader={vectorOverlayVertexShader}
