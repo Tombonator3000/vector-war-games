@@ -90,8 +90,9 @@ const morphVertexShader = /* glsl */ `
     vUv = uv;
 
     // Sphere position (from UV to spherical coordinates)
-    // With flipY=true: uv.y=0 is top of image (north pole), uv.y=1 is bottom (south pole)
-    float phi = uv.y * 3.14159265359; // latitude: 0 at north pole, PI at south pole
+    // With flipY=true (default): uv.y=0 is BOTTOM of image (south pole), uv.y=1 is TOP (north pole)
+    // Invert uv.y so phi=0 at north pole (top of image) and phi=PI at south pole (bottom of image)
+    float phi = (1.0 - uv.y) * 3.14159265359; // latitude: 0 at north pole, PI at south pole
     float theta = uv.x * 2.0 * 3.14159265359 - 3.14159265359; // longitude: -PI to PI
 
     vec3 spherePos = vec3(
@@ -210,7 +211,8 @@ const vectorOverlayVertexShader = /* glsl */ `
 
   void main() {
     // Calculate sphere position from UV
-    float phi = uv2.y * 3.14159265359;
+    // Invert uv2.y to match flipY=true texture orientation (uv.y=0 at bottom, uv.y=1 at top)
+    float phi = (1.0 - uv2.y) * 3.14159265359;
     float theta = uv2.x * 2.0 * 3.14159265359 - 3.14159265359;
 
     vec3 spherePos = vec3(
