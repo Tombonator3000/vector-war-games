@@ -414,7 +414,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         dayTexture.magFilter = THREE.LinearFilter;
         dayTexture.wrapS = THREE.RepeatWrapping;
         dayTexture.wrapT = THREE.ClampToEdgeWrapping;
-        dayTexture.flipY = false;
+        // flipY defaults to true, which is correct for standard image textures
         dayTexture.needsUpdate = true;
       }
     }, [dayTexture]);
@@ -429,7 +429,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         nightTexture.magFilter = THREE.LinearFilter;
         nightTexture.wrapS = THREE.RepeatWrapping;
         nightTexture.wrapT = THREE.ClampToEdgeWrapping;
-        nightTexture.flipY = false;
+        // flipY defaults to true, which is correct for standard image textures
         nightTexture.needsUpdate = true;
       }
     }, [nightTexture]);

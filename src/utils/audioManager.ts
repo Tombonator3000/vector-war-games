@@ -2,6 +2,8 @@
  * Audio Manager for game sound effects
  */
 
+import { resolvePublicAssetPath } from '@/lib/renderingUtils';
+
 class AudioManager {
   private sounds: Map<string, HTMLAudioElement> = new Map();
   private volume: number = 0.5;
@@ -153,16 +155,16 @@ export const audioManager = new AudioManager();
 if (typeof window !== 'undefined' && typeof Audio !== 'undefined') {
   // Only preload sounds that actually exist in public/sfx/
   // UI
-  audioManager.preload(audioManager.uiClickKey, '/sfx/klick1.mp3');
+  audioManager.preload(audioManager.uiClickKey, resolvePublicAssetPath('sfx/klick1.mp3'));
 
   // Explosions
-  audioManager.preload('nuclear-explosion', '/sfx/nuclear-explosion.mp3');
-  audioManager.preload('explosion-blast', '/sfx/explosion-blast.mp3');
+  audioManager.preload('nuclear-explosion', resolvePublicAssetPath('sfx/nuclear-explosion.mp3'));
+  audioManager.preload('explosion-blast', resolvePublicAssetPath('sfx/explosion-blast.mp3'));
 
   // Military
-  audioManager.preload('rocket-whoosh', '/sfx/rocket-whoosh.mp3');
+  audioManager.preload('rocket-whoosh', resolvePublicAssetPath('sfx/rocket-whoosh.mp3'));
 
   // Alerts
-  audioManager.preload('defcon1-siren', '/sfx/defcon1-siren.mp3');
-  audioManager.preload('defcon2-siren', '/sfx/defcon2-siren.mp3');
+  audioManager.preload('defcon1-siren', resolvePublicAssetPath('sfx/defcon1-siren.mp3'));
+  audioManager.preload('defcon2-siren', resolvePublicAssetPath('sfx/defcon2-siren.mp3'));
 }

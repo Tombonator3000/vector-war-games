@@ -753,7 +753,7 @@ function EarthRealistic({
         texture.generateMipmaps = true;
         texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.magFilter = THREE.LinearFilter;
-        texture.flipY = false; // Prevent texture inversion on globe
+        // flipY defaults to true, which is correct for sphere textures
         texture.needsUpdate = true;
       }
     });
@@ -1136,7 +1136,7 @@ function FlatEarthBackdrop({
         loadedTexture.generateMipmaps = true;
         loadedTexture.minFilter = THREE.LinearMipmapLinearFilter;
         loadedTexture.magFilter = THREE.LinearFilter;
-        loadedTexture.flipY = false; // Prevent texture inversion on flat 2D map
+        // flipY defaults to true, which is correct for standard image textures
         loadedTexture.needsUpdate = true;
 
         disposeCurrentTexture();
