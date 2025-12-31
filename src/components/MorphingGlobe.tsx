@@ -668,7 +668,8 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
     return (
       <group>
         {/* Main earth mesh - hidden in vectorOnlyMode, shows only dark background */}
-        {/* Use FrontSide to prevent seeing inside of sphere during globe mode */}
+        {/* Use BackSide because X negation in vertex shader reverses winding order */}
+        {/* With negated X, the outside of the sphere has back-facing triangles */}
         {!vectorOnlyMode && (
           <mesh ref={meshRef} geometry={geometry} renderOrder={0}>
             <shaderMaterial
@@ -676,7 +677,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
               vertexShader={morphVertexShader}
               fragmentShader={morphFragmentShader}
               uniforms={uniforms}
-              side={THREE.FrontSide}
+              side={THREE.BackSide}
               transparent={false}
               depthWrite={true}
               depthTest={true}
@@ -685,6 +686,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         )}
 
         {/* Dark background mesh for vectorOnlyMode (WARGAMES theme) - morphs with globe */}
+        {/* Use BackSide because X negation in vertex shader reverses winding order */}
         {vectorOnlyMode && (
           <mesh ref={meshRef} geometry={geometry} renderOrder={0}>
             <shaderMaterial
@@ -692,7 +694,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
               vertexShader={morphVertexShader}
               fragmentShader={darkFragmentShader}
               uniforms={darkUniforms}
-              side={THREE.FrontSide}
+              side={THREE.BackSide}
               transparent={false}
               depthWrite={true}
               depthTest={true}

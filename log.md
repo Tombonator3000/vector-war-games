@@ -7,6 +7,37 @@
 
 ---
 
+### 2025-12-31T14:00:00Z - Fixed globe rendering inside-out issue with BackSide culling
+
+**Root Cause Identified:**
+- The vertex shader in `src/components/MorphingGlobe.tsx` negates the X coordinate (line 98: `-uRadius * sin(phi) * cos(theta)`) to fix texture mirroring
+- Negating X reverses the triangle winding order of the sphere geometry
+- With reversed winding order, what should be the "outside" of the sphere becomes the "inside"
+- The material was using `side={THREE.FrontSide}` (line 680), which only renders front-facing triangles
+- But with reversed winding, the front-facing triangles are on the INSIDE of the sphere
+- Even though the normal was negated (line 116: `-normalize(spherePos)`) to fix lighting, this doesn't change the triangle winding order
+- Result: The globe appeared inside-out, with textures rendering on the interior surface
+- The flat 2D map also appeared black because the same winding issue affected the morphed flat plane
+
+**Fix Applied:**
+- Changed `side={THREE.FrontSide}` to `side={THREE.BackSide}` in `src/components/MorphingGlobe.tsx` (line 680)
+  - This renders the back-facing triangles, which are now on the OUTSIDE due to the X negation
+- Also updated the vectorOnlyMode dark background mesh to use `side={THREE.BackSide}` (line 697)
+- Added explanatory comments: "Use BackSide because X negation in vertex shader reverses winding order"
+
+**Why This Works:**
+- With X negated, the sphere's winding order is reversed
+- Back-facing triangles are now on the outside of the sphere (where the camera views from)
+- Using `BackSide` renders these back-facing triangles correctly
+- The negated normal (line 116) ensures lighting still points outward
+- Both 3D globe and flat 2D map now render correctly with textures on the exterior
+
+**Files Modified:**
+- `src/components/MorphingGlobe.tsx` (lines 671-672, 680, 689, 697)
+
+**Verified:**
+- TypeScript compilation successful (`npx tsc --noEmit`)
+
 ### 2025-11-19T07:19:49Z - Disable flat overlay while viewing Vector globe
 - Audited the `gameLoop` overlay pipeline to confirm the coarse flat projection was still being drawn above the 3D globe even when players selected the Vector (wireframe) mode.
 - Added a `currentMapStyle === 'wireframe'` guard so Atmosphere/Ocean rendering and all flat map painting routines stay paused, leaving only missiles, units, and FX on the transparent overlay canvas while the vector globe remains visible underneath.
