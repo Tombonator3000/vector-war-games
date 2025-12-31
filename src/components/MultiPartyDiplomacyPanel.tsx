@@ -122,7 +122,7 @@ export function MultiPartyDiplomacyPanel({
       yesVotes,
       totalVotes,
       required: agreement.requiredVotes,
-      percentage: (yesVotes / totalVotes) * 100,
+      percentage: totalVotes > 0 ? (yesVotes / totalVotes) * 100 : 0,
     };
   };
 

@@ -3581,3 +3581,9 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 3580→- Hidden detailed resource statistics in header (keeping only DEFCON and TURN) in minimal mode
 3581→- Result: Much cleaner UI with focus on map and corner controls, similar to Chill n Fish reference
 3582→- Committed and pushed changes to branch claude/cleanup-ui-controls-KEHBB
+
+### 2025-12-31T10:00:00Z - Fixed division by zero bug in MultiPartyDiplomacyPanel
+- Found and fixed division by zero bug in `getVoteProgress` function in `src/components/MultiPartyDiplomacyPanel.tsx:125`
+- Added guard to check if `totalVotes > 0` before calculating percentage to prevent `Infinity` result when `participantIds` array is empty
+- Changed percentage calculation from `(yesVotes / totalVotes) * 100` to `totalVotes > 0 ? (yesVotes / totalVotes) * 100 : 0`
+- TypeScript compilation verified to pass with `npx tsc --noEmit`
