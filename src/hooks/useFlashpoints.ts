@@ -3754,127 +3754,197 @@ export function useFlashpoints() {
     successRate: 50
   });
 
-  const triggerRandomFlashpoint = useCallback((turn: number, defcon: number) => {
-    // Check for pending follow-ups first (priority over random flashpoints)
-    if (pendingFollowUps.length > 0) {
-      console.log(`Checking ${pendingFollowUps.length} pending follow-ups for turn ${turn}`);
+  /**
+   * Helper: Process pending follow-up flashpoints
+   * Returns the first follow-up flashpoint that is ready to trigger (triggerAtTurn <= turn)
+   */
+  const processFollowUpFlashpoint = useCallback((
+    turn: number,
+    pendingFollowUps: Array<{ parentId: string; category: string; outcome: string; triggerAtTurn: number }>,
+    setPendingFollowUps: React.Dispatch<React.SetStateAction<Array<{ parentId: string; category: string; outcome: string; triggerAtTurn: number }>>>,
+    setActiveFlashpoint: React.Dispatch<React.SetStateAction<FlashpointEvent | null>>,
+    flashpointHistory: FlashpointHistoryEntry[],
+    playerReputation: PlayerReputation
+  ): FlashpointEvent | null => {
+    if (pendingFollowUps.length === 0) {
+      return null;
     }
+
+    console.log(`Checking ${pendingFollowUps.length} pending follow-ups for turn ${turn}`);
 
     const followUp = pendingFollowUps.find(f => f.triggerAtTurn <= turn);
-    if (followUp) {
-      console.log(`Triggering follow-up: ${followUp.category}/${followUp.outcome} (scheduled for turn ${followUp.triggerAtTurn}, current turn ${turn})`);
-
-      const followUpTemplate = FOLLOWUP_FLASHPOINTS[followUp.category]?.[followUp.outcome];
-      if (followUpTemplate) {
-        const baseFlashpoint: FlashpointEvent = {
-          ...followUpTemplate,
-          id: `flashpoint_followup_${Date.now()}`,
-          triggeredAt: Date.now(),
-          triggeredBy: followUp.parentId
-        };
-
-        // Inject historical context
-        const flashpoint = injectHistoricalContext(baseFlashpoint, flashpointHistory, playerReputation);
-
-        // Remove the triggered follow-up from the queue
-        setPendingFollowUps(prev => prev.filter(f => f !== followUp));
-        setActiveFlashpoint(flashpoint);
-        console.log(`Follow-up flashpoint triggered successfully: ${flashpoint.title}`);
-        return flashpoint;
-      } else {
-        // Template not found - log warning but still remove from queue to prevent infinite retries
-        console.warn(`Follow-up template not found for category: ${followUp.category}, outcome: ${followUp.outcome}. Removing from queue.`);
-        setPendingFollowUps(prev => prev.filter(f => f !== followUp));
-      }
+    if (!followUp) {
+      return null;
     }
 
-    // Check for scenario-specific turn-based flashpoints (Cuba Crisis Enhanced)
+    console.log(`Triggering follow-up: ${followUp.category}/${followUp.outcome} (scheduled for turn ${followUp.triggerAtTurn}, current turn ${turn})`);
+
+    const followUpTemplate = FOLLOWUP_FLASHPOINTS[followUp.category]?.[followUp.outcome];
+    if (!followUpTemplate) {
+      // Template not found - log warning but still remove from queue to prevent infinite retries
+      console.warn(`Follow-up template not found for category: ${followUp.category}, outcome: ${followUp.outcome}. Removing from queue.`);
+      setPendingFollowUps(prev => prev.filter(f => f !== followUp));
+      return null;
+    }
+
+    const baseFlashpoint: FlashpointEvent = {
+      ...followUpTemplate,
+      id: `flashpoint_followup_${Date.now()}`,
+      triggeredAt: Date.now(),
+      triggeredBy: followUp.parentId
+    };
+
+    // Inject historical context
+    const flashpoint = injectHistoricalContext(baseFlashpoint, flashpointHistory, playerReputation);
+
+    // Remove the triggered follow-up from the queue
+    setPendingFollowUps(prev => prev.filter(f => f !== followUp));
+    setActiveFlashpoint(flashpoint);
+    console.log(`Follow-up flashpoint triggered successfully: ${flashpoint.title}`);
+    return flashpoint;
+  }, []);
+
+  /**
+   * Helper: Process scenario-specific turn-based flashpoints (e.g., Cuba Crisis)
+   * Returns a scenario flashpoint if one is scheduled for this turn
+   */
+  const processScenarioFlashpoint = useCallback((
+    turn: number,
+    setActiveFlashpoint: React.Dispatch<React.SetStateAction<FlashpointEvent | null>>
+  ): FlashpointEvent | null => {
     const scenarioId = getActiveScenarioId();
     console.log(`[Flashpoint Debug] Current scenario ID: ${scenarioId}, Turn: ${turn}`);
-    if (scenarioId === 'cubanCrisis') {
-      const turnForSchedule = Math.max(1, turn - 1);
-      // Player-visible turns increment before scheduling, so subtract one (clamped to 1)
-      // to align with the historical day map and fire turn-one briefings immediately.
-      const enhancedFlashpoints = getEnhancedFlashpointsForTurn(turnForSchedule);
+
+    if (scenarioId !== 'cubanCrisis') {
+      return null;
+    }
+
+    const turnForSchedule = Math.max(1, turn - 1);
+    // Player-visible turns increment before scheduling, so subtract one (clamped to 1)
+    // to align with the historical day map and fire turn-one briefings immediately.
+    const enhancedFlashpoints = getEnhancedFlashpointsForTurn(turnForSchedule);
+    console.log(
+      `[Flashpoint Debug] Enhanced flashpoints for schedule turn ${turnForSchedule} (player turn ${turn}):`,
+      enhancedFlashpoints?.length || 0
+    );
+
+    if (!enhancedFlashpoints || enhancedFlashpoints.length === 0) {
       console.log(
-        `[Flashpoint Debug] Enhanced flashpoints for schedule turn ${turnForSchedule} (player turn ${turn}):`,
-        enhancedFlashpoints?.length || 0
+        `[Flashpoint Debug] No enhanced flashpoints for schedule turn ${turnForSchedule} (player turn ${turn}) in Cuba Crisis`
       );
-      if (enhancedFlashpoints && enhancedFlashpoints.length > 0) {
-        // Cuba Crisis has turn-specific flashpoints - trigger them
-        const enhancedFlashpoint = enhancedFlashpoints[0]; // Take first one (usually only one per turn)
-        console.log(
-          `[Flashpoint Debug] Triggering Cuba Crisis enhanced flashpoint for schedule turn ${turnForSchedule} (player turn ${turn}): ${enhancedFlashpoint.title}`
-        );
-        console.log(`[Flashpoint Debug] Flashpoint has ${enhancedFlashpoint.options?.length || 0} options:`, enhancedFlashpoint.options?.map(o => o.text));
-        setActiveFlashpoint(enhancedFlashpoint);
-        return enhancedFlashpoint;
-      } else {
-        console.log(
-          `[Flashpoint Debug] No enhanced flashpoints for schedule turn ${turnForSchedule} (player turn ${turn}) in Cuba Crisis`
-        );
-      }
+      return null;
     }
 
+    // Cuba Crisis has turn-specific flashpoints - trigger them
+    const enhancedFlashpoint = enhancedFlashpoints[0]; // Take first one (usually only one per turn)
+    console.log(
+      `[Flashpoint Debug] Triggering Cuba Crisis enhanced flashpoint for schedule turn ${turnForSchedule} (player turn ${turn}): ${enhancedFlashpoint.title}`
+    );
+    console.log(`[Flashpoint Debug] Flashpoint has ${enhancedFlashpoint.options?.length || 0} options:`, enhancedFlashpoint.options?.map(o => o.text));
+    setActiveFlashpoint(enhancedFlashpoint);
+    return enhancedFlashpoint;
+  }, []);
+
+  /**
+   * Helper: Filter flashpoint templates by year restrictions with 3-tier fallback
+   * Tier 1: Year-appropriate templates (respect minYear/maxYear)
+   * Tier 2: Timeless templates (no year restrictions)
+   * Tier 3: All templates as last resort
+   */
+  const filterTemplatesByYear = useCallback((
+    templatePool: Omit<FlashpointEvent, 'id' | 'triggeredAt'>[],
+    currentYear: number | undefined
+  ): Omit<FlashpointEvent, 'id' | 'triggeredAt'>[] => {
+    // If no year info, allow all templates
+    if (!currentYear) {
+      return templatePool;
+    }
+
+    // Tier 1: Use year-appropriate historical flashpoints
+    let validTemplates = templatePool.filter(t => {
+      const minYearOk = !t.minYear || currentYear >= t.minYear;
+      const maxYearOk = !t.maxYear || currentYear <= t.maxYear;
+      return minYearOk && maxYearOk;
+    });
+
+    if (validTemplates.length > 0) {
+      return validTemplates;
+    }
+
+    console.log(`[Flashpoint Debug] No year-appropriate flashpoints for ${currentYear}, falling back to timeless templates`);
+
+    // Tier 2: Fall back to timeless templates (no year restrictions)
+    validTemplates = templatePool.filter(t => !t.minYear && !t.maxYear);
+
+    if (validTemplates.length > 0) {
+      return validTemplates;
+    }
+
+    // Tier 3: If still none, use all templates as last resort
+    console.log(`[Flashpoint Debug] No timeless templates found, using all templates`);
+    return templatePool;
+  }, []);
+
+  const triggerRandomFlashpoint = useCallback((turn: number, defcon: number) => {
+    // Priority 1: Check for pending follow-up flashpoints
+    const followUpFlashpoint = processFollowUpFlashpoint(
+      turn,
+      pendingFollowUps,
+      setPendingFollowUps,
+      setActiveFlashpoint,
+      flashpointHistory,
+      playerReputation
+    );
+    if (followUpFlashpoint) {
+      return followUpFlashpoint;
+    }
+
+    // Priority 2: Check for scenario-specific turn-based flashpoints (Cuba Crisis Enhanced)
+    const scenarioFlashpoint = processScenarioFlashpoint(turn, setActiveFlashpoint);
+    if (scenarioFlashpoint) {
+      return scenarioFlashpoint;
+    }
+
+    // Priority 3: Generate random flashpoint based on probability
     const probability = calculateFlashpointProbability(turn, defcon);
-
-    if (rng.next() < probability) {
-      // scenarioId already retrieved above for Cuba Crisis check
-      const scenarioTemplates = scenarioId ? SCENARIO_FLASHPOINTS[scenarioId] : undefined;
-
-      // IMPORTANT: Cuba Crisis uses ONLY enhanced turn-based flashpoints (no random base game flashpoints)
-      if (scenarioId === 'cubanCrisis') {
-        // No random flashpoints for Cuba Crisis - only scheduled enhanced ones
-        return null;
-      }
-
-      const currentYear = getCurrentYear(turn);
-      const templatePool = scenarioTemplates && scenarioTemplates.length > 0 ? scenarioTemplates : FLASHPOINT_TEMPLATES;
-
-      // Filter templates by year restrictions (3-tier fallback system)
-      let validTemplates = currentYear
-        ? templatePool.filter(t => {
-            const minYearOk = !t.minYear || currentYear >= t.minYear;
-            const maxYearOk = !t.maxYear || currentYear <= t.maxYear;
-            return minYearOk && maxYearOk;
-          })
-        : templatePool; // If no year info, allow all templates
-
-      // Tier 1: Use year-appropriate historical flashpoints
-      if (validTemplates.length === 0 && currentYear) {
-        console.log(`[Flashpoint Debug] No year-appropriate flashpoints for ${currentYear}, falling back to timeless templates`);
-
-        // Tier 2: Fall back to timeless templates (no year restrictions)
-        validTemplates = templatePool.filter(t => !t.minYear && !t.maxYear);
-
-        // Tier 3: If still none, use all templates as last resort
-        if (validTemplates.length === 0) {
-          console.log(`[Flashpoint Debug] No timeless templates found, using all templates`);
-          validTemplates = templatePool;
-        }
-      }
-
-      // If still no templates (empty template pool), return null
-      if (validTemplates.length === 0) {
-        console.log(`[Flashpoint Debug] Template pool is empty - cannot generate flashpoint`);
-        return null;
-      }
-
-      const template = rng.choice(validTemplates);
-      const baseFlashpoint: FlashpointEvent = {
-        ...template,
-        id: `flashpoint_${Date.now()}`,
-        triggeredAt: Date.now()
-      };
-
-      // Inject historical context into new flashpoints
-      const flashpoint = injectHistoricalContext(baseFlashpoint, flashpointHistory, playerReputation);
-
-      setActiveFlashpoint(flashpoint);
-      return flashpoint;
+    if (rng.next() >= probability) {
+      return null;
     }
-    return null;
-  }, [pendingFollowUps, flashpointHistory, playerReputation, rng]);
+
+    const scenarioId = getActiveScenarioId();
+    const scenarioTemplates = scenarioId ? SCENARIO_FLASHPOINTS[scenarioId] : undefined;
+
+    // IMPORTANT: Cuba Crisis uses ONLY enhanced turn-based flashpoints (no random base game flashpoints)
+    if (scenarioId === 'cubanCrisis') {
+      return null;
+    }
+
+    const currentYear = getCurrentYear(turn);
+    const templatePool = scenarioTemplates && scenarioTemplates.length > 0 ? scenarioTemplates : FLASHPOINT_TEMPLATES;
+
+    // Filter templates by year restrictions (3-tier fallback system)
+    const validTemplates = filterTemplatesByYear(templatePool, currentYear);
+
+    // If no valid templates (empty template pool), return null
+    if (validTemplates.length === 0) {
+      console.log(`[Flashpoint Debug] Template pool is empty - cannot generate flashpoint`);
+      return null;
+    }
+
+    // Select random template and create flashpoint
+    const template = rng.choice(validTemplates);
+    const baseFlashpoint: FlashpointEvent = {
+      ...template,
+      id: `flashpoint_${Date.now()}`,
+      triggeredAt: Date.now()
+    };
+
+    // Inject historical context into new flashpoints
+    const flashpoint = injectHistoricalContext(baseFlashpoint, flashpointHistory, playerReputation);
+
+    setActiveFlashpoint(flashpoint);
+    return flashpoint;
+  }, [pendingFollowUps, flashpointHistory, playerReputation, rng, processFollowUpFlashpoint, processScenarioFlashpoint, filterTemplatesByYear]);
 
   const resolveFlashpoint = useCallback((optionId: string, flashpoint: FlashpointEvent, currentTurn: number): {
     success: boolean;
