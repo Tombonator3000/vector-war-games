@@ -3792,3 +3792,57 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - **Related files:**
   - `src/components/MorphingGlobe.tsx`: Added renderOrder and fixed lat-to-UV conversion
   - Added explanatory comments for both fixes
+### 2026-01-04T12:00:00Z - Refactored complex triggerRandomFlashpoint function for clarity
+- **Identified complexity issues in `src/hooks/useFlashpoints.ts` `triggerRandomFlashpoint` function (lines 3757-3877):**
+  - Original function was ~120 lines with 3+ levels of nesting
+  - Mixed three distinct responsibilities: follow-up processing, scenario handling, and random generation
+  - Complex nested conditionals and 3-tier year-based fallback logic
+  - Violated single responsibility principle
+
+- **Extracted three focused helper functions:**
+  1. **`processFollowUpFlashpoint`** (48 lines) - Handles pending follow-up queue processing
+     - Checks for ready follow-ups (triggerAtTurn <= turn)
+     - Creates flashpoint from template with historical context
+     - Removes processed follow-up from queue
+     - Returns flashpoint or null with early returns for clarity
+  
+  2. **`processScenarioFlashpoint`** (39 lines) - Handles Cuba Crisis scenario-specific flashpoints
+     - Checks if current scenario is Cuba Crisis
+     - Gets enhanced flashpoints for the turn
+     - Returns scenario flashpoint or null
+     - Clear early returns reduce nesting
+  
+  3. **`filterTemplatesByYear`** (33 lines) - Handles year-based template filtering
+     - Implements 3-tier fallback system:
+       - Tier 1: Year-appropriate templates (respect minYear/maxYear)
+       - Tier 2: Timeless templates (no year restrictions)
+       - Tier 3: All templates as last resort
+     - Returns filtered array with clear logic flow
+
+- **Simplified main `triggerRandomFlashpoint` function:**
+  - Reduced from ~120 lines to ~60 lines
+  - Clear priority structure with numbered steps:
+    1. Priority 1: Check for pending follow-up flashpoints
+    2. Priority 2: Check for scenario-specific flashpoints
+    3. Priority 3: Generate random flashpoint based on probability
+  - Reduced nesting levels from 3+ to 1-2
+  - Each helper called in sequence with early returns
+  - Improved readability and maintainability
+
+- **Benefits of refactoring:**
+  - Single responsibility: Each function does one thing well
+  - Better testability: Helper functions can be tested independently
+  - Improved readability: Clear flow with JSDoc documentation
+  - Reduced complexity: Fewer nested conditionals
+  - Maintained behavior: Exact same logic flow and functionality
+  - Easier maintenance: Changes to one concern don't affect others
+
+- **Verification:**
+  - TypeScript compilation passes with `npx tsc --noEmit`
+  - All helper functions use useCallback for proper React optimization
+  - Dependencies correctly specified in useCallback arrays
+  - Behavior is identical to original implementation
+
+- **Related files:**
+  - `src/hooks/useFlashpoints.ts`: Refactored triggerRandomFlashpoint and added three helper functions
+
