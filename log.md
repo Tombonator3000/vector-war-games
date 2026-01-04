@@ -3846,3 +3846,79 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - **Related files:**
   - `src/hooks/useFlashpoints.ts`: Refactored triggerRandomFlashpoint and added three helper functions
 
+
+### 2026-01-04T14:00:00Z - Refactored complex drawMissiles function for clarity
+- **Identified complexity issues in `src/pages/Index.tsx` `drawMissiles` function (lines 4360-4484):**
+  - Original function was 124 lines with deep nesting (3-4 levels)
+  - Mixed multiple distinct responsibilities: trajectory calculation, rendering, MIRV logic, interception, and impact
+  - Complex nested conditionals within impact handling
+  - Difficult to test and maintain individual concerns
+  - Violated single responsibility principle
+
+- **Extracted four focused helper functions:**
+  1. **`calculateMissileTrajectoryPoint`** (28 lines) - Calculates missile position along quadratic Bezier curve
+     - Takes missile data and screen coordinates
+     - Returns current position (x, y), heading, and control point
+     - Pure calculation function with clear mathematical documentation
+     - Formula: B(t) = (1-t)²P₀ + 2(1-t)tP₁ + t²P₂
+  
+  2. **`renderMissileVisuals`** (33 lines) - Renders missile trajectory path and icon
+     - Handles all canvas drawing operations for missile visualization
+     - Draws animated dashed trajectory path
+     - Renders missile glow and oriented icon at current position
+     - Isolated rendering logic from game logic
+  
+  3. **`handleMirvSplitting`** (43 lines) - Handles MIRV (Multiple Independently targetable Reentry Vehicle) splitting
+     - Checks if missile should split into multiple warheads
+     - Spawns 2 additional warheads with geographic spread (±8 degrees)
+     - Uses staggered timing (200ms delays) for realistic deployment
+     - Returns boolean indicating if MIRV activated
+     - Clear early return pattern
+  
+  4. **`checkAndHandleInterception`** (58 lines) - Handles missile interception logic
+     - Checks if missile should be intercepted at 95% completion
+     - Calculates combined defense from target nation and allies
+     - Includes policy-based defense bonuses
+     - Logs ally support attempts
+     - Removes missile and creates intercept visual effect if successful
+     - Returns boolean indicating interception status
+
+- **Simplified main `drawMissiles` function:**
+  - Reduced from 124 lines to ~60 lines in the main loop
+  - Clear step-by-step structure with numbered comments:
+    1. Check if missile is visible on screen
+    2. Calculate trajectory and render visuals
+    3. Show incoming warning near impact
+    4. Handle impact phase with clear priority:
+       - Priority 1: MIRV splitting
+       - Priority 2: Interception check
+       - Priority 3: Explosion (if not MIRV'd or intercepted)
+  - Reduced nesting levels from 3-4 to 1-2 maximum
+  - Each step clearly documented with inline comments
+  - Early continue for intercepted missiles
+  - Improved readability and flow
+
+- **Benefits of refactoring:**
+  - **Single responsibility**: Each helper function has one clear purpose
+  - **Better testability**: Helper functions can be unit tested independently
+  - **Improved readability**: Main loop reads like a clear sequence of steps
+  - **Reduced complexity**: Fewer nested conditionals and clearer logic flow
+  - **Mathematical clarity**: Bezier curve formula documented in code
+  - **Maintained behavior**: Exact same functionality and game logic preserved
+  - **Easier maintenance**: Changes to rendering, MIRV, or interception isolated to specific functions
+  - **Better documentation**: JSDoc comments explain each function's purpose and return values
+
+- **Code organization improvements:**
+  - Added clear section headers with separator comments
+  - Grouped helper functions together before main function
+  - Consistent naming: `calculate*`, `render*`, `handle*`, `check*`
+  - Clear parameter names: `missile`, `startX`, `targetX`, etc.
+
+- **Verification:**
+  - TypeScript compilation passes with `npx tsc --noEmit`
+  - All helper functions properly typed with return types
+  - Behavior is identical to original implementation
+  - No changes to game mechanics or visual appearance
+
+- **Related files:**
+  - `src/pages/Index.tsx`: Refactored drawMissiles and added four helper functions (lines 4360-4602)
