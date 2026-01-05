@@ -173,8 +173,20 @@ export function addNegotiationRound(
 // ============================================================================
 
 /**
+ * Handler function type for calculating item values.
+ * Each handler is responsible for calculating the base value of a single item type.
+ */
+type ItemValueCalculator = (
+  item: NegotiableItem,
+  context: ItemValueContext,
+  baseValue: number
+) => number;
+
+/**
  * Calculate the value of a single negotiable item
  * Value is from the perspective of the evaluator (the nation receiving the item)
+ *
+ * Refactored to use handler registry pattern for improved maintainability.
  *
  * @param item - The item to evaluate
  * @param context - Context for evaluation (nations, game state, etc.)
@@ -185,75 +197,19 @@ export function calculateItemValue(
   context: ItemValueContext
 ): number {
   const baseValue = BASE_ITEM_VALUES[item.type] || 0;
-  let value = baseValue;
 
-  // Apply item-specific calculations
-  switch (item.type) {
-    case 'gold':
-    case 'intel':
-    case 'production':
-      value = baseValue * (item.amount || 0);
-      break;
+  // Lookup handler for this item type
+  const calculator = VALUE_CALCULATOR_HANDLERS[item.type];
 
-    case 'alliance':
-      value = calculateAllianceValue(item, context);
-      break;
-
-    case 'treaty':
-      value = calculateTreatyValue(item, context);
-      break;
-
-    case 'promise':
-      value = calculatePromiseValue(item, context);
-      break;
-
-    case 'favor-exchange':
-      value = baseValue * (item.amount || 0);
-      break;
-
-    case 'sanction-lift':
-      // More valuable if currently sanctioned
-      if (context.evaluatorNation.sanctioned) {
-        value = baseValue * 2;
-      }
-      break;
-
-    case 'join-war':
-      value = calculateJoinWarValue(item, context);
-      break;
-
-    case 'share-tech':
-      value = calculateShareTechValue(item, context);
-      break;
-
-    case 'open-borders':
-      value = baseValue * (item.duration || 1);
-      break;
-
-    case 'grievance-apology':
-      value = calculateGrievanceApologyValue(item, context);
-      break;
-
-    case 'resource-share':
-      value = (item.amount || 0) * (item.duration || 1) * 2; // Resource per turn times duration
-      break;
-
-    case 'military-support':
-      value = calculateMilitarySupportValue(item, context);
-      break;
-
-    case 'trade-agreement':
-      value = baseValue * (item.duration || 1);
-      break;
-
-    default:
-      value = baseValue;
-  }
+  // Calculate base value using handler or default to baseValue
+  const value = calculator
+    ? calculator(item, context, baseValue)
+    : baseValue;
 
   // Apply context modifiers
-  value = applyContextModifiers(value, item, context);
+  const modifiedValue = applyContextModifiers(value, item, context);
 
-  return Math.max(0, Math.round(value));
+  return Math.max(0, Math.round(modifiedValue));
 }
 
 /**
@@ -530,6 +486,83 @@ function applyContextModifiers(
 
   return modified;
 }
+
+// ============================================================================
+// Item Value Calculator Handlers
+// ============================================================================
+
+/** Calculate value for gold, intel, and production (amount-based resources) */
+function calculateAmountBasedValue(
+  item: NegotiableItem,
+  _context: ItemValueContext,
+  baseValue: number
+): number {
+  return baseValue * (item.amount || 0);
+}
+
+/** Calculate value for sanction lift */
+function calculateSanctionLiftValue(
+  _item: NegotiableItem,
+  context: ItemValueContext,
+  baseValue: number
+): number {
+  // More valuable if currently sanctioned
+  return context.evaluatorNation.sanctioned ? baseValue * 2 : baseValue;
+}
+
+/** Calculate value for open borders */
+function calculateOpenBordersValue(
+  item: NegotiableItem,
+  _context: ItemValueContext,
+  baseValue: number
+): number {
+  return baseValue * (item.duration || 1);
+}
+
+/** Calculate value for resource sharing */
+function calculateResourceShareValue(
+  item: NegotiableItem,
+  _context: ItemValueContext,
+  _baseValue: number
+): number {
+  // Resource per turn times duration
+  return (item.amount || 0) * (item.duration || 1) * 2;
+}
+
+/** Calculate value for trade agreements */
+function calculateTradeAgreementValue(
+  item: NegotiableItem,
+  _context: ItemValueContext,
+  baseValue: number
+): number {
+  return baseValue * (item.duration || 1);
+}
+
+// ============================================================================
+// Item Value Calculator Registry
+// ============================================================================
+
+/**
+ * Registry mapping item types to their value calculator handlers.
+ * This pattern makes it easy to add new item types and keeps each calculator focused.
+ */
+const VALUE_CALCULATOR_HANDLERS: Partial<Record<NegotiableItemType, ItemValueCalculator>> = {
+  'gold': calculateAmountBasedValue,
+  'intel': calculateAmountBasedValue,
+  'production': calculateAmountBasedValue,
+  'alliance': (item, context) => calculateAllianceValue(item, context),
+  'treaty': (item, context) => calculateTreatyValue(item, context),
+  'promise': (item, context) => calculatePromiseValue(item, context),
+  'favor-exchange': calculateAmountBasedValue,
+  'sanction-lift': calculateSanctionLiftValue,
+  'join-war': (item, context) => calculateJoinWarValue(item, context),
+  'share-tech': (item, context) => calculateShareTechValue(item, context),
+  'open-borders': calculateOpenBordersValue,
+  'grievance-apology': (item, context) => calculateGrievanceApologyValue(item, context),
+  'resource-share': calculateResourceShareValue,
+  'military-support': (item, context) => calculateMilitarySupportValue(item, context),
+  'trade-agreement': calculateTradeAgreementValue,
+};
 
 /**
  * Calculate total value of a list of items
