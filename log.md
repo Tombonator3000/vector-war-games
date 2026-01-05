@@ -4184,3 +4184,121 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
   - **No behavioral changes:** Exact same game logic and functionality preserved
   - **Code structure:** Significantly improved readability and maintainability
   - **Testing:** Much easier to test individual pieces of logic independently
+
+
+### 2026-01-05T16:00:00Z - Refactored evaluateAttack function for improved clarity and testability
+- **Identified and refactored overly complex function:**
+  - **Target:** `evaluateAttack()` function in `src/lib/conventionalAI.ts` (originally 108 lines, lines 40-147)
+  - **Complexity issues identified:**
+    - Long if/else-if chain for personality types (6 branches with duplicate structure)
+    - Complex power ratio scoring logic with chained conditionals (4 branches)
+    - Strategic value calculations mixed with main evaluation flow
+    - Multiple responsibilities: personality mapping, power calculation, strategic evaluation
+    - Poor testability due to tightly coupled logic and no pure functions
+    - Difficult to add new personality types or modify scoring logic
+
+- **Refactoring approach - Extract Method and Config-Based Design:**
+  1. **Created `PersonalityModifiers` interface (lines 44-48):**
+     - Type-safe structure for personality configuration
+     - Properties: `aggressionMultiplier`, `riskTolerance`, `baseScoreBonus`
+     - Eliminates magic numbers and unclear variable assignments
+  
+  2. **Created `getPersonalityModifiers()` helper function (lines 65-100):**
+     - Replaced 23-line if/else-if chain with declarative config object
+     - Config-based approach using `PERSONALITY_CONFIGS` map
+     - Six personality types: aggressive, defensive, chaotic, isolationist, trickster, balanced
+     - Pure function: easy to test, no side effects
+     - Easy to extend: add new personalities by adding config entries
+     - Single responsibility: translate personality string to modifiers
+  
+  3. **Created `calculatePowerRatioScore()` helper function (lines 117-142):**
+     - Extracted 20 lines of power ratio evaluation logic
+     - Pure function: takes ratio and multiplier, returns score and reason
+     - Four clear tiers: overwhelming (≥3:1), strong (≥2:1), slight (≥1.5:1), risky (<1.5:1)
+     - Independently testable without territory or game state
+     - Single responsibility: evaluate attack power advantage
+  
+  4. **Created `evaluateStrategicValue()` helper function (lines 160-201):**
+     - Extracted 42 lines of strategic value calculation
+     - Consolidates five strategic factors:
+       - Territory's inherent strategic value (×10 multiplier)
+       - Production bonus (×5 multiplier)
+       - Region completion bonus (+80, triggers region bonus in game)
+       - Uncontrolled territory bonus (+30, easier targets)
+       - Conflict risk penalty (-20 if high risk and weak position)
+     - Returns score and reasons array for transparency
+     - Pure function except for `wouldCompleteRegion()` call
+     - Single responsibility: assess territory value
+
+- **Refactored main function (lines 223-263):**
+  - **Reduced from 108 lines to ~40 lines** (63% reduction)
+  - **Simplified personality handling to single line:** `const modifiers = getPersonalityModifiers(personality)`
+  - **Simplified power ratio evaluation:** `const powerRatioEval = calculatePowerRatioScore(powerRatio, modifiers.aggressionMultiplier)`
+  - **Simplified strategic evaluation:** `const strategicEval = evaluateStrategicValue(toTerritory, powerRatio, aiId, territories)`
+  - **Main function now reads as high-level orchestration:**
+    1. Get personality modifiers and apply base bonus
+    2. Validate army availability
+    3. Calculate power ratio
+    4. Check risk tolerance
+    5. Evaluate power advantage
+    6. Evaluate strategic value
+    7. Combine and return results
+
+- **Benefits of refactoring:**
+  - **Improved readability:** Main function is now clear, high-level orchestrator (~40 lines vs 108)
+  - **Better testability:** Three helper functions are pure and can be tested independently
+  - **Reduced complexity:** Eliminated 6-branch if/else chain and complex nested conditionals
+  - **Config-based design:** Personality types are now data structures, not procedural code
+  - **Single Responsibility Principle:** Each function has one clear, focused purpose
+  - **Maintained behavior:** Exact same functionality and AI decision-making logic preserved
+  - **Easier maintenance:** Changes to personalities, scoring, or strategic factors are isolated
+  - **Better extensibility:** Add new personalities by adding config entries, not code branches
+  - **Enhanced documentation:** JSDoc comments explain each helper's purpose and parameters
+  - **Type safety:** PersonalityModifiers interface prevents configuration errors
+
+- **Code quality improvements:**
+  - Replaced 6-branch if/else-if chain with declarative config map
+  - Reduced cyclomatic complexity from 10+ to ~5 in main function
+  - Reduced nesting depth from 3 levels to 2 levels
+  - Extracted 3 pure/helper functions with clear interfaces and return types
+  - Added comprehensive JSDoc documentation for all functions
+  - Consistent naming conventions: `get*`, `calculate*`, `evaluate*`
+  - Clear separation of concerns with section headers and comments
+  - All helper functions are independently testable
+
+- **Verification:**
+  - TypeScript compilation passes with `npx tsc --noEmit`
+  - All helper functions properly typed with clear signatures
+  - Behavior is identical to original implementation
+  - No changes to AI decision-making logic or attack evaluation
+  - Pure functions have no side effects (except evaluateStrategicValue's wouldCompleteRegion call)
+  - Code organization follows established patterns from previous refactorings
+
+- **Technical details:**
+  - **Original function:** 108 lines with high cyclomatic complexity
+  - **Refactored function:** ~40 lines with reduced complexity
+  - **New helper functions:** 3 functions totaling ~140 lines (includes docs, types, and spacing)
+  - **Net result:** Slightly more total lines but vastly improved organization, testability, and maintainability
+  - **Complexity metrics improved:**
+    - Main function cyclomatic complexity: 10+ → ~5
+    - Nesting depth: 3 levels → 2 levels
+    - Lines per function: 108 → 40 (main) + 3 helpers averaging 35 lines each
+    - Testable pure functions: 0 → 2 (getPersonalityModifiers, calculatePowerRatioScore)
+
+- **Personality configuration details:**
+  - **Aggressive:** 1.5× aggression, 1.3:1 risk tolerance, +30 base score
+  - **Defensive:** 0.7× aggression, 2.5:1 risk tolerance, -20 base score
+  - **Chaotic:** 1.3× aggression, 1.0:1 risk tolerance (takes even fights), +15 base score
+  - **Isolationist:** 0.5× aggression, 3.0:1 risk tolerance (very cautious), -30 base score
+  - **Trickster:** 1.1× aggression, 1.8:1 risk tolerance, no base score change
+  - **Balanced:** 1.0× aggression, 2.0:1 risk tolerance, no base score change
+
+- **Related files:**
+  - `src/lib/conventionalAI.ts`: Refactored `evaluateAttack()` and added three helper functions plus PersonalityModifiers interface (lines 37-263)
+
+- **Behavioral changes:**
+  - **No behavioral changes:** Exact same AI decision-making and attack evaluation logic preserved
+  - **Code structure:** Significantly improved readability, testability, and maintainability
+  - **Testing:** Much easier to test personality configs, power ratio scoring, and strategic value independently
+  - **Extensibility:** Adding new personality types or modifying scoring logic is now straightforward
+

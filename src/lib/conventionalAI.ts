@@ -34,8 +34,191 @@ const REGIONS: RegionInfo[] = [
   { name: 'Arctic', territoryIds: ['arctic_circle'], bonus: 1 },
 ];
 
+// ============================================================================
+// Helper Types & Interfaces
+// ============================================================================
+
+/**
+ * Modifiers applied based on AI personality type
+ */
+interface PersonalityModifiers {
+  aggressionMultiplier: number;
+  riskTolerance: number;
+  baseScoreBonus: number;
+}
+
+// ============================================================================
+// Helper Functions for evaluateAttack
+// ============================================================================
+
+/**
+ * Get personality-based modifiers for attack evaluation
+ *
+ * Returns multipliers and bonuses that affect how the AI evaluates attacks:
+ * - aggressionMultiplier: Scales power ratio bonuses (higher = more aggressive)
+ * - riskTolerance: Minimum power ratio AI wants (lower = more willing to take risks)
+ * - baseScoreBonus: Flat bonus/penalty to attack score
+ *
+ * @param personality - AI personality type (aggressive, defensive, chaotic, etc.)
+ * @returns Personality modifiers object
+ */
+function getPersonalityModifiers(personality?: string): PersonalityModifiers {
+  const PERSONALITY_CONFIGS: Record<string, PersonalityModifiers> = {
+    aggressive: {
+      aggressionMultiplier: 1.5,
+      riskTolerance: 1.3, // Willing to attack at 1.3:1 ratio
+      baseScoreBonus: 30,
+    },
+    defensive: {
+      aggressionMultiplier: 0.7,
+      riskTolerance: 2.5, // Only attacks at 2.5:1 ratio
+      baseScoreBonus: -20,
+    },
+    chaotic: {
+      aggressionMultiplier: 1.3,
+      riskTolerance: 1.0, // Will even take even fights
+      baseScoreBonus: 15,
+    },
+    isolationist: {
+      aggressionMultiplier: 0.5,
+      riskTolerance: 3.0, // Very cautious
+      baseScoreBonus: -30,
+    },
+    trickster: {
+      aggressionMultiplier: 1.1,
+      riskTolerance: 1.8,
+      baseScoreBonus: 0,
+    },
+    balanced: {
+      aggressionMultiplier: 1.0,
+      riskTolerance: 2.0,
+      baseScoreBonus: 0,
+    },
+  };
+
+  return PERSONALITY_CONFIGS[personality || 'balanced'] || PERSONALITY_CONFIGS.balanced;
+}
+
+/**
+ * Calculate attack score based on power ratio
+ *
+ * Evaluates how favorable the attacker-to-defender army ratio is:
+ * - 3:1 or better: Overwhelming force (high score)
+ * - 2:1 to 3:1: Strong advantage (medium score)
+ * - 1.5:1 to 2:1: Slight advantage (low score)
+ * - Below 1.5:1: Too risky (negative score)
+ *
+ * Scores are multiplied by aggressionMultiplier to reflect personality.
+ *
+ * @param powerRatio - Ratio of attacker armies to defender armies
+ * @param aggressionMultiplier - Personality-based multiplier
+ * @returns Object with score and reason
+ */
+function calculatePowerRatioScore(
+  powerRatio: number,
+  aggressionMultiplier: number,
+): { score: number; reason: string } {
+  if (powerRatio >= 3) {
+    return {
+      score: 100 * aggressionMultiplier,
+      reason: 'overwhelming force',
+    };
+  } else if (powerRatio >= 2) {
+    return {
+      score: 50 * aggressionMultiplier,
+      reason: 'strong advantage',
+    };
+  } else if (powerRatio >= 1.5) {
+    return {
+      score: 20 * aggressionMultiplier,
+      reason: 'slight advantage',
+    };
+  } else {
+    return {
+      score: -50 / aggressionMultiplier,
+      reason: 'too risky',
+    };
+  }
+}
+
+/**
+ * Evaluate strategic value of capturing a territory
+ *
+ * Considers multiple factors that make a territory valuable:
+ * - Strategic value: Inherent importance (geographic, political)
+ * - Production bonus: Economic/military production capacity
+ * - Region completion: Bonus for completing a full region
+ * - Control status: Uncontrolled territories are easier to capture
+ * - Conflict risk: High-risk territories are less attractive unless strong
+ *
+ * @param territory - Target territory to evaluate
+ * @param powerRatio - Attacker-to-defender army ratio
+ * @param aiId - ID of the attacking AI nation
+ * @param territories - All territories in the game
+ * @returns Object with total score and list of reasons
+ */
+function evaluateStrategicValue(
+  territory: TerritoryState,
+  powerRatio: number,
+  aiId: string,
+  territories: Record<string, TerritoryState>,
+): { score: number; reasons: string[] } {
+  let score = 0;
+  const reasons: string[] = [];
+
+  // Strategic value of target
+  score += territory.strategicValue * 10;
+  if (territory.strategicValue >= 4) {
+    reasons.push('high strategic value');
+  }
+
+  // Production bonus
+  score += territory.productionBonus * 5;
+  if (territory.productionBonus >= 3) {
+    reasons.push('valuable production');
+  }
+
+  // Check if capturing would complete a region
+  const completesRegion = wouldCompleteRegion(territory.id, aiId, territories);
+  if (completesRegion) {
+    score += 80;
+    reasons.push(`completes ${completesRegion.name} (+${completesRegion.bonus} bonus)`);
+  }
+
+  // Prefer attacking uncontrolled territories (easier)
+  if (!territory.controllingNationId) {
+    score += 30;
+    reasons.push('uncontrolled territory');
+  }
+
+  // Avoid high conflict risk territories unless we're strong
+  if (territory.conflictRisk > 20 && powerRatio < 2.5) {
+    score -= 20;
+    reasons.push('high conflict risk');
+  }
+
+  return { score, reasons };
+}
+
+// ============================================================================
+// Main Attack Evaluation Function
+// ============================================================================
+
 /**
  * Evaluate if attacking a territory is a good idea
+ *
+ * Orchestrates multiple evaluation factors:
+ * 1. Personality-based modifiers (aggression, risk tolerance)
+ * 2. Army availability check
+ * 3. Power ratio evaluation
+ * 4. Strategic value assessment
+ *
+ * @param fromTerritory - Attacking territory
+ * @param toTerritory - Target territory
+ * @param aiId - ID of the attacking AI nation
+ * @param territories - All territories in the game
+ * @param personality - AI personality type
+ * @returns Score and reasoning for the attack
  */
 function evaluateAttack(
   fromTerritory: TerritoryState,
@@ -45,36 +228,11 @@ function evaluateAttack(
   personality?: string,
 ): { score: number; reason: string } {
   let score = 0;
-  let reasons: string[] = [];
+  const reasons: string[] = [];
 
-  // Personality affects base aggression
-  let aggressionMultiplier = 1.0;
-  let riskTolerance = 2.0; // Base risk tolerance (2:1 ratio)
-
-  // Personality affects aggression and risk tolerance
-  if (personality === 'aggressive') {
-    aggressionMultiplier = 1.5;
-    riskTolerance = 1.3; // Willing to attack at 1.3:1 ratio
-    score += 30; // Base aggression bonus
-  } else if (personality === 'defensive') {
-    aggressionMultiplier = 0.7;
-    riskTolerance = 2.5; // Only attacks at 2.5:1 ratio
-    score -= 20; // Penalty to aggression
-  } else if (personality === 'chaotic') {
-    aggressionMultiplier = 1.3;
-    riskTolerance = 1.0; // Will even take even fights
-    score += 15;
-  } else if (personality === 'isolationist') {
-    aggressionMultiplier = 0.5;
-    riskTolerance = 3.0; // Very cautious
-    score -= 30;
-  } else if (personality === 'trickster') {
-    aggressionMultiplier = 1.1;
-    riskTolerance = 1.8;
-  } else { // balanced
-    aggressionMultiplier = 1.0;
-    riskTolerance = 2.0;
-  }
+  // Get personality-based modifiers
+  const modifiers = getPersonalityModifiers(personality);
+  score += modifiers.baseScoreBonus;
 
   // Must have enough armies to attack (leave at least 1 behind)
   const availableArmies = fromTerritory.armies - 1;
@@ -86,62 +244,20 @@ function evaluateAttack(
   const powerRatio = availableArmies / Math.max(1, toTerritory.armies);
 
   // Check if attack meets personality's risk tolerance
-  if (powerRatio < riskTolerance && personality) {
-    score -= 40; // Penalty for too risky
+  if (powerRatio < modifiers.riskTolerance && personality) {
+    score -= 40;
     reasons.push('below risk tolerance');
   }
 
-  // Strong advantage (3:1 or better) - very attractive
-  if (powerRatio >= 3) {
-    score += 100 * aggressionMultiplier;
-    reasons.push('overwhelming force');
-  }
-  // Good advantage (2:1 to 3:1) - attractive
-  else if (powerRatio >= 2) {
-    score += 50 * aggressionMultiplier;
-    reasons.push('strong advantage');
-  }
-  // Slight advantage (1.5:1 to 2:1) - risky but possible
-  else if (powerRatio >= 1.5) {
-    score += 20 * aggressionMultiplier;
-    reasons.push('slight advantage');
-  }
-  // Even or disadvantage - avoid (unless aggressive/chaotic)
-  else {
-    score -= 50 / aggressionMultiplier;
-    reasons.push('too risky');
-  }
+  // Evaluate power ratio advantage
+  const powerRatioEval = calculatePowerRatioScore(powerRatio, modifiers.aggressionMultiplier);
+  score += powerRatioEval.score;
+  reasons.push(powerRatioEval.reason);
 
-  // Strategic value of target
-  score += toTerritory.strategicValue * 10;
-  if (toTerritory.strategicValue >= 4) {
-    reasons.push('high strategic value');
-  }
-
-  // Production bonus
-  score += toTerritory.productionBonus * 5;
-  if (toTerritory.productionBonus >= 3) {
-    reasons.push('valuable production');
-  }
-
-  // Check if capturing would complete a region
-  const completesRegion = wouldCompleteRegion(toTerritory.id, aiId, territories);
-  if (completesRegion) {
-    score += 80;
-    reasons.push(`completes ${completesRegion.name} (+${completesRegion.bonus} bonus)`);
-  }
-
-  // Prefer attacking uncontrolled territories (easier)
-  if (!toTerritory.controllingNationId) {
-    score += 30;
-    reasons.push('uncontrolled territory');
-  }
-
-  // Avoid high conflict risk territories unless we're strong
-  if (toTerritory.conflictRisk > 20 && powerRatio < 2.5) {
-    score -= 20;
-    reasons.push('high conflict risk');
-  }
+  // Evaluate strategic value of the target
+  const strategicEval = evaluateStrategicValue(toTerritory, powerRatio, aiId, territories);
+  score += strategicEval.score;
+  reasons.push(...strategicEval.reasons);
 
   return { score, reason: reasons.join(', ') };
 }
