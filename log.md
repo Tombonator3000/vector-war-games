@@ -7,6 +7,612 @@
 
 ---
 
+## 2026-01-05T19:29:37Z - Critical Architecture Analysis: Monolithic Components & Duplicated Systems
+
+### Executive Summary
+
+Performed comprehensive analysis of three critical architectural concerns identified during ongoing refactoring work:
+
+1. **Index.tsx** - 19,191 lines (685KB) - Massive monolithic component
+2. **useFlashpoints.ts** - 4,166 lines (205KB) - Performance-critical data bloat
+3. **Duplicated BioWarfare Systems** - Two complete parallel implementations (~1,500 LOC duplication)
+
+### Detailed Analysis
+
+#### 1. Index.tsx - The Monolithic Game Controller (19,191 lines, 685KB)
+
+**Current State:**
+- **19,191 lines of code** in a single React component file
+- **685KB file size** - massive bundle impact
+- **370 React hook calls** (useState, useEffect, useCallback, useMemo, useRef)
+- **74 component imports** from @/components
+- **~318 total imports/exports/functions** based on grep analysis
+- Manages ALL game systems: rendering, state, UI, logic, AI, networking, combat, diplomacy, economics, etc.
+
+**Root Causes:**
+1. **God Object Anti-Pattern** - Single component orchestrates entire game
+2. **No Separation of Concerns** - Game logic, UI, state management, side effects all mixed
+3. **Historical Growth** - Features incrementally added without architectural refactoring
+4. **Convenience Over Structure** - Easier to add to existing file than architect properly
+
+**Performance Impact:**
+- **Initial Bundle Size** - Massive JavaScript payload on first load
+- **Re-render Performance** - Any state change potentially triggers expensive re-renders
+- **Memory Usage** - All 370+ hooks loaded into memory simultaneously
+- **Developer Experience** - Extremely difficult to navigate, edit, test, or understand
+
+**Maintainability Impact:**
+- **Merge Conflicts** - High probability when multiple developers work on game
+- **Testing Difficulty** - Nearly impossible to unit test individual game systems
+- **Code Review** - Reviewers cannot reasonably audit 19,000 line files
+- **Onboarding** - New developers overwhelmed by file size
+
+**Refactoring Strategy - Three-Phase Approach:**
+
+**PHASE 1: Extract Game Systems into Dedicated Managers (Immediate Priority)**
+
+Create focused manager modules that handle distinct game systems:
+
+```typescript
+// src/managers/GameStateManager.ts
+export class GameStateManager {
+  constructor(initialState: GameState) { }
+  getNation(id: string): Nation { }
+  updateNation(id: string, updates: Partial<Nation>): void { }
+  getCurrentTurn(): number { }
+  // ... focused game state operations
+}
+
+// src/managers/CombatManager.ts
+export class CombatManager {
+  constructor(stateManager: GameStateManager) { }
+  launchNuclearStrike(payload: NuclearStrikePayload): void { }
+  resolveMissileDefense(payload: MissileDefensePayload): void { }
+  processConventionalAttack(payload: ConventionalAttackPayload): void { }
+  // ... combat-specific operations
+}
+
+// src/managers/DiplomacyManager.ts
+export class DiplomacyManager {
+  constructor(stateManager: GameStateManager) { }
+  proposeNegotiation(payload: NegotiationPayload): void { }
+  processAIDiplomacy(): void { }
+  updateRelationships(): void { }
+  // ... diplomacy-specific operations
+}
+
+// Similar managers for:
+// - EconomyManager (production, trade, resources)
+// - ResearchManager (tech tree, unlocks)
+// - UIStateManager (modal states, selections, view state)
+// - NetworkManager (multiplayer sync)
+// - AIManager (AI turn processing)
+```
+
+**Benefits:**
+- **Testable** - Each manager independently unit testable
+- **Focused** - Single Responsibility Principle applied
+- **Reusable** - Managers can be used outside Index.tsx (e.g., in game server)
+- **Dependency Injection** - Clear dependencies between systems
+
+**PHASE 2: Split UI into Logical Screen Components**
+
+Break Index.tsx UI into focused screen components:
+
+```typescript
+// src/screens/GameplayScreen.tsx
+export function GameplayScreen({
+  gameState,
+  onAction
+}: GameplayScreenProps) {
+  return (
+    <>
+      <GameMap />
+      <GameHUD />
+      <ResourceDisplay />
+      <TurnControls />
+    </>
+  );
+}
+
+// src/screens/DiplomacyScreen.tsx
+export function DiplomacyScreen({
+  gameState,
+  onAction
+}: DiplomacyScreenProps) {
+  return (
+    <>
+      <LeadersOverview />
+      <RelationshipMatrix />
+      <ActiveNegotiations />
+      <DiplomaticHistory />
+    </>
+  );
+}
+
+// Similar screens:
+// - ResearchScreen (tech tree, research queue)
+// - EconomyScreen (production, trade, resources)
+// - MilitaryScreen (units, bases, deployments)
+// - IntelScreen (spy networks, operations)
+```
+
+**Benefits:**
+- **Code Splitting** - Each screen can be lazy-loaded
+- **Screen-Specific State** - Reduce unnecessary re-renders
+- **Clearer Navigation** - Distinct screens vs monolithic interface
+- **Parallel Development** - Teams can work on different screens
+
+**PHASE 3: Implement Proper State Management Architecture**
+
+Replace ad-hoc useState calls with structured state management:
+
+```typescript
+// Option A: Context-based (simpler, good for medium complexity)
+export const GameStateContext = createContext<GameStateManager>(null);
+
+// Option B: Redux Toolkit (better for complex state, time travel debugging)
+export const gameSlice = createSlice({
+  name: 'game',
+  initialState,
+  reducers: {
+    launchNuclearStrike: (state, action) => { },
+    processTurn: (state) => { },
+    // ...
+  }
+});
+
+// Option C: Zustand (lightweight, modern alternative)
+export const useGameStore = create<GameStore>((set, get) => ({
+  gameState: initialState,
+  launchNuclearStrike: (payload) => set(state => ({ ... })),
+  // ...
+}));
+```
+
+**Benefits:**
+- **Predictable State Updates** - Clear data flow
+- **DevTools** - Time travel debugging, state inspection
+- **Optimized Re-renders** - Only components using changed state re-render
+- **Serializable State** - Save/load, multiplayer sync easier
+
+**Recommended Extraction Order (Priority-Based):**
+
+1. **Combat System** (~2000 lines)
+   - Nuclear strikes, missile defense, conventional warfare
+   - High complexity, well-defined boundaries
+   - Already has some helpers in separate files
+
+2. **Diplomacy System** (~1500 lines)
+   - Negotiations, relationships, proposals
+   - Clear interface with game state
+   - Multiple panels/modals to extract
+
+3. **UI State Management** (~1000 lines)
+   - Modal open/close states
+   - Selection states
+   - View preferences
+   - Easiest to extract, immediate reduction in state hook count
+
+4. **Economy & Production** (~1200 lines)
+   - Resource management
+   - Production queues
+   - Trade systems
+
+5. **AI Processing** (~800 lines)
+   - AI turn logic
+   - AI decision making
+   - Well-defined execution cycle
+
+6. **Research & Tech Tree** (~600 lines)
+   - Tech unlocks
+   - Research progress
+   - Tech tree UI
+
+**Success Metrics:**
+- Index.tsx reduced to < 2,000 lines (90% reduction)
+- < 50 React hooks in Index.tsx (87% reduction)
+- 80%+ test coverage for extracted managers
+- Initial bundle size reduced by 40%+
+- Lighthouse performance score improvement
+
+**Risks & Mitigations:**
+- **Risk:** Breaking existing functionality during extraction
+  - **Mitigation:** Extract and test one system at a time
+  - **Mitigation:** Comprehensive integration tests before each extraction
+  - **Mitigation:** Feature flags to toggle between old/new implementations
+
+- **Risk:** Performance regression during transition
+  - **Mitigation:** Benchmark before/after each extraction
+  - **Mitigation:** Profile with React DevTools
+  - **Mitigation:** Monitor bundle size with webpack-bundle-analyzer
+
+- **Risk:** Increased complexity from indirection
+  - **Mitigation:** Clear manager interfaces and documentation
+  - **Mitigation:** Consistent patterns across all managers
+  - **Mitigation:** Architecture decision records (ADRs)
+
+#### 2. useFlashpoints.ts - Data Bloat in Hook File (4,166 lines, 205KB)
+
+**Current State:**
+- **4,166 lines** of flashpoint definitions in a hook file
+- **205KB file size** - loaded on every game render
+- **Only 7 useCallback + 5 useState** - minimal actual hook logic (~200 lines)
+- **~3,900 lines of static data** (94% of file is data, not logic)
+- Contains massive flashpoint event objects with nested options, narratives, outcomes
+
+**Root Cause:**
+- **Data Definition in Hook File** - Static data mixed with reactive logic
+- **No Data Separation** - All flashpoint scenarios defined inline
+- **Single File Convenience** - Historical decision to keep all flashpoints together
+
+**Performance Impact:**
+- **Bundle Size** - 205KB loaded even if flashpoints never triggered
+- **Parse Time** - JavaScript engine must parse all object literals
+- **Memory Overhead** - All flashpoint data held in memory constantly
+- **Hot Module Reload** - Development builds reload entire 4,166 line file on any change
+
+**Refactoring Strategy:**
+
+**RECOMMENDED: Split Data from Logic + Lazy Loading**
+
+```typescript
+// src/data/flashpoints/index.ts (NEW)
+export { NUCLEAR_MATERIALS_FLASHPOINTS } from './nuclearMaterials';
+export { MILITARY_COUP_FLASHPOINTS } from './militaryCoup';
+export { ROGUE_AI_FLASHPOINTS } from './rogueAI';
+export { BIO_TERROR_FLASHPOINTS } from './bioTerror';
+export { ALIEN_CONTACT_FLASHPOINTS } from './alienContact';
+// ... 10-15 focused category files
+
+// src/data/flashpoints/nuclearMaterials.ts (NEW - ~400 lines)
+export const NUCLEAR_MATERIALS_FLASHPOINTS = {
+  main: { /* flashpoint definition */ },
+  followUps: {
+    raid_success: { /* follow-up definition */ },
+    raid_failure: { /* follow-up definition */ },
+  }
+};
+
+// src/hooks/useFlashpoints.ts (REFACTORED - ~300 lines)
+import { useState, useCallback } from 'react';
+import type { FlashpointEvent } from '@/types/flashpoint';
+
+// Lazy load flashpoint data
+async function loadFlashpointCategory(category: string) {
+  const module = await import(`@/data/flashpoints/${category}`);
+  return module.default;
+}
+
+export function useFlashpoints() {
+  const [activeFlashpoint, setActiveFlashpoint] = useState<FlashpointEvent | null>(null);
+  const [flashpointHistory, setFlashpointHistory] = useState<FlashpointHistoryEntry[]>([]);
+
+  const triggerFlashpoint = useCallback(async (category: string, severity: string) => {
+    // Lazy load only the needed flashpoint data
+    const flashpoints = await loadFlashpointCategory(category);
+    const event = selectFlashpoint(flashpoints, severity);
+    setActiveFlashpoint(event);
+  }, []);
+
+  // ... rest of hook logic
+}
+```
+
+**Benefits:**
+- **94% Size Reduction** in hook file (4,166 → ~300 lines)
+- **Lazy Loading** - Only load flashpoint data when needed
+- **Code Splitting** - Each flashpoint category in separate bundle chunk
+- **Better Organization** - Flashpoints grouped by theme/category
+- **Easier Maintenance** - Edit one category without touching others
+
+**Alternative Approach: JSON Data Files**
+
+```typescript
+// src/data/flashpoints/nuclearMaterials.json (NEW)
+{
+  "main": { /* flashpoint definition */ },
+  "followUps": { /* follow-ups */ }
+}
+
+// Benefits:
+// - Non-code data format (can be edited by designers/writers)
+// - Automatic schema validation possible
+// - Easier to generate/modify programmatically
+// - Even cleaner separation
+
+// Drawbacks:
+// - No TypeScript type checking in JSON
+// - Requires runtime validation
+// - No code comments for documentation
+```
+
+**Recommended File Structure:**
+
+```
+src/data/flashpoints/
+├── index.ts                    # Re-exports all categories
+├── types.ts                    # Shared flashpoint types
+├── nuclearMaterials.ts         # ~400 lines
+├── militaryCoup.ts             # ~350 lines
+├── rogueAI.ts                  # ~450 lines
+├── bioTerror.ts                # ~380 lines
+├── alienContact.ts             # ~320 lines
+├── accidentalLaunch.ts         # ~400 lines
+├── climateDisaster.ts          # ~350 lines
+├── economicCrisis.ts           # ~300 lines
+├── cyberAttack.ts              # ~280 lines
+└── spaceRace.ts                # ~300 lines
+
+src/hooks/
+└── useFlashpoints.ts           # ~300 lines (hook logic only)
+```
+
+**Migration Steps:**
+1. Create `src/data/flashpoints/` directory
+2. Extract each flashpoint category into dedicated file
+3. Add lazy loading logic to useFlashpoints.ts
+4. Update imports in Index.tsx
+5. Test flashpoint triggering works correctly
+6. Monitor bundle size reduction with webpack-bundle-analyzer
+
+**Success Metrics:**
+- useFlashpoints.ts reduced to < 350 lines (92% reduction)
+- Initial bundle size reduced by ~180KB
+- Flashpoint data only loaded when first flashpoint triggers
+- Each flashpoint category < 500 lines
+- Parse time reduced (measurable with Chrome DevTools)
+
+#### 3. Duplicated BioWarfare Systems - Parallel Implementations (~1,500 LOC)
+
+**Current State:**
+
+**System A: Original Complex BioWarfare (Evolution Tree System)**
+- `src/hooks/useBioWarfare.ts` - 463 lines
+- `src/components/BioWarfareLab.tsx` - 355 lines
+- `src/hooks/useEvolutionTree.ts` - Complex evolution tree logic
+- `src/hooks/usePandemic.ts` - Pandemic spread mechanics
+- `src/lib/evolutionData.ts` - Large evolution node definitions
+- **Total:** ~1,200+ lines across multiple files
+
+**Features:**
+- Complex evolution tree (Plague Inc. style)
+- Plague type selection (virus, bacteria, fungus, parasite, etc.)
+- Node-based evolution system (infectivity, lethality, transmission)
+- DNA points for evolution
+- Lab tier progression (tier 0-4)
+- Deployment methods with false flags
+- Vaccine/defense research tree
+
+**System B: Simplified BioWarfare (Deploy/Defend System)**
+- `src/lib/simplifiedBioWarfareLogic.ts` - 348 lines
+- `src/components/SimplifiedBioWarfarePanel.tsx` - 355 lines
+- **Total:** ~700 lines
+
+**Features:**
+- Simple research unlock (one-time)
+- Direct deployment (intel + uranium cost)
+- Bio-defense levels (0-3)
+- Attack tracking (duration, casualties)
+- Detection mechanics
+- Relationship penalties
+
+**BOTH SYSTEMS USED IN Index.tsx:**
+```typescript
+import { BioWarfareLab } from '@/components/BioWarfareLab';           // Original
+import { SimplifiedBioWarfarePanel } from '@/components/SimplifiedBioWarfarePanel'; // Simplified
+
+// Both rendered conditionally:
+<BioWarfareLab ... />
+<SimplifiedBioWarfarePanel ... />
+```
+
+**Root Cause Analysis:**
+1. **Feature Creep** - Original system became too complex for gameplay
+2. **Simplification Attempt** - New system created instead of refactoring original
+3. **No Deprecation** - Old system kept "just in case"
+4. **Unclear Requirements** - No decision on which system is canonical
+5. **Testing Burden** - Both systems need testing, both maintained
+
+**Impact:**
+- **Code Duplication** - ~1,500 lines of duplicated functionality
+- **Maintenance Cost** - Bug fixes needed in two places
+- **Confusion** - Developers unsure which system to use/extend
+- **Testing Overhead** - Need tests for both systems
+- **User Experience** - Inconsistent based on scenario/mode
+- **Bundle Size** - Loading code for both systems
+
+**Decision Required: Which System to Keep?**
+
+**Option A: Keep Simplified System (RECOMMENDED)**
+
+**Rationale:**
+- **Gameplay Balance** - Complex evolution tree may be too detailed for strategy game
+- **Player Cognitive Load** - Simplified system easier to learn and use
+- **Performance** - Significantly less complex calculations
+- **Code Maintainability** - 700 lines vs 1,200+ lines
+- **Testing** - Easier to test and validate
+
+**Migration Plan:**
+1. Audit all features in original system not in simplified
+2. Evaluate if any original features should be ported
+3. Update all references to use simplified system
+4. Remove original system files:
+   - Delete `src/components/BioWarfareLab.tsx`
+   - Delete `src/hooks/useBioWarfare.ts`
+   - Delete `src/hooks/useEvolutionTree.ts`
+   - Remove evolution tree UI components
+5. Update Index.tsx to only use SimplifiedBioWarfarePanel
+6. Remove scenario flags that toggle between systems
+7. Update tests to remove original system tests
+
+**Features to Consider Porting:**
+- **Deployment Methods** - Original has more nuanced deployment options
+- **False Flag Operations** - Interesting covert ops mechanic
+- **Lab Tier Progression** - Could map to simplified defense levels
+- **Visual Evolution Tree** - If valuable for player experience
+
+**Option B: Keep Original Complex System**
+
+**Rationale:**
+- **Depth** - Provides more strategic depth
+- **Differentiation** - Unique Plague Inc.-inspired mechanic
+- **Realism** - More realistic bioweapon development
+- **Scenario Variety** - Can enable complex pandemic scenarios
+
+**Migration Plan:**
+1. Remove simplified system entirely
+2. Refactor original to improve performance
+3. Simplify UI while keeping evolution mechanics
+4. Balance gameplay to prevent overwhelming players
+
+**Option C: Merge Systems (Hybrid Approach)**
+
+**Rationale:**
+- **Best of Both** - Simple UI with optional advanced features
+- **Progressive Complexity** - Simple at first, complexity unlocks later
+- **Scenario-Dependent** - Simple for quick games, complex for campaign
+
+**Implementation:**
+```typescript
+// src/lib/bioWarfare/core.ts
+export class BioWarfareSystem {
+  mode: 'simple' | 'advanced';
+
+  // Simple mode: direct deploy/defend
+  simpleResearch(): void { }
+  simpleDeploy(): void { }
+  simpleDefense(): void { }
+
+  // Advanced mode: evolution tree
+  selectPlague(): void { }
+  evolveNode(): void { }
+  advancedDeploy(): void { }
+}
+
+// UI adapts based on mode
+<BioWarfarePanel mode={gameMode === 'campaign' ? 'advanced' : 'simple'} />
+```
+
+**Drawbacks:**
+- **Increased Complexity** - Now maintaining hybrid system
+- **More Code** - May end up with more total code than either system alone
+- **Testing Complexity** - Need to test both modes and transitions
+
+**RECOMMENDATION: Option A - Keep Simplified, Remove Original**
+
+**Justification:**
+1. **Game Design** - Bio-warfare should be strategic tool, not minigame
+2. **Scope** - Vector War is grand strategy game, not Plague Inc.
+3. **Player Focus** - Players focus on nuclear/conventional war, diplomacy
+4. **Development Resources** - Eliminate maintenance burden
+5. **Code Quality** - Remove 1,200+ lines of unused/duplicate code
+
+**Implementation Timeline:**
+- **Phase 1 (1-2 days):** Audit features, identify must-ports
+- **Phase 2 (2-3 days):** Port any critical features to simplified
+- **Phase 3 (1 day):** Remove original system files
+- **Phase 4 (1 day):** Update Index.tsx and all references
+- **Phase 5 (1-2 days):** Update/remove tests
+- **Phase 6 (1 day):** Test full game flow, verify no regressions
+
+**Success Metrics:**
+- 1,200+ lines removed
+- 0 references to BioWarfareLab component
+- 0 references to useBioWarfare hook
+- All bio-warfare tests updated and passing
+- Game fully playable with simplified system only
+- No user reports of missing features
+
+### Summary of Recommendations
+
+**Immediate Actions (Next 1-2 Weeks):**
+
+1. **useFlashpoints.ts Refactor** (2-3 days)
+   - Split data into category files
+   - Implement lazy loading
+   - Test flashpoint triggering
+   - Monitor bundle size reduction
+   - **Expected Impact:** 92% reduction (4,166 → ~300 lines), ~180KB bundle savings
+
+2. **BioWarfare Duplication Resolution** (1 week)
+   - Choose simplified system
+   - Remove original system
+   - Port any critical features
+   - Update all references
+   - **Expected Impact:** Remove 1,200+ lines, eliminate maintenance burden
+
+**Medium-Term Actions (Next 1-2 Months):**
+
+3. **Index.tsx Phased Extraction** (ongoing)
+   - Extract UI State Manager (1 week)
+   - Extract Combat System (2 weeks)
+   - Extract Diplomacy System (2 weeks)
+   - Extract Economy System (1 week)
+   - Extract AI Processing (1 week)
+   - Extract Research System (1 week)
+   - **Expected Impact:** 90% reduction (19,191 → ~2,000 lines)
+
+**Long-Term Architecture (Next 3-6 Months):**
+
+4. **State Management Migration**
+   - Evaluate Redux Toolkit vs Zustand vs Context
+   - Implement chosen solution incrementally
+   - Migrate systems one at a time
+   - Establish patterns and conventions
+
+5. **Screen-Based Architecture**
+   - Design screen component structure
+   - Implement lazy loading for screens
+   - Migrate UI to screen components
+   - Implement proper code splitting
+
+**Guiding Principles for All Refactoring:**
+
+1. **Incremental Progress** - Small, testable changes
+2. **Behavior Preservation** - No functional changes during refactoring
+3. **Test Coverage** - Comprehensive tests before and after
+4. **Metrics-Driven** - Measure improvements (bundle size, performance, LOC)
+5. **Patterns from Success** - Apply same patterns used in launch(), evaluateNegotiation(), calculateItemValue()
+6. **Documentation** - Log all changes in this document
+7. **Rollback Safety** - Keep old code until new code proven stable
+
+### Risk Assessment
+
+**High Risk Areas:**
+- Index.tsx refactoring (high complexity, many dependencies)
+- State management migration (affects entire application)
+
+**Medium Risk Areas:**
+- BioWarfare system removal (affects game balance)
+- Screen component extraction (UI changes visible to users)
+
+**Low Risk Areas:**
+- useFlashpoints.ts data extraction (isolated, clear boundaries)
+- Manager class extraction (incremental, testable)
+
+**Mitigation Strategies:**
+- Feature flags for all major changes
+- A/B testing for gameplay changes
+- Comprehensive integration test suite
+- Staged rollouts (dev → staging → production)
+- Quick rollback procedures
+
+### Next Steps
+
+**Recommended Starting Point: useFlashpoints.ts** (Lowest Risk, High Value)
+
+1. Create `src/data/flashpoints/` directory structure
+2. Extract nuclear materials flashpoints as proof of concept
+3. Implement lazy loading logic
+4. Test and measure bundle impact
+5. Apply pattern to remaining categories
+6. Document pattern for future data extraction
+
+This provides immediate value with minimal risk and establishes patterns for future refactoring work.
+
+---
+
 ### 2025-12-31T14:00:00Z - Fixed globe rendering inside-out issue with BackSide culling
 
 **Root Cause Identified:**
