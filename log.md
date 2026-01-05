@@ -7337,3 +7337,56 @@ Part of ongoing effort to refactor monolithic Index.tsx (19,191 lines)
 Target: 90% reduction to ~2,000 lines through 3-phase refactoring
 ```
 
+
+---
+
+## 2026-01-05 - Index.tsx Refactoring: Phase 1 - Session 2 Start
+
+### Session Context
+
+Continuing refactoring of monolithic Index.tsx (currently 19,064 lines after Session 1).
+
+**Session 1 Results:**
+- ✅ Created `/src/lib/nuclearLaunchHandlers.ts` (122 lines)
+- ✅ Created `/src/lib/gameUtilityFunctions.ts` (152 lines)
+- ✅ Reduced Index.tsx: 19,191 → 19,064 lines (-127 lines / -0.7%)
+- ✅ Build verified successfully
+- ✅ Changes committed to branch `claude/refactor-index-tsx-teeaX`
+
+**Current Status:**
+- **Branch:** `claude/refactor-index-tsx-R1wmf`
+- **Index.tsx:** 19,064 lines
+- **Target:** ~2,000 lines (90% reduction)
+- **Remaining:** ~17,064 lines to extract
+
+### Session 2 Goals
+
+**Priority Extractions (Target: ~1,600-2,500 lines reduction)**
+
+1. **Rendering Functions** (~300-500 lines)
+   - `drawWorld()`, `drawWorldPath()`, `drawNations()`, `drawTerritories()`
+   - Create `src/lib/worldRendering.ts`
+
+2. **Game Initialization** (~500-800 lines)
+   - `initNations()`, `resetGameState()`, `bootstrapNationResourceState()`
+   - `initCubanCrisisNations()`, `createCubanCrisisNation()`
+   - Create `src/lib/gameInitialization.ts`
+
+3. **Research & Construction** (~200-300 lines)
+   - `startResearch()`, `advanceResearch()`, `advanceCityConstruction()`
+   - Create `src/lib/researchHandlers.ts`
+
+4. **Leader & Doctrine** (~200-300 lines)
+   - `applyLeaderBonuses()`, `applyDoctrineEffects()`
+   - `mapAbilityCategoryToNewsCategory()`
+   - Create `src/lib/leaderDoctrineHandlers.ts`
+
+### Implementation Strategy
+
+Following proven pattern from Session 1:
+1. Extract function to dedicated module
+2. Use dependency injection pattern
+3. Replace in Index.tsx with wrapper function
+4. Verify build after each extraction
+5. Commit when logical unit complete
+
