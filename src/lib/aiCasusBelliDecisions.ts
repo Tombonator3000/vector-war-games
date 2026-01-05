@@ -95,25 +95,35 @@ export function getAIWarPersonality(nation: Nation): AIWarPersonality {
   );
 }
 
+// ============================================================================
+// Helper Functions for War Declaration Evaluation
+// ============================================================================
+
 /**
- * AI evaluates whether to declare war
+ * Result of a war factor evaluation
  */
-export function aiShouldDeclareWar(
+interface FactorEvaluation {
+  score: number;
+  reasons: string[];
+}
+
+/**
+ * Evaluates Casus Belli availability and quality
+ */
+function evaluateCasusBelli(
   aiNation: Nation,
   targetNation: Nation,
-  allNations: Nation[],
-  currentTurn: number
+  currentTurn: number,
+  personality: AIWarPersonality
 ): {
-  shouldDeclare: boolean;
-  confidence: number; // 0-100
-  bestCasusBelli?: CasusBelli;
-  reasoning: string[];
+  score: number;
+  reasons: string[];
+  bestCB?: CasusBelli;
+  earlyReturn?: { shouldDeclare: boolean; confidence: number };
 } {
-  const personality = getAIWarPersonality(aiNation);
-  const reasoning: string[] = [];
-  let confidence = 0;
+  const reasons: string[] = [];
+  let score = 0;
 
-  // Get best available Casus Belli
   const grievances = toGrievanceArray(aiNation.grievances);
   const claims = toClaimArray(aiNation.claims);
   const casusBelli = Array.isArray(aiNation.casusBelli)
@@ -138,27 +148,235 @@ export function aiShouldDeclareWar(
     );
 
     if (potentialCBs.length > 0) {
-      reasoning.push(
+      reasons.push(
         `Could generate Casus Belli: ${potentialCBs[0].type} (${potentialCBs[0].justification})`
       );
 
       // Low honor-bound nations might declare war anyway
       if (personality.honorBound < 40 && personality.aggression > 70) {
-        confidence = 30;
-        reasoning.push('Aggressive personality might ignore CB requirements');
+        score = 30;
+        reasons.push('Aggressive personality might ignore CB requirements');
       }
     } else {
-      reasoning.push('No Casus Belli available');
-      return { shouldDeclare: false, confidence: 0, reasoning };
+      reasons.push('No Casus Belli available');
+      return {
+        score: 0,
+        reasons,
+        earlyReturn: { shouldDeclare: false, confidence: 0 },
+      };
     }
   } else {
-    reasoning.push(
+    reasons.push(
       `Best Casus Belli: ${bestCB.type} (justification: ${bestCB.justification})`
     );
-    confidence += bestCB.justification / 2; // 0-50 points
+    score += bestCB.justification / 2; // 0-50 points
   }
 
-  // Validate war declaration
+  return { score, reasons, bestCB };
+}
+
+/**
+ * Evaluates military strength comparison
+ */
+function evaluateMilitaryStrength(
+  aiNation: Nation,
+  targetNation: Nation
+): FactorEvaluation {
+  const myMilitary =
+    aiNation.missiles * 10 +
+    (aiNation.bombers || 0) * 5 +
+    (aiNation.submarines || 0) * 8;
+  const theirMilitary =
+    targetNation.missiles * 10 +
+    (targetNation.bombers || 0) * 5 +
+    (targetNation.submarines || 0) * 8;
+  const militaryRatio = myMilitary / (theirMilitary || 1);
+
+  if (militaryRatio > 1.5) {
+    return {
+      score: 20,
+      reasons: [`Strong military advantage (${militaryRatio.toFixed(1)}x)`],
+    };
+  } else if (militaryRatio < 0.7) {
+    return {
+      score: -30,
+      reasons: [`Military disadvantage (${militaryRatio.toFixed(1)}x)`],
+    };
+  }
+
+  return { score: 0, reasons: [] };
+}
+
+/**
+ * Evaluates relationship and threat factors
+ */
+function evaluateRelationshipAndThreat(
+  aiNation: Nation,
+  targetNation: Nation
+): FactorEvaluation {
+  const reasons: string[] = [];
+  let score = 0;
+
+  // Relationship factor
+  const relationship = aiNation.relationships?.[targetNation.id] || 0;
+  if (relationship < -50) {
+    score += 15;
+    reasons.push(`Hostile relationship (${relationship})`);
+  } else if (relationship > 0) {
+    score -= 20;
+    reasons.push(`Positive relationship (${relationship})`);
+  }
+
+  // Threat level factor
+  const threatLevel = aiNation.threats?.[targetNation.id] || 0;
+  if (threatLevel > 60) {
+    score += 20;
+    reasons.push(`High threat level (${threatLevel})`);
+  }
+
+  return { score, reasons };
+}
+
+/**
+ * Evaluates personality-based confidence modifiers
+ */
+function evaluatePersonalityFactors(
+  personality: AIWarPersonality,
+  validation: ReturnType<typeof validateWarDeclaration>
+): FactorEvaluation {
+  const reasons: string[] = [];
+  let score = 0;
+
+  // Aggression and opportunism
+  score += (personality.aggression - 50) / 2; // -25 to +25
+  score += (personality.opportunism - 50) / 4; // -12.5 to +12.5
+
+  // Honor-bound check
+  if (validation.validity !== 'valid' && personality.honorBound > 60) {
+    score -= 40;
+    reasons.push(
+      `Insufficient justification (honorBound: ${personality.honorBound})`
+    );
+  }
+
+  return { score, reasons };
+}
+
+/**
+ * Evaluates alliance balance between nations
+ */
+function evaluateAllianceBalance(
+  aiNation: Nation,
+  targetNation: Nation,
+  allNations: Nation[]
+): FactorEvaluation {
+  const theirAllies = allNations.filter((n) =>
+    targetNation.alliances?.includes(n.id)
+  );
+  const myAllies = allNations.filter((n) => aiNation.alliances?.includes(n.id));
+
+  if (theirAllies.length > myAllies.length) {
+    return {
+      score: -15,
+      reasons: [
+        `Target has more allies (${theirAllies.length} vs ${myAllies.length})`,
+      ],
+    };
+  } else if (myAllies.length > theirAllies.length) {
+    return {
+      score: 10,
+      reasons: ['We have alliance advantage'],
+    };
+  }
+
+  return { score: 0, reasons: [] };
+}
+
+/**
+ * Evaluates economic readiness for war
+ */
+function evaluateEconomicStrength(aiNation: Nation): FactorEvaluation {
+  if (aiNation.production < 30) {
+    return {
+      score: -20,
+      reasons: [`Weak economy (production: ${aiNation.production})`],
+    };
+  }
+  return { score: 0, reasons: [] };
+}
+
+/**
+ * Evaluates expansionist ideology bonus
+ */
+function evaluateExpansionistBonus(
+  personality: AIWarPersonality,
+  bestCB?: CasusBelli
+): FactorEvaluation {
+  if (personality.expansionist > 70 && bestCB?.type === 'territorial-claim') {
+    return {
+      score: 15,
+      reasons: ['Expansionist ideology supports territorial claims'],
+    };
+  }
+  return { score: 0, reasons: [] };
+}
+
+/**
+ * Evaluates penalty for ongoing wars
+ */
+function evaluateActiveWars(aiNation: Nation): FactorEvaluation {
+  const activeWarsCount = aiNation.activeWars?.length || 0;
+  if (activeWarsCount > 0) {
+    return {
+      score: -25 * activeWarsCount,
+      reasons: [`Already fighting ${activeWarsCount} war(s)`],
+    };
+  }
+  return { score: 0, reasons: [] };
+}
+
+// ============================================================================
+// Main War Declaration Function
+// ============================================================================
+
+/**
+ * AI evaluates whether to declare war
+ *
+ * Refactored to use helper functions for each evaluation factor.
+ * Each factor is independently testable and clearly documented.
+ */
+export function aiShouldDeclareWar(
+  aiNation: Nation,
+  targetNation: Nation,
+  allNations: Nation[],
+  currentTurn: number
+): {
+  shouldDeclare: boolean;
+  confidence: number; // 0-100
+  bestCasusBelli?: CasusBelli;
+  reasoning: string[];
+} {
+  const personality = getAIWarPersonality(aiNation);
+  const reasoning: string[] = [];
+  let confidence = 0;
+
+  // Step 1: Evaluate Casus Belli
+  const cbEval = evaluateCasusBelli(aiNation, targetNation, currentTurn, personality);
+  confidence += cbEval.score;
+  reasoning.push(...cbEval.reasons);
+
+  // Early return if no CB available
+  if (cbEval.earlyReturn) {
+    return { ...cbEval.earlyReturn, reasoning };
+  }
+
+  // Step 2: Validate war declaration
+  const grievances = toGrievanceArray(aiNation.grievances);
+  const claims = toClaimArray(aiNation.claims);
+  const casusBelli = Array.isArray(aiNation.casusBelli)
+    ? aiNation.casusBelli
+    : [];
+
   const validation = validateWarDeclaration(
     aiNation,
     targetNation,
@@ -171,89 +389,50 @@ export function aiShouldDeclareWar(
 
   if (!validation.canDeclareWar) {
     reasoning.push(`Cannot declare war: ${validation.blockers?.join(', ')}`);
-    return { shouldDeclare: false, confidence: 0, bestCasusBelli: bestCB, reasoning };
+    return {
+      shouldDeclare: false,
+      confidence: 0,
+      bestCasusBelli: cbEval.bestCB,
+      reasoning,
+    };
   }
 
-  // Factor 1: Military strength comparison
-  const myMilitary =
-    aiNation.missiles * 10 +
-    (aiNation.bombers || 0) * 5 +
-    (aiNation.submarines || 0) * 8;
-  const theirMilitary =
-    targetNation.missiles * 10 +
-    (targetNation.bombers || 0) * 5 +
-    (targetNation.submarines || 0) * 8;
-  const militaryRatio = myMilitary / (theirMilitary || 1);
+  // Step 3: Evaluate military strength
+  const militaryEval = evaluateMilitaryStrength(aiNation, targetNation);
+  confidence += militaryEval.score;
+  reasoning.push(...militaryEval.reasons);
 
-  if (militaryRatio > 1.5) {
-    confidence += 20;
-    reasoning.push(`Strong military advantage (${militaryRatio.toFixed(1)}x)`);
-  } else if (militaryRatio < 0.7) {
-    confidence -= 30;
-    reasoning.push(`Military disadvantage (${militaryRatio.toFixed(1)}x)`);
-  }
+  // Step 4: Evaluate relationship and threat
+  const relationshipEval = evaluateRelationshipAndThreat(aiNation, targetNation);
+  confidence += relationshipEval.score;
+  reasoning.push(...relationshipEval.reasons);
 
-  // Factor 2: Relationship
-  const relationship = aiNation.relationships?.[targetNation.id] || 0;
-  if (relationship < -50) {
-    confidence += 15;
-    reasoning.push(`Hostile relationship (${relationship})`);
-  } else if (relationship > 0) {
-    confidence -= 20;
-    reasoning.push(`Positive relationship (${relationship})`);
-  }
+  // Step 5: Evaluate personality factors
+  const personalityEval = evaluatePersonalityFactors(personality, validation);
+  confidence += personalityEval.score;
+  reasoning.push(...personalityEval.reasons);
 
-  // Factor 3: Threat level
-  const threatLevel = aiNation.threats?.[targetNation.id] || 0;
-  if (threatLevel > 60) {
-    confidence += 20;
-    reasoning.push(`High threat level (${threatLevel})`);
-  }
+  // Step 6: Evaluate alliance balance
+  const allianceEval = evaluateAllianceBalance(aiNation, targetNation, allNations);
+  confidence += allianceEval.score;
+  reasoning.push(...allianceEval.reasons);
 
-  // Factor 4: Personality factors
-  confidence += (personality.aggression - 50) / 2; // -25 to +25
-  confidence += (personality.opportunism - 50) / 4; // -12.5 to +12.5
+  // Step 7: Evaluate economic strength
+  const economicEval = evaluateEconomicStrength(aiNation);
+  confidence += economicEval.score;
+  reasoning.push(...economicEval.reasons);
 
-  // Factor 5: Honor-bound check
-  if (validation.validity !== 'valid' && personality.honorBound > 60) {
-    confidence -= 40;
-    reasoning.push(`Insufficient justification (honorBound: ${personality.honorBound})`);
-  }
+  // Step 8: Evaluate expansionist bonus
+  const expansionistEval = evaluateExpansionistBonus(personality, cbEval.bestCB);
+  confidence += expansionistEval.score;
+  reasoning.push(...expansionistEval.reasons);
 
-  // Factor 6: Allies and enemies
-  const theirAllies = allNations.filter((n) =>
-    targetNation.alliances?.includes(n.id)
-  );
-  const myAllies = allNations.filter((n) => aiNation.alliances?.includes(n.id));
+  // Step 9: Evaluate active wars penalty
+  const activeWarsEval = evaluateActiveWars(aiNation);
+  confidence += activeWarsEval.score;
+  reasoning.push(...activeWarsEval.reasons);
 
-  if (theirAllies.length > myAllies.length) {
-    confidence -= 15;
-    reasoning.push(`Target has more allies (${theirAllies.length} vs ${myAllies.length})`);
-  } else if (myAllies.length > theirAllies.length) {
-    confidence += 10;
-    reasoning.push(`We have alliance advantage`);
-  }
-
-  // Factor 7: Economic strength
-  if (aiNation.production < 30) {
-    confidence -= 20;
-    reasoning.push(`Weak economy (production: ${aiNation.production})`);
-  }
-
-  // Factor 8: Expansionist desires
-  if (personality.expansionist > 70 && bestCB?.type === 'territorial-claim') {
-    confidence += 15;
-    reasoning.push(`Expansionist ideology supports territorial claims`);
-  }
-
-  // Factor 9: Already at war?
-  const activeWarsCount = aiNation.activeWars?.length || 0;
-  if (activeWarsCount > 0) {
-    confidence -= 25 * activeWarsCount;
-    reasoning.push(`Already fighting ${activeWarsCount} war(s)`);
-  }
-
-  // Final decision threshold
+  // Step 10: Final decision
   const threshold = 60 - personality.aggression / 3; // 27-60
   const shouldDeclare = confidence >= threshold;
 
@@ -264,7 +443,7 @@ export function aiShouldDeclareWar(
   return {
     shouldDeclare,
     confidence: Math.max(0, Math.min(100, confidence)),
-    bestCasusBelli: bestCB,
+    bestCasusBelli: cbEval.bestCB,
     reasoning,
   };
 }
