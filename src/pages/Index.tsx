@@ -2247,17 +2247,11 @@ const AudioSys = {
   },
 
   updateAmbientForDefcon(defconLevel: number) {
-    const targetClip: AmbientClipId | null =
-      defconLevel === 1 ? 'defcon1-siren'
-      : defconLevel === 2 ? 'defcon2-siren'
-      : null;
+    // DEFCON 1 and 2 sirens should NOT be ambient loops
+    // They play once via audioManager.playCritical() in handleDefconTransition()
+    // No ambient loop needed for DEFCON sirens
 
-    if (targetClip) {
-      const shouldRestart = this.ambientDesiredClipId !== targetClip;
-      this.startAmbientLoop(targetClip, { forceRestart: shouldRestart });
-      return;
-    }
-
+    // Stop any existing DEFCON siren loops if they somehow got started
     if (
       this.ambientDesiredClipId === 'defcon1-siren' ||
       this.ambientDesiredClipId === 'defcon2-siren'
@@ -2267,18 +2261,15 @@ const AudioSys = {
   },
 
   handleDefconTransition(previous: number, next: number) {
-    const targetClip: AmbientClipId | null =
-      next === 1 ? 'defcon1-siren'
-      : next === 2 ? 'defcon2-siren'
-      : null;
-
-    if (targetClip) {
-      const shouldRestart = previous > 2 || this.ambientDesiredClipId !== targetClip;
-      this.startAmbientLoop(targetClip, { forceRestart: shouldRestart });
-    } else if (previous === 1 || previous === 2) {
+    // Stop any existing DEFCON siren ambient loops
+    if (
+      this.ambientDesiredClipId === 'defcon1-siren' ||
+      this.ambientDesiredClipId === 'defcon2-siren'
+    ) {
       this.stopAmbientLoop();
     }
 
+    // Only play siren on escalation to DEFCON 1 or 2
     if (next !== 1 && next !== 2) {
       return;
     }
@@ -2288,6 +2279,7 @@ const AudioSys = {
       return;
     }
 
+    // Play DEFCON siren ONCE (not as a loop)
     const triggerOscillatorFallback = () => {
       this.playSFX('defcon');
     };
