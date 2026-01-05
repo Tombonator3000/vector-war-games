@@ -1,4 +1,5 @@
 import type { Nation } from '@/types/game';
+import { calculateDefenseDamageMultiplier } from '@/lib/nuclearDamage';
 
 export type NuclearDamageStage = 'shockwave' | 'thermal' | 'radiation';
 
@@ -60,8 +61,9 @@ function formatMillions(value: number): string {
 
 export function calculateNuclearImpact(input: NuclearImpactInput): NuclearImpactResult {
   const yieldMT = Math.max(0, input.yieldMT);
-  const mitigation = Math.max(0.15, 1 - Math.max(0, input.defense) * 0.05);
-  const intensityBase = Math.log10(yieldMT + 1) * mitigation;
+  // Use consistent defense mitigation formula from nuclearDamage.ts
+  const damageMultiplier = calculateDefenseDamageMultiplier(input.defense);
+  const intensityBase = Math.log10(yieldMT + 1) * damageMultiplier;
   const severity = Math.max(0, intensityBase * 1.4);
 
   const stageBlueprints = [
