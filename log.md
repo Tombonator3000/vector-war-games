@@ -610,6 +610,149 @@ export class BioWarfareSystem {
 6. Document pattern for future data extraction
 
 This provides immediate value with minimal risk and establishes patterns for future refactoring work.
+### 2026-01-05T00:00:00Z - Deep audit of all game functions - 3 critical bugs fixed
+
+**Audit Scope:**
+Performed comprehensive deep audit of all game systems including:
+- Core game loop and state management
+- Production calculations and multiplier stacking
+- Nuclear damage calculations
+- Victory condition checks
+- Resource depletion and bounds checking
+- AI decision-making systems
+- Conventional warfare mechanics
+- Diplomacy and negotiation systems
+
+**Critical Bugs Found and Fixed:**
+
+#### Bug #1: Green Shift Penalty Override (CRITICAL)
+**Location:** `src/lib/gamePhaseHandlers.ts` (lines 521-522)
+
+**Problem:**
+- Green shift penalty was **overriding** all previous production multipliers instead of **multiplying** them
+- If a nation had both hunger penalty (50%) and green shift (30%), the final penalty was only 30% instead of cumulative 65%
+- This caused nations with green shift to have higher production than intended when suffering from other debuffs
+
+**Root Cause:**
+```typescript
+// BEFORE (BUG):
+prodMult = PENALTY_CONFIG.GREEN_SHIFT_PROD_MULT;  // Sets to 0.7
+uranMult = PENALTY_CONFIG.GREEN_SHIFT_URANIUM_MULT;  // Sets to 0.5
+```
+This **replaced** the multiplier instead of **applying** it to existing penalties.
+
+**Fix Applied:**
+```typescript
+// AFTER (FIXED):
+prodMult *= PENALTY_CONFIG.GREEN_SHIFT_PROD_MULT;  // Multiplies by 0.7
+uranMult *= PENALTY_CONFIG.GREEN_SHIFT_URANIUM_MULT;  // Multiplies by 0.5
+```
+
+**Impact:**
+- Production penalties now stack correctly
+- Nations with multiple debuffs (hunger + sickness + green shift) now have appropriately severe production losses
+- Balances eco movement mechanics properly
+
+---
+
+#### Bug #2: Nuclear Damage Inconsistency (CRITICAL)
+**Location:** `src/lib/nuclearDamageModel.ts` (line 63-65)
+
+**Problem:**
+- Two different nuclear damage calculation systems used **different defense mitigation formulas**
+- `nuclearDamage.ts` used soft cap formula: `mitigation = defense / (defense + 20)`
+- `nuclearDamageModel.ts` used linear formula: `mitigation = max(0.15, 1 - defense * 0.05)`
+- This caused **wildly different damage** depending on which calculation path was used
+
+**Example Discrepancy:**
+With defense = 20:
+- Soft cap formula: mitigation = 20/40 = 0.5 (50% damage reduction)
+- Linear formula: mitigation = max(0.15, 1 - 1.0) = 0.15 (85% damage reduction)
+- **70% difference in damage!**
+
+**Root Cause:**
+`nuclearDamageModel.ts` was using ad-hoc linear formula instead of the well-designed soft cap formula from `nuclearDamage.ts`.
+
+**Fix Applied:**
+- Imported `calculateDefenseDamageMultiplier()` from `nuclearDamage.ts`
+- Replaced linear formula with consistent soft cap calculation
+- Both systems now use identical defense mitigation
+
+**Files Modified:**
+- `src/lib/nuclearDamageModel.ts` (lines 2, 65)
+  - Added import: `import { calculateDefenseDamageMultiplier } from '@/lib/nuclearDamage';`
+  - Replaced: `const mitigation = Math.max(0.15, 1 - Math.max(0, input.defense) * 0.05);`
+  - With: `const damageMultiplier = calculateDefenseDamageMultiplier(input.defense);`
+
+**Impact:**
+- Nuclear damage calculations now consistent across all code paths
+- Defense research provides predictable benefit
+- No more confusion from different damage values for same defense level
+
+---
+
+#### Bug #3: Economic Victory Description Mismatch
+**Location:** `src/types/streamlinedVictoryConditions.ts` (lines 112, 132, 140)
+
+**Problem:**
+- Victory condition description said "Generate 200+ production per turn"
+- Actual check was `player.production >= 200` (checking stockpile, not generation rate)
+- Players confused why they "lost" economic victory after spending production
+- Misleading UI text
+
+**Fix Applied:**
+- Updated description: "Control 10 cities and accumulate 200 production stockpile"
+- Updated condition description: "Accumulate 200+ production stockpile"
+- Updated unit label: "production" instead of "production/turn"
+
+**Impact:**
+- Victory condition text now accurately reflects game mechanics
+- Players understand they need to save production, not just generate it
+- No more confusion about victory condition flipping
+
+---
+
+**Additional Findings (No Bugs Found):**
+
+✅ **Resource Depletion System** - Well bounded with proper min/max checks
+✅ **Radiation Zone Processing** - Proper decay and damage capping
+✅ **Instability Effects** - Proper bounds on civil war population multiplier
+✅ **Production Calculations** - Math.max(0, ...) prevents negative values
+✅ **Refugee Labor Loss** - Math.max(1, ...) prevents division by zero
+✅ **City Maintenance** - Proper shortage penalty calculations
+
+**Codebase Health Assessment:**
+
+**Strengths:**
+- Good use of configuration constants (PRODUCTION_CONFIG, PENALTY_CONFIG, etc.)
+- Comprehensive bounds checking in most systems
+- Well-documented production phase handlers
+- Clean separation of concerns in recent refactoring
+
+**Areas of Concern:**
+- Index.tsx still 19,191 lines (700KB) - monolithic
+- useFlashpoints.ts is 209KB (!) - performance risk
+- useConventionalWarfare.ts is 60KB - complexity risk
+- Multiple state management approaches (GameStateManager, React state, window APIs)
+- Duplicate systems (biowarfare original vs simplified, culture original vs streamlined)
+
+**Recommendations for Future Work:**
+1. Continue refactoring Index.tsx into smaller modules
+2. Split useFlashpoints into focused sub-hooks
+3. Consolidate duplicate systems (remove deprecated versions)
+4. Standardize on single state management approach
+5. Add integration tests for production multiplier stacking
+6. Add tests for nuclear damage consistency across both calculation paths
+
+**Files Modified:**
+- `src/lib/gamePhaseHandlers.ts` (lines 521-522)
+- `src/lib/nuclearDamageModel.ts` (lines 2, 65)
+- `src/types/streamlinedVictoryConditions.ts` (lines 112, 132, 140)
+
+**Verification:**
+- TypeScript compilation successful: `npx tsc --noEmit` ✓
+- No new errors introduced
+- All fixes are backwards compatible
 
 ---
 

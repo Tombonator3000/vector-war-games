@@ -518,8 +518,8 @@ function calculateProductionMultipliers(
 
   // Green shift debuff
   if (n.greenShiftTurns && n.greenShiftTurns > 0) {
-    prodMult = PENALTY_CONFIG.GREEN_SHIFT_PROD_MULT;
-    uranMult = PENALTY_CONFIG.GREEN_SHIFT_URANIUM_MULT;
+    prodMult *= PENALTY_CONFIG.GREEN_SHIFT_PROD_MULT;
+    uranMult *= PENALTY_CONFIG.GREEN_SHIFT_URANIUM_MULT;
     n.greenShiftTurns--;
     if (player && n === player) {
       log('Eco movement reduces nuclear production', 'warning');

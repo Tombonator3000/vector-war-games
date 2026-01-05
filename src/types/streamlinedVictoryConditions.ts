@@ -109,7 +109,7 @@ export const VICTORY_PATHS: VictoryPathDefinition[] = [
   {
     type: 'economic',
     name: 'Economic Victory',
-    description: 'Control 10 cities and maintain 200 production per turn',
+    description: 'Control 10 cities and accumulate 200 production stockpile',
     icon: '💰',
     color: 'text-yellow-500',
     conditions: [
@@ -129,7 +129,7 @@ export const VICTORY_PATHS: VictoryPathDefinition[] = [
       },
       {
         id: 'production-capacity',
-        description: 'Generate 200+ production per turn',
+        description: 'Accumulate 200+ production stockpile',
         check: (player) => {
           return player.production >= 200;
         },
@@ -137,7 +137,7 @@ export const VICTORY_PATHS: VictoryPathDefinition[] = [
           return {
             current: Math.floor(player.production),
             required: 200,
-            unit: 'production/turn',
+            unit: 'production',
           };
         },
       },
