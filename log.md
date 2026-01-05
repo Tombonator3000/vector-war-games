@@ -4526,3 +4526,241 @@ Similar to the `resolveFlashpoint` and `evaluateAttack` refactorings:
 
 This refactoring completes the trilogy of major AI decision-making function improvements!
 
+
+---
+
+## 2026-01-05 - Refactor selectOptimalGovernmentForAI Function
+
+**Objective:** Refactor complex government selection function for improved clarity and testability
+
+**Agent:** Claude (Sonnet 4.5)
+
+**Branch:** `claude/refactor-complex-code-cdQE8`
+
+**Commit:** `afaa0c2`
+
+### Problem
+
+The `selectOptimalGovernmentForAI()` function in `src/lib/aiGovernmentSelection.ts` had several complexity issues:
+
+1. **Large Switch Statement:** 6 personality cases (lines 94-137) with complex scoring logic
+2. **Mixed Concerns:** Personality-based scoring intertwined with situational scoring
+3. **Monolithic Structure:** 107 lines with multiple nested conditionals
+4. **Limited Testability:** Cannot test individual personality or situational logic in isolation
+5. **High Cyclomatic Complexity:** Multiple nested if statements and switch cases
+6. **Maintainability Issues:** Adding new personalities or situations requires modifying core function
+
+### Solution
+
+Applied **Strategy Pattern** and **Single Responsibility Principle** by extracting scoring logic into focused helper functions:
+
+#### Personality-Based Scoring Helpers (6 functions)
+
+1. **`scoreForAggressive()`** (lines 73-82)
+   - Prefers military-focused governments
+   - Weights: recruitment (×20), cost reduction (×50)
+   - Bonus: Military Junta, Dictatorship (+30)
+
+2. **`scoreForDefensive()`** (lines 88-97)
+   - Prefers stable governments with coup resistance
+   - Weights: stability modifier (×2), coup resistance (×0.3)
+   - Bonus: Constitutional Monarchy, Absolute Monarchy (+25)
+
+3. **`scoreForBalanced()`** (lines 103-113)
+   - Prefers production and research balance
+   - Weights: production (×20), research (×20), stability (×1)
+   - Bonus: Technocracy, One Party State (+20)
+
+4. **`scoreForTrickster()`** (lines 119-128)
+   - Prefers intelligence and propaganda capabilities
+   - Weights: intel bonus (×2), propaganda (×15)
+   - Bonus: Dictatorship, One Party State (+20)
+
+5. **`scoreForIsolationist()`** (lines 134-143)
+   - Prefers self-sufficient, stable governments
+   - Weights: stability (×2), production (×15)
+   - Bonus: Absolute Monarchy, Technocracy (+25)
+
+6. **`scoreForDefault()`** (lines 149-158)
+   - Balanced fallback for unknown personalities
+   - Weights: production (×15), research (×15), stability (×1)
+
+#### Situational Scoring Helpers (3 functions)
+
+1. **`applyWarSituationBonus()`** (lines 168-177)
+   - Applies military bonuses during wartime
+   - Weights: recruitment (×15), cost reduction (×30)
+   - Returns 0 if not at war
+
+2. **`applyStabilityBonus()`** (lines 183-192)
+   - Applies stability bonuses when stability < 50
+   - Weights: stability modifier (×3), coup resistance (×0.5)
+   - Returns 0 if stability ≥ 50
+
+3. **`applyProductionBonus()`** (lines 198-206)
+   - Special bonus for Technocracy with high production
+   - Returns +25 if production > 100 and gov is Technocracy
+   - Returns 0 otherwise
+
+#### Utility Helper (1 function)
+
+1. **`isNationAtWar()`** (lines 211-219)
+   - Extracted war detection logic from main function
+   - Checks for active hostile relationships (threat > 50)
+   - Excludes eliminated nations and truces
+
+### Refactored Main Function
+
+**`selectOptimalGovernmentForAI()`** (lines 234-302)
+
+The main function is now a clear orchestrator:
+
+1. **Validation** (lines 239-246)
+   - Check government state exists
+   - Filter unlocked governments (exclude current)
+   - Early return if no options
+
+2. **Context Gathering** (lines 248-251)
+   - Collect situational data once upfront
+   - `isAtWar`, `stability`, `production`
+   - Prevents redundant calculations
+
+3. **Scoring Pipeline** (lines 259-291)
+   - **Step 1:** Apply personality-based scoring (switch statement)
+   - **Step 2:** Apply situational bonuses (war, stability, production)
+   - Each government scored independently
+
+4. **Selection** (lines 293-301)
+   - Sort by score descending
+   - Require significant improvement threshold (>15 points)
+   - Return best option or null
+
+### Key Improvements
+
+1. **Separation of Concerns:**
+   - Personality scoring isolated from situational scoring
+   - Each helper has single, clear responsibility
+   - War detection extracted into utility function
+
+2. **Testability:**
+   - Each personality scorer can be unit tested independently
+   - Situational bonuses tested in isolation
+   - Mock-friendly function signatures
+
+3. **Maintainability:**
+   - Adding new personality: create new `scoreFor*()` function, add switch case
+   - Modifying personality logic: edit only that function
+   - Adjusting situational factors: modify only relevant helper
+
+4. **Readability:**
+   - Main function reduced from 107 to ~68 lines
+   - Clear two-step scoring process documented
+   - Helper functions have descriptive names and JSDoc
+
+5. **Type Safety:**
+   - All helpers properly typed
+   - `typeof GOVERNMENT_BONUSES[GovernmentType]` ensures bonus structure consistency
+   - TypeScript enforces correct parameter types
+
+6. **Code Organization:**
+   - Clear section headers with visual separators
+   - Logical grouping: personalities → situations → utilities → main
+   - Consistent naming pattern: `scoreFor*()`, `apply*Bonus()`
+
+### Behavioral Preservation
+
+**No changes to AI behavior:**
+- ✅ Exact same scoring formulas preserved
+- ✅ Identical weight multipliers
+- ✅ Same personality bonuses
+- ✅ Same situational logic
+- ✅ Same threshold (>15 points)
+- ✅ Same war detection criteria
+
+### Code Metrics
+
+**Before:**
+- Main function: 107 lines
+- Cyclomatic complexity: ~12
+- Switch statement: 44 lines (6 cases)
+- Testability: Low (monolithic)
+
+**After:**
+- Main function: ~68 lines (-36%)
+- Cyclomatic complexity: ~5 (-58%)
+- Helper functions: 10 functions, ~160 lines total
+- Testability: High (isolated functions)
+
+**Overall:**
+- Total lines: +93 (includes JSDoc and section headers)
+- Functions: 1 → 11 (+10 helpers)
+- Average function length: ~17 lines
+- Code organization: Significantly improved
+
+### Testing Implications
+
+**Can now test independently:**
+1. Each personality scoring algorithm
+2. Each situational bonus calculation
+3. War detection logic
+4. Main orchestration logic
+5. Edge cases per personality
+
+**Example test cases:**
+```typescript
+// Test aggressive scoring
+expect(scoreForAggressive('military_junta', bonuses)).toBeGreaterThan(
+  scoreForAggressive('democracy', bonuses)
+);
+
+// Test war bonus application
+expect(applyWarSituationBonus(true, militaryBonuses)).toBeGreaterThan(0);
+expect(applyWarSituationBonus(false, militaryBonuses)).toBe(0);
+
+// Test stability bonus threshold
+expect(applyStabilityBonus(49, bonuses)).toBeGreaterThan(0);
+expect(applyStabilityBonus(50, bonuses)).toBe(0);
+```
+
+### Pattern Consistency
+
+This refactoring follows the same architectural approach as previous AI refactorings:
+
+1. **`resolveFlashpoint()`** - Extracted flashpoint evaluation helpers
+2. **`evaluateAttack()`** - Extracted attack evaluation helpers
+3. **`aiShouldDeclareWar()`** - Extracted war declaration helpers
+4. **`selectOptimalGovernmentForAI()`** - Extracted government scoring helpers ✓
+
+**Common patterns:**
+- Extract complex logic into single-purpose helpers
+- Main function becomes orchestrator
+- Preserve exact behavior
+- Improve testability and maintainability
+- Clear documentation and naming
+
+### Verification
+
+- ✅ TypeScript compilation passes: `npx tsc --noEmit`
+- ✅ All helper functions properly typed
+- ✅ Behavior identical to original implementation
+- ✅ No changes to AI decision-making
+- ✅ Code follows established refactoring patterns
+- ✅ Section headers for clear organization
+- ✅ JSDoc comments on all helpers
+
+### Related Files
+
+- `src/lib/aiGovernmentSelection.ts`: Refactored `selectOptimalGovernmentForAI()` and added 10 helper functions
+
+### Future Enhancements
+
+With this refactoring, the following improvements are now easier to implement:
+
+1. **Unit Tests:** Each helper can be tested independently
+2. **New Personalities:** Add new `scoreFor*()` function and switch case
+3. **New Situational Factors:** Add new `apply*Bonus()` function
+4. **AI Tuning:** Adjust weights in specific helpers without affecting others
+5. **A/B Testing:** Swap personality scorers to test different strategies
+6. **Difficulty Levels:** Override scorers for different AI difficulty settings
+
+This refactoring significantly improves code quality while maintaining exact behavior, making the codebase more maintainable and extensible for future development.

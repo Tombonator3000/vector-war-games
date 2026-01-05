@@ -62,8 +62,174 @@ export function evaluateCivicsResearchPriority(
   return Math.min(1.0, priority);
 }
 
+// ============================================================================
+// HELPER FUNCTIONS: Personality-Based Government Scoring
+// ============================================================================
+
+/**
+ * Score government for aggressive AI personality
+ * Prefers military-focused governments with recruitment and cost benefits
+ */
+function scoreForAggressive(
+  gov: GovernmentType,
+  bonuses: typeof GOVERNMENT_BONUSES[GovernmentType]
+): number {
+  let score = 0;
+  score += bonuses.recruitmentMultiplier * 20;
+  score += bonuses.militaryCostReduction * 50;
+  if (gov === 'military_junta' || gov === 'dictatorship') score += 30;
+  return score;
+}
+
+/**
+ * Score government for defensive AI personality
+ * Prefers stable governments with high coup resistance
+ */
+function scoreForDefensive(
+  gov: GovernmentType,
+  bonuses: typeof GOVERNMENT_BONUSES[GovernmentType]
+): number {
+  let score = 0;
+  score += bonuses.baseStabilityModifier * 2;
+  score += bonuses.coupResistance * 0.3;
+  if (gov === 'constitutional_monarchy' || gov === 'absolute_monarchy') score += 25;
+  return score;
+}
+
+/**
+ * Score government for balanced AI personality
+ * Prefers governments with good production and research bonuses
+ */
+function scoreForBalanced(
+  gov: GovernmentType,
+  bonuses: typeof GOVERNMENT_BONUSES[GovernmentType]
+): number {
+  let score = 0;
+  score += bonuses.productionMultiplier * 20;
+  score += bonuses.researchMultiplier * 20;
+  score += bonuses.baseStabilityModifier;
+  if (gov === 'technocracy' || gov === 'one_party_state') score += 20;
+  return score;
+}
+
+/**
+ * Score government for trickster AI personality
+ * Prefers governments with intelligence and propaganda benefits
+ */
+function scoreForTrickster(
+  gov: GovernmentType,
+  bonuses: typeof GOVERNMENT_BONUSES[GovernmentType]
+): number {
+  let score = 0;
+  score += bonuses.intelBonus * 2;
+  score += bonuses.propagandaEffectiveness * 15;
+  if (gov === 'dictatorship' || gov === 'one_party_state') score += 20;
+  return score;
+}
+
+/**
+ * Score government for isolationist AI personality
+ * Prefers stable, self-sufficient governments
+ */
+function scoreForIsolationist(
+  gov: GovernmentType,
+  bonuses: typeof GOVERNMENT_BONUSES[GovernmentType]
+): number {
+  let score = 0;
+  score += bonuses.baseStabilityModifier * 2;
+  score += bonuses.productionMultiplier * 15;
+  if (gov === 'absolute_monarchy' || gov === 'technocracy') score += 25;
+  return score;
+}
+
+/**
+ * Score government for default/unknown AI personality
+ * Uses balanced approach favoring production and research
+ */
+function scoreForDefault(
+  gov: GovernmentType,
+  bonuses: typeof GOVERNMENT_BONUSES[GovernmentType]
+): number {
+  let score = 0;
+  score += bonuses.productionMultiplier * 15;
+  score += bonuses.researchMultiplier * 15;
+  score += bonuses.baseStabilityModifier;
+  return score;
+}
+
+// ============================================================================
+// HELPER FUNCTIONS: Situational Government Scoring
+// ============================================================================
+
+/**
+ * Apply bonus for war situation
+ * During war, prioritize military-focused governments
+ */
+function applyWarSituationBonus(
+  isAtWar: boolean,
+  bonuses: typeof GOVERNMENT_BONUSES[GovernmentType]
+): number {
+  if (!isAtWar) return 0;
+  let bonus = 0;
+  bonus += bonuses.recruitmentMultiplier * 15;
+  bonus += bonuses.militaryCostReduction * 30;
+  return bonus;
+}
+
+/**
+ * Apply bonus for low stability situation
+ * When stability is low, prioritize stable governments
+ */
+function applyStabilityBonus(
+  stability: number,
+  bonuses: typeof GOVERNMENT_BONUSES[GovernmentType]
+): number {
+  if (stability >= 50) return 0;
+  let bonus = 0;
+  bonus += bonuses.baseStabilityModifier * 3;
+  bonus += bonuses.coupResistance * 0.5;
+  return bonus;
+}
+
+/**
+ * Apply bonus for high production situation
+ * Technocracy is especially valuable with high production
+ */
+function applyProductionBonus(
+  production: number,
+  gov: GovernmentType
+): number {
+  if (production > 100 && gov === 'technocracy') {
+    return 25;
+  }
+  return 0;
+}
+
+/**
+ * Check if nation is currently at war with any other nation
+ */
+function isNationAtWar(nation: Nation, nations: Nation[]): boolean {
+  return nations.some(
+    (other) =>
+      other !== nation &&
+      !other.eliminated &&
+      !nation.treaties?.[other.id]?.truceTurns &&
+      (nation.threats?.[other.id] || 0) > 50
+  );
+}
+
+// ============================================================================
+// MAIN FUNCTION: Government Selection Orchestrator
+// ============================================================================
+
 /**
  * Select best government type for AI based on their situation and personality
+ *
+ * This function orchestrates the government selection process by:
+ * 1. Filtering available governments
+ * 2. Scoring each based on personality preferences
+ * 3. Applying situational bonuses (war, stability, production)
+ * 4. Selecting the highest-scoring option
  */
 export function selectOptimalGovernmentForAI(
   nation: Nation,
@@ -75,10 +241,14 @@ export function selectOptimalGovernmentForAI(
   const currentGov = nation.governmentState.currentGovernment;
   const unlockedGovs = nation.unlockedGovernments || ['democracy'];
 
-  // Filter to only unlocked governments
+  // Filter to only unlocked governments (exclude current)
   const availableGovs = unlockedGovs.filter((gov) => gov !== currentGov);
-
   if (availableGovs.length === 0) return null;
+
+  // Gather situational context
+  const isAtWar = isNationAtWar(nation, nations);
+  const stability = nation.governmentState?.governmentStability || 50;
+  const production = nation.production || 0;
 
   // Score each government based on AI personality and situation
   interface GovernmentScore {
@@ -87,82 +257,35 @@ export function selectOptimalGovernmentForAI(
   }
 
   const scores: GovernmentScore[] = availableGovs.map((gov) => {
-    let score = 0;
     const bonuses = GOVERNMENT_BONUSES[gov];
 
-    // Personality-based scoring
+    // Step 1: Apply personality-based scoring
+    let score = 0;
     switch (aiPersonality) {
       case 'aggressive':
-        // Prefer military-focused governments
-        score += bonuses.recruitmentMultiplier * 20;
-        score += bonuses.militaryCostReduction * 50;
-        if (gov === 'military_junta' || gov === 'dictatorship') score += 30;
+        score += scoreForAggressive(gov, bonuses);
         break;
-
       case 'defensive':
-        // Prefer stable governments with good defense
-        score += bonuses.baseStabilityModifier * 2;
-        score += bonuses.coupResistance * 0.3;
-        if (gov === 'constitutional_monarchy' || gov === 'absolute_monarchy') score += 25;
+        score += scoreForDefensive(gov, bonuses);
         break;
-
       case 'balanced':
-        // Prefer balanced governments
-        score += bonuses.productionMultiplier * 20;
-        score += bonuses.researchMultiplier * 20;
-        score += bonuses.baseStabilityModifier;
-        if (gov === 'technocracy' || gov === 'one_party_state') score += 20;
+        score += scoreForBalanced(gov, bonuses);
         break;
-
       case 'trickster':
-        // Prefer intel-focused governments
-        score += bonuses.intelBonus * 2;
-        score += bonuses.propagandaEffectiveness * 15;
-        if (gov === 'dictatorship' || gov === 'one_party_state') score += 20;
+        score += scoreForTrickster(gov, bonuses);
         break;
-
       case 'isolationist':
-        // Prefer stable, self-sufficient governments
-        score += bonuses.baseStabilityModifier * 2;
-        score += bonuses.productionMultiplier * 15;
-        if (gov === 'absolute_monarchy' || gov === 'technocracy') score += 25;
+        score += scoreForIsolationist(gov, bonuses);
         break;
-
       default:
-        // Default: balanced approach
-        score += bonuses.productionMultiplier * 15;
-        score += bonuses.researchMultiplier * 15;
-        score += bonuses.baseStabilityModifier;
+        score += scoreForDefault(gov, bonuses);
         break;
     }
 
-    // Situational scoring
-    const isAtWar = nations.some(
-      (other) =>
-        other !== nation &&
-        !other.eliminated &&
-        !nation.treaties?.[other.id]?.truceTurns &&
-        (nation.threats?.[other.id] || 0) > 50
-    );
-
-    if (isAtWar) {
-      // During war, prefer military-focused governments
-      score += bonuses.recruitmentMultiplier * 15;
-      score += bonuses.militaryCostReduction * 30;
-    }
-
-    // If low stability, prefer stable governments
-    const stability = nation.governmentState?.governmentStability || 50;
-    if (stability < 50) {
-      score += bonuses.baseStabilityModifier * 3;
-      score += bonuses.coupResistance * 0.5;
-    }
-
-    // If high production, consider technocracy
-    const production = nation.production || 0;
-    if (production > 100 && gov === 'technocracy') {
-      score += 25;
-    }
+    // Step 2: Apply situational bonuses
+    score += applyWarSituationBonus(isAtWar, bonuses);
+    score += applyStabilityBonus(stability, bonuses);
+    score += applyProductionBonus(production, gov);
 
     return { gov, score };
   });
