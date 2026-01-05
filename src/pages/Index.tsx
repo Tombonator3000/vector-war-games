@@ -2863,99 +2863,92 @@ function bootstrapNationResourceState(nation: LocalNation) {
 }
 
 // Cuban Crisis specific initialization with historical nations
-function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: any, selectedDoctrine: DoctrineKey | undefined) {
-  const player = PlayerManager.get();
+// ============================================================================
+// CUBAN CRISIS INITIALIZATION HELPER FUNCTIONS
+// ============================================================================
 
-  // Determine which historical leader the player chose
-  const isKennedy = playerLeaderName === 'John F. Kennedy';
-  const isKhrushchev = playerLeaderName === 'Nikita Khrushchev';
-  const isCastro = playerLeaderName === 'Fidel Castro';
-
-  // USA (Kennedy) - historically had superior nuclear arsenal
-  const usaNation: LocalNation = {
-    id: isKennedy ? 'player' : 'usa',
-    isPlayer: isKennedy,
-    name: 'United States',
-    leader: 'John F. Kennedy',
-    leaderName: 'John F. Kennedy',
-    aiPersonality: 'balanced',
-    ai: 'balanced',
-    lon: -95,
-    lat: 39,
-    color: '#0047AB',
-    population: 186, // 1962 US population in millions
-    missiles: 25, // USA had significant ICBM advantage
-    bombers: 15, // Strategic Air Command was strong
-    submarines: 5, // Polaris submarines
-    defense: 8, // NORAD and early warning systems
-    instability: 0,
-    morale: isKennedy ? 72 : 65,
-    publicOpinion: isKennedy ? 68 : 60,
-    electionTimer: 0,
-    cabinetApproval: isKennedy ? 64 : 55,
-    production: 40, // Strong industrial base
-    uranium: 30, // Large stockpile
-    intel: isKennedy ? 15 : 10,
-    cities: 2,
-    warheads: { 20: 15, 50: 10, 100: 5 }, // Varied arsenal
-    researched: { warhead_20: true, warhead_50: true, warhead_100: true },
-    researchQueue: null,
-    treaties: {},
-    threats: {},
-    migrantsThisTurn: 0,
-    migrantsTotal: 0,
-    conventional: createDefaultNationConventionalProfile('navy'),
-    controlledTerritories: [],
-    cyber: createDefaultNationCyberProfile(), // Minimal - no real cyber warfare in 1962
-    casusBelli: [],
-    activeWars: [],
-    peaceOffers: [],
-    spyNetwork: initializeSpyNetwork(),
+/**
+ * Configuration for a Cuban Crisis nation
+ */
+interface CrisisNationConfig {
+  id: string;
+  name: string;
+  leader: string;
+  aiPersonality: 'balanced' | 'aggressive';
+  lon: number;
+  lat: number;
+  color: string;
+  population: number;
+  missiles: number;
+  bombers: number;
+  submarines: number;
+  defense: number;
+  instability: number;
+  baseStats: {
+    morale: number;
+    publicOpinion: number;
+    cabinetApproval: number;
   };
+  playerStats: {
+    morale: number;
+    publicOpinion: number;
+    cabinetApproval: number;
+    intel: number;
+  };
+  production: number;
+  uranium: number;
+  baseIntel: number;
+  cities: number;
+  warheads: { [yield: number]: number };
+  researched: { [key: string]: boolean };
+  conventionalProfile: 'navy' | 'army';
+}
 
-  if (isKennedy) {
-    applyDoctrineEffects(usaNation, selectedDoctrine);
-  }
-  // Apply leader bonuses to USA (FASE 2.1)
-  applyLeaderBonuses(usaNation, 'John F. Kennedy');
-  initializeNationLeaderAbility(usaNation);
-  bootstrapNationResourceState(usaNation);
-  nations.push(usaNation);
-
-  // USSR (Khrushchev) - historically had fewer missiles but was building up
-  const ussrNation: LocalNation = {
-    id: isKhrushchev ? 'player' : 'ussr',
-    isPlayer: isKhrushchev,
-    name: 'Soviet Union',
-    leader: 'Nikita Khrushchev',
-    leaderName: 'Nikita Khrushchev',
-    aiPersonality: 'aggressive',
-    ai: 'aggressive',
-    lon: 37,
-    lat: 55,
-    color: '#CC0000',
-    population: 220, // 1962 USSR population in millions
-    missiles: 10, // USSR had fewer ICBMs (missile gap was a myth)
-    bombers: 12, // Strong bomber force
-    submarines: 4, // Growing submarine fleet
-    defense: 10, // Extensive air defense network
-    instability: 5,
-    morale: isKhrushchev ? 70 : 68,
-    publicOpinion: isKhrushchev ? 65 : 60,
+/**
+ * Creates a Cuban Crisis nation with standardized initialization
+ * @param config - Nation configuration with historical stats
+ * @param isPlayer - Whether this nation is controlled by the player
+ * @param selectedDoctrine - Doctrine to apply if player-controlled
+ * @returns Fully initialized LocalNation
+ */
+function createCubanCrisisNation(
+  config: CrisisNationConfig,
+  isPlayer: boolean,
+  selectedDoctrine: DoctrineKey | undefined
+): LocalNation {
+  const nation: LocalNation = {
+    id: isPlayer ? 'player' : config.id,
+    isPlayer,
+    name: config.name,
+    leader: config.leader,
+    leaderName: config.leader,
+    aiPersonality: config.aiPersonality,
+    ai: config.aiPersonality,
+    lon: config.lon,
+    lat: config.lat,
+    color: config.color,
+    population: config.population,
+    missiles: config.missiles,
+    bombers: config.bombers,
+    submarines: config.submarines,
+    defense: config.defense,
+    instability: config.instability,
+    morale: isPlayer ? config.playerStats.morale : config.baseStats.morale,
+    publicOpinion: isPlayer ? config.playerStats.publicOpinion : config.baseStats.publicOpinion,
     electionTimer: 0,
-    cabinetApproval: isKhrushchev ? 60 : 55,
-    production: 35, // Strong but less efficient than US
-    uranium: 25,
-    intel: isKhrushchev ? 15 : 12,
-    cities: 2,
-    warheads: { 20: 8, 50: 12, 100: 8 }, // Emphasis on larger warheads
-    researched: { warhead_20: true, warhead_50: true, warhead_100: true },
+    cabinetApproval: isPlayer ? config.playerStats.cabinetApproval : config.baseStats.cabinetApproval,
+    production: config.production,
+    uranium: config.uranium,
+    intel: isPlayer ? config.playerStats.intel : config.baseIntel,
+    cities: config.cities,
+    warheads: config.warheads,
+    researched: config.researched,
     researchQueue: null,
     treaties: {},
     threats: {},
     migrantsThisTurn: 0,
     migrantsTotal: 0,
-    conventional: createDefaultNationConventionalProfile('army'),
+    conventional: createDefaultNationConventionalProfile(config.conventionalProfile),
     controlledTerritories: [],
     cyber: createDefaultNationCyberProfile(),
     casusBelli: [],
@@ -2964,104 +2957,78 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
     spyNetwork: initializeSpyNetwork(),
   };
 
-  if (isKhrushchev) {
-    applyDoctrineEffects(ussrNation, selectedDoctrine);
+  // Apply player-specific configuration
+  if (isPlayer) {
+    applyDoctrineEffects(nation, selectedDoctrine);
   }
-  // Apply leader bonuses to USSR (FASE 2.1)
-  applyLeaderBonuses(ussrNation, 'Nikita Khrushchev');
-  initializeNationLeaderAbility(ussrNation);
-  bootstrapNationResourceState(ussrNation);
-  nations.push(ussrNation);
 
-  // Cuba (Castro) - revolutionary state with Soviet support
-  const cubaNation: LocalNation = {
-    id: isCastro ? 'player' : 'cuba',
-    isPlayer: isCastro,
-    name: 'Cuba',
-    leader: 'Fidel Castro',
-    leaderName: 'Fidel Castro',
-    aiPersonality: 'aggressive',
-    ai: 'aggressive',
-    lon: -80,
-    lat: 22,
-    color: '#CE1126',
-    population: 7, // 1962 Cuba population in millions
-    missiles: 0, // No ICBMs, but hosted Soviet IRBMs
-    bombers: 1, // Limited air force
-    submarines: 0, // No submarines
-    defense: 5, // Soviet SAM batteries
-    instability: 10,
-    morale: isCastro ? 75 : 80,
-    publicOpinion: isCastro ? 70 : 75,
-    electionTimer: 0,
-    cabinetApproval: isCastro ? 65 : 70,
-    production: 8, // Small economy
-    uranium: 2, // Minimal resources
-    intel: isCastro ? 12 : 8,
-    cities: 1,
-    warheads: { 10: 2 }, // Soviet-supplied tactical nukes
-    researched: {},
-    researchQueue: null,
-    treaties: {},
-    threats: {},
-    migrantsThisTurn: 0,
-    migrantsTotal: 0,
-    conventional: createDefaultNationConventionalProfile('army'),
-    controlledTerritories: [],
-    cyber: createDefaultNationCyberProfile(),
-    casusBelli: [],
-    activeWars: [],
-    peaceOffers: [],
-    spyNetwork: initializeSpyNetwork(),
-  };
+  // Apply leader bonuses and initialize abilities
+  applyLeaderBonuses(nation, config.leader);
+  initializeNationLeaderAbility(nation);
+  bootstrapNationResourceState(nation);
 
-  if (isCastro) {
-    applyDoctrineEffects(cubaNation, selectedDoctrine);
-  }
-  // Apply leader bonuses to Cuba (FASE 2.1)
-  applyLeaderBonuses(cubaNation, 'Fidel Castro');
-  initializeNationLeaderAbility(cubaNation);
-  bootstrapNationResourceState(cubaNation);
-  nations.push(cubaNation);
+  return nation;
+}
 
+/**
+ * Initializes historical relationships for Cuban Crisis scenario
+ * Sets up threats, alliances, and diplomatic relationships between USA, USSR, and Cuba
+ * @param usa - United States nation
+ * @param ussr - Soviet Union nation
+ * @param cuba - Cuba nation
+ */
+function initializeCrisisRelationships(
+  usa: LocalNation,
+  ussr: LocalNation,
+  cuba: LocalNation
+): void {
   // Initialize threat levels (historically accurate tensions)
-  usaNation.threats = {
-    [ussrNation.id]: 75,
-    [cubaNation.id]: 90,
-  }; // Very high threat from Cuba
-  ussrNation.threats = {
-    [usaNation.id]: 70,
-    [cubaNation.id]: 0,
-  }; // Cuba is allied
-  cubaNation.threats = {
-    [usaNation.id]: 95,
-    [ussrNation.id]: 0,
-  }; // Extreme threat from USA
-
-  // Set up alliances
-  ussrNation.alliances = [cubaNation.id];
-  cubaNation.alliances = [ussrNation.id];
-
-  // Initialize relationships
-  usaNation.relationships = {
-    [ussrNation.id]: -80,
-    [cubaNation.id]: -95,
+  usa.threats = {
+    [ussr.id]: 75,  // High Cold War tensions
+    [cuba.id]: 90,  // Very high threat from Cuba
   };
-  ussrNation.relationships = {
-    [usaNation.id]: -80,
-    [cubaNation.id]: 85,
+  ussr.threats = {
+    [usa.id]: 70,   // High Cold War tensions
+    [cuba.id]: 0,   // Cuba is allied
   };
-  cubaNation.relationships = {
-    [usaNation.id]: -95,
-    [ussrNation.id]: 85,
+  cuba.threats = {
+    [usa.id]: 95,   // Extreme threat from USA
+    [ussr.id]: 0,   // USSR is allied
   };
 
+  // Set up USSR-Cuba alliance
+  ussr.alliances = [cuba.id];
+  cuba.alliances = [ussr.id];
+
+  // Initialize diplomatic relationships
+  usa.relationships = {
+    [ussr.id]: -80,  // Hostile superpower rivalry
+    [cuba.id]: -95,  // Extreme hostility
+  };
+  ussr.relationships = {
+    [usa.id]: -80,   // Hostile superpower rivalry
+    [cuba.id]: 85,   // Strong alliance
+  };
+  cuba.relationships = {
+    [usa.id]: -95,   // Extreme hostility
+    [ussr.id]: 85,   // Strong alliance
+  };
+}
+
+/**
+ * Initializes all game systems for Cuban Crisis scenario
+ * Handles conventional warfare, AI, diplomacy, population, ideology, government, DIP, and agendas
+ * @param nations - Array of all nations in the scenario
+ * @param difficulty - Game difficulty level
+ */
+function initializeCrisisGameSystems(nations: LocalNation[], difficulty: string): void {
   // Initialize conventional warfare state
   const conventionalState = createDefaultConventionalState(
     nations.map(nation => ({ id: nation.id, isPlayer: nation.isPlayer }))
   );
   S.conventional = conventionalState;
 
+  // Sync conventional state with nations
   nations.forEach(nation => {
     const profile = nation.conventional ?? createDefaultNationConventionalProfile();
     const units = Object.values(conventionalState.units).filter(unit => unit.ownerId === nation.id);
@@ -3077,7 +3044,6 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   });
 
   // Initialize AI bio-warfare capabilities (minimal for 1962)
-  const difficulty = S.difficulty || 'medium';
   initializeAllAINations(nations, difficulty);
 
   // Initialize Diplomacy Phase 1-3 systems
@@ -3088,32 +3054,28 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   nations.length = 0;
   nations.push(...diplomacyReadyNations);
 
-  // Initialize immigration & culture systems (popGroups, cultural identity, etc.)
+  // Initialize immigration & culture systems
   nations.forEach(nation => {
     if (!nation.eliminated) {
       initializeNationPopSystem(nation);
     }
   });
 
-  // Initialize ideology system for all nations
+  // Initialize ideology, government, and DIP systems
   initializeIdeologySystem(nations);
-
-  // Initialize government system for all nations
   initializeGovernmentSystem(nations);
-
-  // Initialize DIP (Diplomatic Influence Points) for all nations
   nations.forEach((nation, index) => {
     nations[index] = initializeDIP(nation);
   });
 
-  // Initialize Agenda System (Phase 4): Assign unique leader agendas to AI nations
+  // Initialize Agenda System (Phase 4)
   const playerNation = nations.find(n => n.isPlayer);
   if (playerNation) {
     const agendaReadyNations = initializeNationAgendas(nations, playerNation.id, Math.random);
     nations.length = 0;
     nations.push(...agendaReadyNations);
 
-    // Initialize firstContactTurn for all AI nations (needed for hidden agenda revelation)
+    // Initialize firstContactTurn for all AI nations
     nations.forEach(nation => {
       if (!nation.isPlayer) {
         nation.firstContactTurn = nation.firstContactTurn || {};
@@ -3137,12 +3099,22 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
       }
     });
   }
+}
 
+/**
+ * Finalizes Cuban Crisis game state after all nations and systems are initialized
+ * Sets turn, phase, game flags, and logs scenario information
+ * @param nations - Array of all nations
+ * @param playerLeaderName - Name of the player's chosen leader
+ */
+function finalizeCrisisGameState(nations: LocalNation[], playerLeaderName: string): void {
+  // Log scenario start
   log('=== CUBAN MISSILE CRISIS - OCTOBER 1962 ===', 'critical');
   log(`Leader: ${playerLeaderName}`, 'success');
   log(`Doctrine: ${S.selectedDoctrine}`, 'success');
   log('The world stands on the brink of nuclear war...', 'warning');
 
+  // Set initial game state
   S.turn = 1;
   S.phase = 'PLAYER';
   S.paused = false;
@@ -3150,6 +3122,7 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   S.diplomacy = createDefaultDiplomacyState();
   S.actionsRemaining = 2; // Crisis demands quick decisions
 
+  // Initialize casus belli system
   const casusReadyNations = updateCasusBelliForAllNations(nations, S.turn) as LocalNation[];
   nations.length = 0;
   nations.push(...casusReadyNations);
@@ -3165,6 +3138,122 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
   }
 
   updateDisplay();
+}
+
+// ============================================================================
+// MAIN CUBAN CRISIS INITIALIZATION FUNCTION
+// ============================================================================
+
+/**
+ * Initializes nations and game state for Cuban Missile Crisis scenario (October 1962)
+ * Creates USA, USSR, and Cuba with historical stats and configurations
+ * @param playerLeaderName - Name of the leader the player chose (Kennedy, Khrushchev, or Castro)
+ * @param playerLeaderConfig - Configuration for the player's chosen leader
+ * @param selectedDoctrine - Strategic doctrine chosen by the player
+ */
+function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: any, selectedDoctrine: DoctrineKey | undefined) {
+  const player = PlayerManager.get();
+
+  // Determine which historical leader the player chose
+  const isKennedy = playerLeaderName === 'John F. Kennedy';
+  const isKhrushchev = playerLeaderName === 'Nikita Khrushchev';
+  const isCastro = playerLeaderName === 'Fidel Castro';
+
+  // Create USA with historically superior nuclear arsenal
+  const usaConfig: CrisisNationConfig = {
+    id: 'usa',
+    name: 'United States',
+    leader: 'John F. Kennedy',
+    aiPersonality: 'balanced',
+    lon: -95,
+    lat: 39,
+    color: '#0047AB',
+    population: 186, // 1962 US population in millions
+    missiles: 25,    // USA had significant ICBM advantage
+    bombers: 15,     // Strategic Air Command was strong
+    submarines: 5,   // Polaris submarines
+    defense: 8,      // NORAD and early warning systems
+    instability: 0,
+    baseStats: { morale: 65, publicOpinion: 60, cabinetApproval: 55 },
+    playerStats: { morale: 72, publicOpinion: 68, cabinetApproval: 64, intel: 15 },
+    production: 40,  // Strong industrial base
+    uranium: 30,     // Large stockpile
+    baseIntel: 10,
+    cities: 2,
+    warheads: { 20: 15, 50: 10, 100: 5 }, // Varied arsenal
+    researched: { warhead_20: true, warhead_50: true, warhead_100: true },
+    conventionalProfile: 'navy',
+  };
+
+  // Create USSR with historical buildup but fewer missiles
+  const ussrConfig: CrisisNationConfig = {
+    id: 'ussr',
+    name: 'Soviet Union',
+    leader: 'Nikita Khrushchev',
+    aiPersonality: 'aggressive',
+    lon: 37,
+    lat: 55,
+    color: '#CC0000',
+    population: 220, // 1962 USSR population in millions
+    missiles: 10,    // USSR had fewer ICBMs (missile gap was a myth)
+    bombers: 12,     // Strong bomber force
+    submarines: 4,   // Growing submarine fleet
+    defense: 10,     // Extensive air defense network
+    instability: 5,
+    baseStats: { morale: 68, publicOpinion: 60, cabinetApproval: 55 },
+    playerStats: { morale: 70, publicOpinion: 65, cabinetApproval: 60, intel: 15 },
+    production: 35,  // Strong but less efficient than US
+    uranium: 25,
+    baseIntel: 12,
+    cities: 2,
+    warheads: { 20: 8, 50: 12, 100: 8 }, // Emphasis on larger warheads
+    researched: { warhead_20: true, warhead_50: true, warhead_100: true },
+    conventionalProfile: 'army',
+  };
+
+  // Create Cuba as revolutionary state with Soviet support
+  const cubaConfig: CrisisNationConfig = {
+    id: 'cuba',
+    name: 'Cuba',
+    leader: 'Fidel Castro',
+    aiPersonality: 'aggressive',
+    lon: -80,
+    lat: 22,
+    color: '#CE1126',
+    population: 7,  // 1962 Cuba population in millions
+    missiles: 0,    // No ICBMs, but hosted Soviet IRBMs
+    bombers: 1,     // Limited air force
+    submarines: 0,  // No submarines
+    defense: 5,     // Soviet SAM batteries
+    instability: 10,
+    baseStats: { morale: 80, publicOpinion: 75, cabinetApproval: 70 },
+    playerStats: { morale: 75, publicOpinion: 70, cabinetApproval: 65, intel: 12 },
+    production: 8,  // Small economy
+    uranium: 2,     // Minimal resources
+    baseIntel: 8,
+    cities: 1,
+    warheads: { 10: 2 }, // Soviet-supplied tactical nukes
+    researched: {},
+    conventionalProfile: 'army',
+  };
+
+  // Create the three nations
+  const usaNation = createCubanCrisisNation(usaConfig, isKennedy, selectedDoctrine);
+  const ussrNation = createCubanCrisisNation(ussrConfig, isKhrushchev, selectedDoctrine);
+  const cubaNation = createCubanCrisisNation(cubaConfig, isCastro, selectedDoctrine);
+
+  // Add nations to global array
+  nations.push(usaNation, ussrNation, cubaNation);
+
+  // Initialize historical relationships
+  initializeCrisisRelationships(usaNation, ussrNation, cubaNation);
+
+  // Initialize all game systems
+  const difficulty = S.difficulty || 'medium';
+  initializeCrisisGameSystems(nations, difficulty);
+
+  // Finalize game state
+  finalizeCrisisGameState(nations, playerLeaderName);
 }
 
 /**
