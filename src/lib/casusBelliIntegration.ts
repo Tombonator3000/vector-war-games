@@ -304,7 +304,7 @@ export function processWarDeclaration(
   // Update attacker's Casus Belli list
   const finalAttacker = {
     ...attackerWithPenalties,
-    casusBelli: attacker.casusBelli?.map((cb) =>
+    casusBelli: (attackerWithPenalties.casusBelli || attacker.casusBelli || []).map((cb) =>
       cb.id === casusBelli.id ? updatedCasusBelli : cb
     ),
     activeWars: [...(attackerWithPenalties.activeWars || []), warState],
