@@ -4009,3 +4009,78 @@ ng the computed blend (`src/rendering/worldRenderer.ts`).
 - **Related files:**
   - `src/pages/Index.tsx`: Refactored initCubanCrisisNations and added four helper functions plus CrisisNationConfig interface (lines 2866-3257)
 
+
+### 2026-01-05T12:00:00Z - Fixed DEFCON siren looping and music restart issues
+- **Identified and fixed critical audio system issues:**
+  - **Problem 1:** DEFCON 1 and 2 sirens were playing as looping ambient sounds
+  - **Problem 2:** Sirens were being played both as ambient loops AND via audioManager, creating duplicates
+  - **Analysis:** Music system was well-designed and not causing unnecessary restarts
+
+- **Fixed DEFCON siren looping (src/pages/Index.tsx):**
+  1. **Modified `updateAmbientForDefcon()` function (lines 2249-2261):**
+     - Removed logic that started DEFCON sirens as ambient loops
+     - Added clear comments explaining sirens should NOT be ambient loops
+     - Now only stops any existing DEFCON siren loops that might have been started
+     - DEFCON sirens are played once via `audioManager.playCritical()` in `handleDefconTransition()`
+  
+  2. **Modified `handleDefconTransition()` function (lines 2263-2303):**
+     - Removed `startAmbientLoop()` calls for DEFCON sirens (previously at lines 2271, 2277)
+     - Stopped treating DEFCON sirens as repeating ambient sounds
+     - Kept the one-shot `audioManager.playCritical()` call (line 2292)
+     - Added clear comment: "Play DEFCON siren ONCE (not as a loop)"
+     - Sirens now only play once when DEFCON level escalates
+
+- **Root cause analysis:**
+  - DEFCON sirens were defined in `AMBIENT_CLIPS` array (lines 1889-1892)
+  - `ensureAmbientPlayback()` function set `source.loop = true` (line 2213)
+  - This caused sirens to loop continuously when played as ambient sounds
+  - Additionally, sirens were played via `audioManager.playCritical()` creating duplicates
+
+- **Music system verification:**
+  - Analyzed music autoplay logic (lines 8817-8854)
+  - Confirmed `playTrack()` has proper guard (lines 2081-2082):
+    - Checks if track is already playing before restarting
+    - Only restarts when `forceRestart: true` is explicitly passed
+  - Verified `handleUserInteraction()` only triggers once per user interaction:
+    - Uses `userInteractionPrimed` flag to prevent multiple calls
+    - Event listeners use `{ once: true }` option (line 9110)
+  - Confirmed all `forceRestart: true` calls are appropriate:
+    - `setPreferredTrack()`: When user changes track (intentional)
+    - `setMusicEnabled()`: When re-enabling music (intentional)
+    - `playNextTrack()`: When manually skipping track (intentional)
+    - `handleUserInteraction()`: Only first time (intentional)
+  - **Conclusion:** Music system is well-designed and does not restart unnecessarily
+
+- **Benefits of fix:**
+  - **DEFCON sirens play once:** No more looping sirens at DEFCON 1/2
+  - **No duplicate sounds:** Removed conflict between ambient loop and audioManager
+  - **Better user experience:** Critical alerts are now clear and not repetitive
+  - **Cleaner audio architecture:** DEFCON sirens correctly use one-shot playback
+  - **Music continues smoothly:** Verified music doesn't restart unexpectedly
+
+- **Code organization improvements:**
+  - Added clear inline comments explaining why DEFCON sirens are not ambient loops
+  - Improved function documentation for audio behavior
+  - Made intent explicit: ambient loops are for continuous sounds, not critical alerts
+
+- **Technical details:**
+  - Reduced `updateAmbientForDefcon()` from ~20 lines to ~13 lines
+  - Simplified `handleDefconTransition()` by removing ambient loop logic
+  - Maintained all existing functionality except the unwanted looping
+  - TypeScript compilation passes with `npx tsc --noEmit`
+
+- **Testing approach:**
+  - Verified TypeScript compilation succeeds
+  - Code review of all music playback call sites
+  - Analyzed event listener configuration
+  - Confirmed proper use of forceRestart parameter
+
+- **Related files:**
+  - `src/pages/Index.tsx`: Modified `updateAmbientForDefcon()` and `handleDefconTransition()` functions
+  - `src/utils/audioManager.ts`: No changes needed (already correctly implements one-shot playback)
+
+- **Behavioral changes:**
+  - **Before:** DEFCON 1/2 sirens looped continuously as ambient sounds
+  - **After:** DEFCON 1/2 sirens play once when level changes
+  - **Music:** No changes - already working correctly
+
