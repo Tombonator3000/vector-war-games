@@ -46,6 +46,8 @@ import {
   processResourceDepletion,
   DEFAULT_DEPLETION_CONFIG
 } from '@/lib/resourceDepletionSystem';
+import { validateLaunch } from '@/lib/launchValidation';
+import { applyLaunchStateChanges, handleLaunchSideEffects } from '@/lib/launchEffects';
 import {
   createIntelligenceAgency,
   progressIntelOperation,
@@ -108,120 +110,43 @@ export function launch(
   yieldMT: number,
   deps: LaunchDependencies
 ): boolean {
-  const { S, log, toast, AudioSys, DoomsdayClock, WARHEAD_YIELD_TO_ID, RESEARCH_LOOKUP, PlayerManager } = deps;
+  const { S, log, toast, AudioSys, DoomsdayClock, WARHEAD_YIELD_TO_ID, RESEARCH_LOOKUP } = deps;
 
-  if (from.treaties?.[to.id]?.truceTurns > 0) {
-    log(`Cannot attack ${to.name} - truce active!`, 'warning');
-    return false;
-  }
-
-  const allianceActive = Boolean(
-    from.treaties?.[to.id]?.alliance ||
-    to.treaties?.[from.id]?.alliance ||
-    from.alliances?.includes(to.id) ||
-    to.alliances?.includes(from.id)
-  );
-
-  if (allianceActive) {
-    const allianceMessage = `Cannot attack ${to.name} - alliance active!`;
-    log(allianceMessage, 'warning');
-    if (from.isPlayer) {
-      toast({
-        title: 'Alliance prevents strike',
-        description: allianceMessage,
-      });
-    }
-    return false;
-  }
-
-  if (yieldMT > 50 && S.defcon > 1) {
-    log(`Strategic weapons require DEFCON 1`, 'warning');
-    return false;
-  }
-
-  if (yieldMT <= 50 && S.defcon > 2) {
-    log(`Tactical nukes require DEFCON 2 or lower`, 'warning');
-    return false;
-  }
-
-  if (!from.warheads?.[yieldMT] || from.warheads[yieldMT] <= 0) {
-    log('No warheads of that yield!', 'warning');
-    return false;
-  }
-
-  const requiredResearchId = WARHEAD_YIELD_TO_ID.get(yieldMT);
-  if (requiredResearchId && !from.researched?.[requiredResearchId]) {
-    const projectName = RESEARCH_LOOKUP[requiredResearchId]?.name || `${yieldMT}MT program`;
-    if (from.isPlayer) {
-      toast({ title: 'Technology unavailable', description: `Research ${projectName} before deploying this warhead.` });
-    } else {
-      log(`${from.name} lacks the ${projectName} technology and aborts the launch.`, 'warning');
-    }
-    return false;
-  }
-
-  if (from.missiles <= 0) {
-    log('No missiles available!', 'warning');
-    return false;
-  }
-
-  from.warheads[yieldMT]--;
-  if (from.warheads[yieldMT] <= 0) {
-    delete from.warheads[yieldMT];
-  }
-  from.missiles--;
-
-  // Add random offset to spread impacts across the country (±3 degrees)
-  const lonOffset = (Math.random() - 0.5) * 6;
-  const latOffset = (Math.random() - 0.5) * 6;
-
-  S.missiles.push({
+  // Validate launch preconditions
+  const validationResult = validateLaunch({
     from,
     to,
-    t: 0,
-    fromLon: from.lon,
-    fromLat: from.lat,
-    toLon: to.lon + lonOffset,
-    toLat: to.lat + latOffset,
-    yield: yieldMT,
-    target: to,
-    color: from.color
+    yieldMT,
+    defcon: S.defcon,
+    warheadYieldToId: WARHEAD_YIELD_TO_ID,
+    researchLookup: RESEARCH_LOOKUP,
   });
 
-  log(`${from.name} → ${to.name}: LAUNCH ${yieldMT}MT`);
-  AudioSys.playSFX('launch');
-  DoomsdayClock.tick(0.3);
-
-  // Mark as aggressive action
-  from.lastAggressiveAction = S.turn;
-
-  // Track statistics - removed (not part of core GameState)
-  if (from.isPlayer) {
-
-    // Update public opinion (nuclear launches are unpopular)
-    if (S.scenario?.electionConfig) {
-      modifyOpinionFromAction(from, 'LAUNCH_MISSILE', true, S.scenario.electionConfig);
+  // Handle validation failure
+  if (!validationResult.valid) {
+    if (validationResult.errorMessage) {
+      log(validationResult.errorMessage, validationResult.errorType || 'warning');
     }
+    if (validationResult.requiresToast && validationResult.toastConfig) {
+      toast(validationResult.toastConfig);
+    }
+    return false;
   }
 
-  // Toast feedback for player launches
-  if (from.isPlayer) {
-    toast({
-      title: '🚀 Missile Launched',
-      description: `${yieldMT}MT warhead inbound to ${to.name}. -1 missile, -1 warhead.`,
-      variant: 'destructive',
-    });
-  }
+  // Apply state changes
+  applyLaunchStateChanges(from, to, yieldMT, S);
 
-  // Generate news for launch
-  if (window.__gameAddNewsItem) {
-    const priority = yieldMT > 50 ? 'critical' : 'urgent';
-    window.__gameAddNewsItem(
-      'military',
-      `${from.name} launches ${yieldMT}MT warhead at ${to.name}`,
-      priority
-    );
-  }
+  // Handle side effects
+  handleLaunchSideEffects({
+    from,
+    to,
+    yieldMT,
+    gameState: S,
+    log,
+    toast,
+    AudioSys,
+    DoomsdayClock,
+  });
 
   return true;
 }
