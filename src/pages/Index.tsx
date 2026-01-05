@@ -345,6 +345,21 @@ import {
   type ProductionPhaseDependencies,
 } from '@/lib/gamePhaseHandlers';
 import {
+  launchSubmarine as launchSubmarineExtracted,
+  launchBomber as launchBomberExtracted,
+  type NuclearLaunchDependencies,
+} from '@/lib/nuclearLaunchHandlers';
+import {
+  getScenarioDefcon,
+  getDefconIndicatorClasses,
+  resolveNationName as resolveNationNameUtil,
+  getImposingNationNamesFromPackages as getImposingNationNamesUtil,
+  formatSanctionTypeLabel as formatSanctionTypeUtil,
+  getLeaderInitials as getLeaderInitialsUtil,
+  Storage,
+  easeInOutQuad,
+} from '@/lib/gameUtilityFunctions';
+import {
   drawWorld as renderWorld,
   drawNations as renderNations,
   drawWorldPath as renderWorldPath,
@@ -384,36 +399,7 @@ import { useModalManager, type ModalContentValue } from '@/hooks/game/useModalMa
 import { useNewsManager } from '@/hooks/game/useNewsManager';
 import { getTrust, getFavors, FavorCosts } from '@/types/trustAndFavors';
 
-const DEFAULT_DEFCON_LEVEL = 5;
-const getScenarioDefcon = (scenario: ScenarioConfig) =>
-  scenario.id === 'nuclearWar' ? scenario.startingDefcon : DEFAULT_DEFCON_LEVEL;
-
-const DEFCON_BADGE_BASE_CLASSES =
-  'flex items-center gap-1.5 px-2.5 py-0.5 rounded border transition-all duration-200';
-const DEFCON_VALUE_BASE_CLASSES = 'font-bold text-xl leading-none transition-colors duration-200';
-
-function getDefconIndicatorClasses(defcon: number) {
-  if (defcon >= 4) {
-    return {
-      badge: 'bg-emerald-500/10 border-emerald-400/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]',
-      value: 'text-emerald-200 drop-shadow-[0_0_6px_rgba(16,185,129,0.35)]',
-    };
-  }
-
-  if (defcon === 3) {
-    return {
-      badge: 'bg-yellow-500/10 border-yellow-400/50 shadow-[0_0_12px_rgba(234,179,8,0.25)]',
-      value: 'text-yellow-100 drop-shadow-[0_0_6px_rgba(234,179,8,0.4)]',
-    };
-  }
-
-  const criticalGlow = 'shadow-[0_0_18px_rgba(248,113,113,0.45)] ring-1 ring-red-400/60';
-
-  return {
-    badge: `bg-red-500/20 border-red-400/70 ${criticalGlow} ${defcon === 1 ? 'animate-pulse' : ''}`.trim(),
-    value: 'text-red-50 drop-shadow-[0_0_8px_rgba(248,113,113,0.55)]',
-  };
-}
+// DEFCON utility functions now imported from @/lib/gameUtilityFunctions
 
 type PressureDeltaState = { goldPenalty: number; aidGold: number };
 
@@ -432,78 +418,18 @@ const resetPressureDeltaState = () => {
   pressureDeltaState.aidGold = 0;
 };
 
-const resolveNationName = (nationId: string): string => {
-  const nation = getNationById(GameStateManager.getNations(), nationId);
-  return nation?.name ?? nationId;
-};
+// Wrapper functions for imported utilities
+const resolveNationName = (nationId: string): string =>
+  resolveNationNameUtil(nationId, GameStateManager.getNations());
 
-const getImposingNationNamesFromPackages = (packages: SanctionPackage[]): string[] => {
-  const imposingIds = new Set<string>();
-  packages.forEach((pkg) => {
-    pkg.imposingNations.forEach((nationId) => imposingIds.add(nationId));
-  });
-  return Array.from(imposingIds).map(resolveNationName);
-};
+const getImposingNationNamesFromPackages = (packages: SanctionPackage[]): string[] =>
+  getImposingNationNamesUtil(packages, GameStateManager.getNations());
 
-const formatSanctionTypeLabel = (type: SanctionType): string => {
-  switch (type) {
-    case 'trade':
-      return 'Trade';
-    case 'financial':
-      return 'Financial';
-    case 'military':
-      return 'Military';
-    case 'diplomatic':
-      return 'Diplomatic';
-    case 'technology':
-      return 'Technology';
-    case 'travel':
-      return 'Travel';
-    default:
-      return type;
-  }
-};
+const formatSanctionTypeLabel = formatSanctionTypeUtil;
 
-// Storage wrapper for localStorage
-const Storage = {
-  getItem: (key: string) => {
-    try {
-      return localStorage.getItem(`norad_${key}`);
-    } catch (e) {
-      return null;
-    }
-  },
-  setItem: (key: string, value: string) => {
-    try {
-      localStorage.setItem(`norad_${key}`, value);
-    } catch (e) {
-      // Silent failure - localStorage may be disabled or full
-    }
-  },
-  removeItem: (key: string) => {
-    try {
-      localStorage.removeItem(`norad_${key}`);
-    } catch (e) {
-      // Silent failure - localStorage may be disabled
-    }
-  }
-};
+// Storage now imported from @/lib/gameUtilityFunctions
 
-const getLeaderInitials = (name?: string): string => {
-  if (!name) {
-    return '??';
-  }
-
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part.charAt(0))
-    .join('')
-    .toUpperCase();
-
-  return initials || '??';
-};
+const getLeaderInitials = getLeaderInitialsUtil;
 
 // Game State Types - now imported from @/state module (Phase 6 refactoring)
 let governanceApiRef: UseGovernanceReturn | null = null;
@@ -763,7 +689,7 @@ const BOMBER_ICON_BASE_SCALE = 0.18;
 const SUBMARINE_ICON_BASE_SCALE = 0.2;
 const RADIATION_ICON_BASE_SCALE = 0.16;
 const SATELLITE_ICON_BASE_SCALE = 0.18;
-const easeInOutQuad = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+// easeInOutQuad now imported from @/lib/gameUtilityFunctions
 const SATELLITE_ORBIT_RADIUS = 34;
 const SATELLITE_ORBIT_TTL_MS = 3600000; // 1 hour - long enough for satellites to expire naturally via turn-based cleanup
 const SATELLITE_ORBIT_SPEED = (Math.PI * 2) / 12000;
@@ -5794,81 +5720,28 @@ function explode(
   checkVictoryProgress();
 }
 
-// Launch submarine
+// Launch submarine - wrapper function that delegates to extracted module
 function launchSubmarine(from: Nation, to: Nation, yieldMT: number) {
-  const { x: fx, y: fy } = projectLocal(from.lon, from.lat);
-  const { x: tx, y: ty } = projectLocal(to.lon, to.lat);
-  S.submarines = S.submarines || [];
-  S.submarines.push({
-    x: fx + (Math.random() - 0.5) * 50,
-    y: fy + (Math.random() - 0.5) * 50,
-    phase: 0, // 0=surfacing,1=launching,2=diving
-    targetX: tx,
-    targetY: ty,
-    yield: yieldMT,
-    target: to,
-    from
-  });
-  AudioSys.playSFX('launch');
-
-  // Track statistics for submarine launches
-  if (from.isPlayer) {
-    if (!S.statistics) {
-      S.statistics = {
-        nukesLaunched: 0,
-        nukesReceived: 0,
-        enemiesDestroyed: 0,
-        nonPandemicCasualties: 0,
-      };
-    }
-    S.statistics.nukesLaunched++;
-
-    toast({
-      title: '🌊 Submarine Launched',
-      description: `SLBM strike inbound to ${to.name}. ${yieldMT}MT warhead deployed.`,
-      variant: 'destructive',
-    });
-  }
-
-  return true;
+  const deps: NuclearLaunchDependencies = {
+    S,
+    projectLocal,
+    AudioSys,
+    toast,
+    log,
+  };
+  return launchSubmarineExtracted(from, to, yieldMT, deps);
 }
 
-// Launch bomber
+// Launch bomber - wrapper function that delegates to extracted module
 function launchBomber(from: Nation, to: Nation, payload: any) {
-  // Add random offset to spread impacts across the country
-  const lonOffset = (Math.random() - 0.5) * 6;
-  const latOffset = (Math.random() - 0.5) * 6;
-  
-  const { x: sx, y: sy } = projectLocal(from.lon, from.lat);
-  const { x: tx, y: ty } = projectLocal(to.lon + lonOffset, to.lat + latOffset);
-
-  S.bombers.push({
-    from, to,
-    t: 0,
-    sx, sy, tx, ty,
-    payload
-  });
-
-  // Track statistics for bombers as nuclear launches
-  if (from.isPlayer) {
-    if (!S.statistics) {
-      S.statistics = {
-        nukesLaunched: 0,
-        nukesReceived: 0,
-        enemiesDestroyed: 0,
-        nonPandemicCasualties: 0,
-      };
-    }
-    S.statistics.nukesLaunched++;
-
-    toast({
-      title: '✈️ Bomber Dispatched',
-      description: `Strategic bomber en route to ${to.name}. Payload armed.`,
-      variant: 'destructive',
-    });
-  }
-
-  return true;
+  const deps: NuclearLaunchDependencies = {
+    S,
+    projectLocal,
+    AudioSys,
+    toast,
+    log,
+  };
+  return launchBomberExtracted(from, to, payload, deps);
 }
 
 // createDefaultDiplomacyState now imported from @/state (Phase 6 refactoring)
