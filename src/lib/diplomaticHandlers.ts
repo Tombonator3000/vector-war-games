@@ -7,10 +7,10 @@
 
 import { toast } from "@/components/ui/use-toast";
 import type { Nation } from '@/types';
-import type { GameState } from '@/lib/gameState';
+import type { GameState } from '@/types/game';
 import type { WarState, PeaceOffer } from '@/types/casusBelli';
-import { PlayerManager } from '@/lib/PlayerManager';
-import { GameStateManager } from '@/lib/GameStateManager';
+import PlayerManager from '@/state/PlayerManager';
+import GameStateManager from '@/state/GameStateManager';
 import { createPeaceOffer, createWhitePeaceTerms } from '@/lib/peaceTermsUtils';
 import { endWar } from '@/lib/warDeclarationUtils';
 

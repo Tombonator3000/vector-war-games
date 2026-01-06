@@ -7,7 +7,7 @@
  */
 
 import type { Nation } from '@/types/core';
-import { PlayerManager } from '@/lib/managers/player';
+import PlayerManager from '@/state/PlayerManager';
 
 /**
  * Operation action definition

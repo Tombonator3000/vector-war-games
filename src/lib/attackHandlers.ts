@@ -7,9 +7,9 @@
 
 import { toast } from "@/components/ui/use-toast";
 import type { Nation } from '@/types';
-import type { GameState } from '@/lib/gameState';
-import { PlayerManager } from '@/lib/PlayerManager';
-import { canPerformAction } from '@/lib/actions';
+import type { GameState } from '@/types/game';
+import PlayerManager from '@/state/PlayerManager';
+import { canPerformAction } from '@/lib/gameUtils';
 import { WARHEAD_YIELD_TO_ID } from '@/lib/gameConstants';
 
 export interface PendingLaunchState {

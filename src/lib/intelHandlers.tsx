@@ -9,9 +9,9 @@
 import { type ReactNode } from 'react';
 import { toast } from "@/components/ui/use-toast";
 import type { Nation } from '@/types';
-import type { GameState } from '@/lib/gameState';
-import { PlayerManager } from '@/lib/PlayerManager';
-import { spendStrategicResource } from '@/lib/strategicResources';
+import type { GameState } from '@/types/game';
+import PlayerManager from '@/state/PlayerManager';
+import { spendStrategicResource } from '@/lib/territorialResourcesSystem';
 import { OperationModal, type OperationAction } from '@/components/modals/OperationModal';
 import { IntelReportContent } from '@/components/modals/IntelReportContent';
 
