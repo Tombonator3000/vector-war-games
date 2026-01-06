@@ -7191,7 +7191,7 @@ export default function NoradVector() {
       };
       handleUseLeaderAbilityExtracted(targetId, deps);
     },
-    [addNewsItem]
+    [toast, nations, log, addNewsItem, updateDisplay]
   );
 
   // Hearts of Iron Phase 2: Memoize nations data to prevent infinite loops
@@ -9791,10 +9791,14 @@ export default function NoradVector() {
     pendingLaunch,
     selectedWarheadYield,
     selectedDeliveryMethod,
+    toast,
     resetLaunchControl,
+    log,
     triggerConsequenceAlerts,
     consumeAction,
     queueConsequencePreview,
+    setConsequencePreview,
+    setConsequenceCallback,
   ]);
 
   const startGame = useCallback((leaderOverride?: string, doctrineOverride?: string) => {
@@ -10918,15 +10922,17 @@ export default function NoradVector() {
     };
     await handleCultureExtracted(deps, OperationModal);
   }, [
-    closeModal,
-    getBuildContext,
-    openModal,
     requestApproval,
+    getBuildContext,
+    toast,
+    log,
+    updateDisplay,
+    consumeAction,
+    endGame,
+    openModal,
+    closeModal,
     targetableNations,
-    getCyberActionAvailability,
-    launchCyberAttack,
-    hardenCyberNetworks,
-    launchCyberFalseFlag,
+    nations,
   ]);
 
 
