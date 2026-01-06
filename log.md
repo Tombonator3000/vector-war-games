@@ -9693,3 +9693,207 @@ npm run build
 - **Fix:** Added `import { CityLights } from '@/state/CityLights';`
 - **Result:** Game starts correctly, all functionality restored
 - **Prevention:** Enhanced import verification checklist for future refactoring
+
+---
+
+## Session 10: Debug Blue Screen Issue
+
+**Date:** 2026-01-06  
+**Agent:** Claude (Sonnet 4.5)  
+**Branch:** `claude/fix-game-startup-kNIlf`  
+**Status:** 🔍 In Progress (Diagnostic Logging Added)
+
+### Problem
+
+After Session 9 fixes (CityLights import added), game still displays blue screen on startup. User reports:
+- Game begins to load
+- Screen cuts out to blue
+- Only blue globe visible, no UI elements
+- User testing on mobile (no access to developer console)
+
+### Investigation Steps
+
+**Code Analysis Performed:**
+1. ✅ Verified all imports present and correct
+2. ✅ Checked CityLights import (line 303) - present
+3. ✅ Verified initNationsExtracted import (line 447) - present  
+4. ✅ Tested build - completes successfully (3601 modules)
+5. ✅ Checked dev server - runs without errors
+6. ✅ Verified setup components (IntroScreen, LeaderSelectionScreen) - all exist
+7. ✅ Checked all handler imports - all correct
+8. ✅ Reviewed bootstrap process - logic appears sound
+
+**Findings:**
+- All TypeScript compilation successful
+- No build-time errors
+- All imports verified correct
+- Issue is runtime-only (not caught by TypeScript)
+
+### Diagnostic Approach
+
+Since user cannot access developer console (mobile device), added comprehensive debug logging to track execution flow:
+
+**Logging Added:**
+1. `handleIntroStart()` - Track scenario selection and initialization
+2. `startGame()` - Track leader/doctrine selection and game start
+3. Bootstrap `useEffect` - Track initialization sequence  
+4. `LeaderSelectionScreen` callback - Track leader selection
+5. Render phase detection - Track which screen is being rendered
+
+**Debug Log Points:**
+```typescript
+// Track intro start
+console.log('[DEBUG] handleIntroStart called');
+console.log('[DEBUG] Selected scenario:', scenario?.id);
+console.log('[DEBUG] Initial DEFCON:', defcon);
+
+// Track game start
+console.log('[DEBUG] startGame called with leader:', leaderOverride, 'doctrine:', doctrineOverride);
+console.log('[DEBUG] Starting game with leader:', leaderToUse, 'doctrine:', doctrineToUse);
+
+// Track bootstrap
+console.log('[DEBUG] Bootstrap useEffect triggered, isGameStarted:', isGameStarted);
+console.log('[DEBUG] Bootstrap: Initializing nations');
+
+// Track render phase
+console.log('[DEBUG] Render phase:', gamePhase);
+console.log('[DEBUG] Rendering IntroScreen');
+console.log('[DEBUG] Rendering LeaderSelectionScreen');
+```
+
+### Changes Made
+
+**Files Modified:**
+- `src/pages/Index.tsx` - Added 17 console.log statements for debugging
+
+**Lines Changed:**
+- Line 6273: Added logging to `handleIntroStart`
+- Line 6275: Log selected scenario
+- Line 6282: Log initial DEFCON
+- Line 6809: Added logging to `startGame`  
+- Line 6818: Log game start with parameters
+- Line 6715: Added logging to bootstrap useEffect
+- Line 6722: Log bootstrap abort reasons
+- Line 6726: Log canvas availability
+- Line 6750: Log nation initialization
+- Line 13535: Log leader selection
+- Line 13540: Log doctrine assignment
+- Line 13599: Log current render phase
+- Line 13601: Log IntroScreen render
+- Line 13606: Log LeaderSelectionScreen render
+
+### Build Status
+
+```bash
+npm run build
+# ✅ vite v5.4.21 building for production...
+# ✅ ✓ 3601 modules transformed.
+# ✅ dist/assets/Index-CYMKxMGT.js    2,311.57 kB │ gzip: 642.66 kB
+# ✅ Build completed in 35.33s
+```
+
+**No Build Errors:**
+- ✅ All modules transformed successfully
+- ✅ Debug logging does not introduce errors
+- ✅ Production build completes
+- ✅ No TypeScript errors
+
+### Next Steps
+
+**For User:**
+1. **Restart dev server** with new debug logging:
+   ```bash
+   # Stop old server
+   # Start new: npm run dev
+   ```
+2. **Test game startup** - Try to reproduce blue screen issue
+3. **Open Developer Console** on desktop (F12 or Ctrl+Shift+I)
+4. **Check console output** - Look for `[DEBUG]` messages
+5. **Report findings** - Share which debug messages appear before crash
+
+**Expected Debug Flow (Normal Startup):**
+```
+[DEBUG] Render phase: intro
+[DEBUG] Rendering IntroScreen
+[DEBUG] handleIntroStart called
+[DEBUG] Selected scenario: default
+[DEBUG] Initial DEFCON: 5
+[DEBUG] Render phase: leader
+[DEBUG] Rendering LeaderSelectionScreen
+[DEBUG] Leader selected: [leader name]
+[DEBUG] Auto-assigned doctrine: [doctrine]
+[DEBUG] startGame called with leader: [leader], doctrine: [doctrine]
+[DEBUG] Starting game with leader: [leader], doctrine: [doctrine]
+[DEBUG] Bootstrap useEffect triggered, isGameStarted: true
+[DEBUG] Bootstrap: Canvas available, setting up game loop
+[DEBUG] Bootstrap: First time setup, initializing systems
+[DEBUG] Bootstrap: Initializing nations
+```
+
+**If Crash Occurs:**
+- Last `[DEBUG]` message before crash indicates failure point
+- Missing expected messages indicate where code path diverges
+- Browser may show red error message with stack trace
+
+### Potential Root Causes (Hypotheses)
+
+Based on analysis, most likely causes:
+
+1. **Component Render Error:**
+   - IntroScreen or LeaderSelectionScreen child component crashes
+   - Possibly Globe3D, Starfield, or IntroLogo
+   - Would crash before reaching game phase
+
+2. **startGame() Function Error:**
+   - Scenario initialization fails
+   - Doctrine/leader data missing or malformed
+   - State reset fails
+
+3. **Bootstrap Initialization Error:**
+   - nations initialization fails (initNations())
+   - CityLights.generate() fails (even though import is present)
+   - Canvas setup fails
+   - WebGL context creation fails
+
+4. **Race Condition:**
+   - GlobeScene not ready when game starts
+   - overlayCanvas not available when bootstrap runs
+   - State update timing issue
+
+### Current Status
+
+**What Works:**
+- ✅ Code compiles without errors
+- ✅ All imports present and correct
+- ✅ Build succeeds (3601 modules)
+- ✅ Dev server runs without errors
+- ✅ Debug logging in place
+
+**What Needs Investigation:**
+- ❓ Which component/function crashes at runtime
+- ❓ Browser console error messages
+- ❓ Execution flow before crash
+- ❓ State values at crash point
+
+### Session 10 Summary
+
+**Achievement:**
+- Added comprehensive debug logging (17 log points)
+- Verified all imports and code structure  
+- Builds successfully with debug code
+- Ready for runtime diagnosis
+
+**Outcome:**
+- **Status:** Diagnostic logging deployed
+- **Changes:** 17 console.log statements added  
+- **Build:** ✅ Successful
+- **Push:** ✅ Committed and pushed to `claude/fix-game-startup-kNIlf`
+- **Next:** User needs to test with console access to see debug output
+
+**Summary:**
+- **Issue:** Blue screen persists after Session 9 fix
+- **Action:** Added debug logging to trace execution flow
+- **Result:** Waiting for user to test and provide console output
+- **Prevention:** Debug logs will identify exact crash location
+
+---
