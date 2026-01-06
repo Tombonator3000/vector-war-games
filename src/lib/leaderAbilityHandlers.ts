@@ -7,10 +7,10 @@
 
 import type { Nation } from '@/types/core';
 import type { GameState } from '@/types/game';
-import { PlayerManager } from '@/lib/managers/player';
-import { GameStateManager } from '@/lib/managers/gameState';
-import { activateLeaderAbility } from '@/lib/doctrine';
-import { mapAbilityCategoryToNewsCategory } from '@/lib/newsCategories';
+import PlayerManager from '@/state/PlayerManager';
+import GameStateManager from '@/state/GameStateManager';
+import { activateLeaderAbility } from '@/lib/leaderAbilityIntegration';
+import { mapAbilityCategoryToNewsCategory } from '@/lib/leaderDoctrineHandlers';
 
 /**
  * Dependencies required for handleUseLeaderAbility

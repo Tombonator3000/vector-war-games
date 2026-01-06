@@ -9,12 +9,12 @@ import type { Nation } from '@/types/core';
 import type { GameState } from '@/types/game';
 import type { ActionConsequences, ConsequenceCalculationContext } from '@/types/consequences';
 import type { PendingLaunchState } from '@/lib/attackHandlers';
-import { PlayerManager } from '@/lib/managers/player';
-import { GameStateManager } from '@/lib/managers/gameState';
+import PlayerManager from '@/state/PlayerManager';
+import GameStateManager from '@/state/GameStateManager';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { launch } from '@/lib/gamePhaseHandlers';
 import { launchBomber, launchSubmarine } from '@/lib/nuclearLaunchHandlers';
-import { DoomsdayClock } from '@/lib/doomsdayClock';
+import DoomsdayClock from '@/state/DoomsdayClock';
 
 /**
  * Delivery method type
