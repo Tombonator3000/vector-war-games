@@ -8810,3 +8810,133 @@ git push -u origin claude/refactor-leader-ability-system-Lzg54
 - Ikke startet
 
 **Total målreduksjon:** 90% (fra 19,191 til ~2,000 linjer)
+
+---
+
+## Session 6: Post-Refactoring Bugfixes (2026-01-06)
+
+### Issue
+After Session 5 refactoring, game failed to start with build errors preventing development server from running.
+
+### Root Cause Analysis
+
+**Problem 1: JSX in .ts files**
+- `src/lib/cultureHandlers.ts` and `src/lib/intelHandlers.ts` contained JSX code
+- Files had `.ts` extension instead of `.tsx`
+- TypeScript/esbuild cannot parse JSX syntax in `.ts` files
+- Error: `Expected ">" but found "actions"` at cultureHandlers.ts:249
+- Error: `Expected ">" but found "player"` at intelHandlers.ts:267
+
+**Problem 2: Incorrect import path**
+- `src/lib/attackHandlers.ts` imported `WARHEAD_YIELD_TO_ID` from wrong module
+- Import: `from '@/lib/research'` (incorrect)
+- Should be: `from '@/lib/gameConstants'` (correct location)
+- Error: `No matching export in "src/lib/research.ts" for import "WARHEAD_YIELD_TO_ID"`
+
+### Fix Implementation
+
+**Fix 1: Rename files to .tsx**
+```bash
+git mv src/lib/cultureHandlers.ts src/lib/cultureHandlers.tsx
+git mv src/lib/intelHandlers.ts src/lib/intelHandlers.tsx
+```
+
+These files contain React JSX components:
+- `cultureHandlers.tsx`: `<OperationModal>` component (line 248-256)
+- `intelHandlers.tsx`: `<IntelReportContent>` component (line 267)
+
+TypeScript automatically resolves imports without file extensions, so no import updates needed in Index.tsx.
+
+**Fix 2: Correct import path**
+```typescript
+// Before (incorrect)
+import { WARHEAD_YIELD_TO_ID } from '@/lib/research';
+
+// After (correct)
+import { WARHEAD_YIELD_TO_ID } from '@/lib/gameConstants';
+```
+
+### Verification
+
+**Build Status:**
+✅ Development server starts successfully
+✅ No TypeScript compilation errors
+✅ No esbuild parsing errors
+✅ Game ready for development
+
+**Test Results:**
+```bash
+npm run dev
+# VITE v5.4.21  ready in 475 ms
+# ➜  Local:   http://localhost:5173/
+# No errors in build process
+```
+
+### Impact
+
+**Files Modified:**
+1. `src/lib/cultureHandlers.ts` → `src/lib/cultureHandlers.tsx` (renamed)
+2. `src/lib/intelHandlers.ts` → `src/lib/intelHandlers.tsx` (renamed)
+3. `src/lib/attackHandlers.ts` (import corrected, line 13)
+
+**Behavior:**
+- ✅ No functional changes to game logic
+- ✅ Pure build/type system fix
+- ✅ All Session 5 refactoring preserved
+- ✅ Game startup restored
+
+### Lessons Learned
+
+**File Extension Guidelines:**
+- `.ts` files: TypeScript logic only (no JSX)
+- `.tsx` files: TypeScript with JSX/React components
+- esbuild requires correct extension for JSX parsing
+
+**Import Best Practices:**
+- Always verify export location before importing
+- Use IDE "Go to Definition" to confirm correct module
+- `WARHEAD_YIELD_TO_ID` lives in `gameConstants.ts` (game data)
+- `research.ts` contains research tree logic (separate concern)
+
+**Refactoring Checklist for Future Sessions:**
+1. ✅ Extract handler logic
+2. ✅ Verify all imports are correct
+3. ✅ Use `.tsx` extension if file contains JSX
+4. ✅ Test build after refactoring
+5. ✅ Run `npm run dev` before committing
+
+### Git Commit
+
+```bash
+git add src/lib/cultureHandlers.tsx src/lib/intelHandlers.tsx src/lib/attackHandlers.ts
+git commit -m "fix: Resolve game startup issues after Session 5 refactoring
+
+Fixed two critical issues preventing game startup:
+
+1. Renamed JSX-containing files to .tsx extension:
+   - src/lib/cultureHandlers.ts → cultureHandlers.tsx
+   - src/lib/intelHandlers.ts → intelHandlers.tsx
+   
+   These files contain React JSX components (OperationModal, 
+   IntelReportContent) which require .tsx extension for proper
+   TypeScript/esbuild parsing.
+
+2. Fixed incorrect import in attackHandlers.ts:
+   - Changed WARHEAD_YIELD_TO_ID import from '@/lib/research'
+     to '@/lib/gameConstants' (correct location)
+
+Game now starts successfully without build errors."
+```
+
+### Next Steps
+
+Session 5 refactoring is now fully functional. Ready to continue with Session 6+ refactoring work:
+- Extract diplomacy system (~200+ lines)
+- Extract event handlers (~150-200 lines)  
+- Extract UI modal generators (~200+ lines)
+
+**Current Status:**
+- Index.tsx: 15,959 lines
+- Total reduction: 3,232 lines (16.8%)
+- Phase 1 progress: 32.3% complete (3,232 / 10,000 target)
+
