@@ -274,6 +274,14 @@ import {
   handleResearchExtracted,
   type BuildHandlerDependencies,
 } from '@/lib/buildHandlers';
+import { handleAttackExtracted, type AttackHandlerDependencies, type PendingLaunchState as PendingLaunchStateType } from '@/lib/attackHandlers';
+import { handleIntelExtracted, type IntelHandlerDependencies } from '@/lib/intelHandlers';
+import {
+  handleOfferPeaceExtracted,
+  handleAcceptPeaceExtracted,
+  handleRejectPeaceExtracted,
+  type DiplomaticHandlerDependencies
+} from '@/lib/diplomaticHandlers';
 import {
   createCasualtyAlertTracker,
   evaluateCasualtyMilestones,
@@ -9714,112 +9722,25 @@ export default function NoradVector() {
     }
   }, [selectedTarget]);
 
-  const handleAttack = useCallback(() => {
-    AudioSys.playSFX('click');
-    setIsStrikePlannerOpen(prev => {
-      if (!prev) {
-        return true;
-      }
-      return prev;
-    });
+  // Dependency injection helper for attack handlers
+  const getAttackHandlerDeps = useCallback((): AttackHandlerDependencies => {
+    return {
+      S,
+      nations,
+      isGameStarted,
+      isStrikePlannerOpen,
+      selectedTargetId,
+      AudioSys,
+      setIsStrikePlannerOpen,
+      setSelectedTargetId,
+      setPendingLaunch,
+      setSelectedWarheadYield,
+      setSelectedDeliveryMethod,
+      hasActivePeaceTreaty,
+    };
+  }, [S, nations, isGameStarted, isStrikePlannerOpen, selectedTargetId, AudioSys, setIsStrikePlannerOpen, setSelectedTargetId, setPendingLaunch, setSelectedWarheadYield, setSelectedDeliveryMethod, hasActivePeaceTreaty]);
 
-    if (!isStrikePlannerOpen) {
-      return;
-    }
-
-    if (!isGameStarted || S.gameOver) return;
-
-    const player = PlayerManager.get();
-    if (!player) return;
-
-    if (S.phase !== 'PLAYER') {
-      toast({ title: 'Cannot launch', description: 'Attacks are only available during your phase.' });
-      return;
-    }
-
-    if (S.actionsRemaining <= 0) {
-      toast({ title: 'No actions remaining', description: 'You must end your turn before launching another strike.' });
-      return;
-    }
-
-    if (!canPerformAction('attack', S.defcon)) {
-      toast({ title: 'DEFCON too high', description: 'Escalate to DEFCON 2 or lower before ordering an attack.' });
-      return;
-    }
-
-    if (!selectedTargetId) {
-      toast({ title: 'Select a target', description: 'Choose a target nation from the list before launching.' });
-      return;
-    }
-
-    const target = nations.find(n => n.id === selectedTargetId && !n.isPlayer);
-    if (!target || target.population <= 0) {
-      toast({ title: 'Target unavailable', description: 'The selected target is no longer a valid threat.' });
-      setSelectedTargetId(null);
-      return;
-    }
-
-    if (hasActivePeaceTreaty(player, target)) {
-      toast({ title: 'Treaty in effect', description: 'An active truce or alliance prevents launching against this nation.' });
-      setSelectedTargetId(null);
-      return;
-    }
-
-    const warheadEntries = Object.entries(player.warheads || {})
-      .map(([yieldStr, count]) => ({ yield: Number(yieldStr), count: count as number }))
-      .filter(entry => {
-        if (entry.count <= 0) return false;
-        if (entry.yield <= 10) return true;
-        const researchId = WARHEAD_YIELD_TO_ID.get(entry.yield);
-        if (!researchId) return true;
-        return !!player.researched?.[researchId];
-      })
-      .map(entry => ({
-        ...entry,
-        requiredDefcon: (entry.yield > 50 ? 1 : 2) as 1 | 2,
-      }))
-      .sort((a, b) => b.yield - a.yield);
-
-    if (warheadEntries.length === 0) {
-      toast({ title: 'No warheads ready', description: 'Build warheads before attempting to launch.' });
-      return;
-    }
-
-    const deliverableWarheads = warheadEntries.filter(entry => S.defcon <= entry.requiredDefcon);
-
-    if (deliverableWarheads.length === 0) {
-      const minDefcon = Math.min(...warheadEntries.map(entry => entry.requiredDefcon));
-      toast({
-        title: 'DEFCON restriction',
-        description: `Lower DEFCON to ${minDefcon} or less to deploy available warheads.`,
-      });
-      return;
-    }
-
-    const missileCount = player.missiles || 0;
-    const bomberCount = player.bombers || 0;
-    const submarineCount = player.submarines || 0;
-
-    if (missileCount <= 0 && bomberCount <= 0 && submarineCount <= 0) {
-      toast({ title: 'No launch platforms', description: 'Construct missiles, bombers, or submarines before attacking.' });
-      return;
-    }
-
-    const deliveryOptions: PendingLaunchState['deliveryOptions'] = [
-      { id: 'missile', label: 'ICBM', count: missileCount },
-      { id: 'bomber', label: 'Strategic Bomber', count: bomberCount },
-      { id: 'submarine', label: 'Ballistic Submarine', count: submarineCount },
-    ];
-
-    setPendingLaunch({
-      target,
-      warheads: deliverableWarheads,
-      deliveryOptions,
-    });
-    setSelectedWarheadYield(deliverableWarheads[0]?.yield ?? null);
-    const defaultDelivery = deliveryOptions.find(option => option.count > 0)?.id ?? null;
-    setSelectedDeliveryMethod(defaultDelivery);
-  }, [isGameStarted, isStrikePlannerOpen, selectedTargetId]);
+  const handleAttack = useCallback(() => handleAttackExtracted(getAttackHandlerDeps()), [getAttackHandlerDeps]);
 
   const resetLaunchControl = useCallback(() => {
     setPendingLaunch(null);
@@ -10358,445 +10279,34 @@ export default function NoradVector() {
 
   const handleResearch = useCallback(async () => handleResearchExtracted(getBuildHandlerDeps()), [getBuildHandlerDeps]);
 
-  const handleIntel = useCallback(async () => {
-    const approved = await requestApproval('INTEL', { description: 'Intelligence operations authorization' });
-    if (!approved) return;
-    AudioSys.playSFX('click');
-    const player = getBuildContext('Intelligence');
-    if (!player) return;
-
-    const cyberAttackAvailability = getCyberActionAvailability(player.id, 'intrusion');
-    const cyberDefenseAvailability = getCyberActionAvailability(player.id, 'fortify');
-    const cyberFalseFlagAvailability = getCyberActionAvailability(player.id, 'false_flag');
-
-    const cyberActions: OperationAction[] = [
-      {
-        id: 'cyber_attack',
-        title: 'CYBER INTRUSION',
-        subtitle: 'Drain enemy readiness & intel',
-        costText: `Cost: ${cyberAttackAvailability.cost} CYBER`,
-        requiresTarget: true,
-        disabled: !cyberAttackAvailability.canExecute,
-        disabledReason: cyberAttackAvailability.reason,
-        targetFilter: (nation, commander) => isEligibleEnemyTarget(commander, nation),
-      },
-      {
-        id: 'cyber_defend',
-        title: 'HARDEN NETWORKS',
-        subtitle: 'Restore readiness reserves',
-        costText: `Cost: ${cyberDefenseAvailability.cost} CYBER`,
-        disabled: !cyberDefenseAvailability.canExecute,
-        disabledReason: cyberDefenseAvailability.reason,
-      },
-      {
-        id: 'cyber_false_flag',
-        title: 'FALSE FLAG BREACH',
-        subtitle: 'Frame a rival for aggression',
-        costText: `Cost: ${cyberFalseFlagAvailability.cost} CYBER`,
-        requiresTarget: true,
-        disabled: !cyberFalseFlagAvailability.canExecute,
-        disabledReason: cyberFalseFlagAvailability.reason,
-        description: 'Stage an intrusion that points forensic evidence toward another rival.',
-        targetFilter: (nation, commander) => isEligibleEnemyTarget(commander, nation),
-      },
-    ];
-
-    const intelActions: OperationAction[] = [
-      ...cyberActions,
-      {
-        id: 'satellite',
-        title: 'DEPLOY SATELLITE',
-        subtitle: 'Reveal enemy arsenal',
-        costText: 'Cost: 5 INTEL',
-        requiresTarget: true,
-        disabled: (player.intel || 0) < 5,
-        disabledReason: 'Requires 5 INTEL to deploy a satellite.',
-      },
-      ...(player.hasASATCapability ? [{
-        id: 'asat_strike' as const,
-        title: 'ASAT STRIKE',
-        subtitle: 'Destroy enemy satellite',
-        costText: 'Cost: 15 INTEL + 5 URANIUM',
-        requiresTarget: true,
-        disabled: (player.intel || 0) < 15 || (player.uranium || 0) < 5,
-        disabledReason: 'Requires 15 INTEL and 5 URANIUM to launch ASAT weapon.',
-        targetFilter: (nation: Nation) => nation.satellites && Object.keys(nation.satellites).length > 0,
-      }] : []),
-      ...(((player.orbitalStrikesAvailable || 0) > 0) ? [{
-        id: 'orbital_strike' as const,
-        title: 'ORBITAL STRIKE',
-        subtitle: `Kinetic bombardment (${player.orbitalStrikesAvailable} left)`,
-        costText: 'Cost: 50 INTEL + 30 URANIUM',
-        requiresTarget: true,
-        disabled: (player.intel || 0) < 50 || (player.uranium || 0) < 30,
-        disabledReason: 'Requires 50 INTEL and 30 URANIUM for orbital strike.',
-      }] : []),
-      {
-        id: 'sabotage',
-        title: 'SABOTAGE',
-        subtitle: 'Destroy enemy warhead',
-        costText: 'Cost: 10 INTEL',
-        requiresTarget: true,
-        disabled: (player.intel || 0) < 10,
-        disabledReason: 'Requires 10 INTEL to mount sabotage.',
-        targetFilter: nation => Object.values(nation.warheads || {}).some(count => (count || 0) > 0),
-      },
-      {
-        id: 'propaganda',
-        title: 'PROPAGANDA',
-        subtitle: 'Stoke enemy unrest',
-        costText: 'Cost: 15 INTEL',
-        requiresTarget: true,
-        disabled: (player.intel || 0) < 15,
-        disabledReason: 'Requires 15 INTEL to conduct propaganda.',
-      },
-      {
-        id: 'culture_bomb',
-        title: 'CULTURE BOMB',
-        subtitle: 'Steal 10% population',
-        costText: (() => {
-          const baseCost = 20;
-          const reduction = player.cultureBombCostReduction || 0;
-          const actualCost = Math.ceil(baseCost * (1 - reduction));
-          return `Cost: ${actualCost} INTEL${reduction > 0 ? ` (-${Math.floor(reduction * 100)}%)` : ''}`;
-        })(),
-        requiresTarget: true,
-        disabled: (() => {
-          const baseCost = 20;
-          const reduction = player.cultureBombCostReduction || 0;
-          const actualCost = Math.ceil(baseCost * (1 - reduction));
-          return (player.intel || 0) < actualCost;
-        })(),
-        disabledReason: (() => {
-          const baseCost = 20;
-          const reduction = player.cultureBombCostReduction || 0;
-          const actualCost = Math.ceil(baseCost * (1 - reduction));
-          return `Requires ${actualCost} INTEL to deploy a culture bomb.`;
-        })(),
-        targetFilter: nation => nation.population > 5,
-      },
-      {
-        id: 'view',
-        title: 'VIEW INTELLIGENCE',
-        subtitle: 'Review surveillance reports',
-        description: 'Displays detailed data for nations under satellite coverage.',
-      },
-      {
-        id: 'deep',
-        title: 'DEEP RECON',
-        subtitle: 'Reveal tech and doctrine',
-        costText: 'Cost: 30 INTEL',
-        requiresTarget: true,
-        disabled: (player.intel || 0) < 30,
-        disabledReason: 'Requires 30 INTEL to run deep reconnaissance.',
-      },
-      {
-        id: 'cover',
-        title: 'COVER OPS',
-        subtitle: 'Hide your assets for 3 turns',
-        costText: 'Cost: 25 INTEL',
-        disabled: (player.intel || 0) < 25,
-        disabledReason: 'Requires 25 INTEL to mask your forces.',
-      }
-    ];
-
-    const executeIntelAction = (action: OperationAction, target?: Nation) => {
-      const commander = PlayerManager.get();
-      if (!commander) {
-        toast({ title: 'No command authority', description: 'Player nation could not be located.' });
-        return false;
-      }
-
-      switch (action.id) {
-        case 'cyber_attack': {
-          if (!target) return false;
-          const outcome = launchCyberAttack(commander.id, target.id);
-          if (!outcome.executed) {
-            return false;
-          }
-          updateDisplay();
-          consumeAction();
-          return true;
-        }
-
-        case 'cyber_defend': {
-          const outcome = hardenCyberNetworks(commander.id);
-          if (!outcome.executed) {
-            return false;
-          }
-          updateDisplay();
-          consumeAction();
-          return true;
-        }
-
-        case 'cyber_false_flag': {
-          if (!target) return false;
-          const outcome = launchCyberFalseFlag(commander.id, target.id);
-          if (!outcome.executed) {
-            return false;
-          }
-          updateDisplay();
-          consumeAction();
-          return true;
-        }
-
-        case 'view':
-          openModal('INTELLIGENCE REPORT', <IntelReportContent player={commander} nations={nations} onClose={closeModal} />);
-          return false;
-
-        case 'satellite':
-          if (!target) return false;
-          if ((commander.intel || 0) < 5) {
-            toast({ title: 'Insufficient intel', description: 'You need 5 INTEL to deploy a satellite.' });
-            return false;
-          }
-          {
-            // Check satellite limit (only count non-expired satellites)
-            const maxSats = commander.maxSatellites || 3;
-            const currentSats = Object.keys(commander.satellites || {}).filter(id => {
-              const expiresAt = commander.satellites?.[id];
-              return expiresAt && S.turn < expiresAt;
-            }).length;
-            if (currentSats >= maxSats) {
-              toast({ title: 'Satellite limit reached', description: `Maximum ${maxSats} satellites deployed. Research Advanced Satellite Network for more slots.` });
-              return false;
-            }
-
-            commander.intel -= 5;
-            commander.satellites = commander.satellites || {};
-            commander.satellites[target.id] = S.turn + 5; // Expires after 5 turns
-            log(`Satellite deployed over ${target.name}`);
-            registerSatelliteOrbit(commander.id, target.id);
-          }
-          updateDisplay();
-          consumeAction();
-          return true;
-
-        case 'asat_strike':
-          if (!target) return false;
-          {
-            const availableUranium = commander.resourceStockpile?.uranium ?? commander.uranium ?? 0;
-            if ((commander.intel || 0) < 15 || availableUranium < 5) {
-              toast({ title: 'Insufficient resources', description: 'You need 15 INTEL and 5 URANIUM for ASAT strike.' });
-              return false;
-            }
-          }
-          {
-            // Only count non-expired satellites
-            const targetSatellites = Object.keys(target.satellites || {}).filter(id => {
-              const expiresAt = target.satellites?.[id];
-              return expiresAt && S.turn < expiresAt;
-            });
-            if (targetSatellites.length === 0) {
-              toast({ title: 'No satellites', description: `${target.name} has no satellites to destroy.` });
-              return false;
-            }
-            // Destroy a random satellite
-            const randomSat = targetSatellites[Math.floor(Math.random() * targetSatellites.length)];
-            if (target.satellites) {
-              delete target.satellites[randomSat];
-            }
-            commander.intel -= 15;
-            spendStrategicResource(commander, 'uranium', 5);
-            log(`ASAT strike destroys ${target.name}'s satellite!`, 'alert');
-            adjustThreat(target, commander.id, 15);
-          }
-          updateDisplay();
-          consumeAction();
-          return true;
-
-        case 'orbital_strike':
-          if (!target) return false;
-          {
-            const availableUranium = commander.resourceStockpile?.uranium ?? commander.uranium ?? 0;
-            if ((commander.intel || 0) < 50 || availableUranium < 30) {
-              toast({ title: 'Insufficient resources', description: 'You need 50 INTEL and 30 URANIUM for orbital strike.' });
-              return false;
-            }
-          }
-          if ((commander.orbitalStrikesAvailable || 0) <= 0) {
-            toast({ title: 'No strikes available', description: 'No orbital strikes remaining.' });
-            return false;
-          }
-          {
-            // Orbital strike: massive damage
-            const popLoss = Math.floor(target.population * 0.15);
-            const prodLoss = Math.floor((target.production || 0) * 0.20);
-            const warheadTypes = Object.keys(target.warheads || {});
-            const warheadsDestroyed = Math.min(3, warheadTypes.length);
-
-            target.population = Math.max(0, target.population - popLoss);
-            target.production = Math.max(0, (target.production || 0) - prodLoss);
-
-            // Destroy random warheads
-            for (let i = 0; i < warheadsDestroyed; i++) {
-              if (warheadTypes.length > 0) {
-                const idx = Math.floor(Math.random() * warheadTypes.length);
-                const type = Number(warheadTypes[idx]);
-                if (target.warheads && target.warheads[type]) {
-                  target.warheads[type] = Math.max(0, target.warheads[type] - 1);
-                  if (target.warheads[type] <= 0) {
-                    delete target.warheads[type];
-                  }
-                }
-                warheadTypes.splice(idx, 1);
-              }
-            }
-
-            commander.intel -= 50;
-            spendStrategicResource(commander, 'uranium', 30);
-            commander.orbitalStrikesAvailable = (commander.orbitalStrikesAvailable || 1) - 1;
-
-            // Mark as aggressive action
-            commander.lastAggressiveAction = S.turn;
-
-            log(`☄️ ORBITAL STRIKE devastates ${target.name}: ${popLoss}M casualties, ${warheadsDestroyed} warheads destroyed!`, 'alert');
-            adjustThreat(target, commander.id, 35);
-            handleDefconChange(-1, `Orbital strike against ${target.name} escalates global tensions`, 'player', {
-              onAudioTransition: AudioSys.handleDefconTransition,
-              onLog: log,
-              onNewsItem: addNewsItem,
-              onUpdateDisplay: updateDisplay,
-              onShowModal: setDefconChangeEvent,
-            });
-          }
-          updateDisplay();
-          consumeAction();
-          return true;
-
-        case 'sabotage':
-          if (!target) return false;
-          if ((commander.intel || 0) < 10) {
-            toast({ title: 'Insufficient intel', description: 'You need 10 INTEL for sabotage operations.' });
-            return false;
-          }
-          {
-            const warheadTypes = Object.keys(target.warheads || {}).filter(key => (target.warheads?.[Number(key)] || 0) > 0);
-            if (warheadTypes.length === 0) {
-              toast({ title: 'No targets', description: `${target.name} has no active warheads to sabotage.` });
-              return false;
-            }
-            const type = warheadTypes[Math.floor(Math.random() * warheadTypes.length)];
-            const numericType = Number(type);
-            if (target.warheads) {
-              target.warheads[numericType] = Math.max(0, (target.warheads[numericType] || 0) - 1);
-              if (target.warheads[numericType] <= 0) {
-                delete target.warheads[numericType];
-              }
-            }
-            commander.intel -= 10;
-
-            // Apply sabotage detection reduction from Deep Cover Operations tech
-            const baseDetectionChance = 0.40;
-            const detectionReduction = commander.sabotageDetectionReduction || 0;
-            const actualDetectionChance = Math.max(0.05, baseDetectionChance - detectionReduction);
-
-            if (Math.random() < actualDetectionChance) {
-              log(`Sabotage successful: ${target.name}'s ${type}MT warhead destroyed (DETECTED).`, 'warning');
-              adjustThreat(target, commander.id, 20);
-            } else {
-              log(`Sabotage successful: ${target.name}'s ${type}MT warhead destroyed.`);
-            }
-          }
-          updateDisplay();
-          consumeAction();
-          return true;
-
-        case 'propaganda':
-          if (!target) return false;
-          if ((commander.intel || 0) < 15) {
-            toast({ title: 'Insufficient intel', description: 'You need 15 INTEL for propaganda operations.' });
-            return false;
-          }
-          {
-            commander.intel -= 15;
-
-            // Apply propaganda effectiveness bonus from Propaganda Mastery tech
-            const baseInstability = 20;
-            const effectiveness = commander.memeWaveEffectiveness || 1.0;
-            const actualInstability = Math.floor(baseInstability * effectiveness);
-
-            target.instability = (target.instability || 0) + actualInstability;
-            log(`Propaganda campaign spikes instability in ${target.name} (+${actualInstability}).`);
-          }
-          updateDisplay();
-          consumeAction();
-          return true;
-
-        case 'culture_bomb':
-          if (!target) return false;
-          {
-            // Apply culture bomb cost reduction from tech
-            const baseCost = 20;
-            const costReduction = commander.cultureBombCostReduction || 0;
-            const actualCost = Math.ceil(baseCost * (1 - costReduction));
-
-            if ((commander.intel || 0) < actualCost) {
-              toast({ title: 'Insufficient intel', description: `You need ${actualCost} INTEL for a culture bomb.` });
-              return false;
-            }
-
-            // Apply stolen pop conversion rate bonus
-            const baseStolen = Math.floor(target.population * 0.1);
-            const conversionRate = commander.stolenPopConversionRate || 1.0;
-            const stolen = Math.max(1, Math.floor(baseStolen * conversionRate));
-
-            commander.intel -= actualCost;
-            target.population = Math.max(0, target.population - stolen);
-            commander.population += stolen;
-            commander.migrantsThisTurn = (commander.migrantsThisTurn || 0) + stolen;
-            commander.migrantsTotal = (commander.migrantsTotal || 0) + stolen;
-            log(`Culture bomb siphons ${stolen}M population from ${target.name}.`);
-          }
-          updateDisplay();
-          consumeAction();
-          return true;
-
-        case 'deep':
-          if (!target) return false;
-          if ((commander.intel || 0) < 30) {
-            toast({ title: 'Insufficient intel', description: 'You need 30 INTEL for deep reconnaissance.' });
-            return false;
-          }
-          commander.intel -= 30;
-          commander.satellites = commander.satellites || {};
-          commander.satellites[target.id] = S.turn + 5; // Expires after 5 turns
-          commander.deepRecon = commander.deepRecon || {};
-          commander.deepRecon[target.id] = (commander.deepRecon[target.id] || 0) + 3;
-          log(`Deep recon initiated over ${target.name}. Detailed intel for 3 turns.`);
-          registerSatelliteOrbit(commander.id, target.id);
-          updateDisplay();
-          consumeAction();
-          return true;
-
-        case 'cover':
-          if ((commander.intel || 0) < 25) {
-            toast({ title: 'Insufficient intel', description: 'You need 25 INTEL to initiate cover operations.' });
-            return false;
-          }
-          commander.intel -= 25;
-          commander.coverOpsTurns = (commander.coverOpsTurns || 0) + 3;
-          log('Cover operations active: your forces are hidden for 3 turns.');
-          updateDisplay();
-          consumeAction();
-          return true;
-      }
-
-      return false;
+  // Dependency injection helper for intel handlers
+  const getIntelHandlerDeps = useCallback((): IntelHandlerDependencies => {
+    return {
+      S,
+      nations,
+      targetableNations,
+      AudioSys,
+      log,
+      openModal,
+      closeModal,
+      updateDisplay,
+      consumeAction,
+      getBuildContext,
+      requestApproval,
+      getCyberActionAvailability,
+      launchCyberAttack,
+      hardenCyberNetworks,
+      launchCyberFalseFlag,
+      registerSatelliteOrbit,
+      adjustThreat,
+      handleDefconChange,
+      addNewsItem,
+      setDefconChangeEvent,
+      isEligibleEnemyTarget,
     };
+  }, [S, nations, targetableNations, AudioSys, log, openModal, closeModal, updateDisplay, consumeAction, getBuildContext, requestApproval, getCyberActionAvailability, launchCyberAttack, hardenCyberNetworks, launchCyberFalseFlag, registerSatelliteOrbit, adjustThreat, handleDefconChange, addNewsItem, setDefconChangeEvent, isEligibleEnemyTarget]);
 
-    openModal(
-      'INTELLIGENCE OPS',
-      <OperationModal
-        actions={intelActions}
-        player={player}
-        targetableNations={targetableNations}
-        onExecute={executeIntelAction}
-        onClose={closeModal}
-        accent="cyan"
-      />
-    );
-  }, [closeModal, getBuildContext, openModal, targetableNations, nations, requestApproval, getCyberActionAvailability, launchCyberAttack, hardenCyberNetworks, launchCyberFalseFlag, log, registerSatelliteOrbit, adjustThreat, updateDisplay, consumeAction]);
+  const handleIntel = useCallback(async () => handleIntelExtracted(getIntelHandlerDeps()), [getIntelHandlerDeps]);
 
   const handleStartLabConstruction = useCallback((tier: number) => {
     const player = getNationById(nations, playerNationId);
@@ -11487,164 +10997,30 @@ export default function NoradVector() {
     [refreshGameState, toast, addNewsItem, queueConsequencePreview]
   );
 
+  // Dependency injection helper for diplomatic handlers
+  const getDiplomaticHandlerDeps = useCallback((): DiplomaticHandlerDependencies => {
+    return {
+      S,
+      log,
+      addNewsItem,
+      applyNationUpdatesMap,
+      triggerNationsUpdate,
+    };
+  }, [S, log, addNewsItem, applyNationUpdatesMap, triggerNationsUpdate]);
+
   const handleOfferPeace = useCallback(
-    (warId: string) => {
-      const player = PlayerManager.get();
-      if (!player) {
-        toast({ title: 'Unable to offer peace', description: 'Player nation not found.', variant: 'destructive' });
-        return;
-      }
-
-      const warState = (player.activeWars || []).find((war) => war.id === warId);
-      if (!warState) {
-        toast({ title: 'Unable to offer peace', description: 'War state could not be located.', variant: 'destructive' });
-        return;
-      }
-
-      const opponentId =
-        warState.attackerNationId === player.id ? warState.defenderNationId : warState.attackerNationId;
-      const opponent = GameStateManager.getNation(opponentId);
-      if (!opponent) {
-        toast({ title: 'Unable to offer peace', description: 'Opponent nation not found.', variant: 'destructive' });
-        return;
-      }
-
-      const terms = createWhitePeaceTerms();
-      const offer = createPeaceOffer(player, opponent, warState, terms, S.turn);
-
-      const playerOffers: PeaceOffer[] = (player.peaceOffers || [])
-        .filter((existing) => existing.id !== offer.id && existing.warId !== warState.id)
-        .map((existing) => ({ ...existing }));
-      playerOffers.push(offer);
-
-      const opponentOffers: PeaceOffer[] = (opponent.peaceOffers || [])
-        .filter((existing) => existing.id !== offer.id)
-        .map((existing) => ({ ...existing }));
-      opponentOffers.push(offer);
-
-      const updates = new Map<string, Partial<Nation>>();
-      updates.set(player.id, { peaceOffers: playerOffers } as Partial<Nation>);
-      updates.set(opponent.id, { peaceOffers: opponentOffers } as Partial<Nation>);
-      applyNationUpdatesMap(updates);
-
-      toast({
-        title: 'Peace Offer Sent',
-        description: `White peace proposal sent to ${opponent.name}.`,
-      });
-      log(`Peace offer sent to ${opponent.name}`, 'diplomatic');
-      addNewsItem('diplomatic', `${player.name || player.id} proposes peace to ${opponent.name}`, 'important');
-      triggerNationsUpdate?.();
-    },
-    [applyNationUpdatesMap, toast, addNewsItem]
+    (warId: string) => handleOfferPeaceExtracted(warId, getDiplomaticHandlerDeps()),
+    [getDiplomaticHandlerDeps]
   );
 
   const handleAcceptPeace = useCallback(
-    (offerId: string) => {
-      const player = PlayerManager.get();
-      if (!player) {
-        toast({ title: 'Unable to process offer', description: 'Player nation not found.', variant: 'destructive' });
-        return;
-      }
-
-      const offer = (player.peaceOffers || []).find((po) => po.id === offerId);
-      if (!offer) {
-        toast({ title: 'Offer expired', description: 'Peace offer could not be found.', variant: 'destructive' });
-        return;
-      }
-
-      if (offer.toNationId !== player.id) {
-        toast({ title: 'Offer not addressed to player', description: 'Cannot accept outgoing offer.', variant: 'destructive' });
-        return;
-      }
-
-      const opponent = GameStateManager.getNation(offer.fromNationId);
-      if (!opponent) {
-        toast({ title: 'Unable to process offer', description: 'Opposing nation not found.', variant: 'destructive' });
-        return;
-      }
-
-      const warState = (player.activeWars || []).find((war) => war.id === offer.warId);
-      if (!warState) {
-        toast({ title: 'War not found', description: 'Conflict already ended or missing.', variant: 'destructive' });
-        return;
-      }
-
-      const status: WarState['status'] = offer.terms.type === 'white-peace'
-        ? 'white-peace'
-        : warState.attackerNationId === player.id
-          ? 'defender-victory'
-          : 'attacker-victory';
-      const resolvedWar = endWar(warState, status);
-
-      const updatedPlayerWars = (player.activeWars || []).filter((war) => war.id !== warState.id);
-      const updatedOpponentWars = (opponent.activeWars || []).filter((war) => war.id !== warState.id);
-      const updatedPlayerOffers: PeaceOffer[] = (player.peaceOffers || [])
-        .filter((po) => po.id !== offerId)
-        .map((existing) => ({ ...existing }));
-      const updatedOpponentOffers: PeaceOffer[] = (opponent.peaceOffers || [])
-        .filter((po) => po.id !== offerId)
-        .map((existing) => ({ ...existing }));
-
-      const updates = new Map<string, Partial<Nation>>();
-      updates.set(player.id, { activeWars: updatedPlayerWars, peaceOffers: updatedPlayerOffers } as Partial<Nation>);
-      updates.set(opponent.id, { activeWars: updatedOpponentWars, peaceOffers: updatedOpponentOffers } as Partial<Nation>);
-      applyNationUpdatesMap(updates);
-
-      const casusState = S.casusBelliState ?? { allWars: [], warHistory: [] };
-      casusState.allWars = (casusState.allWars || []).filter((war) => war.id !== warState.id);
-      casusState.warHistory = [...(casusState.warHistory || []), resolvedWar];
-      S.casusBelliState = casusState;
-
-      toast({ title: 'Peace Accepted', description: `Peace agreed with ${opponent.name}.` });
-      log(`Peace concluded with ${opponent.name}`, 'success');
-      addNewsItem('diplomatic', `${player.name || player.id} accepts peace with ${opponent.name}`, 'important');
-      triggerNationsUpdate?.();
-    },
-    [applyNationUpdatesMap, toast, addNewsItem]
+    (offerId: string) => handleAcceptPeaceExtracted(offerId, getDiplomaticHandlerDeps()),
+    [getDiplomaticHandlerDeps]
   );
 
   const handleRejectPeace = useCallback(
-    (offerId: string) => {
-      const player = PlayerManager.get();
-      if (!player) {
-        toast({ title: 'Unable to process offer', description: 'Player nation not found.', variant: 'destructive' });
-        return;
-      }
-
-      const offer = (player.peaceOffers || []).find((po) => po.id === offerId);
-      if (!offer) {
-        toast({ title: 'Offer not found', description: 'The peace offer may have expired.', variant: 'destructive' });
-        return;
-      }
-
-      const opponentId = offer.fromNationId === player.id ? offer.toNationId : offer.fromNationId;
-      const opponent = GameStateManager.getNation(opponentId);
-
-      const updatedPlayerOffers: PeaceOffer[] = (player.peaceOffers || [])
-        .filter((po) => po.id !== offerId)
-        .map((existing) => ({ ...existing }));
-      const updates = new Map<string, Partial<Nation>>();
-      updates.set(player.id, { peaceOffers: updatedPlayerOffers } as Partial<Nation>);
-
-      if (opponent) {
-        const updatedOpponentOffers: PeaceOffer[] = (opponent.peaceOffers || [])
-          .filter((po) => po.id !== offerId)
-          .map((existing) => ({ ...existing }));
-        updates.set(opponent.id, { peaceOffers: updatedOpponentOffers } as Partial<Nation>);
-      }
-
-      applyNationUpdatesMap(updates);
-
-      toast({
-        title: 'Peace Offer Rejected',
-        description: `Peace offer from ${opponent?.name ?? 'opponent'} rejected.`,
-        variant: 'destructive',
-      });
-      log(`Peace offer rejected from ${opponent?.name ?? 'opponent'}`, 'warning');
-      addNewsItem('diplomatic', `${player.name || player.id} rejects peace from ${opponent?.name ?? 'opponent'}`, 'alert');
-      triggerNationsUpdate?.();
-    },
-    [applyNationUpdatesMap, toast, addNewsItem]
+    (offerId: string) => handleRejectPeaceExtracted(offerId, getDiplomaticHandlerDeps()),
+    [getDiplomaticHandlerDeps]
   );
 
   const handleCulture = useCallback(async () => {
