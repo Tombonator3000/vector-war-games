@@ -6270,13 +6270,16 @@ export default function NoradVector() {
   }, []);
 
   const handleIntroStart = useCallback(() => {
+    console.log('[DEBUG] handleIntroStart called');
     const scenario = SCENARIOS[selectedScenarioId] ?? getDefaultScenario();
+    console.log('[DEBUG] Selected scenario:', scenario?.id);
     S.scenario = scenario;
     S.turn = 1;
     S.phase = 'PLAYER';
     S.gameOver = false;
     S.paused = false;
     const defcon = getScenarioDefcon(scenario);
+    console.log('[DEBUG] Initial DEFCON:', defcon);
     S.defcon = defcon;
     S.actionsRemaining = defcon >= 4 ? 1 : defcon >= 2 ? 2 : 3;
 
@@ -6709,15 +6712,18 @@ export default function NoradVector() {
   }, [isGameStarted]);
 
   useEffect(() => {
+    console.log('[DEBUG] Bootstrap useEffect triggered, isGameStarted:', isGameStarted);
     if (!isGameStarted) {
       return;
     }
 
     const canvasElement = globeSceneRef.current?.overlayCanvas ?? null;
     if (!canvasElement) {
+      console.log('[DEBUG] Bootstrap aborted - no overlay canvas yet');
       return;
     }
 
+    console.log('[DEBUG] Bootstrap: Canvas available, setting up game loop');
     canvas = canvasElement;
     ctx = canvasElement.getContext('2d')!;
 
@@ -6727,11 +6733,13 @@ export default function NoradVector() {
     }
 
     if (hasBootstrappedGameRef.current) {
+      console.log('[DEBUG] Bootstrap: Already bootstrapped, enabling gameplay loop');
       isGameplayLoopEnabled = true;
       isAttractModeActive = false;
       return;
     }
 
+    console.log('[DEBUG] Bootstrap: First time setup, initializing systems');
     hasBootstrappedGameRef.current = true;
 
     AudioSys.init();
@@ -6739,6 +6747,7 @@ export default function NoradVector() {
     Ocean.init();
 
     if (nations.length === 0) {
+      console.log('[DEBUG] Bootstrap: Initializing nations');
       initNations();
       setConventionalState(S.conventional ?? createDefaultConventionalState());
       CityLights.generate();
@@ -9803,13 +9812,16 @@ export default function NoradVector() {
   ]);
 
   const startGame = useCallback((leaderOverride?: string, doctrineOverride?: string) => {
+    console.log('[DEBUG] startGame called with leader:', leaderOverride, 'doctrine:', doctrineOverride);
     const leaderToUse = leaderOverride ?? selectedLeader;
     const doctrineToUse = doctrineOverride ?? selectedDoctrine;
 
     if (!leaderToUse || !doctrineToUse) {
+      console.log('[DEBUG] startGame aborted - missing leader or doctrine');
       return;
     }
 
+    console.log('[DEBUG] Starting game with leader:', leaderToUse, 'doctrine:', doctrineToUse);
     // CRITICAL: Reset all game state before starting a new game
     // This ensures no state persists from previous sessions (immigration policy, etc.)
     resetGameState();
@@ -13520,10 +13532,12 @@ export default function NoradVector() {
         interfaceRef={interfaceRef}
         leaders={availableLeaders}
         onSelectLeader={(leaderName) => {
+          console.log('[DEBUG] Leader selected:', leaderName);
           setSelectedLeader(leaderName);
 
           // Auto-assign doctrine based on leader
           const defaultDoctrine = getLeaderDefaultDoctrine(leaderName);
+          console.log('[DEBUG] Auto-assigned doctrine:', defaultDoctrine);
           setSelectedDoctrine(defaultDoctrine);
 
           // Start game directly with leader's doctrine
@@ -13582,11 +13596,14 @@ export default function NoradVector() {
   const defconIndicatorClasses = useMemo(() => getDefconIndicatorClasses(S.defcon), [S.defcon]);
 
   // Early returns for different phases
+  console.log('[DEBUG] Render phase:', gamePhase);
   if (gamePhase === 'intro') {
+    console.log('[DEBUG] Rendering IntroScreen');
     return renderIntroScreen();
   }
 
   if (gamePhase === 'leader') {
+    console.log('[DEBUG] Rendering LeaderSelectionScreen');
     return renderLeaderSelection();
   }
 
