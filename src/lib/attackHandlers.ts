@@ -10,7 +10,7 @@ import type { Nation } from '@/types';
 import type { GameState } from '@/lib/gameState';
 import { PlayerManager } from '@/lib/PlayerManager';
 import { canPerformAction } from '@/lib/actions';
-import { WARHEAD_YIELD_TO_ID } from '@/lib/research';
+import { WARHEAD_YIELD_TO_ID } from '@/lib/gameConstants';
 
 export interface PendingLaunchState {
   target: Nation;
