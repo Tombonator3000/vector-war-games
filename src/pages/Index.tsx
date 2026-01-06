@@ -282,6 +282,9 @@ import {
   handleRejectPeaceExtracted,
   type DiplomaticHandlerDependencies
 } from '@/lib/diplomaticHandlers';
+import { handleUseLeaderAbility as handleUseLeaderAbilityExtracted, type LeaderAbilityDeps } from '@/lib/leaderAbilityHandlers';
+import { handleCulture as handleCultureExtracted, type CultureHandlerDeps } from '@/lib/cultureHandlers';
+import { confirmPendingLaunch as confirmPendingLaunchExtracted, type LaunchConfirmationDeps } from '@/lib/launchConfirmationHandlers';
 import {
   createCasualtyAlertTracker,
   evaluateCasualtyMilestones,
@@ -7178,44 +7181,15 @@ export default function NoradVector() {
 
   const handleUseLeaderAbility = useCallback(
     (targetId?: string) => {
-      const player = PlayerManager.get();
-      if (!player?.leaderAbilityState) {
-        toast({
-          title: 'Leader ability unavailable',
-          description: 'Your leader does not have an activatable ability.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const { ability } = player.leaderAbilityState;
-      const abilityName = ability.name;
-      const abilityCategory = ability.category;
-      const result = activateLeaderAbility(player, S, targetId);
-
-      if (result.success) {
-        toast({
-          title: `${abilityName} activated`,
-          description: result.message,
-        });
-        log(`${player.name} activates ${abilityName}: ${result.message}`, 'success');
-        const newsCategory = mapAbilityCategoryToNewsCategory(abilityCategory);
-        addNewsItem(newsCategory, `${player.name} activates ${abilityName}`, 'important');
-        result.effects.forEach(effect => {
-          addNewsItem(newsCategory, effect, 'important');
-        });
-      } else {
-        toast({
-          title: 'Unable to activate ability',
-          description: result.message,
-          variant: 'destructive',
-        });
-        log(`Leader ability failed: ${result.message}`, 'warning');
-      }
-
-      GameStateManager.setNations([...nations]);
-      PlayerManager.setNations([...nations]);
-      updateDisplay();
+      const deps: LeaderAbilityDeps = {
+        toast,
+        gameState: S,
+        nations,
+        log,
+        addNewsItem,
+        updateDisplay,
+      };
+      handleUseLeaderAbilityExtracted(targetId, deps);
     },
     [addNewsItem]
   );
@@ -9797,118 +9771,22 @@ export default function NoradVector() {
   }, []);
 
   const confirmPendingLaunch = useCallback(() => {
-    if (!pendingLaunch || selectedWarheadYield === null || !selectedDeliveryMethod) {
-      return;
-    }
-
-    const player = PlayerManager.get();
-    if (!player) {
-      resetLaunchControl();
-      return;
-    }
-
-    const selectedWarhead = pendingLaunch.warheads.find(warhead => warhead.yield === selectedWarheadYield);
-    if (!selectedWarhead) {
-      toast({ title: 'Warhead unavailable', description: 'Select a valid warhead yield before launching.' });
-      return;
-    }
-
-    if (S.defcon > selectedWarhead.requiredDefcon) {
-      toast({
-        title: 'DEFCON restriction',
-        description: `Lower DEFCON to ${selectedWarhead.requiredDefcon} or less to deploy a ${selectedWarheadYield}MT warhead.`,
-      });
-      return;
-    }
-
-    const availableWarheads = player.warheads?.[selectedWarheadYield] ?? 0;
-    if (availableWarheads <= 0) {
-      toast({ title: 'Warhead unavailable', description: 'Selected warhead is no longer ready for launch.' });
-      resetLaunchControl();
-      return;
-    }
-
-    const missileCount = player.missiles || 0;
-    const bomberCount = player.bombers || 0;
-    const submarineCount = player.submarines || 0;
-
-    if (selectedDeliveryMethod === 'missile' && missileCount <= 0) {
-      toast({ title: 'No ICBMs ready', description: 'Select another delivery platform or build additional missiles.' });
-      return;
-    }
-
-    if (selectedDeliveryMethod === 'bomber' && bomberCount <= 0) {
-      toast({ title: 'No bombers ready', description: 'Select another delivery platform or build additional bombers.' });
-      return;
-    }
-
-    if (selectedDeliveryMethod === 'submarine' && submarineCount <= 0) {
-      toast({ title: 'No submarines ready', description: 'Select another delivery platform or build additional submarines.' });
-      return;
-    }
-
-    const context: ConsequenceCalculationContext = {
-      playerNation: player as Nation,
-      targetNation: pendingLaunch.target as Nation,
-      allNations: GameStateManager.getNations(),
-      currentDefcon: S.defcon,
-      currentTurn: S.turn,
-      gameState: S as GameState,
+    const deps: LaunchConfirmationDeps = {
+      pendingLaunch,
+      selectedWarheadYield,
+      selectedDeliveryMethod,
+      toast,
+      resetLaunchControl,
+      gameState: S,
+      log,
+      triggerConsequenceAlerts,
+      consumeAction,
+      queueConsequencePreview,
+      setConsequencePreview,
+      setConsequenceCallback,
+      playSFX: AudioSys.playSFX,
     };
-
-    const consequences = calculateActionConsequences('launch_missile', context, {
-      warheadYield: selectedWarheadYield,
-      deliveryMethod: selectedDeliveryMethod,
-    });
-
-    if (!consequences) {
-      toast({ title: 'Unable to analyze strike', description: 'Consequence system failed to respond.', variant: 'destructive' });
-      return;
-    }
-
-    const executeLaunch = () => {
-      let launchSucceeded = false;
-
-      if (selectedDeliveryMethod === 'missile') {
-        launchSucceeded = launch(player, pendingLaunch.target, selectedWarheadYield);
-      } else {
-        player.warheads = player.warheads || {};
-        const remaining = (player.warheads[selectedWarheadYield] || 0) - 1;
-        if (remaining <= 0) {
-          delete player.warheads[selectedWarheadYield];
-        } else {
-          player.warheads[selectedWarheadYield] = remaining;
-        }
-
-        if (selectedDeliveryMethod === 'bomber') {
-          player.bombers = Math.max(0, bomberCount - 1);
-          launchSucceeded = launchBomber(player, pendingLaunch.target, { yield: selectedWarheadYield });
-          if (launchSucceeded) {
-            log(`${player.name} dispatches bomber strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
-            DoomsdayClock.tick(0.3);
-            AudioSys.playSFX('launch');
-          }
-        } else if (selectedDeliveryMethod === 'submarine') {
-          player.submarines = Math.max(0, submarineCount - 1);
-          launchSucceeded = launchSubmarine(player, pendingLaunch.target, selectedWarheadYield);
-          if (launchSucceeded) {
-            log(`${player.name} launches submarine strike (${selectedWarheadYield}MT) toward ${pendingLaunch.target.name}`);
-            DoomsdayClock.tick(0.3);
-          }
-        }
-      }
-
-      if (launchSucceeded) {
-        triggerConsequenceAlerts(consequences);
-        consumeAction();
-        resetLaunchControl();
-      }
-    };
-
-    if (!queueConsequencePreview(consequences, executeLaunch)) {
-      setConsequencePreview(consequences);
-      setConsequenceCallback(() => executeLaunch);
-    }
+    confirmPendingLaunchExtracted(deps);
   }, [
     pendingLaunch,
     selectedWarheadYield,
@@ -11024,164 +10902,21 @@ export default function NoradVector() {
   );
 
   const handleCulture = useCallback(async () => {
-    const approved = await requestApproval('CULTURE', { description: 'Cultural operations briefing' });
-    if (!approved) return;
-    AudioSys.playSFX('click');
-    const player = getBuildContext('Culture');
-    if (!player) return;
-
-    const cultureActions: OperationAction[] = [
-      {
-        id: 'meme',
-        title: 'MEME WAVE',
-        subtitle: 'Steal 5M pop, +8 instability',
-        costText: 'Cost: 2 INTEL',
-        requiresTarget: true,
-        disabled: (player.intel || 0) < 2,
-        disabledReason: 'Requires 2 INTEL to flood the networks.',
-        targetFilter: nation => nation.population > 1,
-      },
-      {
-        id: 'cancel',
-        title: 'CANCEL CAMPAIGN',
-        subtitle: 'Agitate regime supporters',
-        costText: 'Cost: 3 INTEL',
-        requiresTarget: true,
-        disabled: (player.intel || 0) < 3,
-        disabledReason: 'Requires 3 INTEL to fuel the outrage machine.',
-      },
-      {
-        id: 'deepfake',
-        title: 'DEEPFAKE OPS',
-        subtitle: 'Target defense -2',
-        costText: 'Cost: 5 INTEL',
-        requiresTarget: true,
-        disabled: (player.intel || 0) < 5,
-        disabledReason: 'Requires 5 INTEL to produce convincing deepfakes.',
-      },
-      {
-        id: 'victory',
-        title: 'PROPAGANDA VICTORY',
-        subtitle: 'Win via cultural dominance',
-        costText: 'Requires 50 INTEL and majority influence',
-        disabled: (player.intel || 0) < 50,
-        disabledReason: 'Requires 50 INTEL to attempt cultural victory.',
-      },
-      {
-        id: 'eco',
-        title: 'ECO PROPAGANDA',
-        subtitle: 'Force nuclear phase-out',
-        costText: 'Cost: 30 PROD, 150 INTEL',
-        requiresTarget: true,
-        disabled: (player.intel || 0) < 150 || (player.production || 0) < 30,
-        disabledReason: 'Requires 150 INTEL and 30 PRODUCTION to sway global opinion.',
-      }
-    ];
-
-    const executeCultureAction = (action: OperationAction, target?: Nation) => {
-      const commander = PlayerManager.get();
-      if (!commander) {
-        toast({ title: 'No command authority', description: 'Player nation could not be located.' });
-        return false;
-      }
-
-      switch (action.id) {
-        case 'meme':
-          if (!target) return false;
-          if ((commander.intel || 0) < 2) {
-            toast({ title: 'Insufficient intel', description: 'You need 2 INTEL to unleash the meme wave.' });
-            return false;
-          }
-          commander.intel -= 2;
-          {
-            const stolen = Math.min(5, Math.max(1, Math.floor(target.population)));
-            target.population = Math.max(0, target.population - stolen);
-            commander.population += stolen;
-            commander.migrantsThisTurn = (commander.migrantsThisTurn || 0) + stolen;
-            commander.migrantsTotal = (commander.migrantsTotal || 0) + stolen;
-            target.instability = (target.instability || 0) + 8;
-            log(`Meme wave steals ${stolen}M population from ${target.name}.`);
-          }
-          updateDisplay();
-          consumeAction();
-          return true;
-
-        case 'cancel':
-          if (!target) return false;
-          if ((commander.intel || 0) < 3) {
-            toast({ title: 'Insufficient intel', description: 'You need 3 INTEL to sustain a cancel campaign.' });
-            return false;
-          }
-          commander.intel -= 3;
-          target.instability = (target.instability || 0) + 4;
-          log(`Cancel campaign inflames unrest in ${target.name}.`);
-          updateDisplay();
-          consumeAction();
-          return true;
-
-        case 'deepfake':
-          if (!target) return false;
-          if ((commander.intel || 0) < 5) {
-            toast({ title: 'Insufficient intel', description: 'You need 5 INTEL to produce deepfakes.' });
-            return false;
-          }
-          commander.intel -= 5;
-          target.defense = Math.max(0, target.defense - 2);
-          log(`Deepfake operation undermines ${target.name}'s defenses.`);
-          updateDisplay();
-          consumeAction();
-          return true;
-
-        case 'victory': {
-          if ((commander.intel || 0) < 50) {
-            toast({ title: 'Insufficient intel', description: 'You need 50 INTEL to attempt a cultural victory.' });
-            return false;
-          }
-          const totalIntel = nations.reduce((sum, nation) => sum + (nation.intel || 0), 0);
-          if (totalIntel <= 0) {
-            toast({ title: 'Insufficient data', description: 'No global intel footprint detected yet.' });
-            return false;
-          }
-          const share = (commander.intel || 0) / totalIntel;
-          if (share <= 0.5) {
-            toast({ title: 'Influence too low', description: 'Control more than half of the world\'s culture to win.' });
-            return false;
-          }
-          commander.intel -= 50;
-          consumeAction();
-          endGame(true, 'CULTURAL VICTORY - Minds conquered without firing a shot!');
-          return true;
-        }
-
-        case 'eco':
-          if (!target) return false;
-          if ((commander.intel || 0) < 150 || (commander.production || 0) < 30) {
-            toast({ title: 'Insufficient resources', description: 'You need 150 INTEL and 30 PRODUCTION to launch eco propaganda.' });
-            return false;
-          }
-          commander.intel -= 150;
-          commander.production = Math.max(0, (commander.production || 0) - 30);
-          target.greenShiftTurns = (target.greenShiftTurns || 0) + 5;
-          log(`Eco propaganda forces ${target.name} to wind down nuclear production.`);
-          updateDisplay();
-          consumeAction();
-          return true;
-      }
-
-      return false;
+    const deps: CultureHandlerDeps = {
+      requestApproval,
+      playSFX: AudioSys.playSFX,
+      getBuildContext,
+      toast,
+      log,
+      updateDisplay,
+      consumeAction,
+      endGame,
+      openModal,
+      closeModal,
+      targetableNations,
+      nations,
     };
-
-    openModal(
-      'CULTURE WARFARE',
-      <OperationModal
-        actions={cultureActions}
-        player={player}
-        targetableNations={targetableNations}
-        onExecute={executeCultureAction}
-        onClose={closeModal}
-        accent="violet"
-      />
-    );
+    await handleCultureExtracted(deps, OperationModal);
   }, [
     closeModal,
     getBuildContext,
