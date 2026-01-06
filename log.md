@@ -9897,3 +9897,290 @@ Based on analysis, most likely causes:
 - **Prevention:** Debug logs will identify exact crash location
 
 ---
+
+---
+
+## Session 11 - Diagnosing White Screen After Index.tsx Refactoring
+
+**Date:** 2026-01-06  
+**Agent:** Claude (Sonnet 4.5)  
+**Branch:** `claude/fix-blank-screen-index-69MAG`  
+**Status:** 🔧 Debug Instrumentation Added
+
+### Problem Statement
+
+After the Index.tsx refactoring (Sessions 4-7), game displays a completely white/blank screen on startup. User reports:
+- No UI elements visible
+- Just blank white screen
+- Previous sessions had blue screen issue - now it's white
+- Issue persists after Session 10's debug logging
+
+### Investigation Process
+
+**Initial Diagnostic Steps:**
+1. ✅ Verified build completes successfully (3601 modules)
+2. ✅ Checked TypeScript compilation - no errors
+3. ✅ Confirmed dev server starts without issues
+4. ✅ Verified all component imports present and correct:
+   - IntroScreen component exists and exports correctly
+   - LeaderSelectionScreen component exists and exports correctly
+   - All child components (Starfield, SpinningEarth, IntroLogo) present
+5. ✅ Checked component structure:
+   - NoradVector function exported as default ✓
+   - gamePhase initializes to 'intro' ✓
+   - Early return logic at lines 13600-13608 ✓
+   - renderIntroScreen() and renderLeaderSelection() defined ✓
+
+**Code Structure Analysis:**
+- Component starts: line 5729
+- gamePhase state: initializes to 'intro' (line 5733)
+- Render helper functions: lines 13470-13568
+  - renderIntroScreen(): line 13470
+  - renderLeaderSelection(): line 13520
+- Early return checks: lines 13600-13608
+- Main game render: line 13689
+
+**No Obvious Structural Issues Found:**
+- All imports verified correct (Storage, AudioSys, etc.)
+- Component export structure valid
+- No early returns before render functions defined
+- No hooks called after early returns (React rules compliant)
+- All dependencies (scenarioOptions, selectedScenario, musicTracks) properly defined
+
+### Root Cause Hypothesis
+
+Since build and TypeScript show no errors, issue is likely:
+1. **Runtime Error in Browser** - Component or child component throws exception
+2. **Missing/Undefined Prop** - A required prop is undefined causing render failure
+3. **Circular Dependency** - Large file (16k lines) may have import issues
+4. **CSS Not Loading** - White screen could be styling issue
+
+**Key Challenge:**
+- User cannot access developer console (mobile/remote testing)
+- Need comprehensive error instrumentation to identify exact failure point
+
+### Solution Implemented
+
+**Comprehensive Error Handling & Logging:**
+
+Added try-catch blocks with detailed debug logging to trace execution flow and catch errors:
+
+#### 1. Component Initialization Logging
+```typescript
+export default function NoradVector() {
+  console.log('[DEBUG] NoradVector component rendering');
+  // ... state initialization ...
+  console.log('[DEBUG] Initial gamePhase:', gamePhase);
+```
+
+**Purpose:** Verify component actually executes
+
+#### 2. IntroScreen Render Function (lines 13470-13518)
+```typescript
+const renderIntroScreen = () => {
+  try {
+    console.log('[DEBUG] renderIntroScreen called');
+    console.log('[DEBUG] scenarioOptions:', scenarioOptions);
+    console.log('[DEBUG] selectedScenario:', selectedScenario);
+    console.log('[DEBUG] musicTracks:', musicTracks);
+    
+    const highscores = JSON.parse(Storage.getItem('highscores') || '[]').slice(0, 5);
+    console.log('[DEBUG] highscores loaded:', highscores);
+    
+    return <IntroScreen {...props} />;
+  } catch (error) {
+    console.error('[ERROR] renderIntroScreen failed:', error);
+    return (
+      <div style={{ padding: '20px', color: 'red', background: 'white' }}>
+        <h1>Error in IntroScreen</h1>
+        <pre>{error.message}</pre>
+        <pre>{error.stack}</pre>
+      </div>
+    );
+  }
+};
+```
+
+**Purpose:** 
+- Track when IntroScreen renders
+- Verify all props are defined
+- Catch and display any rendering errors
+- Show error message on white background (visible even without console)
+
+#### 3. LeaderSelectionScreen Render Function (lines 13520-13583)
+```typescript
+const renderLeaderSelection = () => {
+  try {
+    console.log('[DEBUG] renderLeaderSelection called');
+    // ... leader filtering logic ...
+    console.log('[DEBUG] availableLeaders:', availableLeaders.length);
+    
+    return <LeaderSelectionScreen {...props} />;
+  } catch (error) {
+    console.error('[ERROR] renderLeaderSelection failed:', error);
+    return (
+      <div style={{ padding: '20px', color: 'red', background: 'white' }}>
+        <h1>Error in LeaderSelectionScreen</h1>
+        <pre>{error.message}</pre>
+        <pre>{error.stack}</pre>
+      </div>
+    );
+  }
+};
+```
+
+**Purpose:**
+- Track leader selection screen rendering
+- Verify leaders array filtering works
+- Catch and display errors
+
+### Debug Logging Strategy
+
+**Console Log Checkpoints:**
+1. `[DEBUG] NoradVector component rendering` - Component starts
+2. `[DEBUG] Initial gamePhase: intro` - Verify state initialization
+3. `[DEBUG] Render phase: intro` - Check phase determination (from Session 10)
+4. `[DEBUG] renderIntroScreen called` - Verify function called
+5. `[DEBUG] scenarioOptions: [...]` - Verify props defined
+6. `[DEBUG] selectedScenario: {...}` - Verify scenario data
+7. `[DEBUG] musicTracks: [...]` - Verify audio data
+8. `[DEBUG] highscores loaded: [...]` - Verify storage access
+
+**Error Detection:**
+- If `[ERROR]` appears: Shows exact error message and stack trace
+- If render error: Red error screen visible on white background
+- If no logs appear: Component not rendering at all (routing issue)
+
+### Testing Instructions for User
+
+**Browser Console Testing (Desktop):**
+```bash
+1. Open application in browser
+2. Press F12 or Ctrl+Shift+I to open Developer Console
+3. Refresh page
+4. Look for debug messages in order:
+   - [DEBUG] NoradVector component rendering
+   - [DEBUG] Initial gamePhase: intro
+   - [DEBUG] Render phase: intro
+   - [DEBUG] renderIntroScreen called
+   - [DEBUG] scenarioOptions: Array(X)
+   - [DEBUG] selectedScenario: Object {...}
+   - [DEBUG] musicTracks: Array(Y)
+   - [DEBUG] highscores loaded: Array(Z)
+5. If [ERROR] appears: Report error message and stack trace
+6. If error screen shows: Take screenshot of red error message
+7. If no logs appear: Routing or lazy load issue
+```
+
+**Expected Outcomes:**
+
+**✅ Success Case:**
+- All debug logs appear in order
+- IntroScreen renders (game menu visible)
+- No errors in console
+
+**❌ Error Case 1 - Component Error:**
+```
+[DEBUG] NoradVector component rendering
+[DEBUG] Initial gamePhase: intro
+[ERROR] renderIntroScreen failed: ...
+```
+→ Error in render function - error message shows root cause
+
+**❌ Error Case 2 - Props Undefined:**
+```
+[DEBUG] NoradVector component rendering
+[DEBUG] Initial gamePhase: intro
+[DEBUG] renderIntroScreen called
+[DEBUG] scenarioOptions: undefined  ← Problem here
+```
+→ Prop is undefined - shows which dependency failed
+
+**❌ Error Case 3 - No Logs:**
+```
+(no console output)
+```
+→ Component not loading - check App.tsx routing or main.tsx
+
+### Changes Made
+
+**Files Modified:**
+- `src/pages/Index.tsx` (lines changed: 107 insertions, 71 deletions)
+
+**Specific Edits:**
+1. Line 5730: Added component initialization log
+2. Line 5736: Added gamePhase state log
+3. Lines 13471-13517: Wrapped renderIntroScreen in try-catch with logging
+4. Lines 13521-13582: Wrapped renderLeaderSelection in try-catch with logging
+
+### Build Verification
+
+```bash
+npm run build
+# ✅ vite v5.4.21 building for production...
+# ✅ ✓ 3601 modules transformed.
+# ✅ dist/assets/Index-Bhyu-Zf2.js  2,312.12 kB │ gzip: 642.78 kB
+# ✅ Build completed in 36.41s
+```
+
+**No Build Errors:**
+- ✅ All modules transformed successfully
+- ✅ Debug instrumentation compiles correctly
+- ✅ No TypeScript errors
+- ✅ Production build succeeds
+
+### Next Steps
+
+**Immediate Actions:**
+1. **User Testing Required:**
+   - User must test with browser developer console open
+   - Report which debug logs appear
+   - Share any [ERROR] messages
+   - Screenshot any visible error screens
+
+2. **Expected Diagnostic Results:**
+   - If all logs show and no errors → Issue may be CSS/styling
+   - If error in renderIntroScreen → Identifies exact failure point
+   - If props undefined → Shows which dependency is broken
+   - If no logs → Routing or App.tsx lazy load issue
+
+3. **Follow-up Based on Results:**
+   - **Scenario A:** Error caught → Fix identified issue
+   - **Scenario B:** Props undefined → Investigate missing dependency
+   - **Scenario C:** No logs → Check App.tsx and main.tsx
+   - **Scenario D:** Logs show but white screen → CSS loading issue
+
+### Prevention Strategy
+
+**Future Refactoring Safeguards:**
+- Add error boundaries around major components
+- Include debug logging during development
+- Test in browser after major structural changes
+- Verify lazy loading works correctly
+- Check all props are defined before render
+
+### Session 11 Summary
+
+**Achievement:**
+- Added comprehensive error handling to diagnose white screen
+- Implemented detailed debug logging at all critical checkpoints
+- Created visible error screens for runtime failures
+- Maintained backward compatibility (no breaking changes)
+
+**Outcome:**
+- **Status:** Debug instrumentation deployed
+- **Changes:** Try-catch blocks + debug logs in render functions
+- **Build:** ✅ Successful (3601 modules)
+- **Push:** ✅ Committed to `claude/fix-blank-screen-index-69MAG`
+- **Next:** **User must test with console and report findings**
+
+**Key Achievement:**
+Even without browser console access, errors will now be visible on screen with full stack traces, making remote debugging possible.
+
+**Summary:**
+- **Issue:** White screen after refactoring
+- **Action:** Added comprehensive error instrumentation
+- **Result:** Waiting for user to test and provide console output
+- **Prevention:** Error handling ensures visible feedback for future issues
+
+---
