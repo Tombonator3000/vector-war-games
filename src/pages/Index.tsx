@@ -5727,10 +5727,13 @@ function consumeAction() {
 
 // React Component
 export default function NoradVector() {
+  console.log('[DEBUG] NoradVector component rendering');
+
   const navigate = useNavigate();
   const interfaceRef = useRef<HTMLDivElement>(null);
   const globeSceneRef = useRef<GlobeSceneHandle | null>(null);
   const [gamePhase, setGamePhase] = useState('intro');
+  console.log('[DEBUG] Initial gamePhase:', gamePhase);
   const { rng, resetRNG } = useRNG();
   const [isGameStarted, setIsGameStarted] = useState(false);
   const hasAutoplayedTurnOneMusicRef = useRef(false);
@@ -13468,85 +13471,118 @@ export default function NoradVector() {
   // Render functions for different phases
   // Screen render functions - now using extracted components (Phase 7 refactoring)
   const renderIntroScreen = () => {
-    const highscores = JSON.parse(Storage.getItem('highscores') || '[]').slice(0, 5);
-    return (
-      <IntroScreen
-        scenarioOptions={scenarioOptions}
-        selectedScenarioId={selectedScenarioId}
-        selectedScenario={selectedScenario}
-        isScenarioPanelOpen={isScenarioPanelOpen}
-        highscores={highscores}
-        onStart={handleIntroStart}
-        onScenarioSelect={handleScenarioSelect}
-        onOpenScenarioPanel={() => setIsScenarioPanelOpen(true)}
-        onCloseScenarioPanel={setIsScenarioPanelOpen}
-        mapStyle={mapStyle}
-        onMapStyleChange={handleMapStyleChange}
-        dayNightAutoCycleEnabled={dayNightAutoCycleEnabled}
-        onDayNightAutoCycleToggle={handleDayNightAutoCycleToggle}
-        musicEnabled={musicEnabled}
-        onMusicToggle={handleMusicToggle}
-        sfxEnabled={sfxEnabled}
-        onSfxToggle={handleSfxToggle}
-        musicVolume={musicVolume}
-        onMusicVolumeChange={handleMusicVolumeChange}
-        musicSelection={musicSelection}
-        onMusicTrackChange={handleMusicTrackChange}
-        onNextTrack={handleNextTrack}
-        activeTrackMessage={activeTrackMessage}
-        musicTracks={musicTracks}
-      />
-    );
+    try {
+      console.log('[DEBUG] renderIntroScreen called');
+      console.log('[DEBUG] scenarioOptions:', scenarioOptions);
+      console.log('[DEBUG] selectedScenario:', selectedScenario);
+      console.log('[DEBUG] musicTracks:', musicTracks);
+
+      const highscores = JSON.parse(Storage.getItem('highscores') || '[]').slice(0, 5);
+      console.log('[DEBUG] highscores loaded:', highscores);
+
+      return (
+        <IntroScreen
+          scenarioOptions={scenarioOptions}
+          selectedScenarioId={selectedScenarioId}
+          selectedScenario={selectedScenario}
+          isScenarioPanelOpen={isScenarioPanelOpen}
+          highscores={highscores}
+          onStart={handleIntroStart}
+          onScenarioSelect={handleScenarioSelect}
+          onOpenScenarioPanel={() => setIsScenarioPanelOpen(true)}
+          onCloseScenarioPanel={setIsScenarioPanelOpen}
+          mapStyle={mapStyle}
+          onMapStyleChange={handleMapStyleChange}
+          dayNightAutoCycleEnabled={dayNightAutoCycleEnabled}
+          onDayNightAutoCycleToggle={handleDayNightAutoCycleToggle}
+          musicEnabled={musicEnabled}
+          onMusicToggle={handleMusicToggle}
+          sfxEnabled={sfxEnabled}
+          onSfxToggle={handleSfxToggle}
+          musicVolume={musicVolume}
+          onMusicVolumeChange={handleMusicVolumeChange}
+          musicSelection={musicSelection}
+          onMusicTrackChange={handleMusicTrackChange}
+          onNextTrack={handleNextTrack}
+          activeTrackMessage={activeTrackMessage}
+          musicTracks={musicTracks}
+        />
+      );
+    } catch (error) {
+      console.error('[ERROR] renderIntroScreen failed:', error);
+      return (
+        <div style={{ padding: '20px', color: 'red', background: 'white' }}>
+          <h1>Error in IntroScreen</h1>
+          <pre>{error instanceof Error ? error.message : String(error)}</pre>
+          <pre>{error instanceof Error ? error.stack : ''}</pre>
+        </div>
+      );
+    }
   };
 
   const renderLeaderSelection = () => {
-    // Filter leaders based on scenario - only historical leaders for Cuban Crisis, only lovecraftian for Great Old Ones, only parody for Nuclear War
-    const isCubanCrisisScenario = S.scenario?.id === 'cubanCrisis';
-    const isGreatOldOnesScenario = S.scenario?.id === 'greatOldOnes';
-    const isNuclearWarScenario = S.scenario?.id === 'nuclearWar';
-    const availableLeaders = leaders.filter((leader) => {
-      const tags = leader.scenarios
-        ?? (leader.isLovecraftian
-          ? ['greatOldOnes']
-          : leader.isHistoricalCubanCrisis
-            ? ['cubanCrisis']
-            : ['default']);
+    try {
+      console.log('[DEBUG] renderLeaderSelection called');
 
-      if (isCubanCrisisScenario) {
-        return tags.includes('cubanCrisis');
-      }
+      // Filter leaders based on scenario - only historical leaders for Cuban Crisis, only lovecraftian for Great Old Ones, only parody for Nuclear War
+      const isCubanCrisisScenario = S.scenario?.id === 'cubanCrisis';
+      const isGreatOldOnesScenario = S.scenario?.id === 'greatOldOnes';
+      const isNuclearWarScenario = S.scenario?.id === 'nuclearWar';
+      const availableLeaders = leaders.filter((leader) => {
+        const tags = leader.scenarios
+          ?? (leader.isLovecraftian
+            ? ['greatOldOnes']
+            : leader.isHistoricalCubanCrisis
+              ? ['cubanCrisis']
+              : ['default']);
 
-      if (isGreatOldOnesScenario) {
-        return tags.includes('greatOldOnes');
-      }
+        if (isCubanCrisisScenario) {
+          return tags.includes('cubanCrisis');
+        }
 
-      if (isNuclearWarScenario) {
-        return tags.includes('nuclearWar');
-      }
+        if (isGreatOldOnesScenario) {
+          return tags.includes('greatOldOnes');
+        }
 
-      return tags.includes('default');
-    });
+        if (isNuclearWarScenario) {
+          return tags.includes('nuclearWar');
+        }
 
-    return (
-      <LeaderSelectionScreen
-        interfaceRef={interfaceRef}
-        leaders={availableLeaders}
-        onSelectLeader={(leaderName) => {
-          console.log('[DEBUG] Leader selected:', leaderName);
-          setSelectedLeader(leaderName);
+        return tags.includes('default');
+      });
 
-          // Auto-assign doctrine based on leader
-          const defaultDoctrine = getLeaderDefaultDoctrine(leaderName);
-          console.log('[DEBUG] Auto-assigned doctrine:', defaultDoctrine);
-          setSelectedDoctrine(defaultDoctrine);
+      console.log('[DEBUG] availableLeaders:', availableLeaders.length);
 
-          // Start game directly with leader's doctrine
-          startGame(leaderName, defaultDoctrine);
-          setGamePhase('game');
-        }}
-        onBack={() => setGamePhase('intro')}
-      />
-    );
+      return (
+        <LeaderSelectionScreen
+          interfaceRef={interfaceRef}
+          leaders={availableLeaders}
+          onSelectLeader={(leaderName) => {
+            console.log('[DEBUG] Leader selected:', leaderName);
+            setSelectedLeader(leaderName);
+
+            // Auto-assign doctrine based on leader
+            const defaultDoctrine = getLeaderDefaultDoctrine(leaderName);
+            console.log('[DEBUG] Auto-assigned doctrine:', defaultDoctrine);
+            setSelectedDoctrine(defaultDoctrine);
+
+            // Start game directly with leader's doctrine
+            startGame(leaderName, defaultDoctrine);
+            setGamePhase('game');
+          }}
+          onBack={() => setGamePhase('intro')}
+        />
+      );
+    } catch (error) {
+      console.error('[ERROR] renderLeaderSelection failed:', error);
+      return (
+        <div style={{ padding: '20px', color: 'red', background: 'white' }}>
+          <h1>Error in LeaderSelectionScreen</h1>
+          <pre>{error instanceof Error ? error.message : String(error)}</pre>
+          <pre>{error instanceof Error ? error.stack : ''}</pre>
+        </div>
+      );
+    }
   };
 
   const overlayCanvas = globeSceneRef.current?.overlayCanvas ?? null;
