@@ -5788,6 +5788,8 @@ export default function NoradVector() {
   const [showEnhancedDiplomacy, setShowEnhancedDiplomacy] = useState(false);
   const [showCivStyleDiplomacy, setShowCivStyleDiplomacy] = useState(false);
   const [civStyleDiplomacyTarget, setCivStyleDiplomacyTarget] = useState<string | null>(null);
+  const [isDefconWarningVisible, setIsDefconWarningVisible] = useState(false);
+  const defconWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerDefconWarning = useCallback(() => {
     setIsDefconWarningVisible(true);
@@ -6013,8 +6015,6 @@ export default function NoradVector() {
   const [regionalSanityOverlayVisible, setRegionalSanityOverlayVisible] = useState(false);
   const [phase2PanelOpen, setPhase2PanelOpen] = useState(false);
   const [defconChangeEvent, setDefconChangeEvent] = useState<import('@/types/game').DefconChangeEvent | null>(null);
-  const [isDefconWarningVisible, setIsDefconWarningVisible] = useState(false);
-  const defconWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const focusCompletionCountRef = useRef(0);
   const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
   const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
