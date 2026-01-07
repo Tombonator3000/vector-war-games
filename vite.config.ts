@@ -29,11 +29,13 @@ export default defineConfig(({ mode }) => ({
       },
     },
     // Improve chunk splitting
+    // NOTE: React is NOT manually chunked to avoid initialization order issues
+    // when lazy loading components with module-level code (Index.tsx)
     rollupOptions: {
       output: {
         manualChunks: {
           // Separate vendor chunks for better caching
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // 'react-vendor' removed - let Vite handle React chunking automatically
           'ui-vendor': [
             '@radix-ui/react-dialog',
             '@radix-ui/react-dropdown-menu',
