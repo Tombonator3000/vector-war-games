@@ -18,9 +18,9 @@ const DEFAULT_DEFCON_LEVEL = 5;
 export const getScenarioDefcon = (scenario: ScenarioConfig): number =>
   scenario.id === 'nuclearWar' ? scenario.startingDefcon : DEFAULT_DEFCON_LEVEL;
 
-const DEFCON_BADGE_BASE_CLASSES =
+export const DEFCON_BADGE_BASE_CLASSES =
   'flex items-center gap-1.5 px-2.5 py-0.5 rounded border transition-all duration-200';
-const DEFCON_VALUE_BASE_CLASSES = 'font-bold text-xl leading-none transition-colors duration-200';
+export const DEFCON_VALUE_BASE_CLASSES = 'font-bold text-xl leading-none transition-colors duration-200';
 
 /**
  * Get CSS classes for DEFCON indicator based on level
