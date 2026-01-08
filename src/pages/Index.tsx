@@ -5189,7 +5189,7 @@ function endTurn() {
       const updatedNationsFromBio = nations.map(nation => {
         if (nation.eliminated) return nation;
 
-        const result = processAllBioAttacks(nation, S.turn);
+        const result = processAllBioAttacks(nation, S.turn, undefined, undefined, rng);
         messages.push(...result.messages);
 
         if (result.totalDamage > 0) {
@@ -10636,9 +10636,9 @@ export default function NoradVector() {
   const handleSimplifiedBioWeaponDeploy = useCallback((targetId: string) => {
     const player = PlayerManager.get();
     const target = getNationById(nations, targetId);
-    if (!player || !target) return;
+    if (!player || !target || !globalRNG) return;
 
-    const result = deployBioWeapon(player, target, S.turn);
+    const result = deployBioWeapon(player, target, S.turn, globalRNG);
 
     if (!result.success) {
       toast({

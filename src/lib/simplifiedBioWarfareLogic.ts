@@ -6,6 +6,7 @@
 
 import type { Nation, GameState } from '@/types/game';
 import type { BioAttackDeployment } from '@/types/simplifiedBiowarfare';
+import type { SeededRandom } from '@/lib/seededRandom';
 import {
   calculateBioWeaponDamage,
   calculateBioAttackDuration,
@@ -37,7 +38,8 @@ export function initializeBioWarfareState(nation: Nation): Nation {
 export function deployBioWeapon(
   attacker: Nation,
   target: Nation,
-  currentTurn: number
+  currentTurn: number,
+  rng: SeededRandom
 ): {
   attacker: Nation;
   target: Nation;
@@ -81,10 +83,10 @@ export function deployBioWeapon(
   };
 
   // Calculate attack parameters
-  const duration = calculateBioAttackDuration();
-  const basePopLoss = 0.03 + Math.random() * 0.02; // 3-5%
+  const duration = calculateBioAttackDuration(rng);
+  const basePopLoss = 0.03 + rng.next() * 0.02; // 3-5%
   const bioDefenseLevel = 0; // Bio defense not fully implemented yet
-  const detected = rollBioDetection(bioDefenseLevel);
+  const detected = rollBioDetection(bioDefenseLevel, rng);
 
   // Create attack deployment
   const attack: BioAttackDeployment = {
@@ -126,7 +128,8 @@ export function deployBioWeapon(
 export function processBioAttackTurn(
   nation: Nation,
   attack: BioAttackDeployment,
-  currentTurn: number
+  currentTurn: number,
+  rng: SeededRandom
 ): {
   nation: Nation;
   attack: BioAttackDeployment;
@@ -144,7 +147,7 @@ export function processBioAttackTurn(
 
   // Calculate damage - bioDefenseLevel stored in researched or defaults to 0
   const bioDefenseLevel = (nation.researched?.bioDefenseLevel as unknown as number) || 0;
-  const damage = calculateBioWeaponDamage(nation.population, bioDefenseLevel);
+  const damage = calculateBioWeaponDamage(nation.population, bioDefenseLevel, rng);
 
   // Apply damage
   const updatedNation = {
@@ -179,7 +182,8 @@ export function processAllBioAttacks(
   nation: Nation,
   currentTurn: number,
   gameState?: GameState,
-  conventionalState?: any
+  conventionalState?: any,
+  rng?: SeededRandom
 ): {
   nation: Nation;
   messages: string[];
@@ -223,7 +227,14 @@ export function processAllBioAttacks(
   }
 
   for (const attack of activeBioAttacks) {
-    const result = processBioAttackTurn(updatedNation, attack, currentTurn);
+    // If no RNG provided, we can't process attacks deterministically
+    // This should not happen in production, but we need to handle it
+    if (!rng) {
+      console.warn('processAllBioAttacks called without RNG - bio-attacks cannot be processed deterministically');
+      break;
+    }
+
+    const result = processBioAttackTurn(updatedNation, attack, currentTurn, rng);
     updatedNation = result.nation;
     totalDamage += result.damage;
 

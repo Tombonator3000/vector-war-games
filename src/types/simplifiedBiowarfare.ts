@@ -7,6 +7,8 @@
  * Research determines effectiveness, defense research reduces damage.
  */
 
+import { SeededRandom } from '@/lib/seededRandom';
+
 export interface SimplifiedBioWeaponState {
   // Research progress
   bioWeaponResearched: boolean;        // Can deploy bio-weapons
@@ -106,10 +108,11 @@ export const BIO_DEFENSE_LEVELS: BioDefenseLevel[] = [
  */
 export function calculateBioWeaponDamage(
   targetPopulation: number,
-  defenseLevel: number
+  defenseLevel: number,
+  rng: SeededRandom
 ): number {
   // Base: 2-5% population loss per turn for 5-8 turns
-  const basePercentLoss = 0.03 + Math.random() * 0.02; // 3-5%
+  const basePercentLoss = 0.03 + rng.next() * 0.02; // 3-5%
   const baseDamage = targetPopulation * basePercentLoss;
 
   // Apply defense reduction
@@ -122,16 +125,16 @@ export function calculateBioWeaponDamage(
 /**
  * Calculate attack duration (turns)
  */
-export function calculateBioAttackDuration(): number {
-  return 5 + Math.floor(Math.random() * 4); // 5-8 turns
+export function calculateBioAttackDuration(rng: SeededRandom): number {
+  return 5 + Math.floor(rng.next() * 4); // 5-8 turns
 }
 
 /**
  * Check if bio-attack is detected
  */
-export function rollBioDetection(defenseLevel: number): boolean {
+export function rollBioDetection(defenseLevel: number, rng: SeededRandom): boolean {
   const defense = BIO_DEFENSE_LEVELS[defenseLevel];
-  return Math.random() < defense.detectionChance;
+  return rng.next() < defense.detectionChance;
 }
 
 /**
