@@ -301,7 +301,6 @@ import {
   type ProjectedPoint,
 } from '@/lib/renderingUtils';
 import { GameStateManager, PlayerManager, DoomsdayClock, type LocalGameState, type LocalNation, createDefaultDiplomacyState } from '@/state';
-import { CityLights } from '@/state/CityLights';
 import type { GreatOldOnesState } from '@/types/greatOldOnes';
 import { initializeGreatOldOnesState } from '@/lib/greatOldOnesHelpers';
 import { initializeNationLeaderAbility, activateLeaderAbility } from '@/lib/leaderAbilityIntegration';
