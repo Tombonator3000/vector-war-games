@@ -6,7 +6,7 @@
  */
 
 import { toast } from "@/components/ui/use-toast";
-import type { Nation } from '@/types';
+import type { Nation } from '@/types/game';
 import type { GameState } from '@/types/game';
 import type { WarState, PeaceOffer } from '@/types/casusBelli';
 import PlayerManager from '@/state/PlayerManager';

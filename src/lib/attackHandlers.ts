@@ -6,7 +6,7 @@
  */
 
 import { toast } from "@/components/ui/use-toast";
-import type { Nation } from '@/types';
+import type { Nation } from '@/types/game';
 import type { GameState } from '@/types/game';
 import PlayerManager from '@/state/PlayerManager';
 import { canPerformAction } from '@/lib/gameUtils';
@@ -28,7 +28,7 @@ export interface AttackHandlerDependencies {
   setIsStrikePlannerOpen: (value: boolean | ((prev: boolean) => boolean)) => void;
   setSelectedTargetId: (id: string | null) => void;
   setPendingLaunch: (state: PendingLaunchState | null) => void;
-  setSelectedWarheadYield: (yield: number | null) => void;
+  setSelectedWarheadYield: (yieldValue: number | null) => void;
   setSelectedDeliveryMethod: (method: string | null) => void;
   hasActivePeaceTreaty: (player: Nation, target: Nation) => boolean;
 }

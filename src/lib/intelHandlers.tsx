@@ -8,7 +8,7 @@
 
 import { type ReactNode } from 'react';
 import { toast } from "@/components/ui/use-toast";
-import type { Nation } from '@/types';
+import type { Nation } from '@/types/game';
 import type { GameState } from '@/types/game';
 import PlayerManager from '@/state/PlayerManager';
 import { spendStrategicResource } from '@/lib/territorialResourcesSystem';

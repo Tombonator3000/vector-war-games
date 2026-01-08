@@ -27,8 +27,28 @@ import type {
 import type { ConventionalState, NationConventionalProfile } from '@/hooks/useConventionalWarfare';
 import type { ScenarioConfig } from '@/types/scenario';
 import { getDefaultScenario } from '@/types/scenario';
-import { createDefaultConventionalState } from '@/hooks/useConventionalWarfare';
 import type { GreatOldOnesState } from '@/types/greatOldOnes';
+
+// Lazy import to break circular dependency
+let _createDefaultConventionalState: typeof import('@/hooks/useConventionalWarfare').createDefaultConventionalState | null = null;
+async function getCreateDefaultConventionalState() {
+  if (!_createDefaultConventionalState) {
+    const module = await import('@/hooks/useConventionalWarfare');
+    _createDefaultConventionalState = module.createDefaultConventionalState;
+  }
+  return _createDefaultConventionalState;
+}
+
+// Synchronous fallback for initial state - minimal empty state
+function createEmptyConventionalState(): ConventionalState {
+  return {
+    templates: {},
+    units: {},
+    territories: {},
+    logs: [],
+    reinforcementPools: {},
+  };
+}
 
 /**
  * Diplomacy state tracking
@@ -123,7 +143,7 @@ function createInitialState(): LocalGameState {
     globalRadiation: 0,
     events: false,
     diplomacy: createDefaultDiplomacyState(),
-    conventional: createDefaultConventionalState(),
+    conventional: createEmptyConventionalState(),
     conventionalMovements: [],
     conventionalUnits: [],
     casusBelliState: {

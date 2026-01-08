@@ -616,10 +616,10 @@ function CityLights({ nations, morphFactor, isNightMode }: CityLightsProps) {
 }
 
 interface AtmosphereProps {
-  morphFactor: number;
+  morphFactor?: number;
 }
 
-function Atmosphere({ morphFactor }: AtmosphereProps) {
+function Atmosphere({ morphFactor = 0 }: AtmosphereProps) {
   // Fade atmosphere as we transition to flat map
   const opacity = Math.max(0, 1 - morphFactor * 1.5);
 
