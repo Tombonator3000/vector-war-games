@@ -451,6 +451,9 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
     }, [dayNightBlend, textureVariant]);
 
     // Create shader material uniforms
+    // NOTE: dayTexture and nightTexture are NOT in dependencies to prevent uniforms recreation
+    // when textures load/change. Texture uniforms are updated via useEffect below.
+    // This prevents morphFactor from being reset when textures change.
     const uniforms = useMemo(
       () => ({
         uMorphFactor: { value: initialView === 'flat' ? 1.0 : 0.0 },
@@ -463,10 +466,12 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         uLightDirection: { value: new THREE.Vector3(1, 0.5, 1).normalize() },
         uAmbientIntensity: { value: 0.95 },
       }),
-      [dayTexture, nightTexture, effectiveBlend, initialView]
+      [effectiveBlend, initialView]
     );
 
     // Vector overlay uniforms
+    // NOTE: vectorColor and vectorOpacity are NOT in dependencies to prevent uniforms recreation.
+    // These are updated via useEffect below to preserve morphFactor.
     const vectorUniforms = useMemo(
       () => ({
         uMorphFactor: { value: initialView === 'flat' ? 1.0 : 0.0 },
@@ -476,7 +481,7 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
         uColor: { value: new THREE.Color(vectorColor) },
         uOpacity: { value: vectorOpacity },
       }),
-      [initialView, vectorColor, vectorOpacity]
+      [initialView]
     );
 
     // Dark background uniforms for vectorOnlyMode (WARGAMES theme)

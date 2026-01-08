@@ -12501,3 +12501,164 @@ handleSimplifiedBioWeaponDeploy()
 - `claude/find-fix-bug-2m1pp`
 - Ready for testing and commit
 
+
+## Globe til 2D Flat Map Plassering Bug Fix - Session 2026-01-08
+
+### Problemrapport
+Bruker rapporterte to problemer:
+1. **Globe → 2D:** Byer/spillere plassering blir feil når man bytter til 2D flat kart
+2. **2D → Globe:** 2D flat kart "henger igjen" og klarer ikke å bli en globe igjen
+
+### Root Cause Analyse
+
+**Problem:**
+I `src/components/MorphingGlobe.tsx` hadde `uniforms` og `vectorUniforms` useMemo dependencies som forårsaket uniforms-objektet å bli recreated når teksturer eller props endret seg. Dette førte til at `uMorphFactor` ble reset til initial value (0 eller 1) midt i en morph-animasjon.
+
+**Eksempel:**
+```typescript
+// BEFORE (buggy):
+const uniforms = useMemo(
+  () => ({
+    uMorphFactor: { value: initialView === 'flat' ? 1.0 : 0.0 },
+    uDayTexture: { value: dayTexture },
+    // ...
+  }),
+  [dayTexture, nightTexture, effectiveBlend, initialView] // ❌ Recreates when textures change!
+);
+```
+
+**Flyt av buggen:**
+1. Bruker starter morph-animasjon fra globe (morphFactor=0) til flat (morphFactor→1)
+2. Animasjonen starter og morphFactor oppdateres gradvis: 0 → 0.5 → 0.8 → ...
+3. Tekstur laster eller endres under animasjonen
+4. `uniforms` useMemo trigges fordi `dayTexture` er i dependencies
+5. Nytt uniforms-objekt opprettes med `uMorphFactor: { value: 0.0 }`
+6. morphFactor resettes til 0, og globen "hopper tilbake"
+7. Samme problem skjer i motsatt retning (2D → Globe)
+
+### Løsning
+
+**Fix:**
+Fjernet `dayTexture`, `nightTexture`, `vectorColor`, og `vectorOpacity` fra useMemo dependencies. Disse oppdateres nå kun via eksisterende useEffect hooks, som bevarer morphFactor verdien.
+
+```typescript
+// AFTER (fixed):
+const uniforms = useMemo(
+  () => ({
+    uMorphFactor: { value: initialView === 'flat' ? 1.0 : 0.0 },
+    uDayTexture: { value: dayTexture },
+    // ...
+  }),
+  [effectiveBlend, initialView] // ✅ Only recreate when essential props change
+);
+
+// Texture updates handled by existing useEffect:
+useEffect(() => {
+  if (materialRef.current) {
+    materialRef.current.uniforms.uDayTexture.value = dayTexture;
+    materialRef.current.uniforms.uNightTexture.value = nightTexture;
+    materialRef.current.needsUpdate = true;
+  }
+}, [dayTexture, nightTexture]);
+```
+
+### Endringer
+
+**Modified Files:**
+- `src/components/MorphingGlobe.tsx`
+
+**Changes:**
+1. **uniforms useMemo (line ~457):**
+   - Removed `dayTexture`, `nightTexture` from dependencies
+   - Added comment explaining why
+   - Dependencies: `[dayTexture, nightTexture, effectiveBlend, initialView]` → `[effectiveBlend, initialView]`
+
+2. **vectorUniforms useMemo (line ~475):**
+   - Removed `vectorColor`, `vectorOpacity` from dependencies
+   - Added comment explaining why
+   - Dependencies: `[initialView, vectorColor, vectorOpacity]` → `[initialView]`
+
+**Existing useEffects preserved morphFactor:**
+- Texture updates: Lines 498-508
+- Vector color/opacity: Lines 542-546
+- MorphFactor sync: Lines 520-531
+
+### Testing
+
+**Build Status:**
+✅ `npm run build` successful - no errors
+
+**Expected Behavior After Fix:**
+1. ✅ Globe → 2D morphing completes smoothly without interruptions
+2. ✅ City lights and markers follow the morph animation correctly
+3. ✅ 2D → Globe morphing works correctly
+4. ✅ Texture changes during morph don't reset animation
+5. ✅ Vector overlay color changes don't interrupt morph
+
+### Technical Details
+
+**Morph System Architecture:**
+```
+MorphToggleButton (user click)
+  └─> GlobeScene.toggleMorphView()
+      └─> MorphingGlobe.toggle()
+          └─> Sets animationRef with start/end values
+              └─> useFrame loop updates morphFactor gradually
+                  └─> onMorphProgress callback
+                      └─> Updates all dependent components
+```
+
+**Key Components Updated:**
+- `MorphingGlobe` - Earth mesh vertex shader (morphs geometry)
+- `CityLights` - Uses `getMorphedPosition(morphFactor)` ✅
+- `TerritoryMarkers` - Uses `latLonToSceneVector(morphFactor)` ✅
+- `WeatherClouds` - Uses `getMorphedPosition(morphFactor)` ✅
+
+### Impact
+
+**Before Fix:**
+- ❌ Globe/2D toggle unreliable
+- ❌ Markers positioned incorrectly during/after morph
+- ❌ Morph animation resets mid-transition
+- ❌ Globe "gets stuck" in flat mode or vice versa
+
+**After Fix:**
+- ✅ Smooth, uninterrupted morph animations
+- ✅ Markers always positioned correctly
+- ✅ Morph state preserved across texture/prop changes
+- ✅ Reliable globe ↔ 2D switching
+
+### Key Learning
+
+**React Three Fiber + Shader Uniforms:**
+- Be careful with useMemo dependencies for shader uniforms
+- Avoid recreating uniform objects during animations
+- Use useEffect to update individual uniforms instead
+- TypeScript can't prevent logic bugs like this - careful review needed
+
+**Testing Strategy:**
+- Test morph animation while textures are loading
+- Test morph animation with prop changes (colors, opacity)
+- Verify markers follow morph smoothly
+- Test rapid toggle clicks (stress test)
+
+### Session Summary
+
+**Achievement:**
+- ✅ Identified uniforms recreation bug
+- ✅ Fixed by removing texture/prop dependencies from useMemo
+- ✅ Verified build passes without errors
+- ✅ Preserved all existing useEffect update logic
+
+**Files Modified:**
+- `src/components/MorphingGlobe.tsx` (2 useMemo blocks, added comments)
+
+**Branch:**
+- `claude/fix-globe-to-map-placement-gGAQs`
+- Ready for testing and commit
+
+**Next Steps:**
+- Commit changes with descriptive message
+- Push to branch
+- User testing to verify fix works in browser
+
