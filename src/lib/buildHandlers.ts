@@ -43,10 +43,13 @@ export interface BuildHandlerDependencies {
   consumeAction: () => void;
   closeModal: () => void;
   openModal: (title: string, content: ReactNode) => void;
-  renderBuildModal: () => ReactNode;
   requestApproval: (action: string, options?: { description?: string }) => Promise<boolean>;
   setCivInfoDefaultTab: (tab: string) => void;
   setCivInfoPanelOpen: (open: boolean) => void;
+}
+
+export interface HandleBuildDeps extends BuildHandlerDependencies {
+  renderBuildModal: () => ReactNode;
 }
 
 // ============================================================
@@ -284,7 +287,7 @@ export function buildWarheadExtracted(yieldMT: number, deps: BuildHandlerDepende
 // MODAL HANDLERS
 // ============================================================
 
-export async function handleBuildExtracted(deps: BuildHandlerDependencies): Promise<void> {
+export async function handleBuildExtracted(deps: HandleBuildDeps): Promise<void> {
   const { AudioSys, openModal, renderBuildModal, requestApproval } = deps;
 
   const approved = await requestApproval('BUILD', { description: 'Strategic production request' });

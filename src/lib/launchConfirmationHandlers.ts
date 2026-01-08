@@ -9,6 +9,7 @@ import type { Nation } from '@/types/game';
 import type { GameState } from '@/types/game';
 import type { ActionConsequences, ConsequenceCalculationContext } from '@/types/consequences';
 import type { PendingLaunchState } from '@/lib/attackHandlers';
+import type { LaunchDependencies } from '@/lib/gamePhaseHandlers';
 import PlayerManager from '@/state/PlayerManager';
 import GameStateManager from '@/state/GameStateManager';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
@@ -51,6 +52,8 @@ export interface LaunchConfirmationDeps {
   setConsequenceCallback: (callback: (() => void) | null) => void;
   /** Play sound effect */
   playSFX: (sound: string) => void;
+  /** Launch dependencies for the missile launch function */
+  launchDeps: LaunchDependencies;
 }
 
 /**
@@ -137,7 +140,7 @@ export function confirmPendingLaunch(deps: LaunchConfirmationDeps): void {
     let launchSucceeded = false;
 
     if (deps.selectedDeliveryMethod === 'missile') {
-      launchSucceeded = launch(player, deps.pendingLaunch!.target, deps.selectedWarheadYield!);
+      launchSucceeded = launch(player, deps.pendingLaunch!.target, deps.selectedWarheadYield!, deps.launchDeps);
     } else {
       player.warheads = player.warheads || {};
       const remaining = (player.warheads[deps.selectedWarheadYield!] || 0) - 1;
@@ -149,7 +152,7 @@ export function confirmPendingLaunch(deps: LaunchConfirmationDeps): void {
 
       if (deps.selectedDeliveryMethod === 'bomber') {
         player.bombers = Math.max(0, bomberCount - 1);
-        launchSucceeded = launchBomber(player, deps.pendingLaunch!.target, { yield: deps.selectedWarheadYield! });
+        launchSucceeded = launchBomber(player, deps.pendingLaunch!.target, { yield: deps.selectedWarheadYield! }, deps.launchDeps);
         if (launchSucceeded) {
           deps.log(`${player.name} dispatches bomber strike (${deps.selectedWarheadYield}MT) toward ${deps.pendingLaunch!.target.name}`);
           DoomsdayClock.tick(0.3);
@@ -157,7 +160,7 @@ export function confirmPendingLaunch(deps: LaunchConfirmationDeps): void {
         }
       } else if (deps.selectedDeliveryMethod === 'submarine') {
         player.submarines = Math.max(0, submarineCount - 1);
-        launchSucceeded = launchSubmarine(player, deps.pendingLaunch!.target, deps.selectedWarheadYield!);
+        launchSucceeded = launchSubmarine(player, deps.pendingLaunch!.target, deps.selectedWarheadYield!, deps.launchDeps);
         if (launchSucceeded) {
           deps.log(`${player.name} launches submarine strike (${deps.selectedWarheadYield}MT) toward ${deps.pendingLaunch!.target.name}`);
           DoomsdayClock.tick(0.3);

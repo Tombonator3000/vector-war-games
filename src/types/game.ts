@@ -445,6 +445,14 @@ export interface GameState {
   conventional?: import('../hooks/useConventionalWarfare').ConventionalState;  // Conventional warfare state
   conventionalMovements?: unknown[];  // Active conventional force movements
   conventionalUnits?: unknown[];      // Deployed conventional units
+
+  /** Game Statistics */
+  statistics?: {
+    nukesLaunched: number;
+    nukesReceived: number;
+    enemiesDestroyed: number;
+    nonPandemicCasualties: number;
+  };
 }
 
 export interface ConventionalWarfareDelta {

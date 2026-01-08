@@ -273,6 +273,7 @@ import {
   handleBuildExtracted,
   handleResearchExtracted,
   type BuildHandlerDependencies,
+  type HandleBuildDeps,
 } from '@/lib/buildHandlers';
 import { handleAttackExtracted, type AttackHandlerDependencies, type PendingLaunchState as PendingLaunchStateType } from '@/lib/attackHandlers';
 import { handleIntelExtracted, type IntelHandlerDependencies } from '@/lib/intelHandlers';
@@ -10140,12 +10141,11 @@ export default function NoradVector() {
       consumeAction,
       closeModal,
       openModal,
-      renderBuildModal,
       requestApproval,
       setCivInfoDefaultTab,
       setCivInfoPanelOpen,
     };
-  }, [isGameStarted, log, updateDisplay, consumeAction, closeModal, openModal, renderBuildModal, requestApproval, setCivInfoDefaultTab, setCivInfoPanelOpen]);
+  }, [isGameStarted, log, updateDisplay, consumeAction, closeModal, openModal, requestApproval, setCivInfoDefaultTab, setCivInfoPanelOpen]);
 
   const getBuildContext = useCallback((actionLabel: string): Nation | null => getBuildContextExtracted(actionLabel, getBuildHandlerDeps()), [getBuildHandlerDeps]);
 
@@ -10174,7 +10174,7 @@ export default function NoradVector() {
     );
   }, [isGameStarted, buildMissile, buildBomber, buildDefense, buildCity, buildWarhead]);
 
-  const handleBuild = useCallback(async () => handleBuildExtracted(getBuildHandlerDeps()), [getBuildHandlerDeps]);
+  const handleBuild = useCallback(async () => handleBuildExtracted({ ...getBuildHandlerDeps(), renderBuildModal }), [getBuildHandlerDeps, renderBuildModal]);
 
   const handleResearch = useCallback(async () => handleResearchExtracted(getBuildHandlerDeps()), [getBuildHandlerDeps]);
 

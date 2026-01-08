@@ -10,8 +10,7 @@
  * - Doomsday clock updates
  */
 
-import type { Nation } from '@/types/Nation';
-import type { GameState } from '@/types/GameState';
+import type { Nation, GameState } from '@/types/game';
 
 export interface LaunchEffectsContext {
   from: Nation;

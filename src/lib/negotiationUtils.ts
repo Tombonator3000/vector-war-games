@@ -1141,8 +1141,8 @@ function handleOpenBorders(
 
   const giverTreaty = ensureTreatyRecord(updatedGiver, updatedReceiver);
   const receiverTreaty = ensureTreatyRecord(updatedReceiver, updatedGiver);
-  giverTreaty.openBordersTurns = Math.max(giverTreaty.openBordersTurns || 0, duration);
-  receiverTreaty.openBordersTurns = Math.max(receiverTreaty.openBordersTurns || 0, duration);
+  giverTreaty.openBordersTurns = Math.max(Number(giverTreaty.openBordersTurns) || 0, duration);
+  receiverTreaty.openBordersTurns = Math.max(Number(receiverTreaty.openBordersTurns) || 0, duration);
 
   updatedGiver = { ...updatedGiver, bordersClosedTurns: 0 };
   updatedReceiver = { ...updatedReceiver, bordersClosedTurns: 0 };
@@ -1234,7 +1234,7 @@ function handleMilitarySupport(
   const duration: number = typeof item.duration === 'number' ? item.duration : 5;
 
   const treaty = ensureTreatyRecord(receiver, giver);
-  treaty.militarySupportTurns = Math.max(treaty.militarySupportTurns || 0, duration);
+  treaty.militarySupportTurns = Math.max(Number(treaty.militarySupportTurns) || 0, duration);
 
   const updatedReceiver = {
     ...receiver,
