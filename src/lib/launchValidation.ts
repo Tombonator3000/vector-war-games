@@ -5,8 +5,7 @@
  * Contains all validation logic for missile launches.
  */
 
-import type { Nation } from '@/types/Nation';
-import type { GameState } from '@/types/GameState';
+import type { Nation, GameState } from '@/types/game';
 
 export interface LaunchValidationContext {
   from: Nation;

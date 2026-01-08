@@ -320,9 +320,7 @@ export function finalizeCrisisGameState(
   S.casusBelliState = { allWars: [], warHistory: [] };
 
   // Initialize Phase 3 state
-  // @ts-expect-error - Legacy Phase 3 diplomacy
   if (!S.diplomacyPhase3) {
-    // @ts-expect-error - Legacy Phase 3 diplomacy
     S.diplomacyPhase3 = initializeDiplomacyPhase3State(S.turn);
   }
 
@@ -754,9 +752,7 @@ export function initNations(
   S.casusBelliState = { allWars: [], warHistory: [] };
 
   // Initialize Phase 3 state
-  // @ts-expect-error - Legacy Phase 3 diplomacy
   if (!S.diplomacyPhase3) {
-    // @ts-expect-error - Legacy Phase 3 diplomacy
     S.diplomacyPhase3 = initializeDiplomacyPhase3State(S.turn);
   }
 

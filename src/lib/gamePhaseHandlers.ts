@@ -249,10 +249,12 @@ function processRadiationZones(
     // Decay radiation intensity
     zone.intensity *= 0.95;
 
-    // Apply damage to nations within zone
+    // Apply damage to nations within zone - project zone coordinates
+    const zoneProjected = projectLocal(zone.lon, zone.lat);
+
     for (const nation of nations) {
       const { x, y } = projectLocal(nation.lon, nation.lat);
-      const distance = Math.hypot(x - zone.x, y - zone.y);
+      const distance = Math.hypot(x - zoneProjected.x, y - zoneProjected.y);
 
       if (distance < zone.radius) {
         const baseDamage = zone.intensity * 3;

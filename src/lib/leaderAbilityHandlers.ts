@@ -5,7 +5,7 @@
  * Handles leader ability activation and effects
  */
 
-import type { Nation } from '@/types/core';
+import type { Nation } from '@/types/game';
 import type { GameState } from '@/types/game';
 import PlayerManager from '@/state/PlayerManager';
 import GameStateManager from '@/state/GameStateManager';

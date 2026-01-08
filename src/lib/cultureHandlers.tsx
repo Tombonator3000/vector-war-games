@@ -244,7 +244,6 @@ export async function handleCulture(
 
   deps.openModal(
     'CULTURE WARFARE',
-    // @ts-expect-error - React component type mismatch
     <OperationModal
       actions={cultureActions}
       player={player}
