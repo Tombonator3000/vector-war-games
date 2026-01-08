@@ -7,6 +7,44 @@
 
 ---
 
+## 2026-01-08 - Globe/Flat Map Morph Position Bug Fix
+
+### Problem
+Two issues with globe/2D map view switching:
+1. When switching from globe to 2D flat map, cities/player positions were wrong (stuck at globe positions)
+2. When switching back to globe, the 2D flat map was stuck and didn't morph back
+
+### Root Cause
+The `getMorphedPosition` function in `MorphingGlobe.tsx` used the wrong UV formula for flat position.
+
+The shader uses flipY=true texture orientation:
+- `uv.y = 0` at south pole (lat=-90)
+- `uv.y = 1` at north pole (lat=+90)
+
+But `getMorphedPosition` was using the inverted formula: `v = (90 - lat) / 180` instead of `v = (lat + 90) / 180`.
+
+### Fix Applied
+1. **MorphingGlobe.tsx `getMorphedPosition`**: Fixed flat position formula to use `v = (lat + 90) / 180`
+2. **GlobeScene.tsx picker**: Fixed inverse formula to convert screen Y back to latitude correctly
+
+### Code Changes
+
+**MorphingGlobe.tsx line 781:**
+```diff
+- const v = (90 - lat) / 180; // uv.y in shader terms
++ const v = (lat + 90) / 180; // uv.y: 0 at south pole, 1 at north pole
+```
+
+**GlobeScene.tsx line 1957-1960:**
+```diff
+- const v = 0.5 - point.y / MORPHING_FLAT_HEIGHT;
+- const flatLat = THREE.MathUtils.clamp(90 - v * 180, -90, 90);
++ const v = point.y / MORPHING_FLAT_HEIGHT + 0.5;
++ const flatLat = THREE.MathUtils.clamp(v * 180 - 90, -90, 90);
+```
+
+---
+
 ## 2026-01-05T19:29:37Z - Critical Architecture Analysis: Monolithic Components & Duplicated Systems
 
 ### Executive Summary

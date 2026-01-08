@@ -1950,14 +1950,14 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       const sphereLon = normalizeLon(THREE.MathUtils.radToDeg(sphereTheta));
 
       // Calculate coordinates from flat plane (for high morph factor)
-      // Flat position formula from shader:
+      // Flat position formula from shader (with flipY=true):
       //   x = (uv.x - 0.5) * FLAT_WIDTH  ->  uv.x = x / FLAT_WIDTH + 0.5
-      //   y = (0.5 - uv.y) * FLAT_HEIGHT  ->  uv.y = 0.5 - y / FLAT_HEIGHT
-      // Where uv.x = (lon + 180) / 360, uv.y = (90 - lat) / 180
+      //   y = (uv.y - 0.5) * FLAT_HEIGHT  ->  uv.y = y / FLAT_HEIGHT + 0.5
+      // Where uv.x = (lon + 180) / 360, uv.y = (lat + 90) / 180
       const u = point.x / MORPHING_FLAT_WIDTH + 0.5;
-      const v = 0.5 - point.y / MORPHING_FLAT_HEIGHT; // Inverted to match shader formula
+      const v = point.y / MORPHING_FLAT_HEIGHT + 0.5;
       const flatLon = normalizeLon(u * 360 - 180);
-      const flatLat = THREE.MathUtils.clamp(90 - v * 180, -90, 90);
+      const flatLat = THREE.MathUtils.clamp(v * 180 - 90, -90, 90);
 
       // Interpolate between sphere and flat coordinates based on morph factor
       const lon = THREE.MathUtils.lerp(sphereLon, flatLon, morphFactor);
