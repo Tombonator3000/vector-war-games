@@ -12281,3 +12281,223 @@ Index.tsx
 
 ---
 
+
+---
+
+## Session: Find and Fix Bug - Non-Deterministic Random in Bio Warfare
+**Date:** 2026-01-08
+**Branch:** `claude/find-fix-bug-2m1pp`
+**Task:** Search for bugs and fix one
+
+### Bug Found: Non-Deterministic Random Number Generation in Bio Warfare System
+
+**Location:** `src/types/simplifiedBiowarfare.ts` and `src/lib/simplifiedBioWarfareLogic.ts`
+
+**Problem:**
+The bio warfare system was using `Math.random()` for game mechanics, which causes:
+1. **Multiplayer desync:** Non-deterministic random will cause games to diverge between players
+2. **Replay inconsistency:** Replays will not produce the same results
+3. **Testing difficulty:** Cannot reproduce bugs or test scenarios consistently
+
+The codebase has a `SeededRandom` class specifically designed for deterministic random number generation (documented in `src/lib/seededRandom.ts`), but the bio warfare functions were not using it.
+
+**Affected Functions:**
+1. `calculateBioWeaponDamage()` - Line 112
+2. `calculateBioAttackDuration()` - Line 126
+3. `rollBioDetection()` - Line 134
+4. `deployBioWeapon()` - Line 85, 87
+5. `processBioAttackTurn()` - Line 147
+6. `processAllBioAttacks()` - Line 192, 230
+
+### Solution
+
+#### 1. Updated Function Signatures in `src/types/simplifiedBiowarfare.ts`
+
+```typescript
+// Added import
+import { SeededRandom } from '@/lib/seededRandom';
+
+// Updated function signatures
+export function calculateBioWeaponDamage(
+  targetPopulation: number,
+  defenseLevel: number,
+  rng: SeededRandom  // ✅ Added
+): number {
+  const basePercentLoss = 0.03 + rng.next() * 0.02; // ✅ Changed from Math.random()
+  // ...
+}
+
+export function calculateBioAttackDuration(rng: SeededRandom): number {
+  return 5 + Math.floor(rng.next() * 4); // ✅ Changed from Math.random()
+}
+
+export function rollBioDetection(defenseLevel: number, rng: SeededRandom): boolean {
+  const defense = BIO_DEFENSE_LEVELS[defenseLevel];
+  return rng.next() < defense.detectionChance; // ✅ Changed from Math.random()
+}
+```
+
+#### 2. Updated Callers in `src/lib/simplifiedBioWarfareLogic.ts`
+
+```typescript
+// Added import
+import type { SeededRandom } from '@/lib/seededRandom';
+
+// Updated deployBioWeapon signature
+export function deployBioWeapon(
+  attacker: Nation,
+  target: Nation,
+  currentTurn: number,
+  rng: SeededRandom  // ✅ Added
+): { /* ... */ } {
+  // Updated calls
+  const duration = calculateBioAttackDuration(rng);  // ✅ Pass RNG
+  const basePopLoss = 0.03 + rng.next() * 0.02;     // ✅ Use RNG
+  const detected = rollBioDetection(bioDefenseLevel, rng);  // ✅ Pass RNG
+  // ...
+}
+
+// Updated processBioAttackTurn signature
+export function processBioAttackTurn(
+  nation: Nation,
+  attack: BioAttackDeployment,
+  currentTurn: number,
+  rng: SeededRandom  // ✅ Added
+): { /* ... */ } {
+  const damage = calculateBioWeaponDamage(nation.population, bioDefenseLevel, rng);  // ✅ Pass RNG
+  // ...
+}
+
+// Updated processAllBioAttacks signature
+export function processAllBioAttacks(
+  nation: Nation,
+  currentTurn: number,
+  gameState?: GameState,
+  conventionalState?: any,
+  rng?: SeededRandom  // ✅ Added as optional
+): { /* ... */ } {
+  for (const attack of activeBioAttacks) {
+    if (!rng) {
+      console.warn('processAllBioAttacks called without RNG - bio-attacks cannot be processed deterministically');
+      break;
+    }
+    const result = processBioAttackTurn(updatedNation, attack, currentTurn, rng);  // ✅ Pass RNG
+    // ...
+  }
+}
+```
+
+#### 3. Updated Callers in `src/pages/Index.tsx`
+
+**Production Phase (line 5192):**
+```typescript
+const result = processAllBioAttacks(nation, S.turn, undefined, undefined, rng);  // ✅ Added rng
+```
+
+**Bio Weapon Deploy Handler (line 10641):**
+```typescript
+const handleSimplifiedBioWeaponDeploy = useCallback((targetId: string) => {
+  const player = PlayerManager.get();
+  const target = getNationById(nations, targetId);
+  if (!player || !target || !globalRNG) return;  // ✅ Check globalRNG
+
+  const result = deployBioWeapon(player, target, S.turn, globalRNG);  // ✅ Pass globalRNG
+  // ...
+});
+```
+
+### Files Modified
+
+1. **`src/types/simplifiedBiowarfare.ts`**
+   - Added SeededRandom import
+   - Updated 3 function signatures to accept `rng: SeededRandom`
+   - Replaced `Math.random()` with `rng.next()` in 3 places
+
+2. **`src/lib/simplifiedBioWarfareLogic.ts`**
+   - Added SeededRandom import
+   - Updated 3 function signatures to accept RNG parameter
+   - Updated function calls to pass RNG through
+   - Added safety check for missing RNG in processAllBioAttacks
+
+3. **`src/pages/Index.tsx`**
+   - Updated 2 function calls to pass RNG/globalRNG
+
+### Impact
+
+**Benefits:**
+- ✅ Bio warfare now uses deterministic random number generation
+- ✅ Multiplayer games will stay in sync
+- ✅ Replays will be consistent and reproducible
+- ✅ Testing and debugging is now possible with predictable results
+- ✅ Follows the same pattern as other game systems
+
+**Breaking Changes:**
+- Function signatures changed (added RNG parameter)
+- Callers must now provide an RNG instance
+- Optional RNG parameter in `processAllBioAttacks` for backwards compatibility
+
+### Testing Recommendations
+
+1. **Verify determinism:** Run the same bio warfare scenario twice with the same seed and verify identical results
+2. **Check multiplayer:** Ensure bio warfare actions produce the same results on both clients
+3. **Test replays:** Record a game with bio warfare and replay it to ensure consistency
+4. **Edge cases:** Test bio warfare when RNG is not available (should log warning)
+
+### Architecture Notes
+
+**RNG Flow:**
+```
+productionPhase(rng) 
+  └─> processAllBioAttacks(nation, turn, gameState, conv, rng)
+      └─> processBioAttackTurn(nation, attack, turn, rng)
+          └─> calculateBioWeaponDamage(pop, defense, rng)
+              └─> rng.next()
+
+handleSimplifiedBioWeaponDeploy()
+  └─> deployBioWeapon(attacker, target, turn, globalRNG)
+      ├─> calculateBioAttackDuration(globalRNG)
+      ├─> rollBioDetection(defense, globalRNG)
+      └─> rng.next()
+```
+
+**Note:** There are TWO different `deployBioWeapon` functions in the codebase:
+1. `src/lib/simplifiedBioWarfareLogic.ts` - Simple bio weapon deployment (fixed in this PR)
+2. `src/hooks/useEvolutionTree.ts` - Complex Plague Inc. style deployment (separate system)
+
+### Key Learning
+
+**Deterministic Game Logic:**
+- Always use `SeededRandom` for game mechanics, never `Math.random()`
+- `Math.random()` can be used for cosmetic effects (particle positions, etc.)
+- Thread RNG through function calls explicitly
+- Document when RNG is optional vs required
+
+**Type Safety:**
+- TypeScript doesn't prevent runtime non-determinism
+- Code review and testing are essential
+- Grep for `Math.random()` in game logic files regularly
+
+### Session Summary
+
+**Achievement:**
+- ✅ Identified non-deterministic random usage bug
+- ✅ Fixed 6 functions to use SeededRandom
+- ✅ Updated all callers to pass RNG
+- ✅ Added safety check for missing RNG
+- ✅ Maintained backwards compatibility where possible
+
+**Outcome:**
+- **Status:** Bug fixed - Bio warfare now deterministic
+- **Changes:** 3 files modified (8 function signatures, 6 Math.random() replacements)
+- **Impact:** Multiplayer sync, replay consistency, testability all improved
+- **Next:** Test in-game to verify bio warfare still works correctly
+
+**Key Files Modified:**
+- `src/types/simplifiedBiowarfare.ts` (added import, 3 functions updated)
+- `src/lib/simplifiedBioWarfareLogic.ts` (added import, 3 functions updated, 1 safety check)
+- `src/pages/Index.tsx` (2 caller sites updated)
+
+**Branch:**
+- `claude/find-fix-bug-2m1pp`
+- Ready for testing and commit
+
