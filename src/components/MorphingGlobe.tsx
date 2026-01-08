@@ -762,10 +762,11 @@ export function getMorphedPosition(
   radius: number = EARTH_RADIUS
 ): THREE.Vector3 {
   // Sphere position - match the vertex shader formula exactly:
-  // Shader: phi = uv.y * PI, theta = uv.x * 2*PI - PI
-  // Where uv.x = (lon + 180) / 360, so theta = lon * PI/180
+  // Shader: phi = (1.0 - uv.y) * PI (inverts because flipY=true, uv.y=0 at south, uv.y=1 at north)
+  // Shader: theta = uv.x * 2*PI - PI
+  // Where uv.x = (lon + 180) / 360, uv.y = (lat + 90) / 180
   const phi = THREE.MathUtils.degToRad(90 - lat);
-  const theta = THREE.MathUtils.degToRad(lon); // Match shader: theta ranges -PI to PI
+  const theta = THREE.MathUtils.degToRad(lon);
 
   const spherePos = new THREE.Vector3(
     -radius * Math.sin(phi) * Math.cos(theta),  // Negate X to fix texture mirroring
@@ -773,17 +774,17 @@ export function getMorphedPosition(
     radius * Math.sin(phi) * Math.sin(theta)
   );
 
-  // Flat position (normalized 0-1, then scaled)
-  // Match the vertex shader formula exactly:
+  // Flat position - match vertex shader exactly:
+  // Shader with flipY=true: uv.y = 0 at south pole (lat=-90), uv.y = 1 at north pole (lat=+90)
   // Shader: flatPos.x = (uv.x - 0.5) * uFlatWidth
   // Shader: flatPos.y = (uv.y - 0.5) * uFlatHeight
-  // Where uv.x = (lon + 180) / 360, uv.y = (90 - lat) / 180
+  // Where uv.x = (lon + 180) / 360, uv.y = (lat + 90) / 180
   const u = (lon + 180) / 360;
-  const v = (90 - lat) / 180; // uv.y in shader terms
+  const v = (lat + 90) / 180; // uv.y: 0 at south pole, 1 at north pole
 
   const flatPos = new THREE.Vector3(
     (u - 0.5) * FLAT_WIDTH,
-    (v - 0.5) * FLAT_HEIGHT, // Match shader: (uv.y - 0.5) * uFlatHeight
+    (v - 0.5) * FLAT_HEIGHT, // Match shader: south pole at bottom (-Y), north pole at top (+Y)
     0
   );
 
