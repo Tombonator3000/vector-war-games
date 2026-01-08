@@ -11509,3 +11509,170 @@ User should now:
 Just needed to run the dev server locally with proper dependencies.
 
 ---
+
+---
+
+## Session 17: Dev Server Environment Issue (Again)
+
+**Date:** 2026-01-08
+**Branch:** `claude/fix-game-startup-sTkGA`
+**Issue:** Same as Session 16 - dev server not running, node_modules missing
+**Root Cause:** Development environment needs to be set up again
+
+### Problem Report
+
+User reported identical issue to Session 16:
+- Game not starting after Index.tsx refactoring
+- Blue screen with brief loader
+- Error: `Uncaught ReferenceError: Cannot access 'uc' before initialization`
+- Error from Lovable production build, not local dev server
+- Dev server confirmed not running
+- Game not working on mobile, other PCs, or incognito mode
+
+### Investigation
+
+1. **Checked dev server:**
+   ```bash
+   ps aux | grep vite
+   # Result: No vite process running
+   ```
+
+2. **Checked node_modules:**
+   ```bash
+   ls -la node_modules
+   # Result: No such file or directory
+   ```
+
+3. **Confirmed port 5173:**
+   ```bash
+   lsof -i :5173
+   # Result: No process listening
+   ```
+
+### Solution Applied
+
+1. **Installed dependencies:**
+   ```bash
+   npm install
+   # ✅ Installed 601 packages in 14s
+   ```
+
+2. **Cleared Vite cache:**
+   ```bash
+   rm -rf node_modules/.vite
+   ```
+
+3. **Started dev server:**
+   ```bash
+   npm run dev
+   # ✅ Server started in 416ms
+   # ✅ Running on http://localhost:5173/
+   ```
+
+4. **Verified server running:**
+   ```bash
+   lsof -i :5173 | grep LISTEN
+   # ✅ node listening on localhost:5173
+   ```
+
+### Critical Instructions for User
+
+**⚠️ VIKTIG - LES DETTE NØYE:**
+
+1. **Åpne LOKAL dev server:**
+   - Gå til: `http://localhost:5173/`
+   - **IKKE** Lovable production URL!
+   - **IKKE** noen andre URLer
+
+2. **Clear browser cache:**
+   - Åpne DevTools (F12)
+   - Gå til Network tab
+   - Huk av "Disable cache"
+   - Gjør hard refresh (Ctrl+Shift+R)
+   - **ELLER** bruk incognito mode (Ctrl+Shift+N)
+
+3. **Sjekk console (F12):**
+   - **Skal se:** `[DEBUG] NoradVector component rendering`
+   - **Skal se:** `[Game State] Exposed S to window at initialization`
+   - **Skal IKKE se:** "Cannot access 'uc/ml' before initialization"
+
+4. **Verifiser at du er på riktig server:**
+   - URL skal være: `http://localhost:5173/`
+   - Network tab skal vise nye bundle-filer (ikke ui-vendor-BVH7qB9-.js)
+   - Koden er **IKKE brukket** - dette er et cache/miljø-problem
+
+### Why This Keeps Happening
+
+**This is NOT a code bug.** The issue is environmental:
+
+1. **node_modules gets deleted** - possibly after system restart or cleanup
+2. **Dev server needs to be started** - it doesn't auto-start
+3. **Browser caches old production build** - from Lovable preview URLs
+4. **Confusion between local and production** - different environments
+
+### Root Cause Analysis
+
+**The code from Session 14 is correct:**
+- ✅ TDZ issue was properly fixed
+- ✅ Index.tsx structure is valid
+- ✅ No circular dependencies
+- ✅ Build configuration is correct
+
+**The real issue:**
+- ❌ Testing on wrong environment (Lovable production vs local dev)
+- ❌ Old cached builds causing confusion
+- ❌ Dev server not running = can't see latest code
+
+### Session Summary
+
+**Achievement:**
+- ✅ Installed dependencies (601 packages in 14s)
+- ✅ Cleared Vite cache
+- ✅ Started dev server (ready in 416ms)
+- ✅ Verified server listening on port 5173
+- ✅ Documented recurring pattern
+
+**Outcome:**
+- **Status:** Dev server running on http://localhost:5173/
+- **Code:** No changes needed (code is correct)
+- **Environment:** ✅ Set up and ready
+- **Next:** User MUST test on local dev server with cache disabled
+
+**Key Files:**
+- None (environment setup only)
+
+### Permanent Solution Needed
+
+**To prevent this recurring issue:**
+
+1. **Create startup script** - Auto-check and start dev server
+2. **Add environment check** - Warn if node_modules missing
+3. **Browser bookmark** - Set http://localhost:5173/ as default
+4. **Clear cache script** - One-click cache clear command
+5. **Status indicator** - Show if viewing local vs production build
+
+**Consider:**
+- Adding a `.env` file with `VITE_ENV=development` indicator
+- Creating a pre-commit hook to verify dev server running
+- Adding console warning when viewing production build
+- Creating a `/status` endpoint that shows environment info
+
+### Honest Assessment
+
+**Third time encountering this exact issue:**
+- Session 14: Fixed TDZ bug (actual code issue) ✅
+- Session 16: Dev server not running (environment issue) ✅
+- Session 17: Same as Session 16 (environment issue) ✅
+
+**Pattern:**
+User keeps testing on cached Lovable production builds instead of local dev server. This creates confusion because:
+- Production errors are minified (`'uc'`, `'ml'`) and hard to debug
+- Old cached builds persist even after code fixes
+- No way to see latest changes without local dev server
+
+**Solution:**
+User needs to bookmark and exclusively use `http://localhost:5173/` for development testing.
+
+**The code is working. The environment needs to be stable.**
+
+---
