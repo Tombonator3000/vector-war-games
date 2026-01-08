@@ -430,6 +430,8 @@ export interface GameState {
 
   /** Conventional Warfare System */
   conventional?: import('../hooks/useConventionalWarfare').ConventionalState;  // Conventional warfare state
+  conventionalMovements?: unknown[];  // Conventional unit movements (legacy compatibility)
+  conventionalUnits?: unknown[];      // Conventional units (legacy compatibility)
 }
 
 export interface ConventionalWarfareDelta {
