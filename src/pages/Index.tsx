@@ -390,6 +390,8 @@ import {
 import {
   getScenarioDefcon,
   getDefconIndicatorClasses,
+  DEFCON_BADGE_BASE_CLASSES,
+  DEFCON_VALUE_BASE_CLASSES,
   resolveNationName as resolveNationNameUtil,
   getImposingNationNamesFromPackages as getImposingNationNamesUtil,
   formatSanctionTypeLabel as formatSanctionTypeUtil,
