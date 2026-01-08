@@ -390,8 +390,6 @@ import {
 import {
   getScenarioDefcon,
   getDefconIndicatorClasses,
-  DEFCON_BADGE_BASE_CLASSES,
-  DEFCON_VALUE_BASE_CLASSES,
   resolveNationName as resolveNationNameUtil,
   getImposingNationNamesFromPackages as getImposingNationNamesUtil,
   formatSanctionTypeLabel as formatSanctionTypeUtil,
@@ -5518,16 +5516,20 @@ function updateDisplay() {
   const player = PlayerManager.get();
   if (!player) return;
 
+  // Inline constants to avoid module initialization order issues
+  const badgeBaseClasses = 'flex items-center gap-1.5 px-2.5 py-0.5 rounded border transition-all duration-200';
+  const valueBaseClasses = 'font-bold text-xl leading-none transition-colors duration-200';
+
   const defconClasses = getDefconIndicatorClasses(S.defcon);
   const defconBadgeEl = document.getElementById('defconBadge');
   if (defconBadgeEl) {
-    defconBadgeEl.className = `${DEFCON_BADGE_BASE_CLASSES} ${defconClasses.badge}`;
+    defconBadgeEl.className = `${badgeBaseClasses} ${defconClasses.badge}`;
   }
 
   const defconEl = document.getElementById('defcon');
   if (defconEl) {
     defconEl.textContent = S.defcon.toString();
-    defconEl.className = `${DEFCON_VALUE_BASE_CLASSES} ${defconClasses.value}`;
+    defconEl.className = `${valueBaseClasses} ${defconClasses.value}`;
   }
   AudioSys.updateAmbientForDefcon(S.defcon);
   
@@ -13860,11 +13862,11 @@ export default function NoradVector() {
               {/* DEFCON - Enlarged for prominence */}
               <div
                 id="defconBadge"
-                className={`${DEFCON_BADGE_BASE_CLASSES} ${defconIndicatorClasses.badge}`}
+                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded border transition-all duration-200 ${defconIndicatorClasses.badge}`}
               >
                 <span className="text-cyan-300 text-xs tracking-wide">DEFCON</span>
                 <span
-                  className={`${DEFCON_VALUE_BASE_CLASSES} ${defconIndicatorClasses.value}`}
+                  className={`font-bold text-xl leading-none transition-colors duration-200 ${defconIndicatorClasses.value}`}
                   id="defcon"
                 >
                   {S.defcon}
