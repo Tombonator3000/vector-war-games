@@ -42,8 +42,7 @@ export interface BuildHandlerDependencies {
   updateDisplay: () => void;
   consumeAction: () => void;
   closeModal: () => void;
-  openModal: (title: string, content: ReactNode) => void;
-  renderBuildModal: () => ReactNode;
+  // openModal and renderBuildModal removed to break circular dependency
   requestApproval: (action: string, options?: { description?: string }) => Promise<boolean>;
   setCivInfoDefaultTab: (tab: string) => void;
   setCivInfoPanelOpen: (open: boolean) => void;
@@ -284,13 +283,14 @@ export function buildWarheadExtracted(yieldMT: number, deps: BuildHandlerDepende
 // MODAL HANDLERS
 // ============================================================
 
-export async function handleBuildExtracted(deps: BuildHandlerDependencies): Promise<void> {
-  const { AudioSys, openModal, renderBuildModal, requestApproval } = deps;
+// Returns true if approved and modal should be opened
+export async function handleBuildExtracted(deps: BuildHandlerDependencies): Promise<boolean> {
+  const { AudioSys, requestApproval } = deps;
 
   const approved = await requestApproval('BUILD', { description: 'Strategic production request' });
-  if (!approved) return;
+  if (!approved) return false;
   AudioSys.playSFX('click');
-  openModal('STRATEGIC PRODUCTION', renderBuildModal());
+  return true;
 }
 
 export async function handleResearchExtracted(deps: BuildHandlerDependencies): Promise<void> {

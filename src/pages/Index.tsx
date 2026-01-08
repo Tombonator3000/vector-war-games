@@ -10139,13 +10139,12 @@ export default function NoradVector() {
       updateDisplay,
       consumeAction,
       closeModal,
-      openModal,
-      renderBuildModal,
+      // openModal and renderBuildModal removed to break circular dependency
       requestApproval,
       setCivInfoDefaultTab,
       setCivInfoPanelOpen,
     };
-  }, [isGameStarted, log, updateDisplay, consumeAction, closeModal, openModal, renderBuildModal, requestApproval, setCivInfoDefaultTab, setCivInfoPanelOpen]);
+  }, [isGameStarted, log, updateDisplay, consumeAction, closeModal, requestApproval, setCivInfoDefaultTab, setCivInfoPanelOpen]);
 
   const getBuildContext = useCallback((actionLabel: string): Nation | null => getBuildContextExtracted(actionLabel, getBuildHandlerDeps()), [getBuildHandlerDeps]);
 
@@ -10174,7 +10173,12 @@ export default function NoradVector() {
     );
   }, [isGameStarted, buildMissile, buildBomber, buildDefense, buildCity, buildWarhead]);
 
-  const handleBuild = useCallback(async () => handleBuildExtracted(getBuildHandlerDeps()), [getBuildHandlerDeps]);
+  const handleBuild = useCallback(async () => {
+    const shouldOpenModal = await handleBuildExtracted(getBuildHandlerDeps());
+    if (shouldOpenModal) {
+      openModal('STRATEGIC PRODUCTION', renderBuildModal());
+    }
+  }, [getBuildHandlerDeps, openModal, renderBuildModal]);
 
   const handleResearch = useCallback(async () => handleResearchExtracted(getBuildHandlerDeps()), [getBuildHandlerDeps]);
 
