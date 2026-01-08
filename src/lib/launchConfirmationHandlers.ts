@@ -5,7 +5,7 @@
  * Handles final launch validation and execution for nuclear strikes
  */
 
-import type { Nation } from '@/types/core';
+import type { Nation } from '@/types/game';
 import type { GameState } from '@/types/game';
 import type { ActionConsequences, ConsequenceCalculationContext } from '@/types/consequences';
 import type { PendingLaunchState } from '@/lib/attackHandlers';

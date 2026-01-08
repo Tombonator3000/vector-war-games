@@ -6,7 +6,7 @@
  * deepfakes, cultural victory, and eco propaganda
  */
 
-import type { Nation } from '@/types/core';
+import type { Nation } from '@/types/game';
 import PlayerManager from '@/state/PlayerManager';
 
 /**

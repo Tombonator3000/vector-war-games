@@ -87,6 +87,19 @@ export interface Treaty {
 }
 
 export interface Missile {
+  t: number;
+  fromLon: number;
+  fromLat: number;
+  toLon: number;
+  toLat: number;
+  yield: number;
+  target: Nation;
+  from?: Nation | null;
+  hasExploded?: boolean;
+  isSubmarine?: boolean;
+  isMirv?: boolean;
+  mirvCount?: number;
+  _tele?: boolean;
   [key: string]: unknown;
 }
 
@@ -430,6 +443,8 @@ export interface GameState {
 
   /** Conventional Warfare System */
   conventional?: import('../hooks/useConventionalWarfare').ConventionalState;  // Conventional warfare state
+  conventionalMovements?: unknown[];  // Active conventional force movements
+  conventionalUnits?: unknown[];      // Deployed conventional units
 }
 
 export interface ConventionalWarfareDelta {

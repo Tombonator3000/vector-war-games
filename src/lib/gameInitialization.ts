@@ -79,7 +79,7 @@ export interface CrisisNationConfig {
   uranium: number;
   baseIntel: number;
   cities: number;
-  warheads: { [yield: number]: number };
+  warheads: { [yieldValue: number]: number };
   researched: { [key: string]: boolean };
   conventionalProfile: 'navy' | 'army' | 'air';
 }
