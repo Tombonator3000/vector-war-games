@@ -4,6 +4,7 @@
  */
 
 import { GreatOldOnesState, RegionalState } from '../types/greatOldOnes';
+import type { SeededRandom } from './seededRandom';
 
 // Import Phase 2 systems
 import {
@@ -153,9 +154,10 @@ export function initializePhase2State(): Phase2State {
  */
 export function updatePhase2Systems(
   state: GreatOldOnesState,
-  phase2State: Phase2State
+  phase2State: Phase2State,
+  rng: SeededRandom
 ): Phase2State {
-  const { events, stateChanges } = processPhase2Turn(state, phase2State);
+  const { events, stateChanges } = processPhase2Turn(state, phase2State, rng);
   // Apply state changes to phase2State
   stateChanges.forEach(change => {
     applyPhase2StateChanges(phase2State, change);
@@ -218,7 +220,8 @@ export function checkPhase2UnlockConditions(state: GreatOldOnesState): {
  */
 export function processPhase2Turn(
   state: GreatOldOnesState,
-  phase2State: Phase2State
+  phase2State: Phase2State,
+  rng: SeededRandom
 ): {
   events: Phase2TurnEvent[];
   stateChanges: Phase2StateChange[];
@@ -243,21 +246,21 @@ export function processPhase2Turn(
 
   // Process based on selected doctrine
   if (state.doctrine === 'domination') {
-    const dominationResults = processDominationTurn(state, phase2State);
+    const dominationResults = processDominationTurn(state, phase2State, rng);
     events.push(...dominationResults.events);
     stateChanges.push(...dominationResults.stateChanges);
   } else if (state.doctrine === 'corruption') {
-    const corruptionResults = processCorruptionTurn(state, phase2State);
+    const corruptionResults = processCorruptionTurn(state, phase2State, rng);
     events.push(...corruptionResults.events);
     stateChanges.push(...corruptionResults.stateChanges);
   } else if (state.doctrine === 'convergence') {
-    const convergenceResults = processConvergenceTurn(state, phase2State);
+    const convergenceResults = processConvergenceTurn(state, phase2State, rng);
     events.push(...convergenceResults.events);
     stateChanges.push(...convergenceResults.stateChanges);
   }
 
   // Process shared systems
-  const sharedResults = processSharedSystems(state, phase2State);
+  const sharedResults = processSharedSystems(state, phase2State, rng);
   events.push(...sharedResults.events);
   stateChanges.push(...sharedResults.stateChanges);
 
@@ -269,7 +272,8 @@ export function processPhase2Turn(
  */
 function processDominationTurn(
   state: GreatOldOnesState,
-  phase2State: Phase2State
+  phase2State: Phase2State,
+  rng: SeededRandom
 ): {
   events: Phase2TurnEvent[];
   stateChanges: Phase2StateChange[];
@@ -388,7 +392,8 @@ function processDominationTurn(
  */
 function processCorruptionTurn(
   state: GreatOldOnesState,
-  phase2State: Phase2State
+  phase2State: Phase2State,
+  rng: SeededRandom
 ): {
   events: Phase2TurnEvent[];
   stateChanges: Phase2StateChange[];
@@ -405,7 +410,7 @@ function processCorruptionTurn(
       n => campaign.amplificationNodes.includes(n.id)
     );
 
-    const spreadResult = spreadMeme(campaign.agent, region, amplificationNodes, state);
+    const spreadResult = spreadMeme(campaign.agent, region, amplificationNodes, state, rng);
 
     campaign.agent.reach = spreadResult.newReach;
 
@@ -566,7 +571,8 @@ function processCorruptionTurn(
  */
 function processConvergenceTurn(
   state: GreatOldOnesState,
-  phase2State: Phase2State
+  phase2State: Phase2State,
+  rng: SeededRandom
 ): {
   events: Phase2TurnEvent[];
   stateChanges: Phase2StateChange[];
@@ -709,7 +715,8 @@ function processConvergenceTurn(
  */
 function processSharedSystems(
   state: GreatOldOnesState,
-  phase2State: Phase2State
+  phase2State: Phase2State,
+  rng: SeededRandom
 ): {
   events: Phase2TurnEvent[];
   stateChanges: Phase2StateChange[];
