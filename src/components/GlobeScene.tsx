@@ -623,31 +623,24 @@ function Atmosphere({ morphFactor = 0 }: AtmosphereProps) {
   // Fade atmosphere as we transition to flat map
   const opacity = Math.max(0, 1 - morphFactor * 1.5);
 
-  // Inner fresnel glow - visible from front (surface glow)
-  // Uses additive blending for light glow effect only
-  const innerGlowVertexShader = `
+  // Outer halo shader - creates a glowing ring around the globe
+  const haloVertexShader = `
     varying vec3 vNormal;
-    varying vec3 vViewPosition;
     void main() {
-      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-      vViewPosition = -mvPosition.xyz;
       vNormal = normalize(normalMatrix * normal);
-      gl_Position = projectionMatrix * mvPosition;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }
   `;
 
-  const innerGlowFragmentShader = `
+  const haloFragmentShader = `
     uniform float uOpacity;
     varying vec3 vNormal;
-    varying vec3 vViewPosition;
     void main() {
-      vec3 viewDir = normalize(vViewPosition);
-      // Fresnel effect - glow at edges
-      float fresnel = pow(1.0 - max(0.0, dot(viewDir, vNormal)), 4.0);
-      // Soft blue atmospheric glow
-      vec3 glowColor = vec3(0.3, 0.6, 1.0);
-      float intensity = fresnel * 0.6;
-      gl_FragColor = vec4(glowColor, intensity * uOpacity);
+      // Fresnel-based rim glow - stronger at edges, invisible at center
+      float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.5);
+      vec3 haloColor = vec3(0.3, 0.7, 1.0); // Cyan/blue halo
+      float intensity = fresnel * 0.9;
+      gl_FragColor = vec4(haloColor, intensity * uOpacity);
     }
   `;
 
@@ -656,19 +649,17 @@ function Atmosphere({ morphFactor = 0 }: AtmosphereProps) {
     return null;
   }
 
-  // Only render inner fresnel glow - removed BackSide atmosphere layers
-  // to eliminate dark circle artifacts visible behind globe labels
   return (
     <group>
-      {/* Inner fresnel glow on earth surface - FrontSide only */}
-      <mesh scale={1.005} renderOrder={3}>
+      {/* Outer halo ring around globe - creates visible glow at edges */}
+      <mesh scale={1.12} renderOrder={2}>
         <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
         <shaderMaterial
-          vertexShader={innerGlowVertexShader}
-          fragmentShader={innerGlowFragmentShader}
-          uniforms={{ uOpacity: { value: opacity } }}
+          vertexShader={haloVertexShader}
+          fragmentShader={haloFragmentShader}
+          uniforms={{ uOpacity: { value: opacity * 0.8 } }}
           blending={THREE.AdditiveBlending}
-          side={THREE.FrontSide}
+          side={THREE.BackSide}
           transparent
           depthWrite={false}
         />
