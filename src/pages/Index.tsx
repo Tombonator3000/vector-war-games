@@ -5473,7 +5473,7 @@ function endTurn() {
           }
 
           if (phase2State.unlocked) {
-            const updatedPhase2 = updatePhase2Systems(gooState, phase2State);
+            const updatedPhase2 = updatePhase2Systems(gooState, phase2State, rng);
             setPhase2State(updatedPhase2);
           }
         }

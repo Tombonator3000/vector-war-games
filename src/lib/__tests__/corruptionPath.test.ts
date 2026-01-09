@@ -152,7 +152,8 @@ describe('Phase 2 corruption benefit processing', () => {
       } satisfies InfluenceNode,
     ];
 
-    const { stateChanges } = processPhase2Turn(state, phase2State);
+    const rng = new SeededRandom(12345);
+    const { stateChanges } = processPhase2Turn(state, phase2State, rng);
 
     expect(stateChanges).toEqual(
       expect.arrayContaining([

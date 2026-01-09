@@ -13217,3 +13217,206 @@ npm run build
 **Commit:** Refactor drawFalloutMarks for clarity and maintainability
 **Branch:** `claude/refactor-complex-code-de2DO`
 
+
+---
+
+## Session: Fix 2D Map Overlay and RNG Error (2026-01-09)
+
+**Branch:** `claude/fix-2d-map-overlay-nXWDP`
+
+### Problem Description
+
+User reported two issues when toggling from 3D globe to 2D flat map:
+1. **2D map not rendering** - Only overlays were visible, the actual map texture was missing
+2. **JavaScript Error** - Console showed: `Uncaught ReferenceError: rng is not defined`
+
+### Root Cause Analysis
+
+#### Primary Issue: Missing RNG Parameter
+
+**Location:** `/home/user/vector-war-games/src/lib/phase2Integration.ts:408`
+
+The `spreadMeme()` function requires 5 parameters but was being called with only 4:
+```typescript
+// INCORRECT (line 408)
+const spreadResult = spreadMeme(campaign.agent, region, amplificationNodes, state);
+
+// CORRECT (should be)
+const spreadResult = spreadMeme(campaign.agent, region, amplificationNodes, state, rng);
+```
+
+**Function Signature** (`corruptionPath.ts:650-655`):
+```typescript
+export function spreadMeme(
+  agent: MemeticAgent,
+  region: RegionalState,
+  amplificationNodes: InfluenceNode[],
+  state: GreatOldOnesState,
+  rng: SeededRandom  // <-- Missing parameter
+): {
+```
+
+**Where RNG is Used** (`corruptionPath.ts:703`):
+```typescript
+const counterMemeDetected = rng.next() * 100 < counterMemeChance;
+```
+
+This caused a runtime error when `rng.next()` was called on an undefined variable.
+
+#### Secondary Issue: Rendering Pipeline Interrupted
+
+The uncaught `ReferenceError` likely interrupted the rendering pipeline during turn processing, preventing the 2D map from rendering properly. Only overlays rendered because they are rendered separately from the main map texture.
+
+### Solution Implemented
+
+Added `rng: SeededRandom` parameter throughout the Phase 2 turn processing call chain:
+
+#### 1. Import SeededRandom Type
+**File:** `src/lib/phase2Integration.ts`
+```typescript
+import type { SeededRandom } from './seededRandom';
+```
+
+#### 2. Update Function Signatures
+
+**updatePhase2Systems** (line 155-159):
+```typescript
+export function updatePhase2Systems(
+  state: GreatOldOnesState,
+  phase2State: Phase2State,
+  rng: SeededRandom  // <-- Added
+): Phase2State {
+  const { events, stateChanges } = processPhase2Turn(state, phase2State, rng);
+  // ...
+}
+```
+
+**processPhase2Turn** (line 221-225):
+```typescript
+export function processPhase2Turn(
+  state: GreatOldOnesState,
+  phase2State: Phase2State,
+  rng: SeededRandom  // <-- Added
+): {
+  events: Phase2TurnEvent[];
+  stateChanges: Phase2StateChange[];
+} {
+  // ...
+  const dominationResults = processDominationTurn(state, phase2State, rng);
+  const corruptionResults = processCorruptionTurn(state, phase2State, rng);
+  const convergenceResults = processConvergenceTurn(state, phase2State, rng);
+  const sharedResults = processSharedSystems(state, phase2State, rng);
+  // ...
+}
+```
+
+**processDominationTurn** (line 273-276):
+```typescript
+function processDominationTurn(
+  state: GreatOldOnesState,
+  phase2State: Phase2State,
+  rng: SeededRandom  // <-- Added
+): {
+```
+
+**processCorruptionTurn** (line 393-396):
+```typescript
+function processCorruptionTurn(
+  state: GreatOldOnesState,
+  phase2State: Phase2State,
+  rng: SeededRandom  // <-- Added
+): {
+  // ...
+  const spreadResult = spreadMeme(campaign.agent, region, amplificationNodes, state, rng);
+  // ...
+}
+```
+
+**processConvergenceTurn** (line 572-575):
+```typescript
+function processConvergenceTurn(
+  state: GreatOldOnesState,
+  phase2State: Phase2State,
+  rng: SeededRandom  // <-- Added
+): {
+```
+
+**processSharedSystems** (line 716-719):
+```typescript
+function processSharedSystems(
+  state: GreatOldOnesState,
+  phase2State: Phase2State,
+  rng: SeededRandom  // <-- Added
+): {
+```
+
+#### 3. Update Caller in Index.tsx
+**File:** `src/pages/Index.tsx:5476`
+```typescript
+// Before
+const updatedPhase2 = updatePhase2Systems(gooState, phase2State);
+
+// After
+const updatedPhase2 = updatePhase2Systems(gooState, phase2State, rng);
+```
+
+The `rng` is available via `useRNG()` hook at line 5742 in Index.tsx.
+
+#### 4. Update Test
+**File:** `src/lib/__tests__/corruptionPath.test.ts:155-156`
+```typescript
+const rng = new SeededRandom(12345);
+const { stateChanges } = processPhase2Turn(state, phase2State, rng);
+```
+
+### Files Modified
+
+1. **src/lib/phase2Integration.ts**
+   - Added `SeededRandom` import
+   - Added `rng` parameter to 6 functions
+   - Passed `rng` to `spreadMeme()` call
+
+2. **src/pages/Index.tsx**
+   - Updated `updatePhase2Systems()` call to pass `rng` parameter
+
+3. **src/lib/__tests__/corruptionPath.test.ts**
+   - Created test RNG instance
+   - Updated test call to include `rng` parameter
+
+### Expected Results
+
+✅ **RNG Error Fixed**: The `rng is not defined` error will no longer occur  
+✅ **2D Map Rendering**: Map texture should render properly alongside overlays  
+✅ **Deterministic Behavior**: Using seeded RNG ensures reproducible game behavior  
+✅ **Tests Pass**: Unit tests updated to work with new signature
+
+### Testing Instructions
+
+1. Start the game
+2. Toggle from 3D globe to 2D flat map using the button in top right
+3. Verify that:
+   - No console errors appear
+   - 2D map texture renders (not just overlays)
+   - Can toggle back to 3D globe without issues
+   - Turn processing works correctly
+
+### Related Issues
+
+This fix resolves the missing RNG parameter that was introduced when Phase 2 systems were integrated. The `spreadMeme()` function has always required an RNG parameter for deterministic random behavior, but the call chain wasn't properly passing it through.
+
+### Technical Notes
+
+**Why This Matters:**
+- The game uses seeded random number generation for deterministic, reproducible gameplay
+- All random events must use the RNG from context, not `Math.random()`
+- This ensures multiplayer synchronization and save/load consistency
+
+**Call Chain:**
+```
+Index.tsx (has rng from useRNG())
+  └→ updatePhase2Systems(gooState, phase2State, rng)
+      └→ processPhase2Turn(state, phase2State, rng)
+          └→ processCorruptionTurn(state, phase2State, rng)
+              └→ spreadMeme(..., rng)
+                  └→ rng.next() ✓
+```
