@@ -7,6 +7,26 @@
 
 ---
 
+## 2026-01-09 - EarthRealistic Shadow Properties Removed - BLACK CIRCLES FIX (DEEP AUDIT #6)
+
+### Problem
+Large dark oval artifacts still appearing behind player names in 3D globe view after removing 3D sphere markers.
+
+### Root Cause (DEEP AUDIT #6)
+**GlobeScene.tsx EarthRealistic component** (deprecated but still in codebase) had `castShadow receiveShadow` properties on the Earth mesh. Even though this component may not be actively used (MorphingGlobe is the main renderer), these shadow properties can cause shadow artifacts when any mesh in the scene is configured to cast/receive shadows.
+
+### Fix Applied
+Removed `castShadow receiveShadow` from the EarthRealistic mesh component.
+
+### Complete List of Black Circle Fixes Applied:
+1. `TerritoryMarkers.tsx` - 3D sphere meshes removed
+2. `WeatherClouds.tsx` - Shadow mesh disabled (`effectiveShowShadows = false`)
+3. `GlobeScene.tsx` - Nation capital marker spheres removed
+4. `GlobeScene.tsx` - BackSide atmosphere layers replaced with halo
+5. `GlobeScene.tsx` - EarthRealistic castShadow/receiveShadow removed (this fix)
+
+---
+
 ## 2026-01-09 - Nation Capital Markers Removed - BLACK CIRCLES FIXED (DEEP AUDIT #5)
 
 ### Problem

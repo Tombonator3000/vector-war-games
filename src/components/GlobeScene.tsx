@@ -705,7 +705,8 @@ function EarthRealistic({
 
   return (
     <group>
-      <mesh ref={earthRef} castShadow receiveShadow>
+      {/* Removed castShadow receiveShadow to prevent black circle artifacts */}
+      <mesh ref={earthRef}>
         <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
         <meshPhongMaterial
           map={dayMap}
