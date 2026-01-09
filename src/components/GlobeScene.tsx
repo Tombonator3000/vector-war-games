@@ -1589,30 +1589,8 @@ function SceneContent({
       {/* MorphingGlobe handles its own lighting, no additional lights needed */}
       {renderEarth()}
       <group>
-        {/* Nation capital markers - simple dots only, overlays handled by dedicated SVG components */}
-        {nations.map(nation => {
-            if (Number.isNaN(nation.lon) || Number.isNaN(nation.lat)) return null;
-            const position = latLonToSceneVector(nation.lon, nation.lat, EARTH_RADIUS + MARKER_OFFSET);
-
-            // Simple marker coloring - player is green, others use their nation color
-            const baseColor = nation.color || '#ff6b6b';
-            const markerColor = nation.isPlayer ? '#7cff6b' : baseColor;
-
-            return (
-              <group key={nation.id}>
-                <mesh
-                  position={position.toArray() as [number, number, number]}
-                  onClick={(event: ThreeEvent<PointerEvent>) => {
-                    event.stopPropagation();
-                    onNationClick?.(nation.id);
-                  }}
-                >
-                  <sphereGeometry args={[0.06, 16, 16]} />
-                  <meshStandardMaterial color={markerColor} emissive={markerColor} emissiveIntensity={0.6} />
-                </mesh>
-              </group>
-            );
-          })}
+        {/* Nation capital markers removed - caused black circle artifacts behind labels.
+            Click handling is now done via HTML overlays instead of 3D meshes. */}
 
         {/* Territory boundaries - only render if vector overlay is disabled to avoid duplication */}
         {!showVectorOverlay && territoryGroups.map((group, i) => (
