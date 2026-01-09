@@ -7,6 +7,34 @@
 
 ---
 
+## 2026-01-09 - CityLights Glow Mesh Removed - GREEN CIRCLE FIX (DEEP AUDIT #7)
+
+### Problem
+Large GREEN circle artifacts appearing around player names in 3D globe view. Previous fixes targeted BLACK circles from shadows/3D spheres, but this was a different issue.
+
+### Root Cause (DEEP AUDIT #7)
+**CityLights component in GlobeScene.tsx** was rendering TWO instanced meshes:
+1. `innerMesh` - Small core city light points
+2. `glowMesh` - Larger glow spheres with 0.25 opacity
+
+With hundreds of overlapping glow spheres using the nation's color (green for player), they accumulated to create a visible large GREEN circle around player positions.
+
+### Fix Applied
+1. Removed `glowMeshRef` and `glowMaterial` from CityLights component
+2. Removed glow instancedMesh from JSX render
+3. Changed geometry from `SphereGeometry` to `PlaneGeometry` to prevent 3D sphere artifacts
+4. Only core city lights remain (smaller, no overlapping glow)
+
+### Complete List of Circle Artifact Fixes:
+1. `TerritoryMarkers.tsx` - 3D sphere meshes removed
+2. `WeatherClouds.tsx` - Shadow mesh disabled
+3. `GlobeScene.tsx` - Nation capital marker spheres removed
+4. `GlobeScene.tsx` - BackSide atmosphere layers replaced with halo
+5. `GlobeScene.tsx` - EarthRealistic castShadow/receiveShadow removed
+6. `GlobeScene.tsx` - CityLights glow mesh removed (THIS FIX)
+
+---
+
 ## 2026-01-09 - EarthRealistic Shadow Properties Removed - BLACK CIRCLES FIX (DEEP AUDIT #6)
 
 ### Problem

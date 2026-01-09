@@ -431,13 +431,15 @@ interface CityLightsProps {
 
 function CityLights({ nations, morphFactor, isNightMode }: CityLightsProps) {
   const innerMeshRef = useRef<THREE.InstancedMesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>>(null);
-  const glowMeshRef = useRef<THREE.InstancedMesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>>(null);
+  // Glow mesh removed - caused green circle artifacts around player labels
+  // when many overlapping glow spheres accumulated
 
   // Calculate visibility based on night mode and morph factor
   // City lights are more visible at night, and fade with day
   const baseOpacity = isNightMode ? 1.0 : 0.3;
 
-  const baseGeometry = useMemo(() => new THREE.SphereGeometry(1, 8, 8), []);
+  // Use PlaneGeometry instead of SphereGeometry to avoid 3D sphere artifacts
+  const baseGeometry = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
   const coreMaterial = useMemo(() => {
     const material = new THREE.MeshBasicMaterial({
       transparent: true,
@@ -449,25 +451,15 @@ function CityLights({ nations, morphFactor, isNightMode }: CityLightsProps) {
     material.vertexColors = true;
     return material;
   }, []);
-  const glowMaterial = useMemo(() => {
-    const material = new THREE.MeshBasicMaterial({
-      transparent: true,
-      opacity: 0.25,
-      toneMapped: false,
-      depthWrite: false,
-      depthTest: true,
-    });
-    material.vertexColors = true;
-    return material;
-  }, []);
+  // Glow material removed - caused green/colored circle artifacts around player labels
+  // when many overlapping glow spheres accumulated
 
   useEffect(() => {
     return () => {
       baseGeometry.dispose();
       coreMaterial.dispose();
-      glowMaterial.dispose();
     };
-  }, [baseGeometry, coreMaterial, glowMaterial]);
+  }, [baseGeometry, coreMaterial]);
 
   const cityLights = useMemo(() => {
     if (!nations.length) {
@@ -552,20 +544,18 @@ function CityLights({ nations, morphFactor, isNightMode }: CityLightsProps) {
   // Update positions when morphFactor or cityLights change
   useEffect(() => {
     const innerMesh = innerMeshRef.current;
-    const glowMesh = glowMeshRef.current;
+    // Glow mesh removed to prevent circle artifacts
 
-    if (!innerMesh || !glowMesh) {
+    if (!innerMesh) {
       return;
     }
 
     const dummy = new THREE.Object3D();
 
     innerMesh.count = cityLights.length;
-    glowMesh.count = cityLights.length;
 
     // Update material opacity based on night mode
     coreMaterial.opacity = 0.95 * baseOpacity;
-    glowMaterial.opacity = 0.25 * baseOpacity;
 
     cityLights.forEach((light, index) => {
       // Use getMorphedPosition to calculate position based on current morphFactor
@@ -573,38 +563,23 @@ function CityLights({ nations, morphFactor, isNightMode }: CityLightsProps) {
       dummy.position.copy(position);
 
       const scale = CITY_LIGHT_CORE_BASE_RADIUS * THREE.MathUtils.lerp(CITY_LIGHT_MIN_SCALE, CITY_LIGHT_MAX_SCALE, light.brightness);
-      const glowScale = scale * CITY_LIGHT_GLOW_SCALE;
 
       dummy.scale.setScalar(scale);
       dummy.updateMatrix();
       innerMesh.setMatrixAt(index, dummy.matrix);
       innerMesh.setColorAt(index, light.innerColor);
-
-      dummy.scale.setScalar(glowScale);
-      dummy.updateMatrix();
-      glowMesh.setMatrixAt(index, dummy.matrix);
-      glowMesh.setColorAt(index, light.outerColor);
     });
 
     innerMesh.instanceMatrix.needsUpdate = true;
-    glowMesh.instanceMatrix.needsUpdate = true;
 
     if (innerMesh.instanceColor) {
       innerMesh.instanceColor.needsUpdate = true;
     }
-    if (glowMesh.instanceColor) {
-      glowMesh.instanceColor.needsUpdate = true;
-    }
-  }, [cityLights, morphFactor, baseOpacity, coreMaterial, glowMaterial]);
+  }, [cityLights, morphFactor, baseOpacity, coreMaterial]);
 
   return (
     <group renderOrder={10}>
-      <instancedMesh
-        ref={glowMeshRef}
-        args={[baseGeometry, glowMaterial, MAX_CITY_LIGHT_INSTANCES]}
-        frustumCulled={false}
-        renderOrder={10}
-      />
+      {/* Glow mesh removed - caused colored circle artifacts around labels */}
       <instancedMesh
         ref={innerMeshRef}
         args={[baseGeometry, coreMaterial, MAX_CITY_LIGHT_INSTANCES]}
