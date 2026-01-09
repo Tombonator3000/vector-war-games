@@ -317,6 +317,8 @@ export function WeatherClouds({
     const shadowMesh = shadowMeshRef.current;
 
     if (!cloudMesh || cloudInstances.length === 0) return;
+    // Skip shadow updates if shadows are disabled
+    const shouldUpdateShadows = effectiveShowShadows && shadowMesh;
 
     // Create attribute arrays
     const positions = new Float32Array(MAX_CLOUD_INSTANCES * 3);
@@ -365,7 +367,7 @@ export function WeatherClouds({
     cloudMesh.count = cloudInstances.length;
 
     // Set shadow mesh attributes (reuse positions, scales, opacities, phases)
-    if (shadowMesh && showShadows) {
+    if (shouldUpdateShadows) {
       shadowMesh.geometry.setAttribute(
         'instancePosition',
         new THREE.InstancedBufferAttribute(positions.slice(), 3)
@@ -384,7 +386,7 @@ export function WeatherClouds({
       );
       shadowMesh.count = cloudInstances.length;
     }
-  }, [cloudInstances, showShadows]);
+  }, [cloudInstances, effectiveShowShadows]);
 
   // Update positions when morphFactor changes
   useEffect(() => {
@@ -416,8 +418,8 @@ export function WeatherClouds({
       posAttr.needsUpdate = true;
     }
 
-    // Update shadow mesh positions
-    if (shadowMesh && showShadows) {
+    // Update shadow mesh positions (skip in flat mode)
+    if (shadowMesh && effectiveShowShadows) {
       const shadowPosAttr = shadowMesh.geometry.getAttribute('instancePosition') as THREE.InstancedBufferAttribute;
       if (shadowPosAttr) {
         shadowPosAttr.array.set(positions);
