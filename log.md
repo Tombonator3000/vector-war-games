@@ -7,6 +7,29 @@
 
 ---
 
+## 2026-01-09 - TerritoryMarkers 3D Spheres Removed - BLACK CIRCLES FIXED
+
+### Problem
+Large green/red circle artifacts appearing behind player names in 3D globe view. These were NOT from WeatherClouds, canvas shadows, or Atmosphere BackSide layers.
+
+### Root Cause (DEEP AUDIT #4)
+The **TerritoryMarkers** component (`src/components/TerritoryMarkers.tsx`) was rendering 3D sphere meshes with `meshBasicMaterial` for each territory marker:
+1. Main marker sphere at lines 54-61
+2. Additional "glow effect" sphere for player territories at lines 186-196
+
+These transparent spheres were rendering as large green/red circles behind the HTML labels.
+
+### Fix Applied
+Removed ALL 3D sphere meshes from TerritoryMarkers component, keeping only the HTML labels. The component now only renders:
+- HTML territory name labels
+- Troop count badges
+- Contested/risk indicators
+- Unit composition badges
+
+No 3D spheres that could create visual artifacts.
+
+---
+
 ## 2026-01-09 - Globe Halo Added + Atmosphere Redesign
 
 ### Changes
