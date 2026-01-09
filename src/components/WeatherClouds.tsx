@@ -469,15 +469,8 @@ export function WeatherClouds({
 
   return (
     <group>
-      {/* Shadow layer (rendered first, below clouds) */}
-      {showShadows && (
-        <instancedMesh
-          ref={shadowMeshRef}
-          args={[planeGeometry, shadowMaterial, MAX_CLOUD_INSTANCES]}
-          frustumCulled={false}
-          renderOrder={5}
-        />
-      )}
+      {/* Shadow layer - disabled to prevent black circle artifacts */}
+      {/* Shadow rendering completely disabled via effectiveShowShadows = false */}
 
       {/* Cloud layer */}
       <instancedMesh

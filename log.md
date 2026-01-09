@@ -24,6 +24,11 @@ Completely disabled shadow rendering in `WeatherClouds.tsx` by setting `effectiv
 + const effectiveShowShadows = false;
 ```
 
+Also removed the shadow mesh from the JSX render completely to ensure no shadow artifacts appear.
+
+**WeatherClouds.tsx JSX (line 471-480):**
+Completely removed the shadow instancedMesh from rendering.
+
 ---
 
 ## 2026-01-08 - Globe/Flat Map Morph Position Bug Fix
