@@ -7,6 +7,19 @@
 
 ---
 
+## 2026-01-09 - Globe Halo Added + Atmosphere Redesign
+
+### Changes
+1. **Removed inner fresnel glow** - Completely replaced Atmosphere component
+2. **Added outer halo ring** - New BackSide mesh at scale 1.12 creates visible cyan glow around globe edges
+3. Uses additive blending to avoid dark artifacts
+4. Fades out when transitioning to flat map (morphFactor > 0.7)
+
+### Note on Black Circles
+Deep audit performed - WeatherClouds shadows already disabled, canvas shadows already disabled for morphing mode. The large black oval artifacts may be related to how the user's browser/GPU handles certain blend modes. The new halo uses a simpler shader approach.
+
+---
+
 ## 2026-01-09 - Black Circle Artifacts - ATMOSPHERE BACKSIDE FIX
 
 ### Problem
