@@ -623,31 +623,8 @@ function Atmosphere({ morphFactor = 0 }: AtmosphereProps) {
   // Fade atmosphere as we transition to flat map
   const opacity = Math.max(0, 1 - morphFactor * 1.5);
 
-  // Outer glow - visible from behind (rim lighting effect)
-  const outerGlowVertexShader = `
-    varying vec3 vNormal;
-    varying vec3 vPosition;
-    void main() {
-      vNormal = normalize(normalMatrix * normal);
-      vPosition = position;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `;
-
-  const outerGlowFragmentShader = `
-    uniform float uOpacity;
-    varying vec3 vNormal;
-    void main() {
-      // Fresnel-based rim lighting - stronger at edges
-      float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 3.0);
-      // Atmospheric blue color with gradient
-      vec3 atmosphereColor = mix(vec3(0.1, 0.4, 0.8), vec3(0.4, 0.7, 1.0), fresnel);
-      float intensity = fresnel * 0.8;
-      gl_FragColor = vec4(atmosphereColor, intensity * uOpacity);
-    }
-  `;
-
   // Inner fresnel glow - visible from front (surface glow)
+  // Uses additive blending for light glow effect only
   const innerGlowVertexShader = `
     varying vec3 vNormal;
     varying vec3 vViewPosition;
@@ -679,9 +656,11 @@ function Atmosphere({ morphFactor = 0 }: AtmosphereProps) {
     return null;
   }
 
+  // Only render inner fresnel glow - removed BackSide atmosphere layers
+  // to eliminate dark circle artifacts visible behind globe labels
   return (
     <group>
-      {/* Inner fresnel glow on earth surface */}
+      {/* Inner fresnel glow on earth surface - FrontSide only */}
       <mesh scale={1.005} renderOrder={3}>
         <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
         <shaderMaterial
@@ -690,32 +669,6 @@ function Atmosphere({ morphFactor = 0 }: AtmosphereProps) {
           uniforms={{ uOpacity: { value: opacity } }}
           blending={THREE.AdditiveBlending}
           side={THREE.FrontSide}
-          transparent
-          depthWrite={false}
-        />
-      </mesh>
-      {/* Mid atmosphere layer */}
-      <mesh scale={1.08} renderOrder={4}>
-        <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
-        <shaderMaterial
-          vertexShader={outerGlowVertexShader}
-          fragmentShader={outerGlowFragmentShader}
-          uniforms={{ uOpacity: { value: opacity * 0.7 } }}
-          blending={THREE.AdditiveBlending}
-          side={THREE.BackSide}
-          transparent
-          depthWrite={false}
-        />
-      </mesh>
-      {/* Outer atmosphere halo */}
-      <mesh scale={1.15} renderOrder={5}>
-        <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
-        <shaderMaterial
-          vertexShader={outerGlowVertexShader}
-          fragmentShader={outerGlowFragmentShader}
-          uniforms={{ uOpacity: { value: opacity * 0.5 } }}
-          blending={THREE.AdditiveBlending}
-          side={THREE.BackSide}
           transparent
           depthWrite={false}
         />
