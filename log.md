@@ -13420,3 +13420,44 @@ Index.tsx (has rng from useRNG())
               └→ spreadMeme(..., rng)
                   └→ rng.next() ✓
 ```
+
+---
+
+## 2026-01-09: WeatherClouds Shadow Fix for 2D Map Mode
+
+### Issue
+Black circles appeared around player names in 2D flat map mode. This was caused by cloud shadows from the `WeatherClouds` component still rendering in flat mode.
+
+### Root Cause
+The `WeatherClouds` component had a `showShadows` prop that was always active regardless of whether the map was in globe or flat mode. The shadows (`instancedMesh` with `renderOrder={1}`) created visual artifacts appearing as black circles around player names in the 2D flat view.
+
+### Fix
+Added `effectiveShowShadows` variable that conditionally disables shadows when `morphFactor < 0.5` (indicating flat map mode):
+
+```typescript
+// src/components/WeatherClouds.tsx
+export function WeatherClouds({
+  clouds,
+  morphFactor,
+  opacity = 1.0,
+  showShadows = true,
+  animationSpeed = 1.0,
+}: WeatherCloudsProps) {
+  // Disable shadows in flat mode to prevent black circle artifacts around names
+  const effectiveShowShadows = showShadows && morphFactor < 0.5;
+  
+  // ... rest of component uses effectiveShowShadows instead of showShadows
+}
+```
+
+### Files Modified
+- `src/components/WeatherClouds.tsx` - Added `effectiveShowShadows` logic
+
+### Expected Results
+- ✅ No black circles around player names in 2D flat map mode
+- ✅ Cloud shadows still work correctly in 3D globe mode
+- ✅ Smooth transition between modes
+
+### Related Memories
+- `memory/style/weather-clouds-shadow-behavior` - Documents this shadow behavior
+- `memory/style/player-name-visuals` - User requirement for no black circles around names
