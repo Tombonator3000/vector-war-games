@@ -1226,8 +1226,215 @@ export function drawParticles(deps: CanvasDrawingDependencies) {
   });
 }
 
+/**
+ * Finds the nearest nation to a canvas position within a given radius.
+ */
+function getNearestNationName(
+  x: number,
+  y: number,
+  radius: number,
+  nations: Nation[],
+  projectLocal: (lon: number, lat: number) => ProjectedPoint
+): string | null {
+  let best: { name: string; dist: number } | null = null;
+  nations.forEach((nation) => {
+    if (nation.population <= 0) return;
+    const { x: nx, y: ny } = projectLocal(nation.lon, nation.lat);
+    const dist = Math.hypot(nx - x, ny - y);
+    if (dist <= radius && (!best || dist < best.dist)) {
+      best = { name: nation.name, dist };
+    }
+  });
+  return best?.name ?? null;
+}
+
+/**
+ * Updates the radius, intensity, and decay for a single fallout mark.
+ * Returns the updated mark with new state values.
+ */
+function updateFalloutMarkState(
+  mark: FalloutMark,
+  deltaSeconds: number,
+  now: number
+): FalloutMark {
+  const next: FalloutMark = { ...mark };
+
+  // Calculate growth factor
+  const growthFactor = Math.min(1, next.growthRate * deltaSeconds);
+
+  // Grow radius towards target
+  if (next.radius < next.targetRadius) {
+    const radiusDelta = (next.targetRadius - next.radius) * growthFactor;
+    next.radius = Math.min(next.targetRadius, next.radius + radiusDelta);
+  }
+
+  // Grow intensity towards target
+  if (next.intensity < next.targetIntensity) {
+    const intensityDelta = (next.targetIntensity - next.intensity) * (growthFactor * 0.8);
+    next.intensity = Math.min(next.targetIntensity, next.intensity + intensityDelta);
+  }
+
+  // Apply decay after delay period
+  if (now - next.lastStrikeAt > next.decayDelayMs) {
+    const decayAmount = next.decayRate * deltaSeconds;
+    next.intensity = Math.max(0, next.intensity - decayAmount);
+    next.targetIntensity = Math.max(0, next.targetIntensity - decayAmount * 0.5);
+    const shrink = next.targetRadius * decayAmount * 0.2;
+    if (next.radius > next.targetRadius * 0.6) {
+      next.radius = Math.max(next.targetRadius * 0.6, next.radius - shrink);
+    }
+  }
+
+  next.updatedAt = now;
+  return next;
+}
+
+/**
+ * Renders the graphics for a single fallout mark including gradient, stroke, label, and icon.
+ */
+function renderFalloutMarkGraphics(
+  ctx: CanvasRenderingContext2D,
+  mark: FalloutMark,
+  px: number,
+  py: number,
+  severityLevel: 'none' | 'moderate' | 'severe' | 'deadly',
+  deps: CanvasDrawingDependencies
+): void {
+  const { radiationIcon } = deps;
+
+  // Draw radial gradient
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = Math.min(0.85, mark.intensity + 0.05);
+  const gradient = ctx.createRadialGradient(
+    px,
+    py,
+    Math.max(4, mark.radius * 0.25),
+    px,
+    py,
+    mark.radius
+  );
+  gradient.addColorStop(0, 'rgba(120,255,180,0.75)');
+  gradient.addColorStop(0.45, 'rgba(60,200,120,0.35)');
+  gradient.addColorStop(1, 'rgba(10,80,30,0)');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(px, py, mark.radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Draw severity indicator (stroke and label)
+  if (severityLevel !== 'none') {
+    const strokeColor =
+      severityLevel === 'deadly'
+        ? 'rgba(248,113,113,0.8)'
+        : severityLevel === 'severe'
+          ? 'rgba(250,204,21,0.75)'
+          : 'rgba(56,189,248,0.6)';
+    const label =
+      severityLevel === 'deadly'
+        ? '☢️ DEADLY FALLOUT'
+        : severityLevel === 'severe'
+          ? '⚠️ SEVERE FALLOUT'
+          : '☢️ FALLOUT ZONE';
+
+    // Draw dashed circle
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.9, mark.intensity + 0.2);
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = Math.max(1.5, Math.min(4, mark.radius * 0.08));
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.arc(px, py, mark.radius * 1.08, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Draw label text
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.95, mark.intensity + 0.25);
+    ctx.fillStyle = strokeColor;
+    ctx.font = `600 ${Math.max(12, Math.min(22, mark.radius * 0.55))}px var(--font-sans, 'Orbitron', sans-serif)`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(label, px, py - mark.radius - 8);
+    ctx.restore();
+  }
+
+  // Draw radiation icon
+  const iconScale =
+    severityLevel === 'deadly'
+      ? RADIATION_ICON_BASE_SCALE * 1.4
+      : severityLevel === 'severe'
+        ? RADIATION_ICON_BASE_SCALE * 1.2
+        : RADIATION_ICON_BASE_SCALE;
+  drawIcon(
+    radiationIcon,
+    px,
+    py,
+    0,
+    iconScale,
+    {
+      alpha: Math.min(0.9, mark.intensity + 0.15),
+    },
+    deps
+  );
+}
+
+/**
+ * Checks if an alert should be sent for a deadly fallout zone and sends toast + news notifications.
+ */
+function handleFalloutAlert(
+  mark: FalloutMark,
+  px: number,
+  py: number,
+  severityLevel: 'none' | 'moderate' | 'severe' | 'deadly',
+  previousAlertLevel: 'none' | 'moderate' | 'severe' | 'deadly',
+  deps: CanvasDrawingDependencies
+): void {
+  const { toast, nations, projectLocal } = deps;
+
+  if (severityLevel === 'deadly' && previousAlertLevel !== 'deadly') {
+    const impactedNation = getNearestNationName(px, py, mark.radius * 1.4, nations, projectLocal);
+    const description = impactedNation
+      ? `${impactedNation} reports lethal fallout. Immediate evacuation required.`
+      : 'A fallout zone has intensified to lethal levels.';
+    toast({
+      title: '☢️ Deadly Fallout Detected',
+      description,
+      variant: 'destructive',
+    });
+    if (typeof window !== 'undefined' && (window as any).__gameAddNewsItem) {
+      (window as any).__gameAddNewsItem(
+        'environment',
+        impactedNation
+          ? `${impactedNation} overwhelmed by deadly fallout levels!`
+          : 'Deadly fallout detected over irradiated wasteland!',
+        'critical'
+      );
+    }
+  }
+}
+
+/**
+ * Limits the fallout marks array to MAX_FALLOUT_MARKS by removing oldest entries.
+ */
+function limitFalloutMarks(marks: FalloutMark[]): FalloutMark[] {
+  if (marks.length > MAX_FALLOUT_MARKS) {
+    const limited = [...marks];
+    limited
+      .sort((a, b) => a.lastStrikeAt - b.lastStrikeAt)
+      .splice(0, limited.length - MAX_FALLOUT_MARKS);
+    return limited;
+  }
+  return marks;
+}
+
+/**
+ * Main function to update and render all fallout marks.
+ * Coordinates state updates, rendering, and alerts for each fallout zone.
+ */
 export function drawFalloutMarks(deltaMs: number, deps: CanvasDrawingDependencies) {
-  const { ctx, S, nations, projectLocal, currentMapStyle, toast, radiationIcon } = deps;
+  const { ctx, S, projectLocal, currentMapStyle } = deps;
   if (!ctx || currentMapStyle !== 'flat-realistic') {
     return;
   }
@@ -1240,45 +1447,14 @@ export function drawFalloutMarks(deltaMs: number, deps: CanvasDrawingDependencie
   const now = Date.now();
   const deltaSeconds = Math.max(0.016, deltaMs / 1000);
   const updatedMarks: FalloutMark[] = [];
-  const getNearestNationName = (x: number, y: number, radius: number): string | null => {
-    let best: { name: string; dist: number } | null = null;
-    nations.forEach((nation) => {
-      if (nation.population <= 0) return;
-      const { x: nx, y: ny } = projectLocal(nation.lon, nation.lat);
-      const dist = Math.hypot(nx - x, ny - y);
-      if (dist <= radius && (!best || dist < best.dist)) {
-        best = { name: nation.name, dist };
-      }
-    });
-    return best?.name ?? null;
-  };
 
   for (const mark of S.falloutMarks) {
-    const next: FalloutMark = { ...mark };
     const previousAlertLevel = mark.alertLevel ?? 'none';
 
-    const growthFactor = Math.min(1, next.growthRate * deltaSeconds);
-    if (next.radius < next.targetRadius) {
-      const radiusDelta = (next.targetRadius - next.radius) * growthFactor;
-      next.radius = Math.min(next.targetRadius, next.radius + radiusDelta);
-    }
+    // Update mark state (growth and decay)
+    const next = updateFalloutMarkState(mark, deltaSeconds, now);
 
-    if (next.intensity < next.targetIntensity) {
-      const intensityDelta = (next.targetIntensity - next.intensity) * (growthFactor * 0.8);
-      next.intensity = Math.min(next.targetIntensity, next.intensity + intensityDelta);
-    }
-
-    if (now - next.lastStrikeAt > next.decayDelayMs) {
-      const decayAmount = next.decayRate * deltaSeconds;
-      next.intensity = Math.max(0, next.intensity - decayAmount);
-      next.targetIntensity = Math.max(0, next.targetIntensity - decayAmount * 0.5);
-      const shrink = next.targetRadius * decayAmount * 0.2;
-      if (next.radius > next.targetRadius * 0.6) {
-        next.radius = Math.max(next.targetRadius * 0.6, next.radius - shrink);
-      }
-    }
-
-    next.updatedAt = now;
+    // Project to canvas coordinates and check visibility
     const { x: px, y: py, visible } = projectLocal(next.lon, next.lat);
     if (!visible) {
       continue;
@@ -1286,116 +1462,26 @@ export function drawFalloutMarks(deltaMs: number, deps: CanvasDrawingDependencie
     next.canvasX = px;
     next.canvasY = py;
 
+    // Skip marks with negligible intensity
     if (next.intensity <= 0.015) {
       continue;
     }
 
+    // Calculate severity level
     const severityLevel = getFalloutSeverityLevel(next.intensity);
     next.alertLevel = severityLevel;
 
     updatedMarks.push(next);
 
-    ctx.save();
-    ctx.globalCompositeOperation = 'screen';
-    ctx.globalAlpha = Math.min(0.85, next.intensity + 0.05);
-    const gradient = ctx.createRadialGradient(
-      px,
-      py,
-      Math.max(4, next.radius * 0.25),
-      px,
-      py,
-      next.radius
-    );
-    gradient.addColorStop(0, 'rgba(120,255,180,0.75)');
-    gradient.addColorStop(0.45, 'rgba(60,200,120,0.35)');
-    gradient.addColorStop(1, 'rgba(10,80,30,0)');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(px, py, next.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    // Render graphics
+    renderFalloutMarkGraphics(ctx, next, px, py, severityLevel, deps);
 
-    if (severityLevel !== 'none') {
-      const strokeColor =
-        severityLevel === 'deadly'
-          ? 'rgba(248,113,113,0.8)'
-          : severityLevel === 'severe'
-            ? 'rgba(250,204,21,0.75)'
-            : 'rgba(56,189,248,0.6)';
-      const label =
-        severityLevel === 'deadly'
-          ? '☢️ DEADLY FALLOUT'
-          : severityLevel === 'severe'
-            ? '⚠️ SEVERE FALLOUT'
-            : '☢️ FALLOUT ZONE';
-
-      ctx.save();
-      ctx.globalAlpha = Math.min(0.9, next.intensity + 0.2);
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = Math.max(1.5, Math.min(4, next.radius * 0.08));
-      ctx.setLineDash([8, 6]);
-      ctx.beginPath();
-      ctx.arc(px, py, next.radius * 1.08, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.save();
-      ctx.globalAlpha = Math.min(0.95, next.intensity + 0.25);
-      ctx.fillStyle = strokeColor;
-      ctx.font = `600 ${Math.max(12, Math.min(22, next.radius * 0.55))}px var(--font-sans, 'Orbitron', sans-serif)`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(label, px, py - next.radius - 8);
-      ctx.restore();
-    }
-
-    const iconScale =
-      severityLevel === 'deadly'
-        ? RADIATION_ICON_BASE_SCALE * 1.4
-        : severityLevel === 'severe'
-          ? RADIATION_ICON_BASE_SCALE * 1.2
-          : RADIATION_ICON_BASE_SCALE;
-    drawIcon(
-      radiationIcon,
-      px,
-      py,
-      0,
-      iconScale,
-      {
-        alpha: Math.min(0.9, next.intensity + 0.15),
-      },
-      deps
-    );
-
-    if (severityLevel === 'deadly' && previousAlertLevel !== 'deadly') {
-      const impactedNation = getNearestNationName(px, py, next.radius * 1.4);
-      const description = impactedNation
-        ? `${impactedNation} reports lethal fallout. Immediate evacuation required.`
-        : 'A fallout zone has intensified to lethal levels.';
-      toast({
-        title: '☢️ Deadly Fallout Detected',
-        description,
-        variant: 'destructive',
-      });
-      if (typeof window !== 'undefined' && (window as any).__gameAddNewsItem) {
-        (window as any).__gameAddNewsItem(
-          'environment',
-          impactedNation
-            ? `${impactedNation} overwhelmed by deadly fallout levels!`
-            : 'Deadly fallout detected over irradiated wasteland!',
-          'critical'
-        );
-      }
-    }
+    // Handle alerts for deadly fallout
+    handleFalloutAlert(next, px, py, severityLevel, previousAlertLevel, deps);
   }
 
-  if (updatedMarks.length > MAX_FALLOUT_MARKS) {
-    updatedMarks
-      .sort((a, b) => a.lastStrikeAt - b.lastStrikeAt)
-      .splice(0, updatedMarks.length - MAX_FALLOUT_MARKS);
-  }
-
-  S.falloutMarks = updatedMarks;
+  // Limit array size and update state
+  S.falloutMarks = limitFalloutMarks(updatedMarks);
 }
 
 export function upsertFalloutMark(
