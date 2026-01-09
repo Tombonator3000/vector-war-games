@@ -7,6 +7,25 @@
 
 ---
 
+## 2026-01-09 - WeatherClouds Shadow Fix - Remove Black Circles Around Player Names
+
+### Problem
+Black circular shadows appearing around all player names/markers in both 3D globe and 2D flat map views.
+
+### Root Cause
+The `WeatherClouds` component uses `MultiplyBlending` for shadow rendering, creating dark circular artifacts that overlay player markers.
+
+### Fix Applied
+Completely disabled shadow rendering in `WeatherClouds.tsx` by setting `effectiveShowShadows = false`.
+
+**WeatherClouds.tsx line 206-207:**
+```diff
+- const effectiveShowShadows = showShadows && morphFactor < 0.5;
++ const effectiveShowShadows = false;
+```
+
+---
+
 ## 2026-01-08 - Globe/Flat Map Morph Position Bug Fix
 
 ### Problem

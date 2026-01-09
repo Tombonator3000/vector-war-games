@@ -203,8 +203,8 @@ export function WeatherClouds({
   showShadows = true,
   animationSpeed = 1.0,
 }: WeatherCloudsProps) {
-  // Disable shadows in flat mode to prevent black circle artifacts around names
-  const effectiveShowShadows = showShadows && morphFactor < 0.5;
+  // Disable all shadows to prevent black circle artifacts around player names
+  const effectiveShowShadows = false;
   
   const cloudMeshRef = useRef<THREE.InstancedMesh>(null);
   const shadowMeshRef = useRef<THREE.InstancedMesh>(null);
