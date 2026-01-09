@@ -48,14 +48,7 @@ import type { CloudRegion } from '@/hooks/useWeatherRadar';
 
 const EARTH_RADIUS = 1.8;
 const MARKER_OFFSET = 0.06;
-const MAX_CITY_LIGHT_INSTANCES = 4500;
-const CITY_LIGHT_CORE_BASE_RADIUS = 0.035;
-const CITY_LIGHT_GLOW_SCALE = 1.6;
-const CITY_LIGHT_MIN_SCALE = 0.8;
-const CITY_LIGHT_MAX_SCALE = 1.35;
-const CITY_LIGHT_ALTITUDE = EARTH_RADIUS + 0.012;
-const WHITE_COLOR = new THREE.Color('#ffffff');
-const FALLBACK_CITY_COLOR = new THREE.Color('#ffdd00');
+/* CityLights constants REMOVED - component deleted to fix circle artifacts */
 const FLAT_PLANE_Z = -0.02;
 
 // Debug flag for overlay canvas
@@ -256,12 +249,7 @@ function normalizeLon(lon: number) {
   return result;
 }
 
-function clampColorIntensity(color: THREE.Color) {
-  color.r = Math.min(color.r, 1);
-  color.g = Math.min(color.g, 1);
-  color.b = Math.min(color.b, 1);
-  return color;
-}
+/* clampColorIntensity removed - only used by deleted CityLights component */
 
 function resolveCssRendererSize(
   renderer: (THREE.WebGLRenderer & { domElement?: HTMLCanvasElement | null }) | undefined,
@@ -415,180 +403,9 @@ function collectWireframeSegments(
   return new Float32Array(segments);
 }
 
-interface CityLightInstance {
-  lon: number;
-  lat: number;
-  innerColor: THREE.Color;
-  outerColor: THREE.Color;
-  brightness: number;
-}
-
-interface CityLightsProps {
-  nations: GlobeSceneProps['nations'];
-  morphFactor: number;
-  isNightMode: boolean;
-}
-
-function CityLights({ nations, morphFactor, isNightMode }: CityLightsProps) {
-  const innerMeshRef = useRef<THREE.InstancedMesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>>(null);
-  // Glow mesh removed - caused green circle artifacts around player labels
-  // when many overlapping glow spheres accumulated
-
-  // Calculate visibility based on night mode and morph factor
-  // City lights are more visible at night, and fade with day
-  const baseOpacity = isNightMode ? 1.0 : 0.3;
-
-  // Use PlaneGeometry instead of SphereGeometry to avoid 3D sphere artifacts
-  const baseGeometry = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
-  const coreMaterial = useMemo(() => {
-    const material = new THREE.MeshBasicMaterial({
-      transparent: true,
-      opacity: 0.95,
-      toneMapped: false,
-      depthWrite: false,
-      depthTest: true,
-    });
-    material.vertexColors = true;
-    return material;
-  }, []);
-  // Glow material removed - caused green/colored circle artifacts around player labels
-  // when many overlapping glow spheres accumulated
-
-  useEffect(() => {
-    return () => {
-      baseGeometry.dispose();
-      coreMaterial.dispose();
-    };
-  }, [baseGeometry, coreMaterial]);
-
-  const cityLights = useMemo(() => {
-    if (!nations.length) {
-      return [] as CityLightInstance[];
-    }
-
-    const desiredLights = nations.map(nation => {
-      const population = nation.population || 0;
-      const cities = nation.cities || 1;
-
-      const baseMinimum = 800;
-      const populationBonus = Math.floor(population * 8);
-      const cityBonus = cities * 150;
-      const cityCount = Math.max(baseMinimum, populationBonus + cityBonus);
-      const healthFactor = Math.max(0.15, Math.min(1, population / 100));
-
-      return { nation, cityCount, healthFactor };
-    });
-
-    const totalDesired = desiredLights.reduce((total, entry) => total + entry.cityCount, 0);
-    if (totalDesired === 0) {
-      return [] as CityLightInstance[];
-    }
-
-    const scale = Math.min(1, MAX_CITY_LIGHT_INSTANCES / totalDesired);
-
-    const allocations = desiredLights.map(entry => {
-      const scaled = entry.cityCount * scale;
-      const baseCount = Math.floor(scaled);
-      const fraction = scaled - baseCount;
-      return { ...entry, allocated: baseCount, fraction };
-    });
-
-    const allocatedTotal = allocations.reduce((total, entry) => total + entry.allocated, 0);
-    let remainder = Math.max(0, Math.min(MAX_CITY_LIGHT_INSTANCES - allocatedTotal, MAX_CITY_LIGHT_INSTANCES));
-
-    const prioritized = [...allocations].sort((a, b) => b.fraction - a.fraction);
-    for (const entry of prioritized) {
-      if (remainder <= 0) break;
-      entry.allocated += 1;
-      remainder -= 1;
-    }
-
-    const lights: CityLightInstance[] = [];
-    allocations.forEach(entry => {
-      const { nation, allocated, healthFactor } = entry;
-      if (allocated <= 0) return;
-
-      const baseColor = nation.color ? new THREE.Color(nation.color) : FALLBACK_CITY_COLOR.clone();
-
-      for (let i = 0; i < allocated; i++) {
-        const clusterRadius = 6 + Math.random() * 4;
-        const angle = Math.random() * Math.PI * 2;
-        const dist = Math.pow(Math.random(), 0.7) * clusterRadius;
-
-        const lat = nation.lat + Math.sin(angle) * dist;
-        const lon = nation.lon + Math.cos(angle) * dist;
-        const brightness = (0.9 + Math.random() * 0.1) * healthFactor;
-
-        const intensity = THREE.MathUtils.clamp(brightness, 0.15, 1);
-        const innerColor = clampColorIntensity(baseColor.clone().multiplyScalar(THREE.MathUtils.lerp(0.55, 1, intensity)));
-        const outerColor = clampColorIntensity(
-          baseColor
-            .clone()
-            .lerp(WHITE_COLOR, 0.35)
-            .multiplyScalar(THREE.MathUtils.lerp(0.2, 0.45, intensity)),
-        );
-
-        lights.push({
-          lon,
-          lat,
-          innerColor,
-          outerColor,
-          brightness: intensity,
-        });
-      }
-    });
-
-    return lights;
-  }, [nations]);
-
-  // Update positions when morphFactor or cityLights change
-  useEffect(() => {
-    const innerMesh = innerMeshRef.current;
-    // Glow mesh removed to prevent circle artifacts
-
-    if (!innerMesh) {
-      return;
-    }
-
-    const dummy = new THREE.Object3D();
-
-    innerMesh.count = cityLights.length;
-
-    // Update material opacity based on night mode
-    coreMaterial.opacity = 0.95 * baseOpacity;
-
-    cityLights.forEach((light, index) => {
-      // Use getMorphedPosition to calculate position based on current morphFactor
-      const position = getMorphedPosition(light.lon, light.lat, morphFactor, CITY_LIGHT_ALTITUDE);
-      dummy.position.copy(position);
-
-      const scale = CITY_LIGHT_CORE_BASE_RADIUS * THREE.MathUtils.lerp(CITY_LIGHT_MIN_SCALE, CITY_LIGHT_MAX_SCALE, light.brightness);
-
-      dummy.scale.setScalar(scale);
-      dummy.updateMatrix();
-      innerMesh.setMatrixAt(index, dummy.matrix);
-      innerMesh.setColorAt(index, light.innerColor);
-    });
-
-    innerMesh.instanceMatrix.needsUpdate = true;
-
-    if (innerMesh.instanceColor) {
-      innerMesh.instanceColor.needsUpdate = true;
-    }
-  }, [cityLights, morphFactor, baseOpacity, coreMaterial]);
-
-  return (
-    <group renderOrder={10}>
-      {/* Glow mesh removed - caused colored circle artifacts around labels */}
-      <instancedMesh
-        ref={innerMeshRef}
-        args={[baseGeometry, coreMaterial, MAX_CITY_LIGHT_INSTANCES]}
-        frustumCulled={false}
-        renderOrder={11}
-      />
-    </group>
-  );
-}
+/* CityLights component REMOVED - caused green/colored circle artifacts around player labels.
+   The 3D instanced meshes accumulated and created visible circles around nation positions.
+   See log.md DEEP AUDIT #7 and #8 for full history. */
 
 interface AtmosphereProps {
   morphFactor?: number;
@@ -1547,12 +1364,7 @@ function SceneContent({
             showShadows={showCloudShadows}
           />
         )}
-        {/* City lights - more visible at night */}
-        <CityLights
-          nations={nations}
-          morphFactor={morphFactor}
-          isNightMode={isNightMode}
-        />
+        {/* CityLights REMOVED - caused green circle artifacts around player labels */}
       </Suspense>
     );
   };
