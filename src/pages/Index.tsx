@@ -5189,7 +5189,7 @@ function endTurn() {
       const updatedNationsFromBio = nations.map(nation => {
         if (nation.eliminated) return nation;
 
-        const result = processAllBioAttacks(nation, S.turn, undefined, undefined, rng);
+        const result = processAllBioAttacks(nation, S.turn, undefined, undefined, globalRNG ?? undefined);
         messages.push(...result.messages);
 
         if (result.totalDamage > 0) {
@@ -5473,7 +5473,7 @@ function endTurn() {
           }
 
           if (phase2State.unlocked) {
-            const updatedPhase2 = updatePhase2Systems(gooState, phase2State, rng);
+            const updatedPhase2 = updatePhase2Systems(gooState, phase2State, globalRNG ?? undefined);
             setPhase2State(updatedPhase2);
           }
         }

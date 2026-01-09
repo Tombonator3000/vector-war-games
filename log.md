@@ -7,6 +7,28 @@
 
 ---
 
+## 2026-01-09 - RNG Undefined Error Fix + Globe-Flat Morph Optimization
+
+### Problem
+1. Console error "Uncaught ReferenceError: rng is not defined" causing JavaScript failures and globe-to-flat map transition hanging
+2. Users reported the morph toggle button not working properly
+
+### Root Cause
+**Index.tsx** had two places using `rng` variable OUTSIDE the React component scope (in `endTurn`/production phase callbacks), but `rng` is only defined INSIDE the component via `useRNG()` hook:
+
+1. Line 5192: `processAllBioAttacks(..., rng)` - `rng` undefined in closure
+2. Line 5476: `updatePhase2Systems(..., rng)` - `rng` undefined in closure
+
+The codebase already has `globalRNG` (defined at module scope line 913, synced with React `rng` via useEffect on line 5840) specifically for use outside the component.
+
+### Fix Applied
+1. Changed line 5192: `rng` → `globalRNG ?? undefined`
+2. Changed line 5476: `rng` → `globalRNG ?? undefined`
+
+This ensures the module-scoped `globalRNG` is used in callbacks that execute outside React's component lifecycle.
+
+---
+
 ## 2026-01-09 - CityLights Component COMPLETELY REMOVED (DEEP AUDIT #8)
 
 ### Problem
@@ -12206,6 +12228,27 @@ When extracting code to modules:
 
 ---
 
+## 2026-01-09 - RNG Undefined Error Fix + Globe-Flat Morph Optimization
+
+### Problem
+1. Console error "Uncaught ReferenceError: rng is not defined" causing JavaScript failures
+2. Globe-to-flat map transition getting stuck/hanging
+
+### Root Cause
+**Index.tsx** had two places using `rng` variable OUTSIDE the React component scope (in `endTurn`/production phase callbacks), but `rng` is only defined INSIDE the component via `useRNG()` hook:
+
+1. Line 5192: `processAllBioAttacks(..., rng)` - `rng` undefined in closure
+2. Line 5476: `updatePhase2Systems(..., rng)` - `rng` undefined in closure
+
+The codebase already has `globalRNG` (defined at module scope, synced with React `rng` via useEffect) specifically for use outside the component.
+
+### Fix Applied
+1. Changed line 5192: `rng` → `globalRNG ?? undefined`
+2. Changed line 5476: `rng` → `globalRNG ?? undefined`
+
+This ensures the module-scoped `globalRNG` is used in callbacks that execute outside React's component lifecycle.
+
+---
 
 ---
 
