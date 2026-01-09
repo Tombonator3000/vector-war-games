@@ -7,7 +7,25 @@
 
 ---
 
-## 2026-01-09 - TerritoryMarkers 3D Spheres Removed - BLACK CIRCLES FIXED
+## 2026-01-09 - Nation Capital Markers Removed - BLACK CIRCLES FIXED (DEEP AUDIT #5)
+
+### Problem
+Large dark circular artifacts still appearing behind player names in 3D globe view after previous fixes.
+
+### Root Cause (DEEP AUDIT #5)
+**GlobeScene.tsx lines 1591-1615** - "Nation capital markers" were rendering 3D sphere meshes (`sphereGeometry args={[0.06, 16, 16]}` with `meshStandardMaterial` and emissive properties) at each nation's position. These 3D spheres created dark circular artifacts behind HTML labels.
+
+### Fix Applied
+Removed nation capital marker 3D meshes entirely from GlobeScene.tsx. Click handling for nations should be done via HTML overlays.
+
+### All 3D Sphere Artifacts Now Removed:
+1. `TerritoryMarkers.tsx` - 3D sphere meshes removed
+2. `WeatherClouds.tsx` - Shadow mesh removed
+3. `GlobeScene.tsx` - Nation capital marker spheres removed (this fix)
+
+---
+
+## 2026-01-09 - TerritoryMarkers 3D Spheres Removed - BLACK CIRCLES PARTIALLY FIXED
 
 ### Problem
 Large green/red circle artifacts appearing behind player names in 3D globe view. These were NOT from WeatherClouds, canvas shadows, or Atmosphere BackSide layers.
