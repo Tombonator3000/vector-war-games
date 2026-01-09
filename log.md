@@ -7,6 +7,32 @@
 
 ---
 
+## 2026-01-09 - CityLights Component COMPLETELY REMOVED (DEEP AUDIT #8)
+
+### Problem
+CHRONIC issue: Large green circle artifacts STILL appearing around player names despite 7 previous fixes. User confirmed CityLights is the culprit.
+
+### Root Cause (DEEP AUDIT #8)
+**The entire CityLights component** was rendering thousands of 3D instanced meshes clustered around nation positions. Even after removing glowMesh and switching to PlaneGeometry, the core mesh instances still accumulated to create visible colored circles.
+
+### Fix Applied
+1. DELETED the entire `CityLights` function component (~175 lines)
+2. DELETED the `CityLightsProps` and `CityLightInstance` interfaces
+3. DELETED all CityLights constants (MAX_CITY_LIGHT_INSTANCES, CITY_LIGHT_CORE_BASE_RADIUS, etc.)
+4. REMOVED `<CityLights />` usage from renderEarth()
+
+### Complete Circle Artifact Fix History:
+1. `TerritoryMarkers.tsx` - 3D sphere meshes removed
+2. `WeatherClouds.tsx` - Shadow mesh disabled
+3. `GlobeScene.tsx` - Nation capital marker spheres removed
+4. `GlobeScene.tsx` - BackSide atmosphere layers replaced with halo
+5. `GlobeScene.tsx` - EarthRealistic castShadow/receiveShadow removed
+6. `GlobeScene.tsx` - CityLights glow mesh removed (DEEP AUDIT #7)
+7. `GlobeScene.tsx` - CityLights geometry changed to PlaneGeometry
+8. **`GlobeScene.tsx` - CityLights COMPLETELY DELETED (DEEP AUDIT #8) - THIS FIX**
+
+---
+
 ## 2026-01-09 - CityLights Glow Mesh Removed - GREEN CIRCLE FIX (DEEP AUDIT #7)
 
 ### Problem
