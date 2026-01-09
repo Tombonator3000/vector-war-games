@@ -7,27 +7,46 @@
 
 ---
 
-## 2026-01-09 - WeatherClouds Shadow Fix - Remove Black Circles Around Player Names
+## 2026-01-09 - Black Circle Artifacts Around Player Names - FINAL FIX
 
 ### Problem
-Black circular shadows appearing around all player names/markers in both 3D globe and 2D flat map views.
+Black circular shadows appearing around all player names/markers in 3D globe and 2D flat map views.
 
-### Root Cause
-The `WeatherClouds` component uses `MultiplyBlending` for shadow rendering, creating dark circular artifacts that overlay player markers.
+### Initial Investigation
+Initial attempts targeted `WeatherClouds` component shadows, but the issue persisted.
+
+### Root Cause (DEEP AUDIT)
+The actual cause was in `worldRenderer.ts` function `drawNations()`. The canvas 2D overlay was using `ctx.shadowBlur = 6` and `ctx.shadowColor` when drawing player name labels - even in morphing (3D) mode. This created dark glow artifacts around the text labels that appeared as black circles.
 
 ### Fix Applied
-Completely disabled shadow rendering in `WeatherClouds.tsx` by setting `effectiveShowShadows = false`.
+Modified `worldRenderer.ts` to conditionally apply shadow/glow effects only for non-morphing modes:
 
-**WeatherClouds.tsx line 206-207:**
+**worldRenderer.ts lines 927-938:**
 ```diff
-- const effectiveShowShadows = showShadows && morphFactor < 0.5;
-+ const effectiveShowShadows = false;
+  ctx.save();
+  ctx.globalAlpha = labelVisibility;
+  ctx.font = `bold ${Math.round(12 * z)}px monospace`;
+  const displayNameColor = isWireframeStyle ? '#4ef6ff' : (isMorphingStyle ? '#00ff00' : markerColor);
+  ctx.fillStyle = displayNameColor;
+- ctx.shadowColor = isMorphingStyle ? '#00ff00' : markerColor;
+- ctx.shadowBlur = 6;
++ // Only apply shadow/glow for non-morphing modes to prevent black circle artifacts in 3D view
++ if (!isMorphingStyle) {
++   ctx.shadowColor = markerColor;
++   ctx.shadowBlur = 6;
++ }
+  ctx.fillText(displayName, lx, lyTop + pad + 12 * z);
+  ctx.shadowBlur = 0;
 ```
 
-Also removed the shadow mesh from the JSX render completely to ensure no shadow artifacts appear.
+### Previous Fix (Also Applied)
+WeatherClouds shadow mesh was completely disabled to prevent any cloud shadow artifacts.
 
-**WeatherClouds.tsx JSX (line 471-480):**
-Completely removed the shadow instancedMesh from rendering.
+---
+
+## 2026-01-09 - WeatherClouds Shadow Mesh Removal (Precautionary)
+
+Removed shadow rendering completely from WeatherClouds component to eliminate potential artifacts.
 
 ---
 
