@@ -929,8 +929,11 @@ export function drawNations(style: MapVisualStyle, context: NationRenderContext)
       ctx.font = `bold ${Math.round(12 * z)}px monospace`;
       const displayNameColor = isWireframeStyle ? '#4ef6ff' : (isMorphingStyle ? '#00ff00' : markerColor);
       ctx.fillStyle = displayNameColor;
-      ctx.shadowColor = isMorphingStyle ? '#00ff00' : markerColor;
-      ctx.shadowBlur = 6;
+      // Only apply shadow/glow for non-morphing modes to prevent black circle artifacts in 3D view
+      if (!isMorphingStyle) {
+        ctx.shadowColor = markerColor;
+        ctx.shadowBlur = 6;
+      }
       ctx.fillText(displayName, lx, lyTop + pad + 12 * z);
       ctx.shadowBlur = 0;
 
