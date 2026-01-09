@@ -50,17 +50,7 @@ export function TerritoryMarkers({
     <group>
       {markerData.map(({ territory, position, color, scale, isPlayerOwned }) => (
         <group key={territory.id} position={position.toArray() as [number, number, number]}>
-          {/* 3D Marker Sphere */}
-          <mesh scale={[scale, scale, scale]}>
-            <sphereGeometry args={[0.05, 16, 16]} />
-            <meshBasicMaterial
-              color={color}
-              transparent
-              opacity={0.8}
-            />
-          </mesh>
-
-          {/* HTML Label with troop count */}
+          {/* HTML Label with troop count - removed 3D spheres to eliminate black circle artifacts */}
           {showLabels && (
             <Html
               center
@@ -86,7 +76,6 @@ export function TerritoryMarkers({
                         ? 'rgba(153, 27, 27, 0.9)' // Dark red for enemies
                         : 'rgba(63, 63, 70, 0.9)', // Dark gray for neutral
                     color: '#fff',
-                    // Subtle shadow instead of shadow-lg to prevent black clump artifacts
                     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
                   }}
                 >
@@ -103,7 +92,6 @@ export function TerritoryMarkers({
                         ? 'rgba(220, 38, 38, 0.9)'
                         : 'rgba(113, 113, 122, 0.9)',
                     border: `2px solid ${color}`,
-                    // Subtle shadow to prevent black clump artifacts
                     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
                   }}
                 >
@@ -181,18 +169,6 @@ export function TerritoryMarkers({
                 )}
               </div>
             </Html>
-          )}
-
-          {/* Glow effect for player territories */}
-          {isPlayerOwned && (
-            <mesh scale={[scale * 1.5, scale * 1.5, scale * 1.5]}>
-              <sphereGeometry args={[0.06, 16, 16]} />
-              <meshBasicMaterial
-                color={color}
-                transparent
-                opacity={0.2}
-              />
-            </mesh>
           )}
         </group>
       ))}
