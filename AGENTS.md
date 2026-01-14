@@ -10,22 +10,131 @@
   - **Deterministic React integration:** Hooks rely on `useCallback`, `useMemo`, and controlled refs to stabilise game loops and side effects, keeping render cycles predictable even with randomised event payloads.
 
 ## Coding Standards
-- **TypeScript Practices**
-  - Prefer explicit interfaces/types for gameplay entities (see `pages/Index.tsx` and hooks for patterns). Avoid `any`; if unavoidable, annotate with TODO to refine.
-  - Use discriminated unions for complex states (`PandemicStage`, `FlashpointEvent.category`, etc.) to enable exhaustive handling.
-  - Co-locate helper functions near their usage unless shared broadly; promote to `src/lib` when reused across domains.
-- **React & Hooks**
-  - Keep hook signatures focused on a single domain and expose imperative handlers via callbacks rather than mutating shared state.
-  - Memoize expensive computations (`useMemo`) and event handlers (`useCallback`) to align with existing performance expectations in `GlobeScene` and custom hooks.
-  - Prefer composition over prop drilling: wrap shared providers (React Query, Tooltip, Toaster) at `App.tsx` level.
-- **Tailwind CSS Usage**
-  - Compose utility classes directly in JSX; extract shared patterns into helper components when repeated.
-  - Use design tokens consistent with current neon vector aesthetic (e.g., `bg-slate-900`, `text-cyan-300`).
-  - Avoid inline style objects unless interacting with three.js or canvas APIs.
-- **shadcn-ui Patterns**
-  - Import via `@/components/ui/*` barrel exports.
-  - Keep dialog/sheet primitives declarative; stateful logic lives in parent components.
-  - When extending primitives, respect shadcn UI's variant props and className merging patterns.
+
+### 🎯 Module-Based Architecture (MANDATORY)
+**All code MUST be modular to minimize future refactoring.**
+
+- ✅ **DO:** Create small, focused modules with single responsibilities
+- ✅ **DO:** Keep files under 500 lines when possible
+- ✅ **DO:** Keep functions under 50 lines
+- ❌ **DON'T:** Create monolithic files with multiple concerns
+- ❌ **DON'T:** Mix unrelated functionality in the same module
+
+**Example Structure:**
+```typescript
+// ✅ GOOD: Modular approach
+src/utils/calculations/
+  ├── economicCalculations.ts    // Only economic math
+  ├── combatCalculations.ts      // Only combat math
+  └── resourceCalculations.ts    // Only resource math
+
+// ❌ BAD: Monolithic approach
+src/utils/allCalculations.ts     // 2000+ lines mixing everything
+```
+
+### 📂 Separation of Data and Logic (MANDATORY)
+**Files MUST NOT mix data definitions and business logic.**
+
+#### Data Files (Constants, Types, Configs)
+- ✅ Store in dedicated `/data/`, `/constants/`, or `/types/` directories
+- ✅ Use clear naming: `*.data.ts`, `*.constants.ts`, `*.types.ts`
+- ✅ Keep data files pure (no logic, no side effects)
+
+#### Logic Files (Functions, Classes, Utilities)
+- ✅ Store in `/utils/`, `/services/`, or `/lib/` directories
+- ✅ Import data from data files
+- ✅ Keep functions pure and testable when possible
+
+**Example:**
+```typescript
+// ✅ GOOD: Separated
+// techTree.data.ts (ONLY DATA)
+export const TECH_TREE_DATA = {
+  "cybersecurity": { cost: 1000, prereqs: [] }
+};
+
+// techTree.utils.ts (ONLY LOGIC)
+import { TECH_TREE_DATA } from './techTree.data';
+export function canResearchTech(techId: string, nation: Nation): boolean {
+  return nation.science >= TECH_TREE_DATA[techId].cost;
+}
+
+// ❌ BAD: Mixed data and logic in one file
+```
+
+### 🚨 Refactoring Red Flags
+**If you encounter these patterns, REFACTOR IMMEDIATELY:**
+- ❌ Files over 1000 lines
+- ❌ Functions over 100 lines
+- ❌ Duplicate code in 3+ places
+- ❌ Data definitions mixed with logic
+- ❌ Deep nesting (more than 3 levels)
+
+### 📁 Directory Structure Standards
+```
+src/
+├── components/          # React components ONLY
+│   ├── ui/             # Pure UI components
+│   ├── game/           # Game-specific components
+│   └── layout/         # Layout components
+├── data/               # Pure data definitions
+├── types/              # TypeScript interfaces/types
+├── utils/              # Pure utility functions
+├── services/           # Business logic and services
+├── hooks/              # React custom hooks
+└── constants/          # App-wide constants
+```
+
+### 🔤 Naming Conventions
+- **Data files:** `*.data.ts` (e.g., `techTree.data.ts`)
+- **Type files:** `*.types.ts` (e.g., `game.types.ts`)
+- **Utility files:** `*.utils.ts` (e.g., `combat.utils.ts`)
+- **Hook files:** `use*.ts` (e.g., `useGameState.ts`)
+- **Component files:** PascalCase (e.g., `TechTree.tsx`)
+
+### 💻 TypeScript Practices
+- Prefer explicit interfaces/types for gameplay entities (see `pages/Index.tsx` and hooks for patterns). Avoid `any`; if unavoidable, annotate with TODO to refine.
+- Use discriminated unions for complex states (`PandemicStage`, `FlashpointEvent.category`, etc.) to enable exhaustive handling.
+- Co-locate helper functions near their usage unless shared broadly; promote to `src/lib` when reused across domains.
+
+### ⚛️ React & Hooks
+- Keep hook signatures focused on a single domain and expose imperative handlers via callbacks rather than mutating shared state.
+- Memoize expensive computations (`useMemo`) and event handlers (`useCallback`) to align with existing performance expectations in `GlobeScene` and custom hooks.
+- Prefer composition over prop drilling: wrap shared providers (React Query, Tooltip, Toaster) at `App.tsx` level.
+- Use `React.memo()` for expensive components to prevent unnecessary re-renders.
+
+### 🎨 Tailwind CSS Usage
+- Compose utility classes directly in JSX; extract shared patterns into helper components when repeated.
+- Use design tokens consistent with current neon vector aesthetic (e.g., `bg-slate-900`, `text-cyan-300`).
+- Avoid inline style objects unless interacting with three.js or canvas APIs.
+
+### 🧩 shadcn-ui Patterns
+- Import via `@/components/ui/*` barrel exports.
+- Keep dialog/sheet primitives declarative; stateful logic lives in parent components.
+- When extending primitives, respect shadcn UI's variant props and className merging patterns.
+
+### 📖 Documentation Standards
+- Add JSDoc comments for complex functions
+- Document parameters, return types, and side effects
+- Update log.md with significant changes
+
+**Example:**
+```typescript
+/**
+ * Calculates combat damage between attacker and defender
+ * @param attacker - The attacking nation's stats
+ * @param defender - The defending nation's stats
+ * @param terrain - Battlefield terrain type
+ * @returns Damage dealt to defender (0-100)
+ */
+export function calculateCombatDamage(
+  attacker: Nation,
+  defender: Nation,
+  terrain: TerrainType
+): number {
+  // Implementation
+}
+```
 
 ## Testing Expectations
 - Primary test framework is **Vitest** with **React Testing Library**.

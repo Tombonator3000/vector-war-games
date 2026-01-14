@@ -7,6 +7,67 @@
 
 ---
 
+## 2026-01-14 - Enhanced Agent Development Guidelines (AGENTS.md)
+
+### Purpose
+Enhanced existing AGENTS.md with comprehensive modular architecture guidelines to ensure all code follows best practices and minimizes future refactoring.
+
+### What Was Added
+Updated **AGENTS.md** (the existing contributor guide) with new mandatory sections:
+
+1. **Module-Based Architecture (MANDATORY)**
+   - All code must be modular with single responsibilities
+   - Keep files under 500 lines, functions under 50 lines
+   - Clear examples of good vs. bad modular structure
+   - Create focused modules that are easy to understand and maintain
+
+2. **Separation of Data and Logic (MANDATORY)**
+   - Data files (`.data.ts`, `.constants.ts`, `.types.ts`) must contain ONLY data definitions
+   - Logic files (`.utils.ts`, `.services.ts`) must contain ONLY functions and business logic
+   - Clear directory structure: `/data/`, `/types/`, `/utils/`, `/services/`
+   - Code examples showing proper separation
+
+3. **Refactoring Red Flags**
+   - Files >1000 lines, functions >100 lines
+   - Duplicate code in 3+ places
+   - Data definitions mixed with logic
+   - Deep nesting (>3 levels)
+
+4. **Directory Structure Standards**
+   - Standardized folder organization
+   - Clear separation of concerns across directories
+   - Naming conventions for different file types
+
+5. **Enhanced Documentation Standards**
+   - JSDoc examples for complex functions
+   - Documentation of parameters, return types, side effects
+   - log.md update requirements reinforced
+
+### Integration with Existing Content
+The new modular architecture guidelines were integrated into the existing "Coding Standards" section, which already contained:
+- TypeScript practices
+- React & Hooks best practices
+- Tailwind CSS usage
+- shadcn-ui patterns
+
+The modular guidelines now provide the foundation layer that all other standards build upon.
+
+### Benefits
+- **Minimizes Future Refactoring:** Modular code from the start prevents need for major restructuring later
+- **Easier Debugging:** Small, focused files make bugs easier to locate and fix
+- **Better Collaboration:** Clear structure helps all developers/agents understand codebase
+- **Improved Testability:** Pure functions and separated concerns are easier to test
+- **Faster Onboarding:** New developers can understand modules in isolation
+
+### Files Changed
+- **Updated:** `AGENTS.md` (enhanced with modular architecture guidelines)
+- **Updated:** `log.md` (this entry)
+
+### Context
+This addresses patterns seen in recent refactoring work (PRs #861, #862, #863) where large monolithic files needed to be split into modular components. By establishing these guidelines now in the existing AGENTS.md contributor guide, future code will be written modularly from the start.
+
+---
+
 ## 2026-01-09 - RNG Undefined Error Fix + Globe-Flat Morph Optimization
 
 ### Problem
