@@ -1,6 +1,12 @@
 import { useState, useCallback } from 'react';
 import { useRNG } from '@/contexts/RNGContext';
 import { getEnhancedFlashpointsForTurn } from './useCubaCrisisFlashpointsEnhanced';
+import {
+  determineCategoryKey,
+  calculateReputationUpdates,
+  calculateDnaAward,
+  checkFollowUpScheduling,
+} from '@/utils/flashpoint/flashpointUtils';
 
 export interface FlashpointEvent {
   id: string;
@@ -3946,97 +3952,13 @@ export function useFlashpoints() {
     return flashpoint;
   }, [pendingFollowUps, flashpointHistory, playerReputation, rng, processFollowUpFlashpoint, processScenarioFlashpoint, filterTemplatesByYear]);
 
-  /**
-   * Determines the category key for a flashpoint, used for follow-up lookups.
-   * This replaces the complex ternary chain with a cleaner fallback mechanism.
-   */
-  function determineCategoryKey(flashpoint: FlashpointEvent): string | null {
-    // Priority 1: Use explicit follow-up ID if provided
-    if (flashpoint.followUpId) {
-      return flashpoint.followUpId;
-    }
 
-    // Priority 2: Use the helper function for reliable title-based mapping
-    const categoryKey = getFlashpointCategoryKey(flashpoint.title);
-    if (categoryKey) {
-      return categoryKey;
-    }
 
-    // Priority 3: Fallback to explicit title matching for edge cases
-    const title = flashpoint.title;
-    if (title.includes('Nuclear Materials')) return 'nuclear_materials';
-    if (title.includes('COUP')) return 'military_coup';
-    if (title.includes('ROGUE AI')) return 'rogue_ai';
-    if (title.includes('ACCIDENTAL LAUNCH')) return 'accidental_launch';
-    if (title.includes('EXTRATERRESTRIAL')) return 'alien_contact';
-    if (title.includes('BIO-TERROR')) return 'bio_terror';
-
-    return null;
-  }
-
-  /**
-   * Calculates reputation updates based on the player's choice.
-   * Returns an update object that can be merged with the previous reputation.
-   */
-  function calculateReputationUpdates(
-    option: FlashpointOption,
-    success: boolean,
-    flashpointHistory: FlashpointHistoryEntry[],
-    currentReputation: PlayerReputation
-  ): PlayerReputation {
-    const totalChoices = flashpointHistory.length + 1;
-    const successCount = flashpointHistory.filter(h => h.result === 'success').length + (success ? 1 : 0);
-
-    const reputationUpdate = { ...currentReputation };
-
-    // Update aggressive score (military options)
-    if (option.advisorSupport.includes('military')) {
-      reputationUpdate.aggressive = Math.min(100, currentReputation.aggressive + 2);
-    }
-
-    // Update diplomatic score
-    if (option.advisorSupport.includes('diplomatic')) {
-      reputationUpdate.diplomatic = Math.min(100, currentReputation.diplomatic + 2);
-    }
-
-    // Update cautious score (high probability options)
-    if (option.outcome.probability >= 0.7) {
-      reputationUpdate.cautious = Math.min(100, currentReputation.cautious + 2);
-    }
-
-    // Update reckless score (low probability options)
-    if (option.outcome.probability <= 0.4) {
-      reputationUpdate.reckless = Math.min(100, currentReputation.reckless + 2);
-    }
-
-    // Update overall success rate
-    reputationUpdate.successRate = Math.round((successCount / totalChoices) * 100);
-
-    return reputationUpdate;
-  }
-
-  /**
-   * Calculates DNA points awarded for flashpoint resolution.
-   * Awards based on bio-warfare events and intel gained.
-   */
-  function calculateDnaAward(flashpoint: FlashpointEvent, success: boolean, outcome: Record<string, any>): number {
-    let dnaAwarded = 0;
-
-    // Bio-terror events award DNA points
-    if (flashpoint.category === 'blackswan' && flashpoint.title.includes('BIO-TERROR')) {
-      dnaAwarded = success ? 3 : 1; // More DNA for successful handling
-    }
-    // Intel-based DNA awards
-    else if (success && outcome.intel && outcome.intel > 0) {
-      dnaAwarded = Math.floor(outcome.intel / 10); // 1 DNA per 10 intel gained
-    }
-
-    return dnaAwarded;
-  }
 
   /**
    * Schedules a follow-up flashpoint if one exists for the chosen outcome.
    * Returns a hint message if a follow-up is scheduled, undefined otherwise.
+   * Refactored to use extracted pure function with side effects handled here.
    */
   function scheduleFollowUpIfNeeded(
     flashpoint: FlashpointEvent,
@@ -4047,32 +3969,23 @@ export function useFlashpoints() {
     setPendingFollowUps: React.Dispatch<React.SetStateAction<any[]>>,
     rng: any
   ): string | undefined {
-    if (!categoryKey) {
-      return undefined;
+    const triggerDelay = rng.nextInt(2, 4);
+    const result = checkFollowUpScheduling(
+      flashpoint,
+      optionId,
+      success,
+      categoryKey,
+      currentTurn,
+      triggerDelay,
+      FOLLOWUP_FLASHPOINTS
+    );
+
+    if (result.shouldSchedule && result.followUpData) {
+      setPendingFollowUps(prev => [...prev, result.followUpData]);
+      return result.hint;
     }
 
-    const followUpKey = `${optionId}_${success ? 'success' : 'failure'}`;
-
-    // Check if a follow-up template exists for this outcome
-    if (FOLLOWUP_FLASHPOINTS[categoryKey]?.[followUpKey]) {
-      // Schedule follow-up for 2-4 turns later
-      const triggerDelay = rng.nextInt(2, 4);
-      setPendingFollowUps(prev => [...prev, {
-        parentId: flashpoint.id,
-        category: categoryKey,
-        outcome: followUpKey,
-        triggerAtTurn: currentTurn + triggerDelay
-      }]);
-
-      // Debug logging for follow-up scheduling
-      console.log(`Follow-up scheduled: ${categoryKey}/${followUpKey} for turn ${currentTurn + triggerDelay}`);
-
-      return 'Intelligence suggests this situation may have further developments. Remain vigilant.';
-    } else {
-      // Category key found but no matching follow-up template
-      console.log(`No follow-up template found for ${categoryKey}/${followUpKey}`);
-      return undefined;
-    }
+    return undefined;
   }
 
   const resolveFlashpoint = useCallback((optionId: string, flashpoint: FlashpointEvent, currentTurn: number): {
