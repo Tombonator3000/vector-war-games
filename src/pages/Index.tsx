@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Factory, Microscope, Satellite, Radio, Users, Handshake, Zap, ArrowRight, Shield, FlaskConical, X, Menu, Save, FolderOpen, LogOut, Settings, AlertTriangle, Target, UserSearch, Swords, Flag } from 'lucide-react';
 import { NewsTicker, NewsItem } from '@/components/NewsTicker';
 import { PandemicPanel } from '@/components/PandemicPanel';
+import { AdvisorPanel } from '@/components/advisors';
 import { BioWarfareLab } from '@/components/BioWarfareLab';
 import { useFlashpoints, type FlashpointOutcome } from '@/hooks/useFlashpoints';
 import {
@@ -32,6 +33,7 @@ import {
   type PandemicCountermeasurePayload,
   type PandemicTurnContext
 } from '@/hooks/usePandemic';
+import { useAdvisorSystem } from '@/hooks/useAdvisorSystem';
 import { useBioWarfare } from '@/hooks/useBioWarfare';
 import { useEconomicDepth } from '@/hooks/useEconomicDepth';
 import { useMilitaryTemplates } from '@/hooks/useMilitaryTemplates';
@@ -944,6 +946,9 @@ type OverlayListener = (message: OverlayNotification | null) => void;
 let overlayListener: OverlayListener | null = null;
 let overlayTimeout: ReturnType<typeof setTimeout> | null = null;
 
+// AI Advisor System global reference
+let globalProcessGameEvent: ((event: any, gameState?: any) => void) | null = null;
+
 type DefconAlertListener = (previousDefcon: number, newDefcon: number) => void;
 const defconAlertListeners = new Set<DefconAlertListener>();
 
@@ -979,6 +984,16 @@ function handleDefconChange(
 
     if (newDefcon === 1 && previousDefcon !== 1) {
       notifyDefconAlertListeners(previousDefcon, newDefcon);
+    }
+
+    // Trigger AI Advisor commentary on DEFCON change
+    if (globalProcessGameEvent) {
+      globalProcessGameEvent({
+        type: 'defcon_change',
+        data: { level: newDefcon, previousLevel: previousDefcon, reason },
+        timestamp: Date.now(),
+        turn: S.turn,
+      });
     }
   }
 
@@ -5840,6 +5855,14 @@ export default function NoradVector() {
     globalRNG = rng;
   }, [rng]);
 
+  // Update global processGameEvent reference for advisor system
+  useEffect(() => {
+    globalProcessGameEvent = processGameEvent;
+    return () => {
+      globalProcessGameEvent = null;
+    };
+  }, [processGameEvent]);
+
   const refreshGameState = useCallback((updatedNations: LocalNation[]) => {
     nations = updatedNations;
     GameStateManager.setNations(updatedNations);
@@ -5994,6 +6017,9 @@ export default function NoradVector() {
     resolveFlashpoint,
     dismissFlashpoint,
   } = useFlashpoints();
+
+  // AI Advisor System
+  const { processGameEvent, enabled: advisorsEnabled } = useAdvisorSystem();
 
   // NASA VIIRS satellite fire detection layer
   const viirsHook = useVIIRS();
@@ -15230,6 +15256,9 @@ export default function NoradVector() {
         />
       )}
 
+      {/* AI Advisor Panel */}
+      {advisorsEnabled && <AdvisorPanel position="bottom" />}
+
       {(() => {
         const player = PlayerManager.get();
         if (!player) {
@@ -15604,7 +15633,23 @@ export default function NoradVector() {
             } else {
               addNewsItem('crisis', `Crisis escalated: ${option.text} failed`, 'urgent');
             }
-            
+
+            // Trigger AI Advisor commentary on flashpoint resolution
+            if (globalProcessGameEvent) {
+              globalProcessGameEvent({
+                type: 'flashpoint_resolved',
+                data: {
+                  flashpointTitle: activeFlashpoint.title,
+                  success: result.success,
+                  chosenOption: option.text,
+                  advisorSupport: option.advisorSupport || [],
+                  advisorOppose: option.advisorOppose || [],
+                },
+                timestamp: Date.now(),
+                turn: S.turn,
+              });
+            }
+
             updateDisplay();
           }}
           onTimeout={() => {
