@@ -7,54 +7,49 @@
 
 ---
 
-## 2026-01-14 - Created Agent Development Guidelines (agents.md)
+## 2026-01-14 - Merged Agent Documentation Files into Single agents.md
+
+**Timestamp:** 2026-01-14T12:00:00Z
 
 ### Purpose
-Established comprehensive development guidelines to ensure all code follows modular architecture principles and maintains high quality standards.
+Consolidated three separate agent-related documentation files into one comprehensive `agents.md` to eliminate duplication and create a single source of truth for development guidelines.
 
-### What Was Added
-Created **agents.md** with mandatory guidelines covering:
+### Problem
+Multiple agent documentation files existed with overlapping content:
+- `agents.md` (lowercase) - Modular code guidelines
+- `AGENTS.md` (uppercase) - Project overview, design pillars, testing expectations
+- `docs/agent.md` - AI Advisor System with ElevenLabs integration
 
-1. **Module-Based Architecture**
-   - All code must be modular with single responsibilities
-   - Keep files under 500 lines
-   - Create focused modules that are easy to understand and maintain
+This fragmentation made it difficult for developers to know which file to reference and created maintenance overhead.
 
-2. **Separation of Data and Logic**
-   - Data files (`.data.ts`, `.constants.ts`, `.types.ts`) must contain ONLY data definitions
-   - Logic files (`.utils.ts`, `.services.ts`) must contain ONLY functions and business logic
-   - Clear directory structure: `/data/`, `/types/`, `/utils/`, `/services/`
-
-3. **Code Quality Standards**
-   - Functions under 50 lines
-   - Files organized by concern
-   - Explicit TypeScript types (no `any`)
-   - Proper error handling
-   - Performance considerations (memoization, lazy loading)
-
-4. **Refactoring Guidelines**
-   - Red flags: files >1000 lines, functions >100 lines, duplicate code
-   - Step-by-step refactoring process
-   - Examples of before/after modular structure
-
-5. **Documentation Standards**
-   - Git commit message format
-   - JSDoc for complex functions
-   - log.md update requirements
-
-### Benefits
-- **Minimizes Future Refactoring:** Modular code from the start prevents need for major restructuring later
-- **Easier Debugging:** Small, focused files make bugs easier to locate and fix
-- **Better Collaboration:** Clear structure helps all developers/agents understand codebase
-- **Improved Testability:** Pure functions and separated concerns are easier to test
-- **Faster Onboarding:** New developers can understand modules in isolation
+### Changes Applied
+1. **Merged Content:** Combined all three files into single `agents.md` with complete table of contents
+2. **Deleted Duplicates:** Removed `AGENTS.md` and `docs/agent.md`
+3. **Organized Structure:** Created comprehensive document with 8 main sections:
+   - Project Overview (purpose, design pillars, strategic map directive)
+   - Core Principles & Architecture (modular code, data/logic separation, file organization)
+   - Code Quality Standards (TypeScript, React hooks, error handling, performance)
+   - Refactoring Guidelines (red flags, refactoring process)
+   - Testing Expectations (Vitest, React Testing Library)
+   - Game Design Guidance (core mechanics, balance goals, UX, assets)
+   - AI Advisor System (6 advisor personalities, ElevenLabs integration, voice system)
+   - Commit and Logging Standards (git commits, log.md updates)
 
 ### Files Changed
-- **Created:** `agents.md` (comprehensive development guidelines)
+- **Modified:** `agents.md` (comprehensive merged documentation - 846 lines)
+- **Deleted:** `AGENTS.md` (74 lines)
+- **Deleted:** `docs/agent.md` (590 lines)
 - **Updated:** `log.md` (this entry)
 
+### Benefits
+- **Single Source of Truth:** All development guidelines in one place
+- **Easier Maintenance:** No duplicate content to keep in sync
+- **Better Navigation:** Table of contents with anchor links for quick reference
+- **Complete Context:** Code guidelines + game design + AI advisor system in unified document
+- **Improved Developer Experience:** One file to read for complete project understanding
+
 ### Context
-This addresses patterns seen in recent refactoring work (PRs #861, #862, #863) where large monolithic files needed to be split into modular components. By establishing these guidelines now, future code will be written modularly from the start.
+This consolidation addresses feedback about having multiple overlapping documentation files. The unified `agents.md` now serves as the definitive guide for all developers and AI agents working on NORAD VECTOR, covering everything from modular code architecture to AI advisor implementation details.
 
 ---
 
