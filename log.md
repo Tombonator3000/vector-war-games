@@ -7,6 +7,57 @@
 
 ---
 
+## 2026-01-14 - Created Agent Development Guidelines (agents.md)
+
+### Purpose
+Established comprehensive development guidelines to ensure all code follows modular architecture principles and maintains high quality standards.
+
+### What Was Added
+Created **agents.md** with mandatory guidelines covering:
+
+1. **Module-Based Architecture**
+   - All code must be modular with single responsibilities
+   - Keep files under 500 lines
+   - Create focused modules that are easy to understand and maintain
+
+2. **Separation of Data and Logic**
+   - Data files (`.data.ts`, `.constants.ts`, `.types.ts`) must contain ONLY data definitions
+   - Logic files (`.utils.ts`, `.services.ts`) must contain ONLY functions and business logic
+   - Clear directory structure: `/data/`, `/types/`, `/utils/`, `/services/`
+
+3. **Code Quality Standards**
+   - Functions under 50 lines
+   - Files organized by concern
+   - Explicit TypeScript types (no `any`)
+   - Proper error handling
+   - Performance considerations (memoization, lazy loading)
+
+4. **Refactoring Guidelines**
+   - Red flags: files >1000 lines, functions >100 lines, duplicate code
+   - Step-by-step refactoring process
+   - Examples of before/after modular structure
+
+5. **Documentation Standards**
+   - Git commit message format
+   - JSDoc for complex functions
+   - log.md update requirements
+
+### Benefits
+- **Minimizes Future Refactoring:** Modular code from the start prevents need for major restructuring later
+- **Easier Debugging:** Small, focused files make bugs easier to locate and fix
+- **Better Collaboration:** Clear structure helps all developers/agents understand codebase
+- **Improved Testability:** Pure functions and separated concerns are easier to test
+- **Faster Onboarding:** New developers can understand modules in isolation
+
+### Files Changed
+- **Created:** `agents.md` (comprehensive development guidelines)
+- **Updated:** `log.md` (this entry)
+
+### Context
+This addresses patterns seen in recent refactoring work (PRs #861, #862, #863) where large monolithic files needed to be split into modular components. By establishing these guidelines now, future code will be written modularly from the start.
+
+---
+
 ## 2026-01-09 - RNG Undefined Error Fix + Globe-Flat Morph Optimization
 
 ### Problem
