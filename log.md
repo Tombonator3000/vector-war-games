@@ -14119,3 +14119,192 @@ With this modular structure, we can now:
 
 *Refactoring complete. Code is now more maintainable and easier to understand while preserving all existing functionality.*
 
+
+---
+
+## 2026-01-14 - Code Refactoring: Spy Network Utilities
+
+**Task:** Refactor complex code for clarity while maintaining the same behavior
+
+### Analysis
+
+Identified `src/lib/spyNetworkUtils.ts` as a high-priority candidate for refactoring:
+- **1,071 lines** in a single file
+- **156 conditional statements** (highest in lib folder)
+- **Multiple complex functions** with deeply nested logic
+- **Mixed concerns:** Mission execution, reward calculation, narrative generation, discovery resolution
+
+### Problem Areas
+
+**generateMissionRewards() (lines 562-645):**
+- Massive switch statement with 13 different mission type cases
+- Each case handling different reward calculations
+- Mixed game state manipulation logic
+
+**generateMissionNarrative() (lines 650-720):**
+- Deeply nested conditional logic (4 levels)
+- Multiple outcome scenarios: eliminated, caught, discovered, success, failed
+- 3-5 random narrative options per scenario
+- Large inline data structures for mission descriptions
+
+**generateDiscoveryDetails() (lines 725-796):**
+- Complex fate determination logic
+- Conditional diplomatic consequences based on mission type
+- Mixed narrative and game logic concerns
+
+### Refactoring Strategy
+
+Split complex helper functions into **focused, single-responsibility modules**:
+
+```
+src/lib/
+  ├── spyNetworkUtils.ts           (838 lines) - Core spy network management
+  ├── spyMissionRewards.ts         (103 lines) - Reward calculation logic
+  ├── spyNarrativeGenerator.ts     (103 lines) - Mission narrative generation
+  └── spyDiscoveryResolver.ts      (161 lines) - Discovery and consequence handling
+```
+
+### Implementation Details
+
+**spyMissionRewards.ts** - Mission Reward System
+- Extracted `generateMissionRewards()` function
+- Clean switch statement for mission type handling
+- Clear documentation of reward types per mission
+- Self-contained reward calculation logic
+
+**spyNarrativeGenerator.ts** - Narrative Generation
+- Extracted `generateMissionNarrative()` function
+- Organized narrative templates by outcome severity
+- Helper function `selectRandomNarrative()` for cleaner code
+- Constant `MISSION_TYPE_DESCRIPTIONS` for reusability
+
+**spyDiscoveryResolver.ts** - Discovery Resolution
+- Extracted `generateDiscoveryDetails()` function
+- Broken down into smaller focused functions:
+  - `determineSpyFate()` - Fate calculation logic
+  - `generateDiplomaticConsequences()` - Consequence generation
+  - `selectRandom()` - Generic utility helper
+- Exported `SpyFate` type and `DiscoveryDetails` interface for type safety
+
+### Results
+
+✅ **Before:** 1 file with 1,071 lines, 156 conditionals  
+✅ **After:** 4 focused modules (838 + 103 + 103 + 161 = 1,205 lines)  
+✅ **Main File Reduction:** 233 lines removed from spyNetworkUtils.ts (22% reduction)  
+✅ **TypeScript Compilation:** ✓ No errors  
+✅ **Backward Compatibility:** ✓ All imports work correctly  
+
+### Benefits
+
+**Modularity:**
+- Each module handles one specific concern
+- Mission rewards, narratives, and discovery handling are independent
+- Can be tested in isolation
+
+**Maintainability:**
+- Smaller, more focused files
+- Easier to locate specific logic
+- Changes are localized to relevant modules
+- Reduced cognitive load
+
+**Code Quality:**
+- Better separation of concerns
+- More descriptive function and type names
+- Improved documentation and comments
+- Reusable helper functions
+
+**Type Safety:**
+- Exported `SpyFate` type for consistency
+- Exported `DiscoveryDetails` interface
+- Better TypeScript inference
+
+### Module Breakdown
+
+**spyNetworkUtils.ts** - Core Spy Management (838 lines)
+- Spy recruitment and lifecycle
+- Mission assignment and execution orchestration
+- Counter-intelligence operations
+- Spy network state management
+- Imports helper functions from specialized modules
+
+**spyMissionRewards.ts** - Reward System (103 lines)
+- Single exported function: `generateMissionRewards()`
+- Maps mission types to specific rewards
+- Handles tech stealing, production damage, morale impacts
+- Trust impact calculations for diplomatic missions
+
+**spyNarrativeGenerator.ts** - Narrative System (103 lines)
+- Single exported function: `generateMissionNarrative()`
+- Mission type descriptions constant
+- Prioritized narrative generation (eliminated → caught → discovered → success → failed)
+- Random narrative selection for variety
+
+**spyDiscoveryResolver.ts** - Discovery Resolution (161 lines)
+- Main function: `generateDiscoveryDetails()`
+- Helper functions: `determineSpyFate()`, `generateDiplomaticConsequences()`, `selectRandom()`
+- Type exports: `SpyFate`, `DiscoveryDetails`
+- Mission-specific consequence handling
+
+### Design Principles Applied
+
+1. **Single Responsibility Principle** - Each module has one clear purpose
+2. **Separation of Concerns** - Rewards, narratives, and discovery logic are independent
+3. **Don't Repeat Yourself** - Helper functions and constants extracted
+4. **Type Safety** - Exported types for better TypeScript support
+5. **Readability** - Descriptive names and clear function signatures
+
+### Complexity Reduction
+
+**Before:**
+- spyNetworkUtils.ts: 156 conditional statements in 1,071 lines
+- Average function complexity: High
+- Nested conditionals: 4+ levels in narrative generation
+
+**After:**
+- spyNetworkUtils.ts: ~90 conditionals in 838 lines
+- spyMissionRewards.ts: 13 conditionals (switch cases)
+- spyNarrativeGenerator.ts: 5 conditionals (well-structured)
+- spyDiscoveryResolver.ts: 8 conditionals (clear logic)
+- Average function complexity: Medium-Low
+
+### Impact
+
+**Developers:**
+- Faster feature development
+- Easier debugging and testing
+- Reduced merge conflicts
+- Clear module boundaries
+
+**Codebase:**
+- Better code organization
+- Improved maintainability score
+- Foundation for future enhancements
+- Easier to add new mission types or narratives
+
+### Testing Opportunities
+
+With this modular structure, we can now:
+- Unit test reward calculations independently
+- Test narrative generation with mock data
+- Test discovery resolution without full game state
+- Mock modules for integration testing
+
+### Future Enhancements
+
+The refactored structure enables:
+- Adding new mission types without modifying existing code
+- Extending narrative systems with new templates
+- Implementing localization for narratives
+- Creating mission-specific reward modifiers
+- Adding analytics for spy network effectiveness
+
+---
+
+**Refactoring Duration:** ~25 minutes  
+**Files Created:** 3 new modules  
+**Lines Reorganized:** 1,071 → 1,205 (modular)  
+**Main File Reduction:** -233 lines (22%)  
+**TypeScript Errors:** 0  
+**Breaking Changes:** 0  
+
+*Refactoring complete. Spy network utilities are now more maintainable, testable, and easier to extend while preserving all existing functionality.*
