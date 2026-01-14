@@ -4,6 +4,37 @@
 
 ---
 
+## 📋 Table of Contents
+
+1. [Project Overview](#project-overview)
+2. [Core Principles & Architecture](#core-principles)
+3. [Code Quality Standards](#code-quality-standards)
+4. [Refactoring Guidelines](#refactoring-red-flags)
+5. [Testing Expectations](#testing-expectations)
+6. [Game Design Guidance](#game-design-guidance)
+7. [AI Advisor System](#ai-advisor-system)
+8. [Commit and Logging Standards](#commit-and-logging-standards)
+
+---
+
+## Project Overview
+
+### Purpose & Target Audience
+- **Purpose:** Vector War Games is a Vite-powered TypeScript/React experience that simulates Cold War crisis management across nuclear, diplomatic, and pandemic fronts. The gameplay loop stitches together strategic map interactions (`GlobeScene`), narrative events (`FlashpointModal`), and global condition trackers (pandemic, fog of war, diplomacy) to immerse players in high-stakes decision making.
+- **Target Audience:** Designed for strategy enthusiasts and narrative-driven simulation fans who appreciate alternate-history techno-thrillers, along with educators or streamers showcasing systems-driven crisis management.
+
+### Design Pillars
+- **Data-driven simulations:** Core mechanics (flashpoints, pandemics, fog of war) are encapsulated as React hooks (`useFlashpoints`, `usePandemic`, `useFogOfWar`) that expose deterministic state transitions and side-effects for UI orchestration.
+- **Composable UI layers:** Gameplay renders through modular components (`GlobeScene`, `PandemicPanel`, `NewsTicker`, `TutorialOverlay`) coordinated by page-level containers like `pages/Index.tsx`. Each module owns its styling and state wiring.
+- **Player feedback first:** Hooks emit rich metadata (e.g., flashpoint advisor stances, pandemic stage thresholds, fog reveal states) so components can surface responsive toasts, overlays, and tutorial guidance.
+- **Deterministic React integration:** Hooks rely on `useCallback`, `useMemo`, and controlled refs to stabilise game loops and side effects, keeping render cycles predictable even with randomised event payloads.
+
+### Strategic Map Engine Directive
+- The strategic 2D world view must default to the Three.js tactical engine using the flat-realistic high-resolution satellite texture.
+- Cesium integrations are experimental test maps only; do not promote Cesium beyond optional/testing contexts.
+
+---
+
 ## 🎯 Core Principles
 
 ### 1. **Module-Based Architecture (MANDATORY)**
@@ -146,7 +177,31 @@ export function processEndTurn(gameState: GameState): GameState {
 
 ---
 
-### 5. **Import Organization**
+### 5. **TypeScript Practices**
+
+- ✅ **DO:** Prefer explicit interfaces/types for gameplay entities
+- ✅ **DO:** Use discriminated unions for complex states
+- ✅ **DO:** Use `type` for unions and simple aliases
+- ✅ **DO:** Use `interface` for object shapes and classes
+- ✅ **DO:** Avoid `any` type (use `unknown` if type is truly unknown)
+- ❌ **DON'T:** Use implicit types or `any`
+
+---
+
+### 6. **React & Hooks Best Practices**
+
+- ✅ **DO:** Keep hook signatures focused on a single domain
+- ✅ **DO:** Use `React.memo()` for expensive components
+- ✅ **DO:** Use `useMemo()` and `useCallback()` for expensive calculations
+- ✅ **DO:** Expose imperative handlers via callbacks rather than mutating shared state
+- ✅ **DO:** Memoize expensive computations to align with performance expectations
+- ✅ **DO:** Prefer composition over prop drilling
+- ❌ **DON'T:** Mutate state directly
+- ❌ **DON'T:** Store derived values in state (calculate on render instead)
+
+---
+
+### 7. **Import Organization**
 
 Order imports logically:
 ```typescript
@@ -166,26 +221,6 @@ import { calculateCombat } from '@/utils/calculations/combat.utils';
 // 5. Internal components
 import { TechTree } from '@/components/game/TechTree';
 ```
-
----
-
-### 6. **State Management**
-
-- ✅ **DO:** Use React hooks for component-local state
-- ✅ **DO:** Use context for shared state across components
-- ✅ **DO:** Keep state updates pure and predictable
-- ❌ **DON'T:** Mutate state directly
-- ❌ **DON'T:** Store derived values in state (calculate on render instead)
-
----
-
-### 7. **Type Safety**
-
-- ✅ **DO:** Define explicit TypeScript interfaces for all data structures
-- ✅ **DO:** Use `type` for unions and simple aliases
-- ✅ **DO:** Use `interface` for object shapes and classes
-- ✅ **DO:** Avoid `any` type (use `unknown` if type is truly unknown)
-- ❌ **DON'T:** Use implicit types or `any`
 
 ---
 
@@ -290,6 +325,445 @@ src/components/game/
 
 ---
 
+## Testing Expectations
+
+### Primary Framework
+- **Test Framework:** Vitest with React Testing Library
+- **Location:** Tests under `src/hooks/__tests__/` or parallel component test folders
+
+### Test Requirements
+- ✅ Ensure new hooks/components include unit or integration tests
+- ✅ Validate deterministic outcomes for randomised systems by seeding/mocking randomness
+- ✅ Test flashpoint resolution odds, pandemic mutations, and other probabilistic systems
+- ✅ Run `npm run test` locally before opening a PR
+- ✅ CI mirrors this command
+
+---
+
+## Game Design Guidance
+
+### Core Mechanics
+
+#### Flashpoints
+- Present branching crisis events with probabilistic outcomes and advisor feedback
+- Resolve via `useFlashpoints`' template-driven options
+- Maintain tension between immediate crisis response and long-term stability
+
+#### Pandemic System
+- Escalates through stages driven by infection/mutation thresholds in `usePandemic`
+- Countermeasures adjust containment, lethality, and news output
+- Should interplay with flashpoints (e.g., high infection rates reducing available actions)
+
+#### Fog of War
+- Governed by `useFogOfWar`, revealing map intel progressively
+- Interacts with DEFCON/game phase states from `pages/Index.tsx`
+
+#### Globe Interactions
+- Funnel through `GlobeScene` using `@react-three/fiber`
+- Render territories, city lights, and selectable nations
+
+### Balance Goals
+- Maintain tension between immediate crisis response and long-term stability (DEFCON, diplomacy, production)
+- Adjust odds and timers to keep failure states possible but recoverable
+- Ensure advisor recommendations meaningfully inform decision making
+- Probabilities should reward diverse playstyles without trivialising optimal paths
+- Pandemic and flashpoint escalations should interplay without creating unwinnable spirals
+
+### UX Expectations
+- Keep overlays (tutorial, flashpoint modals, pandemic alerts) non-blocking unless critical decisions are required
+- Surface feedback through toasts (`use-toast`) and ticker updates to narrate systemic changes
+- Preserve accessibility: keyboard navigable dialogs, sufficient color contrast, descriptive aria labels
+
+### Asset Pipeline
+- Vector-styled assets live under `public/` or are generated procedurally
+- Supply new assets as optimized SVG/GLTF where possible
+- Integrate media via Vite static imports or dynamic loaders compatible with React Suspense
+
+### Introducing New Features
+- Extend domain hooks with new state fields and pure helpers
+- Expose them through typed return objects rather than mutating external data
+- Add new crisis templates or pandemic events by appending to existing constant arrays
+- Implement dedicated components under `src/components/`
+- Wire into page containers with feature flags or tutorial updates
+
+---
+
+## 🎭 AI Advisor System
+
+### Overview
+The Agent System provides intelligent, voice-enabled advisors that guide players through strategic decisions, react to game events, and provide dynamic commentary. This system uses ElevenLabs for text-to-speech and implements an adaptive personality framework.
+
+---
+
+### Advisor Personalities
+
+#### 1. General Marcus "Iron" Stone (Military Advisor)
+**Voice:** Roger (EXAVITQu4vr4xnSDxMaL) - Deep, authoritative
+**Personality:** Hawkish, direct, action-oriented
+**Triggers:**
+- DEFCON changes
+- Military buildups detected
+- Combat engagements
+- Defense system failures
+
+**Sample Lines:**
+```
+"DEFCON 3 confirmed, Mr. President. Recommend immediate alert posture."
+"Enemy missile silos operational. We should strike first while we have the advantage."
+"Our ABM systems intercepted 12 warheads. Defense grid holding... for now."
+"Intelligence shows massive troop movements. This is it."
+```
+
+**Personality Traits:**
+- Favors military solutions
+- Impatient with diplomacy
+- Respects strength
+- Dislikes indecision
+
+---
+
+#### 2. Dr. Eleanor Vance (Science Advisor)
+**Voice:** Sarah (EXAVITQu4vr4xnSDxMaL) - Calm, analytical
+**Personality:** Rational, cautious, long-term thinker
+**Triggers:**
+- Research completions
+- Environmental catastrophes
+- Radiation warnings
+- Tech breakthroughs
+
+**Sample Lines:**
+```
+"Research complete: Titan-Class Weaponization. I pray we never use it."
+"Nuclear winter projections are... catastrophic. 80% crop failure within six months."
+"Radiation levels in sector 7 are lethal. Evacuation recommended immediately."
+"Our satellite network is now operational. Knowledge is our greatest weapon."
+```
+
+**Personality Traits:**
+- Emphasizes consequences
+- Fears nuclear escalation
+- Values knowledge
+- Warns of environmental collapse
+
+---
+
+#### 3. Ambassador Katherine Wei (Diplomatic Advisor)
+**Voice:** Charlotte (XB0fDUnXU5powFXDhCwa) - Diplomatic, measured
+**Personality:** Patient, persuasive, idealistic
+**Triggers:**
+- Treaty negotiations
+- Alliance formations
+- International incidents
+- UN actions
+
+**Sample Lines:**
+```
+"Mr. President, the UN General Secretary is on the line. They're proposing a ceasefire."
+"Breaking a treaty now would destroy our credibility. We must honor our word."
+"I've secured a non-aggression pact with France. It's fragile, but it holds."
+"The world is watching. How we respond here defines our legacy."
+```
+
+**Personality Traits:**
+- Prefers negotiation
+- Values reputation
+- Builds coalitions
+- Avoids unnecessary conflict
+
+---
+
+#### 4. Director James "Shadow" Garrett (Intelligence)
+**Voice:** Daniel (onwK4e9ZLuTAKqWW03F9) - Measured, cryptic
+**Personality:** Paranoid, secretive, pragmatic
+**Triggers:**
+- Intel operations success/failure
+- Espionage detected
+- Cover ops missions
+- Satellite data
+
+**Sample Lines:**
+```
+"Our asset in Moscow confirms: they're preparing a first strike."
+"Sir, we've been compromised. Someone leaked our launch codes."
+"Satellite recon shows something... unusual. Underground construction, massive scale."
+"Trust no one, Mr. President. Even our allies have secrets."
+```
+
+**Personality Traits:**
+- Sees threats everywhere
+- Values intelligence over force
+- Distrusts everyone
+- Operates in shadows
+
+---
+
+#### 5. Secretary Hayes (Economic Advisor)
+**Voice:** Bill (pqHfZKP75CvOlQylNhV4) - Practical, numbers-focused
+**Personality:** Pragmatic, cautious with resources
+**Triggers:**
+- Resource shortages
+- Economic warfare
+- Production milestones
+- Budget crises
+
+**Sample Lines:**
+```
+"Mr. President, we're burning through uranium reserves at an unsustainable rate."
+"The economy is in freefall. We need trade agreements, not more missiles."
+"Production quotas exceeded. Our industrial might is unmatched."
+"Sanctions are crippling their economy. Another month and they'll collapse."
+```
+
+**Personality Traits:**
+- Bottom-line oriented
+- Opposes expensive wars
+- Supports economic warfare
+- Warns of overextension
+
+---
+
+#### 6. Press Secretary Morgan (Public Relations)
+**Voice:** Jessica (cgSgspJ2msm6clMCkdW9) - Urgent, media-savvy
+**Personality:** Image-conscious, politically aware
+**Triggers:**
+- Morale changes
+- Political events
+- Public protests
+- Media scandals
+
+**Sample Lines:**
+```
+"Mr. President, the press is going wild. We need a statement NOW."
+"Public approval just dropped 15 points. The people want peace."
+"Protests in every major city. They're burning flags and calling for your resignation."
+"Our propaganda campaign is working. National morale is soaring."
+```
+
+**Personality Traits:**
+- Obsessed with optics
+- Fears public backlash
+- Spins everything
+- Monitors polls constantly
+
+---
+
+### Adaptive Commentary System
+
+#### Dynamic Context Awareness
+Advisors comment based on:
+- **Game State:** DEFCON, turn number, resources, threats
+- **Recent Actions:** Last 3 player decisions
+- **Trends:** Rising/falling metrics
+- **Personality:** Each advisor's bias filters their advice
+
+#### Interruption System
+**Priority Levels:**
+1. **CRITICAL:** Nuclear launch detected, capital under attack
+2. **URGENT:** DEFCON change, treaty broken, resource crisis
+3. **IMPORTANT:** Research done, intel report, morale event
+4. **ROUTINE:** Turn summary, advisor musings
+
+**Rules:**
+- CRITICAL interrupts everything, plays immediately
+- URGENT waits for current line to finish
+- IMPORTANT queues (max 3)
+- ROUTINE only plays during idle moments
+
+#### Conflict Resolution
+When multiple advisors want to speak:
+```typescript
+// Priority: Military > Intel > Diplomatic > Science > Economic > PR
+if (multiplePendingLines) {
+  const priorityOrder = ['military', 'intel', 'diplomatic', 'science', 'economic', 'pr'];
+  const selectedAdvisor = priorityOrder.find(role => hasPendingLine(role));
+  playLine(selectedAdvisor);
+}
+```
+
+---
+
+### ElevenLabs Integration
+
+#### Voice Configuration
+```typescript
+const ADVISOR_VOICES = {
+  military: {
+    voiceId: 'CwhRBWXzGAHq8TQ4Fs17', // Roger
+    model: 'eleven_turbo_v2_5',
+    stability: 0.7,
+    similarityBoost: 0.8,
+    style: 0.6, // More expressive
+  },
+  science: {
+    voiceId: 'EXAVITQu4vr4xnSDxMaL', // Sarah
+    model: 'eleven_turbo_v2_5',
+    stability: 0.9,
+    similarityBoost: 0.7,
+    style: 0.3, // More neutral
+  },
+  diplomatic: {
+    voiceId: 'XB0fDUnXU5powFXDhCwa', // Charlotte
+    model: 'eleven_turbo_v2_5',
+    stability: 0.8,
+    similarityBoost: 0.8,
+    style: 0.5,
+  },
+  intel: {
+    voiceId: 'onwK4e9ZLuTAKqWW03F9', // Daniel
+    model: 'eleven_turbo_v2_5',
+    stability: 0.8,
+    similarityBoost: 0.6,
+    style: 0.4,
+  },
+  economic: {
+    voiceId: 'pqHfZKP75CvOlQylNhV4', // Bill
+    model: 'eleven_turbo_v2_5',
+    stability: 0.85,
+    similarityBoost: 0.7,
+    style: 0.35,
+  },
+  pr: {
+    voiceId: 'cgSgspJ2msm6clMCkdW9', // Jessica
+    model: 'eleven_turbo_v2_5',
+    stability: 0.75,
+    similarityBoost: 0.8,
+    style: 0.7, // Very expressive
+  }
+};
+```
+
+#### Audio Playback System
+```typescript
+class AdvisorVoice {
+  private audioQueue: AudioBuffer[] = [];
+  private currentlyPlaying: boolean = false;
+
+  async speak(text: string, advisorRole: string, priority: 'critical' | 'urgent' | 'important' | 'routine') {
+    const voiceConfig = ADVISOR_VOICES[advisorRole];
+
+    // Generate speech via ElevenLabs API
+    const audioBuffer = await this.generateSpeech(text, voiceConfig);
+
+    if (priority === 'critical') {
+      this.interrupt();
+      this.playImmediately(audioBuffer);
+    } else {
+      this.enqueue(audioBuffer, priority);
+    }
+  }
+
+  private async generateSpeech(text: string, config: VoiceConfig): Promise<AudioBuffer> {
+    // Call ElevenLabs API through edge function
+    const response = await fetch('/api/text-to-speech', {
+      method: 'POST',
+      body: JSON.stringify({ text, ...config })
+    });
+    return await response.arrayBuffer();
+  }
+}
+```
+
+---
+
+### Advice Trigger Matrix
+
+| Event | Military | Science | Diplomatic | Intel | Economic | PR |
+|-------|----------|---------|------------|-------|----------|-----|
+| **DEFCON Change** | ✅ Primary | ⚠️ Warns | ⚠️ Urges calm | ℹ️ Context | ❌ | ℹ️ Public |
+| **Research Done** | ℹ️ Military tech | ✅ Primary | ❌ | ℹ️ Applications | ℹ️ Costs | ❌ |
+| **Treaty Signed** | ⚠️ Skeptical | ℹ️ Benefits | ✅ Primary | ⚠️ Verification | ℹ️ Trade | ✅ PR win |
+| **Intel Success** | ℹ️ Strategic | ❌ | ℹ️ Diplomatic use | ✅ Primary | ❌ | ℹ️ Leak risk |
+| **Resource Low** | ⚠️ Readiness | ⚠️ Limits | ℹ️ Trade | ❌ | ✅ Primary | ⚠️ Rationing |
+| **Morale Drop** | ⚠️ Unrest | ℹ️ Causes | ⚠️ Stability | ℹ️ Threats | ⚠️ Economy | ✅ Primary |
+| **Nuclear Launch** | ✅ Tactical | ✅ Consequences | ⚠️ War crime | ℹ️ Counterstrike | ❌ | ✅ Crisis |
+| **Enemy Buildup** | ✅ Primary | ⚠️ Arms race | ℹ️ Negotiate | ✅ Primary | ℹ️ Costs | ℹ️ Spin |
+
+Legend:
+- ✅ Primary advisor for this event
+- ⚠️ Strong opinion/warning
+- ℹ️ Informational commentary
+- ❌ Silent on this event
+
+---
+
+### Dynamic Dialogue Generation
+
+#### Template System
+```typescript
+const DIALOGUE_TEMPLATES = {
+  defconEscalation: {
+    military: [
+      "DEFCON ${level}. All forces on alert. Ready to strike on your command.",
+      "We've moved to DEFCON ${level}. Our response time is now ${seconds} seconds.",
+      "Escalation to DEFCON ${level} complete. God help us all."
+    ],
+    science: [
+      "DEFCON ${level}... the probability of nuclear exchange just jumped to ${percent}%.",
+      "We're at DEFCON ${level}. At this rate, we'll trigger nuclear winter by month's end.",
+    ],
+    diplomatic: [
+      "DEFCON ${level} sends a dangerous message. We should pursue de-escalation immediately.",
+      "Mr. President, going to DEFCON ${level} closes diplomatic doors. Reconsider."
+    ]
+  },
+  // ... 100+ event templates
+};
+```
+
+#### Context Injection
+Advisors reference specific game state:
+```typescript
+function generateAdvice(event: GameEvent, advisor: Advisor): string {
+  const template = DIALOGUE_TEMPLATES[event.type][advisor.role];
+  const selected = selectRandomWeighted(template, advisor.personality);
+
+  // Inject dynamic data
+  return selected
+    .replace('${level}', event.data.defcon)
+    .replace('${nation}', event.data.nationName)
+    .replace('${count}', event.data.missileCount)
+    .replace('${percent}', Math.round(event.data.probability * 100));
+}
+```
+
+---
+
+### Advisor Influence System
+
+#### Trust & Credibility
+```typescript
+interface AdvisorState {
+  role: string;
+  trustLevel: number; // 0-100
+  correctPredictions: number;
+  wrongPredictions: number;
+  timesIgnored: number;
+  timesFollowed: number;
+}
+```
+
+**Trust Affects:**
+- Frequency of advice (high trust = more vocal)
+- Tone of delivery (low trust = more desperate/defensive)
+- Quality of intelligence (low trust intel = less accurate)
+
+**Trust Changes:**
+- Following advice that succeeds: +5 trust
+- Following advice that fails: -10 trust
+- Ignoring advice that would have succeeded: -3 trust
+- Ignoring advice that would have failed: +2 trust
+
+#### Advisor Conflicts
+Advisors can disagree publicly:
+```
+MILITARY: "We must strike now while we have superiority!"
+DIPLOMATIC: "General, that's madness. Negotiations are progressing."
+MILITARY: "Negotiations are stalling tactics. They're buying time to build more warheads!"
+SCIENCE: "Both of you are ignoring the real threat: nuclear winter. ANY major exchange ends civilization."
+```
+
+---
+
 ## 📝 Commit and Logging Standards
 
 ### Git Commits
@@ -310,6 +784,8 @@ docs: Update agents.md with modular code guidelines
 - ✅ Include: problem, root cause, fix applied, files changed
 - ✅ Use clear date headers (YYYY-MM-DD format)
 - ✅ Reference issue numbers when applicable
+- ✅ **MANDATORY:** Include ISO-8601 timestamp (UTC) for every session log entry
+- ✅ Record relative paths of all files touched
 
 ---
 
@@ -332,6 +808,17 @@ Before submitting new code, verify:
 
 ---
 
+## 📋 Review & PR Checklist
+
+- [ ] Confirm TypeScript passes `tsc --noEmit` (implicit via Vite build) or local IDE diagnostics
+- [ ] Run `npm run lint` if lint rules are added/updated
+- [ ] Execute `npm run test` and ensure coverage for new gameplay logic
+- [ ] Validate UI changes across dark/high-contrast themes when relevant
+- [ ] Update documentation or tutorial overlays if mechanics shift
+- [ ] Seek review from gameplay & UX maintainers for balance-affecting changes
+
+---
+
 ## 🎓 Philosophy
 
 **"Write code that is easy to delete, not easy to extend."**
@@ -349,7 +836,7 @@ Modular code is maintainable code. When each file has a single, clear purpose, b
 ## 📚 Additional Resources
 
 - See `log.md` for refactoring examples and lessons learned
-- See recent PRs for modular code patterns (e.g., #861, #862, #863)
+- See recent PRs for modular code patterns (e.g., #861, #862, #863, #864)
 - TypeScript best practices: https://www.typescriptlang.org/docs/handbook/
 
 ---
