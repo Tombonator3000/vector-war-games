@@ -911,6 +911,11 @@ let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
 let isGameplayLoopEnabled = false;
+
+// Performance: FPS limiting to reduce CPU usage
+const TARGET_FPS = 60;
+const FRAME_TIME = 1000 / TARGET_FPS;
+let lastFrameTime = 0;
 let isAttractModeActive = false;
 let globalRNG: SeededRandom | null = null; // Global RNG reference for use outside React component
 
@@ -5674,9 +5679,16 @@ function maybeRevealEndGameScreen() {
   }
 }
 
-// Game loop
-function gameLoop() {
+// Game loop with FPS limiting
+function gameLoop(timestamp: number = 0) {
   requestAnimationFrame(gameLoop);
+
+  // Performance: Skip frame if we're running faster than target FPS
+  const elapsed = timestamp - lastFrameTime;
+  if (elapsed < FRAME_TIME) {
+    return;
+  }
+  lastFrameTime = timestamp - (elapsed % FRAME_TIME);
 
   if (!ctx) {
     return;
