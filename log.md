@@ -15383,3 +15383,69 @@ function gameLoop(timestamp: number = 0) {
 ✅ No breaking changes
 
 ---
+
+## 2026-01-26T12:00:00Z - Fix Game Startup Black Screen Error
+
+### Session Context
+- **Branch:** `claude/fix-game-startup-2zTZa`
+- **Task:** Fix game not starting - showing black screen with console error
+
+### Problem
+Game failed to start with the following error:
+```
+Uncaught ReferenceError: Cannot access 'Ke' before initialization
+at EF (Index-DaV2jaZz.js:14:2048886)
+```
+
+### Root Cause Analysis
+The error occurred due to a variable initialization order problem in `src/pages/Index.tsx`:
+
+1. **Issue:** `processGameEvent` was used in a `useEffect` hook (line 5871) BEFORE it was defined by calling `useAdvisorSystem()` (line 6034)
+
+2. **Code flow:**
+   - Line 5871-5876: `useEffect` references `processGameEvent` in its dependency array
+   - Line 6034: `useAdvisorSystem()` hook call that returns `processGameEvent`
+
+3. **JavaScript Behavior:** When Vite/Rollup bundles and minifies the code, the temporal dead zone violation causes the "Cannot access before initialization" error. The minified variable name `Ke` corresponds to `processGameEvent`.
+
+### Solution
+Moved the `useAdvisorSystem()` hook call above the `useEffect` that depends on `processGameEvent`:
+
+```typescript
+// BEFORE (broken):
+useEffect(() => {
+  globalProcessGameEvent = processGameEvent; // ERROR: processGameEvent not yet defined
+}, [processGameEvent]);
+
+// ... 150+ lines later ...
+
+const { processGameEvent, enabled: advisorsEnabled } = useAdvisorSystem();
+
+// AFTER (fixed):
+const { processGameEvent, enabled: advisorsEnabled } = useAdvisorSystem();
+
+useEffect(() => {
+  globalProcessGameEvent = processGameEvent; // OK: processGameEvent is defined
+}, [processGameEvent]);
+```
+
+### Files Modified
+1. `src/pages/Index.tsx`
+   - Moved `useAdvisorSystem()` hook from line 6034 to line 5869
+   - Removed duplicate hook call at original location
+
+### Build Status
+✅ **Build successful** (37.93s)
+- No TypeScript errors
+- No runtime errors
+- Game loads correctly
+
+### Testing
+- Verified build completes without errors
+- Verified dev server starts and serves content
+- Verified no "Cannot access before initialization" error
+
+### Related Issues
+This issue was introduced in commit `db17cf1` (feat: Integrate AI Advisor system with main game events) where the `useEffect` was added above existing code without considering the hook dependency order.
+
+---
