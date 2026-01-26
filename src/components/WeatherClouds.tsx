@@ -8,7 +8,7 @@
  * - Animated subtle drift for realism
  */
 
-import { useRef, useMemo, useEffect } from 'react';
+import { useRef, useMemo, useEffect, memo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { getMorphedPosition } from '@/components/MorphingGlobe';
@@ -196,7 +196,7 @@ interface CloudInstance {
   altitudeOffset: number;
 }
 
-export function WeatherClouds({
+export const WeatherClouds = memo(function WeatherClouds({
   clouds,
   morphFactor,
   opacity = 1.0,
@@ -481,6 +481,6 @@ export function WeatherClouds({
       />
     </group>
   );
-}
+});
 
 export default WeatherClouds;

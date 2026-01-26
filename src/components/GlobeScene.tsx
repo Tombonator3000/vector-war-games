@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  memo,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -228,7 +229,7 @@ interface SceneRegistration {
   projectPosition?: (lon: number, lat: number, radius: number) => THREE.Vector3;
 }
 
-function latLonToVector3(lon: number, lat: number, radius: number) {
+function latLonToVector3(lon: number, lat: number, radius: number, target?: THREE.Vector3): THREE.Vector3 {
   // Match the MorphingGlobe shader's coordinate system:
   // phi = (90 - lat) in radians, theta = lon in radians
   // This ensures markers align with the rendered globe surface
@@ -239,6 +240,10 @@ function latLonToVector3(lon: number, lat: number, radius: number) {
   const y = radius * Math.cos(phi);
   const z = radius * Math.sin(phi) * Math.sin(theta);
 
+  // Performance: If target provided, reuse it to avoid allocations in animation loops
+  if (target) {
+    return target.set(x, y, z);
+  }
   return new THREE.Vector3(x, y, z);
 }
 
@@ -411,30 +416,30 @@ interface AtmosphereProps {
   morphFactor?: number;
 }
 
-function Atmosphere({ morphFactor = 0 }: AtmosphereProps) {
+// Performance: Move shader strings outside component to avoid recreation on each render
+const ATMOSPHERE_HALO_VERTEX_SHADER = /* glsl */ `
+  varying vec3 vNormal;
+  void main() {
+    vNormal = normalize(normalMatrix * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const ATMOSPHERE_HALO_FRAGMENT_SHADER = /* glsl */ `
+  uniform float uOpacity;
+  varying vec3 vNormal;
+  void main() {
+    // Fresnel-based rim glow - stronger at edges, invisible at center
+    float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.5);
+    vec3 haloColor = vec3(0.3, 0.7, 1.0); // Cyan/blue halo
+    float intensity = fresnel * 0.9;
+    gl_FragColor = vec4(haloColor, intensity * uOpacity);
+  }
+`;
+
+const Atmosphere = memo(function Atmosphere({ morphFactor = 0 }: AtmosphereProps) {
   // Fade atmosphere as we transition to flat map
   const opacity = Math.max(0, 1 - morphFactor * 1.5);
-
-  // Outer halo shader - creates a glowing ring around the globe
-  const haloVertexShader = `
-    varying vec3 vNormal;
-    void main() {
-      vNormal = normalize(normalMatrix * normal);
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `;
-
-  const haloFragmentShader = `
-    uniform float uOpacity;
-    varying vec3 vNormal;
-    void main() {
-      // Fresnel-based rim glow - stronger at edges, invisible at center
-      float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.5);
-      vec3 haloColor = vec3(0.3, 0.7, 1.0); // Cyan/blue halo
-      float intensity = fresnel * 0.9;
-      gl_FragColor = vec4(haloColor, intensity * uOpacity);
-    }
-  `;
 
   // Don't render if fully flat
   if (morphFactor > 0.7) {
@@ -447,8 +452,8 @@ function Atmosphere({ morphFactor = 0 }: AtmosphereProps) {
       <mesh scale={1.12} renderOrder={2}>
         <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
         <shaderMaterial
-          vertexShader={haloVertexShader}
-          fragmentShader={haloFragmentShader}
+          vertexShader={ATMOSPHERE_HALO_VERTEX_SHADER}
+          fragmentShader={ATMOSPHERE_HALO_FRAGMENT_SHADER}
           uniforms={{ uOpacity: { value: opacity * 0.8 } }}
           blending={THREE.AdditiveBlending}
           side={THREE.BackSide}
@@ -458,7 +463,7 @@ function Atmosphere({ morphFactor = 0 }: AtmosphereProps) {
       </mesh>
     </group>
   );
-}
+});
 
 /**
  * @deprecated EarthRealistic is no longer used. The unified MorphingGlobe component
@@ -1063,6 +1068,9 @@ function SceneContent({
   const cameraPoseUpdateRef = useRef<typeof onCameraPoseUpdate>();
   const [morphFactor, setMorphFactorState] = useState(0);
   const prevMorphFactorRef = useRef(morphFactor);
+  // Performance: Cached Vector3 objects to avoid allocations in animation loop
+  const centerDirRef = useRef(new THREE.Vector3());
+  const desiredPosRef = useRef(new THREE.Vector3());
   // Define isFlat and isMorphing based on morph factor for unified map system
   const isMorphing = true; // Always morphing mode now
   const isFlat = morphFactor > 0.5; // Considered "flat" when morph factor is above 0.5
@@ -1272,14 +1280,16 @@ function SceneContent({
       const centerLon = ((width / 2 - cam.x) / (width * cam.zoom)) * 360 - 180;
       const centerLat = 90 - ((height / 2 - cam.y) / (height * cam.zoom)) * 180;
 
-      const centerDir = latLonToVector3(centerLon, centerLat, 1).normalize();
+      // Performance: Use cached Vector3 refs to avoid allocations every frame
+      latLonToVector3(centerLon, centerLat, 1, centerDirRef.current);
+      centerDirRef.current.normalize();
       const minDistance = EARTH_RADIUS + 1.3;
       const maxDistance = EARTH_RADIUS + 3.4;
       const zoomT = THREE.MathUtils.clamp((cam.zoom - 0.5) / (3 - 0.5), 0, 1);
       const targetDistance = THREE.MathUtils.lerp(maxDistance, minDistance, zoomT);
 
-      const desired = centerDir.clone().multiplyScalar(targetDistance);
-      (camera as THREE.PerspectiveCamera).position.lerp(desired, 0.12);
+      desiredPosRef.current.copy(centerDirRef.current).multiplyScalar(targetDistance);
+      (camera as THREE.PerspectiveCamera).position.lerp(desiredPosRef.current, 0.12);
       (camera as THREE.PerspectiveCamera).lookAt(0, 0, 0);
       (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
     }

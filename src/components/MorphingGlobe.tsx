@@ -397,6 +397,10 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
       duration: number;
     } | null>(null);
 
+    // Performance: Cached Vector3 objects to avoid allocations in animation loop
+    const cameraDirRef = useRef(new THREE.Vector3());
+    const lightOffsetRef = useRef(new THREE.Vector3(0.3, 0.5, 0));
+
     // Load both day and night textures for blending
     const dayTextureUrl = useMemo(() => {
       if (customTextureUrl && textureVariant === 'day') return customTextureUrl;
@@ -595,13 +599,13 @@ export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>
       }
 
       // Update light direction based on camera position for globe view
+      // Performance: Use cached Vector3 refs to avoid allocations every frame
       if (materialRef.current && morphFactor < 0.5) {
-        const cameraDir = new THREE.Vector3();
-        camera.getWorldDirection(cameraDir);
+        camera.getWorldDirection(cameraDirRef.current);
         materialRef.current.uniforms.uLightDirection.value
-          .copy(cameraDir)
+          .copy(cameraDirRef.current)
           .negate()
-          .add(new THREE.Vector3(0.3, 0.5, 0))
+          .add(lightOffsetRef.current)
           .normalize();
       }
     });
