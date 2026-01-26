@@ -5867,6 +5867,9 @@ export default function NoradVector() {
     globalRNG = rng;
   }, [rng]);
 
+  // AI Advisor System - must be defined before useEffect that references processGameEvent
+  const { processGameEvent, enabled: advisorsEnabled } = useAdvisorSystem();
+
   // Update global processGameEvent reference for advisor system
   useEffect(() => {
     globalProcessGameEvent = processGameEvent;
@@ -6029,9 +6032,6 @@ export default function NoradVector() {
     resolveFlashpoint,
     dismissFlashpoint,
   } = useFlashpoints();
-
-  // AI Advisor System
-  const { processGameEvent, enabled: advisorsEnabled } = useAdvisorSystem();
 
   // NASA VIIRS satellite fire detection layer
   const viirsHook = useVIIRS();
