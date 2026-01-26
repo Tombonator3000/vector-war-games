@@ -90,8 +90,10 @@ export function useAdvisorSystem() {
         commentQueue: [...prev.commentQueue, ...validComments],
       }));
 
-      // Start processing if not already running
-      processQueue();
+      // Start processing if not already running (fire-and-forget with error handling)
+      processQueue().catch((error) => {
+        console.error('[AdvisorSystem] Error processing queue:', error);
+      });
     },
     [systemState.enabled, systemState.advisors]
   );
@@ -108,24 +110,29 @@ export function useAdvisorSystem() {
         const comment = advisorQueue.dequeueComment();
         if (!comment) break;
 
-        // Check if should interrupt current playback
-        if (advisorQueue.shouldInterrupt(comment.priority)) {
-          advisorVoiceSystem.stop();
-          setSystemState((prev) => ({ ...prev, currentlyPlaying: null }));
+        try {
+          // Check if should interrupt current playback
+          if (advisorQueue.shouldInterrupt(comment.priority)) {
+            advisorVoiceSystem.stop();
+            setSystemState((prev) => ({ ...prev, currentlyPlaying: null }));
+          }
+
+          // Generate audio
+          const voiceConfig = ADVISOR_CONFIGS[comment.advisorRole].voiceConfig;
+          const audio = await advisorVoiceSystem.generateSpeech(comment, voiceConfig);
+
+          // Add to audio queue
+          advisorQueue.enqueueAudio(audio);
+
+          // Update state
+          setSystemState((prev) => ({
+            ...prev,
+            audioQueue: [...prev.audioQueue, audio],
+          }));
+        } catch (commentError) {
+          console.error('[AdvisorSystem] Error processing comment:', commentError);
+          // Continue to next comment even if one fails
         }
-
-        // Generate audio
-        const voiceConfig = ADVISOR_CONFIGS[comment.advisorRole].voiceConfig;
-        const audio = await advisorVoiceSystem.generateSpeech(comment, voiceConfig);
-
-        // Add to audio queue
-        advisorQueue.enqueueAudio(audio);
-
-        // Update state
-        setSystemState((prev) => ({
-          ...prev,
-          audioQueue: [...prev.audioQueue, audio],
-        }));
       }
     } finally {
       processingRef.current = false;

@@ -15449,3 +15449,68 @@ useEffect(() => {
 This issue was introduced in commit `db17cf1` (feat: Integrate AI Advisor system with main game events) where the `useEffect` was added above existing code without considering the hook dependency order.
 
 ---
+
+## 2026-01-26T16:00:00Z - Fix Black Screen on Startup - AudioContext and Async Error Handling
+
+### Session Context
+- **Branch:** `claude/fix-game-startup-lPn6v`
+- **Task:** Fix game not starting - showing black screen on startup
+
+### Problem
+Game showed a black screen on startup. Build succeeded without errors, indicating a runtime issue.
+
+### Root Cause Analysis
+Deep audit revealed multiple issues in the AI Advisor System that could cause the app to fail silently:
+
+1. **AudioContext initialization without error handling** (`src/lib/advisorVoice.ts`)
+   - `initAudioContext()` method could throw errors if AudioContext was not available
+   - `createSilentAudio()` called `initAudioContext()` without try-catch
+   - This could crash the entire advisor system during initialization
+
+2. **Unhandled async errors in useAdvisorSystem** (`src/hooks/useAdvisorSystem.ts`)
+   - `processQueue()` was called without awaiting or catching errors
+   - Errors in audio generation would cause unhandled promise rejections
+   - Individual comment processing errors could halt the entire queue
+
+### Solution Applied
+
+#### 1. Fixed AudioContext initialization (advisorVoice.ts)
+- Changed `initAudioContext()` to return `AudioContext | null`
+- Added try-catch around AudioContext creation
+- Updated all methods that use AudioContext to handle null case:
+  - `getAudioDuration()` - returns default 5000ms if no context
+  - `playAudio()` - early return if no context or empty buffer
+  - `createSilentAudio()` - simplified to not require AudioContext
+
+#### 2. Fixed async error handling (useAdvisorSystem.ts)
+- Added `.catch()` handler to `processQueue()` call in `processGameEvent`
+- Added inner try-catch around individual comment processing
+- Errors in one comment no longer stop processing of remaining comments
+
+### Files Modified
+1. `src/lib/advisorVoice.ts`
+   - `initAudioContext()` - added error handling, returns null on failure
+   - `getAudioDuration()` - handles null AudioContext
+   - `createSilentAudio()` - removed AudioContext dependency
+   - `playAudio()` - handles null AudioContext and empty buffers
+
+2. `src/hooks/useAdvisorSystem.ts`
+   - `processGameEvent()` - added error catch for processQueue call
+   - `processQueue()` - added inner try-catch for individual comments
+
+### Build Status
+✅ **Build successful** (42.16s)
+- No TypeScript errors
+- No runtime errors expected
+
+### Testing Recommendations
+1. Verify game loads without black screen
+2. Test advisor system still works when ElevenLabs API is unavailable
+3. Test in environments without AudioContext support (older browsers)
+
+### Prevention
+- Always wrap browser APIs (AudioContext, WebGL, etc.) in try-catch
+- Always handle errors from async functions, even fire-and-forget calls
+- Test in various environments where browser APIs may be unavailable
+
+---

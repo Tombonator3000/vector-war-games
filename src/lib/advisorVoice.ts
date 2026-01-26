@@ -47,10 +47,21 @@ export class AdvisorVoiceSystem {
 
   /**
    * Initialize audio context
+   * Returns null if AudioContext is not available
    */
-  private initAudioContext(): AudioContext {
+  private initAudioContext(): AudioContext | null {
     if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContextClass) {
+          console.warn('[AdvisorVoice] AudioContext not available in this environment');
+          return null;
+        }
+        this.audioContext = new AudioContextClass();
+      } catch (error) {
+        console.warn('[AdvisorVoice] Failed to create AudioContext:', error);
+        return null;
+      }
     }
     return this.audioContext;
   }
@@ -215,6 +226,9 @@ export class AdvisorVoiceSystem {
   private async getAudioDuration(audioBuffer: ArrayBuffer): Promise<number> {
     try {
       const ctx = this.initAudioContext();
+      if (!ctx) {
+        return 5000; // Default 5 seconds if no AudioContext
+      }
       const decoded = await ctx.decodeAudioData(audioBuffer.slice(0));
       return decoded.duration * 1000; // Convert to milliseconds
     } catch (error) {
@@ -227,11 +241,7 @@ export class AdvisorVoiceSystem {
    * Create silent audio fallback
    */
   private createSilentAudio(comment: AdvisorComment): AdvisorAudio {
-    // Create minimal silent audio buffer
-    const ctx = this.initAudioContext();
-    const buffer = ctx.createBuffer(1, ctx.sampleRate * 1, ctx.sampleRate);
-
-    // Convert AudioBuffer to ArrayBuffer (simplified approach)
+    // Create empty audio buffer as fallback (no AudioContext needed)
     const arrayBuffer = new ArrayBuffer(0);
 
     return {
@@ -251,8 +261,18 @@ export class AdvisorVoiceSystem {
       this.stop();
     }
 
+    // Skip playback if audio buffer is empty (fallback/silent audio)
+    if (!advisorAudio.audioBuffer || advisorAudio.audioBuffer.byteLength === 0) {
+      console.log('[AdvisorVoice] Skipping playback for empty audio buffer');
+      return;
+    }
+
     try {
       const ctx = this.initAudioContext();
+      if (!ctx) {
+        console.warn('[AdvisorVoice] Cannot play audio: AudioContext not available');
+        return;
+      }
 
       // Resume context if suspended (browser autoplay policy)
       if (ctx.state === 'suspended') {
