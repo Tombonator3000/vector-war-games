@@ -7,6 +7,64 @@
 
 ---
 
+## 2026-01-26 - Review av Pokey AI Assistant Layout
+
+**Timestamp:** 2026-01-26T10:00:00Z
+
+### Kontekst
+Mottok diagram over "Pokey - Personal AI Assistant Ecosystem" for vurdering av relevans til NORAD VECTOR-prosjektet.
+
+### Pokey-arkitekturens komponenter
+1. **INPUTS**: WhatsApp, Voice messages, Text commands
+2. **MEMORY LAYER**: SOUL.md (Personality & Tone), USER.md (Who you are & Context), MEMORY.md (Long-term Knowledge), Daily logs
+3. **DATABASES** (via Notion): Tasks, Ideas, CRM, Content
+4. **Clawdbot Gateway**: AI Processing & Orchestration
+5. **AUTOMATIONS**: Daily Brief (8am), Munger Observer (5pm), Evening Check (9pm), Content Machine (10pm)
+6. **OUTPUTS**: Calendar events, Email drafts, Task scoring, Alerts & reminders
+7. **TASK SCORING**: Impact + Effort = Leverage → P0-P5 Priority Tiers
+
+### Relevans for NORAD VECTOR
+
+#### Direkte anvendbare konsepter:
+1. **Memory Layer → Advisor Personality System**
+   - SOUL.md-konseptet matcher vårt eksisterende Advisor-system
+   - Hver advisor (General Stone, Dr. Vance, etc.) har allerede personality traits
+   - Kan formaliseres som separate .md-filer per advisor
+
+2. **Task Scoring (P0-P5) → Advisor Priority System**
+   - Vi har allerede: CRITICAL > URGENT > IMPORTANT > ROUTINE
+   - Pokey bruker: P0 > P1 > P2 > P3 > P4 > P5
+   - Kan vurdere mer granular prioritering
+
+3. **Automations → Scheduled Game Events**
+   - Daily Brief-konseptet → Turn-start briefings fra advisors
+   - Evening Check → End-turn summaries
+   - Allerede delvis implementert via `useFlashpoints` og `usePandemic`
+
+4. **Gateway/Orchestration → Event Priority Queue**
+   - Clawdbot Gateway = vår `AdvisorVoice` class med audioQueue
+   - Conflict resolution mellom advisors allerede implementert
+
+#### Ikke direkte relevant:
+- WhatsApp/Voice inputs (spill, ikke produktivitetsapp)
+- CRM/Content databases (irrelevant for spill)
+- Calendar events/Email drafts (irrelevant for spill)
+
+### Konklusjon
+**Layouten har begrenset direkte anvendelse** for NORAD VECTOR siden:
+- Det er en personlig produktivitetsassistent, ikke et spill
+- Vi har allerede implementert lignende konsepter (advisor priorities, personality traits)
+
+**Mulige fremtidige forbedringer inspirert av Pokey:**
+1. Formalisere advisor personalities som separate data-filer
+2. Legge til "Daily Brief" mekanisme ved turnstart med sammendrag
+3. Implementere mer granular prioritering (6 nivåer vs 4)
+
+### Filer endret
+- `log.md` - denne oppføringen
+
+---
+
 ## 2026-01-14 - Merged Agent Documentation Files into Single agents.md
 
 **Timestamp:** 2026-01-14T12:00:00Z
