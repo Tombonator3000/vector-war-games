@@ -110,7 +110,25 @@ export function launch(
   yieldMT: number,
   deps: LaunchDependencies
 ): boolean {
+  // Defensive check: ensure deps object is defined
+  if (!deps) {
+    console.error('[Launch Handler] Dependencies object is undefined');
+    return false;
+  }
+
   const { S, log, toast, AudioSys, DoomsdayClock, WARHEAD_YIELD_TO_ID, RESEARCH_LOOKUP } = deps;
+
+  // Defensive check: ensure game state is available
+  if (!S) {
+    console.error('[Launch Handler] Game state (S) is undefined');
+    if (toast) {
+      toast({
+        title: 'System error',
+        description: 'Game state not available. Please refresh the page.'
+      });
+    }
+    return false;
+  }
 
   // Validate launch preconditions
   const validationResult = validateLaunch({
@@ -357,9 +375,27 @@ function processDoctrineIncidents(
  * 6. Doctrine incident system
  */
 export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
+  // Defensive check: ensure deps object is defined
+  if (!deps) {
+    console.error('[Resolution Phase] Dependencies object is undefined');
+    return;
+  }
+
   const { S, nations, log, projectLocal, explode, advanceResearch, advanceCityConstruction } = deps;
 
-  log('=== RESOLUTION PHASE ===', 'success');
+  // Defensive check: ensure game state is available
+  if (!S) {
+    console.error('[Resolution Phase] Game state (S) is undefined');
+    return;
+  }
+
+  // Defensive check: ensure nations array is available
+  if (!nations || !Array.isArray(nations)) {
+    console.error('[Resolution Phase] Nations array is undefined or not an array');
+    return;
+  }
+
+  log?.('=== RESOLUTION PHASE ===', 'success');
 
   // 1. Update threat levels between nations
   updateThreatLevels(nations);
@@ -379,7 +415,7 @@ export function resolutionPhase(deps: ResolutionPhaseDependencies): void {
     advanceCityConstruction(nation, 'RESOLUTION');
   }
 
-  log('=== RESOLUTION PHASE COMPLETE ===', 'success');
+  log?.('=== RESOLUTION PHASE COMPLETE ===', 'success');
 
   // 6. Process nuclear winter effects
   processNuclearWinterEffects(S, nations, log);

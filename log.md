@@ -7,6 +7,57 @@
 
 ---
 
+## 2026-01-27 - Fix Attack Handler Crash (S is Undefined)
+
+**Timestamp:** 2026-01-27T21:30:00Z
+
+### Problem
+Game crashed with "SYSTEM MALFUNCTION" error when user clicked the ATTACK button. The error message was: "Cannot destructure property 'S' of 'a' as it is undefined." This indicates that the dependencies object passed to the attack handler was undefined.
+
+### Root Cause Analysis
+The `handleAttackExtracted` function in `attackHandlers.ts` expected a `deps` object containing the game state (`S`) and other dependencies. When called, if `deps` was undefined for any reason (race condition, initialization timing issue, or stale closure), the destructuring would fail and crash the game.
+
+The same pattern existed in other handler files:
+- `buildHandlers.ts`
+- `gamePhaseHandlers.ts`
+
+### Solution Applied
+
+#### 1. Added Defensive Checks to `src/lib/attackHandlers.ts`
+- Added null check for `deps` object before destructuring
+- Added null check for `S` (game state) after destructuring
+- Added null check for `setIsStrikePlannerOpen` function
+- Used optional chaining for `AudioSys.playSFX()` call
+- Added console.error logging for debugging
+- Display user-friendly toast message instead of crashing
+
+#### 2. Added Defensive Checks to `src/lib/buildHandlers.ts`
+- Added null check for `deps` object in `getBuildContextExtracted`
+- Added null check for `S` (game state)
+- Returns `null` gracefully instead of crashing
+
+#### 3. Added Defensive Checks to `src/lib/gamePhaseHandlers.ts`
+- Added null check for `deps` object in `launch` function
+- Added null check for `S` (game state)
+- Added null check for `deps` object in `resolutionPhase` function
+- Added null check for `nations` array
+- Used optional chaining for log function calls
+
+### Files Changed
+- **Modified:** `src/lib/attackHandlers.ts` (defensive null checks)
+- **Modified:** `src/lib/buildHandlers.ts` (defensive null checks)
+- **Modified:** `src/lib/gamePhaseHandlers.ts` (defensive null checks)
+- **Modified:** `log.md` (this entry)
+
+### Testing
+- Build completes successfully
+- Error handling now prevents crash and shows user-friendly message
+
+### Technical Notes
+In minified JavaScript, variable names are shortened (e.g., `deps` becomes `a`). The error "Cannot destructure property 'S' of 'a' as it is undefined" meant the `deps` parameter was undefined when passed to the handler function. The defensive checks now catch this edge case before attempting destructuring.
+
+---
+
 ## 2026-01-27 - Comprehensive Advisory Panel Fix & Advisor Interactivity
 
 **Timestamp:** 2026-01-27T19:00:00Z
