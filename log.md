@@ -7,6 +7,148 @@
 
 ---
 
+## 2026-01-27 - Edge-TTS Integration for Advisor Voices (Development)
+
+**Timestamp:** 2026-01-27T09:30:00Z
+
+### Purpose
+Implemented Edge-TTS as a FREE text-to-speech solution for advisor voices during development, eliminating ElevenLabs API costs while prototyping.
+
+### Implementation Details
+
+#### 1. TTS Dev Server (`server/tts-dev-server.js`)
+- Express server running on port 3001
+- Uses Microsoft Edge's neural TTS service (FREE, no API key)
+- Maps ElevenLabs voiceIds to Edge-TTS voices automatically
+- Includes fallback to mock audio when network unavailable
+- Endpoints:
+  - `POST /api/tts` - Generate speech
+  - `GET /api/tts/health` - Health check
+  - `GET /api/tts/voices` - List voice mapping
+
+#### 2. Voice Mapping (ElevenLabs → Edge-TTS)
+
+| Advisor | ElevenLabs Voice | Edge-TTS Voice | Character |
+|---------|------------------|----------------|-----------|
+| Military | Roger (CwhR...) | en-US-GuyNeural | Deep, authoritative male |
+| Science | Sarah (EXAV...) | en-US-JennyNeural | Calm, analytical female |
+| Diplomatic | Charlotte (XB0f...) | en-GB-SoniaNeural | Measured British female |
+| Intel | Daniel (onwK...) | en-US-DavisNeural | Cryptic male |
+| Economic | Bill (pqHf...) | en-US-TonyNeural | Practical male |
+| PR | Jessica (cgSg...) | en-US-AriaNeural | Urgent, expressive female |
+
+#### 3. TTS Configuration (`src/config/tts.config.ts`)
+- Auto-detects environment (dev/prod)
+- Development without ElevenLabs key → Edge-TTS
+- Production with ElevenLabs key → ElevenLabs
+- Configurable via environment variables
+
+#### 4. Updated AdvisorVoiceSystem (`src/lib/advisorVoice.ts`)
+- Multi-provider support (Edge-TTS + ElevenLabs)
+- Automatic provider selection based on config
+- Graceful fallback on network errors
+- New methods: `resetTTSAvailability()`, `isTTSAvailable()`
+
+### Files Changed
+- **Created:** `server/tts-dev-server.js` (TTS dev server)
+- **Created:** `src/config/tts.config.ts` (TTS configuration)
+- **Modified:** `src/lib/advisorVoice.ts` (multi-provider support)
+- **Modified:** `package.json` (added `tts:dev` script)
+- **Modified:** `log.md` (this entry)
+- **Modified:** `todo.md` (task tracking)
+
+### Usage
+
+```bash
+# Start TTS dev server (terminal 1)
+npm run tts:dev
+
+# Start Vite dev server (terminal 2)
+npm run dev
+```
+
+### Environment Variables (Optional)
+```
+VITE_EDGE_TTS_ENDPOINT=http://localhost:3001/api/tts  # Default
+VITE_ELEVENLABS_API_KEY=your_key                      # For production
+TTS_MOCK=true                                          # Force mock mode
+```
+
+### Notes
+- Edge-TTS requires internet access to `speech.platform.bing.com`
+- Falls back to silent audio when network unavailable
+- For production, use ElevenLabs with backend proxy
+
+---
+
+## 2026-01-27 - Research: clawdbot/skills Repository Evaluation
+
+**Timestamp:** 2026-01-27T10:00:00Z
+
+### Purpose
+Evaluated the [clawdbot/skills](https://github.com/clawdbot/skills) repository to determine if any skills could enhance Vector War Games development, particularly for the AI Advisor System.
+
+### Repository Overview
+- **Source:** Archive of skills from clawdhub.com
+- **Total Skills:** 352 different skills
+- **Languages:** Python (44.9%), JavaScript (18%), Shell (16.6%), TypeScript (10.4%), Go (8.8%)
+- **License:** MIT
+
+### Relevant Skills Identified for Vector War Games
+
+#### 1. **pennyroyaltea/elevenlabs-agents** - ElevenLabs Agent Management
+- Creates, manages, and deploys conversational AI agents through ElevenLabs
+- **Relevance:** Direct integration with our AI Advisor System (agents.md section 7)
+- Features: Agent templates, webhook integrations, HTML widget embedding
+- Could streamline advisor voice deployment
+
+#### 2. **i3130002/edge-tts** - Microsoft Edge TTS (FREE)
+- Text-to-speech using Microsoft Edge's neural TTS service
+- **Key advantage:** No API key required, free to use
+- 40+ neural voices, multiple languages
+- Speed/pitch/volume adjustment
+- **Potential use:** Cost-effective alternative for advisor voices during development
+
+#### 3. **amstko/tts** - Text-to-Speech (Hume AI/OpenAI)
+- MP3 audio generation from text
+- Supports Hume AI (recommended) and OpenAI (nova voice)
+- **Relevance:** Alternative TTS implementation for advisors
+
+#### 4. **chair4ce/swarm** - Parallel Task Execution
+- Distributes work across multiple LLM worker nodes
+- 3.8x to 18x speedup for batch operations
+- Phase-based execution with dependency management
+- **Potential use:** Parallelizing research tasks, batch processing game events
+
+#### 5. **lc0rp/ask-questions-if-underspecified** - Requirement Clarification
+- Workflow for clarifying ambiguous requirements before implementation
+- Multiple-choice question format with defaults
+- **Useful for:** Development best practices
+
+#### 6. **jmz1/skillcraft** - Skill Creation Guide
+- Structured 5-stage process for creating reusable skills
+- Inventory → Problem Understanding → Capability Discovery → Design → Implementation
+- **Potential use:** Creating custom skills for Vector War Games workflow
+
+### Recommendation
+
+**YES - This repository is useful for Vector War Games:**
+
+1. **Immediate value:** `edge-tts` can provide FREE TTS for advisor voices during development (no ElevenLabs costs)
+2. **Production value:** `elevenlabs-agents` aligns perfectly with our documented advisor system in agents.md
+3. **Development efficiency:** `swarm` could speed up bulk game data processing and research tasks
+
+### Next Steps
+1. Test `edge-tts` integration for advisor voice prototyping
+2. Evaluate `elevenlabs-agents` for production advisor deployment
+3. Consider `swarm` for parallel game state calculations
+
+### Files Changed
+- **Modified:** `log.md` (this entry)
+- **Created:** `todo.md` (task tracking)
+
+---
+
 ## 2026-01-14 - Merged Agent Documentation Files into Single agents.md
 
 **Timestamp:** 2026-01-14T12:00:00Z

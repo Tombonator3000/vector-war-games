@@ -1,11 +1,16 @@
 /**
- * Advisor Voice System - ElevenLabs TTS Integration
+ * Advisor Voice System - Multi-Provider TTS Integration
  *
- * Handles text-to-speech generation via ElevenLabs API for advisor commentary.
+ * Handles text-to-speech generation for advisor commentary.
+ * Supports multiple providers:
+ * - Edge-TTS (development): FREE, no API key required
+ * - ElevenLabs (production): High quality, requires API key
+ *
  * Implements caching, error handling, and audio buffer management.
  */
 
 import { VoiceConfig, AdvisorAudio, AdvisorComment } from '@/types/advisor.types';
+import { getTTSConfig, logTTSStatus, TTSConfig } from '@/config/tts.config';
 
 /**
  * Cache for generated audio to avoid redundant API calls
@@ -44,6 +49,13 @@ export class AdvisorVoiceSystem {
   private currentSource: AudioBufferSourceNode | null = null;
   private isPlaying = false;
   private volume = 0.7;
+  private ttsConfig: TTSConfig;
+  private ttsAvailable = true;
+
+  constructor() {
+    this.ttsConfig = getTTSConfig();
+    logTTSStatus();
+  }
 
   /**
    * Initialize audio context
@@ -123,9 +135,8 @@ export class AdvisorVoiceSystem {
     try {
       console.log(`[AdvisorVoice] Generating TTS for ${comment.advisorRole}: ${comment.text}`);
 
-      // Call ElevenLabs API
-      // Note: In production, this should go through a backend API to keep API keys secure
-      const response = await this.callElevenLabsAPI(comment.text, voiceConfig);
+      // Call TTS API (Edge-TTS in dev, ElevenLabs in production)
+      const response = await this.callTTSAPI(comment.text, voiceConfig);
 
       if (!response.ok) {
         throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText}`);
@@ -158,7 +169,74 @@ export class AdvisorVoiceSystem {
   }
 
   /**
-   * Call ElevenLabs Text-to-Speech API
+   * Call TTS API (Edge-TTS or ElevenLabs based on config)
+   *
+   * @param text - Text to convert to speech
+   * @param voiceConfig - Voice configuration
+   * @returns Response with audio data
+   */
+  private async callTTSAPI(
+    text: string,
+    voiceConfig: VoiceConfig
+  ): Promise<Response> {
+    // Check if TTS was previously marked unavailable
+    if (!this.ttsAvailable && this.ttsConfig.useFallback) {
+      throw new Error('TTS service unavailable');
+    }
+
+    // Use Edge-TTS in development (FREE)
+    if (this.ttsConfig.provider === 'edge-tts') {
+      return this.callEdgeTTSAPI(text, voiceConfig);
+    }
+
+    // Use ElevenLabs in production
+    return this.callElevenLabsAPI(text, voiceConfig);
+  }
+
+  /**
+   * Call Edge-TTS API (development - FREE)
+   */
+  private async callEdgeTTSAPI(
+    text: string,
+    voiceConfig: VoiceConfig
+  ): Promise<Response> {
+    console.log(`[AdvisorVoice] Using Edge-TTS (FREE) - endpoint: ${this.ttsConfig.endpoint}`);
+
+    try {
+      const response = await fetch(this.ttsConfig.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          voiceId: voiceConfig.voiceId, // Will be mapped server-side
+          voiceSettings: {
+            stability: voiceConfig.stability,
+            similarity_boost: voiceConfig.similarityBoost,
+            style: voiceConfig.style,
+          },
+        }),
+        signal: AbortSignal.timeout(30000), // 30 second timeout
+      });
+
+      if (!response.ok) {
+        throw new Error(`Edge-TTS error: ${response.status}`);
+      }
+
+      return response;
+    } catch (error) {
+      // Mark TTS as unavailable to avoid repeated failures
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.warn('[AdvisorVoice] Edge-TTS server not running. Start with: npm run tts:dev');
+        this.ttsAvailable = false;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Call ElevenLabs Text-to-Speech API (production)
    *
    * @param text - Text to convert to speech
    * @param voiceConfig - Voice configuration
@@ -168,17 +246,16 @@ export class AdvisorVoiceSystem {
     text: string,
     voiceConfig: VoiceConfig
   ): Promise<Response> {
-    // In development, use mock API or backend proxy
-    const apiEndpoint = import.meta.env.VITE_ELEVENLABS_API_ENDPOINT || '/api/tts';
-    const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
+    const apiEndpoint = this.ttsConfig.endpoint;
+    const apiKey = this.ttsConfig.apiKey;
 
-    if (!apiKey && !apiEndpoint.startsWith('/api')) {
+    if (!apiKey && !apiEndpoint.startsWith('/api') && !apiEndpoint.startsWith('http://localhost')) {
       console.warn('[AdvisorVoice] No ElevenLabs API key configured. Using fallback.');
       throw new Error('No API key configured');
     }
 
     // Backend proxy approach (recommended for production)
-    if (apiEndpoint.startsWith('/api')) {
+    if (apiEndpoint.startsWith('/api') || apiEndpoint.includes('localhost')) {
       return fetch(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -218,6 +295,22 @@ export class AdvisorVoiceSystem {
         }),
       }
     );
+  }
+
+  /**
+   * Reset TTS availability (call after config change or to retry)
+   */
+  resetTTSAvailability(): void {
+    this.ttsAvailable = true;
+    this.ttsConfig = getTTSConfig();
+    logTTSStatus();
+  }
+
+  /**
+   * Check if TTS is currently available
+   */
+  isTTSAvailable(): boolean {
+    return this.ttsAvailable;
   }
 
   /**
