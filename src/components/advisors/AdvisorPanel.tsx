@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface AdvisorPanelProps {
-  position?: 'top' | 'bottom' | 'left' | 'right';
+  position?: 'top' | 'bottom' | 'left' | 'right' | 'bottom-left' | 'bottom-right';
   defaultCollapsed?: boolean;
   className?: string;
 }
@@ -55,6 +55,8 @@ export function AdvisorPanel({
     bottom: 'bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl',
     left: 'left-0 top-1/2 -translate-y-1/2 h-full max-h-screen',
     right: 'right-0 top-1/2 -translate-y-1/2 h-full max-h-screen',
+    'bottom-left': 'bottom-4 left-4 w-auto max-w-md',
+    'bottom-right': 'bottom-4 right-4 w-auto max-w-md',
   };
 
   if (!enabled) {
