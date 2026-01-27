@@ -66,15 +66,15 @@ export function AdvisorPanel({
   return (
     <div
       className={cn(
-        'fixed z-50 pointer-events-none',
+        'fixed z-[60] pointer-events-none',
         positionStyles[position],
         className
       )}
     >
-      <div className="pointer-events-auto">
+      <div className="pointer-events-auto relative">
         {/* Collapsed header */}
         {collapsed && (
-          <div className="bg-black/80 backdrop-blur-sm border border-cyan-500/30 rounded-t-lg p-2 flex items-center justify-between">
+          <div className="bg-black/80 backdrop-blur-sm border border-cyan-500/30 rounded-lg p-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Volume2 className="w-4 h-4 text-cyan-400" />
               <span className="text-sm text-white/80">Advisors</span>
@@ -88,7 +88,7 @@ export function AdvisorPanel({
               variant="ghost"
               size="sm"
               onClick={() => setCollapsed(false)}
-              className="h-6 w-6 p-0"
+              className="h-6 w-6 p-0 hover:bg-cyan-500/20 cursor-pointer"
             >
               <ChevronUp className="w-4 h-4" />
             </Button>
@@ -108,7 +108,7 @@ export function AdvisorPanel({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 relative z-10">
                 {/* Queue indicator */}
                 {queueSize > 0 && (
                   <div className="px-3 py-1 bg-cyan-500/20 border border-cyan-500/40 rounded text-cyan-400 text-xs font-mono">
@@ -121,7 +121,7 @@ export function AdvisorPanel({
                   variant="ghost"
                   size="sm"
                   onClick={toggleVoice}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-cyan-500/20 cursor-pointer"
                   title={voiceEnabled ? 'Mute advisors' : 'Unmute advisors'}
                 >
                   {voiceEnabled ? (
@@ -135,7 +135,7 @@ export function AdvisorPanel({
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowSettings(!showSettings)}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-cyan-500/20 cursor-pointer"
                 >
                   <Settings className="w-4 h-4" />
                 </Button>
@@ -144,7 +144,7 @@ export function AdvisorPanel({
                   variant="ghost"
                   size="sm"
                   onClick={() => setCollapsed(true)}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-cyan-500/20 cursor-pointer"
                 >
                   <ChevronDown className="w-4 h-4" />
                 </Button>

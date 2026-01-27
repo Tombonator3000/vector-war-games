@@ -7,6 +7,43 @@
 
 ---
 
+## 2026-01-27 - Fix Advisory Panel Button Interactivity
+
+**Timestamp:** 2026-01-27T17:30:00Z
+
+### Problem
+The NORAD Advisory Panel buttons (volume toggle, settings, collapse/expand) were not responding to clicks. Users could not interact with any controls on the panel.
+
+### Root Cause Analysis
+1. **Z-index conflict:** The AdvisorPanel had `z-50` which was the same as other UI elements (hotbar, GameHelper container) in the same area
+2. **Position overlap:** GameHelper container at `bottom-4 right-4` with internal buttons at `z-50` competed with AdvisorPanel at the same position
+3. **Missing hover states:** Ghost variant buttons had no visible hover feedback, making it unclear they were interactive
+
+### Solution Applied
+
+#### 1. Increased Z-index (`src/components/advisors/AdvisorPanel.tsx`)
+- Changed outer container from `z-50` to `z-[60]` to ensure panel is always above other fixed elements
+- Added `relative` to inner container for proper stacking context
+
+#### 2. Enhanced Button Interactivity
+- Added `relative z-10` to the controls container to ensure buttons stack above any overlapping elements
+- Added `hover:bg-cyan-500/20 cursor-pointer` to all buttons for clear visual feedback
+- Applied consistent styling to both collapsed and expanded state buttons
+
+#### 3. Improved Collapsed State
+- Changed `rounded-t-lg` to `rounded-lg` for better visual consistency when collapsed
+
+### Files Changed
+- **Modified:** `src/components/advisors/AdvisorPanel.tsx` (z-index, button styling, stacking context)
+- **Modified:** `log.md` (this entry)
+
+### Testing
+- Build completes successfully
+- Buttons now have visible hover states
+- Panel controls should be clickable above other UI elements
+
+---
+
 ## 2026-01-27 - Move Advisor Panel to Non-Blocking Position
 
 **Timestamp:** 2026-01-27T15:00:00Z
