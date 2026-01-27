@@ -7,6 +7,81 @@
 
 ---
 
+## 2026-01-27 - Comprehensive Advisory Panel Fix & Advisor Interactivity
+
+**Timestamp:** 2026-01-27T19:00:00Z
+
+### Problem
+Despite previous fixes, NORAD Advisory Panel buttons were still not responding to clicks. The advisor avatars (General, Dr., Ambassador, etc.) also had no functionality - clicking them did nothing.
+
+### Root Cause Analysis
+1. **Pointer-events CSS conflict:** CSS class `pointer-events-none` was not being properly overridden by `pointer-events-auto` on inner elements due to specificity/cascading issues
+2. **Z-index still too low:** `z-[60]` was still potentially conflicting with other UI elements (PandemicPanel at `z-50 bottom-20 right-4`)
+3. **No advisor click handlers:** AdvisorAvatar component had no onClick functionality - advisors were purely display-only
+4. **Missing event type:** `ADVISOR_CONSULTED` event type was not defined, so clicking advisors couldn't trigger any system response
+
+### Solution Applied
+
+#### 1. Enhanced Z-index and Pointer-Events (`src/components/advisors/AdvisorPanel.tsx`)
+- Increased z-index to `z-[100]` to ensure panel is always on top
+- Used inline `style={{ pointerEvents: 'none' }}` on outer container for reliable pointer-events handling
+- Used inline `style={{ pointerEvents: 'auto' }}` on inner container to re-enable clicks
+- Added explicit `style={{ pointerEvents: 'auto' }}` to all buttons as failsafe
+
+#### 2. Improved Button Feedback
+- Changed hover states from `hover:bg-cyan-500/20` to `hover:bg-cyan-500/30 active:bg-cyan-500/50`
+- Added `border border-transparent hover:border-cyan-500/50` for visible hover effect
+- Added `e.stopPropagation()` to all button click handlers
+- Added console.log debugging to verify clicks are registering
+
+#### 3. Made Advisors Clickable (`src/components/advisors/AdvisorAvatar.tsx`)
+- Added optional `onClick?: (role: AdvisorRole) => void` prop to AdvisorAvatar
+- Added visual feedback: `cursor-pointer hover:scale-110 hover:shadow-lg active:scale-95`
+- Added accessibility: `role="button"`, `tabIndex`, keyboard support (Enter/Space)
+- Updated title attribute: "Click to consult"
+
+#### 4. Added Advisor Consultation System
+- Added `ADVISOR_CONSULTED` to `GameEventType` union in `src/types/advisor.types.ts`
+- Made `turn` field optional in `GameEvent` interface (not all events occur during turns)
+- Added `priority` field to `GameEvent` interface for event priority override
+- Created `handleConsultAdvisor` function in AdvisorPanel that triggers consultation events
+
+#### 5. Added Consultation Dialogue Templates (`src/data/dialogueTemplates.data.ts`)
+- Added 4 unique dialogue templates for each advisor role (24 total):
+  - Military: Tactical briefings, readiness reports
+  - Science: Research updates, environmental warnings
+  - Diplomatic: Alliance status, negotiation opportunities
+  - Intel: Intelligence summaries, security concerns
+  - Economic: Economic assessments, resource reports
+  - PR: Media briefings, public opinion updates
+
+#### 6. Updated Trigger System (`src/lib/advisorTriggers.ts`)
+- Added special handling for `ADVISOR_CONSULTED` events
+- When advisor is consulted, only that specific advisor responds (not all advisors)
+- Added console logging for debugging consultation flow
+
+### Files Changed
+- **Modified:** `src/components/advisors/AdvisorPanel.tsx` (z-index, pointer-events, consultation handler)
+- **Modified:** `src/components/advisors/AdvisorAvatar.tsx` (onClick support, visual feedback)
+- **Modified:** `src/types/advisor.types.ts` (added ADVISOR_CONSULTED event type)
+- **Modified:** `src/data/dialogueTemplates.data.ts` (24 new consultation dialogue templates)
+- **Modified:** `src/lib/advisorTriggers.ts` (ADVISOR_CONSULTED handling)
+- **Modified:** `log.md` (this entry)
+
+### Testing
+- Build completes successfully
+- Buttons have enhanced hover/active states
+- Advisor avatars now show consultation instructions
+- Console logs confirm click events are firing
+
+### User Experience Improvements
+- Panel shows "Click an advisor to consult" instruction
+- Clicking an advisor triggers their consultation dialogue
+- Visual feedback shows which advisor is being consulted
+- 3-second highlight on consulted advisor
+
+---
+
 ## 2026-01-27 - Fix Advisory Panel Button Interactivity
 
 **Timestamp:** 2026-01-27T17:30:00Z

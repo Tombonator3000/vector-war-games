@@ -361,6 +361,76 @@ export const DIALOGUE_TEMPLATES: DialogueTemplate[] = [
       "Daily intelligence brief complete. No immediate threats detected.",
     ],
   },
+
+  // ========================================
+  // ADVISOR CONSULTATION (when player clicks an advisor)
+  // ========================================
+  {
+    eventType: 'ADVISOR_CONSULTED',
+    advisorRole: 'military',
+    priority: 'important',
+    templates: [
+      "General Stone reporting in. Our forces stand ready, Mr. President. What are your orders?",
+      "Military assessment: We maintain tactical superiority, but the enemy is mobilizing. Strike now while we have the advantage.",
+      "Sir, our nuclear deterrent is fully operational. Say the word and we can end this.",
+      "The enemy shows weakness. This is the time for decisive action, not diplomacy.",
+    ],
+  },
+  {
+    eventType: 'ADVISOR_CONSULTED',
+    advisorRole: 'science',
+    priority: 'important',
+    templates: [
+      "Dr. Vance here. Our research teams are making progress, but I urge caution with our... more destructive technologies.",
+      "The environmental models are concerning, Mr. President. Any major conflict will have catastrophic consequences.",
+      "Scientific briefing: Our satellite network is operational. I recommend we focus on intelligence over firepower.",
+      "Every nuclear detonation brings us closer to extinction. Please consider the long-term implications of your decisions.",
+    ],
+  },
+  {
+    eventType: 'ADVISOR_CONSULTED',
+    advisorRole: 'diplomatic',
+    priority: 'important',
+    templates: [
+      "Ambassador Wei reporting. The world is watching, Mr. President. Our allies are nervous.",
+      "There are always alternatives to war. Let me explore diplomatic channels before we commit to military action.",
+      "Diplomatic briefing: Several nations are open to negotiation. We should pursue peace while we can.",
+      "The legacy of your presidency will be defined by how we resolve this crisis. Choose wisely.",
+    ],
+  },
+  {
+    eventType: 'ADVISOR_CONSULTED',
+    advisorRole: 'intel',
+    priority: 'important',
+    templates: [
+      "Director Garrett here. Trust no one, Mr. President. Even our allies have secrets.",
+      "Intelligence suggests the enemy is planning something. Our sources are... investigating.",
+      "Classified briefing: I have information that changes everything. We need to speak privately.",
+      "Our spy networks are operational. I'll know their plans before they execute them.",
+    ],
+  },
+  {
+    eventType: 'ADVISOR_CONSULTED',
+    advisorRole: 'economic',
+    priority: 'important',
+    templates: [
+      "Secretary Hayes reporting. The economy is stable, but war would change everything.",
+      "Economic assessment: We have the resources for a sustained conflict, but at great cost.",
+      "Trade routes remain open. Sanctions could be more effective than missiles, Mr. President.",
+      "Budget briefing: Military spending is consuming our reserves. We need to prioritize.",
+    ],
+  },
+  {
+    eventType: 'ADVISOR_CONSULTED',
+    advisorRole: 'pr',
+    priority: 'important',
+    templates: [
+      "Press Secretary Morgan here. The media is demanding answers. What should I tell them?",
+      "Public opinion is volatile, sir. Every decision you make will be scrutinized.",
+      "Media briefing: Your approval ratings are holding steady, but one wrong move could change that.",
+      "The people need reassurance, Mr. President. Consider making a public address.",
+    ],
+  },
 ];
 
 /**

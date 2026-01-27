@@ -91,7 +91,8 @@ export type GameEventType =
   | 'diplomatic_incident'
   | 'spy_discovered'
   | 'turn_start'
-  | 'turn_end';
+  | 'turn_end'
+  | 'ADVISOR_CONSULTED';
 
 /**
  * Game event data passed to trigger system
@@ -100,7 +101,8 @@ export interface GameEvent {
   type: GameEventType;
   data: Record<string, any>;
   timestamp: number;
-  turn: number;
+  turn?: number;              // Optional - not all events happen during turns
+  priority?: CommentPriority; // Optional priority override
 }
 
 /**
