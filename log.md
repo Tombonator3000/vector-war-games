@@ -15903,3 +15903,70 @@ Deep audit revealed multiple issues in the AI Advisor System that could cause th
 - Test in various environments where browser APIs may be unavailable
 
 ---
+
+
+## 2026-01-27T10:00:00Z - Fix Advisor Button Click - Display Comment Text
+
+### Session Context
+- **Branch:** `claude/fix-advisor-button-26uux`
+- **Task:** Fix advisor buttons not displaying text when clicked
+
+### Problem
+When clicking on an advisor in the Advisory Panel, the button blinks but nothing visible happens to the user. The question was: what should happen - voice, text popup, or something else?
+
+### Root Cause Analysis
+Investigation revealed the advisor consultation system was mostly working, but had two issues:
+
+1. **Comment text not displayed** (`src/components/advisors/AdvisorPanel.tsx`)
+   - UI showed hardcoded text "Currently speaking..." instead of actual advisor comment
+   - The `currentlyPlaying` state (of type `AdvisorAudio`) did not include the text field
+
+2. **Text disappeared instantly without TTS** (`src/lib/advisorVoice.ts`)
+   - When TTS server wasn't running, `playAudio()` returned immediately for empty audio buffers
+   - This caused `currentlyPlaying` to be set and unset almost instantly
+   - Users saw nothing because the text display was too brief
+
+### Solution Applied
+
+#### 1. Added text field to AdvisorAudio interface (advisor.types.ts)
+- Added `text: string` field to `AdvisorAudio` interface
+- This allows the UI to display the comment text from the audio object
+
+#### 2. Updated advisorVoice.ts to include text
+- All `AdvisorAudio` return objects now include `text: comment.text`
+- Updated `generateSpeech()` (both cache hit and generation paths)
+- Updated `createSilentAudio()` to include text
+
+#### 3. Fixed AdvisorPanel.tsx to display actual text
+- Changed from hardcoded "Currently speaking..." to `{currentlyPlaying.text}`
+- Comment text now displays in the speech bubble
+
+#### 4. Added text-only fallback mode (advisorVoice.ts)
+- When TTS is unavailable (empty audio buffer), now waits to display text
+- Display time calculated based on text length (50ms per character, min 3 seconds)
+- This ensures users see the advisor's response even without voice
+
+### Files Modified
+1. `src/types/advisor.types.ts` - Added `text` field to `AdvisorAudio` interface
+2. `src/lib/advisorVoice.ts` - Include text in all audio objects, add text-only display mode
+3. `src/components/advisors/AdvisorPanel.tsx` - Display actual comment text
+
+### Expected Behavior After Fix
+When user clicks an advisor:
+1. Advisor avatar highlights (consulting state)
+2. If TTS available: Voice plays with text displayed
+3. If TTS unavailable: Text displays for calculated duration (3+ seconds)
+4. Text shows the advisor's actual dialogue from templates
+
+### Testing
+- Click any advisor in the Advisory Panel
+- Should see advisor-specific text in the speech bubble
+- Text should remain visible for several seconds
+- Console shows: `[AdvisorSystem] Processing event: ADVISOR_CONSULTED`
+
+### Notes
+- TTS requires running `npm run tts:dev` in a separate terminal
+- Without TTS server, system falls back to text-only mode (still functional)
+- Dialogue templates exist for all 6 advisors in `src/data/dialogueTemplates.data.ts`
+
+---

@@ -253,8 +253,7 @@ export function AdvisorPanel({
 
                     <div className="bg-black/40 border border-cyan-500/20 rounded p-3 relative">
                       <p className="text-white/90 text-sm leading-relaxed">
-                        "{/* Text would come from TTS or stored comment */}
-                        Currently speaking..."
+                        "{currentlyPlaying.text}"
                       </p>
 
                       {/* Speaking indicator wave */}

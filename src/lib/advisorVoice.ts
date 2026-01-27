@@ -129,6 +129,7 @@ export class AdvisorVoiceSystem {
         audioBuffer: cached.buffer,
         duration: await this.getAudioDuration(cached.buffer),
         priority: comment.priority,
+        text: comment.text,
       };
     }
 
@@ -159,6 +160,7 @@ export class AdvisorVoiceSystem {
         audioBuffer,
         duration,
         priority: comment.priority,
+        text: comment.text,
       };
     } catch (error) {
       console.error('[AdvisorVoice] TTS generation failed:', error);
@@ -343,6 +345,7 @@ export class AdvisorVoiceSystem {
       audioBuffer: arrayBuffer,
       duration: 1000,
       priority: comment.priority,
+      text: comment.text,
     };
   }
 
@@ -354,9 +357,14 @@ export class AdvisorVoiceSystem {
       this.stop();
     }
 
-    // Skip playback if audio buffer is empty (fallback/silent audio)
+    // For empty audio buffer (fallback/silent audio), wait for duration to display text
     if (!advisorAudio.audioBuffer || advisorAudio.audioBuffer.byteLength === 0) {
-      console.log('[AdvisorVoice] Skipping playback for empty audio buffer');
+      console.log('[AdvisorVoice] Silent audio mode - displaying text for', advisorAudio.duration, 'ms');
+      this.isPlaying = true;
+      // Calculate display time based on text length (roughly 50ms per character, min 3 seconds)
+      const displayTime = Math.max(3000, advisorAudio.text.length * 50);
+      await new Promise((resolve) => setTimeout(resolve, displayTime));
+      this.isPlaying = false;
       return;
     }
 

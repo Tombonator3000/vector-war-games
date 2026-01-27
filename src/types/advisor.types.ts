@@ -138,6 +138,7 @@ export interface AdvisorAudio {
   audioBuffer: ArrayBuffer;
   duration: number;          // Duration in milliseconds
   priority: CommentPriority;
+  text: string;              // Original comment text for display
 }
 
 /**
