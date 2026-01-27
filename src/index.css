@@ -966,6 +966,9 @@ body {
   -webkit-touch-callout: none;
   touch-action: manipulation;
   overscroll-behavior: none;
+  /* Default dark background to prevent white flash during load or error */
+  background-color: #000408;
+  color: hsl(188 88% 80%);
 }
 
 /* Touch-friendly styles for mobile devices */
