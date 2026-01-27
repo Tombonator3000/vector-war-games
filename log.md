@@ -7,6 +7,60 @@
 
 ---
 
+## 2026-01-27 - Fix White Screen on Game Startup
+
+**Timestamp:** 2026-01-27T14:30:00Z
+
+### Problem
+Game showed white screen on startup instead of the intro screen. This was a follow-up issue after the previous "black screen" fix.
+
+### Root Cause Analysis
+1. **Missing default background color:** The body element only received a background color after theme CSS classes were applied via a `useEffect` hook in `Index.tsx`
+2. **Render failure timing:** If any error occurred during the initial render (before useEffect runs), the body would retain the browser's default white background
+3. **No global error handling:** Errors in React components could crash the app silently without informing the user
+
+### Solution Applied
+
+#### 1. Added Default Dark Background to Body (`src/index.css`)
+- Added `background-color: #000408` and `color: hsl(188 88% 80%)` to the base `body` selector
+- This ensures dark background is always present, regardless of when theme classes are applied
+- Prevents white flash during initial load or error states
+
+#### 2. Added Global ErrorBoundary (`src/App.tsx`)
+- Created `GlobalErrorBoundary` class component to catch rendering errors
+- Wraps entire app to catch any unhandled exceptions
+- Displays user-friendly "SYSTEM MALFUNCTION" error page with:
+  - Error message details
+  - "RESTART SYSTEM" button to reload the page
+  - Dark themed error UI matching the game's aesthetic
+
+#### 3. Updated PageLoader Component
+- Changed from `bg-deep-space` class to explicit `bg-[#000408]`
+- Ensures loading state also has correct dark background
+- Updated text styling to use Tailwind cyan colors
+
+### Files Changed
+- **Modified:** `src/index.css` (added default background-color to body)
+- **Modified:** `src/App.tsx` (added GlobalErrorBoundary, updated PageLoader)
+- **Modified:** `log.md` (this entry)
+
+### Technical Details
+The theme class is applied in `Index.tsx` at line ~9648:
+```javascript
+useEffect(() => {
+  document.body.classList.add(`theme-${theme}`);
+}, [theme]);
+```
+
+This only runs after the component mounts. If mounting fails, the class is never applied.
+
+### Testing
+- Build completes successfully
+- Page displays dark background immediately on load
+- Errors are caught and displayed with themed error UI
+
+---
+
 ## 2026-01-27 - Edge-TTS Integration for Advisor Voices (Development)
 
 **Timestamp:** 2026-01-27T09:30:00Z
