@@ -35,10 +35,32 @@ export function AdvisorPanel({
     toggleVoice,
     setVolume,
     queueSize,
+    processGameEvent,
   } = useAdvisorSystem();
 
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [showSettings, setShowSettings] = useState(false);
+  const [consultingAdvisor, setConsultingAdvisor] = useState<AdvisorRole | null>(null);
+
+  // Handle clicking on an advisor to consult them
+  const handleConsultAdvisor = (role: AdvisorRole) => {
+    console.log('[AdvisorPanel] Consulting advisor:', role);
+    setConsultingAdvisor(role);
+
+    // Trigger an advisor consultation event
+    processGameEvent({
+      type: 'ADVISOR_CONSULTED',
+      priority: 'important',
+      timestamp: Date.now(),
+      data: {
+        advisorRole: role,
+        requestType: 'general_briefing',
+      },
+    });
+
+    // Clear consultation state after a moment
+    setTimeout(() => setConsultingAdvisor(null), 3000);
+  };
 
   // Get currently speaking advisor
   const speakingAdvisor = currentlyPlaying
@@ -66,12 +88,16 @@ export function AdvisorPanel({
   return (
     <div
       className={cn(
-        'fixed z-[60] pointer-events-none',
+        'fixed z-[100]',
         positionStyles[position],
         className
       )}
+      style={{ pointerEvents: 'none' }}
     >
-      <div className="pointer-events-auto relative">
+      <div
+        className="relative"
+        style={{ pointerEvents: 'auto' }}
+      >
         {/* Collapsed header */}
         {collapsed && (
           <div className="bg-black/80 backdrop-blur-sm border border-cyan-500/30 rounded-lg p-2 flex items-center justify-between">
@@ -87,8 +113,13 @@ export function AdvisorPanel({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCollapsed(false)}
-              className="h-6 w-6 p-0 hover:bg-cyan-500/20 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('[AdvisorPanel] Expand button clicked');
+                setCollapsed(false);
+              }}
+              className="h-6 w-6 p-0 hover:bg-cyan-500/30 active:bg-cyan-500/50 cursor-pointer"
+              style={{ pointerEvents: 'auto' }}
             >
               <ChevronUp className="w-4 h-4" />
             </Button>
@@ -120,8 +151,13 @@ export function AdvisorPanel({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={toggleVoice}
-                  className="h-8 w-8 p-0 hover:bg-cyan-500/20 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('[AdvisorPanel] Toggle voice clicked, current:', voiceEnabled);
+                    toggleVoice();
+                  }}
+                  className="h-8 w-8 p-0 hover:bg-cyan-500/30 active:bg-cyan-500/50 cursor-pointer border border-transparent hover:border-cyan-500/50"
+                  style={{ pointerEvents: 'auto' }}
                   title={voiceEnabled ? 'Mute advisors' : 'Unmute advisors'}
                 >
                   {voiceEnabled ? (
@@ -134,8 +170,13 @@ export function AdvisorPanel({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowSettings(!showSettings)}
-                  className="h-8 w-8 p-0 hover:bg-cyan-500/20 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('[AdvisorPanel] Settings button clicked');
+                    setShowSettings(!showSettings);
+                  }}
+                  className="h-8 w-8 p-0 hover:bg-cyan-500/30 active:bg-cyan-500/50 cursor-pointer border border-transparent hover:border-cyan-500/50"
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <Settings className="w-4 h-4" />
                 </Button>
@@ -143,8 +184,13 @@ export function AdvisorPanel({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setCollapsed(true)}
-                  className="h-8 w-8 p-0 hover:bg-cyan-500/20 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('[AdvisorPanel] Collapse button clicked');
+                    setCollapsed(true);
+                  }}
+                  className="h-8 w-8 p-0 hover:bg-cyan-500/30 active:bg-cyan-500/50 cursor-pointer border border-transparent hover:border-cyan-500/50"
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <ChevronDown className="w-4 h-4" />
                 </Button>
@@ -230,17 +276,22 @@ export function AdvisorPanel({
               </div>
             )}
 
-            {/* All advisors */}
+            {/* All advisors - click to consult */}
             <div className="p-4">
+              <p className="text-white/50 text-xs text-center mb-3">Click an advisor to consult</p>
               <div className="flex flex-wrap gap-4 justify-center">
                 {(Object.keys(advisors) as AdvisorRole[]).map((role) => (
                   <AdvisorAvatar
                     key={role}
                     role={role}
-                    state={advisors[role]}
+                    state={{
+                      ...advisors[role],
+                      isActive: advisors[role].isActive || consultingAdvisor === role,
+                    }}
                     size="sm"
                     showTrust
                     showName
+                    onClick={handleConsultAdvisor}
                   />
                 ))}
               </div>

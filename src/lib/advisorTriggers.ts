@@ -75,6 +75,18 @@ export class AdvisorTriggerSystem {
   processEvent(event: GameEvent, gameState: any): AdvisorComment[] {
     const comments: AdvisorComment[] = [];
 
+    // Special handling for ADVISOR_CONSULTED - only trigger the specific advisor
+    if (event.type === 'ADVISOR_CONSULTED' && event.data.advisorRole) {
+      const targetAdvisor = event.data.advisorRole as AdvisorRole;
+      console.log('[AdvisorTriggers] Processing consultation for:', targetAdvisor);
+
+      const comment = this.generateComment(targetAdvisor, event, gameState);
+      if (comment) {
+        comments.push(comment);
+      }
+      return comments;
+    }
+
     // Get all advisors that react to this event type
     const reactingAdvisors = getAdvisorsForEvent(event.type);
 

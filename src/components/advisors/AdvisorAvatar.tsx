@@ -17,6 +17,7 @@ interface AdvisorAvatarProps {
   size?: 'sm' | 'md' | 'lg';
   showTrust?: boolean;
   showName?: boolean;
+  onClick?: (role: AdvisorRole) => void;
   className?: string;
 }
 
@@ -105,12 +106,20 @@ export function AdvisorAvatar({
   size = 'md',
   showTrust = false,
   showName = false,
+  onClick,
   className,
 }: AdvisorAvatarProps) {
   const config = ADVISOR_CONFIGS[role];
   const Icon = ADVISOR_ICONS[role];
   const colors = ADVISOR_COLORS[role];
   const sizeConfig = SIZE_CONFIG[size];
+
+  const handleClick = () => {
+    if (onClick) {
+      console.log('[AdvisorAvatar] Clicked advisor:', role);
+      onClick(role);
+    }
+  };
 
   return (
     <div className={cn('flex flex-col items-center gap-2', className)}>
@@ -121,9 +130,14 @@ export function AdvisorAvatar({
           sizeConfig.container,
           colors.bg,
           state.isActive ? colors.active : colors.border,
-          state.isActive && 'shadow-lg animate-pulse'
+          state.isActive && 'shadow-lg animate-pulse',
+          onClick && 'cursor-pointer hover:scale-110 hover:shadow-lg active:scale-95'
         )}
-        title={`${config.name} (Trust: ${state.trustLevel}%)`}
+        title={`${config.name} (Trust: ${state.trustLevel}%) - Click to consult`}
+        onClick={handleClick}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); } : undefined}
       >
         <Icon className={cn(sizeConfig.icon, 'text-white/90')} />
 
