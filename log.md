@@ -7,6 +7,36 @@
 
 ---
 
+## 2026-01-27 - Move Advisor Panel to Non-Blocking Position
+
+**Timestamp:** 2026-01-27T15:00:00Z
+
+### Problem
+The AI Advisor Panel was positioned at the bottom-center of the screen, overlapping with the game's hotbar buttons and blocking user interaction with important UI elements.
+
+### Solution Applied
+
+#### 1. Extended Position Options (`src/components/advisors/AdvisorPanel.tsx`)
+- Added two new position options: `'bottom-left'` and `'bottom-right'`
+- New positions use `bottom-4` and `left-4`/`right-4` for padding from edges
+- Constrained width with `max-w-md` for compact display
+
+#### 2. Updated Panel Position (`src/pages/Index.tsx`)
+- Changed AdvisorPanel from `position="bottom"` to `position="bottom-right"`
+- Added `defaultCollapsed={true}` to minimize screen real estate usage
+- Panel now sits in bottom-right corner, away from the central hotbar
+
+### Files Changed
+- **Modified:** `src/components/advisors/AdvisorPanel.tsx` (added bottom-left/bottom-right positions)
+- **Modified:** `src/pages/Index.tsx` (changed position to bottom-right)
+- **Modified:** `log.md` (this entry)
+
+### Testing
+- Build completes successfully
+- Panel no longer overlaps with hotbar buttons
+
+---
+
 ## 2026-01-27 - Fix White Screen on Game Startup
 
 **Timestamp:** 2026-01-27T14:30:00Z
