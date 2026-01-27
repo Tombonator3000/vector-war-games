@@ -60,7 +60,27 @@ export function getBuildContextExtracted(
   actionLabel: string,
   deps: BuildHandlerDependencies
 ): Nation | null {
+  // Defensive check: ensure deps object is defined
+  if (!deps) {
+    console.error('[Build Handler] Dependencies object is undefined');
+    toast({
+      title: 'System error',
+      description: 'Build system not initialized. Please refresh the page.'
+    });
+    return null;
+  }
+
   const { S, isGameStarted } = deps;
+
+  // Defensive check: ensure game state is available
+  if (!S) {
+    console.error('[Build Handler] Game state (S) is undefined');
+    toast({
+      title: 'System error',
+      description: 'Game state not available. Please refresh the page.'
+    });
+    return null;
+  }
 
   if (!isGameStarted) {
     toast({ title: 'Simulation inactive', description: 'Start the scenario before issuing build orders.' });

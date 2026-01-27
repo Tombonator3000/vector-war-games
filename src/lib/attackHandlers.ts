@@ -37,6 +37,16 @@ export interface AttackHandlerDependencies {
  * Handles nuclear strike initiation and validates launch conditions
  */
 export function handleAttackExtracted(deps: AttackHandlerDependencies): void {
+  // Defensive check: ensure deps object is defined
+  if (!deps) {
+    console.error('[Attack Handler] Dependencies object is undefined - cannot process attack');
+    toast({
+      title: 'System error',
+      description: 'Attack system not initialized. Please refresh the page.'
+    });
+    return;
+  }
+
   const {
     S,
     nations,
@@ -52,7 +62,28 @@ export function handleAttackExtracted(deps: AttackHandlerDependencies): void {
     hasActivePeaceTreaty,
   } = deps;
 
-  AudioSys.playSFX('click');
+  // Defensive check: ensure critical dependencies are available
+  if (!S) {
+    console.error('[Attack Handler] Game state (S) is undefined');
+    toast({
+      title: 'System error',
+      description: 'Game state not available. Please refresh the page.'
+    });
+    return;
+  }
+
+  if (typeof setIsStrikePlannerOpen !== 'function') {
+    console.error('[Attack Handler] setIsStrikePlannerOpen is not a function');
+    toast({
+      title: 'System error',
+      description: 'Strike planner not initialized. Please refresh the page.'
+    });
+    return;
+  }
+
+  // Play click sound if audio system is available
+  AudioSys?.playSFX?.('click');
+
   setIsStrikePlannerOpen(prev => {
     if (!prev) {
       return true;
