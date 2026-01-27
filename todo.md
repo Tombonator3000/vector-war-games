@@ -5,41 +5,59 @@
 
 ---
 
-## Current Session: Skills Integration Evaluation
+## Current Session: Edge-TTS Integration
 
 ### Completed
 - [x] Research clawdbot/skills repository (352 skills available)
 - [x] Identify relevant skills for Vector War Games
 - [x] Document findings in log.md
+- [x] **Implement Edge-TTS for advisor voices (FREE development TTS)**
+  - Created `server/tts-dev-server.js`
+  - Created `src/config/tts.config.ts`
+  - Updated `src/lib/advisorVoice.ts` for multi-provider support
+  - Added `npm run tts:dev` script
 
-### Pending Evaluation Tasks
-- [ ] Test `edge-tts` for advisor voice prototyping (FREE, no API key needed)
+### Pending Tasks
 - [ ] Evaluate `elevenlabs-agents` skill for production advisor deployment
 - [ ] Consider `swarm` skill for parallel game calculations
-- [ ] Assess integration complexity vs. benefit
+- [ ] Test advisor voices in-game with Edge-TTS
 
 ---
 
-## Relevant Skills Summary
+## Quick Start: Advisor Voice Development
 
-| Skill | Purpose | Priority | Notes |
-|-------|---------|----------|-------|
-| `i3130002/edge-tts` | Free TTS | High | No API key, 40+ voices |
-| `pennyroyaltea/elevenlabs-agents` | ElevenLabs integration | High | Matches agents.md spec |
-| `chair4ce/swarm` | Parallel execution | Medium | 3.8-18x speedup |
-| `amstko/tts` | Hume/OpenAI TTS | Low | Requires API keys |
+```bash
+# Terminal 1: Start TTS server (FREE, no API key needed)
+npm run tts:dev
+
+# Terminal 2: Start game
+npm run dev
+```
+
+---
+
+## Voice Mapping Summary
+
+| Advisor | Edge-TTS Voice | Character |
+|---------|----------------|-----------|
+| Military (Gen. Stone) | en-US-GuyNeural | Deep, authoritative |
+| Science (Dr. Vance) | en-US-JennyNeural | Calm, analytical |
+| Diplomatic (Amb. Wei) | en-GB-SoniaNeural | Measured, British |
+| Intel (Dir. Garrett) | en-US-DavisNeural | Cryptic |
+| Economic (Sec. Hayes) | en-US-TonyNeural | Practical |
+| PR (Press Sec. Morgan) | en-US-AriaNeural | Urgent, expressive |
 
 ---
 
 ## Backlog (From agents.md)
-- [ ] AI Advisor System implementation
-- [ ] ElevenLabs voice integration for 6 advisors
 - [ ] Dynamic dialogue generation
 - [ ] Advisor trust/credibility system
 - [ ] Priority interruption system for advisors
+- [ ] Production ElevenLabs backend setup
 
 ---
 
 ## Notes
 - See `log.md` for detailed session logs
 - See `agents.md` for development guidelines and AI Advisor specifications
+- Edge-TTS requires internet to `speech.platform.bing.com`

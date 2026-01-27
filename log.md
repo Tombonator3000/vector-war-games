@@ -7,6 +7,80 @@
 
 ---
 
+## 2026-01-27 - Edge-TTS Integration for Advisor Voices (Development)
+
+**Timestamp:** 2026-01-27T09:30:00Z
+
+### Purpose
+Implemented Edge-TTS as a FREE text-to-speech solution for advisor voices during development, eliminating ElevenLabs API costs while prototyping.
+
+### Implementation Details
+
+#### 1. TTS Dev Server (`server/tts-dev-server.js`)
+- Express server running on port 3001
+- Uses Microsoft Edge's neural TTS service (FREE, no API key)
+- Maps ElevenLabs voiceIds to Edge-TTS voices automatically
+- Includes fallback to mock audio when network unavailable
+- Endpoints:
+  - `POST /api/tts` - Generate speech
+  - `GET /api/tts/health` - Health check
+  - `GET /api/tts/voices` - List voice mapping
+
+#### 2. Voice Mapping (ElevenLabs → Edge-TTS)
+
+| Advisor | ElevenLabs Voice | Edge-TTS Voice | Character |
+|---------|------------------|----------------|-----------|
+| Military | Roger (CwhR...) | en-US-GuyNeural | Deep, authoritative male |
+| Science | Sarah (EXAV...) | en-US-JennyNeural | Calm, analytical female |
+| Diplomatic | Charlotte (XB0f...) | en-GB-SoniaNeural | Measured British female |
+| Intel | Daniel (onwK...) | en-US-DavisNeural | Cryptic male |
+| Economic | Bill (pqHf...) | en-US-TonyNeural | Practical male |
+| PR | Jessica (cgSg...) | en-US-AriaNeural | Urgent, expressive female |
+
+#### 3. TTS Configuration (`src/config/tts.config.ts`)
+- Auto-detects environment (dev/prod)
+- Development without ElevenLabs key → Edge-TTS
+- Production with ElevenLabs key → ElevenLabs
+- Configurable via environment variables
+
+#### 4. Updated AdvisorVoiceSystem (`src/lib/advisorVoice.ts`)
+- Multi-provider support (Edge-TTS + ElevenLabs)
+- Automatic provider selection based on config
+- Graceful fallback on network errors
+- New methods: `resetTTSAvailability()`, `isTTSAvailable()`
+
+### Files Changed
+- **Created:** `server/tts-dev-server.js` (TTS dev server)
+- **Created:** `src/config/tts.config.ts` (TTS configuration)
+- **Modified:** `src/lib/advisorVoice.ts` (multi-provider support)
+- **Modified:** `package.json` (added `tts:dev` script)
+- **Modified:** `log.md` (this entry)
+- **Modified:** `todo.md` (task tracking)
+
+### Usage
+
+```bash
+# Start TTS dev server (terminal 1)
+npm run tts:dev
+
+# Start Vite dev server (terminal 2)
+npm run dev
+```
+
+### Environment Variables (Optional)
+```
+VITE_EDGE_TTS_ENDPOINT=http://localhost:3001/api/tts  # Default
+VITE_ELEVENLABS_API_KEY=your_key                      # For production
+TTS_MOCK=true                                          # Force mock mode
+```
+
+### Notes
+- Edge-TTS requires internet access to `speech.platform.bing.com`
+- Falls back to silent audio when network unavailable
+- For production, use ElevenLabs with backend proxy
+
+---
+
 ## 2026-01-27 - Research: clawdbot/skills Repository Evaluation
 
 **Timestamp:** 2026-01-27T10:00:00Z
