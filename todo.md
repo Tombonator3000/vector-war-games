@@ -1,11 +1,11 @@
 # Vector War Games - Task Tracking
 
-**Last Updated:** 2026-01-27
-**Current Branch:** `claude/evaluate-skills-integration-B94uN`
+**Last Updated:** 2026-01-28
+**Current Branch:** `claude/enable-advisor-tts-XNU7c`
 
 ---
 
-## Current Session: Edge-TTS Integration
+## Current Session: Enable Advisor TTS
 
 ### Completed
 - [x] Research clawdbot/skills repository (352 skills available)
@@ -16,11 +16,16 @@
   - Created `src/config/tts.config.ts`
   - Updated `src/lib/advisorVoice.ts` for multi-provider support
   - Added `npm run tts:dev` script
+- [x] **Add TTS status feedback to UI**
+  - Added TTS availability checking on mount
+  - Added warning banner when TTS server is unavailable
+  - Added retry mechanism for TTS connection
+  - Added status indicator in settings panel and footer
 
 ### Pending Tasks
 - [ ] Evaluate `elevenlabs-agents` skill for production advisor deployment
 - [ ] Consider `swarm` skill for parallel game calculations
-- [ ] Test advisor voices in-game with Edge-TTS
+- [ ] Test advisor voices in-game with Edge-TTS (requires running `npm run tts:dev`)
 
 ---
 

@@ -21,6 +21,7 @@ import {
 import { advisorVoiceSystem } from '@/lib/advisorVoice';
 import { advisorQueue } from '@/lib/advisorQueue';
 import { advisorTriggerSystem } from '@/lib/advisorTriggers';
+import { checkTTSAvailability, getTTSConfig } from '@/config/tts.config';
 
 /**
  * Initialize advisor states
@@ -54,8 +55,38 @@ export function useAdvisorSystem() {
     voiceEnabled: true,
   });
 
+  const [ttsStatus, setTtsStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
+  const [ttsProvider, setTtsProvider] = useState<string>('unknown');
+
   const processingRef = useRef(false);
   const playbackIntervalRef = useRef<number | null>(null);
+
+  /**
+   * Check TTS availability on mount and periodically
+   */
+  const checkTTS = useCallback(async () => {
+    const config = getTTSConfig();
+    setTtsProvider(config.provider);
+
+    const available = await checkTTSAvailability();
+    setTtsStatus(available ? 'available' : 'unavailable');
+
+    if (available) {
+      advisorVoiceSystem.resetTTSAvailability();
+    }
+
+    console.log(`[AdvisorSystem] TTS status: ${available ? 'available' : 'unavailable'}, provider: ${config.provider}`);
+    return available;
+  }, []);
+
+  /**
+   * Retry TTS connection
+   */
+  const retryTTS = useCallback(async () => {
+    setTtsStatus('checking');
+    advisorVoiceSystem.resetTTSAvailability();
+    return checkTTS();
+  }, [checkTTS]);
 
   /**
    * Process game event and generate advisor comments
@@ -344,6 +375,11 @@ export function useAdvisorSystem() {
     return () => stopPlaybackLoop();
   }, [startPlaybackLoop, stopPlaybackLoop]);
 
+  // Check TTS availability on mount
+  useEffect(() => {
+    checkTTS();
+  }, [checkTTS]);
+
   return {
     // State
     advisors: systemState.advisors,
@@ -366,5 +402,10 @@ export function useAdvisorSystem() {
     // Queue info
     queueSize: systemState.commentQueue.length,
     audioQueueSize: systemState.audioQueue.length,
+
+    // TTS status
+    ttsStatus,
+    ttsProvider,
+    retryTTS,
   };
 }
