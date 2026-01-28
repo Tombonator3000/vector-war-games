@@ -7,6 +7,82 @@
 
 ---
 
+## 2026-01-28 - Enable Advisor TTS with Status Feedback
+
+**Timestamp:** 2026-01-28T12:00:00Z
+**Branch:** `claude/enable-advisor-tts-XNU7c`
+
+### Problem
+Advisor voices (TTS) were not playing when clicking on advisors in the NORAD Advisory Panel. The Edge-TTS development server integration was implemented but:
+1. No visual feedback indicated when TTS server was unavailable
+2. Users had no way to know they needed to start the TTS server
+3. No retry mechanism existed when TTS connection failed
+
+### Root Cause Analysis
+The Edge-TTS system requires a separate development server (`npm run tts:dev`) running on port 3001. When the server is not running:
+- The system falls back to "silent audio" mode
+- No error is shown to the user
+- Text is displayed but no audio plays
+- `advisorVoiceSystem.ttsAvailable` is set to `false` after first failed connection
+
+### Solution Applied
+
+#### 1. Added TTS Status Tracking (`src/hooks/useAdvisorSystem.ts`)
+- Added `ttsStatus` state: 'checking' | 'available' | 'unavailable'
+- Added `ttsProvider` state to show which TTS backend is being used
+- Added `checkTTS()` function that checks TTS endpoint availability on mount
+- Added `retryTTS()` function to manually retry TTS connection
+- Imported `checkTTSAvailability` and `getTTSConfig` from tts.config.ts
+
+#### 2. Added TTS Status UI (`src/components/advisors/AdvisorPanel.tsx`)
+- Added warning banner when TTS is unavailable with retry button
+- Shows command to start TTS server: `npm run tts:dev`
+- Added TTS status indicator in settings panel:
+  - Green "Online" when available
+  - Blue "Checking..." when testing connection
+  - Red "Offline" when unavailable
+- Shows current TTS provider (Edge-TTS or ElevenLabs)
+- Added retry button in settings for reconnection
+- Updated footer to show TTS status with colored indicator dot
+
+#### 3. Imported New Icons
+- Added `AlertTriangle`, `RefreshCw`, `Mic` icons from lucide-react
+
+### Files Changed
+- **Modified:** `src/hooks/useAdvisorSystem.ts` (TTS status tracking, retry mechanism)
+- **Modified:** `src/components/advisors/AdvisorPanel.tsx` (TTS status UI, warning banner)
+- **Modified:** `log.md` (this entry)
+
+### Testing
+- Build completes successfully
+- TTS status is now visible in the UI
+- Warning appears when TTS server is not running
+- Retry button allows reconnection after starting TTS server
+
+### How to Use TTS
+
+```bash
+# Terminal 1: Start TTS server (FREE, no API key needed)
+npm run tts:dev
+
+# Terminal 2: Start game
+npm run dev
+```
+
+The TTS server must be running for advisor voices to work. If you see a yellow warning in the Advisor Panel, start the TTS server and click "Retry".
+
+### Voice Mapping (Edge-TTS)
+| Advisor | Voice | Character |
+|---------|-------|-----------|
+| Military (Gen. Stone) | en-US-GuyNeural | Deep, authoritative |
+| Science (Dr. Vance) | en-US-JennyNeural | Calm, analytical |
+| Diplomatic (Amb. Wei) | en-GB-SoniaNeural | British, measured |
+| Intel (Dir. Garrett) | en-US-DavisNeural | Cryptic |
+| Economic (Sec. Hayes) | en-US-TonyNeural | Practical |
+| PR (Press Sec. Morgan) | en-US-AriaNeural | Urgent, expressive |
+
+---
+
 ## 2026-01-27 - Fix Attack Handler Crash (S is Undefined)
 
 **Timestamp:** 2026-01-27T21:30:00Z

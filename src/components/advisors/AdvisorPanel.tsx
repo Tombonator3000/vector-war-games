@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { Volume2, VolumeX, Settings, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Volume2, VolumeX, Settings, ChevronDown, ChevronUp, AlertTriangle, RefreshCw, Mic } from 'lucide-react';
 import { AdvisorRole } from '@/types/advisor.types';
 import { ADVISOR_CONFIGS } from '@/data/advisors.data';
 import { useAdvisorSystem } from '@/hooks/useAdvisorSystem';
@@ -36,6 +36,9 @@ export function AdvisorPanel({
     setVolume,
     queueSize,
     processGameEvent,
+    ttsStatus,
+    ttsProvider,
+    retryTTS,
   } = useAdvisorSystem();
 
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
@@ -197,10 +200,52 @@ export function AdvisorPanel({
               </div>
             </div>
 
+            {/* TTS Status Warning */}
+            {ttsStatus === 'unavailable' && (
+              <div className="p-3 border-b border-yellow-500/30 bg-yellow-900/20">
+                <div className="flex items-center gap-2 text-yellow-400 text-sm">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <span className="flex-1">
+                    TTS server ikke tilgjengelig. Start med: <code className="bg-black/40 px-1 rounded">npm run tts:dev</code>
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => retryTTS()}
+                    className="h-6 px-2 text-xs hover:bg-yellow-500/20"
+                    style={{ pointerEvents: 'auto' }}
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Settings panel */}
             {showSettings && (
               <div className="p-4 border-b border-cyan-500/30 bg-black/40">
                 <div className="space-y-3">
+                  {/* TTS Status */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-white/80 flex items-center gap-2">
+                      <Mic className="w-4 h-4" />
+                      TTS Status
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        'text-xs px-2 py-0.5 rounded',
+                        ttsStatus === 'available' ? 'bg-green-500/20 text-green-400' :
+                        ttsStatus === 'checking' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-red-500/20 text-red-400'
+                      )}>
+                        {ttsStatus === 'available' ? 'Online' :
+                         ttsStatus === 'checking' ? 'Checking...' : 'Offline'}
+                      </span>
+                      <span className="text-xs text-white/50">({ttsProvider})</span>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-sm text-white/80 mb-2 block">Volume</label>
                     <input
@@ -227,6 +272,21 @@ export function AdvisorPanel({
                       {voiceEnabled ? 'ON' : 'OFF'}
                     </Button>
                   </div>
+
+                  {/* Retry TTS button */}
+                  {ttsStatus === 'unavailable' && (
+                    <div className="pt-2 border-t border-cyan-500/20">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => retryTTS()}
+                        className="w-full text-xs"
+                      >
+                        <RefreshCw className="w-3 h-3 mr-2" />
+                        Retry TTS Connection
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -298,8 +358,19 @@ export function AdvisorPanel({
 
             {/* Footer */}
             <div className="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 p-2 text-center border-t border-cyan-500/30">
-              <p className="text-white/40 text-xs">
-                AI Advisor System v1.0 | ElevenLabs TTS Integration
+              <p className="text-white/40 text-xs flex items-center justify-center gap-2">
+                AI Advisor System v1.0 |
+                <span className={cn(
+                  'inline-flex items-center gap-1',
+                  ttsStatus === 'available' ? 'text-green-400/60' : 'text-yellow-400/60'
+                )}>
+                  <span className={cn(
+                    'w-1.5 h-1.5 rounded-full',
+                    ttsStatus === 'available' ? 'bg-green-400' :
+                    ttsStatus === 'checking' ? 'bg-blue-400 animate-pulse' : 'bg-yellow-400'
+                  )} />
+                  {ttsProvider === 'edge-tts' ? 'Edge-TTS (FREE)' : 'ElevenLabs'}
+                </span>
               </p>
             </div>
           </div>
