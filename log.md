@@ -7,6 +7,98 @@
 
 ---
 
+## 2026-01-31 - PWA Offline Support Implementation
+
+**Timestamp:** 2026-01-31T07:05:00Z
+**Branch:** `claude/offline-pwa-support-0IcxQ`
+
+### Task
+Implement Progressive Web App (PWA) support with offline capability and installability, allowing users to:
+1. Install the game as a standalone app on their device
+2. Play offline after initial asset download
+3. Get automatic updates when online
+
+### Solution Applied
+
+#### 1. Installed vite-plugin-pwa
+- Added `vite-plugin-pwa` as a dev dependency
+- Configured Workbox service worker for offline caching
+
+#### 2. Updated vite.config.ts
+- Imported and configured `VitePWA` plugin
+- Configured manifest with app metadata:
+  - Name: "Aegis Protocol - NORAD Vector"
+  - Theme: Dark (#0a0a0a)
+  - Display: Standalone, Landscape orientation
+  - Categories: games, entertainment, strategy
+- Configured Workbox caching strategies:
+  - **Precache**: JS, CSS, HTML, icons, fonts (~4.3MB)
+  - **Runtime CacheFirst**: Textures, leaders, music, SFX, geodata
+  - **Runtime NetworkFirst**: API calls
+- Set `maximumFileSizeToCacheInBytes: 10MB` for large game chunks
+- Excluded large media from precache (Muzak, sfx, textures) - uses runtime caching
+
+#### 3. Created PWA Icons
+- Created `scripts/generate-pwa-icons.mjs` for SVG icon generation
+- Created `scripts/convert-icons-to-png.mjs` for PNG conversion using Sharp
+- Generated icons in `public/pwa-icons/`:
+  - `icon-192x192.png` (standard)
+  - `icon-512x512.png` (standard)
+  - `icon-maskable-192x192.png` (maskable for Android adaptive icons)
+  - `icon-maskable-512x512.png` (maskable)
+  - `apple-touch-icon.png` (180x180 for iOS)
+- Icon design: NORAD radar theme with green sweep, blips, and AEGIS text
+
+#### 4. Updated index.html
+- Added PWA meta tags:
+  - `theme-color`: #0a0a0a
+  - `mobile-web-app-capable`: yes
+  - `apple-mobile-web-app-capable`: yes
+  - `apple-mobile-web-app-status-bar-style`: black-translucent
+- Added icon links for all platforms
+- Updated Open Graph and Twitter card meta tags
+
+### Files Changed
+- **Modified:** `vite.config.ts` (PWA plugin configuration)
+- **Modified:** `index.html` (PWA meta tags)
+- **Modified:** `package.json` (added vite-plugin-pwa, sharp deps)
+- **Created:** `public/pwa-icons/` (all icon files)
+- **Created:** `scripts/generate-pwa-icons.mjs`
+- **Created:** `scripts/convert-icons-to-png.mjs`
+
+### Build Output
+- `dist/manifest.webmanifest` - PWA manifest
+- `dist/sw.js` - Service worker (Workbox)
+- `dist/registerSW.js` - SW registration script
+- `dist/workbox-*.js` - Workbox runtime
+- Precached 108 entries (~4.3MB)
+
+### Caching Strategy Summary
+| Asset Type | Strategy | Cache Name | Max Age |
+|------------|----------|------------|---------|
+| Core app (JS/CSS/HTML) | Precache | workbox-precache | Versioned |
+| Textures | CacheFirst | textures-cache | 30 days |
+| Leaders | CacheFirst | leaders-cache | 30 days |
+| Music | CacheFirst | music-cache | 30 days |
+| SFX | CacheFirst | sfx-cache | 30 days |
+| Geodata | CacheFirst | geodata-cache | 30 days |
+| API calls | NetworkFirst | api-cache | 1 hour |
+| Other images | CacheFirst | images-cache | 30 days |
+
+### How to Install
+1. Open the game in a supported browser (Chrome, Edge, Safari)
+2. Look for the install prompt or click browser's "Install" option
+3. The app will be added to your home screen/desktop
+4. After first load, the game works offline
+
+### Testing
+- Build completes successfully with PWA output
+- Manifest validates correctly
+- Service worker registers on page load
+- Icons display correctly in manifest
+
+---
+
 ## 2026-01-28 - Enable Advisor TTS with Status Feedback
 
 **Timestamp:** 2026-01-28T12:00:00Z
