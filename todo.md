@@ -1,11 +1,37 @@
 # Vector War Games - Task Tracking
 
-**Last Updated:** 2026-01-28
-**Current Branch:** `claude/enable-advisor-tts-XNU7c`
+**Last Updated:** 2026-01-31
+**Current Branch:** `claude/offline-pwa-support-0IcxQ`
 
 ---
 
-## Current Session: Enable Advisor TTS
+## Current Session: PWA Offline Support
+
+### Completed
+- [x] **Install vite-plugin-pwa dependency**
+- [x] **Configure PWA manifest with app metadata**
+  - Name: "Aegis Protocol - NORAD Vector"
+  - Display: Standalone, Landscape
+  - Theme: Dark (#0a0a0a)
+- [x] **Configure Workbox service worker for offline caching**
+  - Precache: Core app assets (~4.3MB)
+  - Runtime cache: Textures, music, SFX, leaders
+- [x] **Create PWA icons for installability**
+  - Generated radar-themed icons (192x192, 512x512)
+  - Created maskable variants for Android
+  - Created Apple Touch icon for iOS
+- [x] **Update index.html with PWA meta tags**
+- [x] **Test build successfully**
+
+### How to Install the App
+1. Open the game in Chrome/Edge/Safari
+2. Look for install prompt or browser's "Install" option
+3. App added to home screen/desktop
+4. Works offline after first load
+
+---
+
+## Previous Session: Enable Advisor TTS
 
 ### Completed
 - [x] Research clawdbot/skills repository (352 skills available)
