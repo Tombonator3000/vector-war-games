@@ -529,6 +529,12 @@ describe('Index co-op toggle', () => {
     publishStateMock.mockClear();
     canExecuteMock.mockReturnValue(true);
     window.localStorage.clear();
+    // Provide minimal world map data so Index doesn't attempt network fetch
+    // Storage helper prefixes keys with 'norad_'
+    window.localStorage.setItem(
+      'norad_offlineTopo110m-v2',
+      JSON.stringify({ type: 'FeatureCollection', features: [] }),
+    );
     PlayerManager.reset();
     PlayerManager.setNations([] as any);
     toastMock.mockClear();
@@ -583,15 +589,29 @@ describe('Index co-op toggle', () => {
     fireEvent.click(await screen.findByRole('button', { name: /start game/i }));
     fireEvent.click(await screen.findByText('Fidel Castro'));
 
+    // Open the leader overview dialog via the dock button
+    const leaderDockButton = await screen.findByRole('button', { name: /leader/i });
+    fireEvent.click(leaderDockButton);
+
     const activateButton = await screen.findByRole('button', { name: /activate ability/i });
     expect((activateButton as HTMLButtonElement).disabled).toBe(false);
     await screen.findByText(/2\s*\/\s*2/);
 
     fireEvent.click(activateButton);
 
-    const dialog = await screen.findByRole('dialog');
-    const confirmButton = within(dialog).getByRole('button', { name: /^activate$/i });
+    const dialogs = await screen.findAllByRole('dialog');
+    const confirmDialog = dialogs.find(d => within(d).queryByRole('button', { name: /^activate$/i }));
+    expect(confirmDialog).toBeTruthy();
+    const confirmButton = within(confirmDialog!).getByRole('button', { name: /^activate$/i });
     fireEvent.click(confirmButton);
+
+    // Dialog closes after activation; re-open to verify state
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /activate ability/i })).toBeNull();
+    });
+
+    const reopenButton = await screen.findByRole('button', { name: /leader/i });
+    fireEvent.click(reopenButton);
 
     await screen.findByText(/1\s*\/\s*2/);
     await screen.findAllByText(/10 turns/i);
@@ -652,10 +672,12 @@ describe('Index co-op toggle', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('bio-warfare-lab')).toHaveAttribute('data-open', 'true');
+      const labs = screen.getAllByTestId('bio-warfare-lab');
+      const openLab = labs.find(el => el.getAttribute('data-open') === 'true');
+      expect(openLab).toBeTruthy();
     });
 
-    expect(screen.queryByTestId('simplified-bio-panel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('simplified-bio-panel')).toBeNull();
     expect(toastMock).toHaveBeenCalled();
     expect(PlayerManager.get()?.bioLab?.tier).toBe(3);
   });
@@ -675,6 +697,6 @@ describe('Index co-op toggle', () => {
       name: /global casualties 1,500,000/i,
     });
 
-    expect(casualtyBadge).toHaveTextContent(/casualties/i);
+    expect(casualtyBadge.textContent).toMatch(/casualties/i);
   });
 });

@@ -9,7 +9,12 @@ import type { MultiplayerActionType, MultiplayerSharedState } from '@/types/game
  * Set to false to disable all multiplayer features, popups, and connection attempts.
  * The code is preserved for future use - just set this to true to re-enable.
  */
-export const MULTIPLAYER_ENABLED = false;
+export let MULTIPLAYER_ENABLED = false;
+
+/** Override the multiplayer feature flag (for testing) */
+export function setMultiplayerEnabled(enabled: boolean): void {
+  MULTIPLAYER_ENABLED = enabled;
+}
 
 const ROLE_PERMISSIONS: Record<MultiplayerRole, Set<MultiplayerActionType>> = {
   STRATEGIST: new Set(['BUILD', 'RESEARCH', 'DIPLOMACY', 'PRODUCTION', 'BIOWARFARE']),

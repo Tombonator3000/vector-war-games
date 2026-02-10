@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { render, waitFor, act } from '@testing-library/react';
 import React, { useEffect } from 'react';
-import { MultiplayerProvider, useMultiplayer } from '@/contexts/MultiplayerProvider';
+import { MultiplayerProvider, useMultiplayer, setMultiplayerEnabled } from '@/contexts/MultiplayerProvider';
 import type { MultiplayerSharedState } from '@/types/game';
 
 vi.mock('@/integrations/supabase/client', () => {
@@ -150,6 +150,11 @@ describe('MultiplayerProvider', () => {
   beforeAll(async () => {
     const module = await import('@/integrations/multiplayer/service') as any;
     controls = module.__mockControls as MockControls;
+    setMultiplayerEnabled(true);
+  });
+
+  afterAll(() => {
+    setMultiplayerEnabled(false);
   });
 
   beforeEach(() => {

@@ -75,7 +75,7 @@ describe('evaluateCasualtyMilestones', () => {
       tracker,
       pandemicCasualtyTally: 6_500_000,
       plagueKillTotal: 0,
-      casualtyTotalsThisTurn: { alpha: 300_000 },
+      casualtyTotalsThisTurn: { alpha: 50_000 },
       nations: [{ id: 'alpha', name: 'Alpha' }],
       turn: 6,
       handlers: defaultHandlers,

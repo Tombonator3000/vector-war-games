@@ -126,7 +126,7 @@ export function generateNegotiationFeedback(
   // Negative (counter-offer territory)
   if (finalScore >= ACCEPTANCE_THRESHOLDS.COUNTER_OFFER) {
     const messages = [
-      'This doesn\'t quite work for me. Let me suggest some changes.',
+      'This doesn\'t work for me. Let me suggest some changes.',
       'Not enough. Here\'s what I need...',
       'I\'m afraid I need more than this.',
       'This is unbalanced. Let me propose adjustments.',

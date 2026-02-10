@@ -48,7 +48,7 @@ export function computeDiplomaticColor(score: number): string {
  */
 export function computeIntelColor(normalized: number): string {
   const clamped = MathUtils.clamp(normalized, 0, 1);
-  return INTEL_COLOR_START.clone().lerp(INTEL_COLOR_END, clamped).getStyle();
+  return `#${INTEL_COLOR_START.clone().lerp(INTEL_COLOR_END, clamped).getHexString()}`;
 }
 
 /**
@@ -61,7 +61,7 @@ export function computeIntelColor(normalized: number): string {
  */
 export function computeResourceColor(normalized: number): string {
   const clamped = MathUtils.clamp(normalized, 0, 1);
-  return RESOURCE_COLOR_START.clone().lerp(RESOURCE_COLOR_END, clamped).getStyle();
+  return `#${RESOURCE_COLOR_START.clone().lerp(RESOURCE_COLOR_END, clamped).getHexString()}`;
 }
 
 /**
@@ -96,11 +96,11 @@ export function computePandemicColor(normalized: number): string {
 
   if (clamped <= 0.5) {
     const t = clamped / 0.5;
-    return PANDEMIC_COLOR_START.clone().lerp(PANDEMIC_COLOR_MID, t).getStyle();
+    return `#${PANDEMIC_COLOR_START.clone().lerp(PANDEMIC_COLOR_MID, t).getHexString()}`;
   }
 
   const t = (clamped - 0.5) / 0.5;
-  return PANDEMIC_COLOR_MID.clone().lerp(PANDEMIC_COLOR_END, t).getStyle();
+  return `#${PANDEMIC_COLOR_MID.clone().lerp(PANDEMIC_COLOR_END, t).getHexString()}`;
 }
 
 /**
