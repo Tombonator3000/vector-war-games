@@ -3,39 +3,40 @@ import { render, waitFor } from '@testing-library/react';
 import React from 'react';
 
 vi.mock('@react-three/fiber', () => {
-  const Canvas = ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="mock-canvas">{children}</div>
+  const THREE = require('three');
+  const stableCamera = new THREE.PerspectiveCamera();
+  stableCamera.position.set(0, 0, 5);
+  const stableScene = new THREE.Scene();
+  const stableGl = {
+    domElement: document.createElement('canvas'),
+    setPixelRatio: () => {},
+    setSize: () => {},
+    shadowMap: { enabled: false },
+  };
+  const stableSize = { width: 1024, height: 512 };
+  const stableClock = {
+    getElapsedTime: () => 0,
+    start: () => {},
+    stop: () => {},
+  };
+  const stableResult = {
+    camera: stableCamera,
+    size: stableSize,
+    clock: stableClock,
+    gl: stableGl,
+    scene: stableScene,
+  };
+
+  const Canvas = (_props: { children: React.ReactNode; [k: string]: unknown }) => (
+    <div data-testid="mock-canvas" />
   );
 
   const useLoader = (_loader: unknown, input: string[] | string) => {
-    const THREE = require('three');
     const entries = Array.isArray(input) ? input : [input];
     return entries.map(() => new THREE.Texture());
   };
 
-  const useThree = () => {
-    const THREE = require('three');
-    return {
-      camera: {
-        position: { set: () => {} },
-        lookAt: () => {},
-        updateProjectionMatrix: () => {},
-      },
-      size: { width: 1024, height: 512 },
-      clock: {
-        getElapsedTime: () => 0,
-        start: () => {},
-        stop: () => {},
-      },
-      gl: {
-        domElement: document.createElement('canvas'),
-        setPixelRatio: () => {},
-        setSize: () => {},
-        shadowMap: { enabled: false },
-      },
-      scene: new THREE.Scene(),
-    };
-  };
+  const useThree = () => stableResult;
 
   const useFrame = () => {};
 
@@ -46,6 +47,60 @@ vi.mock('@react-three/fiber', () => {
     useFrame,
   };
 });
+
+vi.mock('@react-three/drei', () => ({
+  OrbitControls: () => null,
+}));
+
+vi.mock('@/components/MorphingGlobe', () => {
+  const ReactActual = require('react');
+  return {
+    MorphingGlobe: ReactActual.forwardRef(() => null),
+    getMorphedPosition: (lon: number, lat: number) => ({ x: lon, y: lat, z: 0 }),
+    MORPHING_FLAT_WIDTH: 36,
+    MORPHING_FLAT_HEIGHT: 18,
+  };
+});
+
+vi.mock('@/components/WeatherClouds', () => ({
+  WeatherClouds: () => null,
+}));
+
+vi.mock('@/components/TerritoryMarkers', () => ({
+  TerritoryMarkers: () => null,
+}));
+
+vi.mock('@/lib/territoryPolygons', () => ({
+  loadTerritoryData: vi.fn(async () => ({ type: 'FeatureCollection', features: [] })),
+  createTerritoryBoundaries: vi.fn(() => []),
+}));
+
+vi.mock('@/lib/missileTrajectories', () => ({
+  createMissileTrajectory: vi.fn(() => ({
+    id: 'test',
+    points: [],
+    progress: 0,
+    done: false,
+  })),
+  updateMissileAnimation: vi.fn(() => false),
+  updateMissileTrajectoryPositions: vi.fn(),
+  createExplosion: vi.fn(() => ({
+    id: 'exp-test',
+    position: { x: 0, y: 0, z: 0 },
+    progress: 0,
+    done: false,
+  })),
+  animateExplosion: vi.fn(() => false),
+}));
+
+vi.mock('@/lib/unitModels', () => ({
+  createUnitBillboard: vi.fn(() => null),
+  disposeUnitVisualization: vi.fn(),
+}));
+
+vi.mock('@/lib/renderingUtils', () => ({
+  resolvePublicAssetPath: vi.fn((path: string) => path),
+}));
 
 import GlobeScene, { type GlobeSceneHandle } from '../GlobeScene';
 

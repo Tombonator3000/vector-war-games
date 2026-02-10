@@ -239,6 +239,7 @@ describe('useGovernance', () => {
     nations[0].morale = 45;
     nations[0].publicOpinion = 40;
     nations[0].cabinetApproval = 55;
+    nations[0].production = 100; // High enough to avoid economic_depression after hazard_pay penalty
     nations[1].morale = 60;
 
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.2);

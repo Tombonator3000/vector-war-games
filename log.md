@@ -3,6 +3,76 @@
 **Project:** Comprehensive Tech Tree & Gameplay Audit Implementation
 **Date Started:** 2025-10-30
 **Branch:** `claude/audit-tech-tree-gaps-011CUd1JyjSuSrytpcJ3oWms`
+
+---
+
+## 2026-02-10 - Test Suite Bug Fixes & Code Quality Improvements
+
+**Timestamp:** 2026-02-10
+**Branch:** `claude/improve-game-code-X2kSm`
+
+### Task
+Fix all 17 failing tests across 7 test files, improve code quality, and verify build integrity.
+
+### Test Failures Fixed (17 tests across 7 files → 0 failures)
+
+#### 1. mapColorUtils.test.ts (7 tests fixed)
+**Problem:** `computeIntelColor`, `computeResourceColor`, `computePandemicColor` returned CSS `rgb()` format instead of hex.
+**Root cause:** Three.js `Color.getStyle()` returns `rgb(r, g, b)` CSS strings, but tests expect hex `#rrggbb`.
+**Fix:** Changed to `#${color.getHexString()}` in all three color functions.
+**Files changed:** `src/lib/mapColorUtils.ts`
+
+#### 2. evaluationFeedback.test.ts (1 test fixed)
+**Problem:** Counter-offer message "This doesn't quite work for me" didn't match test regex `/doesn't work/`.
+**Root cause:** The word "quite" between "doesn't" and "work" prevented regex match when randomly selected.
+**Fix:** Changed message to "This doesn't work for me."
+**Files changed:** `src/lib/evaluationFeedback.ts`
+
+#### 3. MultiplayerProvider.test.tsx (3 tests fixed)
+**Problem:** `MULTIPLAYER_ENABLED = false` prevented transport initialization; tests couldn't verify multiplayer behavior.
+**Root cause:** Hard-coded `const` couldn't be overridden in tests.
+**Fix:** Changed to `let` + added `setMultiplayerEnabled()` test helper. Tests enable flag in `beforeAll` and restore in `afterAll`.
+**Files changed:** `src/contexts/MultiplayerProvider.tsx`, `src/contexts/__tests__/MultiplayerProvider.test.tsx`
+
+#### 4. casualtyAlertEvaluator.test.ts (1 test fixed)
+**Problem:** "does not re-trigger same global threshold" test triggered nation spike alert on 2nd call.
+**Root cause:** 300K per-turn casualties exceeded 250K nation spike threshold, causing unexpected nation-level alert.
+**Fix:** Reduced second call's `casualtyTotalsThisTurn` from 300K to 50K (below 100K threshold).
+**Files changed:** `src/lib/pandemic/__tests__/casualtyAlertEvaluator.test.ts`
+
+#### 5. useGovernance.test.ts (1 test fixed)
+**Problem:** `economic_depression` event fired during morale_crisis cooldown period.
+**Root cause:** After resolving `hazard_pay` (production -6/-10), player production dropped below 40, triggering economic depression condition.
+**Fix:** Set player initial production to 100 (high enough to survive hazard_pay penalty).
+**Files changed:** `src/hooks/__tests__/useGovernance.test.ts`
+
+#### 6. GlobeScene.test.tsx (1 test fixed)
+**Problem:** R3F hooks crashed without Canvas context; component hung during render.
+**Root cause:** MorphingGlobe accessed shader uniforms; SceneContent caused infinite render loop with unstable `useThree` mocks.
+**Fix:** Added mocks for `@react-three/drei`, `MorphingGlobe`, `WeatherClouds`, `TerritoryMarkers`, `territoryPolygons`, `missileTrajectories`, `unitModels`, `renderingUtils`. Made Canvas not render children (SceneContent), used stable Three.js object references.
+**Files changed:** `src/components/__tests__/GlobeScene.test.tsx`
+
+#### 7. Index.test.tsx (3 tests fixed)
+**Problem 1:** "Failed to load world map data" - fetch failed in test environment.
+**Fix:** Pre-populated localStorage with `norad_offlineTopo110m-v2` containing minimal FeatureCollection.
+
+**Problem 2:** "activate ability" button not found after leader selection.
+**Fix:** Updated test to open leader overview dialog via dock button before finding ability button. Re-opens dialog after activation to verify state changes (dialog closes on use).
+
+**Problem 3:** `toHaveTextContent` / `toBeInTheDocument` - jest-dom matchers not available.
+**Fix:** Replaced with standard vitest assertions: `.textContent.toMatch()` and `.toBeNull()`. Used `getAllByTestId` for duplicate elements.
+
+**Files changed:** `src/pages/__tests__/Index.test.tsx`
+
+### Build Status
+- TypeScript: Clean (no type errors)
+- Build: Success (Index chunk 2.3MB - known issue from 16K line Index.tsx)
+- Tests: **61 files, 423 tests, all passing**
+
+### Code Quality Notes
+- Index.tsx at 16,080 lines remains the critical refactoring target
+- Build chunk size warning for Index (2.3MB) should be addressed with code splitting
+- `MULTIPLAYER_ENABLED` is now a mutable `let` with setter function for testability
 **Status:** IN PROGRESS
 
 ---
