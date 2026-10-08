@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import type { GameState } from '@/types/game';
 
-export type CommandActionId = 'build' | 'research' | 'intel' | 'diplomacy' | 'satcom' | 'culture' | 'policy' | 'war' | 'leader' | 'bio' | 'attack';
+export type CommandActionId = 'build' | 'research' | 'intel' | 'diplomacy' | 'satcom' | 'culture' | 'policy' | 'war' | 'leader' | 'bio' | 'attack' | 'empire';
 
 export interface CommandAction {
   id: CommandActionId;

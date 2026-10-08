@@ -1,4 +1,4 @@
-import { Factory, Microscope, Radar, Handshake, Radio, Users, Shield, Swords, UserRound, FlaskConical, Crosshair } from 'lucide-react';
+import { Factory, Microscope, Radar, Handshake, Radio, Users, Shield, Swords, UserRound, FlaskConical, Crosshair, BarChart3 } from 'lucide-react';
 import type { CommandActionDefinition, CommandActionId } from '@/types/command';
 
 export const PRIMARY_COMMANDS: readonly CommandActionId[] = ['build', 'research', 'intel', 'diplomacy'];
@@ -12,6 +12,7 @@ export const COMMAND_ACTIONS: readonly CommandActionDefinition[] = [
   { id: 'culture', label: 'Culture', description: 'Cultural influence and NGO operations', icon: Users, shortcut: '4' },
   { id: 'policy', label: 'Policy', description: 'National strategic policies', icon: Shield },
   { id: 'war', label: 'War', description: 'Conventional forces, declarations and peace', icon: Swords },
+  { id: 'empire', label: 'Empire', description: 'Nation status and strategic ledger', icon: BarChart3, shortcut: 'I' },
   { id: 'leader', label: 'Leader', description: 'Biography and leader abilities', icon: UserRound },
   { id: 'bio', label: 'Bioforge', description: 'Advanced biological operations', icon: FlaskConical },
   { id: 'attack', label: 'Strike', description: 'Open strike planner; launches require confirmation', icon: Crosshair, shortcut: '7' },

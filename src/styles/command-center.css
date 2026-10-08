@@ -4,7 +4,12 @@
   --game-top-bar-height: 72px;
   --game-top-ticker-height: 28px;
 }
+.command-center .game-top-stack { display: flex; padding-top: env(safe-area-inset-top); }
+.command-center .map-shell { inset: 0; height: 100dvh !important; }
+.command-center .game-top-ticker { position: relative; inset: auto; min-height: var(--game-top-ticker-height); }
 .command-center .game-top-bar {
+  position: relative;
+  inset: auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -149,7 +154,8 @@
   .command-center .command-status__date { display: none; }
   .command-status__resources { flex-basis: 100%; gap: 12px; }
   .command-center .game-top-bar__actions { justify-content: space-between; gap: 4px; }
-  .command-center .game-top-bar__actions > .command-doomsday { display: none; }
+  .command-center .game-top-bar__actions > .command-doomsday,
+  .command-center .game-top-bar__actions > .command-fullscreen { display: none; }
   .command-dock { flex-direction: column; gap: 4px; padding: 6px 8px calc(8px + env(safe-area-inset-bottom)); }
   .command-dock__orders { justify-content: space-evenly; gap: 0; }
   .command-dock button.command-dock__action { min-width: 0; flex: 1; padding: 6px 2px; height: 48px; font-size: 10px; }

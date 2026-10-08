@@ -10,6 +10,8 @@ server.stderr.on('data', data => { serverLog = (serverLog + data).slice(-6000); 
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const base = 'http://127.0.0.1:5174';
 let browser;
+let activePage;
+const errors = [];
 
 async function checkLayout(page, label) {
   // ResizeObserver aligns overlay anchors after responsive wrapping settles.
@@ -33,6 +35,7 @@ async function checkLayout(page, label) {
   assert(layout.scrollWidth <= layout.width + 1, label + ': horizontal overflow ' + JSON.stringify(layout));
   assert(layout.dock.bottom <= layout.height + 1 && layout.dock.x >= 0 && layout.dock.right <= layout.width + 1, label + ': dock clipped');
   assert(layout.briefing.bottom < layout.dock.y, label + ': briefing overlaps commands ' + JSON.stringify(layout));
+  assert(layout.header.height >= 32, label + ': header must participate in layout');
   assert(layout.header.bottom < layout.dock.y, label + ': header covers map');
   assert(layout.end.height >= 44 && layout.end.right <= layout.width, label + ': end-turn touch target');
   await page.screenshot({ path: 'test-results/command-center/' + label + '.png' });
@@ -47,7 +50,7 @@ try {
   browser = await chromium.launch({ args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
-  const errors = [];
+  activePage = page;
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(base + '/tests/browser/command-center.html');
   await page.waitForFunction(() => !!window.commandSmoke);
@@ -106,6 +109,7 @@ try {
     localStorage.setItem('norad_audio_sfx_enabled', 'false');
   });
   await page.goto(base + '/');
+  console.log('CAMPAIGN_START:' + JSON.stringify({ url: page.url(), errors, body: await page.locator('body').innerText() }));
   await page.getByRole('button', { name: 'Start Game', exact: true }).click();
   await page.getByRole('button', { name: /^Select / }).click();
   await page.locator('.command-dock').waitFor({ timeout: 30000 });
@@ -125,7 +129,12 @@ try {
   assert.deepEqual(errors, [], 'Unhandled browser errors');
   console.log(JSON.stringify({ result: 'passed', productionAfterOrders: afterOne.production, researchTurnsAfterOneTurn: afterOne.research.turnsRemaining, cityTurnsAfterOneTurn: afterOne.construction.turnsRemaining, checks: 'desktop, portrait, landscape, themes, production, research, turn review, real campaign' }));
 } catch (error) {
-  console.error(error); console.error(serverLog); process.exitCode = 1;
+  console.error(error); console.error(serverLog); console.error('BROWSER_ERRORS:' + JSON.stringify(errors));
+  if (activePage) {
+    console.error('BROWSER_BODY:' + (await activePage.locator('body').innerText()).slice(0, 4000));
+    console.log('UI_PREVIEW_FAILURE:' + (await activePage.screenshot({ type: 'jpeg', quality: 55 })).toString('base64'));
+  }
+  process.exitCode = 1;
 } finally {
   await browser?.close(); server.kill('SIGTERM');
 }

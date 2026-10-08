@@ -13869,6 +13869,7 @@ export default function NoradVector() {
                       size="sm"
                       variant="ghost"
                       onClick={() => {
+                        setCivInfoDefaultTab('own-status');
                         setCivInfoPanelOpen(true);
                         AudioSys.playSFX('click');
                       }}
@@ -13920,6 +13921,9 @@ export default function NoradVector() {
                     Options
                   </DropdownMenuItem>
                   
+                  <DropdownMenuItem onClick={toggleFullscreen} className="text-cyan-400 cursor-pointer">
+                    {isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-cyan-500/30" />
                   
                   <DropdownMenuItem
@@ -13965,7 +13969,7 @@ export default function NoradVector() {
                 size="sm"
                 variant="ghost"
                 onClick={toggleFullscreen}
-                className="h-6 px-2 text-[11px] text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                className="command-fullscreen h-6 px-2 text-[11px] text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
               >
                 {isFullscreen ? 'EXIT FS' : 'FULLSCREEN'}
               </Button>
@@ -14067,6 +14071,7 @@ export default function NoradVector() {
               { id: 'culture', onSelect: () => setIsCulturePanelOpen(value => !value), roleLocked: !cultureAllowed },
               { id: 'policy', onSelect: () => setShowPolicyPanel(true) },
               { id: 'war', onSelect: () => setIsWarCouncilOpen(true) },
+              { id: 'empire', onSelect: () => { setCivInfoDefaultTab('own-status'); setCivInfoPanelOpen(true); } },
               ...(playerNation && playerGovernanceMetrics ? [{ id: 'leader' as const, onSelect: () => setLeaderOverviewOpen(true) }] : []),
               ...(bioForgeUnlocked ? [{ id: 'bio' as const, onSelect: () => setIsBioWarfareOpen(true), roleLocked: !bioWarfareAllowed, disabled: !hasBioForgeAccess }] : []),
               { id: 'attack', onSelect: handleAttack },
