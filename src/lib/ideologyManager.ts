@@ -6,6 +6,7 @@
  */
 
 import type { Nation } from '../types/game';
+import { applyIdeologyStaticBonuses } from './ideologyStaticBonuses';
 import type {
   IdeologyType,
   IdeologyState,
@@ -63,14 +64,9 @@ export function applyIdeologyBonuses(nation: Nation): void {
   const ideologyMultiplier = bonuses.productionMultiplier ?? 1.0;
   nation.productionMultiplier = baseMultiplier * ideologyMultiplier;
   nation.ideologyState.lastAppliedProductionMultiplier = ideologyMultiplier;
+  nation.lastAppliedIdeologyProductionMultiplier = ideologyMultiplier;
 
-  // Apply unit bonuses
-  if (bonuses.unitAttackBonus !== 0) {
-    nation.unitAttackBonus = (nation.unitAttackBonus || 0) + bonuses.unitAttackBonus;
-  }
-  if (bonuses.unitDefenseBonus !== 0) {
-    nation.unitDefenseBonus = (nation.unitDefenseBonus || 0) + bonuses.unitDefenseBonus;
-  }
+  applyIdeologyStaticBonuses(nation, bonuses);
 
   // Apply cultural bonuses
   if (bonuses.culturalPowerBonus !== 0) {
@@ -82,16 +78,6 @@ export function applyIdeologyBonuses(nation: Nation): void {
     nation.intel = Math.max(0, nation.intel + bonuses.intelBonus);
   }
 
-  // Apply immigration modifier
-  if (bonuses.immigrationModifier !== 1.0) {
-    nation.immigrationBonus = (nation.immigrationBonus || 0) + (bonuses.immigrationModifier - 1.0) * 100;
-  }
-
-  // Apply cyber warfare bonus
-  if (bonuses.cyberWarfareBonus !== 0 && nation.cyber) {
-    nation.cyber.offense = Math.max(0, nation.cyber.offense + bonuses.cyberWarfareBonus);
-    nation.cyber.defense = Math.max(0, nation.cyber.defense + bonuses.cyberWarfareBonus);
-  }
 }
 
 /**
@@ -481,3 +467,4 @@ export function processIdeologyTurn(nation: Nation, turn: number): IdeologyEvent
 
   return events;
 }
+

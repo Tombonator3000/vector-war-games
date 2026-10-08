@@ -14,7 +14,7 @@ import {
   validateMissiles,
   validateLaunch,
 } from '../launchValidation';
-import type { Nation } from '@/types/Nation';
+import type { Nation } from '@/types/game';
 
 // Helper function to create a minimal nation for testing
 function createNation(overrides: Partial<Nation> = {}): Nation {
@@ -261,6 +261,36 @@ describe('launchValidation', () => {
   });
 
   describe('validateLaunch', () => {
+    it('checks the selected platform without requiring an ICBM', () => {
+      const from = createNation({ missiles: 0, bombers: 1, submarines: 1 });
+      const base = { from, to: createNation({ id: 'target' }), yieldMT: 50, defcon: 2,
+        warheadYieldToId: new Map<number, string>(), researchLookup: {} };
+      expect(validateLaunch({ ...base, deliveryMethod: 'bomber' }).valid).toBe(true);
+      expect(validateLaunch({ ...base, deliveryMethod: 'submarine' }).valid).toBe(true);
+      expect(validateLaunch(base).valid).toBe(false);
+    });
+
+    it('honors a truce recorded by the target nation', () => {
+      const from = createNation({ id: 'attacker' });
+      const to = createNation({ id: 'target', treaties: { attacker: { truceTurns: 2 } } });
+      expect(validateTreaty(from, to).valid).toBe(false);
+    });
+
+    it.each([NaN, Infinity, -1, 0])('rejects invalid yield %s', yieldMT => {
+      expect(validateDefcon(yieldMT, 1).valid).toBe(false);
+    });
+
+    it.each([undefined, NaN, Infinity, 0.5])('rejects invalid missile inventory %s', missiles => {
+      expect(validateMissiles(createNation({ missiles })).valid).toBe(false);
+    });
+
+    it('rejects eliminated targets and attacks against the launching nation', () => {
+      const from = createNation();
+      const base = { from, yieldMT: 50, defcon: 2, warheadYieldToId: new Map<number, string>(), researchLookup: {} };
+      expect(validateLaunch({ ...base, to: from }).valid).toBe(false);
+      expect(validateLaunch({ ...base, to: createNation({ id: 'target', eliminated: true }) }).valid).toBe(false);
+    });
+
     it('should validate successful launch', () => {
       const from = createNation({
         missiles: 5,

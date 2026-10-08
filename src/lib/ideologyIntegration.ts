@@ -97,7 +97,8 @@ export function applyIdeologyBonusesForProduction(nations: Nation[]): void {
 
     // Remove the prior ideology production multiplier before applying a new one
     const ideologyState = nation.ideologyState;
-    const previousMultiplier = ideologyState.lastAppliedProductionMultiplier ?? 1;
+    const previousMultiplier = nation.lastAppliedIdeologyProductionMultiplier
+      ?? ideologyState.lastAppliedProductionMultiplier ?? 1;
     const currentMultiplier = nation.productionMultiplier ?? 1;
 
     if (previousMultiplier && previousMultiplier !== 1) {
@@ -284,3 +285,4 @@ export function updatePopGroupIdeologyPreferences(nation: Nation): void {
     }
   });
 }
+

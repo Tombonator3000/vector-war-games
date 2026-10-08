@@ -11,6 +11,7 @@
  */
 
 import type { Nation, GameState } from '@/types/game';
+import { modifyOpinionFromAction } from '@/lib/electionSystem';
 
 export interface LaunchEffectsContext {
   from: Nation;
@@ -18,9 +19,9 @@ export interface LaunchEffectsContext {
   yieldMT: number;
   gameState: GameState;
   log: (msg: string, type?: string) => void;
-  toast: (options: any) => void;
-  AudioSys: any;
-  DoomsdayClock: any;
+  toast: (options: { title: string; description: string; variant?: 'destructive' }) => void;
+  AudioSys: { playSFX: (name: string) => void };
+  DoomsdayClock: { tick: (amount: number) => void };
 }
 
 /**
@@ -61,6 +62,9 @@ export function applyLaunchStateChanges(
 
   // Mark as aggressive action
   from.lastAggressiveAction = gameState.turn;
+  if (from.isPlayer && gameState.statistics) {
+    gameState.statistics.nukesLaunched++;
+  }
 }
 
 /**
@@ -80,8 +84,6 @@ export function handleLaunchSideEffects(context: LaunchEffectsContext): void {
 
   // Update public opinion for player launches
   if (from.isPlayer && gameState.scenario?.electionConfig) {
-    // Import dynamically to avoid circular dependencies
-    const { modifyOpinionFromAction } = require('./electionMechanics');
     modifyOpinionFromAction(from, 'LAUNCH_MISSILE', true, gameState.scenario.electionConfig);
   }
 
@@ -102,7 +104,7 @@ export function handleLaunchSideEffects(context: LaunchEffectsContext): void {
  * Generate news item for missile launch
  */
 function generateLaunchNews(from: Nation, to: Nation, yieldMT: number): void {
-  if (window.__gameAddNewsItem) {
+  if (typeof window !== 'undefined' && window.__gameAddNewsItem) {
     const priority = yieldMT > 50 ? 'critical' : 'urgent';
     window.__gameAddNewsItem(
       'military',
@@ -111,3 +113,4 @@ function generateLaunchNews(from: Nation, to: Nation, yieldMT: number): void {
     );
   }
 }
+

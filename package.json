@@ -9,7 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "npm run build && vite preview",
-    "test": "vitest",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "tts:dev": "node server/tts-dev-server.js"
   },
   "dependencies": {
@@ -104,3 +105,4 @@
     "vitest": "^2.1.8"
   }
 }
+

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, fireEvent, within, waitFor, act, cleanup } from '@testing-library/react';
 import React from 'react';
 import { PlayerManager } from '@/state';
 import { toast } from '@/components/ui/use-toast';
@@ -523,7 +523,14 @@ vi.mock('@/contexts/MultiplayerProvider', () => ({
 import Index from '@/pages/Index';
 
 describe('Index co-op toggle', () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
   beforeEach(async () => {
+    // The integration tests use a mock globe; no 2D canvas is needed.
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    vi.spyOn(console, 'log').mockImplementation(() => {});
     ensureActionMock.mockClear();
     registerStateListenerMock.mockImplementation(() => vi.fn());
     publishStateMock.mockClear();
@@ -619,7 +626,7 @@ describe('Index co-op toggle', () => {
       const button = screen.getByRole('button', { name: /activate ability/i }) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
     });
-  });
+  }, 15_000); // Full campaign startup and two dialogs can exceed the unit-test budget in CI.
 
   it('resets RNG sequence when starting consecutive campaigns', async () => {
     window.localStorage.setItem('norad_option_coop_enabled', 'false');
@@ -700,3 +707,4 @@ describe('Index co-op toggle', () => {
     expect(casualtyBadge.textContent).toMatch(/casualties/i);
   });
 });
+

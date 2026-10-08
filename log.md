@@ -1,3 +1,83 @@
+## 2026-10-08 — Gameplay correctness and modular refactor
+
+**Session timestamp (UTC):** 2026-10-08T08:08:04.094Z
+
+**Problem and causes:** Research/construction progressed twice per round; immutable diplomacy results were discarded; government bonuses compounded or lost their tracker during hook synchronization; production mutated React snapshots and returned completions before deferred updaters ran. Reset/imports left stale authoritative objects. Strike previews executed prematurely, lacked dependencies and did not revalidate or restore failed inventory. Weapon resolution depended on visibility; MIRV carriers split repeatedly; removal skipped adjacent weapons. Module-level code referenced component-only setters. Several existing tests relied on uncontrolled random draws.
+
+**Fixes:** Split phase/state/default/snapshot/queue logic into focused typed modules. Persist diplomacy changes without replacing shared Nation identities; advance queues once; preserve legitimate zeros and filter eliminated nations. Keep reset/import/player references synchronized, clone nested snapshots and invalidate prior-session previews. Store React callbacks safely; revalidate live launch orders, preserve failed inventory, record ICBM statistics and use browser-compatible imports. Conserve MIRV payload yield, resolve hidden attacks, freeze paused weapons, clean animation frames/timers on unmount, and report casualty/campaign updates through registered component boundaries. Deliver the final paid trade shipment before expiry. Apply Phase 2/3 campaign effect batches with their correct contracts. Isolate Vitest from deployment plugins and verify the Pages build in CI.
+
+**Validation:** Native assertions exercised the actual state, production, research, launch, government, renderer and campaign modules; deterministic negotiation checks cover exact message/probability boundaries. Added Vitest regressions throughout. Full-suite/build results are recorded on PR #881; initial run exposed three pre-existing flaky/timeout assertions and an async TTS teardown leak, which are repaired in this change.
+
+**Remaining integration gaps:** Production template building/unit completion effects and resource-refinement output still lack a canonical stockpile/entity application contract. These are documented in docs/code-audit-2026-10-08.md; no new balance values were invented.
+
+**Files touched:**
+- `.github/workflows/test.yml`
+- `README.md`
+- `docs/code-audit-2026-10-08.md`
+- `log.md`
+- `package.json`
+- `src/constants/events.constants.ts`
+- `src/constants/gamePhase.constants.ts`
+- `src/constants/victory.constants.ts`
+- `src/hooks/__tests__/useAdvisorSystem.test.tsx`
+- `src/hooks/__tests__/useProductionQueue.test.ts`
+- `src/hooks/useAdvisorSystem.ts`
+- `src/hooks/useProductionQueue.ts`
+- `src/lib/__tests__/coopSync.test.ts`
+- `src/lib/__tests__/evaluationFeedback.test.ts`
+- `src/lib/__tests__/gamePhaseHandlers.test.ts`
+- `src/lib/__tests__/governmentIntegration.test.ts`
+- `src/lib/__tests__/greatOldOnesCampaignTurn.test.ts`
+- `src/lib/__tests__/greatOldOnesPhaseIntegration.test.ts`
+- `src/lib/__tests__/ideologyIntegration.test.ts`
+- `src/lib/__tests__/launchConfirmationHandlers.test.ts`
+- `src/lib/__tests__/launchEffects.test.ts`
+- `src/lib/__tests__/launchValidation.test.ts`
+- `src/lib/__tests__/populationImpactEvents.test.ts`
+- `src/lib/__tests__/researchHandlers.test.ts`
+- `src/lib/__tests__/survivalVictory.test.ts`
+- `src/lib/coopSync.ts`
+- `src/lib/gamePhaseHandlers.ts`
+- `src/lib/gamePhases/nationProduction.ts`
+- `src/lib/gamePhases/productionDiplomacy.ts`
+- `src/lib/gamePhases/productionElections.ts`
+- `src/lib/gamePhases/productionIntegrations.ts`
+- `src/lib/gamePhases/productionPhase.ts`
+- `src/lib/gamePhases/productionTimers.ts`
+- `src/lib/gamePhases/resolutionPhase.ts`
+- `src/lib/gamePhases/territorialProduction.ts`
+- `src/lib/governmentIntegration.ts`
+- `src/lib/greatOldOnesCampaignTurn.ts`
+- `src/lib/ideologyIntegration.ts`
+- `src/lib/ideologyManager.ts`
+- `src/lib/ideologyStaticBonuses.ts`
+- `src/lib/launchConfirmationHandlers.ts`
+- `src/lib/launchEffects.ts`
+- `src/lib/launchValidation.ts`
+- `src/lib/phase2Integration.ts`
+- `src/lib/phase3Integration.ts`
+- `src/lib/populationImpactEvents.ts`
+- `src/lib/rendering/__tests__/weaponRenderer.test.ts`
+- `src/lib/rendering/weaponRenderer.ts`
+- `src/lib/researchHandlers.ts`
+- `src/pages/Index.tsx`
+- `src/pages/__tests__/Index.test.tsx`
+- `src/state/GameStateManager.ts`
+- `src/state/PlayerManager.ts`
+- `src/state/__tests__/GameStateManager.test.ts`
+- `src/state/gameState.types.ts`
+- `src/state/gameStateSnapshot.ts`
+- `src/state/initialGameState.ts`
+- `src/types/game.ts`
+- `src/types/gamePhase.types.ts`
+- `src/types/populationImpact.ts`
+- `src/types/weaponAnimation.ts`
+- `src/utils/productionQueue.utils.ts`
+- `src/utils/survivalVictory.utils.ts`
+- `vitest.config.ts`
+
+---
+
 # NORAD VECTOR - Tech Tree Expansion Implementation Log
 
 **Project:** Comprehensive Tech Tree & Gameplay Audit Implementation

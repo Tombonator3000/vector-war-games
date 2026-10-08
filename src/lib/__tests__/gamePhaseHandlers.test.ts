@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { launch, productionPhase } from '../gamePhaseHandlers';
-import type { LaunchDependencies } from '../gamePhaseHandlers';
+import { launch, productionPhase, resolutionPhase } from '../gamePhaseHandlers';
+import type { LaunchDependencies, ProductionPhaseDependencies, ResolutionPhaseDependencies } from '../gamePhaseHandlers';
+import type { PolicyEffects } from '@/types/policy';
 import * as electionSystem from '../electionSystem';
 import type { GameState, Nation } from '../../types/game';
 import { SeededRandom } from '../seededRandom';
+import { processTerritorialResourceSystems } from '../gamePhases/territorialProduction';
 
 describe('productionPhase election consequences', () => {
   afterEach(() => {
@@ -219,3 +221,246 @@ describe('launch alliance restrictions', () => {
     expect(deps.DoomsdayClock.tick).not.toHaveBeenCalled();
   });
 });
+describe('turn phase processing', () => {
+  const createNation = (overrides: Partial<Nation> = {}): Nation => ({
+    id: 'player',
+    isPlayer: true,
+    name: 'Player',
+    leader: 'Leader',
+    lon: 0,
+    lat: 0,
+    color: '#ffffff',
+    population: 100,
+    missiles: 1,
+    defense: 5,
+    production: 10,
+    uranium: 5,
+    intel: 5,
+    warheads: { 10: 1 },
+    morale: 60,
+    publicOpinion: 60,
+    electionTimer: 5,
+    cabinetApproval: 60,
+    ...overrides,
+  });
+
+  const createState = (nations: Nation[]): GameState => ({
+    turn: 12,
+    gameOver: false,
+    defcon: 5,
+    missiles: [],
+    radiationZones: [],
+    falloutMarks: [],
+    nations,
+  } as unknown as GameState);
+
+  const createProductionDeps = (S: GameState, nations: Nation[]): ProductionPhaseDependencies => ({
+    S,
+    nations,
+    log: vi.fn(),
+    advanceResearch: vi.fn(),
+    advanceCityConstruction: vi.fn(),
+    leaders: [],
+    PlayerManager: { get: () => nations.find(nation => nation.isPlayer) ?? null },
+    rng: new SeededRandom(1),
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('applies off-screen missile impacts once and retains missiles still in flight', () => {
+    const player = createNation();
+    const state = createState([player]);
+    const arrived = {
+      t: 1, fromLon: 0, fromLat: 0, toLon: 50, toLat: 40,
+      yield: 10, target: player, from: null,
+    };
+    const pending = { ...arrived, t: 0.5 };
+    state.missiles = [arrived, pending];
+    const explode = vi.fn();
+    const deps: ResolutionPhaseDependencies = {
+      S: state,
+      nations: [player],
+      log: vi.fn(),
+      projectLocal: () => ({ x: 10, y: 20, visible: false }),
+      explode,
+      advanceResearch: vi.fn(),
+      advanceCityConstruction: vi.fn(),
+    };
+
+    resolutionPhase(deps);
+    resolutionPhase(deps);
+
+    expect(explode).toHaveBeenCalledTimes(1);
+    expect(explode).toHaveBeenCalledWith(10, 20, player, 10, null, 'missile');
+    expect(state.missiles).toEqual([pending]);
+  });
+
+  it('advances research and construction once across a whole turn', () => {
+    const player = createNation({
+      researchQueue: { projectId: 'test', turnsRemaining: 3, totalTurns: 3 },
+      cityConstructionQueue: { turnsRemaining: 3, totalTurns: 3 },
+    });
+    const state = createState([player]);
+    const deps = createProductionDeps(state, [player]);
+    deps.advanceResearch = vi.fn(nation => { nation.researchQueue!.turnsRemaining--; });
+    deps.advanceCityConstruction = vi.fn(nation => { nation.cityConstructionQueue!.turnsRemaining--; });
+
+    resolutionPhase({
+      ...deps,
+      projectLocal: () => ({ x: 0, y: 0, visible: true }),
+      explode: vi.fn(),
+    });
+    expect(player.researchQueue?.turnsRemaining).toBe(3);
+    productionPhase(deps);
+
+    expect(player.researchQueue?.turnsRemaining).toBe(2);
+    expect(player.cityConstructionQueue?.turnsRemaining).toBe(2);
+    expect(deps.advanceResearch).toHaveBeenCalledTimes(1);
+    expect(deps.advanceResearch).toHaveBeenCalledWith(player, 'PRODUCTION');
+    expect(deps.advanceCityConstruction).toHaveBeenCalledTimes(1);
+    expect(deps.advanceCityConstruction).toHaveBeenCalledWith(player, 'PRODUCTION');
+  });
+
+  it('persists grievance and alliance updates without replacing shared nation objects', () => {
+    const player = createNation({
+      grievances: [{
+        id: 'grievance', type: 'broken-promise', severity: 'minor', againstNationId: 'ally',
+        description: 'Broken promise', createdTurn: 0, expiresIn: 2,
+        relationshipPenalty: -5, trustPenalty: -5, resolved: false,
+      }],
+      specializedAlliances: [{
+        id: 'alliance', type: 'military', nation1Id: 'player', nation2Id: 'ally',
+        createdTurn: 0, active: true, level: 1, cooperation: 60, obligations: [], benefits: [],
+      }],
+    });
+    const ally = createNation({ id: 'ally', isPlayer: false });
+    const nations = [player, ally];
+    const state = createState(nations);
+
+    productionPhase(createProductionDeps(state, nations));
+
+    expect(nations[0]).toBe(player);
+    expect(state.nations[0]).toBe(player);
+    expect(player.grievances?.[0].expiresIn).toBe(1);
+    expect(player.specializedAlliances?.[0].level).toBe(2);
+    expect(player.specializedAlliances?.[0].cooperation).toBe(60.5);
+  });
+
+it('delivers and charges the final resource shipment exactly once', () => {
+    const seller = createNation({
+      id: 'seller', isPlayer: false, cities: 0, production: 100, uranium: 100,
+      resourceStockpile: { oil: 500, uranium: 100, rare_earths: 400, food: 600 },
+    });
+    const buyer = createNation({
+      id: 'buyer', cities: 0, production: 100, uranium: 10,
+      resourceStockpile: { oil: 500, uranium: 10, rare_earths: 400, food: 600 },
+    });
+    const state = createState([seller, buyer]);
+    state.territoryResources = {};
+    state.resourceTrades = [{
+      id: 'final-shipment', fromNationId: seller.id, toNationId: buyer.id,
+      resource: 'uranium', amountPerTurn: 10, duration: 1, totalTurns: 1,
+      pricePerTurn: 3, createdTurn: 0,
+    }];
+    const runResources = () => processTerritorialResourceSystems(
+      state, [seller, buyer], { territories: {} }, buyer, new SeededRandom(1), vi.fn()
+    );
+
+    runResources();
+
+    expect(seller.uranium).toBe(90);
+    expect(buyer.uranium).toBe(20);
+    expect(seller.production).toBe(103);
+    expect(buyer.production).toBe(97);
+    expect(state.resourceTrades).toEqual([]);
+    runResources();
+    expect(seller.uranium).toBe(90);
+    expect(buyer.uranium).toBe(20);
+    expect(seller.production).toBe(103);
+    expect(buyer.production).toBe(97);
+  });
+
+  it('keeps trust stable when a policy disables relationship decay', () => {
+    const player = createNation({
+      trustRecords: { ally: { value: 90, lastUpdated: 0, history: [] } },
+    });
+    const state = createState([player]);
+    const deps = createProductionDeps(state, [player]);
+    deps.policyNationId = player.id;
+    deps.policyEffects = { relationshipDecayModifier: 0 } as PolicyEffects;
+
+    productionPhase(deps);
+
+    expect(player.trustRecords?.ally.value).toBe(90);
+  });
+
+  it('honors zero-valued production policy modifiers', () => {
+    const player = createNation();
+    const state = createState([player]);
+    const deps = createProductionDeps(state, [player]);
+    deps.policyNationId = player.id;
+    deps.policyEffects = { productionModifier: 0 } as PolicyEffects;
+
+    productionPhase(deps);
+
+    expect(player.production).toBe(10);
+    expect(player.uranium).toBe(5);
+    expect(player.intel).toBe(5);
+  });
+
+  it('does not give a nation with zero cities the default city bonus', () => {
+    const player = createNation({ cities: 0 });
+    const state = createState([player]);
+
+    productionPhase(createProductionDeps(state, [player]));
+
+    expect(player.production).toBe(30);
+    expect(player.uranium).toBe(7);
+    expect(player.intel).toBe(9);
+  });
+
+  it('uses conventional state from GameState when the caller omits its duplicate dependency', () => {
+    const player = createNation({ cities: 0 });
+    const state = createState([player]);
+    state.conventional = {
+      territories: {}, templates: {}, units: {}, logs: [],
+    };
+
+    productionPhase(createProductionDeps(state, [player]));
+
+    expect(state.territoryResources).toEqual({});
+    expect(state.resourceMarket).toBeDefined();
+    expect(player.resourceGeneration).toBeDefined();
+  });
+
+  it('keeps zero morale at zero when city maintenance resources are missing', () => {
+    const player = createNation({
+      morale: 0,
+      cities: 2,
+      resourceStockpile: { oil: 0, uranium: 5, rare_earths: 0, food: 0 },
+    });
+    const state = createState([player]);
+    const deps = createProductionDeps(state, [player]);
+    deps.conventionalState = { territories: {} };
+
+    productionPhase(deps);
+
+    expect(player.morale).toBe(0);
+  });
+
+  it('does not produce resources or complete research for eliminated nations', () => {
+    const player = createNation({ eliminated: true });
+    const state = createState([player]);
+    const deps = createProductionDeps(state, [player]);
+
+    productionPhase(deps);
+
+    expect(player.production).toBe(10);
+    expect(player.intel).toBe(5);
+    expect(deps.advanceResearch).not.toHaveBeenCalled();
+    expect(deps.advanceCityConstruction).not.toHaveBeenCalled();
+  });
+});
+

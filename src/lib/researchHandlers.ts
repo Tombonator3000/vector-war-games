@@ -9,7 +9,7 @@
  */
 
 import type { Nation } from '@/types/game';
-import { RESEARCH_LOOKUP, WARHEAD_YIELD_TO_ID, type ResourceCost } from '@/lib/gameConstants';
+import { RESEARCH_LOOKUP, WARHEAD_YIELD_TO_ID } from '@/lib/gameConstants';
 import { canAfford, pay } from '@/lib/gameUtils';
 import { CityLights } from '@/state/CityLights';
 
@@ -107,7 +107,7 @@ export function startResearch(
 }
 
 /**
- * Advances research progress for a nation during PRODUCTION or RESOLUTION phase
+ * Advances research during PRODUCTION; RESOLUTION calls are ignored.
  * @param nation - The nation whose research to advance
  * @param phase - The game phase during which this is called
  * @param deps - Injected dependencies
@@ -117,7 +117,7 @@ export function advanceResearch(
   phase: 'PRODUCTION' | 'RESOLUTION',
   deps: ResearchHandlerDependencies
 ) {
-  if (!nation.researchQueue || nation.researchQueue.turnsRemaining <= 0) return;
+  if (phase !== 'PRODUCTION' || !nation.researchQueue) return;
 
   nation.researchQueue.turnsRemaining = Math.max(0, nation.researchQueue.turnsRemaining - 1);
 
@@ -149,7 +149,7 @@ export function advanceResearch(
 }
 
 /**
- * Advances city construction progress for a nation during PRODUCTION or RESOLUTION phase
+ * Advances city construction during PRODUCTION; RESOLUTION calls are ignored.
  * @param nation - The nation whose city construction to advance
  * @param phase - The game phase during which this is called
  * @param deps - Injected dependencies
@@ -159,7 +159,7 @@ export function advanceCityConstruction(
   phase: 'PRODUCTION' | 'RESOLUTION',
   deps: ResearchHandlerDependencies
 ) {
-  if (!nation.cityConstructionQueue || nation.cityConstructionQueue.turnsRemaining <= 0) return;
+  if (phase !== 'PRODUCTION' || !nation.cityConstructionQueue) return;
 
   nation.cityConstructionQueue.turnsRemaining = Math.max(0, nation.cityConstructionQueue.turnsRemaining - 1);
 
@@ -167,7 +167,7 @@ export function advanceCityConstruction(
 
   // Construction complete
   nation.cityConstructionQueue = null;
-  nation.cities = (nation.cities || 1) + 1;
+  nation.cities = (nation.cities ?? 1) + 1;
 
   // Add city lights to the map
   const spread = 6;
@@ -188,3 +188,4 @@ export function advanceCityConstruction(
     deps.updateDisplay();
   }
 }
+

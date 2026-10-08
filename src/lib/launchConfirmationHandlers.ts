@@ -1,182 +1,207 @@
-/**
- * Launch Confirmation Handlers
- *
- * Extracted from Index.tsx (Session 5)
- * Handles final launch validation and execution for nuclear strikes
- */
-
-import type { Nation } from '@/types/game';
-import type { GameState } from '@/types/game';
+/** Final launch confirmation, with current-state validation and one-use previews. */
+import type { GameState, Nation } from '@/types/game';
 import type { ActionConsequences, ConsequenceCalculationContext } from '@/types/consequences';
 import type { PendingLaunchState } from '@/lib/attackHandlers';
 import type { LaunchDependencies } from '@/lib/gamePhaseHandlers';
 import PlayerManager from '@/state/PlayerManager';
 import GameStateManager from '@/state/GameStateManager';
+import DoomsdayClock from '@/state/DoomsdayClock';
 import { calculateActionConsequences } from '@/lib/consequenceCalculator';
 import { launch } from '@/lib/gamePhaseHandlers';
 import { launchBomber, launchSubmarine } from '@/lib/nuclearLaunchHandlers';
-import DoomsdayClock from '@/state/DoomsdayClock';
+import { validateLaunch } from '@/lib/launchValidation';
 
-/**
- * Delivery method type
- */
 export type DeliveryMethod = 'missile' | 'bomber' | 'submarine';
 
-/**
- * Dependencies required for confirmPendingLaunch
- */
 export interface LaunchConfirmationDeps {
-  /** Pending launch state */
   pendingLaunch: PendingLaunchState | null;
-  /** Selected warhead yield */
   selectedWarheadYield: number | null;
-  /** Selected delivery method */
   selectedDeliveryMethod: DeliveryMethod | null;
-  /** Toast notification function */
   toast: (payload: { title: string; description: string; variant?: 'destructive' }) => void;
-  /** Reset launch control state */
   resetLaunchControl: () => void;
-  /** Game state reference */
   gameState: GameState;
-  /** Log message function */
   log: (message: string, tone?: string) => void;
-  /** Trigger consequence alerts */
   triggerConsequenceAlerts: (consequences: ActionConsequences) => void;
-  /** Consume action function */
   consumeAction: () => void;
-  /** Queue consequence preview */
   queueConsequencePreview: (consequences: ActionConsequences, callback: () => void) => boolean;
-  /** Set consequence preview state */
   setConsequencePreview: (consequences: ActionConsequences | null) => void;
-  /** Set consequence callback */
   setConsequenceCallback: (callback: (() => void) | null) => void;
-  /** Play sound effect */
   playSFX: (sound: string) => void;
-  /** Launch dependencies for the missile launch function */
   launchDeps: LaunchDependencies;
 }
 
-/**
- * Confirm and execute pending nuclear launch
- *
- * Performs final validation and executes nuclear strike with selected warhead yield
- * and delivery method (ICBM, bomber, or submarine)
- *
- * @param deps - Dependency injection object
- */
-export function confirmPendingLaunch(deps: LaunchConfirmationDeps): void {
-  if (!deps.pendingLaunch || deps.selectedWarheadYield === null || !deps.selectedDeliveryMethod) {
-    return;
-  }
+interface StrikeOrder {
+  targetId: string;
+  playerId: string;
+  yieldMT: number;
+  deliveryMethod: DeliveryMethod;
+  state: GameState;
+  turn: number;
+  sessionVersion: number;
+}
 
+interface ValidatedStrike {
+  state: GameState;
+  player: Nation;
+  target: Nation;
+  nations: Nation[];
+}
+
+function rejectOrder(deps: LaunchConfirmationDeps, description: string): null {
+  deps.toast({ title: 'Cannot launch', description });
+  deps.resetLaunchControl();
+  return null;
+}
+
+/** Re-resolve nations so a preview cannot target objects replaced by a state update. */
+function validateOrder(order: StrikeOrder, deps: LaunchConfirmationDeps): ValidatedStrike | null {
+  const state = GameStateManager.getState();
   const player = PlayerManager.get();
-  if (!player) {
-    deps.resetLaunchControl();
-    return;
+  const nations = GameStateManager.getNations();
+  const target = nations.find(nation => nation.id === order.targetId);
+  if (state !== order.state || state.turn !== order.turn || player?.id !== order.playerId ||
+      GameStateManager.getSessionVersion() !== order.sessionVersion) {
+    return rejectOrder(deps, 'This strike order has expired. Prepare a new strike.');
   }
-
-  const selectedWarhead = deps.pendingLaunch.warheads.find(
-    warhead => warhead.yield === deps.selectedWarheadYield
-  );
-  if (!selectedWarhead) {
-    deps.toast({ title: 'Warhead unavailable', description: 'Select a valid warhead yield before launching.' });
-    return;
+  if (state.gameOver || state.phase !== 'PLAYER' || state.actionsRemaining <= 0) {
+    return rejectOrder(deps, 'Strikes require an available action during your active turn.');
   }
-
-  if (deps.gameState.defcon > selectedWarhead.requiredDefcon) {
-    deps.toast({
-      title: 'DEFCON restriction',
-      description: `Lower DEFCON to ${selectedWarhead.requiredDefcon} or less to deploy a ${deps.selectedWarheadYield}MT warhead.`,
-    });
-    return;
+  if (!player || player.population <= 0 || player.eliminated || !target || target.eliminated) {
+    return rejectOrder(deps, 'The attacking nation or target is no longer available.');
   }
-
-  const availableWarheads = player.warheads?.[deps.selectedWarheadYield] ?? 0;
-  if (availableWarheads <= 0) {
-    deps.toast({ title: 'Warhead unavailable', description: 'Selected warhead is no longer ready for launch.' });
-    deps.resetLaunchControl();
-    return;
+  if (!deps.launchDeps) {
+    return rejectOrder(deps, 'The launch system is unavailable. Prepare a new strike.');
   }
-
-  const missileCount = player.missiles || 0;
-  const bomberCount = player.bombers || 0;
-  const submarineCount = player.submarines || 0;
-
-  if (deps.selectedDeliveryMethod === 'missile' && missileCount <= 0) {
-    deps.toast({ title: 'No ICBMs ready', description: 'Select another delivery platform or build additional missiles.' });
-    return;
-  }
-
-  if (deps.selectedDeliveryMethod === 'bomber' && bomberCount <= 0) {
-    deps.toast({ title: 'No bombers ready', description: 'Select another delivery platform or build additional bombers.' });
-    return;
-  }
-
-  if (deps.selectedDeliveryMethod === 'submarine' && submarineCount <= 0) {
-    deps.toast({ title: 'No submarines ready', description: 'Select another delivery platform or build additional submarines.' });
-    return;
-  }
-
-  const context: ConsequenceCalculationContext = {
-    playerNation: player as Nation,
-    targetNation: deps.pendingLaunch.target as Nation,
-    allNations: GameStateManager.getNations(),
-    currentDefcon: deps.gameState.defcon,
-    currentTurn: deps.gameState.turn,
-    gameState: deps.gameState as GameState,
-  };
-
-  const consequences = calculateActionConsequences('launch_missile', context, {
-    warheadYield: deps.selectedWarheadYield,
-    deliveryMethod: deps.selectedDeliveryMethod,
+  const validation = validateLaunch({
+    from: player,
+    to: target,
+    yieldMT: order.yieldMT,
+    defcon: state.defcon,
+    warheadYieldToId: deps.launchDeps.WARHEAD_YIELD_TO_ID,
+    researchLookup: deps.launchDeps.RESEARCH_LOOKUP,
+    deliveryMethod: order.deliveryMethod,
   });
+  if (!validation.valid) {
+    return rejectOrder(deps, validation.errorMessage ?? 'The selected strike is no longer valid.');
+  }
+  return { state, player, target, nations };
+}
 
+/** Failed helpers must not consume inventory or leave a strike queued for animation. */
+function captureLaunchState(player: Nation, state: GameState): () => void {
+  const inventory = {
+    warheads: { ...player.warheads },
+    missiles: player.missiles,
+    bombers: player.bombers,
+    submarines: player.submarines,
+    lastAggressiveAction: player.lastAggressiveAction,
+  };
+  const missiles = [...state.missiles];
+  const bombers = [...state.bombers];
+  const submarines = [...(state.submarines ?? [])];
+  const statistics = state.statistics ? { ...state.statistics } : undefined;
+  return () => {
+    Object.assign(player, inventory);
+    state.missiles = missiles;
+    state.bombers = bombers;
+    state.submarines = submarines;
+    state.statistics = statistics;
+  };
+}
+
+function dispatchStrike(order: StrikeOrder, strike: ValidatedStrike, deps: LaunchConfirmationDeps): boolean {
+  const { player, target, state, nations } = strike;
+  const launchDeps = { ...deps.launchDeps, S: state, nations };
+  if (order.deliveryMethod === 'missile') {
+    return launch(player, target, order.yieldMT, launchDeps);
+  }
+  const succeeded = order.deliveryMethod === 'bomber'
+    ? launchBomber(player, target, { yield: order.yieldMT }, launchDeps)
+    : launchSubmarine(player, target, order.yieldMT, launchDeps);
+  if (!succeeded) return false;
+  const remaining = player.warheads[order.yieldMT] - 1;
+  if (remaining <= 0) delete player.warheads[order.yieldMT];
+  else player.warheads[order.yieldMT] = remaining;
+  if (order.deliveryMethod === 'bomber') player.bombers = (player.bombers ?? 0) - 1;
+  else player.submarines = (player.submarines ?? 0) - 1;
+  player.lastAggressiveAction = state.turn;
+  return true;
+}
+
+function executeStrike(order: StrikeOrder, consequences: ActionConsequences, deps: LaunchConfirmationDeps): void {
+  const strike = validateOrder(order, deps);
+  if (!strike) return;
+  const rollback = captureLaunchState(strike.player, strike.state);
+  let succeeded = false;
+  try {
+    succeeded = dispatchStrike(order, strike, deps);
+  } catch (error) {
+    console.error('[Launch Confirmation] Strike failed:', error);
+  }
+  if (!succeeded) {
+    rollback();
+    rejectOrder(deps, 'The strike could not be launched. Your inventory has been preserved.');
+    return;
+  }
+  // Commit the action before optional presentation effects can throw or re-enter.
+  deps.consumeAction();
+  deps.resetLaunchControl();
+  if (order.deliveryMethod !== 'missile') {
+    deps.log(`${strike.player.name} launches ${order.deliveryMethod} strike (${order.yieldMT}MT) toward ${strike.target.name}`);
+    DoomsdayClock.tick(0.3);
+    if (order.deliveryMethod === 'bomber') deps.playSFX('launch');
+  }
+  deps.triggerConsequenceAlerts(consequences);
+}
+
+function prepareOrder(deps: LaunchConfirmationDeps): StrikeOrder | null {
+  const { pendingLaunch, selectedWarheadYield, selectedDeliveryMethod } = deps;
+  if (!pendingLaunch || selectedWarheadYield === null || !selectedDeliveryMethod) return null;
+  if (!pendingLaunch.warheads.some(warhead => warhead.yield === selectedWarheadYield)) {
+    return rejectOrder(deps, 'Select a valid warhead yield before launching.');
+  }
+  const player = PlayerManager.get();
+  if (!player) return rejectOrder(deps, 'Your nation is no longer available.');
+  return {
+    targetId: pendingLaunch.target.id,
+    playerId: player.id,
+    yieldMT: selectedWarheadYield,
+    deliveryMethod: selectedDeliveryMethod,
+    state: deps.gameState,
+    turn: deps.gameState.turn,
+    sessionVersion: GameStateManager.getSessionVersion(),
+  };
+}
+
+export function confirmPendingLaunch(deps: LaunchConfirmationDeps): void {
+  const order = prepareOrder(deps);
+  if (!order) return;
+  const strike = validateOrder(order, deps);
+  if (!strike) return;
+  const context: ConsequenceCalculationContext = {
+    playerNation: strike.player,
+    targetNation: strike.target,
+    allNations: strike.nations,
+    currentDefcon: strike.state.defcon,
+    currentTurn: strike.state.turn,
+    gameState: strike.state,
+  };
+  const consequences = calculateActionConsequences('launch_missile', context, {
+    warheadYield: order.yieldMT,
+    deliveryMethod: order.deliveryMethod,
+  });
   if (!consequences) {
     deps.toast({ title: 'Unable to analyze strike', description: 'Consequence system failed to respond.', variant: 'destructive' });
     return;
   }
-
-  const executeLaunch = () => {
-    let launchSucceeded = false;
-
-    if (deps.selectedDeliveryMethod === 'missile') {
-      launchSucceeded = launch(player, deps.pendingLaunch!.target, deps.selectedWarheadYield!, deps.launchDeps);
-    } else {
-      player.warheads = player.warheads || {};
-      const remaining = (player.warheads[deps.selectedWarheadYield!] || 0) - 1;
-      if (remaining <= 0) {
-        delete player.warheads[deps.selectedWarheadYield!];
-      } else {
-        player.warheads[deps.selectedWarheadYield!] = remaining;
-      }
-
-      if (deps.selectedDeliveryMethod === 'bomber') {
-        player.bombers = Math.max(0, bomberCount - 1);
-        launchSucceeded = launchBomber(player, deps.pendingLaunch!.target, { yield: deps.selectedWarheadYield! }, deps.launchDeps);
-        if (launchSucceeded) {
-          deps.log(`${player.name} dispatches bomber strike (${deps.selectedWarheadYield}MT) toward ${deps.pendingLaunch!.target.name}`);
-          DoomsdayClock.tick(0.3);
-          deps.playSFX('launch');
-        }
-      } else if (deps.selectedDeliveryMethod === 'submarine') {
-        player.submarines = Math.max(0, submarineCount - 1);
-        launchSucceeded = launchSubmarine(player, deps.pendingLaunch!.target, deps.selectedWarheadYield!, deps.launchDeps);
-        if (launchSucceeded) {
-          deps.log(`${player.name} launches submarine strike (${deps.selectedWarheadYield}MT) toward ${deps.pendingLaunch!.target.name}`);
-          DoomsdayClock.tick(0.3);
-        }
-      }
-    }
-
-    if (launchSucceeded) {
-      deps.triggerConsequenceAlerts(consequences);
-      deps.consumeAction();
-      deps.resetLaunchControl();
-    }
+  let executed = false;
+  const onConfirm = () => {
+    if (executed) return;
+    executed = true;
+    executeStrike(order, consequences, deps);
   };
-
-  if (!deps.queueConsequencePreview(consequences, executeLaunch)) {
+  if (!deps.queueConsequencePreview(consequences, onConfirm)) {
     deps.setConsequencePreview(consequences);
-    deps.setConsequenceCallback(() => executeLaunch);
+    deps.setConsequenceCallback(() => onConfirm);
   }
 }

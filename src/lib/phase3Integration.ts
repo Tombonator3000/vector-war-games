@@ -54,14 +54,12 @@ import {
  */
 export function updatePhase3Systems(
   gooState: GreatOldOnesState,
-  phase2State: any,
+  phase2State: Phase2State,
   phase3State: Phase3State
 ): Phase3State {
-  const { events, stateChanges } = processPhase3Turn(gooState, phase2State, phase3State);
-  // Apply state changes to phase3State
-  stateChanges.forEach(change => {
-    applyPhase3StateChanges(phase3State, change);
-  });
+  const { stateChanges } = processPhase3Turn(gooState, phase2State, phase3State);
+  // Turn effects change the shared campaign, while subsystem progress remains in Phase 3.
+  applyPhase3StateChanges(gooState, stateChanges);
   return phase3State;
 }
 
@@ -688,3 +686,4 @@ export function applyPhase3StateChanges(
     }
   }
 }
+

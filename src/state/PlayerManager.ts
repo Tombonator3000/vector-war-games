@@ -14,18 +14,18 @@ import GameStateManager from '@/state/GameStateManager';
  * PlayerManager singleton
  *
  * Provides cached access to the player's nation object.
- * The cache is automatically invalidated when the nations array changes.
+ * Reads the authoritative nations array so imports and resets cannot leave
+ * the player cache attached to a previous game.
  */
 class PlayerManager {
   private static _cached: Nation | null = null;
-  private static _nationsArray: Nation[] = [];
 
   /**
    * Sets the nations array that this manager will search through
    * @param nations - Array of all nations in the game
    */
   static setNations(nations: Nation[]): void {
-    this._nationsArray = nations;
+    GameStateManager.setNations(nations);
     // Invalidate cache when nations array changes
     this._cached = null;
   }
@@ -35,7 +35,7 @@ class PlayerManager {
    * @returns Array of all nations
    */
   static getNations(): Nation[] {
-    return this._nationsArray;
+    return GameStateManager.getNations();
   }
 
   /**
@@ -43,18 +43,20 @@ class PlayerManager {
    * @returns The player's nation or null if not found
    */
   static get(): Nation | null {
+    const nations = this.getNations();
     // Check if cached value is still valid
-    if (this._cached && this._nationsArray.includes(this._cached)) {
+    if (this._cached?.isPlayer && nations.includes(this._cached)) {
       return this._cached;
     }
 
     // Search for player nation
-    const player = this._nationsArray.find(n => n?.isPlayer);
+    const player = nations.find(n => n?.isPlayer);
     if (player) {
       this._cached = player;
       return player;
     }
 
+    this._cached = null;
     return null;
   }
 
@@ -75,20 +77,12 @@ class PlayerManager {
 
     if (updatedNation) {
       // Ensure our local references stay aligned with the authoritative state
-      this._nationsArray = GameStateManager.getNations();
       this._cached = updatedNation;
       return;
     }
 
     // Fallback for cases where the nation has not yet been registered
-    const existingIndex = this._nationsArray.findIndex((n) => n?.id === nation.id);
-    if (existingIndex !== -1) {
-      this._nationsArray[existingIndex] = { ...this._nationsArray[existingIndex], ...nation };
-    } else {
-      this._nationsArray = [...this._nationsArray, nation];
-    }
-
-    GameStateManager.setNations(this._nationsArray as any);
+    GameStateManager.setNations([...this.getNations(), nation]);
     this._cached = nation;
   }
 
@@ -110,3 +104,4 @@ class PlayerManager {
 }
 
 export default PlayerManager;
+

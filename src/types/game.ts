@@ -198,6 +198,18 @@ export interface Nation {
   oppositionState?: import('./opposition').OppositionState;
   lastNukedTurn?: number; // Turn when nation was last hit by nuclear strike
   productionMultiplier?: number;
+  /** Government contribution currently included in productionMultiplier. */
+  lastAppliedGovernmentProductionMultiplier?: number;
+  /** Ideology contribution currently included in productionMultiplier. */
+  lastAppliedIdeologyProductionMultiplier?: number;
+  /** Persistent ideology modifiers already included in the nation's current stats. */
+  lastAppliedIdeologyBonuses?: {
+    unitAttackBonus: number;
+    unitDefenseBonus: number;
+    immigrationBonus: number;
+    cyberOffense: number;
+    cyberDefense: number;
+  };
   uraniumPerTurn?: number;
   hasASATCapability?: boolean;
   orbitalStrikesAvailable?: number;
