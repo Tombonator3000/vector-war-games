@@ -92,7 +92,8 @@ import { PhaseTransitionOverlay } from '@/components/PhaseTransitionOverlay';
 import { CatastropheBanner } from '@/components/CatastropheBanner';
 import { useGameEra } from '@/hooks/useGameEra';
 import { useVictoryTracking } from '@/hooks/useVictoryTracking';
-import { checkVictory } from '@/types/streamlinedVictoryConditions';
+import { checkVictory as checkStreamlinedVictory } from '@/types/streamlinedVictoryConditions';
+import { hasSurvivedCampaign, isApproachingSurvivalVictory } from '@/utils/survivalVictory.utils';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
 import { DefconWarningOverlay } from '@/components/DefconWarningOverlay';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
@@ -2827,6 +2828,8 @@ function initCubanCrisisNations(playerLeaderName: string, playerLeaderConfig: an
  */
 // Wrapper function - delegates to extracted module
 function resetGameState() {
+  clearPendingTurnTimeouts();
+  turnInProgress = false;
   resetGameStateExtracted();
   // Update local module-level references after reset
   S = GameStateManager.getState();
@@ -3888,7 +3891,7 @@ function checkVictoryProgress() {
   }
 
   // Survival Victory Progress (50 turns)
-  if (S.turn >= 40 && S.turn < 50 && player.population >= 50_000_000 && !S.victoryProgressNotifications.survival) {
+  if (isApproachingSurvivalVictory(S.turn, player.population) && !S.victoryProgressNotifications.survival) {
     S.victoryProgressNotifications.survival = true;
     const turnsLeft = 50 - S.turn;
     toast({
@@ -4027,7 +4030,7 @@ function checkVictory() {
     }
   }
 
-  if (S.turn >= 50 && player.population >= 50_000_000) {
+  if (hasSurvivedCampaign(S.turn, player.population)) {
     const score = S.turn * 10 + player.population * 5 + player.missiles * 20;
     endGame(true, `SURVIVAL VICTORY - Endured 50 turns! Score: ${score}`);
     return;
@@ -4704,15 +4707,14 @@ let turnInProgress = false;
 // Track all AI turn timeouts for proper cleanup
 let aiTurnTimeouts: ReturnType<typeof setTimeout>[] = [];
 
+function clearPendingTurnTimeouts() {
+  aiTurnTimeouts.forEach(clearTimeout);
+  aiTurnTimeouts = [];
+}
+
 // End turn
 function endTurn() {
   console.log('[Turn Debug] endTurn called, current phase:', S.phase, 'gameOver:', S.gameOver, 'turnInProgress:', turnInProgress);
-
-  // Clear any pending AI turn timeouts from previous turn to prevent memory leaks
-  if (aiTurnTimeouts.length > 0) {
-    aiTurnTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
-    aiTurnTimeouts = [];
-  }
 
   // Guard: prevent multiple simultaneous calls
   if (turnInProgress) {
@@ -4734,6 +4736,8 @@ function endTurn() {
     console.log('[Turn Debug] Blocked: not in PLAYER phase');
     return;
   }
+
+  clearPendingTurnTimeouts();
 
   const player = PlayerManager.get();
   const playerNationName = player?.name ?? 'Player';
@@ -6413,7 +6417,7 @@ export default function NoradVector() {
     (consequences: ActionConsequences | null, onConfirm?: () => void) => {
       if (!consequences) return false;
       setConsequencePreview(consequences);
-      setConsequenceCallback(onConfirm ?? null);
+      setConsequenceCallback(() => onConfirm ?? null);
       return true;
     },
     [],
@@ -8807,7 +8811,7 @@ export default function NoradVector() {
         diplomacy: S.diplomacy,
       };
 
-      const aiVictoryCheck = checkVictory(aiNation, nations, gameState as any);
+      const aiVictoryCheck = checkStreamlinedVictory(aiNation, nations, gameState as any);
 
       // Guard against undefined progress
       if (!aiVictoryCheck || !aiVictoryCheck.progress) return;
@@ -9841,6 +9845,18 @@ export default function NoradVector() {
       setConsequencePreview,
       setConsequenceCallback,
       playSFX: AudioSys.playSFX,
+      launchDeps: {
+        S,
+        nations,
+        log,
+        toast,
+        AudioSys,
+        DoomsdayClock,
+        WARHEAD_YIELD_TO_ID,
+        RESEARCH_LOOKUP,
+        PlayerManager,
+        projectLocal,
+      },
     };
     confirmPendingLaunchExtracted(deps);
   }, [
@@ -16078,3 +16094,4 @@ export default function NoradVector() {
     </div>
   );
 }
+

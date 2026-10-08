@@ -1,4 +1,5 @@
 import GameStateManager, { type LocalGameState } from '@/state/GameStateManager';
+import { cloneGameStateSnapshot } from '@/state/gameStateSnapshot';
 
 /**
  * Applies a remote co-op game state update to the local runtime.
@@ -8,42 +9,15 @@ import GameStateManager, { type LocalGameState } from '@/state/GameStateManager'
  * `window.S` (like useFlashpoints) receive the latest scenario metadata.
  */
 export function applyRemoteGameStateSync(remoteState: Partial<LocalGameState>): LocalGameState {
-  const sanitizedState: LocalGameState = {
-    ...remoteState,
-    falloutMarks: Array.isArray(remoteState.falloutMarks)
-      ? remoteState.falloutMarks.map(mark => ({ ...mark }))
-      : [],
-    falloutEffects: remoteState.falloutEffects
-      ? Object.fromEntries(
-          Object.entries(remoteState.falloutEffects).map(([id, effect]) => [
-            id,
-            { ...effect },
-          ])
-        )
-      : {},
-    satelliteOrbits: Array.isArray(remoteState.satelliteOrbits)
-      ? remoteState.satelliteOrbits.map(orbit => ({ ...orbit }))
-      : [],
-  } as LocalGameState;
-
-  if (!Array.isArray(sanitizedState.satelliteOrbits)) {
-    sanitizedState.satelliteOrbits = [];
-  }
-
-  if (!Array.isArray(sanitizedState.falloutMarks)) {
-    sanitizedState.falloutMarks = [];
-  }
-
-  if (!sanitizedState.falloutEffects) {
-    sanitizedState.falloutEffects = {};
-  }
-
+  const sanitizedState = cloneGameStateSnapshot(remoteState);
   GameStateManager.setState(sanitizedState);
+  const synchronizedState = GameStateManager.getState();
 
   if (typeof window !== 'undefined') {
-    (window as any).S = sanitizedState;
-    console.log('[Game State] Synchronized S from co-op import. Scenario ID:', sanitizedState.scenario?.id);
+    (window as Window & { S?: LocalGameState }).S = synchronizedState;
+    console.log('[Game State] Synchronized S from co-op import. Scenario ID:', synchronizedState.scenario?.id);
   }
 
-  return sanitizedState;
+  return synchronizedState;
 }
+

@@ -5,7 +5,7 @@
  * Contains all validation logic for missile launches.
  */
 
-import type { Nation, GameState } from '@/types/game';
+import type { Nation } from '@/types/game';
 
 export interface LaunchValidationContext {
   from: Nation;
@@ -13,7 +13,8 @@ export interface LaunchValidationContext {
   yieldMT: number;
   defcon: number;
   warheadYieldToId: Map<number, string>;
-  researchLookup: Record<string, any>;
+  researchLookup: Record<string, { name?: string }>;
+  deliveryMethod?: 'missile' | 'bomber' | 'submarine';
 }
 
 export interface ValidationResult {
@@ -33,7 +34,7 @@ const SUCCESS: ValidationResult = { valid: true };
  * Validates that no truce is active between nations
  */
 export function validateTreaty(from: Nation, to: Nation): ValidationResult {
-  if (from.treaties?.[to.id]?.truceTurns > 0) {
+  if (from.treaties?.[to.id]?.truceTurns > 0 || to.treaties?.[from.id]?.truceTurns > 0) {
     return {
       valid: false,
       errorMessage: `Cannot attack ${to.name} - truce active!`,
@@ -73,6 +74,9 @@ export function validateAlliance(from: Nation, to: Nation): ValidationResult {
  * Validates DEFCON level requirements for weapon yield
  */
 export function validateDefcon(yieldMT: number, defcon: number): ValidationResult {
+  if (!Number.isFinite(yieldMT) || yieldMT <= 0 || !Number.isInteger(defcon) || defcon < 1 || defcon > 5) {
+    return { valid: false, errorMessage: 'Invalid warhead yield or DEFCON level.', errorType: 'error' };
+  }
   // Strategic weapons (>50MT) require DEFCON 1
   if (yieldMT > 50 && defcon > 1) {
     return {
@@ -98,7 +102,7 @@ export function validateDefcon(yieldMT: number, defcon: number): ValidationResul
  * Validates warhead availability
  */
 export function validateWarheads(from: Nation, yieldMT: number): ValidationResult {
-  if (!from.warheads?.[yieldMT] || from.warheads[yieldMT] <= 0) {
+  if (!Number.isFinite(from.warheads?.[yieldMT]) || from.warheads[yieldMT] < 1) {
     return {
       valid: false,
       errorMessage: 'No warheads of that yield!',
@@ -115,7 +119,7 @@ export function validateResearch(
   from: Nation,
   yieldMT: number,
   warheadYieldToId: Map<number, string>,
-  researchLookup: Record<string, any>
+  researchLookup: Record<string, { name?: string }>
 ): ValidationResult {
   const requiredResearchId = warheadYieldToId.get(yieldMT);
 
@@ -143,7 +147,7 @@ export function validateResearch(
  * Validates missile availability
  */
 export function validateMissiles(from: Nation): ValidationResult {
-  if (from.missiles <= 0) {
+  if (!Number.isFinite(from.missiles) || from.missiles < 1) {
     return {
       valid: false,
       errorMessage: 'No missiles available!',
@@ -157,13 +161,17 @@ export function validateMissiles(from: Nation): ValidationResult {
  * Orchestrates all launch validations
  */
 export function validateLaunch(context: LaunchValidationContext): ValidationResult {
+  if (context.from.id === context.to.id || context.from.eliminated || context.to.eliminated ||
+      context.from.population <= 0 || context.to.population <= 0) {
+    return { valid: false, errorMessage: 'Launch requires two active, distinct nations.', errorType: 'warning' };
+  }
   const validators = [
     () => validateTreaty(context.from, context.to),
     () => validateAlliance(context.from, context.to),
     () => validateDefcon(context.yieldMT, context.defcon),
     () => validateWarheads(context.from, context.yieldMT),
     () => validateResearch(context.from, context.yieldMT, context.warheadYieldToId, context.researchLookup),
-    () => validateMissiles(context.from),
+    () => validateDeliveryPlatform(context.from, context.deliveryMethod ?? 'missile'),
   ];
 
   // Run validators in sequence, return first failure
@@ -176,3 +184,17 @@ export function validateLaunch(context: LaunchValidationContext): ValidationResu
 
   return SUCCESS;
 }
+
+/** Validate the selected delivery method without requiring an ICBM for other platforms. */
+export function validateDeliveryPlatform(
+  from: Nation,
+  deliveryMethod: NonNullable<LaunchValidationContext['deliveryMethod']>
+): ValidationResult {
+  if (deliveryMethod === 'missile') return validateMissiles(from);
+  const count = deliveryMethod === 'bomber' ? from.bombers : from.submarines;
+  if (!Number.isFinite(count) || count < 1) {
+    return { valid: false, errorMessage: `No ${deliveryMethod === 'bomber' ? 'bombers' : 'submarines'} available!`, errorType: 'warning' };
+  }
+  return SUCCESS;
+}
+

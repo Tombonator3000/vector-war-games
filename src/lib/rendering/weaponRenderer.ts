@@ -5,7 +5,7 @@
  * Extracted from canvasDrawingFunctions.ts for better modularity.
  */
 
-import type { Nation } from '@/types/game';
+import type { Missile, Nation } from '@/types/game';
 import { calculateMissileInterceptChance } from '@/lib/missileDefense';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 import {
@@ -25,7 +25,7 @@ import {
  * Uses Bezier curve math to interpolate between start and target with an arc.
  */
 function calculateMissileTrajectoryPoint(
-  missile: any,
+  missile: Missile,
   startX: number,
   startY: number,
   targetX: number,
@@ -54,7 +54,7 @@ function calculateMissileTrajectoryPoint(
  * Renders the visual elements of a missile (trajectory path and icon).
  */
 function renderMissileVisuals(
-  missile: any,
+  missile: Missile,
   startX: number,
   startY: number,
   targetX: number,
@@ -69,7 +69,7 @@ function renderMissileVisuals(
   ctx.globalCompositeOperation = 'lighter';
 
   // Draw trajectory path with animated dashing
-  ctx.strokeStyle = missile.color || 'rgba(255,0,255,0.9)';
+  ctx.strokeStyle = typeof missile.color === 'string' ? missile.color : 'rgba(255,0,255,0.9)';
   ctx.lineWidth = 2;
   ctx.setLineDash([8, 6]);
   ctx.lineDashOffset = -(Date.now() / 60) % 100;
@@ -100,10 +100,14 @@ function renderMissileVisuals(
 
 /**
  * Handles MIRV (Multiple Independently targetable Reentry Vehicle) splitting.
- * Spawns additional warheads with spread pattern if MIRV is triggered.
- * Returns true if MIRV split occurred (missile should not explode yet).
+ * Replaces the carrier synchronously with three terminal payloads whose combined
+ * yield matches the carrier. No timer may add weapons after a game reset.
  */
-function handleMirvSplitting(missile: any, deps: CanvasDrawingDependencies): boolean {
+function handleMirvSplitting(
+  missile: Missile,
+  missileIndex: number,
+  deps: CanvasDrawingDependencies
+): boolean {
   const { S, log } = deps;
   // Only check for MIRV on first impact (not already split warheads)
   const mirvChance = getMirvSplitChance(missile.from, !!missile.isMirv);
@@ -111,29 +115,27 @@ function handleMirvSplitting(missile: any, deps: CanvasDrawingDependencies): boo
   if (mirvChance > 0 && Math.random() < mirvChance) {
     log(`MIRV ACTIVATED! Multiple warheads deployed`, 'warning');
 
-    const splitYield = Math.floor(missile.yield / 3);
+    const splitYield = missile.yield / 3;
+    S.missiles.splice(missileIndex, 1);
 
-    // Spawn 2 additional warheads with staggered timing
-    for (let j = 0; j < 2; j++) {
-      setTimeout(() => {
-        // Larger spread for MIRV warheads (±8 degrees)
-        const offsetLon = missile.toLon + (Math.random() - 0.5) * 16;
-        const offsetLat = missile.toLat + (Math.random() - 0.5) * 16;
-
-        S.missiles.push({
-          from: missile.from,
-          to: missile.target,
-          t: 0,
-          fromLon: missile.fromLon,
-          fromLat: missile.fromLat,
-          toLon: offsetLon,
-          toLat: offsetLat,
-          yield: splitYield,
-          target: missile.target,
-          color: '#ffff00',
-          isMirv: true,
-        });
-      }, j * 200);
+    for (let j = 0; j < 3; j++) {
+      // Keep the central payload on target and spread the other two by ±8 degrees.
+      const offsetLon = j === 0 ? 0 : (Math.random() - 0.5) * 16;
+      const offsetLat = j === 0 ? 0 : (Math.random() - 0.5) * 16;
+      S.missiles.push({
+        from: missile.from,
+        to: missile.target,
+        t: 0,
+        fromLon: missile.fromLon,
+        fromLat: missile.fromLat,
+        toLon: missile.toLon + offsetLon,
+        toLat: missile.toLat + offsetLat,
+        yield: splitYield,
+        target: missile.target,
+        color: '#ffff00',
+        isMirv: true,
+        isSubmarine: missile.isSubmarine,
+      });
     }
 
     return true; // MIRV activated
@@ -148,10 +150,11 @@ function handleMirvSplitting(missile: any, deps: CanvasDrawingDependencies): boo
  * Returns true if missile was intercepted and should be removed.
  */
 function checkAndHandleInterception(
-  missile: any,
+  missile: Missile,
   missileIndex: number,
   targetX: number,
   targetY: number,
+  targetVisible: boolean,
   deps: CanvasDrawingDependencies
 ): boolean {
   const { S, nations, log, policySystemRef } = deps;
@@ -194,15 +197,17 @@ function checkAndHandleInterception(
   if (Math.random() < totalChance) {
     S.missiles.splice(missileIndex, 1);
     log(`Missile intercepted! Defense successful`, 'success');
-    S.rings.push({
-      x: targetX,
-      y: targetY,
-      r: 1,
-      max: 40,
-      speed: 3,
-      alpha: 1,
-      type: 'intercept',
-    });
+    if (targetVisible && deps.ctx) {
+      S.rings.push({
+        x: targetX,
+        y: targetY,
+        r: 1,
+        max: 40,
+        speed: 3,
+        alpha: 1,
+        type: 'intercept',
+      });
+    }
     return true; // Intercepted
   }
 
@@ -221,34 +226,31 @@ function checkAndHandleInterception(
  */
 export function drawMissiles(deps: CanvasDrawingDependencies) {
   const { ctx, S, projectLocal, explode } = deps;
-  if (!ctx) return;
 
   // Iterate backwards to safely remove missiles during iteration
   for (let i = S.missiles.length - 1; i >= 0; i--) {
     const missile = S.missiles[i];
     missile.t = Math.min(1, missile.t + 0.016);
 
-    // Step 1: Check if missile is visible on screen
+    // Visibility controls drawing, never combat outcomes.
     const startProjection = projectLocal(missile.fromLon, missile.fromLat);
     const targetProjection = projectLocal(missile.toLon, missile.toLat);
-    if (!startProjection.visible || !targetProjection.visible) {
-      continue;
-    }
     const { x: startX, y: startY } = startProjection;
     const { x: targetX, y: targetY } = targetProjection;
 
-    // Step 2: Calculate trajectory and render visuals
-    const trajectoryPoint = calculateMissileTrajectoryPoint(
-      missile,
-      startX,
-      startY,
-      targetX,
-      targetY
-    );
-    renderMissileVisuals(missile, startX, startY, targetX, targetY, trajectoryPoint, deps);
+    if (ctx && startProjection.visible && targetProjection.visible) {
+      const trajectoryPoint = calculateMissileTrajectoryPoint(
+        missile,
+        startX,
+        startY,
+        targetX,
+        targetY
+      );
+      renderMissileVisuals(missile, startX, startY, targetX, targetY, trajectoryPoint, deps);
+    }
 
     // Step 3: Show incoming warning near impact
-    if (!missile._tele && missile.t > 0.8) {
+    if (ctx && targetProjection.visible && !missile._tele && missile.t > 0.8) {
       missile._tele = true;
       S.rings.push({
         x: targetX,
@@ -262,19 +264,13 @@ export function drawMissiles(deps: CanvasDrawingDependencies) {
       });
     }
 
-    // Step 4: Handle impact phase (MIRV, interception, explosion)
+    // Check defense once at the interception threshold, before any MIRV deploys.
+    if (checkAndHandleInterception(missile, i, targetX, targetY, targetProjection.visible, deps)) {
+      continue;
+    }
+
     if (missile.t >= 1 && !missile.hasExploded) {
-      // Priority 1: Check for MIRV splitting (spawns additional warheads)
-      const mirvActivated = handleMirvSplitting(missile, deps);
-
-      // Priority 2: Check for interception (may remove missile)
-      const wasIntercepted = checkAndHandleInterception(missile, i, targetX, targetY, deps);
-      if (wasIntercepted) {
-        continue; // Missile removed, skip to next
-      }
-
-      // Priority 3: Explode missile at target (unless MIRV already split it)
-      if (!mirvActivated) {
+      if (!handleMirvSplitting(missile, i, deps)) {
         missile.hasExploded = true;
         explode(
           targetX,
@@ -296,10 +292,10 @@ export function drawMissiles(deps: CanvasDrawingDependencies) {
 
 export function drawBombers(deps: CanvasDrawingDependencies) {
   const { ctx, S, AudioSys, log, explode, bomberIcon } = deps;
-  if (!ctx) return;
 
-  S.bombers.forEach((bomber: any, i: number) => {
-    bomber.t += 0.016 / 3;
+  for (let i = S.bombers.length - 1; i >= 0; i--) {
+    const bomber: any = S.bombers[i];
+    bomber.t = Math.min(1, bomber.t + 0.016 / 3);
 
     // Detection at midpoint
     if (bomber.t > 0.5 && !bomber.detected && bomber.to) {
@@ -313,7 +309,7 @@ export function drawBombers(deps: CanvasDrawingDependencies) {
         log(`✓ Bomber intercepted by ${bomber.to.name}!`, 'success');
         S.bombers.splice(i, 1);
         AudioSys.playSFX('explosion');
-        return;
+        continue;
       }
     }
 
@@ -324,13 +320,15 @@ export function drawBombers(deps: CanvasDrawingDependencies) {
     const dy = bomber.ty - bomber.sy;
     const angle = Math.atan2(dy, dx);
 
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = 'rgba(255,255,160,0.3)';
-    ctx.beginPath();
-    ctx.arc(x, y, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    if (ctx) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(255,255,160,0.3)';
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
     drawIcon(bomberIcon, x, y, angle, BOMBER_ICON_BASE_SCALE, undefined, deps);
 
@@ -338,7 +336,7 @@ export function drawBombers(deps: CanvasDrawingDependencies) {
       explode(bomber.tx, bomber.ty, bomber.to, bomber.payload.yield, bomber.from || null, 'bomber');
       S.bombers.splice(i, 1);
     }
-  });
+  }
 }
 
 // ============================================================================
@@ -347,10 +345,10 @@ export function drawBombers(deps: CanvasDrawingDependencies) {
 
 export function drawSubmarines(deps: CanvasDrawingDependencies) {
   const { ctx, S, log, submarineIcon } = deps;
-  if (!ctx) return;
 
   S.submarines = S.submarines || [];
-  S.submarines.forEach((sub: any, i: number) => {
+  for (let i = S.submarines.length - 1; i >= 0; i--) {
+    const sub: any = S.submarines[i];
     const targetX = typeof sub.targetX === 'number' ? sub.targetX : sub.x;
     const targetY = typeof sub.targetY === 'number' ? sub.targetY : sub.y;
     const angle = Math.atan2(targetY - sub.y, targetX - sub.x);
@@ -359,13 +357,15 @@ export function drawSubmarines(deps: CanvasDrawingDependencies) {
       // Surfacing
       sub.phaseProgress = Math.min(1, (sub.phaseProgress || 0) + 0.03);
       const p = sub.phaseProgress;
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.fillStyle = `rgba(100,200,255,${1 - p})`;
-      ctx.beginPath();
-      ctx.arc(sub.x, sub.y, 30 * p, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      if (ctx) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = `rgba(100,200,255,${1 - p})`;
+        ctx.beginPath();
+        ctx.arc(sub.x, sub.y, 30 * p, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
 
       drawIcon(
         submarineIcon,
@@ -416,5 +416,6 @@ export function drawSubmarines(deps: CanvasDrawingDependencies) {
         S.submarines.splice(i, 1);
       }
     }
-  });
+  }
 }
+
