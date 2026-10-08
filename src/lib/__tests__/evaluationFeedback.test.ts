@@ -5,7 +5,7 @@
  * and counter-offer logic.
  */
 
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import type { Nation } from '@/types/game';
 import type { NegotiationState, ItemValueContext } from '@/types/negotiation';
 import {
@@ -16,6 +16,7 @@ import {
   getAIDesiredItems,
   ACCEPTANCE_THRESHOLDS,
   REJECTION_THRESHOLDS,
+  COUNTER_OFFER_THRESHOLDS,
 } from '../evaluationFeedback';
 
 // ============================================================================
@@ -102,202 +103,127 @@ describe('calculateAcceptanceProbability', () => {
 // Feedback Generation Tests
 // ============================================================================
 
+beforeEach(() => {
+  vi.spyOn(Math, 'random').mockReturnValue(0);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('generateNegotiationFeedback', () => {
   const aiNation = createMockNation();
   const playerNation = createMockNation({ id: 'player' });
+  const messageGroups = [
+    {
+      category: 'auto-accept',
+      score: ACCEPTANCE_THRESHOLDS.AUTO_ACCEPT,
+      messages: [
+        'This is an excellent proposal. I accept!',
+        'You are most generous. We have a deal.',
+        'I appreciate this offer and gladly accept.',
+      ],
+    },
+    {
+      category: 'acceptance',
+      score: ACCEPTANCE_THRESHOLDS.LIKELY,
+      messages: [
+        'This seems fair. I accept your terms.',
+        'I find this acceptable.',
+        'We have ourselves a deal.',
+        'This works for me.',
+      ],
+    },
+    {
+      category: 'negotiation',
+      score: ACCEPTANCE_THRESHOLDS.POSSIBLE,
+      messages: [
+        "This could work, but I'd like a bit more.",
+        "We're close. Add a little more and we have a deal.",
+        'Almost there. What else can you offer?',
+        'Not quite enough, but we can work with this.',
+      ],
+    },
+    {
+      category: 'counter-offer',
+      score: ACCEPTANCE_THRESHOLDS.COUNTER_OFFER,
+      messages: [
+        "This doesn't work for me. Let me suggest some changes.",
+        "Not enough. Here's what I need...",
+        "I'm afraid I need more than this.",
+        'This is unbalanced. Let me propose adjustments.',
+      ],
+    },
+  ];
 
-  it('should return positive message for auto-accept score', () => {
-    const feedback = generateNegotiationFeedback(
-      ACCEPTANCE_THRESHOLDS.AUTO_ACCEPT,
-      aiNation,
-      playerNation,
-      50,  // relationship
-      70,  // trust
-      0    // grievancePenalty
-    );
-    expect(feedback).toMatch(/excellent|generous|accept/i);
+  it.each(messageGroups)('selects every valid $category message at the score threshold', ({ score, messages }) => {
+    for (const [index, expected] of messages.entries()) {
+      vi.mocked(Math.random).mockReturnValue((index + 0.5) / messages.length);
+      expect(generateNegotiationFeedback(score, aiNation, playerNation, 50, 70, 0))
+        .toBe(expected);
+    }
   });
 
-  it('should return acceptance message for likely score', () => {
-    const feedback = generateNegotiationFeedback(
-      ACCEPTANCE_THRESHOLDS.LIKELY,
-      aiNation,
-      playerNation,
-      50,
-      70,
-      0
-    );
-    expect(feedback).toMatch(/fair|acceptable|deal/i);
+  it.each([
+    [ACCEPTANCE_THRESHOLDS.AUTO_ACCEPT - 1, 'This seems fair. I accept your terms.'],
+    [ACCEPTANCE_THRESHOLDS.LIKELY - 1, "This could work, but I'd like a bit more."],
+    [ACCEPTANCE_THRESHOLDS.POSSIBLE - 1, "This doesn't work for me. Let me suggest some changes."],
+    [ACCEPTANCE_THRESHOLDS.COUNTER_OFFER - 1, 'This is completely unacceptable.'],
+  ] as const)('uses the lower feedback category just below score %s', (score, expected) => {
+    expect(generateNegotiationFeedback(score, aiNation, playerNation, 50, 70, 0))
+      .toBe(expected);
   });
 
-  it('should return negotiation message for possible score', () => {
-    const feedback = generateNegotiationFeedback(
-      ACCEPTANCE_THRESHOLDS.POSSIBLE + 10,
-      aiNation,
-      playerNation,
-      50,
-      70,
-      0
-    );
-    expect(feedback).toMatch(/could work|close|bit more|almost/i);
-  });
-
-  it('should return counter-offer message for counter-offer score', () => {
-    const feedback = generateNegotiationFeedback(
-      ACCEPTANCE_THRESHOLDS.COUNTER_OFFER + 10,
-      aiNation,
-      playerNation,
-      50,
-      70,
-      0
-    );
-    expect(feedback).toMatch(/doesn't work|not enough|need more|unbalanced/i);
-  });
-
-  it('should mention trust for low trust scores', () => {
-    const feedback = generateNegotiationFeedback(
-      -250,
-      aiNation,
-      playerNation,
-      50,
-      20,  // low trust
-      0
-    );
-    expect(feedback).toMatch(/trust/i);
-  });
-
-  it('should mention relationship for poor relationship', () => {
-    const feedback = generateNegotiationFeedback(
-      -250,
-      aiNation,
-      playerNation,
-      -50,  // poor relationship
-      50,
-      0
-    );
-    expect(feedback).toMatch(/relationship/i);
-  });
-
-  it('should mention grievances when penalty is high', () => {
-    const feedback = generateNegotiationFeedback(
-      -250,
-      aiNation,
-      playerNation,
-      50,
-      50,
-      -30  // high grievance penalty
-    );
-    expect(feedback).toMatch(/grievance/i);
-  });
-
-  it('should return generic rejection for very negative scores', () => {
-    const feedback = generateNegotiationFeedback(
-      -250,
-      aiNation,
-      playerNation,
-      0,    // neutral relationship
-      50,   // decent trust
-      0     // no grievances
-    );
-    expect(feedback).toMatch(/unacceptable/i);
-  });
+  it.each([
+    [20, 50, 0, "I don't trust you enough for this deal."],
+    [50, -50, 0, 'Our relationship is too poor for such an arrangement.'],
+    [50, 50, -30, 'We have too many unresolved grievances.'],
+    [REJECTION_THRESHOLDS.TRUST, REJECTION_THRESHOLDS.RELATIONSHIP,
+      REJECTION_THRESHOLDS.GRIEVANCE, 'This is completely unacceptable.'],
+  ] as const)('provides the contextual rejection for trust %s / relationship %s / grievance %s',
+    (trust, relationship, grievancePenalty, expected) => {
+      expect(generateNegotiationFeedback(-250, aiNation, playerNation, relationship, trust, grievancePenalty))
+        .toBe(expected);
+      expect(Math.random).not.toHaveBeenCalled();
+    });
 });
 
-// ============================================================================
-// Counter-Offer Decision Tests
-// ============================================================================
-
 describe('shouldMakeCounterOffer', () => {
-  it('should not counter if relationship is too hostile', () => {
-    const result = shouldMakeCounterOffer(
-      -50,      // score in counter-offer range
-      'balanced',
-      -60,      // very hostile relationship
-      50        // decent trust
-    );
-    expect(result).toBe(false);
+  it.each([
+    ['defensive', COUNTER_OFFER_THRESHOLDS.DEFENSIVE_PROBABILITY],
+    ['isolationist', COUNTER_OFFER_THRESHOLDS.ISOLATIONIST_PROBABILITY],
+    ['balanced', COUNTER_OFFER_THRESHOLDS.DEFAULT_PROBABILITY],
+    ['aggressive', COUNTER_OFFER_THRESHOLDS.DEFAULT_PROBABILITY],
+    ['unknown', COUNTER_OFFER_THRESHOLDS.DEFAULT_PROBABILITY],
+  ] as const)('uses the exact probability boundary for %s', (personality, probability) => {
+    vi.mocked(Math.random).mockReturnValue(probability - 0.001);
+    expect(shouldMakeCounterOffer(0, personality, 50, 50)).toBe(true);
+    vi.mocked(Math.random).mockReturnValue(probability);
+    expect(shouldMakeCounterOffer(0, personality, 50, 50)).toBe(false);
+    vi.mocked(Math.random).mockReturnValue(probability + 0.001);
+    expect(shouldMakeCounterOffer(0, personality, 50, 50)).toBe(false);
   });
 
-  it('should not counter if trust is very low', () => {
-    const result = shouldMakeCounterOffer(
-      -50,
-      'balanced',
-      50,   // good relationship
-      15    // very low trust
-    );
-    expect(result).toBe(false);
+  it.each([
+    ['hostile relationship', 0, COUNTER_OFFER_THRESHOLDS.RELATIONSHIP_MIN - 1, 50],
+    ['low trust', 0, 50, COUNTER_OFFER_THRESHOLDS.TRUST_MIN - 1],
+    ['acceptable score', ACCEPTANCE_THRESHOLDS.LIKELY, 50, 50],
+    ['very poor score', ACCEPTANCE_THRESHOLDS.UNLIKELY, 50, 50],
+  ] as const)('rejects a counter-offer for %s without drawing randomness', (_reason, score, relationship, trust) => {
+    expect(shouldMakeCounterOffer(score, 'balanced', relationship, trust)).toBe(false);
+    expect(Math.random).not.toHaveBeenCalled();
   });
 
-  it('should not counter if score is too high', () => {
-    const result = shouldMakeCounterOffer(
-      ACCEPTANCE_THRESHOLDS.LIKELY,  // already acceptable
-      'balanced',
-      50,
-      50
-    );
-    expect(result).toBe(false);
-  });
-
-  it('should not counter if score is too low', () => {
-    const result = shouldMakeCounterOffer(
-      ACCEPTANCE_THRESHOLDS.UNLIKELY - 10,  // too negative
-      'balanced',
-      50,
-      50
-    );
-    expect(result).toBe(false);
-  });
-
-  it('should potentially counter for scores in range', () => {
-    // Test multiple times due to randomness
-    let countered = false;
-    for (let i = 0; i < 10; i++) {
-      const result = shouldMakeCounterOffer(
-        0,  // in counter-offer range
-        'balanced',
-        50,
-        50
-      );
-      if (result) {
-        countered = true;
-        break;
-      }
-    }
-    // Should counter at least once out of 10 tries (60% chance each)
-    expect(countered).toBe(true);
-  });
-
-  it('should counter more often for defensive personality', () => {
-    // Defensive has 80% chance, should counter in most trials
-    let counterCount = 0;
-    for (let i = 0; i < 10; i++) {
-      const result = shouldMakeCounterOffer(
-        0,
-        'defensive',
-        50,
-        50
-      );
-      if (result) counterCount++;
-    }
-    // Should counter in majority of trials
-    expect(counterCount).toBeGreaterThan(5);
-  });
-
-  it('should counter less often for isolationist personality', () => {
-    // Isolationist has 40% chance
-    let counterCount = 0;
-    for (let i = 0; i < 10; i++) {
-      const result = shouldMakeCounterOffer(
-        0,
-        'isolationist',
-        50,
-        50
-      );
-      if (result) counterCount++;
-    }
-    // Should not counter in majority of trials
-    expect(counterCount).toBeLessThan(8);
-  });
+  it.each([
+    [ACCEPTANCE_THRESHOLDS.UNLIKELY + 1, 50, 50],
+    [ACCEPTANCE_THRESHOLDS.LIKELY - 1, 50, 50],
+    [0, COUNTER_OFFER_THRESHOLDS.RELATIONSHIP_MIN, 50],
+    [0, 50, COUNTER_OFFER_THRESHOLDS.TRUST_MIN],
+  ] as const)('allows a counter-offer at score %s / relationship %s / trust %s',
+    (score, relationship, trust) => {
+      expect(shouldMakeCounterOffer(score, 'balanced', relationship, trust)).toBe(true);
+      expect(Math.random).toHaveBeenCalledTimes(1);
+    });
 });
 
 // ============================================================================

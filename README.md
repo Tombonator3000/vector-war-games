@@ -1,87 +1,31 @@
-# Welcome to the project
+# Aegis Protocol — NORAD Vector
 
-## Project info
+A browser strategy game about Cold War crisis management, with nuclear and conventional warfare, diplomacy, production, research, political events and pandemic systems. Built with React, TypeScript, Vite and Three.js.
 
-**URL**: https://lovable.dev/projects/a89095ea-e077-4f9c-9f12-aa9ec3441a76
+## Development
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/a89095ea-e077-4f9c-9f12-aa9ec3441a76) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Use Node.js 20.19+ or a supported newer LTS release.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm ci
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/a89095ea-e077-4f9c-9f12-aa9ec3441a76) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
-
-## Running tests
-
-Unit tests are powered by [Vitest](https://vitest.dev/) and the React Testing Library. They cover core gameplay hooks such as `useFlashpoints` to ensure deterministic outcomes for random events.
+## Verification
 
 ```sh
-# Install dependencies if you have not already
-npm install
-
-# Execute the test suite
-npm run test
+npm test                 # Full suite, exits when complete
+npm run test:watch       # Interactive test runner
+npm run build            # Production build
+GITHUB_PAGES=true npm run build  # Build for /vector-war-games/
 ```
 
-Continuous Integration runs the same `npm run test` command to guard against regressions whenever code is pushed or a pull request is opened.
+Vitest has its own configuration so unit tests do not start service workers or deployment plugins. CI runs the test suite and verifies the GitHub Pages build. The deployment workflow publishes changes from `main`.
+
+## Working on the game
+
+Read [agents.md](agents.md) before editing. Keep gameplay logic in focused modules with deterministic regression coverage; record significant changes in [log.md](log.md). The public phase-handler and state-manager interfaces support existing callers while their implementations are split into smaller modules.
+
+See the [October 2026 gameplay audit](docs/code-audit-2026-10-08.md) for repaired behavior and remaining integration gaps.
+
+The connected Lovable project is [available here](https://lovable.dev/projects/a89095ea-e077-4f9c-9f12-aa9ec3441a76).

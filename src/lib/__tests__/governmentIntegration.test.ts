@@ -37,6 +37,17 @@ describe('government production bonuses', () => {
     );
   });
 
+  it('retains contribution tracking when the government hook replaces its state object', () => {
+    const nation = createNation();
+    const hookSnapshot = { ...nation.governmentState! };
+    applyGovernmentBonusesForProduction([nation]);
+    nation.governmentState = { ...hookSnapshot, turnsInPower: 1 };
+    applyGovernmentBonusesForProduction([nation]);
+    expect(nation.productionMultiplier).toBeCloseTo(
+      2 * GOVERNMENT_BONUSES.democracy.productionMultiplier
+    );
+  });
+
   it('preserves additional production research gained between turns', () => {
     const nation = createNation();
     applyGovernmentBonusesForProduction([nation]);

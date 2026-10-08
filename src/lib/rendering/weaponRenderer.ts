@@ -6,6 +6,7 @@
  */
 
 import type { Missile, Nation } from '@/types/game';
+import type { BomberAnimation, SubmarineAnimation } from '@/types/weaponAnimation';
 import { calculateMissileInterceptChance } from '@/lib/missileDefense';
 import { calculateBomberInterceptChance, getMirvSplitChance } from '@/lib/research';
 import {
@@ -230,7 +231,7 @@ export function drawMissiles(deps: CanvasDrawingDependencies) {
   // Iterate backwards to safely remove missiles during iteration
   for (let i = S.missiles.length - 1; i >= 0; i--) {
     const missile = S.missiles[i];
-    missile.t = Math.min(1, missile.t + 0.016);
+    if (!S.paused) missile.t = Math.min(1, missile.t + 0.016);
 
     // Visibility controls drawing, never combat outcomes.
     const startProjection = projectLocal(missile.fromLon, missile.fromLat);
@@ -249,7 +250,9 @@ export function drawMissiles(deps: CanvasDrawingDependencies) {
       renderMissileVisuals(missile, startX, startY, targetX, targetY, trajectoryPoint, deps);
     }
 
-    // Step 3: Show incoming warning near impact
+    if (S.paused) continue;
+
+    // Show incoming warning near impact
     if (ctx && targetProjection.visible && !missile._tele && missile.t > 0.8) {
       missile._tele = true;
       S.rings.push({
@@ -294,11 +297,11 @@ export function drawBombers(deps: CanvasDrawingDependencies) {
   const { ctx, S, AudioSys, log, explode, bomberIcon } = deps;
 
   for (let i = S.bombers.length - 1; i >= 0; i--) {
-    const bomber: any = S.bombers[i];
-    bomber.t = Math.min(1, bomber.t + 0.016 / 3);
+    const bomber = S.bombers[i] as unknown as BomberAnimation;
+    if (!S.paused) bomber.t = Math.min(1, bomber.t + 0.016 / 3);
 
     // Detection at midpoint
-    if (bomber.t > 0.5 && !bomber.detected && bomber.to) {
+    if (!S.paused && bomber.t > 0.5 && !bomber.detected && bomber.to) {
       bomber.detected = true;
       log(`⚠️ BOMBER DETECTED approaching ${bomber.to.name}!`, 'warning');
 
@@ -332,7 +335,7 @@ export function drawBombers(deps: CanvasDrawingDependencies) {
 
     drawIcon(bomberIcon, x, y, angle, BOMBER_ICON_BASE_SCALE, undefined, deps);
 
-    if (bomber.t >= 1.0) {
+    if (!S.paused && bomber.t >= 1.0) {
       explode(bomber.tx, bomber.ty, bomber.to, bomber.payload.yield, bomber.from || null, 'bomber');
       S.bombers.splice(i, 1);
     }
@@ -348,15 +351,15 @@ export function drawSubmarines(deps: CanvasDrawingDependencies) {
 
   S.submarines = S.submarines || [];
   for (let i = S.submarines.length - 1; i >= 0; i--) {
-    const sub: any = S.submarines[i];
+    const sub = S.submarines[i] as unknown as SubmarineAnimation;
     const targetX = typeof sub.targetX === 'number' ? sub.targetX : sub.x;
     const targetY = typeof sub.targetY === 'number' ? sub.targetY : sub.y;
     const angle = Math.atan2(targetY - sub.y, targetX - sub.x);
 
     if (sub.phase === 0) {
       // Surfacing
-      sub.phaseProgress = Math.min(1, (sub.phaseProgress || 0) + 0.03);
-      const p = sub.phaseProgress;
+      if (!S.paused) sub.phaseProgress = Math.min(1, (sub.phaseProgress || 0) + 0.03);
+      const p = sub.phaseProgress || 0;
       if (ctx) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
@@ -376,7 +379,7 @@ export function drawSubmarines(deps: CanvasDrawingDependencies) {
         { alpha: p },
         deps
       );
-      if (p >= 1) {
+      if (!S.paused && p >= 1) {
         sub.phase = 1;
         // Launch missile with random offset to spread impacts
         const lonOffset = (Math.random() - 0.5) * 6;
@@ -399,20 +402,21 @@ export function drawSubmarines(deps: CanvasDrawingDependencies) {
         log(`SUBMARINE LAUNCH! Missile away!`, 'alert');
       }
     } else if (sub.phase === 1) {
-      sub.phase = 2;
+      if (!S.paused) sub.phase = 2;
     } else if (sub.phase === 2) {
-      sub.diveProgress = (sub.diveProgress || 0) + 0.02;
-      const diveAlpha = Math.max(0, 1 - sub.diveProgress);
+      if (!S.paused) sub.diveProgress = (sub.diveProgress || 0) + 0.02;
+      const diveProgress = sub.diveProgress || 0;
+      const diveAlpha = Math.max(0, 1 - diveProgress);
       drawIcon(
         submarineIcon,
         sub.x,
-        sub.y + sub.diveProgress * 10,
+        sub.y + diveProgress * 10,
         angle,
         SUBMARINE_ICON_BASE_SCALE,
         { alpha: diveAlpha },
         deps
       );
-      if (sub.diveProgress >= 1) {
+      if (!S.paused && diveProgress >= 1) {
         S.submarines.splice(i, 1);
       }
     }

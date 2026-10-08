@@ -157,11 +157,9 @@ export function updatePhase2Systems(
   phase2State: Phase2State,
   rng: SeededRandom
 ): Phase2State {
-  const { events, stateChanges } = processPhase2Turn(state, phase2State, rng);
-  // Apply state changes to phase2State
-  stateChanges.forEach(change => {
-    applyPhase2StateChanges(phase2State, change);
-  });
+  const { stateChanges } = processPhase2Turn(state, phase2State, rng);
+  // Turn effects change the shared campaign, while subsystem progress remains in Phase 2.
+  applyPhase2StateChanges(state, stateChanges);
   return phase2State;
 }
 
@@ -894,3 +892,4 @@ export function applyPhase2StateChanges(
     }
   }
 }
+

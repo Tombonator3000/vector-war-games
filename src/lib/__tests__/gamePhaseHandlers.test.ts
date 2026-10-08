@@ -5,6 +5,7 @@ import type { PolicyEffects } from '@/types/policy';
 import * as electionSystem from '../electionSystem';
 import type { GameState, Nation } from '../../types/game';
 import { SeededRandom } from '../seededRandom';
+import { processTerritorialResourceSystems } from '../gamePhases/territorialProduction';
 
 describe('productionPhase election consequences', () => {
   afterEach(() => {
@@ -345,6 +346,54 @@ describe('turn phase processing', () => {
     expect(player.grievances?.[0].expiresIn).toBe(1);
     expect(player.specializedAlliances?.[0].level).toBe(2);
     expect(player.specializedAlliances?.[0].cooperation).toBe(60.5);
+  });
+
+it('delivers and charges the final resource shipment exactly once', () => {
+    const seller = createNation({
+      id: 'seller', isPlayer: false, cities: 0, production: 100, uranium: 100,
+      resourceStockpile: { oil: 500, uranium: 100, rare_earths: 400, food: 600 },
+    });
+    const buyer = createNation({
+      id: 'buyer', cities: 0, production: 100, uranium: 10,
+      resourceStockpile: { oil: 500, uranium: 10, rare_earths: 400, food: 600 },
+    });
+    const state = createState([seller, buyer]);
+    state.territoryResources = {};
+    state.resourceTrades = [{
+      id: 'final-shipment', fromNationId: seller.id, toNationId: buyer.id,
+      resource: 'uranium', amountPerTurn: 10, duration: 1, totalTurns: 1,
+      pricePerTurn: 3, createdTurn: 0,
+    }];
+    const runResources = () => processTerritorialResourceSystems(
+      state, [seller, buyer], { territories: {} }, buyer, new SeededRandom(1), vi.fn()
+    );
+
+    runResources();
+
+    expect(seller.uranium).toBe(90);
+    expect(buyer.uranium).toBe(20);
+    expect(seller.production).toBe(103);
+    expect(buyer.production).toBe(97);
+    expect(state.resourceTrades).toEqual([]);
+    runResources();
+    expect(seller.uranium).toBe(90);
+    expect(buyer.uranium).toBe(20);
+    expect(seller.production).toBe(103);
+    expect(buyer.production).toBe(97);
+  });
+
+  it('keeps trust stable when a policy disables relationship decay', () => {
+    const player = createNation({
+      trustRecords: { ally: { value: 90, lastUpdated: 0, history: [] } },
+    });
+    const state = createState([player]);
+    const deps = createProductionDeps(state, [player]);
+    deps.policyNationId = player.id;
+    deps.policyEffects = { relationshipDecayModifier: 0 } as PolicyEffects;
+
+    productionPhase(deps);
+
+    expect(player.trustRecords?.ally.value).toBe(90);
   });
 
   it('honors zero-valued production policy modifiers', () => {

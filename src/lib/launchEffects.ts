@@ -62,6 +62,9 @@ export function applyLaunchStateChanges(
 
   // Mark as aggressive action
   from.lastAggressiveAction = gameState.turn;
+  if (from.isPlayer && gameState.statistics) {
+    gameState.statistics.nukesLaunched++;
+  }
 }
 
 /**

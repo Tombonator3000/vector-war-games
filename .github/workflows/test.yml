@@ -25,6 +25,7 @@ jobs:
         run: npm run test
 
       - name: Verify GitHub Pages build
+        if: ${{ !cancelled() }}
         env:
           GITHUB_PAGES: "true"
         run: npm run build

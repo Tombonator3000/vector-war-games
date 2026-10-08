@@ -217,14 +217,13 @@ export function applyGovernmentBonusesForProduction(nations: Nation[]): void {
     const bonuses = applyGovernmentBonuses(nation);
 
     // Replace this government's prior contribution; retain tech and ideology bonuses.
-    const state = nation.governmentState;
-    const previousMultiplier = state.lastAppliedProductionMultiplier ?? 1;
+    const previousMultiplier = nation.lastAppliedGovernmentProductionMultiplier ?? 1;
     const currentMultiplier = nation.productionMultiplier ?? 1;
     const baseMultiplier = previousMultiplier > 0
       ? currentMultiplier / previousMultiplier
       : currentMultiplier;
     nation.productionMultiplier = baseMultiplier * bonuses.productionMultiplier;
-    state.lastAppliedProductionMultiplier = bonuses.productionMultiplier;
+    nation.lastAppliedGovernmentProductionMultiplier = bonuses.productionMultiplier;
 
     // Note: Research multiplier bonus is applied but not stored
     // as a persistent property on the nation

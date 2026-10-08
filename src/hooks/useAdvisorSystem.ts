@@ -6,12 +6,11 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import {
+import type {
   AdvisorSystemState,
   AdvisorState,
   AdvisorRole,
   GameEvent,
-  AdvisorComment,
 } from '@/types/advisor.types';
 import {
   ADVISOR_CONFIGS,
@@ -58,33 +57,53 @@ export function useAdvisorSystem() {
   const [ttsStatus, setTtsStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
   const [ttsProvider, setTtsProvider] = useState<string>('unknown');
 
-  const processingRef = useRef(false);
+  const lifecycleRef = useRef<symbol | null>(null);
+  const processingRef = useRef<symbol | null>(null);
+  const playbackRef = useRef<symbol | null>(null);
+  const playbackInProgressRef = useRef<symbol | null>(null);
+  const ttsRequestRef = useRef(0);
   const playbackIntervalRef = useRef<number | null>(null);
 
   /**
    * Check TTS availability on mount and periodically
    */
   const checkTTS = useCallback(async () => {
-    const config = getTTSConfig();
-    setTtsProvider(config.provider);
+    const lifecycle = lifecycleRef.current;
+    if (!lifecycle) return false;
+    const request = ++ttsRequestRef.current;
 
-    const available = await checkTTSAvailability();
-    setTtsStatus(available ? 'available' : 'unavailable');
-
-    if (available) {
-      advisorVoiceSystem.resetTTSAvailability();
+    try {
+      const config = getTTSConfig();
+      setTtsProvider(config.provider);
+      const available = await checkTTSAvailability();
+      if (lifecycleRef.current !== lifecycle || ttsRequestRef.current !== request) return available;
+      setTtsStatus(available ? 'available' : 'unavailable');
+      if (available) advisorVoiceSystem.resetTTSAvailability();
+      console.log(`[AdvisorSystem] TTS status: ${available ? 'available' : 'unavailable'}, provider: ${config.provider}`);
+      return available;
+    } catch (error) {
+      if (lifecycleRef.current === lifecycle && ttsRequestRef.current === request) {
+        setTtsStatus('unavailable');
+        console.error('[AdvisorSystem] TTS availability check failed:', error);
+      }
+      return false;
     }
-
-    console.log(`[AdvisorSystem] TTS status: ${available ? 'available' : 'unavailable'}, provider: ${config.provider}`);
-    return available;
   }, []);
 
   /**
    * Retry TTS connection
    */
   const retryTTS = useCallback(async () => {
+    if (!lifecycleRef.current) return false;
+    ttsRequestRef.current++;
     setTtsStatus('checking');
-    advisorVoiceSystem.resetTTSAvailability();
+    try {
+      advisorVoiceSystem.resetTTSAvailability();
+    } catch (error) {
+      setTtsStatus('unavailable');
+      console.error('[AdvisorSystem] TTS retry failed:', error);
+      return false;
+    }
     return checkTTS();
   }, [checkTTS]);
 
@@ -93,7 +112,7 @@ export function useAdvisorSystem() {
    */
   const processGameEvent = useCallback(
     (event: GameEvent, gameState?: any) => {
-      if (!systemState.enabled) return;
+      if (!lifecycleRef.current || !systemState.enabled) return;
 
       console.log('[AdvisorSystem] Processing event:', event.type);
 
@@ -133,11 +152,12 @@ export function useAdvisorSystem() {
    * Process comment queue and generate audio
    */
   const processQueue = useCallback(async () => {
-    if (processingRef.current) return;
-    processingRef.current = true;
+    const lifecycle = lifecycleRef.current;
+    if (!lifecycle || processingRef.current === lifecycle) return;
+    processingRef.current = lifecycle;
 
     try {
-      while (true) {
+      while (lifecycleRef.current === lifecycle) {
         const comment = advisorQueue.dequeueComment();
         if (!comment) break;
 
@@ -151,6 +171,7 @@ export function useAdvisorSystem() {
           // Generate audio
           const voiceConfig = ADVISOR_CONFIGS[comment.advisorRole].voiceConfig;
           const audio = await advisorVoiceSystem.generateSpeech(comment, voiceConfig);
+          if (lifecycleRef.current !== lifecycle) break;
 
           // Add to audio queue
           advisorQueue.enqueueAudio(audio);
@@ -166,7 +187,7 @@ export function useAdvisorSystem() {
         }
       }
     } finally {
-      processingRef.current = false;
+      if (processingRef.current === lifecycle) processingRef.current = null;
     }
   }, []);
 
@@ -174,14 +195,20 @@ export function useAdvisorSystem() {
    * Start audio playback loop
    */
   const startPlaybackLoop = useCallback(() => {
-    if (playbackIntervalRef.current) return;
+    const lifecycle = lifecycleRef.current;
+    if (!lifecycle || playbackIntervalRef.current !== null) return;
+    const playback = Symbol('advisor playback');
+    playbackRef.current = playback;
 
     const playNext = async () => {
+      if (lifecycleRef.current !== lifecycle || playbackRef.current !== playback) return;
+      if (playbackInProgressRef.current === playback) return;
       if (!systemState.voiceEnabled) return;
       if (advisorVoiceSystem.getIsPlaying()) return;
 
       const nextAudio = advisorQueue.dequeueAudio();
       if (!nextAudio) return;
+      playbackInProgressRef.current = playback;
 
       // Update currently playing
       advisorQueue.setCurrentlyPlaying(nextAudio);
@@ -204,7 +231,14 @@ export function useAdvisorSystem() {
       }));
 
       // Play audio
-      await advisorVoiceSystem.playAudio(nextAudio);
+      try {
+        await advisorVoiceSystem.playAudio(nextAudio);
+      } catch (error) {
+        console.error('[AdvisorSystem] Error playing audio:', error);
+      } finally {
+        if (playbackInProgressRef.current === playback) playbackInProgressRef.current = null;
+      }
+      if (lifecycleRef.current !== lifecycle || playbackRef.current !== playback) return;
 
       // Mark inactive after playback
       setSystemState((prev) => ({
@@ -222,18 +256,35 @@ export function useAdvisorSystem() {
       advisorQueue.setCurrentlyPlaying(null);
     };
 
-    playbackIntervalRef.current = window.setInterval(playNext, 500);
+    playbackIntervalRef.current = window.setInterval(() => {
+      void playNext().catch((error) => {
+        console.error('[AdvisorSystem] Playback loop failed:', error);
+      });
+    }, 500);
   }, [systemState.voiceEnabled]);
 
   /**
    * Stop playback loop
    */
   const stopPlaybackLoop = useCallback(() => {
-    if (playbackIntervalRef.current) {
+    playbackRef.current = null;
+    if (playbackIntervalRef.current !== null) {
       clearInterval(playbackIntervalRef.current);
       playbackIntervalRef.current = null;
     }
     advisorVoiceSystem.stop();
+    advisorQueue.setCurrentlyPlaying(null);
+    if (lifecycleRef.current) {
+      setSystemState((prev) => {
+        const role = prev.currentlyPlaying?.advisorRole;
+        if (!role) return prev;
+        return {
+          ...prev,
+          currentlyPlaying: null,
+          advisors: { ...prev.advisors, [role]: { ...prev.advisors[role], isActive: false } },
+        };
+      });
+    }
   }, []);
 
   /**
@@ -369,6 +420,17 @@ export function useAdvisorSystem() {
     [systemState.advisors]
   );
 
+  // Invalidate every pending continuation, including Strict Mode's first mount.
+  useEffect(() => {
+    const lifecycle = Symbol('advisor lifecycle');
+    lifecycleRef.current = lifecycle;
+    return () => {
+      if (lifecycleRef.current === lifecycle) lifecycleRef.current = null;
+      ttsRequestRef.current++;
+      advisorQueue.clear();
+    };
+  }, []);
+
   // Start playback loop on mount
   useEffect(() => {
     startPlaybackLoop();
@@ -377,7 +439,7 @@ export function useAdvisorSystem() {
 
   // Check TTS availability on mount
   useEffect(() => {
-    checkTTS();
+    void checkTTS();
   }, [checkTTS]);
 
   return {
@@ -409,3 +471,4 @@ export function useAdvisorSystem() {
     retryTTS,
   };
 }
+

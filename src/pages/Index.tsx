@@ -94,6 +94,8 @@ import { useGameEra } from '@/hooks/useGameEra';
 import { useVictoryTracking } from '@/hooks/useVictoryTracking';
 import { checkVictory as checkStreamlinedVictory } from '@/types/streamlinedVictoryConditions';
 import { hasSurvivedCampaign, isApproachingSurvivalVictory } from '@/utils/survivalVictory.utils';
+import { reportPopulationImpact, subscribePopulationImpacts } from '@/lib/populationImpactEvents';
+import type { PopulationImpact } from '@/types/populationImpact';
 import { EraTransitionOverlay } from '@/components/EraTransitionOverlay';
 import { DefconWarningOverlay } from '@/components/DefconWarningOverlay';
 import { ActionConsequencePreview } from '@/components/ActionConsequencePreview';
@@ -313,6 +315,7 @@ import { initializeWeek3State, updateWeek3Systems, type Week3ExtendedState } fro
 import { initializePhase2State, updatePhase2Systems, checkPhase2UnlockConditions, type Phase2State } from '@/lib/phase2Integration';
 import { initializePhase3State, updatePhase3Systems, checkPhase3UnlockConditions } from '@/lib/phase3Integration';
 import type { Phase3State } from '@/types/phase3Types';
+import { advanceGreatOldOnesCampaign, type CampaignSubsystems } from '@/lib/greatOldOnesCampaignTurn';
 import { DoctrineSelectionPanel, CouncilSchismModal, CouncilSchismButton, OrderCommandPanel, SanityHeatMapPanel, GlobalSanityIndicator, RegionalSanityOverlay, RitualSitePanel, MissionBoardPanel, UnitRosterPanel, Phase2DoctrinePanel } from '@/components/greatOldOnes';
 import type { Phase2Operation } from '@/components/greatOldOnes/Phase2DoctrinePanel';
 import {
@@ -911,6 +914,7 @@ let currentMapModeData: MapModeOverlayData | null = null;
 let selectedTargetRefId: string | null = null;
 let uiUpdateCallback: (() => void) | null = null;
 let gameLoopRunning = false; // Prevent multiple game loops
+let gameLoopAnimationFrame: number | null = null;
 let isGameplayLoopEnabled = false;
 
 // Performance: FPS limiting to reduce CPU usage
@@ -945,6 +949,7 @@ let economicDepthApi: ReturnType<typeof useEconomicDepth> | null = null;
 let militaryTemplatesApi: ReturnType<typeof useMilitaryTemplates> | null = null;
 let supplySystemApi: ReturnType<typeof useSupplySystem> | null = null;
 let triggerNationsUpdate: (() => void) | null = null;
+let advanceGreatOldOnesTurn: (() => void) | null = null;
 
 type OverlayTone = 'info' | 'warning' | 'catastrophe';
 type OverlayNotification = { text: string; expiresAt: number; tone?: OverlayTone; sound?: string };
@@ -3629,13 +3634,7 @@ function explode(
     if (convertedCasualties > 0) {
       GameStateManager.addNonPandemicCasualties(convertedCasualties);
       
-      // Add visual population impact feedback
-      setPopulationImpacts(prev => [...prev, {
-        id: `impact-${Date.now()}-${Math.random()}`,
-        casualties: convertedCasualties,
-        targetName: target.name,
-        timestamp: Date.now()
-      }]);
+      reportPopulationImpact(convertedCasualties, target.name);
     }
 
     // Track when nation was last nuked (for political events)
@@ -5475,55 +5474,7 @@ function endTurn() {
 
       // Update Great Old Ones campaign systems (if active)
       if (S.scenario?.id === 'greatOldOnes' && S.greatOldOnes) {
-        const gooState = S.greatOldOnes;
-
-        // Update Week 3 systems (ritual sites, units, missions)
-        if (week3State) {
-          const updatedWeek3 = updateWeek3Systems(gooState, week3State);
-          setWeek3State(updatedWeek3);
-        }
-
-        // Update Phase 2 systems (if unlocked)
-        if (phase2State) {
-          // Check if phase 2 should unlock
-          if (!phase2State.unlocked) {
-            const unlockCheck = checkPhase2UnlockConditions(gooState);
-            if (unlockCheck.shouldUnlock) {
-              phase2State.unlocked = true;
-              if (window.__gameAddNewsItem) {
-                window.__gameAddNewsItem('occult', 'Phase 2 Doctrine Paths Unlocked', 'info');
-              }
-            }
-          }
-
-          if (phase2State.unlocked) {
-            const updatedPhase2 = updatePhase2Systems(gooState, phase2State, globalRNG ?? undefined);
-            setPhase2State(updatedPhase2);
-          }
-        }
-
-        // Update Phase 3 systems (if unlocked)
-        if (phase3State && phase2State) {
-          // Check if phase 3 should unlock
-          if (!phase3State.unlocked) {
-            const unlockCheck = checkPhase3UnlockConditions(gooState, phase2State);
-            if (unlockCheck.shouldUnlock) {
-              phase3State.unlocked = true;
-              if (window.__gameAddNewsItem) {
-                window.__gameAddNewsItem('occult', 'Phase 3 Endgame Systems Unlocked', 'critical');
-              }
-            }
-          }
-
-          if (phase3State.unlocked) {
-            const updatedPhase3 = updatePhase3Systems(gooState, phase2State, phase3State);
-            setPhase3State(updatedPhase3);
-          }
-        }
-
-        // Persist updated state
-        setGreatOldOnesState({ ...gooState });
-        GameStateManager.setGreatOldOnes(gooState);
+        advanceGreatOldOnesTurn?.();
       }
 
       updateDisplay();
@@ -5684,8 +5635,22 @@ function maybeRevealEndGameScreen() {
 }
 
 // Game loop with FPS limiting
+function startGameLoop() {
+  if (gameLoopRunning) return;
+  gameLoopRunning = true;
+  gameLoopAnimationFrame = requestAnimationFrame(gameLoop);
+}
+
+function stopGameLoop() {
+  gameLoopRunning = false;
+  if (gameLoopAnimationFrame !== null) cancelAnimationFrame(gameLoopAnimationFrame);
+  gameLoopAnimationFrame = null;
+  lastFrameTime = 0;
+}
+
 function gameLoop(timestamp: number = 0) {
-  requestAnimationFrame(gameLoop);
+  if (!gameLoopRunning) return;
+  gameLoopAnimationFrame = requestAnimationFrame(gameLoop);
 
   // Performance: Skip frame if we're running faster than target FPS
   const elapsed = timestamp - lastFrameTime;
@@ -5766,6 +5731,13 @@ export default function NoradVector() {
   console.log('[DEBUG] NoradVector component rendering');
 
   const navigate = useNavigate();
+  useEffect(() => () => {
+    stopGameLoop();
+    clearPendingTurnTimeouts();
+    turnInProgress = false;
+    isGameplayLoopEnabled = false;
+    isAttractModeActive = false;
+  }, []);
   const interfaceRef = useRef<HTMLDivElement>(null);
   const globeSceneRef = useRef<GlobeSceneHandle | null>(null);
   const [gamePhase, setGamePhase] = useState('intro');
@@ -6065,6 +6037,40 @@ export default function NoradVector() {
   const [week3State, setWeek3State] = useState<Week3ExtendedState | null>(null);
   const [phase2State, setPhase2State] = useState<Phase2State | null>(null);
   const [phase3State, setPhase3State] = useState<Phase3State | null>(null);
+  const campaignSubsystemsRef = useRef<CampaignSubsystems>({ week3: null, phase2: null, phase3: null });
+  campaignSubsystemsRef.current = { week3: week3State, phase2: phase2State, phase3: phase3State };
+
+  useEffect(() => {
+    const advanceCampaign = () => {
+      const state = GameStateManager.getState();
+      if (state.scenario?.id !== 'greatOldOnes' || !state.greatOldOnes) return;
+      const gooState = state.greatOldOnes;
+      const next = advanceGreatOldOnesCampaign(gooState, campaignSubsystemsRef.current, {
+        updateWeek3: updateWeek3Systems,
+        canUnlockPhase2: checkPhase2UnlockConditions,
+        updatePhase2: updatePhase2Systems,
+        canUnlockPhase3: checkPhase3UnlockConditions,
+        updatePhase3: updatePhase3Systems,
+        rng: globalRNG ?? undefined,
+        onUnlock: phase => {
+          window.__gameAddNewsItem?.('occult', phase === 2
+            ? 'Phase 2 Doctrine Paths Unlocked'
+            : 'Phase 3 Endgame Systems Unlocked', phase === 2 ? 'info' : 'critical');
+        },
+      });
+      campaignSubsystemsRef.current = next;
+      setWeek3State(next.week3);
+      setPhase2State(next.phase2);
+      setPhase3State(next.phase3);
+      setGreatOldOnesState({ ...gooState });
+      GameStateManager.setGreatOldOnes(gooState);
+    };
+    advanceGreatOldOnesTurn = advanceCampaign;
+    return () => {
+      if (advanceGreatOldOnesTurn === advanceCampaign) advanceGreatOldOnesTurn = null;
+    };
+  }, []);
+
   const [diplomacyPhase3State, setDiplomacyPhase3State] = useState<DiplomacyPhase3SystemState | null>(
     () => S.diplomacyPhase3 ?? null
   );
@@ -6085,7 +6091,10 @@ export default function NoradVector() {
     }
   }, [playerNationId]);
   const [isWarCouncilOpen, setIsWarCouncilOpen] = useState(false);
-  const [populationImpacts, setPopulationImpacts] = useState<Array<{ id: string; casualties: number; targetName: string; timestamp: number }>>([]);
+  const [populationImpacts, setPopulationImpacts] = useState<PopulationImpact[]>([]);
+  useEffect(() => subscribePopulationImpacts(impact => {
+    setPopulationImpacts(previous => [...previous, impact]);
+  }), []);
 
   const activeDoctrineIncident = S.doctrineIncidentState?.activeIncident ?? null;
   const doctrineIncidentActive = Boolean(activeDoctrineIncident);
@@ -6777,10 +6786,7 @@ export default function NoradVector() {
     canvas = canvasElement;
     ctx = canvasElement.getContext('2d')!;
 
-    if (!gameLoopRunning) {
-      gameLoopRunning = true;
-      requestAnimationFrame(gameLoop);
-    }
+    startGameLoop();
 
     if (hasBootstrappedGameRef.current) {
       console.log('[DEBUG] Bootstrap: Already bootstrapped, enabling gameplay loop');
@@ -9474,10 +9480,7 @@ export default function NoradVector() {
           resizeCanvas();
 
           const shouldStartLoop = isGameplayLoopEnabled || isAttractModeActive || isGameStarted;
-          if (!gameLoopRunning && shouldStartLoop) {
-            gameLoopRunning = true;
-            requestAnimationFrame(gameLoop);
-          }
+          if (shouldStartLoop) startGameLoop();
         }
       }, 100);
 
@@ -9500,10 +9503,7 @@ export default function NoradVector() {
     }
 
     const shouldStartLoop = isGameplayLoopEnabled || isAttractModeActive || isGameStarted;
-    if (!gameLoopRunning && shouldStartLoop) {
-      gameLoopRunning = true;
-      requestAnimationFrame(gameLoop);
-    }
+    if (shouldStartLoop) startGameLoop();
     
     // Add window resize listener
     const handleResize = () => {

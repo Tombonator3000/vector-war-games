@@ -48,9 +48,6 @@ export interface GovernmentState {
 
   /** Years/turns in power (affects legitimacy over time) */
   turnsInPower: number;
-
-  /** Government multiplier already included in the nation's production multiplier. */
-  lastAppliedProductionMultiplier?: number;
 }
 
 /**
@@ -636,4 +633,3 @@ export function calculateGovernmentCompatibility(
   // Otherwise neutral
   return 0;
 }
-

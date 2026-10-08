@@ -1,4 +1,5 @@
 import type { GameState, Nation } from '@/types/game';
+import type { ResourceTrade } from '@/types/territorialResources';
 import type { ConventionalPhaseState } from '@/types/gamePhase.types';
 import type { TerritoryState } from '@/hooks/useConventionalWarfare';
 import type { SeededRandom } from '@/lib/seededRandom';
@@ -110,6 +111,7 @@ function processNationTerritorialResources(
   nations: Nation[],
   territoriesByNation: Record<string, TerritoryState[]>,
   S: GameState,
+  deliveries: ResourceTrade[],
   player: Nation | null,
   log: (msg: string, type?: string) => void
 ): void {
@@ -121,7 +123,7 @@ function processNationTerritorialResources(
       n,
       controlledTerritories,
       S.territoryResources!,
-      S.resourceTrades || [],
+      deliveries,
       S.turn
     );
 
@@ -203,18 +205,15 @@ export function processTerritorialResourceSystems(
   // Process resource depletion
   processDepletionAndWarnings(S, nations, conventionalState, player, log);
 
-  // Process active trades
-  if (S.resourceTrades) {
-    S.resourceTrades = processResourceTrades(
-      S.resourceTrades,
-      nations,
-      S.turn,
-      S.resourceMarket
-    );
-  }
+  // Settlement decrements duration, including the paid final shipment to zero.
+  const settledTrades = processResourceTrades(
+    S.resourceTrades ?? [], nations, S.turn, S.resourceMarket
+  );
+  const deliveries = settledTrades.map(trade => ({ ...trade, duration: trade.duration + 1 }));
+  S.resourceTrades = settledTrades.filter(trade => trade.duration > 0);
 
   // Process each nation's resources
-  processNationTerritorialResources(nations, territoriesByNation, S, player, log);
+  processNationTerritorialResources(nations, territoriesByNation, S, deliveries, player, log);
 
   // Apply city maintenance costs
   applyCityMaintenanceCosts(nations, player, log);
