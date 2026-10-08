@@ -12,6 +12,16 @@ const base = 'http://127.0.0.1:5174';
 let browser;
 
 async function checkLayout(page, label) {
+  // ResizeObserver aligns overlay anchors after responsive wrapping settles.
+  await page.waitForFunction(() => {
+    const root = document.querySelector('.command-center');
+    const dock = root?.querySelector('.command-dock');
+    const stack = root?.querySelector('.game-top-stack');
+    if (!root || !dock || !stack) return false;
+    const style = getComputedStyle(root);
+    return Math.abs(parseFloat(style.getPropertyValue('--command-dock-height')) - dock.getBoundingClientRect().height) < 1 &&
+      Math.abs(parseFloat(style.getPropertyValue('--game-top-stack-offset')) - stack.getBoundingClientRect().height - 8) < 1;
+  });
   const layout = await page.evaluate(() => {
     const rect = selector => {
       const r = document.querySelector(selector).getBoundingClientRect();
@@ -19,15 +29,15 @@ async function checkLayout(page, label) {
     };
     return { width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth, dock: rect('.command-dock'), briefing: rect('.turn-briefing'), header: rect('.game-top-stack'), end: rect('.turn-control__button') };
   });
+  console.log(JSON.stringify({ label, layout }));
   assert(layout.scrollWidth <= layout.width + 1, label + ': horizontal overflow ' + JSON.stringify(layout));
   assert(layout.dock.bottom <= layout.height + 1 && layout.dock.x >= 0 && layout.dock.right <= layout.width + 1, label + ': dock clipped');
-  assert(layout.briefing.bottom < layout.dock.y, label + ': briefing overlaps commands');
+  assert(layout.briefing.bottom < layout.dock.y, label + ': briefing overlaps commands ' + JSON.stringify(layout));
   assert(layout.header.bottom < layout.dock.y, label + ': header covers map');
   assert(layout.end.height >= 44 && layout.end.right <= layout.width, label + ': end-turn touch target');
   await page.screenshot({ path: 'test-results/command-center/' + label + '.png' });
-  console.log(JSON.stringify({ label, layout }));
 }
-
+ 
 try {
   for (let attempt = 0; attempt < 120; attempt++) {
     try { if ((await fetch(base + '/tests/browser/command-center.html')).ok) break; } catch {}
@@ -42,6 +52,7 @@ try {
   await page.goto(base + '/tests/browser/command-center.html');
   await page.waitForFunction(() => !!window.commandSmoke);
   await checkLayout(page, 'desktop');
+  console.log('UI_PREVIEW_FIXTURE:' + (await page.screenshot({ type: 'jpeg', quality: 55 })).toString('base64'));
   await page.getByRole('button', { name: 'End turn', exact: true }).click();
   await page.getByRole('button', { name: 'Continue planning' }).click();
   assert.equal(await page.evaluate(() => window.commandSmoke.snapshot().turn), 1);
@@ -69,7 +80,7 @@ try {
   assert(await page.getByRole('button', { name: 'End turn', exact: true }).isDisabled());
   await page.evaluate(() => window.commandSmoke.phase('PLAYER'));
 
-  for (const theme of ['synthwave', 'retro80s', 'wargames']) {
+  for (const theme of ['synthwave', 'retro80s', 'wargames', 'highcontrast']) {
     await page.evaluate(value => window.commandSmoke.theme(value), theme);
     for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 1280, height: 800 }]) {
       await page.setViewportSize(viewport);

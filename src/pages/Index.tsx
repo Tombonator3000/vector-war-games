@@ -15284,7 +15284,10 @@ export default function NoradVector() {
         doctrineShiftState={S.doctrineShiftState}
         resourceMarket={S.resourceMarket}
         depletionWarnings={playerDepletionWarnings}
-        onOpenFullDiplomacy={() => setShowEnhancedDiplomacy(true)}
+        onOpenFullDiplomacy={() => {
+          setCivInfoPanelOpen(false);
+          setShowEnhancedDiplomacy(true);
+        }}
       />
 
       <div className="command-assistance">

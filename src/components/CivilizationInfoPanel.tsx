@@ -1076,6 +1076,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
         {/* Tabs */}
         <div className="civ-command-panel__tabs flex border-b border-gray-700 bg-gray-800 overflow-x-auto shrink-0" role="navigation" aria-label="Empire sections">
           <button
+            aria-current={activeTab === 'own-status' ? 'page' : undefined}
             onClick={() => setActiveTab('own-status')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
               activeTab === 'own-status'
@@ -1089,6 +1090,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
             </div>
           </button>
           <button
+            aria-current={activeTab === 'research' ? 'page' : undefined}
             onClick={() => setActiveTab('research')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
               activeTab === 'research'
@@ -1102,6 +1104,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
             </div>
           </button>
           <button
+            aria-current={activeTab === 'ledger' ? 'page' : undefined}
             onClick={() => setActiveTab('ledger')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
               activeTab === 'ledger'
@@ -1115,6 +1118,7 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
             </div>
           </button>
           <button
+            aria-current={activeTab === 'diplomacy' ? 'page' : undefined}
             onClick={() => setActiveTab('diplomacy')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
               activeTab === 'diplomacy'
@@ -1153,21 +1157,12 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
     />
 
     {/* Keyboard Shortcuts Help Overlay */}
-    {showShortcutsHelp && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-        <div className="bg-gray-900 border-2 border-cyan-500 rounded-lg shadow-2xl w-full max-w-md p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-cyan-300 flex items-center gap-2">
-              <Target className="w-5 h-5" />
-              Keyboard Shortcuts
-            </h3>
-            <button
-              onClick={() => setShowShortcutsHelp(false)}
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+    <Dialog open={showShortcutsHelp} onOpenChange={setShowShortcutsHelp}>
+      <DialogContent className="bg-slate-950 border-cyan-500/40 text-cyan-100">
+          <DialogTitle className="text-xl font-bold text-cyan-300 flex items-center gap-2">
+            <Target className="w-5 h-5" aria-hidden="true" /> Keyboard shortcuts
+          </DialogTitle>
+          <DialogDescription>Navigate between empire sections with Shift and the listed key.</DialogDescription>
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b border-gray-700">
               <span className="text-gray-300">Your Empire</span>
@@ -1207,11 +1202,10 @@ export const CivilizationInfoPanel: React.FC<CivilizationInfoPanelProps> = ({
             </div>
           </div>
           <div className="mt-4 pt-4 border-t border-gray-700 text-center text-xs text-gray-400">
-            Press any key or click outside to close
+            Press Esc to close
           </div>
-        </div>
-      </div>
-    )}
+      </DialogContent>
+    </Dialog>
   </>
   );
 };
