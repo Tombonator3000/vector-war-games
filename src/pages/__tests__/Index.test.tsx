@@ -597,7 +597,8 @@ describe('Index co-op toggle', () => {
     fireEvent.click(await screen.findByText('Fidel Castro'));
 
     // Open the leader overview dialog via the dock button
-    const leaderDockButton = await screen.findByRole('button', { name: /leader/i });
+    fireEvent.keyDown(await screen.findByRole('button', { name: /^more$/i }), { key: 'Enter' });
+    const leaderDockButton = await screen.findByRole('menuitem', { name: /^leader$/i });
     fireEvent.click(leaderDockButton);
 
     const activateButton = await screen.findByRole('button', { name: /activate ability/i });
@@ -617,7 +618,8 @@ describe('Index co-op toggle', () => {
       expect(screen.queryByRole('button', { name: /activate ability/i })).toBeNull();
     });
 
-    const reopenButton = await screen.findByRole('button', { name: /leader/i });
+    fireEvent.keyDown(await screen.findByRole('button', { name: /^more$/i }), { key: 'Enter' });
+    const reopenButton = await screen.findByRole('menuitem', { name: /^leader$/i });
     fireEvent.click(reopenButton);
 
     await screen.findByText(/1\s*\/\s*2/);

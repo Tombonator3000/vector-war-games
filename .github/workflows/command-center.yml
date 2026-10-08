@@ -1,0 +1,48 @@
+name: Command center UX
+on:
+  pull_request:
+    paths:
+      - 'src/components/game/**'
+      - 'src/components/Globe3D.tsx'
+      - 'src/components/intro/IntroLogo.tsx'
+      - 'src/components/CivilizationInfoPanel.tsx'
+      - 'src/components/GameSidebar.tsx'
+      - 'src/components/MapModeBar.tsx'
+      - 'src/data/commandActions.ts'
+      - 'src/data/researchCategories.ts'
+      - 'src/types/command.ts'
+      - 'src/types/production.ts'
+      - 'src/lib/commandPresentation.ts'
+      - 'src/lib/productionOptions.ts'
+      - 'src/lib/researchPresentation.ts'
+      - 'src/hooks/game/useCommandHudLayout.ts'
+      - 'src/styles/command-center.css'
+      - 'src/pages/Index.tsx'
+      - 'tests/browser/command-center*'
+      - 'scripts/command-center-smoke.mjs'
+      - '.github/workflows/command-center.yml'
+jobs:
+  interface:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Lint command center modules
+        run: npx eslint src/components/game src/hooks/game/useCommandHudLayout.ts src/lib/commandPresentation.ts src/lib/productionOptions.ts src/lib/researchPresentation.ts src/data/commandActions.ts src/data/researchCategories.ts src/types/command.ts src/types/production.ts src/components/MapModeBar.tsx src/components/GameSidebar.tsx src/components/Globe3D.tsx src/components/intro/IntroLogo.tsx
+      - name: Install browser runner
+        run: npm install --no-save --package-lock=false playwright@1.56.1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify responsive layout and order-to-turn flow
+        run: node scripts/command-center-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: command-center-screenshots
+          path: test-results/command-center
+          if-no-files-found: ignore

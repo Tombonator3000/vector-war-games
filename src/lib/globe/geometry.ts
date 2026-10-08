@@ -77,3 +77,12 @@ export function getFlatMapCameraDistance(fovDegrees: number, aspect: number): nu
   return Math.max(MORPHING_FLAT_HEIGHT / 2, MORPHING_FLAT_WIDTH / (2 * safeAspect))
     / Math.tan(verticalFov / 2) * 1.08;
 }
+
+/** Keep the full globe in view on either axis, with room for the command HUD. */
+export function getGlobeCameraDistance(fovDegrees: number, aspect: number): number {
+  const fov = Number.isFinite(fovDegrees) ? THREE.MathUtils.clamp(fovDegrees, 10, 120) : 40;
+  const safeAspect = Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
+  const verticalHalfFov = THREE.MathUtils.degToRad(fov / 2);
+  const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * safeAspect);
+  return EARTH_RADIUS / Math.sin(Math.min(verticalHalfFov, horizontalHalfFov)) * 1.3;
+}

@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -81,7 +82,8 @@ function MapModeBarComponent({
   className,
 }: MapModeBarProps) {
   return (
-    <div className={cn('flex items-center gap-1.5 rounded-full bg-black/40 px-1.5 py-1 border border-cyan-500/30 pointer-events-auto', className)}>
+    <>
+    <div className={cn('map-mode-bar__icons', 'flex items-center gap-1.5 rounded-full bg-black/40 px-1.5 py-1 border border-cyan-500/30 pointer-events-auto', className)}>
       {MAP_MODE_ORDER.map((modeId) => {
         const Icon = MAP_MODE_ICONS[modeId];
         const isActive = mode === modeId;
@@ -142,6 +144,25 @@ function MapModeBarComponent({
         );
       })}
     </div>
+    <div className="map-mode-bar__compact">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" aria-label="Map layer" className="gap-2 border-cyan-500/30 bg-black/50 text-cyan-100">
+            <Globe2 className="h-4 w-4" aria-hidden="true" />
+            {descriptions[mode]?.label ?? DEFAULT_DESCRIPTIONS[mode].label}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-slate-950 border-cyan-500/40 text-cyan-100">
+          {MAP_MODE_ORDER.map(modeId => (
+            <DropdownMenuItem key={modeId} onSelect={() => onModeChange(modeId)} className="min-h-11 gap-2">
+              <span aria-hidden="true">{mode === modeId ? '✓' : ' '}</span>
+              {descriptions[modeId]?.label ?? DEFAULT_DESCRIPTIONS[modeId].label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+    </>
   );
 }
 
