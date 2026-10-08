@@ -34,7 +34,7 @@ export function GameSidebar({
   defcon,
   className = '',
 }: GameSidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('victory');
 
   const sortedPaths = useMemo(
@@ -50,8 +50,11 @@ export function GameSidebar({
     <div className={`w-[320px] ${className}`}>
       <Card className="border-cyan-500/30 bg-slate-950/90 backdrop-blur-sm shadow-lg shadow-cyan-500/5 overflow-hidden">
         {/* Header */}
-        <div
-          className="flex items-center justify-between px-3 py-2 cursor-pointer border-b border-cyan-500/20"
+        <button
+          type="button"
+          aria-label="Victory and era objectives"
+          aria-expanded={!collapsed}
+          className="w-full min-h-11 flex items-center justify-between px-3 py-2 cursor-pointer border-b border-cyan-500/20"
           onClick={() => setCollapsed((prev) => !prev)}
         >
           <div className="flex items-center gap-2">
@@ -64,7 +67,7 @@ export function GameSidebar({
           ) : (
             <ChevronUp className="h-3.5 w-3.5 text-cyan-400" />
           )}
-        </div>
+        </button>
 
         {!collapsed && (
           <>

@@ -1,3 +1,46 @@
+## 2026-10-08 — Command center layout and gameplay UX
+
+**Session timestamp (UTC):** 2026-10-08T13:11:51.936Z
+
+**Problem and root causes:** Wrapping dock controls, event/objective/helper overlap, tiny labels, conditional resource visibility, unreviewed unused turn actions, production options that appeared usable despite a busy city queue or capped defense, resource previews disconnected from strategic stocks, research navigation requiring a graph and global shortcuts firing during text entry or modal decisions.
+
+**Fixes:** Extract typed action definitions, command dock, status, turn review, briefing, queue/resource views, production options/cards, research cards/filters and presentation helpers. Measure header/dock height and use responsive anchor zones; keep primary actions and end turn visible; collapse secondary operations and objectives. Use canonical costs/stocks, reject unavailable city/defense orders in the UI, expose research progress and searchable programs, retain specialized technology graphs, use an accessible empire dialog, and isolate keyboard shortcuts. Preserve balance values and existing game actions.
+
+**Validation:** Added focused component/interaction regression coverage and a Chromium workflow for responsive layouts, themes, real handlers through production/research/turn transitions and actual campaign startup. Full suite, Pages build, targeted lint and browser/globe checks run on the PR; final results are recorded after completion.
+
+**Files touched:**
+- `src/types/command.ts`
+- `src/data/commandActions.ts`
+- `src/lib/commandPresentation.ts`
+- `src/components/game/QueueProgress.tsx`
+- `src/components/game/ResourceBudget.tsx`
+- `src/components/game/TurnControl.tsx`
+- `src/components/game/CommandDock.tsx`
+- `src/components/game/TurnBriefing.tsx`
+- `src/components/game/CommandStatus.tsx`
+- `src/hooks/game/useCommandHudLayout.ts`
+- `src/styles/command-center.css`
+- `src/types/production.ts`
+- `src/lib/productionOptions.ts`
+- `src/components/game/ProductionCard.tsx`
+- `src/components/game/BuildModal.tsx`
+- `src/data/researchCategories.ts`
+- `src/lib/researchPresentation.ts`
+- `src/components/game/ResearchProgramCard.tsx`
+- `src/components/game/ResearchModal.tsx`
+- `src/pages/Index.tsx`
+- `src/components/CivilizationInfoPanel.tsx`
+- `src/components/GameSidebar.tsx`
+- `src/components/MapModeBar.tsx`
+- `src/pages/__tests__/Index.test.tsx`
+- `src/components/game/__tests__/commandCenter.test.tsx`
+- `tests/browser/command-center.tsx`
+- `tests/browser/command-center.html`
+- `scripts/command-center-smoke.mjs`
+- `.github/workflows/command-center.yml`
+- `docs/command-center-2026-10-08.md`
+- `log.md`
+
 ## 2026-10-08 — Globe lighting, cities and map picking
 
 **Session timestamp (UTC):** 2026-10-08T12:28:10.936Z

@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState, useCallback, useMemo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import '@/styles/command-center.css';
+import { CommandDock } from '@/components/game/CommandDock';
+import { CommandStatus } from '@/components/game/CommandStatus';
+import { TurnBriefing } from '@/components/game/TurnBriefing';
+import { useCommandHudLayout } from '@/hooks/game/useCommandHudLayout';
+import { shouldIgnoreGameShortcut } from '@/lib/commandPresentation';
 import { CityLights } from '@/state/CityLights';
 import { drawCityLights } from '@/lib/rendering/cityLightsRenderer';
 import { getDayNightBlendForTurn } from '@/lib/dayNightCycle';
@@ -112,8 +118,6 @@ import { calculateNuclearImpact, applyNuclearImpactToNation } from '@/lib/nuclea
 import { getFalloutSeverityLevel } from '@/lib/falloutEffects';
 import { loadTerritoryData, type TerritoryPolygon } from '@/lib/territoryPolygons';
 import { CivilizationInfoPanel } from '@/components/CivilizationInfoPanel';
-import { ResourceStockpileDisplay } from '@/components/ResourceStockpileDisplay';
-import { MarketStatusBadge } from '@/components/ResourceMarketPanel';
 import type { DepletionWarning } from '@/lib/resourceDepletionSystem';
 import type { SeededRandom } from '@/lib/seededRandom';
 import { DiplomacyProposalOverlay } from '@/components/DiplomacyProposalOverlay';
@@ -2617,6 +2621,10 @@ const Ocean = {
 
 // Wrapper function - delegates to extracted module
 function startResearch(tier: number | string): boolean {
+  if (S.gameOver || S.phase !== 'PLAYER') {
+    toast({ title: 'Research unavailable', description: 'Research orders can only be issued during your orders phase.' });
+    return false;
+  }
   const deps: ResearchHandlerDependencies = {
     PlayerManager,
     toast,
@@ -5706,8 +5714,8 @@ export default function NoradVector() {
     }
     return 'compact';
   });
+  useCommandHudLayout(interfaceRef, isGameStarted);
   const [showMinimalApprovalQueue, setShowMinimalApprovalQueue] = useState(false);
-  const [showMinimalCommandSheet, setShowMinimalCommandSheet] = useState(false);
   const [isLeaderOverviewOpen, setLeaderOverviewOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [civInfoPanelOpen, setCivInfoPanelOpen] = useState(false);
@@ -5756,7 +5764,6 @@ export default function NoradVector() {
   useEffect(() => {
     if (layoutDensity !== 'minimal') {
       setShowMinimalApprovalQueue(false);
-      setShowMinimalCommandSheet(false);
     }
   }, [layoutDensity]);
 
@@ -12939,7 +12946,7 @@ export default function NoradVector() {
 
       // Keyboard controls
       const handleKeyDown = (e: KeyboardEvent) => {
-        if(S.gameOver) return;
+        if (S.gameOver || shouldIgnoreGameShortcut(e)) return;
 
         if (e.altKey) {
           switch (e.key) {
@@ -12967,6 +12974,14 @@ export default function NoradVector() {
               e.preventDefault();
               handleMapModeChange('pandemic');
               return;
+            case '7':
+              e.preventDefault();
+              handleMapModeChange('radiation');
+              return;
+            case '8':
+              e.preventDefault();
+              handleMapModeChange('migration');
+              return;
             default:
               break;
           }
@@ -12975,8 +12990,8 @@ export default function NoradVector() {
         switch(e.key) {
           case '1': handleBuild(); break;
           case '2': handleResearch(); break;
-          case '3': handleIntel(); break;
-          case '4': handleCulture(); break;
+          case '3': handleIntelOperations(); break;
+          case '4': setIsCulturePanelOpen(value => !value); break;
           case '6': handleDiplomacy(); break;
           case 'o':
           case 'O':
@@ -13076,7 +13091,7 @@ export default function NoradVector() {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [currentMapStyle, isGameStarted, handleBuild, handleResearch, handleIntel, handleCulture, handleDiplomacy, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
+  }, [currentMapStyle, isGameStarted, handleBuild, handleResearch, handleIntelOperations, handleCulture, handleDiplomacy, handleOutlinerToggle, handlePauseToggle, handleMapModeChange, openModal, resizeCanvas, setIsOutlinerCollapsed, setOutlinerAttentionTick]);
 
   const buildAllowed = coopEnabled ? canExecute('BUILD') : true;
   const researchAllowed = coopEnabled ? canExecute('RESEARCH') : true;
@@ -13611,7 +13626,6 @@ export default function NoradVector() {
     globePicker,
   ]);
 
-  const defconIndicatorClasses = useMemo(() => getDefconIndicatorClasses(S.defcon), [S.defcon]);
 
   // Early returns for different phases
   console.log('[DEBUG] Render phase:', gamePhase);
@@ -13705,7 +13719,7 @@ export default function NoradVector() {
   );
 
   return (
-    <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity}`}>
+    <div ref={interfaceRef} className={`command-interface command-interface--${layoutDensity} command-center`}>
       <div className="command-interface__glow" aria-hidden="true" />
       <div className="command-interface__scanlines" aria-hidden="true" />
 
@@ -13836,100 +13850,18 @@ export default function NoradVector() {
         <div className="hud-layers pointer-events-none touch-none">
           <div className="game-top-stack pointer-events-none">
             <header className="game-top-bar w-full bg-black/80 border-b border-cyan-500/30 backdrop-blur-sm flex items-center justify-between pointer-events-auto touch-auto">
-              <div className="game-top-bar__metrics flex items-center gap-5 text-[11px] font-mono">
-              {/* DEFCON - Enlarged for prominence */}
-              <div
-                id="defconBadge"
-                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded border transition-all duration-200 ${defconIndicatorClasses.badge}`}
-              >
-                <span className="text-cyan-300 text-xs tracking-wide">DEFCON</span>
-                <span
-                  className={`font-bold text-xl leading-none transition-colors duration-200 ${defconIndicatorClasses.value}`}
-                  id="defcon"
-                >
-                  {S.defcon}
-                </span>
-              </div>
-
-              {/* Global Sanity - Great Old Ones Campaign */}
-              {S.scenario?.id === 'greatOldOnes' && greatOldOnesState && greatOldOnesState.doctrine && (
-                <GlobalSanityIndicator state={greatOldOnesState} />
-              )}
-
-              <div className="flex items-center gap-1.5">
-                <span className="text-cyan-300 text-[11px] tracking-wide">TURN</span>
-                <span className="text-neon-green font-semibold text-sm" id="turn">1</span>
-              </div>
-              {layoutDensity !== 'minimal' && (
-                <>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-cyan-300 text-[11px] tracking-wide">ACTIONS</span>
-                    <span className="text-neon-green font-semibold text-sm" id="actionsDisplay">1/1</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-cyan-300 text-[11px] tracking-wide">DATE</span>
-                    <span className="text-neon-green font-semibold text-sm" id="gameTimeDisplay">—</span>
-                  </div>
-                  {/* Strategic Resources Display */}
-                  {(() => {
-                    const playerNation = nations.find(n => n.isPlayer);
-                    const hasStockpile = !!playerNation?.resourceStockpile;
-                    const hasMarket = !!S.resourceMarket;
-
-                    if (!hasStockpile && !hasMarket) {
-                      return null;
-                    }
-
-                    return (
-                      <div className="flex items-center gap-3 pl-3 ml-3 border-l border-cyan-500/30">
-                        {playerNation && (
-                          <div className="flex items-center gap-3 text-[11px]">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-cyan-300 tracking-wide">PROD</span>
-                              <span
-                                className="font-mono font-semibold text-neon-green"
-                                id="productionDisplay"
-                              >
-                                {Math.floor(playerNation.production ?? 0)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-cyan-300 tracking-wide">INTEL</span>
-                              <span
-                                className="font-mono font-semibold text-neon-green"
-                                id="intelDisplay"
-                              >
-                                {Math.floor(playerNation.intel ?? 0)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-cyan-300 tracking-wide">GOLD</span>
-                              <span
-                                className="font-mono font-semibold text-neon-green"
-                                id="goldDisplay"
-                              >
-                                {Math.floor(playerNation.gold ?? 0)}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                        {hasStockpile && (
-                          <ResourceStockpileDisplay nation={playerNation!} compact={true} />
-                        )}
-                        {hasMarket && S.resourceMarket && (
-                          <MarketStatusBadge market={S.resourceMarket} />
-                        )}
-                      </div>
-                    );
-                  })()}
-                </>
-              )}
-              </div>
+              <CommandStatus
+                state={S}
+                nation={playerNation ?? null}
+                date={getGameTimestamp(Math.max(0, S.turn - 1), S.scenario?.timeConfig ?? getDefaultScenario().timeConfig)}
+                minimal={layoutDensity === 'minimal'}
+                extra={S.scenario?.id === 'greatOldOnes' && greatOldOnesState?.doctrine ? <GlobalSanityIndicator state={greatOldOnesState} /> : undefined}
+              />
 
               <div className="game-top-bar__actions flex items-center gap-2.5">
                 {layoutDensity !== 'minimal' && (
                   <>
-                    <div className="text-[11px] font-mono text-neon-magenta mr-3">
+                    <div className="command-doomsday text-[11px] font-mono text-neon-magenta mr-3">
                       <span className="text-cyan-300 tracking-wide">DOOMSDAY</span>{' '}
                       <span id="doomsdayTime" className="font-bold">7:00</span>
                     </div>
@@ -14095,7 +14027,7 @@ export default function NoradVector() {
           </div>
 
           {layoutDensity !== 'minimal' && isStrikePlannerOpen ? (
-            <div className="pointer-events-auto fixed bottom-24 right-3 z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))] max-h-[60vh]">
+            <div className="command-strike-panel pointer-events-auto fixed bottom-24 right-3 z-40 sm:w-80 w-[calc(100%-2rem)] max-w-[min(20rem,calc(100%-2rem))] max-h-[60vh]">
               {strikePlannerPanel}
             </div>
           ) : null}
@@ -14105,7 +14037,7 @@ export default function NoradVector() {
               <Button
                 size="icon"
                 variant="ghost"
-                className={`fixed bottom-24 right-4 z-40 h-10 w-10 rounded-full border border-cyan-500/40 bg-black/70 text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20 ${
+                className={`command-strike-panel fixed bottom-24 right-4 z-40 h-10 w-10 rounded-full border border-cyan-500/40 bg-black/70 text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20 ${
                   isStrikePlannerOpen ? 'ring-2 ring-cyan-400/70' : ''
                 }`}
                 onClick={() => setIsStrikePlannerOpen(true)}
@@ -14124,414 +14056,39 @@ export default function NoradVector() {
             </>
           ) : null}
 
-          {/* Bottom command interface stack */}
-          {layoutDensity !== 'minimal' ? (
-            <div
-              className="fixed bottom-0 left-0 right-0 pointer-events-none touch-none z-50"
-              style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-            >
-              <div className="flex flex-col gap-1">
-                <div className="h-16 sm:h-20 pointer-events-auto touch-auto">
-                  <div className="h-full flex flex-wrap items-end justify-center gap-1 px-4 sm:flex-nowrap dock-container">
-                    <Button
-                      onClick={handleBuild}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!buildAllowed}
-                      data-tutorial="build-button"
-                      className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
-                        buildAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={buildAllowed ? 'BUILD - Production and construction' : 'Await strategist approval or request authorization'}
-                    >
-                      <Factory className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">BUILD</span>
-                    </Button>
+          <CommandDock
+            minimal={layoutDensity === 'minimal'}
+            actions={[
+              { id: 'build', onSelect: handleBuild, roleLocked: !buildAllowed },
+              { id: 'research', onSelect: handleResearch, roleLocked: !researchAllowed },
+              { id: 'intel', onSelect: handleIntelOperations, roleLocked: !intelAllowed },
+              { id: 'diplomacy', onSelect: handleDiplomacy, roleLocked: !diplomacyAllowed },
+              { id: 'satcom', onSelect: handleSatelliteComms },
+              { id: 'culture', onSelect: () => setIsCulturePanelOpen(value => !value), roleLocked: !cultureAllowed },
+              { id: 'policy', onSelect: () => setShowPolicyPanel(true) },
+              { id: 'war', onSelect: () => setIsWarCouncilOpen(true) },
+              ...(playerNation && playerGovernanceMetrics ? [{ id: 'leader' as const, onSelect: () => setLeaderOverviewOpen(true) }] : []),
+              ...(bioForgeUnlocked ? [{ id: 'bio' as const, onSelect: () => setIsBioWarfareOpen(true), roleLocked: !bioWarfareAllowed, disabled: !hasBioForgeAccess }] : []),
+              { id: 'attack', onSelect: handleAttack },
+            ]}
+            turn={{
+              turn: S.turn,
+              phase: S.phase,
+              actionsRemaining: S.actionsRemaining,
+              paused: S.paused,
+              gameOver: S.gameOver,
+              revealPending: !!S.endGameRevealRequiresConfirmation,
+              researchIdle: !playerNation?.researchQueue,
+              onEndTurn: handleEndTurn,
+            }}
+          />
+          <TurnBriefing
+            nation={playerNation ?? null}
+            minimal={layoutDensity === 'minimal'}
+            onResearch={handleResearch}
+            onBuild={handleBuild}
+          />
 
-                    <Button
-                      onClick={handleResearch}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!researchAllowed}
-                      data-tutorial="research-button"
-                      className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
-                        researchAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={researchAllowed ? 'RESEARCH - Technology advancement' : 'Strategist approval required to manage research'}
-                    >
-                      <Microscope className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">RESEARCH</span>
-                    </Button>
-
-                    <Button
-                      onClick={handleIntelOperations}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!intelAllowed}
-                      data-tutorial="intel-button"
-                      className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
-                        intelAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={intelAllowed ? 'INTEL - Intelligence & spy operations' : 'Tactician authorization required to operate intel'}
-                    >
-                      <Target className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">INTEL</span>
-                    </Button>
-
-                    <Button
-                      onClick={handleSatelliteComms}
-                      variant="ghost"
-                      size="icon"
-                      data-tutorial="satcom-button"
-                      className="dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
-                      title="SATCOM - Satellite communications & signal monitoring"
-                    >
-                      <Radio className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">SATCOM</span>
-                    </Button>
-
-                    {bioForgeUnlocked ? (
-                      <Button
-                        onClick={() => setIsBioWarfareOpen(true)}
-                        variant="ghost"
-                        size="icon"
-                        data-role-locked={!bioWarfareAllowed}
-                        disabled={!hasBioForgeAccess}
-                        className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
-                          hasBioForgeAccess
-                            ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10'
-                            : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                        }`}
-                        title={
-                          hasBioForgeAccess
-                            ? 'BIOFORGE - Advanced bio-warfare operations'
-                            : 'Requires Tier 3 BioForge access and co-commander approval'
-                        }
-                      >
-                        <FlaskConical className="h-5 w-5" />
-                        <span className="text-[8px] font-mono">BIO</span>
-                      </Button>
-                    ) : null}
-
-                    <Button
-                      onClick={() => setIsCulturePanelOpen(!isCulturePanelOpen)}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!cultureAllowed}
-                      className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
-                        cultureAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={cultureAllowed ? 'CULTURE - Cultural warfare & NGO operations' : 'Requires co-commander approval to launch culture ops'}
-                    >
-                      <Radio className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">CULTURE</span>
-                    </Button>
-
-                    <Button
-                      onClick={() => setShowPolicyPanel(true)}
-                      variant="ghost"
-                      size="icon"
-                      className="dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
-                      title="POLICY - National strategic policies"
-                    >
-                      <Shield className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">POLICY</span>
-                    </Button>
-
-                    <Button
-                      onClick={handleDiplomacy}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!diplomacyAllowed}
-                      className={`dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation ${
-                        diplomacyAllowed ? 'text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
-                    >
-                      <Handshake className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">DIPLO</span>
-                    </Button>
-
-                    <Button
-                      onClick={() => setIsWarCouncilOpen(true)}
-                      variant="ghost"
-                      size="icon"
-                      className="dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
-                      title="WAR - Unified warfare command: declarations, conventional forces, and peace"
-                    >
-                      <Swords className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">WAR</span>
-                    </Button>
-
-                    {playerNation && playerGovernanceMetrics && governance.metrics[playerNation.id] ? (
-                      <Button
-                        onClick={() => setLeaderOverviewOpen(true)}
-                        variant="ghost"
-                        size="icon"
-                        className="dock-button h-12 w-12 sm:h-14 sm:w-14 flex flex-col items-center justify-center gap-0.5 touch-manipulation text-cyan-400 hover:text-neon-green hover:bg-cyan-500/10"
-                        title="LEADER - Review biography and abilities"
-                      >
-                        <Avatar className="h-6 w-6 border border-cyan-500/40 bg-black/60 text-[10px]">
-                          {playerLeaderImage ? (
-                            <AvatarImage
-                              src={playerLeaderImage}
-                              alt={currentPlayerLeaderName ? `${currentPlayerLeaderName} portrait` : 'Leader portrait'}
-                            />
-                          ) : null}
-                          <AvatarFallback>{playerLeaderInitials}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-[8px] font-mono">LEADER</span>
-                      </Button>
-                    ) : null}
-
-                    <div className="dock-divider w-px h-8 bg-cyan-500/30 mx-2" />
-
-                    <Button
-                      onClick={handleAttack}
-                      variant="ghost"
-                      size="icon"
-                      className="dock-button h-12 w-12 sm:h-14 sm:w-14 text-red-400 hover:text-red-300 hover:bg-red-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation"
-                      title="ATTACK - Launch nuclear strike (select target in Strike Planner)"
-                    >
-                      <Zap className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">ATTACK</span>
-                    </Button>
-
-                    <div className="dock-divider w-px h-8 bg-cyan-500/30 mx-2" />
-
-                    <Button
-                      onClick={handleEndTurn}
-                      variant="ghost"
-                      className="dock-button h-12 sm:h-14 px-4 sm:px-6 text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10 flex flex-col items-center justify-center gap-0.5 touch-manipulation"
-                      title="END TURN"
-                    >
-                      <ArrowRight className="h-5 w-5" />
-                      <span className="text-[8px] font-mono">END TURN</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-full border border-cyan-500/40 bg-black/70 px-4 py-2 text-[11px] font-mono tracking-[0.3em] text-cyan-300 hover:text-cyan-100 hover:bg-cyan-500/20"
-                onClick={() => setShowMinimalCommandSheet(true)}
-              >
-                <Menu className="mr-2 h-4 w-4" />
-                ACTIONS
-              </Button>
-              <Sheet open={showMinimalCommandSheet} onOpenChange={setShowMinimalCommandSheet}>
-                <SheetContent
-                  side="bottom"
-                  className="h-auto max-h-[80vh] overflow-y-auto border-t border-cyan-500/40 bg-gradient-to-t from-slate-950/95 to-slate-900/95 text-cyan-100"
-                >
-                  <SheetHeader>
-                    <SheetTitle className="text-sm font-mono tracking-[0.3em] text-cyan-300">Command Actions</SheetTitle>
-                    <SheetDescription className="text-xs text-cyan-200/70">
-                      Quick access to the full operations bar while in minimal HUD mode.
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="mt-4 grid grid-cols-3 gap-3">
-                    <Button
-                      onClick={() => {
-                        handleBuild();
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!buildAllowed}
-                      data-tutorial="build-button"
-                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
-                        buildAllowed ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={buildAllowed ? 'BUILD - Production and construction' : 'Await strategist approval or request authorization'}
-                    >
-                      <Factory className="h-5 w-5" />
-                      BUILD
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        handleResearch();
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!researchAllowed}
-                      data-tutorial="research-button"
-                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
-                        researchAllowed ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={researchAllowed ? 'RESEARCH - Technology advancement' : 'Strategist approval required to manage research'}
-                    >
-                      <Microscope className="h-5 w-5" />
-                      RESEARCH
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        handleIntelOperations();
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!intelAllowed}
-                      data-tutorial="intel-button"
-                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
-                        intelAllowed ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={intelAllowed ? 'INTEL - Intelligence & spy operations' : 'Tactician authorization required to operate intel'}
-                    >
-                      <Target className="h-5 w-5" />
-                      INTEL
-                    </Button>
-                    {bioForgeUnlocked ? (
-                      <Button
-                        onClick={() => {
-                          setIsBioWarfareOpen(true);
-                          setShowMinimalCommandSheet(false);
-                        }}
-                        variant="ghost"
-                        size="icon"
-                        data-role-locked={!bioWarfareAllowed}
-                        disabled={!hasBioForgeAccess}
-                        className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
-                          hasBioForgeAccess
-                            ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10'
-                            : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                        }`}
-                        title={
-                          hasBioForgeAccess
-                            ? 'BIOFORGE - Advanced bio-warfare operations'
-                            : 'Requires Tier 3 BioForge access and co-commander approval'
-                        }
-                      >
-                        <FlaskConical className="h-5 w-5" />
-                        BIOFORGE
-                      </Button>
-                    ) : null}
-                    <Button
-                      onClick={() => {
-                        setIsCulturePanelOpen(!isCulturePanelOpen);
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!cultureAllowed}
-                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
-                        cultureAllowed ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={cultureAllowed ? 'CULTURE - Cultural warfare (simplified)' : 'Requires co-commander approval to launch culture ops'}
-                    >
-                      <Radio className="h-5 w-5" />
-                      CULTURE
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setShowPolicyPanel(true);
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10"
-                      title="POLICY - National strategic policies"
-                    >
-                      <Shield className="h-5 w-5" />
-                      POLICY
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        handleDiplomacy();
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      data-role-locked={!diplomacyAllowed}
-                      className={`h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono ${
-                        diplomacyAllowed ? 'text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10' : 'text-yellow-300/70 hover:text-yellow-200 hover:bg-yellow-500/10'
-                      }`}
-                      title={diplomacyAllowed ? 'DIPLOMACY - International relations' : 'Diplomatic moves require strategist consent'}
-                    >
-                      <Handshake className="h-5 w-5" />
-                      DIPLO
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setIsWarCouncilOpen(true);
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10"
-                      title="WAR - Unified warfare command: declarations, conventional forces, and peace"
-                    >
-                      <Swords className="h-5 w-5" />
-                      WAR
-                    </Button>
-                    {playerNation && playerGovernanceMetrics ? (
-                      <Button
-                        onClick={() => {
-                          setLeaderOverviewOpen(true);
-                          setShowMinimalCommandSheet(false);
-                        }}
-                        variant="ghost"
-                        size="icon"
-                        className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-cyan-300 hover:text-neon-green hover:bg-cyan-500/10"
-                        title="LEADER - Review biography and abilities"
-                      >
-                        <Avatar className="h-10 w-10 border border-cyan-500/40 bg-black/60 text-[12px]">
-                          {playerLeaderImage ? (
-                            <AvatarImage
-                              src={playerLeaderImage}
-                              alt={currentPlayerLeaderName ? `${currentPlayerLeaderName} portrait` : 'Leader portrait'}
-                            />
-                          ) : null}
-                          <AvatarFallback>{playerLeaderInitials}</AvatarFallback>
-                        </Avatar>
-                        LEADER
-                      </Button>
-                    ) : null}
-                    <Button
-                      onClick={() => {
-                        handleAttack();
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-red-500/40 bg-black/60 text-[10px] font-mono text-red-300 hover:text-red-200 hover:bg-red-500/10"
-                      title="ATTACK - Launch nuclear strike (select target in Strike Planner)"
-                    >
-                      <Zap className="h-5 w-5" />
-                      ATTACK
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        handleEndTurn();
-                        setShowMinimalCommandSheet(false);
-                      }}
-                      variant="ghost"
-                      className="h-16 w-full flex flex-col items-center justify-center gap-1 rounded border border-cyan-500/30 bg-black/60 text-[10px] font-mono text-neon-yellow hover:text-neon-green hover:bg-cyan-500/10"
-                      title="END TURN"
-                    >
-                      <ArrowRight className="h-5 w-5" />
-                      END TURN
-                    </Button>
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </>
-          )}
-
-          {/* Events log - moved to bottom-4 next to buttons */}
-          <div className="fixed bottom-4 left-4 w-80 max-h-32 bg-black/80 border border-cyan-500/30 backdrop-blur-sm pointer-events-auto rounded overflow-hidden z-40">
-            <div className="text-[10px] font-mono text-cyan-400 bg-black/60 px-2 py-1 border-b border-cyan-500/30">
-              EVENTS
-            </div>
-            <div id="log" className="text-[10px] font-mono text-cyan-300 p-2 overflow-y-auto max-h-24">
-              {/* Populated by log() function */}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -15708,7 +15265,7 @@ export default function NoradVector() {
           era={gameEra}
           currentTurn={S.turn}
           defcon={S.defcon}
-          className="fixed bottom-4 left-4 z-40 pointer-events-auto"
+          className="command-objectives"
         />
       )}
 
@@ -15730,7 +15287,7 @@ export default function NoradVector() {
         onOpenFullDiplomacy={() => setShowEnhancedDiplomacy(true)}
       />
 
-      <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 sm:gap-3">
+      <div className="command-assistance">
         <GameHelper
           triggerButtonClassName="z-50 h-12 w-12 rounded-full border border-cyan-500/40 bg-slate-950/80 text-cyan-200 shadow-lg transition hover:text-neon-green hover:bg-cyan-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
           onRestartModalTutorial={handleRestartModalTutorial}
