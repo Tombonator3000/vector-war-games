@@ -1,82 +1,65 @@
-/**
- * CityLights State Manager
- *
- * Manages the city lights visualization system.
- * Extracted from Index.tsx to support modularization.
- *
- * Note: The rendering logic remains in Index.tsx due to canvas context dependencies.
- * This module provides state management for the city light data.
- */
+import type { City, CityNation } from '@/types/cityLights';
+import { createCityLight, getVisibleCityCount, normalizeCity } from '@/lib/cityLights';
+export type { City } from '@/types/cityLights';
 
-export interface City {
-  lat: number;
-  lon: number;
-  brightness: number;
-}
+type ProjectCity = (lon: number, lat: number) => { x: number; y: number; visible?: boolean };
 
-/**
- * CityLights singleton for managing city light state
- */
+/** Shared visual state. Destruction only darkens lights; gameplay losses are resolved by combat. */
 export const CityLights = {
   cities: [] as City[],
+  counts: new Map<string, number>(),
 
-  /**
-   * Add a new city light to the map
-   * @param lat - Latitude coordinate
-   * @param lon - Longitude coordinate
-   * @param brightness - Light brightness (0-1)
-   */
-  addCity(lat: number, lon: number, brightness: number): void {
-    this.cities.push({ lat, lon, brightness });
+  generate(nations: readonly CityNation[]): void {
+    this.clear();
+    this.syncNations(nations);
   },
 
-  /**
-   * Remove cities within a radius (e.g., from nuclear blast)
-   * @param x - X coordinate on canvas
-   * @param y - Y coordinate on canvas
-   * @param radius - Destruction radius
-   * @param projectFn - Function to project lat/lon to x/y coordinates
-   * @returns Number of cities destroyed
-   */
-  destroyNear(
-    x: number,
-    y: number,
-    radius: number,
-    projectFn: (lon: number, lat: number) => { x: number; y: number }
-  ): number {
-    let destroyed = 0;
-    this.cities = this.cities.filter(city => {
-      const { x: cx, y: cy } = projectFn(city.lon, city.lat);
-      const dist = Math.hypot(cx - x, cy - y);
-      if (dist < radius) {
-        destroyed++;
-        return false;
+  syncNations(nations: readonly CityNation[]): void {
+    const activeIds = new Set(nations.map(nation => nation.id));
+    this.cities = this.cities.filter(city => !city.nationId || activeIds.has(city.nationId));
+    for (const id of this.counts.keys()) {
+      if (!activeIds.has(id)) this.counts.delete(id);
+    }
+    for (const nation of nations) {
+      const count = getVisibleCityCount(nation);
+      const previous = this.counts.get(nation.id) ?? 0;
+      if (count < previous) {
+        this.cities = this.cities.filter(city => city.nationId !== nation.id || (city.index ?? 0) < count);
       }
-      return true;
-    });
-    return destroyed;
+      for (let index = previous; index < count; index += 1) {
+        this.cities.push(createCityLight(nation, index));
+      }
+      this.counts.set(nation.id, count);
+    }
   },
 
-  /**
-   * Clear all city lights
-   */
+  addCity(lat: number, lon: number, brightness: number): void {
+    const city = normalizeCity({ lat, lon, brightness });
+    if (city) this.cities.push(city);
+  },
+
+  destroyNear(x: number, y: number, radius: number, projectFn: ProjectCity): number {
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius) || radius <= 0) return 0;
+    const before = this.cities.length;
+    this.cities = this.cities.filter(city => {
+      const point = projectFn(city.lon, city.lat);
+      return point.visible === false || !Number.isFinite(point.x) || !Number.isFinite(point.y)
+        || Math.hypot(point.x - x, point.y - y) >= radius;
+    });
+    return before - this.cities.length;
+  },
+
   clear(): void {
     this.cities = [];
+    this.counts.clear();
   },
 
-  /**
-   * Get all cities
-   * @returns Array of city light data
-   */
   getCities(): City[] {
-    return this.cities;
+    return this.cities.map(city => ({ ...city }));
   },
 
-  /**
-   * Set cities directly (useful for initialization)
-   * @param cities - Array of city data
-   */
-  setCities(cities: City[]): void {
-    this.cities = cities;
+  setCities(cities: readonly City[]): void {
+    this.clear();
+    this.cities = cities.map(normalizeCity).filter((city): city is City => city !== null);
   },
 };
