@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'src/components/game/**'
+      - 'src/components/Globe3D.tsx'
+      - 'src/components/intro/IntroLogo.tsx'
       - 'src/components/CivilizationInfoPanel.tsx'
       - 'src/components/GameSidebar.tsx'
       - 'src/components/MapModeBar.tsx'
@@ -31,7 +33,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Lint command center modules
-        run: npx eslint src/components/game src/hooks/game/useCommandHudLayout.ts src/lib/commandPresentation.ts src/lib/productionOptions.ts src/lib/researchPresentation.ts src/data/commandActions.ts src/data/researchCategories.ts src/types/command.ts src/types/production.ts src/components/MapModeBar.tsx src/components/GameSidebar.tsx
+        run: npx eslint src/components/game src/hooks/game/useCommandHudLayout.ts src/lib/commandPresentation.ts src/lib/productionOptions.ts src/lib/researchPresentation.ts src/data/commandActions.ts src/data/researchCategories.ts src/types/command.ts src/types/production.ts src/components/MapModeBar.tsx src/components/GameSidebar.tsx src/components/Globe3D.tsx src/components/intro/IntroLogo.tsx
       - name: Install browser runner
         run: npm install --no-save --package-lock=false playwright@1.56.1
       - name: Install Chromium

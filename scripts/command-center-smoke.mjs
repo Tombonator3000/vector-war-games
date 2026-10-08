@@ -110,6 +110,17 @@ try {
   });
   await page.goto(base + '/');
   console.log('CAMPAIGN_START:' + JSON.stringify({ url: page.url(), errors, body: await page.locator('body').innerText() }));
+  await page.getByRole('button', { name: /Start Game/i }).waitFor();
+  const logoBounds = await page.locator('.intro-screen__logo').evaluate(svg => {
+    const view = svg.viewBox.baseVal;
+    return [...svg.querySelectorAll('text')].map(text => {
+      const box = text.getBBox();
+      return { text: text.textContent.trim(), x: box.x, y: box.y, right: box.x + box.width, bottom: box.y + box.height, width: view.width, height: view.height };
+    });
+  });
+  assert(logoBounds.every(box => box.x >= 0 && box.right <= box.width && box.y >= 0 && box.bottom <= box.height), 'Intro wordmark must fit its viewBox: ' + JSON.stringify(logoBounds));
+  await page.screenshot({ path: 'test-results/command-center/intro.png' });
+  console.log('UI_PREVIEW_INTRO:' + (await page.screenshot({ type: 'jpeg', quality: 55 })).toString('base64'));
   await page.getByRole('button', { name: /Start Game/i }).click();
   await page.getByRole('button', { name: /^Select / }).click();
   await page.locator('.command-dock').waitFor({ timeout: 30000 });
@@ -118,9 +129,12 @@ try {
   const desktopPreview = await page.screenshot({ type: 'jpeg', quality: 55 });
   console.log('UI_PREVIEW_DESKTOP:' + desktopPreview.toString('base64'));
   await page.getByRole('button', { name: 'Research', exact: true }).click();
-  await page.getByRole('searchbox', { name: 'Search programs' }).fill('Fission');
+  await page.getByRole('searchbox', { name: 'Search programs' }).pressSequentially('Fission 123');
   assert.equal(await page.getByRole('dialog').count(), 1, 'Typing must not open extra map dialogs');
   await page.screenshot({ path: 'test-results/command-center/campaign-research.png' });
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('1');
+  await page.getByRole('heading', { name: 'STRATEGIC PRODUCTION', exact: true }).waitFor();
   await page.keyboard.press('Escape');
   await page.setViewportSize({ width: 390, height: 844 });
   await checkLayout(page, 'campaign-mobile');
