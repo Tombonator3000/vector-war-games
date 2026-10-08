@@ -38,6 +38,13 @@ async function checkLayout(page, label) {
   assert(layout.header.height >= 32, label + ': header must participate in layout');
   assert(layout.header.bottom < layout.dock.y, label + ': header covers map');
   assert(layout.end.height >= 44 && layout.end.right <= layout.width, label + ': end-turn touch target');
+  const reachable = await page.evaluate(() => {
+    const button = document.querySelector('.turn-control__button');
+    const rect = button.getBoundingClientRect();
+    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    return hit === button || button.contains(hit);
+  });
+  assert(reachable, label + ': end turn must not be covered by notifications or advisors');
   await page.screenshot({ path: 'test-results/command-center/' + label + '.png' });
 }
  

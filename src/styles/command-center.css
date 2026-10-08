@@ -183,3 +183,15 @@
 .civ-command-panel__tabs button { min-width: 90px; padding-inline: 10px; font-size: 12px; }
 .civ-command-panel__tabs button > div { flex-direction: column; gap: 4px; }
 @media (min-width: 701px) { .civ-command-panel__tabs button > div { flex-direction: row; } }
+
+.command-center .command-advisors {
+  bottom: calc(var(--command-dock-height) + 74px);
+  right: 16px;
+  max-width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - var(--game-top-stack-offset) - var(--command-dock-height) - 96px);
+  overflow-y: auto;
+}
+body:has(.command-center) .game-toast-viewport {
+  bottom: calc(var(--command-dock-height, 118px) + 76px);
+  max-height: calc(100dvh - var(--command-dock-height, 118px) - 160px);
+}

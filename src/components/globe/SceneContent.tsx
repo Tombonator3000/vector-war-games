@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -9,7 +9,7 @@ import { DEFAULT_MAP_STYLE } from '@/constants/map.constants';
 import { createTerritoryBoundaries } from '@/lib/territoryPolygons';
 import { animateExplosion, updateMissileAnimation, updateMissileTrajectoryPositions } from '@/lib/missileTrajectories';
 import { createUnitBillboard, disposeUnitVisualization, type UnitVisualization } from '@/lib/unitModels';
-import { getMorphedPosition, getFlatMapCameraDistance } from '@/lib/globe/geometry';
+import { getMorphedPosition, getFlatMapCameraDistance, getGlobeCameraDistance } from '@/lib/globe/geometry';
 import { disposeObject, disposeMissileInstance, disposeExplosionGroup, resolveCssRendererSize } from '@/lib/globe/sceneResources';
 import { MorphingGlobe, type MorphingGlobeHandle } from '@/components/MorphingGlobe';
 import { WeatherClouds } from '@/components/WeatherClouds';
@@ -51,6 +51,7 @@ export function SceneContent({
 }: SceneContentProps) {
   const { camera, size, clock, gl } = useThree();
   const earthRef = useRef<THREE.Mesh | null>(null);
+  const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null);
   const morphingGlobeRef = useRef<MorphingGlobeHandle>(null);
   // Map mode overlays are handled by dedicated SVG components (e.g. PoliticalStabilityOverlay)
   // The 3D scene only renders the base map and nation markers
@@ -81,6 +82,7 @@ export function SceneContent({
   const cssWidth = cssDimensions.width;
   const cssHeight = cssDimensions.height;
   const flatCameraDistance = getFlatMapCameraDistance((camera as THREE.PerspectiveCamera).fov, cssWidth / cssHeight);
+  const globeCameraDistance = getGlobeCameraDistance((camera as THREE.PerspectiveCamera).fov, cssWidth / cssHeight);
 
   const latLonToSceneVector = useCallback(
     (lon: number, lat: number, radius: number) => getMorphedPosition(lon, lat, morphFactor, radius),
@@ -165,15 +167,14 @@ export function SceneContent({
   }, [units, showUnits, latLonToSceneVector]);
 
   useEffect(() => {
-    if (!isFlat) {
-      return;
-    }
-
     const perspective = camera as THREE.PerspectiveCamera;
-    perspective.position.set(0, 0, flatCameraDistance);
+    if (isFlat) perspective.position.set(0, 0, flatCameraDistance);
+    else perspective.position.normalize().multiplyScalar(globeCameraDistance);
+    controlsRef.current?.target.set(0, 0, 0);
     perspective.lookAt(0, 0, 0);
     perspective.updateProjectionMatrix();
-  }, [camera, isFlat, flatCameraDistance]);
+    controlsRef.current?.update();
+  }, [camera, isFlat, flatCameraDistance, globeCameraDistance]);
 
   useFrame(() => {
     const currentTime = clock.getElapsedTime();
@@ -317,11 +318,12 @@ export function SceneContent({
 
       {/* OrbitControls - behavior adapts based on morph factor */}
       <OrbitControls
+        ref={controlsRef}
         enableRotate={morphFactor < 0.7}
         enableZoom={true}
         enablePan={morphFactor > 0.3}
         minDistance={EARTH_RADIUS + 1.3}
-        maxDistance={Math.max(EARTH_RADIUS + 5, flatCameraDistance * 1.2)}
+        maxDistance={Math.max(EARTH_RADIUS + 5, flatCameraDistance * 1.2, globeCameraDistance * 1.2)}
         mouseButtons={{
           LEFT: isEffectivelyFlat ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
           MIDDLE: THREE.MOUSE.DOLLY,

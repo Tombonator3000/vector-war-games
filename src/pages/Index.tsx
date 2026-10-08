@@ -14771,7 +14771,7 @@ export default function NoradVector() {
       )}
 
       {/* AI Advisor Panel - positioned bottom-right to avoid blocking hotbar */}
-      {advisorsEnabled && <AdvisorPanel position="bottom-right" defaultCollapsed={true} />}
+      {advisorsEnabled && <AdvisorPanel position="bottom-right" defaultCollapsed={true} className="command-advisors" />}
 
       {(() => {
         const player = PlayerManager.get();

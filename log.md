@@ -4,11 +4,15 @@
 
 **Problem and root causes:** Wrapping dock controls, event/objective/helper overlap, tiny labels, conditional resource visibility, unreviewed unused turn actions, production options that appeared usable despite a busy city queue or capped defense, resource previews disconnected from strategic stocks, research navigation requiring a graph and global shortcuts firing during text entry or modal decisions.
 
-**Fixes:** Extract typed action definitions, command dock, status, turn review, briefing, queue/resource views, production options/cards, research cards/filters and presentation helpers. Measure header/dock height and use responsive anchor zones; keep primary actions and end turn visible; collapse secondary operations and objectives. Use canonical costs/stocks, reject unavailable city/defense orders in the UI, expose research progress and searchable programs, retain specialized technology graphs, use an accessible empire dialog, and isolate keyboard shortcuts. Repair clipped introductory globe framing and wordmark tracking discovered in real campaign startup. Preserve balance values and existing game actions.
+**Fixes:** Extract typed action definitions, command dock, status, turn review, briefing, queue/resource views, production options/cards, research cards/filters and presentation helpers. Measure header/dock height and use responsive anchor zones; keep primary actions and end turn visible; collapse secondary operations and objectives. Use canonical costs/stocks, reject unavailable city/defense orders in the UI, expose research progress and searchable programs, retain specialized technology graphs, use an accessible empire dialog, and isolate keyboard shortcuts. Move toast/advisor overlays above the rail and fit the strategic globe to both viewport axes. Repair clipped introductory globe framing and wordmark tracking discovered in real campaign startup. Preserve balance values and existing game actions.
 
 **Validation:** Added focused component/interaction regression coverage and a Chromium workflow for responsive layouts, themes, real handlers through production/research/turn transitions and actual campaign startup. Full suite, Pages build, targeted lint and browser/globe checks run on the PR; final results are recorded after completion.
 
 **Files touched:**
+- `src/lib/globe/geometry.ts`
+- `src/lib/globe/__tests__/geometry.test.ts`
+- `src/components/globe/SceneContent.tsx`
+- `src/components/ui/toaster.tsx`
 - `src/components/Globe3D.tsx`
 - `src/components/intro/IntroLogo.tsx`
 - `src/types/command.ts`
