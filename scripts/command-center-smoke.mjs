@@ -110,7 +110,7 @@ try {
   });
   await page.goto(base + '/');
   console.log('CAMPAIGN_START:' + JSON.stringify({ url: page.url(), errors, body: await page.locator('body').innerText() }));
-  await page.getByRole('button', { name: 'Start Game', exact: true }).click();
+  await page.getByRole('button', { name: /Start Game/i }).click();
   await page.getByRole('button', { name: /^Select / }).click();
   await page.locator('.command-dock').waitFor({ timeout: 30000 });
   await page.locator('.globe-scene__overlay').waitFor();
