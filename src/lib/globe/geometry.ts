@@ -19,10 +19,11 @@ export function getMorphedPosition(
   const theta = THREE.MathUtils.degToRad(lon);
   const factor = clampUnit(morphFactor);
   const globeScale = 1 - factor;
+  const snap = (value: number) => Math.abs(value) < 1e-12 ? 0 : value;
   return target.set(
-    -radius * Math.sin(phi) * Math.cos(theta) * globeScale + lon / 360 * MORPHING_FLAT_WIDTH * factor,
-    radius * Math.cos(phi) * globeScale + lat / 180 * MORPHING_FLAT_HEIGHT * factor,
-    radius * Math.sin(phi) * Math.sin(theta) * globeScale + (radius - EARTH_RADIUS) * factor,
+    snap(-radius * Math.sin(phi) * Math.cos(theta) * globeScale + lon / 360 * MORPHING_FLAT_WIDTH * factor),
+    snap(radius * Math.cos(phi) * globeScale + lat / 180 * MORPHING_FLAT_HEIGHT * factor),
+    snap(radius * Math.sin(phi) * Math.sin(theta) * globeScale + (radius - EARTH_RADIUS) * factor),
   );
 }
 

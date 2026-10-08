@@ -26,7 +26,7 @@ describe('shared map surface', () => {
       const point = getMorphedPosition(lon, lat, factor).project(camera);
       raycaster.setFromCamera(new THREE.Vector2(point.x, point.y), camera);
       const hit = raycaster.intersectObject(mesh)[0];
-      expect(hit?.uv).toBeDefined();
+      expect(hit?.uv, 'Hit at lon=' + lon + ', lat=' + lat).toBeDefined();
       const picked = lonLatFromUv(hit.uv!);
       expect(Math.abs(picked.lon - lon)).toBeLessThan(0.15);
       expect(Math.abs(picked.lat - lat)).toBeLessThan(0.15);

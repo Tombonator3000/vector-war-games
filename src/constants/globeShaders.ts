@@ -138,3 +138,25 @@ export const vectorOverlayFragmentShader = /* glsl */ `
   }
 `;
 
+
+// Performance: Move shader strings outside component to avoid recreation on each render
+export const ATMOSPHERE_HALO_VERTEX_SHADER = /* glsl */ `
+  varying vec3 vNormal;
+  void main() {
+    vNormal = normalize(normalMatrix * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+export const ATMOSPHERE_HALO_FRAGMENT_SHADER = /* glsl */ `
+  uniform float uOpacity;
+  varying vec3 vNormal;
+  void main() {
+    // Fresnel-based rim glow - stronger at edges, invisible at center
+    float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.5);
+    vec3 haloColor = vec3(0.3, 0.7, 1.0); // Cyan/blue halo
+    float intensity = fresnel * 0.9;
+    gl_FragColor = vec4(haloColor, intensity * uOpacity);
+  }
+`;
+

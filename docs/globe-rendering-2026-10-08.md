@@ -14,7 +14,7 @@ Session (UTC): 2026-10-08T12:28:10.936Z
 
 ## Structure
 
-MorphingGlobe is reduced from about 800 lines to about 235. Shader definitions, dimensions, geometry, borders, city data, city state, rendering and turn lighting have separate modules. The unused duplicate city-light implementation is removed from Index.tsx.
+MorphingGlobe is reduced from about 800 lines to about 235. Shader definitions, dimensions, geometry, borders, city data, city state, rendering and turn lighting have separate modules. GlobeScene is reduced from about 1,900 lines to under 500, with the scene content, atmosphere, resource cleanup and contracts in focused modules. The unused legacy globe/flat renderers and duplicate city-light implementation are removed. Stable default arrays prevent render-effect loops when optional map data is omitted.
 
 ## Validation
 

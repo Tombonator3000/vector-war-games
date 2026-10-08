@@ -36,14 +36,17 @@ try {
   await page.screenshot({ path: 'test-results/globe/day.png' });
 
   await page.evaluate(() => window.globeSmoke.setNight(true));
-  await pause(500);
+  await page.waitForFunction(() => window.globeSmoke.sample(90, 0)?.[0] > 240);
   const night = await page.evaluate(() => [window.globeSmoke.sample(90, 0), window.globeSmoke.sample(40, 0)]);
   assert(night[0][0] > 240 && Math.abs(night[0][0] - night[1][0]) <= 3, 'Night emission must remain bright on shaded pixels: ' + JSON.stringify(night));
   await page.screenshot({ path: 'test-results/globe/night.png' });
 
   await page.evaluate(() => window.globeSmoke.morph(true));
   await page.evaluate(() => window.globeSmoke.setNight(false));
-  await pause(500);
+  await page.waitForFunction(() => {
+    const pixel = window.globeSmoke.sample(0, 0);
+    return pixel && Math.abs(pixel[0] - pixel[1]) < 2;
+  });
   assert.equal(await page.evaluate(() => window.globeSmoke.factor()), 1, 'Day/night changes must preserve the flat map');
   const flat = await page.evaluate(() => [window.globeSmoke.sample(0, 0), window.globeSmoke.sample(90, 0)]);
   assert(Math.abs(flat[0][0] - flat[1][0]) <= 3 && flat[0][0] > 120, 'Flat map must be evenly lit: ' + JSON.stringify(flat));
