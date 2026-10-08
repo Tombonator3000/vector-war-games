@@ -195,3 +195,7 @@ body:has(.command-center) .game-toast-viewport {
   bottom: calc(var(--command-dock-height, 118px) + 76px);
   max-height: calc(100dvh - var(--command-dock-height, 118px) - 160px);
 }
+
+body:has(.command-center):has([role="dialog"][data-state="open"]) .game-toast-viewport {
+  z-index: 9998;
+}

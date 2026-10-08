@@ -6,7 +6,7 @@
 
 **Fixes:** Extract typed action definitions, command dock, status, turn review, briefing, queue/resource views, production options/cards, research cards/filters and presentation helpers. Measure header/dock height and use responsive anchor zones; keep primary actions and end turn visible; collapse secondary operations and objectives. Use canonical costs/stocks, reject unavailable city/defense orders in the UI, expose research progress and searchable programs, retain specialized technology graphs, use an accessible empire dialog, and isolate keyboard shortcuts. Move toast/advisor overlays above the rail and fit the strategic globe to both viewport axes. Repair clipped introductory globe framing and wordmark tracking discovered in real campaign startup. Preserve balance values and existing game actions.
 
-**Validation:** Added focused component/interaction regression coverage and a Chromium workflow for responsive layouts, themes, real handlers through production/research/turn transitions and actual campaign startup. Full suite, Pages build, targeted lint and browser/globe checks run on the PR; final results are recorded after completion.
+**Validation:** 587 tests across 79 files and the Pages production build pass in CI. Targeted lint, Chromium checks across desktop/portrait/landscape and four themes, real production/research handlers, campaign startup, program search, keyboard isolation and globe rendering are included in the PR workflows. Browser checks assert that overlays do not obscure End turn and that the intro wordmark fits its viewBox; screenshot artifacts document the results.
 
 **Files touched:**
 - `src/lib/globe/geometry.ts`

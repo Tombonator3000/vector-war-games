@@ -14,6 +14,8 @@ let activePage;
 const errors = [];
 
 async function checkLayout(page, label) {
+  // Modal exit animations can retain their pointer-blocking overlay briefly.
+  await page.waitForFunction(() => !document.querySelector('.fixed.inset-0[data-state="closed"]'));
   // ResizeObserver aligns overlay anchors after responsive wrapping settles.
   await page.waitForFunction(() => {
     const root = document.querySelector('.command-center');
@@ -29,7 +31,9 @@ async function checkLayout(page, label) {
       const r = document.querySelector(selector).getBoundingClientRect();
       return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
     };
-    return { width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth, dock: rect('.command-dock'), briefing: rect('.turn-briefing'), header: rect('.game-top-stack'), end: rect('.turn-control__button') };
+    const endRect = document.querySelector('.turn-control__button').getBoundingClientRect();
+    const hit = document.elementFromPoint(endRect.x + endRect.width / 2, endRect.y + endRect.height / 2);
+    return { endHit: hit?.outerHTML.slice(0, 400), width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth, dock: rect('.command-dock'), briefing: rect('.turn-briefing'), header: rect('.game-top-stack'), end: rect('.turn-control__button') };
   });
   console.log(JSON.stringify({ label, layout }));
   assert(layout.scrollWidth <= layout.width + 1, label + ': horizontal overflow ' + JSON.stringify(layout));
@@ -133,6 +137,8 @@ try {
   await page.locator('.command-dock').waitFor({ timeout: 30000 });
   await page.locator('.globe-scene__overlay').waitFor();
   await checkLayout(page, 'campaign-desktop');
+  await page.getByRole('button', { name: 'End turn', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue planning' }).click();
   const desktopPreview = await page.screenshot({ type: 'jpeg', quality: 55 });
   console.log('UI_PREVIEW_DESKTOP:' + desktopPreview.toString('base64'));
   await page.getByRole('button', { name: 'Research', exact: true }).click();
