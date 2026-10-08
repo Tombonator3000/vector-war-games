@@ -1,3 +1,40 @@
+## 2026-10-08 — Globe lighting, cities and map picking
+
+**Session timestamp (UTC):** 2026-10-08T12:28:10.936Z
+
+**Problem and root causes:** Inverted lighting normals, non-emissive night imagery, a cycle that never reached full night, recreated uniforms restoring the globe, stale/unregistered surface references, shader-only deformation with CPU raycasting against an undeformed plane, mirrored longitude inversion, clipped and high-DPR label drift, city rendering skipped for the default map, random city generation disconnected from construction, and date-line border stripes.
+
+**Fixes:** Extract shared dimensions/shaders/geometry/border and city modules; preserve stable uniforms; synchronize raycast geometry with the shader; register the actual loaded mesh and decode hit UVs; use CSS projection coordinates and increasing revisions; hide clipped/back-facing markers; fit the flat map on portrait screens; render deterministic gameplay city lights, synchronize completed construction, protect hidden cities from screen-space blasts, reset visual state, and use a complete day/dusk/night/dawn cycle.
+
+**Validation:** Added regression tests for raycasting, border seams, projection visibility, portrait fitting, city lifecycle and day/night progression. Added Chromium pixel and production-scene checks with screenshot artifacts. Full tests, Pages build and browser checks run on the associated PR; exact results will be recorded after completion.
+
+**Files touched:**
+- `.github/workflows/globe-smoke.yml`
+- `docs/globe-rendering-2026-10-08.md`
+- `log.md`
+- `scripts/globe-rendering-smoke.mjs`
+- `src/components/GlobeScene.tsx`
+- `src/components/MorphingGlobe.tsx`
+- `src/constants/globe.constants.ts`
+- `src/constants/globeShaders.ts`
+- `src/lib/__tests__/dayNightCycle.test.ts`
+- `src/lib/cityLights.ts`
+- `src/lib/dayNightCycle.ts`
+- `src/lib/globe/__tests__/borders.test.ts`
+- `src/lib/globe/__tests__/geometry.test.ts`
+- `src/lib/globe/borders.ts`
+- `src/lib/globe/geometry.ts`
+- `src/lib/rendering/__tests__/cityLightsRenderer.test.ts`
+- `src/lib/rendering/cityLightsRenderer.ts`
+- `src/pages/Index.tsx`
+- `src/state/CityLights.ts`
+- `src/state/__tests__/CityLights.test.ts`
+- `src/types/cityLights.ts`
+- `tests/browser/globe.html`
+- `tests/browser/globe.tsx`
+
+---
+
 ## 2026-10-08 — Gameplay correctness and modular refactor
 
 **Session timestamp (UTC):** 2026-10-08T08:08:04.094Z

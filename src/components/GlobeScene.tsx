@@ -43,7 +43,8 @@ import {
 import { resolvePublicAssetPath } from '@/lib/renderingUtils';
 import { TerritoryMarkers } from '@/components/TerritoryMarkers';
 import type { TerritoryState } from '@/hooks/useConventionalWarfare';
-import { MorphingGlobe, getMorphedPosition, MORPHING_FLAT_WIDTH, MORPHING_FLAT_HEIGHT, type MorphingGlobeHandle } from '@/components/MorphingGlobe';
+import { MorphingGlobe, getMorphedPosition, type MorphingGlobeHandle } from '@/components/MorphingGlobe';
+import { getMorphedNormal, lonLatFromUv, isProjectedPointVisible, getFlatMapCameraDistance } from '@/lib/globe/geometry';
 import { WeatherClouds } from '@/components/WeatherClouds';
 import type { CloudRegion } from '@/hooks/useWeatherRadar';
 
@@ -245,13 +246,6 @@ function latLonToVector3(lon: number, lat: number, radius: number, target?: THRE
     return target.set(x, y, z);
   }
   return new THREE.Vector3(x, y, z);
-}
-
-function normalizeLon(lon: number) {
-  let result = lon;
-  while (result < -180) result += 360;
-  while (result > 180) result -= 360;
-  return result;
 }
 
 /* clampColorIntensity removed - only used by deleted CityLights component */
@@ -561,6 +555,16 @@ function EarthWireframe({
 
   const cssWidth = cssDimensions.width;
   const cssHeight = cssDimensions.height;
+  const flatCameraDistance = getFlatMapCameraDistance((camera as THREE.PerspectiveCamera).fov, cssWidth / cssHeight);
+
+  const handleSurfaceReady = useCallback((earth: THREE.Mesh) => {
+    register({
+      camera: camera as THREE.PerspectiveCamera,
+      size: { width: cssWidth, height: cssHeight },
+      earth, clock,
+    });
+    onMorphingGlobeReady?.(morphingGlobeRef.current);
+  }, [camera, clock, cssWidth, cssHeight, register, onMorphingGlobeReady]);
 
   const normalizedSegments = useMemo(
     () => collectWireframeSegments(worldCountries),
@@ -1079,37 +1083,6 @@ function SceneContent({
     cameraPoseUpdateRef.current = onCameraPoseUpdate;
   }, [onCameraPoseUpdate]);
 
-  // Notify parent when morphing globe ref is available
-  // Use polling to ensure the ref is actually set (handles race condition)
-  useEffect(() => {
-    let cancelled = false;
-    let attempts = 0;
-    const maxAttempts = 50; // ~1 second at 20ms intervals
-
-    const checkAndNotify = () => {
-      if (cancelled) return;
-
-      const handle = morphingGlobeRef.current;
-      if (handle) {
-        onMorphingGlobeReady?.(handle);
-        return;
-      }
-
-      // Retry if ref not yet set (race condition with useImperativeHandle)
-      attempts++;
-      if (attempts < maxAttempts) {
-        requestAnimationFrame(checkAndNotify);
-      }
-    };
-
-    // Start checking after a small delay to let MorphingGlobe render
-    requestAnimationFrame(checkAndNotify);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [onMorphingGlobeReady]);
-
   // Handle morph progress updates from MorphingGlobe
   const handleMorphProgressInternal = useCallback((factor: number) => {
     setMorphFactorState(factor);
@@ -1207,7 +1180,7 @@ function SceneContent({
     register({
       camera: camera as THREE.PerspectiveCamera,
       size: { width: cssWidth, height: cssHeight },
-      earth: isFlat ? null : earthRef.current,
+      earth: earthRef.current,
       clock,
       projectPosition: latLonToSceneVector,
     });
@@ -1267,10 +1240,10 @@ function SceneContent({
     }
 
     const perspective = camera as THREE.PerspectiveCamera;
-    perspective.position.set(0, 0, EARTH_RADIUS + 3);
+    perspective.position.set(0, 0, flatCameraDistance);
     perspective.lookAt(0, 0, 0);
     perspective.updateProjectionMatrix();
-  }, [camera, isFlat]);
+  }, [camera, isFlat, flatCameraDistance]);
 
   useFrame(() => {
     // Only apply cam-based camera positioning for realistic (non-morphing) 3D mode
@@ -1353,6 +1326,8 @@ function SceneContent({
         <MorphingGlobe
           ref={morphingGlobeRef}
           initialView="globe"
+          meshRef={earthRef}
+          onSurfaceReady={handleSurfaceReady}
           animationDuration={1.2}
           textureVariant={isNightMode ? 'night' : 'day'}
           dayNightBlend={dayNightBlend}
@@ -1438,7 +1413,7 @@ function SceneContent({
         enableZoom={true}
         enablePan={morphFactor > 0.3}
         minDistance={EARTH_RADIUS + 1.3}
-        maxDistance={EARTH_RADIUS + 5}
+        maxDistance={Math.max(EARTH_RADIUS + 5, flatCameraDistance * 1.2)}
         mouseButtons={{
           LEFT: isEffectivelyFlat ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
           MIDDLE: THREE.MOUSE.DOLLY,
@@ -1546,6 +1521,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
   }, [onProjectorReady, onProjectorUpdate]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
@@ -1591,13 +1567,12 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       const size = sizeRef.current;
       const overlay = overlayRef.current;
 
-      // Get the devicePixelRatio to account for high-DPI scaling
-      const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-
-      const overlayWidth = overlay && overlay.width > 0 ? overlay.width / dpr : undefined;
-      const overlayHeight = overlay && overlay.height > 0 ? overlay.height / dpr : undefined;
-      const width = overlayWidth ?? size?.width ?? 1;
-      const height = overlayHeight ?? size?.height ?? 1;
+      // Projection uses CSS pixels; the canvas backing buffer may have a capped DPR.
+      const width = overlay?.clientWidth || size?.width || 1;
+      const height = overlay?.clientHeight || size?.height || 1;
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+        return { x: 0, y: 0, visible: false };
+      }
 
       const camera = cameraRef.current;
       if (!camera) {
@@ -1612,17 +1587,14 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
 
       // Unified morphing mode - use morphed position based on current morph factor
       const morphFactor = morphingGlobeHandleRef.current?.getMorphFactor() ?? 0;
-      const worldVector = getMorphedPosition(lon, lat, morphFactor, EARTH_RADIUS + MARKER_OFFSET * 0.5);
+      const worldVector = getMorphedPosition(lon, lat, morphFactor, EARTH_RADIUS);
 
       camera.getWorldPosition(cameraWorldPosition);
-      surfaceNormal.copy(worldVector).normalize();
+      getMorphedNormal(lon, lat, morphFactor, surfaceNormal);
       cameraToSurface.subVectors(cameraWorldPosition, worldVector);
 
-      // For flat view (high morph factor), always consider visible
-      const facingCamera = morphFactor > 0.5 ? true : cameraToSurface.dot(surfaceNormal) > 0;
-
       projectedVector.copy(worldVector).project(camera);
-      const isVisible = facingCamera && projectedVector.z < 1;
+      const isVisible = isProjectedPointVisible(projectedVector, surfaceNormal, cameraToSurface);
 
       return {
         x: (projectedVector.x * 0.5 + 0.5) * width,
@@ -1631,7 +1603,7 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       };
     };
     projectorRef.current = projector;
-    projectorRevisionRef.current = 0;
+    projectorRevisionRef.current += 1;
     emitInitialProjector(projector);
   }, [cam.x, cam.y, cam.zoom, emitInitialProjector]);
 
@@ -1645,6 +1617,8 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
       if (!camera || !earth) return null;
 
       const rect = container.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0 || pointerX < 0 || pointerY < 0
+        || pointerX > rect.width || pointerY > rect.height) return null;
       pointerVec.current.set(
         (pointerX / rect.width) * 2 - 1,
         -(pointerY / rect.height) * 2 + 1,
@@ -1656,34 +1630,10 @@ export const GlobeScene = forwardRef<GlobeSceneHandle, GlobeSceneProps>(function
         return null;
       }
 
-      const point = intersections[0].point.clone();
-
-      // Unified morphing mode - handle both sphere and flat coordinate systems
-      const morphFactor = morphingGlobeHandleRef.current?.getMorphFactor() ?? 0;
-
-      // Calculate coordinates from sphere (for low morph factor)
-      // Match the shader's coordinate system: theta = lon * PI/180
-      // So lon = atan2(z, x) * 180/PI
-      const normalizedPoint = point.clone().normalize();
-      const sphereLat = THREE.MathUtils.radToDeg(Math.asin(normalizedPoint.y));
-      const sphereTheta = Math.atan2(normalizedPoint.z, normalizedPoint.x);
-      const sphereLon = normalizeLon(THREE.MathUtils.radToDeg(sphereTheta));
-
-      // Calculate coordinates from flat plane (for high morph factor)
-      // Flat position formula from shader (with flipY=true):
-      //   x = (uv.x - 0.5) * FLAT_WIDTH  ->  uv.x = x / FLAT_WIDTH + 0.5
-      //   y = (uv.y - 0.5) * FLAT_HEIGHT  ->  uv.y = y / FLAT_HEIGHT + 0.5
-      // Where uv.x = (lon + 180) / 360, uv.y = (lat + 90) / 180
-      const u = point.x / MORPHING_FLAT_WIDTH + 0.5;
-      const v = point.y / MORPHING_FLAT_HEIGHT + 0.5;
-      const flatLon = normalizeLon(u * 360 - 180);
-      const flatLat = THREE.MathUtils.clamp(v * 180 - 90, -90, 90);
-
-      // Interpolate between sphere and flat coordinates based on morph factor
-      const lon = THREE.MathUtils.lerp(sphereLon, flatLon, morphFactor);
-      const lat = THREE.MathUtils.lerp(sphereLat, flatLat, morphFactor);
-
-      return { lon, lat };
+      // Barycentric UV interpolation works on the globe, flat map, and every
+      // intermediate shape. CPU geometry is kept in sync with the shader.
+      const uv = intersections[0].uv;
+      return uv ? lonLatFromUv(uv) : null;
     };
     pickerRef.current = picker;
     if (onPickerReady) {

@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, useCallback, useMemo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CityLights } from '@/state/CityLights';
+import { drawCityLights } from '@/lib/rendering/cityLightsRenderer';
+import { getDayNightBlendForTurn } from '@/lib/dayNightCycle';
 import { feature } from 'topojson-client';
 import type { Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import { Button } from "@/components/ui/button";
@@ -1063,23 +1066,10 @@ function registerDayNightUpdateListener(listener: DayNightUpdateListener | null)
   dayNightUpdateListener = listener;
 }
 
+let currentDayNightBlend = 0;
+
 function notifyDayNightUpdate(turn: number) {
-  // Calculate blend based on turn (4-round cycle: day -> night -> day)
-  // Rounds 1-2: Day to Night (blend 0 -> 1)
-  // Rounds 3-4: Night to Day (blend 1 -> 0)
-  const turnInCycle = ((turn - 1) % 4); // 0-3
-  let targetBlend: number;
-
-  if (turnInCycle < 2) {
-    // First half of cycle: fade to night (0 -> 0.5 -> 1)
-    targetBlend = turnInCycle / 2 + 0.5 / 2; // 0.25 at turn 1, 0.75 at turn 2
-    targetBlend = turnInCycle === 0 ? 0 : turnInCycle === 1 ? 0.5 : 1;
-  } else {
-    // Second half of cycle: fade to day (1 -> 0.5 -> 0)
-    targetBlend = turnInCycle === 2 ? 0.5 : 0;
-  }
-
-  dayNightUpdateListener?.(targetBlend);
+  dayNightUpdateListener?.(getDayNightBlendForTurn(turn));
 }
 
 const setMultiplayerPublisher = (publisher: (() => void) | null) => {
@@ -2621,76 +2611,6 @@ const Ocean = {
   }
 };
 
-// City Lights system
-const CityLights = {
-  cities: [] as Array<{ lat: number; lon: number; brightness: number }>,
-  
-  generate() {
-    this.cities = [];
-    nations.forEach(nation => {
-      if (nation.population > 0) {
-        const cityCount = Math.min(20, Math.floor(nation.population / 10));
-        for (let i = 0; i < cityCount; i++) {
-          const spread = 15;
-          const angle = Math.random() * Math.PI * 2;
-          const dist = Math.random() * spread;
-          this.cities.push({
-            lat: nation.lat + Math.sin(angle) * dist,
-            lon: nation.lon + Math.cos(angle) * dist,
-            brightness: 0.5 + Math.random() * 0.5
-          });
-        }
-      }
-    });
-  },
-  
-  addCity(lat: number, lon: number, brightness: number) {
-    this.cities.push({ lat, lon, brightness });
-  },
-  
-  destroyNear(x: number, y: number, radius: number): number {
-    let destroyed = 0;
-    this.cities = this.cities.filter(city => {
-      const { x: cx, y: cy } = projectLocal(city.lon, city.lat);
-      const dist = Math.hypot(cx - x, cy - y);
-      if (dist < radius) {
-        destroyed++;
-        return false;
-      }
-      return true;
-    });
-    return destroyed;
-  },
-  
-  draw(context: CanvasRenderingContext2D, style: MapStyle) {
-    const visualStyle = typeof style === 'string' ? style : style.visual;
-    if (visualStyle === 'wireframe') {
-      return;
-    }
-
-    const time = Date.now();
-    this.cities.forEach(city => {
-      const { x, y, visible } = projectLocal(city.lon, city.lat);
-      if (!visible) {
-        return;
-      }
-
-      // Flickering light effect (satellite view)
-      const flicker = 0.8 + Math.sin(time * 0.003 + city.lon + city.lat) * 0.2;
-      const brightness = city.brightness * flicker;
-
-      // Glow effect
-      context.save();
-      context.shadowColor = 'rgba(255,255,150,0.8)';
-      context.shadowBlur = visualStyle === 'flat-realistic' ? 2 : 3;
-      context.fillStyle = `rgba(255,255,100,${brightness * 0.6})`;
-      context.fillRect(x - 0.8, y - 0.8, 1.6, 1.6);
-      context.restore();
-    });
-    context.globalAlpha = 1;
-  }
-};
-
 // Helper functions
 // Game utility functions moved to @/lib/gameUtils and @/lib/nationUtils
 // AI diplomacy functions moved to @/lib/aiDiplomacyActions
@@ -2836,6 +2756,8 @@ function resetGameState() {
   clearPendingTurnTimeouts();
   turnInProgress = false;
   resetGameStateExtracted();
+  CityLights.clear();
+  currentDayNightBlend = 0;
   // Update local module-level references after reset
   S = GameStateManager.getState();
   nations = GameStateManager.getNations();
@@ -3433,7 +3355,7 @@ function explode(
   const particleCount = Math.floor(100 * scale);
   
   const blastRadius = Math.sqrt(yieldMT) * 10;
-  const destroyed = CityLights.destroyNear(x, y, blastRadius);
+  const destroyed = CityLights.destroyNear(x, y, blastRadius, projectLocal);
   if (destroyed > 0) {
     log(`💡 ${destroyed} cities went dark`, 'warning');
   }
@@ -4494,11 +4416,7 @@ function aiTurn(n: Nation) {
         pay(n, cityCost);
         n.cities = (n.cities || 1) + 1;
         
-        const spread = 6;
-        const angle = Math.random() * Math.PI * 2;
-        const newLat = n.lat + Math.sin(angle) * spread;
-        const newLon = n.lon + Math.cos(angle) * spread;
-        CityLights.addCity(newLat, newLon, 1.0);
+        CityLights.syncNations(nations);
 
         log(`${n.name} builds city #${n.cities}`);
         maybeBanter(n, 0.6, 'build'); // Increased with specific pool
@@ -5691,7 +5609,11 @@ function gameLoop(timestamp: number = 0) {
   // Morphing uses 3D MorphingGlobe, wireframe uses 3D vector overlay
   if (!isWireframeStyle && !isMorphingStyle) {
     drawWorld(currentMapStyle);
-    CityLights.draw(ctx, currentMapStyle);
+  }
+
+  CityLights.syncNations(nations);
+  if (!isWireframeStyle && currentTheme !== 'wargames') {
+    drawCityLights(ctx, CityLights.cities, projectLocal, currentDayNightBlend, nowMs);
   }
 
   // Draw nation labels and territory markers
@@ -6225,6 +6147,7 @@ export default function NoradVector() {
     if (Math.abs(startBlend - clampedTarget) < 0.001) {
       stopDayNightBlendAnimation();
       dayNightBlendRef.current = clampedTarget;
+      currentDayNightBlend = clampedTarget;
       setDayNightBlend(clampedTarget);
       return;
     }
@@ -6245,6 +6168,7 @@ export default function NoradVector() {
       const nextBlend = startBlend + (clampedTarget - startBlend) * easedProgress;
 
       dayNightBlendRef.current = nextBlend;
+      currentDayNightBlend = nextBlend;
       setDayNightBlend(nextBlend);
 
       if (progress < 1) {
@@ -6806,7 +6730,7 @@ export default function NoradVector() {
       console.log('[DEBUG] Bootstrap: Initializing nations');
       initNations();
       setConventionalState(S.conventional ?? createDefaultConventionalState());
-      CityLights.generate();
+      CityLights.generate(nations);
 
       // Initialize simplified systems for all nations
       const initializedNations = nations.map(nation => {

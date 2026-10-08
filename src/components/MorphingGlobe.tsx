@@ -1,748 +1,223 @@
-/**
- * MorphingGlobe - Unified map system with seamless globe-to-flat morphing
- *
- * This is the consolidated map renderer that replaces all previous map styles:
- * - Realistic globe (morphFactor = 0)
- * - Flat map (morphFactor = 1)
- * - Optional vector overlay (borders rendered on top)
- *
- * Inspired by Polyglobe (pizzint.watch/polyglobe), uses vertex shader interpolation.
- */
 import { forwardRef, useEffect, useMemo, useRef, useState, useImperativeHandle, useCallback } from 'react';
 import type { MutableRefObject } from 'react';
 import { useFrame, useLoader, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson';
+
+import { EARTH_RADIUS, MORPHING_FLAT_HEIGHT, MORPHING_FLAT_WIDTH } from '@/constants/globe.constants';
+import { morphVertexShader, morphFragmentShader, darkFragmentShader, vectorOverlayVertexShader, vectorOverlayFragmentShader } from '@/constants/globeShaders';
+import { createMorphedGeometry, updateMorphedGeometry, clampUnit, easeMorph } from '@/lib/globe/geometry';
+import { collectBorderSegments, createVectorOverlayGeometry } from '@/lib/globe/borders';
 import { resolvePublicAssetPath } from '@/lib/renderingUtils';
 
-const EARTH_RADIUS = 1.8;
-const FLAT_ASPECT = 2; // Equirectangular map is 2:1 aspect ratio
-// Flat map height must be at least sphere diameter (2 * radius) to fully cover the globe during morph
-const FLAT_HEIGHT = EARTH_RADIUS * 2;
-const FLAT_WIDTH = FLAT_HEIGHT * FLAT_ASPECT;
-
-// Export flat dimensions for use in picker/projector calculations
-export const MORPHING_FLAT_WIDTH = FLAT_WIDTH;
-export const MORPHING_FLAT_HEIGHT = FLAT_HEIGHT;
+export { MORPHING_FLAT_HEIGHT, MORPHING_FLAT_WIDTH } from '@/constants/globe.constants';
+export { getMorphedPosition } from '@/lib/globe/geometry';
 
 export interface MorphingGlobeHandle {
-  /** Current morph factor (0 = globe, 1 = flat) */
   getMorphFactor: () => number;
-  /** Set morph factor directly (0-1) */
   setMorphFactor: (value: number) => void;
-  /** Animate to globe view */
   morphToGlobe: (duration?: number) => void;
-  /** Animate to flat map view */
   morphToFlat: (duration?: number) => void;
-  /** Toggle between views */
   toggle: (duration?: number) => void;
-  /** Check if currently in flat mode */
   isFlat: () => boolean;
-  /** Toggle vector overlay visibility */
   setVectorOverlay: (visible: boolean) => void;
-  /** Get vector overlay visibility */
   getVectorOverlay: () => boolean;
 }
 
 export interface MorphingGlobeProps {
-  /** Initial view: 'globe' or 'flat' */
   initialView?: 'globe' | 'flat';
-  /** Animation duration in seconds */
   animationDuration?: number;
-  /** Texture variant: 'day' or 'night' (used when dayNightBlend is not provided) */
   textureVariant?: 'day' | 'night';
-  /** Blend factor between day (0) and night (1) textures for smooth transitions */
   dayNightBlend?: number;
-  /** Custom texture URL */
   customTextureUrl?: string;
-  /** Callback when morph starts */
   onMorphStart?: (targetView: 'globe' | 'flat') => void;
-  /** Callback when morph completes */
   onMorphComplete?: (view: 'globe' | 'flat') => void;
-  /** Callback during morph with current factor */
   onMorphProgress?: (factor: number) => void;
-  /** Reference to the mesh for external access */
   meshRef?: MutableRefObject<THREE.Mesh | null>;
-  /** GeoJSON data for vector overlay borders */
+  onSurfaceReady?: (mesh: THREE.Mesh) => void;
   worldCountries?: FeatureCollection<Polygon | MultiPolygon> | null;
-  /** Show vector overlay (country borders) */
   showVectorOverlay?: boolean;
-  /** Vector overlay color */
   vectorColor?: string;
-  /** Vector overlay opacity */
   vectorOpacity?: number;
-  /** Vector-only mode: hide earth texture and show only vector borders (for WARGAMES theme) */
   vectorOnlyMode?: boolean;
 }
 
-// Vertex shader that interpolates between sphere and flat plane
-const morphVertexShader = /* glsl */ `
-  uniform float uMorphFactor;
-  uniform float uRadius;
-  uniform float uFlatWidth;
-  uniform float uFlatHeight;
-
-  varying vec2 vUv;
-  varying vec3 vNormal;
-  varying vec3 vPosition;
-
-  void main() {
-    vUv = uv;
-
-    // Sphere position (from UV to spherical coordinates)
-    // With flipY=true (default): uv.y=0 is BOTTOM of image (south pole), uv.y=1 is TOP (north pole)
-    // Invert uv.y so phi=0 at north pole (top of image) and phi=PI at south pole (bottom of image)
-    float phi = (1.0 - uv.y) * 3.14159265359; // latitude: 0 at north pole, PI at south pole
-    float theta = uv.x * 2.0 * 3.14159265359 - 3.14159265359; // longitude: -PI to PI
-
-    vec3 spherePos = vec3(
-      -uRadius * sin(phi) * cos(theta),  // Negate X to fix texture mirroring
-      uRadius * cos(phi),
-      uRadius * sin(phi) * sin(theta)
-    );
-
-    // Flat position (centered plane)
-    // With flipY=true: uv.y=0 is south pole (bottom), uv.y=1 is north pole (top)
-    // Map to screen: south (uv.y=0) -> bottom (-Y), north (uv.y=1) -> top (+Y)
-    vec3 flatPos = vec3(
-      (uv.x - 0.5) * uFlatWidth,
-      (uv.y - 0.5) * uFlatHeight,
-      0.0
-    );
-
-    // Interpolate between sphere and flat based on morph factor
-    vec3 morphedPosition = mix(spherePos, flatPos, uMorphFactor);
-
-    // Normal interpolation
-    // Negate sphereNormal because we negated X in spherePos, which reverses winding order
-    vec3 sphereNormal = -normalize(spherePos);
-    vec3 flatNormal = vec3(0.0, 0.0, 1.0);
-    vNormal = normalize(mix(sphereNormal, flatNormal, uMorphFactor));
-
-    vPosition = morphedPosition;
-
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(morphedPosition, 1.0);
-  }
-`;
-
-// Fragment shader with lighting and day/night blending
-const morphFragmentShader = /* glsl */ `
-  uniform sampler2D uDayTexture;
-  uniform sampler2D uNightTexture;
-  uniform float uDayNightBlend;
-  uniform float uMorphFactor;
-  uniform vec3 uLightDirection;
-  uniform float uAmbientIntensity;
-
-  varying vec2 vUv;
-  varying vec3 vNormal;
-  varying vec3 vPosition;
-
-  void main() {
-    // Sample both day and night textures
-    vec4 dayColor = texture2D(uDayTexture, vUv);
-    vec4 nightColor = texture2D(uNightTexture, vUv);
-
-    // Blend between day and night based on uDayNightBlend (0 = day, 1 = night)
-    vec4 texColor = mix(dayColor, nightColor, uDayNightBlend);
-
-    // Simple diffuse lighting
-    float diffuse = max(dot(vNormal, normalize(uLightDirection)), 0.0);
-
-    // Blend between lit (globe) and unlit (flat) based on morph factor
-    float lightInfluence = mix(1.0, 0.3, uMorphFactor);
-    float lighting = mix(uAmbientIntensity, 1.0, diffuse * lightInfluence);
-
-    // Brightness boost for flat view (increased for better visibility)
-    float flatBoost = mix(1.0, 1.4, uMorphFactor);
-
-    vec3 finalColor = texColor.rgb * lighting * flatBoost;
-
-    gl_FragColor = vec4(finalColor, texColor.a);
-  }
-`;
-
-// Simple dark fragment shader for vectorOnlyMode (no texture, just dark color)
-const darkFragmentShader = /* glsl */ `
-  uniform vec3 uDarkColor;
-
-  void main() {
-    gl_FragColor = vec4(uDarkColor, 1.0);
-  }
-`;
-
-// Easing functions for smooth, satisfying animations
-// Polyglobe-inspired elastic ease with slight overshoot for organic feel
-function easeOutElastic(t: number): number {
-  const c4 = (2 * Math.PI) / 3;
-  return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+interface MorphAnimation {
+  startTime: number;
+  startValue: number;
+  endValue: number;
+  duration: number;
 }
 
-// Smooth ease-out with subtle bounce
-function easeOutBack(t: number): number {
-  const c1 = 1.70158;
-  const c3 = c1 + 1;
-  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-}
+export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>(function MorphingGlobe({
+  initialView = 'globe', animationDuration = 1.2, textureVariant = 'day', dayNightBlend,
+  customTextureUrl, onMorphStart, onMorphComplete, onMorphProgress, meshRef: externalMeshRef,
+  worldCountries, showVectorOverlay = false, vectorColor = '#2ef1ff', vectorOpacity = 0.7,
+  vectorOnlyMode = false, onSurfaceReady,
+}, ref) {
+  const internalMeshRef = useRef<THREE.Mesh>(null);
+  const meshRef = externalMeshRef ?? internalMeshRef;
+  const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const vectorMaterialRef = useRef<THREE.ShaderMaterial>(null);
+  const { camera, gl } = useThree();
+  const [vectorOverlayVisible, setVectorOverlayVisible] = useState(showVectorOverlay);
+  const morphFactorRef = useRef(initialView === 'flat' ? 1 : 0);
+  const geometryFactorRef = useRef(morphFactorRef.current);
+  const animationRef = useRef<MorphAnimation | null>(null);
+  const cameraDirection = useMemo(() => new THREE.Vector3(), []);
+  const lightOffset = useMemo(() => new THREE.Vector3(0.3, 0.5, 0), []);
 
-// Combined smooth easing: ease-in-out with slight overshoot at end
-function easeInOutSmooth(t: number): number {
-  if (t < 0.5) {
-    // Ease in: smooth acceleration
-    return 4 * t * t * t;
-  }
-  // Ease out with subtle overshoot
-  const p = -2 * t + 2;
-  const base = 1 - Math.pow(p, 3) / 2;
-  // Add tiny overshoot that settles
-  const overshoot = Math.sin(t * Math.PI) * 0.03 * (1 - t);
-  return Math.min(1, base + overshoot);
-}
+  const dayUrl = customTextureUrl && textureVariant === 'day'
+    ? customTextureUrl : resolvePublicAssetPath('textures/earth_day_flat.jpg');
+  const nightUrl = customTextureUrl && textureVariant === 'night'
+    ? customTextureUrl : resolvePublicAssetPath('textures/earth_night_flat.jpg');
+  const [dayTexture, nightTexture] = useLoader(THREE.TextureLoader, [dayUrl, nightUrl]);
+  const effectiveBlend = clampUnit(dayNightBlend ?? (textureVariant === 'night' ? 1 : 0));
+  const geometry = useMemo(() => createMorphedGeometry(morphFactorRef.current), []);
+  const vectorGeometry = useMemo(() => {
+    const segments = collectBorderSegments(worldCountries);
+    return segments ? createVectorOverlayGeometry(segments) : null;
+  }, [worldCountries]);
 
-// Vertex shader for vector overlay lines that morph with the globe
-const vectorOverlayVertexShader = /* glsl */ `
-  uniform float uMorphFactor;
-  uniform float uRadius;
-  uniform float uFlatWidth;
-  uniform float uFlatHeight;
+  // Uniform objects live for the lifetime of the component. Switching day/night or
+  // vector mode must not restore the initial globe shape.
+  const [uniforms] = useState(() => ({
+    uMorphFactor: { value: morphFactorRef.current },
+    uRadius: { value: EARTH_RADIUS },
+    uFlatWidth: { value: MORPHING_FLAT_WIDTH },
+    uFlatHeight: { value: MORPHING_FLAT_HEIGHT },
+    uDayTexture: { value: dayTexture },
+    uNightTexture: { value: nightTexture },
+    uDayNightBlend: { value: effectiveBlend },
+    uLightDirection: { value: new THREE.Vector3(1, 0.5, 1).normalize() },
+    uAmbientIntensity: { value: 0.48 },
+    uDarkColor: { value: new THREE.Color('#020a02') },
+  }));
+  const [vectorUniforms] = useState(() => ({
+    uMorphFactor: { value: morphFactorRef.current },
+    uRadius: { value: EARTH_RADIUS },
+    uFlatWidth: { value: MORPHING_FLAT_WIDTH },
+    uFlatHeight: { value: MORPHING_FLAT_HEIGHT },
+    uColor: { value: new THREE.Color(vectorColor) },
+    uOpacity: { value: vectorOpacity },
+  }));
 
-  attribute vec2 uv2; // UV coordinates for the line endpoints
-
-  varying float vAlpha;
-
-  void main() {
-    // Calculate sphere position from UV
-    // Invert uv2.y to match flipY=true texture orientation (uv.y=0 at bottom, uv.y=1 at top)
-    float phi = (1.0 - uv2.y) * 3.14159265359;
-    float theta = uv2.x * 2.0 * 3.14159265359 - 3.14159265359;
-
-    vec3 spherePos = vec3(
-      -(uRadius + 0.005) * sin(phi) * cos(theta),  // Negate X to fix texture mirroring
-      (uRadius + 0.005) * cos(phi),
-      (uRadius + 0.005) * sin(phi) * sin(theta)
-    );
-
-    // Calculate flat position
-    // Map UV to screen coordinates: south (uv2.y=0) -> bottom, north (uv2.y=1) -> top
-    vec3 flatPos = vec3(
-      (uv2.x - 0.5) * uFlatWidth,
-      (uv2.y - 0.5) * uFlatHeight,
-      0.01
-    );
-
-    // Interpolate
-    vec3 morphedPosition = mix(spherePos, flatPos, uMorphFactor);
-
-    // Fade alpha for backfacing lines on globe
-    // Negate sphereNormal because we negated X in spherePos, which reverses winding order
-    vec3 sphereNormal = -normalize(spherePos);
-    vec3 viewDir = normalize(cameraPosition - morphedPosition);
-    float facing = dot(sphereNormal, viewDir);
-    vAlpha = mix(smoothstep(-0.1, 0.3, facing), 1.0, uMorphFactor);
-
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(morphedPosition, 1.0);
-  }
-`;
-
-const vectorOverlayFragmentShader = /* glsl */ `
-  uniform vec3 uColor;
-  uniform float uOpacity;
-
-  varying float vAlpha;
-
-  void main() {
-    gl_FragColor = vec4(uColor, uOpacity * vAlpha);
-  }
-`;
-
-/**
- * Convert GeoJSON FeatureCollection to line segment UV coordinates
- * Returns Float32Array of UV pairs (u1, v1, u2, v2, ...)
- */
-function collectBorderSegments(
-  collection?: FeatureCollection<Polygon | MultiPolygon> | null,
-): Float32Array | null {
-  if (!collection?.features?.length) {
-    return null;
-  }
-
-  const segments: number[] = [];
-
-  const pushSegment = (start: readonly [number, number], end: readonly [number, number]) => {
-    const [startLon, startLat] = start;
-    const [endLon, endLat] = end;
-
-    if (!Number.isFinite(startLon) || !Number.isFinite(startLat)) return;
-    if (!Number.isFinite(endLon) || !Number.isFinite(endLat)) return;
-
-    // Convert lon/lat to UV coordinates (0-1 range)
-    // With flipY=true: V=0 at south pole (lat=-90), V=1 at north pole (lat=+90)
-    const startU = THREE.MathUtils.clamp((startLon + 180) / 360, 0, 1);
-    const startV = THREE.MathUtils.clamp((startLat + 90) / 180, 0, 1);
-    const endU = THREE.MathUtils.clamp((endLon + 180) / 360, 0, 1);
-    const endV = THREE.MathUtils.clamp((endLat + 90) / 180, 0, 1);
-
-    segments.push(startU, startV, endU, endV);
-  };
-
-  const appendRing = (ring: readonly number[][]) => {
-    if (!ring || ring.length < 2) return;
-
-    for (let i = 1; i < ring.length; i += 1) {
-      pushSegment(ring[i - 1] as [number, number], ring[i] as [number, number]);
+  useEffect(() => {
+    for (const texture of [dayTexture, nightTexture]) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = Math.min(16, gl.capabilities.getMaxAnisotropy());
+      texture.generateMipmaps = true;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.needsUpdate = true;
     }
+    uniforms.uDayTexture.value = dayTexture;
+    uniforms.uNightTexture.value = nightTexture;
+  }, [dayTexture, nightTexture, gl, uniforms]);
 
-    const first = ring[0] as [number, number];
-    const last = ring[ring.length - 1] as [number, number];
-    if (first[0] !== last[0] || first[1] !== last[1]) {
-      pushSegment(last, first);
+  useEffect(() => { uniforms.uDayNightBlend.value = effectiveBlend; }, [effectiveBlend, uniforms]);
+  useEffect(() => { setVectorOverlayVisible(showVectorOverlay); }, [showVectorOverlay]);
+  useEffect(() => {
+    vectorUniforms.uColor.value.set(vectorColor);
+    vectorUniforms.uOpacity.value = clampUnit(vectorOpacity);
+  }, [vectorColor, vectorOpacity, vectorUniforms]);
+  useEffect(() => () => { geometry.dispose(); }, [geometry]);
+  useEffect(() => () => { vectorGeometry?.dispose(); }, [vectorGeometry]);
+
+  const applyMorph = useCallback((value: number) => {
+    const factor = clampUnit(value, morphFactorRef.current);
+    morphFactorRef.current = factor;
+    uniforms.uMorphFactor.value = factor;
+    vectorUniforms.uMorphFactor.value = factor;
+    if (geometryFactorRef.current !== factor) {
+      updateMorphedGeometry(geometry, factor);
+      geometryFactorRef.current = factor;
     }
-  };
+    onMorphProgress?.(factor);
+  }, [geometry, uniforms, vectorUniforms, onMorphProgress]);
 
-  const appendPolygon = (polygon: Polygon['coordinates']) => {
-    polygon.forEach(ring => appendRing(ring));
-  };
-
-  for (const feature of collection.features) {
-    if (!feature) continue;
-    const geometry = feature.geometry;
-    if (!geometry) continue;
-
-    if (geometry.type === 'Polygon') {
-      appendPolygon(geometry.coordinates);
-    } else if (geometry.type === 'MultiPolygon') {
-      geometry.coordinates.forEach(polygon => appendPolygon(polygon));
+  const startMorph = useCallback((endValue: number, duration = animationDuration) => {
+    const view = endValue === 1 ? 'flat' : 'globe';
+    onMorphStart?.(view);
+    if (!Number.isFinite(duration) || duration <= 0) {
+      animationRef.current = null;
+      applyMorph(endValue);
+      onMorphComplete?.(view);
+      return;
     }
-  }
+    animationRef.current = {
+      startTime: performance.now() / 1000, startValue: morphFactorRef.current, endValue, duration,
+    };
+  }, [animationDuration, onMorphStart, onMorphComplete, applyMorph]);
 
-  if (!segments.length) {
-    return null;
-  }
+  useFrame(() => {
+    const animation = animationRef.current;
+    if (animation) {
+      const progress = clampUnit((performance.now() / 1000 - animation.startTime) / animation.duration);
+      applyMorph(THREE.MathUtils.lerp(animation.startValue, animation.endValue, easeMorph(progress)));
+      if (progress === 1) {
+        animationRef.current = null;
+        onMorphComplete?.(animation.endValue === 1 ? 'flat' : 'globe');
+      }
+    }
+    camera.getWorldDirection(cameraDirection);
+    uniforms.uLightDirection.value.copy(cameraDirection).negate().add(lightOffset).normalize();
+  });
 
-  return new Float32Array(segments);
-}
-
-/**
- * Create vector overlay line geometry from UV segments
- */
-function createVectorOverlayGeometry(uvSegments: Float32Array): THREE.BufferGeometry {
-  const geometry = new THREE.BufferGeometry();
-
-  // Each segment has 4 values (u1, v1, u2, v2), creating 2 vertices
-  const vertexCount = uvSegments.length / 2;
-  const positions = new Float32Array(vertexCount * 3);
-  const uvs = new Float32Array(vertexCount * 2);
-
-  // Fill in positions (will be overridden by vertex shader, but needed for buffer)
-  // and UV coordinates for the shader
-  for (let i = 0; i < uvSegments.length; i += 2) {
-    const vertexIndex = i / 2;
-    const u = uvSegments[i];
-    const v = uvSegments[i + 1];
-
-    // Set UV for shader
-    uvs[i] = u;
-    uvs[i + 1] = v;
-
-    // Placeholder positions (will be computed in shader)
-    positions[vertexIndex * 3] = 0;
-    positions[vertexIndex * 3 + 1] = 0;
-    positions[vertexIndex * 3 + 2] = 0;
-  }
-
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute('uv2', new THREE.BufferAttribute(uvs, 2));
-
-  return geometry;
-}
-
-export const MorphingGlobe = forwardRef<MorphingGlobeHandle, MorphingGlobeProps>(
-  function MorphingGlobe(
-    {
-      initialView = 'globe',
-      animationDuration = 1.2,
-      textureVariant = 'day',
-      dayNightBlend,
-      customTextureUrl,
-      onMorphStart,
-      onMorphComplete,
-      onMorphProgress,
-      meshRef: externalMeshRef,
-      worldCountries,
-      showVectorOverlay = false,
-      vectorColor = '#2ef1ff',
-      vectorOpacity = 0.7,
-      vectorOnlyMode = false,
+  useImperativeHandle(ref, () => ({
+    getMorphFactor: () => morphFactorRef.current,
+    setMorphFactor: (value: number) => {
+      animationRef.current = null;
+      applyMorph(value);
     },
-    ref
-  ) {
-    const internalMeshRef = useRef<THREE.Mesh>(null);
-    const meshRef = externalMeshRef ?? internalMeshRef;
-    const materialRef = useRef<THREE.ShaderMaterial>(null);
-    const vectorMaterialRef = useRef<THREE.ShaderMaterial>(null);
-    const vectorLinesRef = useRef<THREE.LineSegments | null>(null);
-    const { camera } = useThree();
-    const [vectorOverlayVisible, setVectorOverlayVisible] = useState(showVectorOverlay);
+    morphToGlobe: (duration?: number) => startMorph(0, duration),
+    morphToFlat: (duration?: number) => startMorph(1, duration),
+    toggle: (duration?: number) => startMorph(morphFactorRef.current < 0.5 ? 1 : 0, duration),
+    isFlat: () => morphFactorRef.current > 0.5,
+    setVectorOverlay: setVectorOverlayVisible,
+    getVectorOverlay: () => vectorOverlayVisible,
+  }), [applyMorph, startMorph, vectorOverlayVisible]);
 
-    // Animation state
-    const [morphFactor, setMorphFactor] = useState(initialView === 'flat' ? 1 : 0);
-    // Use a ref to track the actual current morph factor for getMorphFactor()
-    // This ensures we return the real-time value, not a stale state value
-    const morphFactorRef = useRef(initialView === 'flat' ? 1 : 0);
-    const animationRef = useRef<{
-      active: boolean;
-      startTime: number;
-      startValue: number;
-      endValue: number;
-      duration: number;
-    } | null>(null);
+  useEffect(() => {
+    if (meshRef.current) onSurfaceReady?.(meshRef.current);
+  }, [meshRef, onSurfaceReady]);
 
-    // Performance: Cached Vector3 objects to avoid allocations in animation loop
-    const cameraDirRef = useRef(new THREE.Vector3());
-    const lightOffsetRef = useRef(new THREE.Vector3(0.3, 0.5, 0));
+  return (
+    <group>
+      <mesh ref={meshRef} geometry={geometry} renderOrder={0} frustumCulled={false}>
+        <shaderMaterial
+          ref={materialRef}
+          vertexShader={morphVertexShader}
+          fragmentShader={vectorOnlyMode ? darkFragmentShader : morphFragmentShader}
+          uniforms={uniforms}
+          side={THREE.FrontSide}
+          depthWrite={true}
+          depthTest={true}
+          toneMapped={false}
+        />
+      </mesh>
+      {(vectorOnlyMode || vectorOverlayVisible) && vectorGeometry && (
+        <lineSegments geometry={vectorGeometry} frustumCulled={false} renderOrder={1}>
+          <shaderMaterial
+            ref={vectorMaterialRef}
+            vertexShader={vectorOverlayVertexShader}
+            fragmentShader={vectorOverlayFragmentShader}
+            uniforms={vectorUniforms}
+            transparent
+            depthWrite={false}
+            depthTest={true}
+            toneMapped={false}
+          />
+        </lineSegments>
+      )}
+    </group>
+  );
+});
 
-    // Load both day and night textures for blending
-    const dayTextureUrl = useMemo(() => {
-      if (customTextureUrl && textureVariant === 'day') return customTextureUrl;
-      return resolvePublicAssetPath('textures/earth_day_flat.jpg');
-    }, [customTextureUrl, textureVariant]);
-
-    const nightTextureUrl = useMemo(() => {
-      if (customTextureUrl && textureVariant === 'night') return customTextureUrl;
-      return resolvePublicAssetPath('textures/earth_night_flat.jpg');
-    }, [customTextureUrl, textureVariant]);
-
-    const dayTexture = useLoader(THREE.TextureLoader, dayTextureUrl);
-    const nightTexture = useLoader(THREE.TextureLoader, nightTextureUrl);
-
-    // Configure day texture
-    useEffect(() => {
-      if (dayTexture) {
-        dayTexture.colorSpace = THREE.SRGBColorSpace;
-        dayTexture.anisotropy = 16;
-        dayTexture.generateMipmaps = true;
-        dayTexture.minFilter = THREE.LinearMipmapLinearFilter;
-        dayTexture.magFilter = THREE.LinearFilter;
-        dayTexture.wrapS = THREE.RepeatWrapping;
-        dayTexture.wrapT = THREE.ClampToEdgeWrapping;
-        // flipY defaults to true, which is correct for standard image textures
-        dayTexture.needsUpdate = true;
-      }
-    }, [dayTexture]);
-
-    // Configure night texture
-    useEffect(() => {
-      if (nightTexture) {
-        nightTexture.colorSpace = THREE.SRGBColorSpace;
-        nightTexture.anisotropy = 16;
-        nightTexture.generateMipmaps = true;
-        nightTexture.minFilter = THREE.LinearMipmapLinearFilter;
-        nightTexture.magFilter = THREE.LinearFilter;
-        nightTexture.wrapS = THREE.RepeatWrapping;
-        nightTexture.wrapT = THREE.ClampToEdgeWrapping;
-        // flipY defaults to true, which is correct for standard image textures
-        nightTexture.needsUpdate = true;
-      }
-    }, [nightTexture]);
-
-    // Calculate effective blend value
-    // If dayNightBlend is provided, use it; otherwise fall back to textureVariant
-    const effectiveBlend = useMemo(() => {
-      if (typeof dayNightBlend === 'number') {
-        return Math.max(0, Math.min(1, dayNightBlend));
-      }
-      return textureVariant === 'night' ? 1 : 0;
-    }, [dayNightBlend, textureVariant]);
-
-    // Create shader material uniforms
-    // NOTE: dayTexture and nightTexture are NOT in dependencies to prevent uniforms recreation
-    // when textures load/change. Texture uniforms are updated via useEffect below.
-    // This prevents morphFactor from being reset when textures change.
-    const uniforms = useMemo(
-      () => ({
-        uMorphFactor: { value: initialView === 'flat' ? 1.0 : 0.0 },
-        uRadius: { value: EARTH_RADIUS },
-        uFlatWidth: { value: FLAT_WIDTH },
-        uFlatHeight: { value: FLAT_HEIGHT },
-        uDayTexture: { value: dayTexture },
-        uNightTexture: { value: nightTexture },
-        uDayNightBlend: { value: effectiveBlend },
-        uLightDirection: { value: new THREE.Vector3(1, 0.5, 1).normalize() },
-        uAmbientIntensity: { value: 0.95 },
-      }),
-      [effectiveBlend, initialView]
-    );
-
-    // Vector overlay uniforms
-    // NOTE: vectorColor and vectorOpacity are NOT in dependencies to prevent uniforms recreation.
-    // These are updated via useEffect below to preserve morphFactor.
-    const vectorUniforms = useMemo(
-      () => ({
-        uMorphFactor: { value: initialView === 'flat' ? 1.0 : 0.0 },
-        uRadius: { value: EARTH_RADIUS },
-        uFlatWidth: { value: FLAT_WIDTH },
-        uFlatHeight: { value: FLAT_HEIGHT },
-        uColor: { value: new THREE.Color(vectorColor) },
-        uOpacity: { value: vectorOpacity },
-      }),
-      [initialView]
-    );
-
-    // Dark background uniforms for vectorOnlyMode (WARGAMES theme)
-    const darkUniforms = useMemo(
-      () => ({
-        uMorphFactor: { value: initialView === 'flat' ? 1.0 : 0.0 },
-        uRadius: { value: EARTH_RADIUS },
-        uFlatWidth: { value: FLAT_WIDTH },
-        uFlatHeight: { value: FLAT_HEIGHT },
-        uDarkColor: { value: new THREE.Color('#020a02') }, // Very dark green for WARGAMES aesthetic
-      }),
-      [initialView]
-    );
-
-    // Ref for dark material
-    const darkMaterialRef = useRef<THREE.ShaderMaterial>(null);
-
-    // Update texture uniforms when they change
-    useEffect(() => {
-      if (materialRef.current) {
-        if (dayTexture) {
-          materialRef.current.uniforms.uDayTexture.value = dayTexture;
-        }
-        if (nightTexture) {
-          materialRef.current.uniforms.uNightTexture.value = nightTexture;
-        }
-        materialRef.current.needsUpdate = true;
-      }
-    }, [dayTexture, nightTexture]);
-
-    // Update day/night blend uniform when it changes
-    useEffect(() => {
-      if (materialRef.current) {
-        materialRef.current.uniforms.uDayNightBlend.value = effectiveBlend;
-      }
-    }, [effectiveBlend]);
-
-    // Ensure morph factor uniform is synced when morphFactor state changes
-    // This handles cases where the uniforms object is recreated (e.g., texture changes)
-    // and prevents the flat plane from showing inside the globe
-    useEffect(() => {
-      const currentFactor = morphFactorRef.current;
-      if (materialRef.current) {
-        materialRef.current.uniforms.uMorphFactor.value = currentFactor;
-      }
-      if (vectorMaterialRef.current) {
-        vectorMaterialRef.current.uniforms.uMorphFactor.value = currentFactor;
-      }
-      if (darkMaterialRef.current) {
-        darkMaterialRef.current.uniforms.uMorphFactor.value = currentFactor;
-      }
-    }, [morphFactor]);
-
-    // Update vector overlay visibility from prop
-    useEffect(() => {
-      setVectorOverlayVisible(showVectorOverlay);
-    }, [showVectorOverlay]);
-
-    // Update vector color and opacity
-    useEffect(() => {
-      if (vectorMaterialRef.current) {
-        vectorMaterialRef.current.uniforms.uColor.value.set(vectorColor);
-        vectorMaterialRef.current.uniforms.uOpacity.value = vectorOpacity;
-      }
-    }, [vectorColor, vectorOpacity]);
-
-    // Create vector overlay geometry from world countries
-    const vectorGeometry = useMemo(() => {
-      if (!worldCountries) return null;
-      const segments = collectBorderSegments(worldCountries);
-      if (!segments) return null;
-      return createVectorOverlayGeometry(segments);
-    }, [worldCountries]);
-
-    // Animation frame update
-    useFrame(() => {
-      const animation = animationRef.current;
-
-      if (animation?.active) {
-        const elapsed = performance.now() / 1000 - animation.startTime;
-        const progress = Math.min(elapsed / animation.duration, 1);
-        const easedProgress = easeInOutSmooth(progress);
-
-        const newValue =
-          animation.startValue + (animation.endValue - animation.startValue) * easedProgress;
-
-        // Update both state and ref - ref is used for real-time getMorphFactor() calls
-        morphFactorRef.current = newValue;
-        setMorphFactor(newValue);
-        onMorphProgress?.(newValue);
-
-        if (materialRef.current) {
-          materialRef.current.uniforms.uMorphFactor.value = newValue;
-        }
-
-        // Sync vector overlay morph factor
-        if (vectorMaterialRef.current) {
-          vectorMaterialRef.current.uniforms.uMorphFactor.value = newValue;
-        }
-
-        // Sync dark background morph factor (for vectorOnlyMode)
-        if (darkMaterialRef.current) {
-          darkMaterialRef.current.uniforms.uMorphFactor.value = newValue;
-        }
-
-        if (progress >= 1) {
-          animation.active = false;
-          const finalView = animation.endValue >= 0.5 ? 'flat' : 'globe';
-          onMorphComplete?.(finalView);
-        }
-      }
-
-      // Update light direction based on camera position for globe view
-      // Performance: Use cached Vector3 refs to avoid allocations every frame
-      if (materialRef.current && morphFactor < 0.5) {
-        camera.getWorldDirection(cameraDirRef.current);
-        materialRef.current.uniforms.uLightDirection.value
-          .copy(cameraDirRef.current)
-          .negate()
-          .add(lightOffsetRef.current)
-          .normalize();
-      }
-    });
-
-    // Imperative handle for external control
-    useImperativeHandle(
-      ref,
-      () => ({
-        // Use ref for real-time value (not stale state)
-        getMorphFactor: () => morphFactorRef.current,
-        setMorphFactor: (value: number) => {
-          const clamped = Math.max(0, Math.min(1, value));
-          morphFactorRef.current = clamped;
-          setMorphFactor(clamped);
-          if (materialRef.current) {
-            materialRef.current.uniforms.uMorphFactor.value = clamped;
-          }
-          if (vectorMaterialRef.current) {
-            vectorMaterialRef.current.uniforms.uMorphFactor.value = clamped;
-          }
-          if (darkMaterialRef.current) {
-            darkMaterialRef.current.uniforms.uMorphFactor.value = clamped;
-          }
-        },
-        morphToGlobe: (duration = animationDuration) => {
-          onMorphStart?.('globe');
-          animationRef.current = {
-            active: true,
-            startTime: performance.now() / 1000,
-            startValue: morphFactorRef.current,
-            endValue: 0,
-            duration,
-          };
-        },
-        morphToFlat: (duration = animationDuration) => {
-          onMorphStart?.('flat');
-          animationRef.current = {
-            active: true,
-            startTime: performance.now() / 1000,
-            startValue: morphFactorRef.current,
-            endValue: 1,
-            duration,
-          };
-        },
-        toggle: (duration = animationDuration) => {
-          const targetFlat = morphFactorRef.current < 0.5;
-          onMorphStart?.(targetFlat ? 'flat' : 'globe');
-          animationRef.current = {
-            active: true,
-            startTime: performance.now() / 1000,
-            startValue: morphFactorRef.current,
-            endValue: targetFlat ? 1 : 0,
-            duration,
-          };
-        },
-        isFlat: () => morphFactorRef.current > 0.5,
-        setVectorOverlay: (visible: boolean) => {
-          setVectorOverlayVisible(visible);
-        },
-        getVectorOverlay: () => vectorOverlayVisible,
-      }),
-      [animationDuration, onMorphStart, vectorOverlayVisible]
-    );
-
-    // Create geometry with enough segments for smooth morphing
-    const geometry = useMemo(() => {
-      const geo = new THREE.PlaneGeometry(1, 1, 128, 64);
-      return geo;
-    }, []);
-
-    // In vectorOnlyMode, force vector overlay to be visible
-    const effectiveVectorOverlayVisible = vectorOnlyMode || vectorOverlayVisible;
-
-    return (
-      <group>
-        {/* Main earth mesh - hidden in vectorOnlyMode, shows only dark background */}
-        {/* Use FrontSide: vertex shader transforms don't affect winding order (determined by geometry indices) */}
-        {/* PlaneGeometry has front faces pointing outward, so FrontSide renders the outside */}
-        {!vectorOnlyMode && (
-          <mesh ref={meshRef} geometry={geometry} renderOrder={0}>
-            <shaderMaterial
-              ref={materialRef}
-              vertexShader={morphVertexShader}
-              fragmentShader={morphFragmentShader}
-              uniforms={uniforms}
-              side={THREE.FrontSide}
-              transparent={false}
-              depthWrite={true}
-              depthTest={true}
-            />
-          </mesh>
-        )}
-
-        {/* Dark background mesh for vectorOnlyMode (WARGAMES theme) - morphs with globe */}
-        {/* Use FrontSide: vertex shader transforms don't affect winding order */}
-        {vectorOnlyMode && (
-          <mesh ref={meshRef} geometry={geometry} renderOrder={0}>
-            <shaderMaterial
-              ref={darkMaterialRef}
-              vertexShader={morphVertexShader}
-              fragmentShader={darkFragmentShader}
-              uniforms={darkUniforms}
-              side={THREE.FrontSide}
-              transparent={false}
-              depthWrite={true}
-              depthTest={true}
-            />
-          </mesh>
-        )}
-
-        {/* Vector overlay (country borders) */}
-        {/* renderOrder={1} ensures vector overlay renders on top of earth mesh (renderOrder={0}) */}
-        {effectiveVectorOverlayVisible && vectorGeometry && (
-          <lineSegments geometry={vectorGeometry} frustumCulled={false} renderOrder={1}>
-            <shaderMaterial
-              ref={vectorMaterialRef}
-              vertexShader={vectorOverlayVertexShader}
-              fragmentShader={vectorOverlayFragmentShader}
-              uniforms={vectorUniforms}
-              transparent={true}
-              depthWrite={false}
-              depthTest={true}
-              blending={THREE.NormalBlending}
-            />
-          </lineSegments>
-        )}
-      </group>
-    );
-  }
-);
-
-/**
- * Utility hook for controlling MorphingGlobe from parent components
- */
 export function useMorphingGlobe() {
   const ref = useRef<MorphingGlobeHandle>(null);
-
   return {
     ref,
     morphToGlobe: (duration?: number) => ref.current?.morphToGlobe(duration),
@@ -753,47 +228,6 @@ export function useMorphingGlobe() {
     setVectorOverlay: (visible: boolean) => ref.current?.setVectorOverlay(visible),
     getVectorOverlay: () => ref.current?.getVectorOverlay() ?? false,
   };
-}
-
-/**
- * Helper to convert lon/lat to position based on morph factor
- * Use this for positioning markers during the transition
- */
-export function getMorphedPosition(
-  lon: number,
-  lat: number,
-  morphFactor: number,
-  radius: number = EARTH_RADIUS
-): THREE.Vector3 {
-  // Sphere position - match the vertex shader formula exactly:
-  // Shader: phi = (1.0 - uv.y) * PI (inverts because flipY=true, uv.y=0 at south, uv.y=1 at north)
-  // Shader: theta = uv.x * 2*PI - PI
-  // Where uv.x = (lon + 180) / 360, uv.y = (lat + 90) / 180
-  const phi = THREE.MathUtils.degToRad(90 - lat);
-  const theta = THREE.MathUtils.degToRad(lon);
-
-  const spherePos = new THREE.Vector3(
-    -radius * Math.sin(phi) * Math.cos(theta),  // Negate X to fix texture mirroring
-    radius * Math.cos(phi),
-    radius * Math.sin(phi) * Math.sin(theta)
-  );
-
-  // Flat position - match vertex shader exactly:
-  // Shader with flipY=true: uv.y = 0 at south pole (lat=-90), uv.y = 1 at north pole (lat=+90)
-  // Shader: flatPos.x = (uv.x - 0.5) * uFlatWidth
-  // Shader: flatPos.y = (uv.y - 0.5) * uFlatHeight
-  // Where uv.x = (lon + 180) / 360, uv.y = (lat + 90) / 180
-  const u = (lon + 180) / 360;
-  const v = (lat + 90) / 180; // uv.y: 0 at south pole, 1 at north pole
-
-  const flatPos = new THREE.Vector3(
-    (u - 0.5) * FLAT_WIDTH,
-    (v - 0.5) * FLAT_HEIGHT, // Match shader: south pole at bottom (-Y), north pole at top (+Y)
-    0
-  );
-
-  // Interpolate
-  return spherePos.lerp(flatPos, morphFactor);
 }
 
 export default MorphingGlobe;
