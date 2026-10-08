@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, within, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor, act, cleanup } from '@testing-library/react';
 import React from 'react';
 import { PlayerManager } from '@/state';
 import { toast } from '@/components/ui/use-toast';
@@ -523,7 +523,10 @@ vi.mock('@/contexts/MultiplayerProvider', () => ({
 import Index from '@/pages/Index';
 
 describe('Index co-op toggle', () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
   beforeEach(async () => {
     // The integration tests use a mock globe; no 2D canvas is needed.
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
