@@ -59,8 +59,8 @@ export const IntroLogo = () => (
         x="50%"
         y="62%"
         textAnchor="middle"
-        fontSize={144}
-        letterSpacing="0.75em"
+        fontSize={132}
+        letterSpacing="0.2em"
         fill="url(#logo-fill)"
         stroke="url(#logo-stroke)"
         strokeWidth={7}

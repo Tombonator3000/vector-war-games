@@ -27,7 +27,7 @@ export function Toaster() {
           </Toast>
         )
       })}
-      <ToastViewport />
+      <ToastViewport className="game-toast-viewport" />
     </ToastProvider>
   )
 }

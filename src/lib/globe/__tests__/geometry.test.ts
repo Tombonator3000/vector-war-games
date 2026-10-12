@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { EARTH_RADIUS, MORPHING_FLAT_WIDTH, MORPHING_FLAT_HEIGHT } from '@/constants/globe.constants';
-import { createMorphedGeometry, getMorphedPosition, getMorphedNormal, updateMorphedGeometry, lonLatFromUv, isProjectedPointVisible, getFlatMapCameraDistance } from '../geometry';
+import { createMorphedGeometry, getMorphedPosition, getMorphedNormal, updateMorphedGeometry, lonLatFromUv, isProjectedPointVisible, getFlatMapCameraDistance, getGlobeCameraDistance } from '../geometry';
 
 describe('shared map surface', () => {
   it('keeps the globe normal outward and raises flat markers above the surface', () => {
@@ -50,5 +50,19 @@ describe('shared map surface', () => {
     for (const point of [new THREE.Vector3(2, 0, 0), new THREE.Vector3(0, 0, -2), new THREE.Vector3(NaN, 0, 0)]) {
       expect(isProjectedPointVisible(point, front, direction)).toBe(false);
     }
+  });
+});
+
+describe('globe framing', () => {
+  it.each([390 / 844, 1440 / 900, 844 / 390])('fits the sphere and HUD margin at aspect %s', aspect => {
+    const distance = getGlobeCameraDistance(40, aspect);
+    const silhouette = Math.asin(EARTH_RADIUS / distance);
+    const verticalHalfFov = THREE.MathUtils.degToRad(20);
+    const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * aspect);
+    expect(silhouette).toBeLessThan(Math.min(verticalHalfFov, horizontalHalfFov) * 0.8);
+  });
+  it('uses finite framing defaults for invalid dimensions', () => {
+    expect(Number.isFinite(getGlobeCameraDistance(NaN, 0))).toBe(true);
+    expect(getGlobeCameraDistance(0, -1)).toBeGreaterThan(EARTH_RADIUS);
   });
 });

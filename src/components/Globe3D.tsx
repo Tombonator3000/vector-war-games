@@ -1,10 +1,11 @@
 import { useMemo, useRef, useEffect, Suspense, Component, ReactNode } from 'react';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
-import { OrbitControls, Stars, Sphere } from '@react-three/drei';
+import type { Nation } from '@/types/game';
+import { Stars, Sphere } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface Globe3DProps {
-  nations?: any[];
+  nations?: Nation[];
   onNationClick?: (nationId: string) => void;
 }
 
@@ -72,9 +73,11 @@ function Earth() {
   const [colorMap, normalMap, specularMap] = useLoader(THREE.TextureLoader, textureUrls);
 
   useEffect(() => {
+    colorMap.colorSpace = THREE.SRGBColorSpace;
+    normalMap.colorSpace = THREE.NoColorSpace;
+    specularMap.colorSpace = THREE.NoColorSpace;
     [colorMap, normalMap, specularMap].forEach(texture => {
       if (texture) {
-        texture.colorSpace = THREE.SRGBColorSpace;
         texture.anisotropy = 16;
         texture.generateMipmaps = true;
         texture.minFilter = THREE.LinearMipmapLinearFilter;
@@ -85,9 +88,9 @@ function Earth() {
     });
   }, [colorMap, normalMap, specularMap]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += 0.001;
+      meshRef.current.rotation.y += Math.min(delta, 0.1) * 0.06;
     }
   });
 
@@ -104,27 +107,18 @@ function Earth() {
   );
 }
 
-export function Globe3D({ nations = [], onNationClick }: Globe3DProps) {
+export function Globe3D(_props: Globe3DProps) {
   return (
     <Globe3DErrorBoundary>
       <Suspense fallback={<GlobeLoader />}>
         <div className="w-full h-full">
-          <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
+          <Canvas camera={{ position: [0, 0, 6.5], fov: 45 }}>
             <ambientLight intensity={0.6} />
             <pointLight position={[10, 10, 10]} intensity={2} />
             <pointLight position={[-10, -10, -10]} intensity={0.8} />
             <Stars radius={100} depth={50} count={5000} factor={4} />
             <Earth />
-            <OrbitControls
-              enableZoom={true}
-              enablePan={true}
-              mouseButtons={{
-                LEFT: undefined,
-                MIDDLE: undefined,
-                RIGHT: 2, // Right button for panning
-              }}
-              zoomSpeed={1.2}
-            />
+
           </Canvas>
         </div>
       </Suspense>
